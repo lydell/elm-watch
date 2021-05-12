@@ -1,0 +1,7 @@
+.cache
+.eslintrc.js
+build
+coverage
+dist
+example
+*.d.ts

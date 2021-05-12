@@ -1,0 +1,12 @@
+{
+  "name": "elm-watch",
+  "version": "0.1.0",
+  "author": "Simon Lydell",
+  "license": "MIT",
+  "description": "`elm make` in watch mode.",
+  "repository": "lydell/elm-watch",
+  "type": "commonjs",
+  "exports": {},
+  "bin": "./index.js",
+  "keywords": ["elm", "watch", "watcher", "elm-tooling.json"]
+}

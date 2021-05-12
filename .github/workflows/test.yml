@@ -1,0 +1,48 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+jobs:
+  main:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        node-version: [12.x, 14.x, 16.x]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "${{ matrix.node-version }}"
+
+      - name: Cache node_modules
+        id: cache-node_modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Cache ~/.elm
+        uses: actions/cache@v2
+        with:
+          path: ~/.elm
+          key: elm-${{ hashFiles('elm-tooling.json') }}
+
+      - name: npm ci
+        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci
+        env:
+          NO_ELM_TOOLING_INSTALL: 1
+
+      - name: elm-tooling install
+        run: npx --no-install elm-tooling install
+
+      - name: Jest
+        run: npx --no-install jest --coverage

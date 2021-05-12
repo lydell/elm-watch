@@ -1,0 +1,8 @@
+.cache
+build
+coverage
+example
+dist
+elm-stuff
+*.json
+_config.yml

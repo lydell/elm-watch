@@ -1,0 +1,54 @@
+name: Check
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+jobs:
+  main:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [16.x]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "${{ matrix.node-version }}"
+
+      - name: Cache node_modules
+        id: cache-node_modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Cache ~/.elm
+        uses: actions/cache@v2
+        with:
+          path: ~/.elm
+          key: elm-${{ hashFiles('elm-tooling.json') }}
+
+      - name: npm ci
+        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci
+        env:
+          NO_ELM_TOOLING_INSTALL: 1
+
+      - name: elm-tooling install
+        run: npx --no-install elm-tooling install
+
+      - name: ESLint
+        run: npx --no-install eslint --report-unused-disable-directives .
+
+      - name: Prettier
+        run: npx --no-install prettier --check .
+
+      # - name: elm-format
+      #   run: npx --no-install elm-format --validate src tests
