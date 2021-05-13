@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as stream from "stream";
 
-import type { ReadStream, WriteStream } from "..";
+import type { ReadStream, WriteStream } from "../src";
 
 export const IS_WINDOWS = os.platform() === "win32";
 

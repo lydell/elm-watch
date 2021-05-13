@@ -1,5 +1,4 @@
 .cache
-.eslintrc.js
 build
 coverage
 dist

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-console */
 
 import { Command, CommanderError } from "commander";
 import type { Readable, Writable } from "stream";

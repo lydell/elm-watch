@@ -1,4 +1,4 @@
-import elmWatchCli from "../index";
+import elmWatchCli from "../src";
 import {
   FailReadStream,
   MemoryWriteStream,
