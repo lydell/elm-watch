@@ -1,5 +1,6 @@
 import elmWatchCli from "../src";
 import {
+  clean,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
@@ -20,7 +21,7 @@ async function indexHelper(args: Array<string>): Promise<string> {
   expect(stdout.content).toBe("");
   expect(exitCode).toBe(1);
 
-  return stderr.content;
+  return clean(stderr.content);
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -28,7 +29,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 describe("index", () => {
   test("unknown command", async () => {
     expect(await indexHelper(["nope"])).toMatchInlineSnapshot(`
-      error: unknown command 'nope'. See 'elm-watch --help'.
+      Unknown command: nope
 
     `);
   });

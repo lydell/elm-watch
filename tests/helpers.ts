@@ -1,8 +1,9 @@
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 import * as stream from "stream";
 
-import type { ReadStream, WriteStream } from "../src";
+import type { ReadStream, WriteStream } from "../src/helpers";
 
 export const IS_WINDOWS = os.platform() === "win32";
 
@@ -90,6 +91,18 @@ export function duoStream(): {
     markedStream: new MarkedWriteStream(),
     unmarkedStream,
   };
+}
+
+export function clean(string: string): string {
+  const { root } = path.parse(__dirname);
+
+  // Replace start of absolute paths with hardcoded stuff so the tests pass on
+  // more than one computer. Replace colors for snapshots.
+  return string
+    .split(__dirname)
+    .join(path.join(root, "Users", "you", "project"))
+    .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
+    .replace(/\x1B\[0?m/g, "⧘");
 }
 
 // Make snapshots easier to read.

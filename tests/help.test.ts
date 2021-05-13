@@ -1,34 +1,28 @@
 import elmWatchCli from "../src";
+import type { Env } from "../src/helpers";
 import {
+  clean,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
 } from "./helpers";
 
-async function helpHelper(
-  args: Array<string>,
-  { expectError = false } = {}
-): Promise<string> {
+async function helpHelper(args: Array<string>, env?: Env): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
 
   const exitCode = await elmWatchCli(args, {
     cwd: __dirname,
-    env: {},
+    env,
     stdin: new FailReadStream(),
     stdout,
     stderr,
   });
 
-  if (expectError) {
-    expect(stdout.content).toBe("");
-    expect(exitCode).toBe(1);
-    return stderr.content;
-  } else {
-    expect(stderr.content).toBe("");
-    expect(exitCode).toBe(0);
-    return stdout.content;
-  }
+  expect(stderr.content).toBe("");
+  expect(exitCode).toBe(0);
+
+  return clean(stdout.content);
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -38,29 +32,70 @@ describe("help", () => {
     const output = await helpHelper(["help"]);
 
     expect(output).toMatchInlineSnapshot(`
-      Usage: elm-watch [options] [command]
+      ⧙elm-watch make [outputs...]⧘
+          Compile Elm code into JS
 
-      Options:
-        --debug           Turn on Elm’s debugger.
-        --optimize        Turn on optimizations to make code smaller and faster.
-        --output <file>   Specify the name of the resulting JS file.
-        --version         Print version and exit
-        -h, --help        Show help.
+      ⧙elm-watch watch [outputs...]⧘
+          Also recompile whenever your Elm files change
 
-      Commands:
-        make [files...]   Compile Elm code into JS.
-        watch [files...]  Also recompile whenever your Elm files change.
-        hot [files...]    Also reload the compiled JS in the browser.
-        help [command]    Show help.
+      ⧙elm-watch hot [outputs...]⧘
+          Also reload the compiled JS in the browser
+
+      All commands read their inputs and outputs from ⧙elm-tooling.json⧘.
+      By default they build all outputs. Pass output JS file paths to only build some.
+
+      ⧙---⧘
+
+      ⧙Environment variables:⧘
+          ⧙NO_COLOR⧘
+              Disable colored output
+
+      ⧙Documentation:⧘
+          https://github.com/lydell/elm-watch/#readme
+
+      ⧙Version:⧘
+          %VERSION%
 
     `);
 
-    expect(await helpHelper([], { expectError: true })).toBe(output);
+    expect(await helpHelper([])).toBe(output);
     expect(await helpHelper(["-h"])).toBe(output);
+    expect(await helpHelper(["-help"])).toBe(output);
     expect(await helpHelper(["--help"])).toBe(output);
     expect(await helpHelper(["whatever", "-h"])).toBe(output);
+    expect(await helpHelper(["whatever", "-help"])).toBe(output);
     expect(await helpHelper(["whatever", "--help"])).toBe(output);
     expect(await helpHelper(["-h", "whatever"])).toBe(output);
+    expect(await helpHelper(["-help", "whatever"])).toBe(output);
     expect(await helpHelper(["--help", "whatever"])).toBe(output);
+  });
+
+  test("NO_COLOR", async () => {
+    expect(await helpHelper(["help"], { NO_COLOR: "" })).toMatchInlineSnapshot(`
+      elm-watch make [outputs...]
+          Compile Elm code into JS
+
+      elm-watch watch [outputs...]
+          Also recompile whenever your Elm files change
+
+      elm-watch hot [outputs...]
+          Also reload the compiled JS in the browser
+
+      All commands read their inputs and outputs from elm-tooling.json.
+      By default they build all outputs. Pass output JS file paths to only build some.
+
+      ---
+
+      Environment variables:
+          NO_COLOR
+              Disable colored output
+
+      Documentation:
+          https://github.com/lydell/elm-watch/#readme
+
+      Version:
+          %VERSION%
+
+    `);
   });
 });

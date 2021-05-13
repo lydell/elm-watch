@@ -1,19 +1,9 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 
-import { Command, CommanderError } from "commander";
-import type { Readable, Writable } from "stream";
-
-type Env = Record<string, string | undefined>;
-
-export type ReadStream = Readable & {
-  isTTY: boolean;
-  setRawMode: (mode: boolean) => void;
-};
-
-export type WriteStream = Writable & {
-  isTTY: boolean;
-};
+import help from "./help";
+import type { Env, ReadStream, WriteStream } from "./helpers";
+import { makeLogger } from "./logger";
+import run from "./run";
 
 type Options = {
   cwd?: string;
@@ -27,77 +17,38 @@ export default async function elmWatchCli(
   args: Array<string>,
   // istanbul ignore next
   {
-    // cwd = process.cwd(),
-    // env = process.env,
+    cwd = process.cwd(),
+    env = process.env,
     // stdin = process.stdin,
     stdout = process.stdout,
     stderr = process.stderr,
   }: Options = {}
 ): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const program = new Command();
+  const logger = makeLogger({ env, stdout, stderr });
 
-    program
-      .allowExcessArguments(false)
-      .exitOverride((error) => {
-        throw error;
-      })
-      .configureOutput({
-        writeOut: (str) => {
-          stdout.write(str);
-        },
-        writeErr: (str) => {
-          stderr.write(str);
-        },
-      })
-      .name("elm-watch")
-      .option("--debug", "Turn on Elm’s debugger.")
-      .option(
-        "--optimize",
-        "Turn on optimizations to make code smaller and faster."
-      )
-      .option("--output <file>", "Specify the name of the resulting JS file.")
-      .version("%VERSION%", "--version", "Print version and exit")
-      .helpOption("-h, --help", "Show help.")
-      .addHelpCommand("help [command]", "Show help.");
+  const isHelp = args.some(
+    (arg) => arg === "-h" || arg === "-help" || arg === "--help"
+  );
+  if (isHelp) {
+    logger.log(help());
+    return 0;
+  }
 
-    program
-      .command("make [files...]")
-      .description("Compile Elm code into JS.")
-      .action((files) => {
-        const options = program.opts();
-        console.log("make", options, files);
-        resolve(0);
-      });
+  switch (args[0]) {
+    case undefined:
+    case "help":
+      logger.log(help());
+      return 0;
 
-    program
-      .command("watch [files...]")
-      .description("Also recompile whenever your Elm files change.")
-      .action((files) => {
-        const options = program.opts();
-        console.log("watch", options, files);
-        resolve(0);
-      });
+    case "make":
+    case "watch":
+    case "hot":
+      return run(cwd, logger, args[0]);
 
-    program
-      .command("hot [files...]")
-      .description("Also reload the compiled JS in the browser.")
-      .action((files) => {
-        const options = program.opts();
-        console.log("hot", options, files);
-        resolve(0);
-      });
-
-    try {
-      program.parse(args, { from: "user" });
-    } catch (error) {
-      if (error instanceof CommanderError) {
-        resolve(error.exitCode);
-      } else {
-        reject(error);
-      }
-    }
-  });
+    default:
+      logger.error(`Unknown command: ${args[0]}`);
+      return 1;
+  }
 }
 
 // istanbul ignore if

@@ -62,7 +62,7 @@ function modifyFile(
   fs.writeFileSync(file, transform(fs.readFileSync(file, "utf8")));
 }
 
-modifyFile(path.join(BUILD, "index.js"), (content) =>
+modifyFile(path.join(BUILD, "help.js"), (content) =>
   content.replace(/%VERSION%/g, PKG.version)
 );
 
