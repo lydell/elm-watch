@@ -1,13 +1,392 @@
+import * as fs from "fs";
+import * as path from "path";
+import * as Decode from "tiny-decoders";
+
+import {
+  bold,
+  dim,
+  findClosest,
+  isNonEmptyArray,
+  mapNonEmptyArray,
+  NonEmptyArray,
+} from "./helpers";
 import type { Logger } from "./logger";
 
 type RunMode = "hot" | "make" | "watch";
 
+type CompilationMode = ReturnType<typeof CompilationMode>;
+const CompilationMode = Decode.stringUnion({
+  standard: null,
+  debug: null,
+  optimize: null,
+});
+
 export default async function run(
-  _cwd: string,
+  cwd: string,
   logger: Logger,
-  runMode: RunMode
+  runMode: RunMode,
+  args: Array<string>
 ): Promise<number> {
-  await Promise.resolve();
-  logger.log(`Run: ${runMode}`);
-  return 0;
+  const parseResult = findReadAndParseElmToolingJson(cwd);
+  switch (parseResult.tag) {
+    case "ReadAsJsonError":
+      logger.error(
+        readAsJsonError(parseResult.elmToolingJsonPath, parseResult.message)
+      );
+      return 1;
+
+    case "DecodeError":
+      logger.error(
+        decodeError(parseResult.elmToolingJsonPath, parseResult.error)
+      );
+      return 1;
+
+    case "ElmToolingJsonNotFound":
+      logger.error(elmToolingJsonNotFoundError(cwd, args));
+      return 1;
+
+    case "Parsed": {
+      const badArgs = args.filter((arg) => !isValidOutputName(arg));
+
+      if (isNonEmptyArray(badArgs)) {
+        logger.error(
+          badArgsError(parseResult.elmToolingJsonPath, args, badArgs)
+        );
+        return 1;
+      }
+
+      const { outputs } = parseResult.config;
+      const unknownOutputs = args.filter(
+        (arg) => !Object.prototype.hasOwnProperty.call(outputs, arg)
+      );
+
+      if (isNonEmptyArray(unknownOutputs)) {
+        logger.error(
+          unknownOutputsError(
+            parseResult.elmToolingJsonPath,
+            Object.keys(outputs),
+            unknownOutputs
+          )
+        );
+        return 1;
+      }
+
+      await Promise.resolve();
+      logger.log(`Run: ${runMode}\n${JSON.stringify(outputs, null, 2)}`);
+      return 0;
+    }
+  }
+}
+
+// First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
+// Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
+// https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-Char.html#v:isLetter
+const INPUT_NAME = /(^|[/\\])\p{Lu}[_\d\p{L}]*\.elm$/u;
+
+function isValidInputName(name: string): boolean {
+  return INPUT_NAME.test(name);
+}
+
+function isValidOutputName(name: string): boolean {
+  // `elm make` doesn’t accept just `.js` but `a.js` and `a/.js`.
+  return (name.endsWith(".js") && name.length >= 3) || name === "/dev/null";
+}
+
+const elmToolingJson = bold("elm-tooling.json");
+
+function readAsJsonError(elmToolingJsonPath: string, message: string): string {
+  return `
+I read inputs, outputs and options from ${elmToolingJson}.
+
+I found an ${elmToolingJson} here:
+
+${dim(elmToolingJsonPath)}
+
+${bold("But I had trouble reading it as JSON:")}
+
+${message}
+  `.trim();
+}
+
+function decodeError(
+  elmToolingJsonPath: string,
+  error: Decode.DecoderError
+): string {
+  return `
+I read inputs, outputs and options from ${elmToolingJson}.
+
+I found an ${elmToolingJson} here:
+
+${dim(elmToolingJsonPath)}
+
+${bold("But I had trouble with the JSON inside:")}
+
+${error.format()}
+  `.trim();
+}
+
+function elmToolingJsonNotFoundError(cwd: string, args: Array<string>): string {
+  return `
+I read inputs, outputs and options from ${elmToolingJson}.
+
+${bold("But I couldn’t find one!")}
+
+You need to create one with JSON like this:
+
+${elmToolingJsonExample(cwd, args)}
+  `.trim();
+}
+
+function badArgsError(
+  elmToolingJsonPath: string,
+  args: Array<string>,
+  badArgs: NonEmptyArray<string>
+): string {
+  return `
+${bold(
+  "I only accept JS file paths as arguments, but I got some that don’t look like that:"
+)}
+
+${dim(badArgs.join("\n"))}
+
+You either need to remove those arguments or move them to the ${elmToolingJson} I found here:
+
+${dim(elmToolingJsonPath)}
+
+For example, you could add some JSON like this:
+
+${elmToolingJsonExample(elmToolingJsonPath, args)}
+  `.trim();
+}
+
+function unknownOutputsError(
+  elmToolingJsonPath: string,
+  knownOutputs: Array<string>,
+  unknownOutputs: NonEmptyArray<string>
+): string {
+  const rest = isNonEmptyArray(knownOutputs)
+    ? `
+It contains these outputs:
+
+${knownOutputs.join("\n")}
+
+${bold("But those don’t include these outputs you asked me to build:")}
+
+${unknownOutputs.join("\n")}
+
+Is something misspelled? Or do you need to add some more outputs?
+      `.trim()
+    : `
+${bold("It doesn’t contain any outputs, but you asked me to build these:")}
+
+${unknownOutputs.join("\n")}
+
+You can add outputs like this:
+
+${elmToolingJsonExampleFromUnknownOutputs(unknownOutputs)}
+      `.trim();
+
+  return `
+I read inputs, outputs and options from ${elmToolingJson}.
+
+I found an ${elmToolingJson} here:
+
+${dim(elmToolingJsonPath)}
+
+${rest}
+  `.trim();
+}
+
+function elmToolingJsonExample(
+  elmToolingJsonPath: string,
+  args: Array<string>
+): string {
+  const {
+    elmFiles,
+    compilationMode,
+    output = "build/main.js",
+  } = parseArgsLikeElmMake(args);
+
+  const example: ElmToolingJson = {
+    "x-elm-watch": {
+      outputs: {
+        [output]: {
+          inputs: isNonEmptyArray(elmFiles)
+            ? mapNonEmptyArray(elmFiles, (file) =>
+                path.relative(elmToolingJsonPath, file)
+              )
+            : ["src/Main.elm"],
+          mode: compilationMode === "standard" ? undefined : compilationMode,
+        },
+      },
+    },
+  };
+
+  return JSON.stringify(example, null, 4);
+}
+
+function elmToolingJsonExampleFromUnknownOutputs(
+  unknownOutputs: NonEmptyArray<string>
+): string {
+  const example: ElmToolingJson = {
+    "x-elm-watch": {
+      outputs: Object.fromEntries(
+        unknownOutputs.map((output, index) => [
+          output,
+          {
+            inputs: [`src/Main${index + 1}.elm`],
+          },
+        ])
+      ),
+    },
+  };
+
+  return JSON.stringify(example, null, 4);
+}
+
+type ElmMakeParsed = {
+  elmFiles: Array<string>;
+  compilationMode: CompilationMode;
+  output: string | undefined;
+};
+
+type IntermediaElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
+
+function parseArgsLikeElmMake(args: Array<string>): ElmMakeParsed {
+  return args.reduce<IntermediaElmMakeParsed>(
+    (passedParsed, arg): IntermediaElmMakeParsed => {
+      const parsed = { ...passedParsed, justSawOutputFlag: false };
+      switch (arg) {
+        case "--debug":
+          return { ...parsed, compilationMode: "debug" };
+
+        case "--optimize":
+          return { ...parsed, compilationMode: "optimize" };
+
+        case "--output":
+          return { ...parsed, justSawOutputFlag: true };
+
+        default: {
+          if (passedParsed.justSawOutputFlag) {
+            return isValidOutputName(arg) ? { ...parsed, output: arg } : parsed;
+          }
+
+          const outputPrefix = "--output=";
+          if (arg.startsWith(outputPrefix)) {
+            const file = arg.slice(outputPrefix.length);
+            return isValidOutputName(file)
+              ? { ...parsed, output: file }
+              : parsed;
+          }
+
+          return isValidInputName(arg)
+            ? { ...parsed, elmFiles: parsed.elmFiles.concat(arg) }
+            : parsed;
+        }
+      }
+    },
+    {
+      elmFiles: [],
+      compilationMode: "standard",
+      output: undefined,
+      justSawOutputFlag: false,
+    }
+  );
+}
+
+const Output = Decode.fieldsAuto(
+  {
+    inputs: NonEmptyArray(
+      Decode.chain(Decode.string, (string) => {
+        if (isValidInputName(string)) {
+          return string;
+        }
+        throw new Decode.DecoderError({
+          message: "Inputs must have a valid module name and end with .elm",
+          value: string,
+        });
+      })
+    ),
+    mode: Decode.optional(CompilationMode),
+  },
+  { exact: "throw" }
+);
+
+type Config = ReturnType<typeof Config>;
+const Config = Decode.fieldsAuto({
+  outputs: Decode.chain(Decode.record(Output), (record) =>
+    Object.fromEntries(
+      Object.entries(record).map(([key, value]) => {
+        if (isValidOutputName(key)) {
+          return [key, value];
+        }
+        throw new Decode.DecoderError({
+          message: "Outputs must end with .js or be /dev/null",
+          value: Decode.DecoderError.MISSING_VALUE,
+          key,
+        });
+      })
+    )
+  ),
+});
+
+type ElmToolingJson = ReturnType<typeof ElmToolingJson>;
+const ElmToolingJson = Decode.fieldsAuto({
+  "x-elm-watch": Config,
+});
+
+export type ParseResult =
+  | {
+      tag: "DecodeError";
+      elmToolingJsonPath: string;
+      error: Decode.DecoderError;
+    }
+  | {
+      tag: "ElmToolingJsonNotFound";
+    }
+  | {
+      tag: "Parsed";
+      elmToolingJsonPath: string;
+      config: Config;
+    }
+  | {
+      tag: "ReadAsJsonError";
+      elmToolingJsonPath: string;
+      message: string;
+    };
+
+function findReadAndParseElmToolingJson(cwd: string): ParseResult {
+  const elmToolingJsonPath = findClosest("elm-tooling.json", cwd);
+  if (elmToolingJsonPath === undefined) {
+    return {
+      tag: "ElmToolingJsonNotFound",
+    };
+  }
+
+  let json: unknown = undefined;
+  try {
+    json = JSON.parse(fs.readFileSync(elmToolingJsonPath, "utf-8"));
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    return {
+      tag: "ReadAsJsonError",
+      elmToolingJsonPath,
+      message: `Failed to read file as JSON:\n${error.message}`,
+    };
+  }
+
+  try {
+    return {
+      tag: "Parsed",
+      elmToolingJsonPath,
+      config: ElmToolingJson(json)["x-elm-watch"],
+    };
+  } catch (errorAny) {
+    const error = errorAny as Decode.DecoderError;
+    return {
+      tag: "DecodeError",
+      elmToolingJsonPath,
+      error,
+    };
+  }
 }

@@ -43,7 +43,7 @@ export default async function elmWatchCli(
     case "make":
     case "watch":
     case "hot":
-      return run(cwd, logger, args[0]);
+      return run(cwd, logger, args[0], args.slice(1));
 
     default:
       logger.error(`Unknown command: ${args[0]}`);

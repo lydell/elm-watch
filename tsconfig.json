@@ -13,9 +13,9 @@
     "noUnusedParameters": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2018",
+    "target": "ES2019",
     "lib": [
-      "ES2018",
+      "ES2019",
     ],
     "outDir": "build"
   },

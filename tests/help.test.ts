@@ -41,7 +41,7 @@ describe("help", () => {
       ⧙elm-watch hot [outputs...]⧘
           Also reload the compiled JS in the browser
 
-      All commands read their inputs and outputs from ⧙elm-tooling.json⧘.
+      All commands read their inputs and outputs from the closest ⧙elm-tooling.json⧘.
       By default they build all outputs. Pass output JS file paths to only build some.
 
       ⧙---⧘
@@ -81,7 +81,7 @@ describe("help", () => {
       elm-watch hot [outputs...]
           Also reload the compiled JS in the browser
 
-      All commands read their inputs and outputs from elm-tooling.json.
+      All commands read their inputs and outputs from the closest elm-tooling.json.
       By default they build all outputs. Pass output JS file paths to only build some.
 
       ---
