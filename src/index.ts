@@ -2,7 +2,7 @@
 
 import { help } from "./help";
 import type { Env, ReadStream, WriteStream } from "./helpers";
-import { makeLogger } from "./logger";
+import { makeLogger } from "./Logger";
 import { absolutePathFromString, Cwd } from "./path-helpers";
 import { run } from "./run";
 

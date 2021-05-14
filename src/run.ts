@@ -1,11 +1,12 @@
 import * as fs from "fs";
-import * as path from "path";
-import * as Decode from "tiny-decoders";
+import type { DecoderError } from "tiny-decoders";
 
+import * as ElmToolingJson from "./ElmToolingJson";
+import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
-import { bold, getSetSingleton, join } from "./helpers";
-import type { Logger } from "./logger";
+import { getSetSingleton } from "./helpers";
+import type { Logger } from "./Logger";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -19,44 +20,15 @@ import {
   findClosest,
   longestCommonAncestorPath,
 } from "./path-helpers";
-
-type RunMode = "hot" | "make" | "watch";
-
-type CompilationMode = ReturnType<typeof CompilationMode>;
-const CompilationMode = Decode.stringUnion({
-  standard: null,
-  debug: null,
-  optimize: null,
-});
-
-// elm-tooling.json
-type ElmToolingJsonPath = {
-  tag: "ElmToolingJsonPath";
-  theElmToolingJsonPath: AbsolutePath;
-};
-
-// elm.json
-type ElmJsonPath = {
-  tag: "ElmJsonPath";
-  theElmJsonPath: AbsolutePath;
-};
-
-// src/Main.elm
-type InputPath = {
-  tag: "InputPath";
-  theInputPath: AbsolutePath;
-};
-
-// build/main.js
-type OutputPath = {
-  tag: "OutputPath";
-  theOutputPath: AbsolutePath;
-};
-
-type CliArg = {
-  tag: "CliArg";
-  theArg: string;
-};
+import type {
+  CliArg,
+  CompilationMode,
+  ElmJsonPath,
+  ElmToolingJsonPath,
+  InputPath,
+  OutputPath,
+  RunMode,
+} from "./types";
 
 export async function run(
   cwd: Cwd,
@@ -69,26 +41,28 @@ export async function run(
   switch (parseResult.tag) {
     case "ReadAsJsonError":
       logger.error(
-        readAsJsonError(parseResult.elmToolingJsonPath, parseResult.error)
+        Errors.readAsJson(parseResult.elmToolingJsonPath, parseResult.error)
       );
       return 1;
 
     case "DecodeError":
       logger.error(
-        decodeError(parseResult.elmToolingJsonPath, parseResult.error)
+        Errors.decode(parseResult.elmToolingJsonPath, parseResult.error)
       );
       return 1;
 
     case "ElmToolingJsonNotFound":
-      logger.error(elmToolingJsonNotFoundError(cwd, args));
+      logger.error(Errors.elmToolingJsonNotFound(cwd, args));
       return 1;
 
     case "Parsed": {
-      const badArgs = args.filter((arg) => !isValidOutputName(arg.theArg));
+      const badArgs = args.filter(
+        (arg) => !ElmToolingJson.isValidOutputName(arg.theArg)
+      );
 
       if (isNonEmptyArray(badArgs)) {
         logger.error(
-          badArgsError(cwd, parseResult.elmToolingJsonPath, args, badArgs)
+          Errors.badArgs(cwd, parseResult.elmToolingJsonPath, args, badArgs)
         );
         return 1;
       }
@@ -101,7 +75,7 @@ export async function run(
 
       if (isNonEmptyArray(unknownOutputs)) {
         logger.error(
-          unknownOutputsError(
+          Errors.unknownOutputs(
             parseResult.elmToolingJsonPath,
             // The decoder validates that there’s at least one output.
             Object.keys(outputs) as NonEmptyArray<string>,
@@ -123,7 +97,7 @@ export async function run(
 
       switch (initStateResult.tag) {
         case "NoCommonRoot":
-          logger.error(noCommonRootError(initStateResult.paths));
+          logger.error(Errors.noCommonRoot(initStateResult.paths));
           return 1;
 
         case "State":
@@ -146,281 +120,11 @@ export async function run(
   }
 }
 
-// First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
-// Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
-// https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-Char.html#v:isLetter
-const INPUT_NAME = /(^|[/\\])\p{Lu}[_\d\p{L}]*\.elm$/u;
-
-function isValidInputName(name: string): boolean {
-  return INPUT_NAME.test(name);
-}
-
-function isValidOutputName(name: string): boolean {
-  // `elm make` doesn’t accept just `.js` but `a.js` and `a/.js`.
-  return (name.endsWith(".js") && name !== ".js") || name === "/dev/null";
-}
-
-const elmToolingJson = bold("elm-tooling.json");
-
-function readAsJsonError(
-  elmToolingJsonPath: ElmToolingJsonPath,
-  error: Error
-): string {
-  return `
-I read inputs, outputs and options from ${elmToolingJson}.
-
-I found an ${elmToolingJson} here:
-
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
-
-${bold("But I had trouble reading it as JSON:")}
-
-${error.message}
-  `.trim();
-}
-
-function decodeError(
-  elmToolingJsonPath: ElmToolingJsonPath,
-  error: Decode.DecoderError
-): string {
-  return `
-I read inputs, outputs and options from ${elmToolingJson}.
-
-I found an ${elmToolingJson} here:
-
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
-
-${bold("But I had trouble with the JSON inside:")}
-
-${error.format()}
-  `.trim();
-}
-
-function elmToolingJsonNotFoundError(cwd: Cwd, args: Array<CliArg>): string {
-  const example = elmToolingJsonExample(
-    cwd,
-    {
-      tag: "ElmToolingJsonPath",
-      theElmToolingJsonPath: absolutePathFromString(
-        cwd.path,
-        "elm-tooling.json"
-      ),
-    },
-    args
-  );
-
-  return `
-I read inputs, outputs and options from ${elmToolingJson}.
-
-${bold("But I couldn’t find one!")}
-
-You need to create one with JSON like this:
-
-${example}
-  `.trim();
-}
-
-function badArgsError(
-  cwd: Cwd,
-  elmToolingJsonPath: ElmToolingJsonPath,
-  args: Array<CliArg>,
-  badArgs: NonEmptyArray<CliArg>
-): string {
-  return `
-${bold(
-  "I only accept JS file paths as arguments, but I got some that don’t look like that:"
-)}
-
-${join(
-  badArgs.map((arg) => arg.theArg),
-  "\n"
-)}
-
-You either need to remove those arguments or move them to the ${elmToolingJson} I found here:
-
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
-
-For example, you could add some JSON like this:
-
-${elmToolingJsonExample(cwd, elmToolingJsonPath, args)}
-  `.trim();
-}
-
-function unknownOutputsError(
-  elmToolingJsonPath: ElmToolingJsonPath,
-  knownOutputs: NonEmptyArray<string>,
-  unknownOutputs: NonEmptyArray<string>
-): string {
-  return `
-I read inputs, outputs and options from ${elmToolingJson}.
-
-I found an ${elmToolingJson} here:
-
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
-
-It contains these outputs:
-
-${join(knownOutputs, "\n")}
-
-${bold("But those don’t include these outputs you asked me to build:")}
-
-${join(unknownOutputs, "\n")}
-
-Is something misspelled? (You need to type them exactly the same.)
-Or do you need to add some more outputs?
-  `.trim();
-}
-
-function noCommonRootError(paths: NonEmptyArray<AbsolutePath>): string {
-  return `
-I could not find a common ancestor for these paths:
-
-${join(
-  paths.map((thePath) => thePath.absolutePath),
-  "\n"
-)}
-
-${bold("Files on different drives is not supported.")}
-  `.trim();
-}
-
-function elmToolingJsonExample(
-  cwd: Cwd,
-  elmToolingJsonPath: ElmToolingJsonPath,
-  args: Array<CliArg>
-): string {
-  const {
-    elmFiles,
-    compilationMode,
-    output = "build/main.js",
-  } = parseArgsLikeElmMake(args);
-
-  const example: ElmToolingJson = {
-    "x-elm-watch": {
-      outputs: {
-        [output]: {
-          inputs: isNonEmptyArray(elmFiles)
-            ? mapNonEmptyArray(elmFiles, (file) =>
-                path.relative(
-                  path.dirname(
-                    elmToolingJsonPath.theElmToolingJsonPath.absolutePath
-                  ),
-                  path.resolve(cwd.path.absolutePath, file)
-                )
-              )
-            : ["src/Main.elm"],
-          mode: compilationMode === "standard" ? undefined : compilationMode,
-        },
-      },
-    },
-  };
-
-  return JSON.stringify(example, null, 4);
-}
-
-type ElmMakeParsed = {
-  elmFiles: Array<string>;
-  compilationMode: CompilationMode;
-  output: string | undefined;
-};
-
-type IntermediaElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
-
-function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
-  return args.reduce<IntermediaElmMakeParsed>(
-    (passedParsed, { theArg: arg }): IntermediaElmMakeParsed => {
-      const parsed = { ...passedParsed, justSawOutputFlag: false };
-      switch (arg) {
-        case "--debug":
-          return { ...parsed, compilationMode: "debug" };
-
-        case "--optimize":
-          return { ...parsed, compilationMode: "optimize" };
-
-        case "--output":
-          return { ...parsed, justSawOutputFlag: true };
-
-        default: {
-          if (passedParsed.justSawOutputFlag) {
-            return isValidOutputName(arg) ? { ...parsed, output: arg } : parsed;
-          }
-
-          const outputPrefix = "--output=";
-          if (arg.startsWith(outputPrefix)) {
-            const file = arg.slice(outputPrefix.length);
-            return isValidOutputName(file)
-              ? { ...parsed, output: file }
-              : parsed;
-          }
-
-          return isValidInputName(arg)
-            ? { ...parsed, elmFiles: parsed.elmFiles.concat(arg) }
-            : parsed;
-        }
-      }
-    },
-    {
-      elmFiles: [],
-      compilationMode: "standard",
-      output: undefined,
-      justSawOutputFlag: false,
-    }
-  );
-}
-
-const Output = Decode.fieldsAuto(
-  {
-    inputs: NonEmptyArray(
-      Decode.chain(Decode.string, (string) => {
-        if (isValidInputName(string)) {
-          return string;
-        }
-        throw new Decode.DecoderError({
-          message: "Inputs must have a valid module name and end with .elm",
-          value: string,
-        });
-      })
-    ),
-    mode: Decode.optional(CompilationMode),
-  },
-  { exact: "throw" }
-);
-
-type Config = ReturnType<typeof Config>;
-const Config = Decode.fieldsAuto({
-  outputs: Decode.chain(Decode.record(Output), (record) => {
-    const entries = Object.entries(record);
-    if (!isNonEmptyArray(entries)) {
-      throw new Decode.DecoderError({
-        message: "Expected a non-empty object",
-        value: record,
-      });
-    }
-    return Object.fromEntries(
-      entries.map(([key, value]) => {
-        if (isValidOutputName(key)) {
-          return [key, value];
-        }
-        throw new Decode.DecoderError({
-          message: "Outputs must end with .js or be /dev/null",
-          value: Decode.DecoderError.MISSING_VALUE,
-          key,
-        });
-      })
-    );
-  }),
-});
-
-type ElmToolingJson = ReturnType<typeof ElmToolingJson>;
-const ElmToolingJson = Decode.fieldsAuto({
-  "x-elm-watch": Config,
-});
-
 export type ParseResult =
   | {
       tag: "DecodeError";
       elmToolingJsonPath: ElmToolingJsonPath;
-      error: Decode.DecoderError;
+      error: DecoderError;
     }
   | {
       tag: "ElmToolingJsonNotFound";
@@ -428,7 +132,7 @@ export type ParseResult =
   | {
       tag: "Parsed";
       elmToolingJsonPath: ElmToolingJsonPath;
-      config: Config;
+      config: ElmToolingJson.Config;
     }
   | {
       tag: "ReadAsJsonError";
@@ -467,10 +171,10 @@ function findReadAndParseElmToolingJson(cwd: Cwd): ParseResult {
     return {
       tag: "Parsed",
       elmToolingJsonPath,
-      config: ElmToolingJson(json)["x-elm-watch"],
+      config: ElmToolingJson.decoder(json)["x-elm-watch"],
     };
   } catch (errorAny) {
-    const error = errorAny as Decode.DecoderError;
+    const error = errorAny as DecoderError;
     return {
       tag: "DecodeError",
       elmToolingJsonPath,
@@ -510,7 +214,7 @@ function initState(
   cwd: Cwd,
   runMode: RunMode,
   elmToolingJsonPath: ElmToolingJsonPath,
-  config: Config,
+  config: ElmToolingJson.Config,
   enabledOutputs: Set<string>
 ): InitStateResult {
   const disabledOutputs = new HashSet<OutputPath>();
