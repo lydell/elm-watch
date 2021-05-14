@@ -1,3 +1,4 @@
+import * as os from "os";
 import type { Readable, Writable } from "stream";
 
 export type Env = Record<string, string | undefined>;
@@ -10,6 +11,8 @@ export type ReadStream = Readable & {
 export type WriteStream = Writable & {
   isTTY: boolean;
 };
+
+export const IS_WINDOWS = os.platform() === "win32";
 
 /**
  * More type safe version of `Array#join`.

@@ -63,13 +63,16 @@ export function init(
   const elmJsons = new HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>();
 
   for (const [outputPathString, output] of Object.entries(config.outputs)) {
-    const outputPath: OutputPath = {
-      tag: "OutputPath",
-      theOutputPath: absolutePathFromString(
-        elmToolingJsonPath.theElmToolingJsonPath,
-        outputPathString
-      ),
-    };
+    const outputPath: OutputPath =
+      outputPathString === "/dev/null"
+        ? { tag: "NullOutputPath" }
+        : {
+            tag: "OutputPath",
+            theOutputPath: absolutePathFromString(
+              elmToolingJsonPath.theElmToolingJsonPath,
+              outputPathString
+            ),
+          };
 
     if (enabledOutputs.has(outputPathString)) {
       const inputs = mapNonEmptyArray(

@@ -1,7 +1,6 @@
+import * as Compile from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
-import { HashMap } from "./HashMap";
-import { HashSet } from "./HashSet";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { Cwd } from "./path-helpers";
@@ -79,20 +78,7 @@ export async function run(
           return 1;
 
         case "State":
-          await Promise.resolve();
-          logger.log(
-            `Run: ${runMode}\n${JSON.stringify(
-              initStateResult.state,
-              (_, value: unknown) =>
-                value instanceof Set ||
-                value instanceof HashSet ||
-                value instanceof HashMap
-                  ? Array.from(value)
-                  : value,
-              2
-            )}`
-          );
-          return 0;
+          return Compile.run(initStateResult.state);
       }
     }
   }

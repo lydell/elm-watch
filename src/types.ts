@@ -23,10 +23,12 @@ export type InputPath = {
 };
 
 // build/main.js
-export type OutputPath = {
-  tag: "OutputPath";
-  theOutputPath: AbsolutePath;
-};
+export type OutputPath =
+  | {
+      tag: "OutputPath";
+      theOutputPath: AbsolutePath;
+    }
+  | { tag: "NullOutputPath" };
 
 export type CliArg = {
   tag: "CliArg";
