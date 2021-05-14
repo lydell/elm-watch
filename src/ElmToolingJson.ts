@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
 
@@ -6,7 +7,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import type { Cwd } from "./path-helpers";
+import { Cwd, findClosest } from "./path-helpers";
 import type { CliArg, CompilationMode, ElmToolingJsonPath } from "./types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
@@ -72,11 +73,73 @@ const Config = Decode.fieldsAuto({
   }),
 });
 
-export type ElmToolingJson = ReturnType<typeof decoder>;
-export const decoder = Decode.fieldsAuto({
+export type ElmToolingJson = ReturnType<typeof ElmToolingJson>;
+const ElmToolingJson = Decode.fieldsAuto({
   "x-elm-watch": Config,
 });
 
+export type ParseResult =
+  | {
+      tag: "DecodeError";
+      elmToolingJsonPath: ElmToolingJsonPath;
+      error: Decode.DecoderError;
+    }
+  | {
+      tag: "ElmToolingJsonNotFound";
+    }
+  | {
+      tag: "Parsed";
+      elmToolingJsonPath: ElmToolingJsonPath;
+      config: Config;
+    }
+  | {
+      tag: "ReadAsJsonError";
+      elmToolingJsonPath: ElmToolingJsonPath;
+      error: Error;
+    };
+
+export function findReadAndParse(cwd: Cwd): ParseResult {
+  const elmToolingJsonPathRaw = findClosest("elm-tooling.json", cwd.path);
+  if (elmToolingJsonPathRaw === undefined) {
+    return {
+      tag: "ElmToolingJsonNotFound",
+    };
+  }
+
+  const elmToolingJsonPath: ElmToolingJsonPath = {
+    tag: "ElmToolingJsonPath",
+    theElmToolingJsonPath: elmToolingJsonPathRaw,
+  };
+
+  let json: unknown = undefined;
+  try {
+    json = JSON.parse(
+      fs.readFileSync(elmToolingJsonPathRaw.absolutePath, "utf-8")
+    );
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    return {
+      tag: "ReadAsJsonError",
+      elmToolingJsonPath,
+      error,
+    };
+  }
+
+  try {
+    return {
+      tag: "Parsed",
+      elmToolingJsonPath,
+      config: ElmToolingJson(json)["x-elm-watch"],
+    };
+  } catch (errorAny) {
+    const error = errorAny as Decode.DecoderError;
+    return {
+      tag: "DecodeError",
+      elmToolingJsonPath,
+      error,
+    };
+  }
+}
 export function example(
   cwd: Cwd,
   elmToolingJsonPath: ElmToolingJsonPath,
