@@ -1,6 +1,6 @@
 import { bold, dim } from "./helpers";
 
-export function help(): string {
+export function render(): string {
   const elmToolingJson = bold("elm-tooling.json");
 
   return `

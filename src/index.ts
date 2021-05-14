@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { help } from "./help";
+import * as Help from "./help";
 import type { Env, ReadStream, WriteStream } from "./helpers";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString, Cwd } from "./path-helpers";
@@ -38,14 +38,14 @@ export async function elmWatchCli(
     (arg) => arg === "-h" || arg === "-help" || arg === "--help"
   );
   if (isHelp) {
-    logger.log(help());
+    logger.log(Help.render());
     return 0;
   }
 
   switch (args[0]) {
     case undefined:
     case "help":
-      logger.log(help());
+      logger.log(Help.render());
       return 0;
 
     case "make":
