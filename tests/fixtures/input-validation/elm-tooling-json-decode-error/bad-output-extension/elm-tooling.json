@@ -1,0 +1,9 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "index.html": {
+        "inputs": ["src/Main.elm"]
+      }
+    }
+  }
+}

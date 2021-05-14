@@ -4,7 +4,6 @@ import * as Decode from "tiny-decoders";
 
 import {
   bold,
-  dim,
   findClosest,
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -31,7 +30,7 @@ export default async function run(
   switch (parseResult.tag) {
     case "ReadAsJsonError":
       logger.error(
-        readAsJsonError(parseResult.elmToolingJsonPath, parseResult.message)
+        readAsJsonError(parseResult.elmToolingJsonPath, parseResult.error)
       );
       return 1;
 
@@ -50,7 +49,7 @@ export default async function run(
 
       if (isNonEmptyArray(badArgs)) {
         logger.error(
-          badArgsError(parseResult.elmToolingJsonPath, args, badArgs)
+          badArgsError(cwd, parseResult.elmToolingJsonPath, args, badArgs)
         );
         return 1;
       }
@@ -64,7 +63,8 @@ export default async function run(
         logger.error(
           unknownOutputsError(
             parseResult.elmToolingJsonPath,
-            Object.keys(outputs),
+            // The decoder validates that there’s at least one output.
+            Object.keys(outputs) as NonEmptyArray<string>,
             unknownOutputs
           )
         );
@@ -89,22 +89,22 @@ function isValidInputName(name: string): boolean {
 
 function isValidOutputName(name: string): boolean {
   // `elm make` doesn’t accept just `.js` but `a.js` and `a/.js`.
-  return (name.endsWith(".js") && name.length >= 3) || name === "/dev/null";
+  return (name.endsWith(".js") && name !== ".js") || name === "/dev/null";
 }
 
 const elmToolingJson = bold("elm-tooling.json");
 
-function readAsJsonError(elmToolingJsonPath: string, message: string): string {
+function readAsJsonError(elmToolingJsonPath: string, error: Error): string {
   return `
 I read inputs, outputs and options from ${elmToolingJson}.
 
 I found an ${elmToolingJson} here:
 
-${dim(elmToolingJsonPath)}
+${elmToolingJsonPath}
 
 ${bold("But I had trouble reading it as JSON:")}
 
-${message}
+${error.message}
   `.trim();
 }
 
@@ -117,7 +117,7 @@ I read inputs, outputs and options from ${elmToolingJson}.
 
 I found an ${elmToolingJson} here:
 
-${dim(elmToolingJsonPath)}
+${elmToolingJsonPath}
 
 ${bold("But I had trouble with the JSON inside:")}
 
@@ -133,11 +133,12 @@ ${bold("But I couldn’t find one!")}
 
 You need to create one with JSON like this:
 
-${elmToolingJsonExample(cwd, args)}
+${elmToolingJsonExample(cwd, cwd, args)}
   `.trim();
 }
 
 function badArgsError(
+  cwd: string,
   elmToolingJsonPath: string,
   args: Array<string>,
   badArgs: NonEmptyArray<string>
@@ -147,25 +148,30 @@ ${bold(
   "I only accept JS file paths as arguments, but I got some that don’t look like that:"
 )}
 
-${dim(badArgs.join("\n"))}
+${badArgs.join("\n")}
 
 You either need to remove those arguments or move them to the ${elmToolingJson} I found here:
 
-${dim(elmToolingJsonPath)}
+${elmToolingJsonPath}
 
 For example, you could add some JSON like this:
 
-${elmToolingJsonExample(elmToolingJsonPath, args)}
+${elmToolingJsonExample(cwd, elmToolingJsonPath, args)}
   `.trim();
 }
 
 function unknownOutputsError(
   elmToolingJsonPath: string,
-  knownOutputs: Array<string>,
+  knownOutputs: NonEmptyArray<string>,
   unknownOutputs: NonEmptyArray<string>
 ): string {
-  const rest = isNonEmptyArray(knownOutputs)
-    ? `
+  return `
+I read inputs, outputs and options from ${elmToolingJson}.
+
+I found an ${elmToolingJson} here:
+
+${elmToolingJsonPath}
+
 It contains these outputs:
 
 ${knownOutputs.join("\n")}
@@ -175,29 +181,11 @@ ${bold("But those don’t include these outputs you asked me to build:")}
 ${unknownOutputs.join("\n")}
 
 Is something misspelled? Or do you need to add some more outputs?
-      `.trim()
-    : `
-${bold("It doesn’t contain any outputs, but you asked me to build these:")}
-
-${unknownOutputs.join("\n")}
-
-You can add outputs like this:
-
-${elmToolingJsonExampleFromUnknownOutputs(unknownOutputs)}
-      `.trim();
-
-  return `
-I read inputs, outputs and options from ${elmToolingJson}.
-
-I found an ${elmToolingJson} here:
-
-${dim(elmToolingJsonPath)}
-
-${rest}
   `.trim();
 }
 
 function elmToolingJsonExample(
+  cwd: string,
   elmToolingJsonPath: string,
   args: Array<string>
 ): string {
@@ -213,31 +201,15 @@ function elmToolingJsonExample(
         [output]: {
           inputs: isNonEmptyArray(elmFiles)
             ? mapNonEmptyArray(elmFiles, (file) =>
-                path.relative(elmToolingJsonPath, file)
+                path.relative(
+                  path.dirname(elmToolingJsonPath),
+                  path.resolve(cwd, file)
+                )
               )
             : ["src/Main.elm"],
           mode: compilationMode === "standard" ? undefined : compilationMode,
         },
       },
-    },
-  };
-
-  return JSON.stringify(example, null, 4);
-}
-
-function elmToolingJsonExampleFromUnknownOutputs(
-  unknownOutputs: NonEmptyArray<string>
-): string {
-  const example: ElmToolingJson = {
-    "x-elm-watch": {
-      outputs: Object.fromEntries(
-        unknownOutputs.map((output, index) => [
-          output,
-          {
-            inputs: [`src/Main${index + 1}.elm`],
-          },
-        ])
-      ),
     },
   };
 
@@ -314,9 +286,16 @@ const Output = Decode.fieldsAuto(
 
 type Config = ReturnType<typeof Config>;
 const Config = Decode.fieldsAuto({
-  outputs: Decode.chain(Decode.record(Output), (record) =>
-    Object.fromEntries(
-      Object.entries(record).map(([key, value]) => {
+  outputs: Decode.chain(Decode.record(Output), (record) => {
+    const entries = Object.entries(record);
+    if (!isNonEmptyArray(entries)) {
+      throw new Decode.DecoderError({
+        message: "Expected a non-empty object",
+        value: record,
+      });
+    }
+    return Object.fromEntries(
+      entries.map(([key, value]) => {
         if (isValidOutputName(key)) {
           return [key, value];
         }
@@ -326,8 +305,8 @@ const Config = Decode.fieldsAuto({
           key,
         });
       })
-    )
-  ),
+    );
+  }),
 });
 
 type ElmToolingJson = ReturnType<typeof ElmToolingJson>;
@@ -352,7 +331,7 @@ export type ParseResult =
   | {
       tag: "ReadAsJsonError";
       elmToolingJsonPath: string;
-      message: string;
+      error: Error;
     };
 
 function findReadAndParseElmToolingJson(cwd: string): ParseResult {
@@ -371,7 +350,7 @@ function findReadAndParseElmToolingJson(cwd: string): ParseResult {
     return {
       tag: "ReadAsJsonError",
       elmToolingJsonPath,
-      message: `Failed to read file as JSON:\n${error.message}`,
+      error,
     };
   }
 

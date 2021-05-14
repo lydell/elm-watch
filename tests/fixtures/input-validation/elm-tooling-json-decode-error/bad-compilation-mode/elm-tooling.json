@@ -1,0 +1,10 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "main.js": {
+        "inputs": ["src/Main.elm"],
+        "mode": "production"
+      }
+    }
+  }
+}
