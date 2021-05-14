@@ -11,6 +11,13 @@ export type WriteStream = Writable & {
   isTTY: boolean;
 };
 
+/**
+ * More type safe version of `Array#join`.
+ */
+export function join(array: Array<string>, separator: string): string {
+  return array.join(separator);
+}
+
 export function getSetSingleton<T>(set: Set<T>): T | undefined {
   return set.size === 1 ? Array.from(set)[0] : undefined;
 }

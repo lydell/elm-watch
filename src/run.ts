@@ -4,7 +4,7 @@ import * as Decode from "tiny-decoders";
 
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
-import { bold, getSetSingleton } from "./helpers";
+import { bold, getSetSingleton, join } from "./helpers";
 import type { Logger } from "./logger";
 import {
   isNonEmptyArray,
@@ -53,11 +53,16 @@ type OutputPath = {
   theOutputPath: AbsolutePath;
 };
 
+type CliArg = {
+  tag: "CliArg";
+  theArg: string;
+};
+
 export default async function run(
   cwd: Cwd,
   logger: Logger,
   runMode: RunMode,
-  args: Array<string>
+  args: Array<CliArg>
 ): Promise<number> {
   const parseResult = findReadAndParseElmToolingJson(cwd);
 
@@ -79,7 +84,7 @@ export default async function run(
       return 1;
 
     case "Parsed": {
-      const badArgs = args.filter((arg) => !isValidOutputName(arg));
+      const badArgs = args.filter((arg) => !isValidOutputName(arg.theArg));
 
       if (isNonEmptyArray(badArgs)) {
         logger.error(
@@ -89,7 +94,8 @@ export default async function run(
       }
 
       const { outputs } = parseResult.config;
-      const unknownOutputs = args.filter(
+      const stringArgs = args.map((arg) => arg.theArg);
+      const unknownOutputs = stringArgs.filter(
         (arg) => !Object.prototype.hasOwnProperty.call(outputs, arg)
       );
 
@@ -110,7 +116,9 @@ export default async function run(
         runMode,
         parseResult.elmToolingJsonPath,
         parseResult.config,
-        isNonEmptyArray(args) ? new Set(args) : new Set(Object.keys(outputs))
+        isNonEmptyArray(stringArgs)
+          ? new Set(stringArgs)
+          : new Set(Object.keys(outputs))
       );
 
       switch (initStateResult.tag) {
@@ -124,7 +132,9 @@ export default async function run(
             `Run: ${runMode}\n${JSON.stringify(
               initStateResult.state,
               (_, value: unknown) =>
-                value instanceof Set || value instanceof HashMap
+                value instanceof Set ||
+                value instanceof HashSet ||
+                value instanceof HashMap
                   ? Array.from(value)
                   : value,
               2
@@ -186,7 +196,7 @@ ${error.format()}
   `.trim();
 }
 
-function elmToolingJsonNotFoundError(cwd: Cwd, args: Array<string>): string {
+function elmToolingJsonNotFoundError(cwd: Cwd, args: Array<CliArg>): string {
   const example = elmToolingJsonExample(
     cwd,
     {
@@ -213,15 +223,18 @@ ${example}
 function badArgsError(
   cwd: Cwd,
   elmToolingJsonPath: ElmToolingJsonPath,
-  args: Array<string>,
-  badArgs: NonEmptyArray<string>
+  args: Array<CliArg>,
+  badArgs: NonEmptyArray<CliArg>
 ): string {
   return `
 ${bold(
   "I only accept JS file paths as arguments, but I got some that don’t look like that:"
 )}
 
-${badArgs.join("\n")}
+${join(
+  badArgs.map((arg) => arg.theArg),
+  "\n"
+)}
 
 You either need to remove those arguments or move them to the ${elmToolingJson} I found here:
 
@@ -247,11 +260,11 @@ ${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
 
 It contains these outputs:
 
-${knownOutputs.join("\n")}
+${join(knownOutputs, "\n")}
 
 ${bold("But those don’t include these outputs you asked me to build:")}
 
-${unknownOutputs.join("\n")}
+${join(unknownOutputs, "\n")}
 
 Is something misspelled? (You need to type them exactly the same.)
 Or do you need to add some more outputs?
@@ -262,7 +275,10 @@ function noCommonRootError(paths: NonEmptyArray<AbsolutePath>): string {
   return `
 I could not find a common ancestor for these paths:
 
-${paths.join("\n")}
+${join(
+  paths.map((thePath) => thePath.absolutePath),
+  "\n"
+)}
 
 ${bold("Files on different drives is not supported.")}
   `.trim();
@@ -271,7 +287,7 @@ ${bold("Files on different drives is not supported.")}
 function elmToolingJsonExample(
   cwd: Cwd,
   elmToolingJsonPath: ElmToolingJsonPath,
-  args: Array<string>
+  args: Array<CliArg>
 ): string {
   const {
     elmFiles,
@@ -310,9 +326,9 @@ type ElmMakeParsed = {
 
 type IntermediaElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
 
-function parseArgsLikeElmMake(args: Array<string>): ElmMakeParsed {
+function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
   return args.reduce<IntermediaElmMakeParsed>(
-    (passedParsed, arg): IntermediaElmMakeParsed => {
+    (passedParsed, { theArg: arg }): IntermediaElmMakeParsed => {
       const parsed = { ...passedParsed, justSawOutputFlag: false };
       switch (arg) {
         case "--debug":

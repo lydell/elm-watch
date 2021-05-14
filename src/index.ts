@@ -51,7 +51,12 @@ export default async function elmWatchCli(
     case "make":
     case "watch":
     case "hot":
-      return run(cwd, logger, args[0], args.slice(1));
+      return run(
+        cwd,
+        logger,
+        args[0],
+        args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg }))
+      );
 
     default:
       logger.error(`Unknown command: ${args[0]}`);
