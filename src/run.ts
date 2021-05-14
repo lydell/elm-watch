@@ -4,7 +4,9 @@ import * as Decode from "tiny-decoders";
 
 import {
   bold,
+  deepestCommonAncestorPath as longestCommonAncestorPath,
   findClosest,
+  getSetSingleton,
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
@@ -27,6 +29,7 @@ export default async function run(
   args: Array<string>
 ): Promise<number> {
   const parseResult = findReadAndParseElmToolingJson(cwd);
+
   switch (parseResult.tag) {
     case "ReadAsJsonError":
       logger.error(
@@ -71,9 +74,35 @@ export default async function run(
         return 1;
       }
 
-      await Promise.resolve();
-      logger.log(`Run: ${runMode}\n${JSON.stringify(outputs, null, 2)}`);
-      return 0;
+      const initStateResult = initState(
+        cwd,
+        runMode,
+        parseResult.elmToolingJsonPath,
+        parseResult.config,
+        isNonEmptyArray(args) ? new Set(args) : new Set(Object.keys(outputs))
+      );
+
+      switch (initStateResult.tag) {
+        case "NoCommonRoot":
+          logger.error(noCommonRootError(initStateResult.paths));
+          return 1;
+
+        case "State":
+          await Promise.resolve();
+          logger.log(
+            `Run: ${runMode}\n${JSON.stringify(
+              initStateResult.state,
+              (_, value: unknown) =>
+                value instanceof Set
+                  ? Array.from(value)
+                  : value instanceof Map
+                  ? (Object.fromEntries(value) as unknown)
+                  : value,
+              2
+            )}`
+          );
+          return 0;
+      }
     }
   }
 }
@@ -181,6 +210,16 @@ ${bold("But those don’t include these outputs you asked me to build:")}
 ${unknownOutputs.join("\n")}
 
 Is something misspelled? Or do you need to add some more outputs?
+  `.trim();
+}
+
+function noCommonRootError(paths: NonEmptyArray<string>): string {
+  return `
+I could not find a common ancestor for these paths:
+
+${paths.join("\n")}
+
+${bold("Files on different drives is not supported.")}
   `.trim();
 }
 
@@ -368,4 +407,154 @@ function findReadAndParseElmToolingJson(cwd: string): ParseResult {
       error,
     };
   }
+}
+
+type State = {
+  // Path to the directory containing elm-tooling.json and all elm.json.
+  watchRoot: string;
+  cwd: string;
+  runMode: RunMode;
+  elmToolingJsonPath: string;
+  disabledOutputs: Set<string>;
+  elmJsonsErrors: Array<ElmJsonError>;
+  // elm.json path to output path to OutputState.
+  elmJsons: Map<string, Map<string, OutputState>>;
+  // Maybe also websocket connections in the future.
+};
+
+type OutputState = {
+  inputs: NonEmptyArray<string>;
+  mode: CompilationMode;
+};
+
+type InitStateResult =
+  | {
+      tag: "NoCommonRoot";
+      paths: NonEmptyArray<string>;
+    }
+  | {
+      tag: "State";
+      state: State;
+    };
+
+function initState(
+  cwd: string,
+  runMode: RunMode,
+  elmToolingJsonPath: string,
+  config: Config,
+  enabledOutputs: Set<string>
+): InitStateResult {
+  const disabledOutputs = new Set<string>();
+  const elmJsonsErrors: Array<ElmJsonError> = [];
+  const elmJsons = new Map<string, Map<string, OutputState>>();
+
+  for (const [outputPath, output] of Object.entries(config.outputs)) {
+    if (enabledOutputs.has(outputPath)) {
+      const resolveElmJsonResult = resolveElmJson(cwd, output.inputs);
+      switch (resolveElmJsonResult.tag) {
+        case "ElmJsonPath": {
+          const previous =
+            elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
+            new Map<string, OutputState>();
+          previous.set(outputPath, {
+            inputs: output.inputs,
+            mode: output.mode ?? "standard",
+          });
+          elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
+          break;
+        }
+
+        case "ElmJsonError":
+          elmJsonsErrors.push(resolveElmJsonResult);
+          break;
+      }
+    } else {
+      disabledOutputs.add(outputPath);
+    }
+  }
+
+  const paths: NonEmptyArray<string> = mapNonEmptyArray(
+    [elmToolingJsonPath, ...elmJsons.keys()],
+    (stringPath) => path.dirname(stringPath)
+  );
+
+  const watchRoot =
+    longestCommonAncestorPath(paths) ??
+    // On Windows, you can have one `C:` and one `D:` path and they don’t have
+    // any overlap. Just go with the elm-tooling.json path in that case.
+    elmToolingJsonPath;
+
+  if (watchRoot === undefined) {
+    return {
+      tag: "NoCommonRoot",
+      paths,
+    };
+  }
+
+  return {
+    tag: "State",
+    state: {
+      watchRoot,
+      cwd,
+      runMode,
+      elmToolingJsonPath,
+      disabledOutputs,
+      elmJsonsErrors,
+      elmJsons,
+    },
+  };
+}
+
+type ResolveElmJsonResult =
+  | ElmJsonError
+  | {
+      tag: "ElmJsonPath";
+      elmJsonPath: string;
+    };
+
+type ElmJsonError = {
+  tag: "ElmJsonError";
+  elmJsonNotFound: Array<string>;
+  nonUniqueElmJsonPaths: Array<{ input: string; elmJsonPath: string }>;
+};
+
+function resolveElmJson(
+  cwd: string,
+  inputs: NonEmptyArray<string>
+): ResolveElmJsonResult {
+  const elmJsonNotFound: Array<string> = [];
+  const elmJsonPaths: Array<{ input: string; elmJsonPath: string }> = [];
+
+  for (const input of inputs) {
+    const elmJsonPath = findClosest("elm.json", cwd);
+    if (elmJsonPath === undefined) {
+      elmJsonNotFound.push(input);
+    } else {
+      elmJsonPaths.push({ input, elmJsonPath });
+    }
+  }
+
+  const elmJsonPathsSet = new Set(
+    elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath)
+  );
+
+  const uniqueElmJsonPath = getSetSingleton(elmJsonPathsSet);
+
+  return isNonEmptyArray(elmJsonNotFound)
+    ? {
+        tag: "ElmJsonError",
+        elmJsonNotFound,
+        nonUniqueElmJsonPaths:
+          uniqueElmJsonPath === undefined ? elmJsonPaths : [],
+      }
+    : uniqueElmJsonPath === undefined
+    ? {
+        tag: "ElmJsonError",
+        elmJsonNotFound: [],
+        nonUniqueElmJsonPaths: elmJsonPaths,
+      }
+    : {
+        tag: "ElmJsonPath",
+        elmJsonPath: uniqueElmJsonPath,
+      };
 }

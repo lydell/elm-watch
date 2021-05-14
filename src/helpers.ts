@@ -50,6 +50,35 @@ export function findClosest(name: string, dir: string): string | undefined {
     : findClosest(name, path.dirname(dir));
 }
 
+export function deepestCommonAncestorPath(
+  paths: NonEmptyArray<string>
+): string | undefined {
+  const pathArrays = mapNonEmptyArray(paths, (pathString) =>
+    pathString.split(path.sep)
+  );
+
+  const length = Math.min(...pathArrays.map((array) => array.length));
+  const commonSegments = [];
+
+  for (let index = 0; index < length; index++) {
+    const segmentsAtIndex = new Set(pathArrays.map((array) => array[index]));
+    const uniqueSegment = getSetSingleton(segmentsAtIndex);
+    if (uniqueSegment === undefined) {
+      break;
+    }
+    commonSegments.push(uniqueSegment);
+  }
+
+  return isNonEmptyArray(commonSegments)
+    ? commonSegments.join(path.sep)
+    : // On Windows, a `C:` path and a `D:` path has no common ancestor.
+      undefined;
+}
+
+export function getSetSingleton<T>(set: Set<T>): T | undefined {
+  return set.size === 1 ? Array.from(set)[0] : undefined;
+}
+
 export const RESET_COLOR = "\x1B[0m";
 
 export function bold(string: string): string {
