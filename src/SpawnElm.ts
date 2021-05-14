@@ -4,6 +4,7 @@ import { DecoderError } from "tiny-decoders";
 import { ElmMakeError } from "./ElmMakeError";
 import { IS_WINDOWS } from "./helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
+import { absoluteDirname } from "./path-helpers";
 import { CompilationMode, ElmJsonPath, InputPath, OutputPath } from "./types";
 
 type ElmMakeResult =
@@ -65,7 +66,7 @@ export async function make({
       IS_WINDOWS ? args.map(cmdEscapeArg) : args,
       {
         shell: IS_WINDOWS,
-        cwd: elmJsonPath.theElmJsonPath.absolutePath,
+        cwd: absoluteDirname(elmJsonPath.theElmJsonPath).absolutePath,
       }
     );
 
