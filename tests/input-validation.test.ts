@@ -540,7 +540,8 @@ describe("input validation", () => {
       build/adnim.js
       app.js
 
-      Is something misspelled? Or do you need to add some more outputs?
+      Is something misspelled? (You need to type them exactly the same.)
+      Or do you need to add some more outputs?
 
     `);
   });

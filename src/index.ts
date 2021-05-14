@@ -3,6 +3,7 @@
 import help from "./help";
 import type { Env, ReadStream, WriteStream } from "./helpers";
 import { makeLogger } from "./logger";
+import { absolutePathFromString, Cwd } from "./path-helpers";
 import run from "./run";
 
 type Options = {
@@ -17,7 +18,7 @@ export default async function elmWatchCli(
   args: Array<string>,
   // istanbul ignore next
   {
-    cwd = process.cwd(),
+    cwd: cwdString = process.cwd(),
     env = process.env,
     // stdin = process.stdin,
     stdout = process.stdout,
@@ -25,6 +26,13 @@ export default async function elmWatchCli(
   }: Options = {}
 ): Promise<number> {
   const logger = makeLogger({ env, stdout, stderr });
+  const cwd: Cwd = {
+    tag: "Cwd",
+    path: absolutePathFromString(
+      { tag: "AbsolutePath", absolutePath: process.cwd() },
+      cwdString
+    ),
+  };
 
   const isHelp = args.some(
     (arg) => arg === "-h" || arg === "-help" || arg === "--help"

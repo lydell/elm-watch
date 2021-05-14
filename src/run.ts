@@ -2,16 +2,23 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
 
+import { HashMap } from "./HashMap";
+import { HashSet } from "./HashSet";
+import { bold, getSetSingleton } from "./helpers";
+import type { Logger } from "./logger";
 import {
-  bold,
-  deepestCommonAncestorPath as longestCommonAncestorPath,
-  findClosest,
-  getSetSingleton,
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
-} from "./helpers";
-import type { Logger } from "./logger";
+} from "./NonEmptyArray";
+import {
+  absoluteDirname,
+  AbsolutePath,
+  absolutePathFromString,
+  Cwd,
+  findClosest,
+  longestCommonAncestorPath,
+} from "./path-helpers";
 
 type RunMode = "hot" | "make" | "watch";
 
@@ -22,8 +29,32 @@ const CompilationMode = Decode.stringUnion({
   optimize: null,
 });
 
+// elm-tooling.json
+type ElmToolingJsonPath = {
+  tag: "ElmToolingJsonPath";
+  theElmToolingJsonPath: AbsolutePath;
+};
+
+// elm.json
+type ElmJsonPath = {
+  tag: "ElmJsonPath";
+  theElmJsonPath: AbsolutePath;
+};
+
+// src/Main.elm
+type InputPath = {
+  tag: "InputPath";
+  theInputPath: AbsolutePath;
+};
+
+// build/main.js
+type OutputPath = {
+  tag: "OutputPath";
+  theOutputPath: AbsolutePath;
+};
+
 export default async function run(
-  cwd: string,
+  cwd: Cwd,
   logger: Logger,
   runMode: RunMode,
   args: Array<string>
@@ -93,10 +124,8 @@ export default async function run(
             `Run: ${runMode}\n${JSON.stringify(
               initStateResult.state,
               (_, value: unknown) =>
-                value instanceof Set
+                value instanceof Set || value instanceof HashMap
                   ? Array.from(value)
-                  : value instanceof Map
-                  ? (Object.fromEntries(value) as unknown)
                   : value,
               2
             )}`
@@ -123,13 +152,16 @@ function isValidOutputName(name: string): boolean {
 
 const elmToolingJson = bold("elm-tooling.json");
 
-function readAsJsonError(elmToolingJsonPath: string, error: Error): string {
+function readAsJsonError(
+  elmToolingJsonPath: ElmToolingJsonPath,
+  error: Error
+): string {
   return `
 I read inputs, outputs and options from ${elmToolingJson}.
 
 I found an ${elmToolingJson} here:
 
-${elmToolingJsonPath}
+${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
 
 ${bold("But I had trouble reading it as JSON:")}
 
@@ -138,7 +170,7 @@ ${error.message}
 }
 
 function decodeError(
-  elmToolingJsonPath: string,
+  elmToolingJsonPath: ElmToolingJsonPath,
   error: Decode.DecoderError
 ): string {
   return `
@@ -146,7 +178,7 @@ I read inputs, outputs and options from ${elmToolingJson}.
 
 I found an ${elmToolingJson} here:
 
-${elmToolingJsonPath}
+${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
 
 ${bold("But I had trouble with the JSON inside:")}
 
@@ -154,7 +186,19 @@ ${error.format()}
   `.trim();
 }
 
-function elmToolingJsonNotFoundError(cwd: string, args: Array<string>): string {
+function elmToolingJsonNotFoundError(cwd: Cwd, args: Array<string>): string {
+  const example = elmToolingJsonExample(
+    cwd,
+    {
+      tag: "ElmToolingJsonPath",
+      theElmToolingJsonPath: absolutePathFromString(
+        cwd.path,
+        "elm-tooling.json"
+      ),
+    },
+    args
+  );
+
   return `
 I read inputs, outputs and options from ${elmToolingJson}.
 
@@ -162,13 +206,13 @@ ${bold("But I couldn’t find one!")}
 
 You need to create one with JSON like this:
 
-${elmToolingJsonExample(cwd, cwd, args)}
+${example}
   `.trim();
 }
 
 function badArgsError(
-  cwd: string,
-  elmToolingJsonPath: string,
+  cwd: Cwd,
+  elmToolingJsonPath: ElmToolingJsonPath,
   args: Array<string>,
   badArgs: NonEmptyArray<string>
 ): string {
@@ -181,7 +225,7 @@ ${badArgs.join("\n")}
 
 You either need to remove those arguments or move them to the ${elmToolingJson} I found here:
 
-${elmToolingJsonPath}
+${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
 
 For example, you could add some JSON like this:
 
@@ -190,7 +234,7 @@ ${elmToolingJsonExample(cwd, elmToolingJsonPath, args)}
 }
 
 function unknownOutputsError(
-  elmToolingJsonPath: string,
+  elmToolingJsonPath: ElmToolingJsonPath,
   knownOutputs: NonEmptyArray<string>,
   unknownOutputs: NonEmptyArray<string>
 ): string {
@@ -199,7 +243,7 @@ I read inputs, outputs and options from ${elmToolingJson}.
 
 I found an ${elmToolingJson} here:
 
-${elmToolingJsonPath}
+${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
 
 It contains these outputs:
 
@@ -209,11 +253,12 @@ ${bold("But those don’t include these outputs you asked me to build:")}
 
 ${unknownOutputs.join("\n")}
 
-Is something misspelled? Or do you need to add some more outputs?
+Is something misspelled? (You need to type them exactly the same.)
+Or do you need to add some more outputs?
   `.trim();
 }
 
-function noCommonRootError(paths: NonEmptyArray<string>): string {
+function noCommonRootError(paths: NonEmptyArray<AbsolutePath>): string {
   return `
 I could not find a common ancestor for these paths:
 
@@ -224,8 +269,8 @@ ${bold("Files on different drives is not supported.")}
 }
 
 function elmToolingJsonExample(
-  cwd: string,
-  elmToolingJsonPath: string,
+  cwd: Cwd,
+  elmToolingJsonPath: ElmToolingJsonPath,
   args: Array<string>
 ): string {
   const {
@@ -241,8 +286,10 @@ function elmToolingJsonExample(
           inputs: isNonEmptyArray(elmFiles)
             ? mapNonEmptyArray(elmFiles, (file) =>
                 path.relative(
-                  path.dirname(elmToolingJsonPath),
-                  path.resolve(cwd, file)
+                  path.dirname(
+                    elmToolingJsonPath.theElmToolingJsonPath.absolutePath
+                  ),
+                  path.resolve(cwd.path.absolutePath, file)
                 )
               )
             : ["src/Main.elm"],
@@ -356,7 +403,7 @@ const ElmToolingJson = Decode.fieldsAuto({
 export type ParseResult =
   | {
       tag: "DecodeError";
-      elmToolingJsonPath: string;
+      elmToolingJsonPath: ElmToolingJsonPath;
       error: Decode.DecoderError;
     }
   | {
@@ -364,26 +411,33 @@ export type ParseResult =
     }
   | {
       tag: "Parsed";
-      elmToolingJsonPath: string;
+      elmToolingJsonPath: ElmToolingJsonPath;
       config: Config;
     }
   | {
       tag: "ReadAsJsonError";
-      elmToolingJsonPath: string;
+      elmToolingJsonPath: ElmToolingJsonPath;
       error: Error;
     };
 
-function findReadAndParseElmToolingJson(cwd: string): ParseResult {
-  const elmToolingJsonPath = findClosest("elm-tooling.json", cwd);
-  if (elmToolingJsonPath === undefined) {
+function findReadAndParseElmToolingJson(cwd: Cwd): ParseResult {
+  const elmToolingJsonPathRaw = findClosest("elm-tooling.json", cwd.path);
+  if (elmToolingJsonPathRaw === undefined) {
     return {
       tag: "ElmToolingJsonNotFound",
     };
   }
 
+  const elmToolingJsonPath: ElmToolingJsonPath = {
+    tag: "ElmToolingJsonPath",
+    theElmToolingJsonPath: elmToolingJsonPathRaw,
+  };
+
   let json: unknown = undefined;
   try {
-    json = JSON.parse(fs.readFileSync(elmToolingJsonPath, "utf-8"));
+    json = JSON.parse(
+      fs.readFileSync(elmToolingJsonPathRaw.absolutePath, "utf-8")
+    );
   } catch (errorAny) {
     const error = errorAny as Error;
     return {
@@ -410,27 +464,26 @@ function findReadAndParseElmToolingJson(cwd: string): ParseResult {
 }
 
 type State = {
-  // Path to the directory containing elm-tooling.json and all elm.json.
-  watchRoot: string;
-  cwd: string;
+  // Path to the longest ancestor of elm-tooling.json and all elm.json.
+  watchRoot: AbsolutePath;
+  cwd: Cwd;
   runMode: RunMode;
-  elmToolingJsonPath: string;
-  disabledOutputs: Set<string>;
+  elmToolingJsonPath: ElmToolingJsonPath;
+  disabledOutputs: HashSet<OutputPath>;
   elmJsonsErrors: Array<ElmJsonError>;
-  // elm.json path to output path to OutputState.
-  elmJsons: Map<string, Map<string, OutputState>>;
+  elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   // Maybe also websocket connections in the future.
 };
 
 type OutputState = {
-  inputs: NonEmptyArray<string>;
+  inputs: NonEmptyArray<InputPath>;
   mode: CompilationMode;
 };
 
 type InitStateResult =
   | {
       tag: "NoCommonRoot";
-      paths: NonEmptyArray<string>;
+      paths: NonEmptyArray<AbsolutePath>;
     }
   | {
       tag: "State";
@@ -438,26 +491,47 @@ type InitStateResult =
     };
 
 function initState(
-  cwd: string,
+  cwd: Cwd,
   runMode: RunMode,
-  elmToolingJsonPath: string,
+  elmToolingJsonPath: ElmToolingJsonPath,
   config: Config,
   enabledOutputs: Set<string>
 ): InitStateResult {
-  const disabledOutputs = new Set<string>();
+  const disabledOutputs = new HashSet<OutputPath>();
   const elmJsonsErrors: Array<ElmJsonError> = [];
-  const elmJsons = new Map<string, Map<string, OutputState>>();
+  const elmJsons = new HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>();
 
-  for (const [outputPath, output] of Object.entries(config.outputs)) {
-    if (enabledOutputs.has(outputPath)) {
-      const resolveElmJsonResult = resolveElmJson(cwd, output.inputs);
+  for (const [outputPathString, output] of Object.entries(config.outputs)) {
+    const outputPath: OutputPath = {
+      tag: "OutputPath",
+      theOutputPath: absolutePathFromString(
+        elmToolingJsonPath.theElmToolingJsonPath,
+        outputPathString
+      ),
+    };
+
+    if (enabledOutputs.has(outputPathString)) {
+      const inputs = mapNonEmptyArray(
+        output.inputs,
+        (inputString): InputPath => ({
+          tag: "InputPath",
+          theInputPath: absolutePathFromString(
+            elmToolingJsonPath.theElmToolingJsonPath,
+            inputString
+          ),
+        })
+      );
+
+      const resolveElmJsonResult = resolveElmJson(inputs);
+
       switch (resolveElmJsonResult.tag) {
         case "ElmJsonPath": {
           const previous =
             elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
-            new Map<string, OutputState>();
+            new HashMap<OutputPath, OutputState>();
+
           previous.set(outputPath, {
-            inputs: output.inputs,
+            inputs,
             mode: output.mode ?? "standard",
           });
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
@@ -473,16 +547,22 @@ function initState(
     }
   }
 
-  const paths: NonEmptyArray<string> = mapNonEmptyArray(
-    [elmToolingJsonPath, ...elmJsons.keys()],
-    (stringPath) => path.dirname(stringPath)
+  const paths = mapNonEmptyArray(
+    [
+      elmToolingJsonPath.theElmToolingJsonPath,
+      ...Array.from(
+        elmJsons.keys(),
+        (elmJsonPath) => elmJsonPath.theElmJsonPath
+      ),
+    ],
+    (absolutePath) => absoluteDirname(absolutePath)
   );
 
   const watchRoot =
     longestCommonAncestorPath(paths) ??
     // On Windows, you can have one `C:` and one `D:` path and they don’t have
     // any overlap. Just go with the elm-tooling.json path in that case.
-    elmToolingJsonPath;
+    elmToolingJsonPath.theElmToolingJsonPath;
 
   if (watchRoot === undefined) {
     return {
@@ -509,32 +589,43 @@ type ResolveElmJsonResult =
   | ElmJsonError
   | {
       tag: "ElmJsonPath";
-      elmJsonPath: string;
+      elmJsonPath: ElmJsonPath;
     };
 
 type ElmJsonError = {
   tag: "ElmJsonError";
-  elmJsonNotFound: Array<string>;
-  nonUniqueElmJsonPaths: Array<{ input: string; elmJsonPath: string }>;
+  elmJsonNotFound: Array<InputPath>;
+  nonUniqueElmJsonPaths: Array<{
+    inputPath: InputPath;
+    elmJsonPath: ElmJsonPath;
+  }>;
 };
 
 function resolveElmJson(
-  cwd: string,
-  inputs: NonEmptyArray<string>
+  inputs: NonEmptyArray<InputPath>
 ): ResolveElmJsonResult {
-  const elmJsonNotFound: Array<string> = [];
-  const elmJsonPaths: Array<{ input: string; elmJsonPath: string }> = [];
+  const elmJsonNotFound: Array<InputPath> = [];
+  const elmJsonPaths: Array<{
+    inputPath: InputPath;
+    elmJsonPath: ElmJsonPath;
+  }> = [];
 
-  for (const input of inputs) {
-    const elmJsonPath = findClosest("elm.json", cwd);
-    if (elmJsonPath === undefined) {
-      elmJsonNotFound.push(input);
+  for (const inputPath of inputs) {
+    const elmJsonPathRaw = findClosest(
+      "elm.json",
+      absoluteDirname(inputPath.theInputPath)
+    );
+    if (elmJsonPathRaw === undefined) {
+      elmJsonNotFound.push(inputPath);
     } else {
-      elmJsonPaths.push({ input, elmJsonPath });
+      elmJsonPaths.push({
+        inputPath,
+        elmJsonPath: { tag: "ElmJsonPath", theElmJsonPath: elmJsonPathRaw },
+      });
     }
   }
 
-  const elmJsonPathsSet = new Set(
+  const elmJsonPathsSet = new HashSet(
     elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath)
   );
 
