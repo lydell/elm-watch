@@ -1,6 +1,6 @@
 import * as path from "path";
 
-import elmWatchCli from "../src";
+import { elmWatchCli } from "../src";
 import {
   clean,
   FailReadStream,

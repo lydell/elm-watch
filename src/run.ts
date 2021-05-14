@@ -58,7 +58,7 @@ type CliArg = {
   theArg: string;
 };
 
-export default async function run(
+export async function run(
   cwd: Cwd,
   logger: Logger,
   runMode: RunMode,

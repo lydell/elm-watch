@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import help from "./help";
+import { help } from "./help";
 import type { Env, ReadStream, WriteStream } from "./helpers";
 import { makeLogger } from "./logger";
 import { absolutePathFromString, Cwd } from "./path-helpers";
-import run from "./run";
+import { run } from "./run";
 
 type Options = {
   cwd?: string;
@@ -14,7 +14,7 @@ type Options = {
   stderr?: WriteStream;
 };
 
-export default async function elmWatchCli(
+export async function elmWatchCli(
   args: Array<string>,
   // istanbul ignore next
   {

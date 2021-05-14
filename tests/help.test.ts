@@ -1,4 +1,4 @@
-import elmWatchCli from "../src";
+import { elmWatchCli } from "../src";
 import type { Env } from "../src/helpers";
 import {
   clean,
