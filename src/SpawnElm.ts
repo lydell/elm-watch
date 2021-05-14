@@ -5,9 +5,15 @@ import { ElmMakeError } from "./ElmMakeError";
 import { IS_WINDOWS } from "./helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname } from "./path-helpers";
-import { CompilationMode, ElmJsonPath, InputPath, OutputPath } from "./types";
+import {
+  CompilationMode,
+  ElmJsonPath,
+  InputPath,
+  OutputPath,
+  outputPathToString,
+} from "./types";
 
-type ElmMakeResult =
+export type ElmMakeResult =
   | {
       tag: "DecodeError";
       error: DecoderError;
@@ -31,6 +37,7 @@ type ElmMakeResult =
     }
   | {
       tag: "Success";
+      timestamp: number;
     }
   | {
       tag: "UnexpectedOutput";
@@ -57,7 +64,7 @@ export async function make({
       "json",
       ...compilationModeToArgs(mode),
       "--output",
-      outputPathToArg(output),
+      outputPathToString(output),
       ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
     ];
 
@@ -92,9 +99,12 @@ export async function make({
     elm.on("close", (exitCode, signal) => {
       resolve(
         exitCode === 0 && signal === null && stdout === "" && stderr === ""
-          ? { tag: "Success" }
-          : exitCode === 1 && signal === null && stdout !== "" && stderr === ""
-          ? parseElmMakeJson(stdout)
+          ? { tag: "Success", timestamp: Date.now() }
+          : exitCode === 1 &&
+            signal === null &&
+            stdout === "" &&
+            stderr.startsWith("{")
+          ? parseElmMakeJson(stderr)
           : {
               tag: "UnexpectedOutput",
               exitReason: exitReason(exitCode, signal),
@@ -122,15 +132,6 @@ function cmdEscapeArg(arg: string): string {
   return `"${arg
     .replace(/(\\*)"/g, '$1$1\\"')
     .replace(/(\\+)$/, "$1$1")}"`.replace(/[()%!^"<>&|;, ]/g, "^$&");
-}
-
-function outputPathToArg(output: OutputPath): string {
-  switch (output.tag) {
-    case "OutputPath":
-      return output.theOutputPath.absolutePath;
-    case "NullOutputPath":
-      return "/dev/null";
-  }
 }
 
 type ExitReason =

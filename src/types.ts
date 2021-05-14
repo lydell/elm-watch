@@ -34,3 +34,12 @@ export type CliArg = {
   tag: "CliArg";
   theArg: string;
 };
+
+export function outputPathToString(output: OutputPath): string {
+  switch (output.tag) {
+    case "OutputPath":
+      return output.theOutputPath.absolutePath;
+    case "NullOutputPath":
+      return "/dev/null";
+  }
+}

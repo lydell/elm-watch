@@ -15,6 +15,7 @@ import {
   findClosest,
   longestCommonAncestorPath,
 } from "./path-helpers";
+import { ElmMakeResult } from "./SpawnElm";
 import type {
   CompilationMode,
   ElmJsonPath,
@@ -36,9 +37,20 @@ export type State = {
   // Maybe also websocket connections in the future.
 };
 
+type ElmJsonError = {
+  tag: "ElmJsonError";
+  outputPath: OutputPath;
+  elmJsonNotFound: Array<InputPath>;
+  nonUniqueElmJsonPaths: Array<{
+    inputPath: InputPath;
+    elmJsonPath: ElmJsonPath;
+  }>;
+};
+
 export type OutputState = {
   inputs: NonEmptyArray<InputPath>;
   mode: CompilationMode;
+  status: ElmMakeResult | { tag: "NotWrittenToDisk" };
 };
 
 export type InitStateResult =
@@ -97,13 +109,14 @@ export function init(
           previous.set(outputPath, {
             inputs,
             mode: output.mode ?? "standard",
+            status: { tag: "NotWrittenToDisk" },
           });
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
           break;
         }
 
         case "ElmJsonError":
-          elmJsonsErrors.push(resolveElmJsonResult);
+          elmJsonsErrors.push({ ...resolveElmJsonResult, outputPath });
           break;
       }
     } else {
@@ -150,20 +163,11 @@ export function init(
 }
 
 type ResolveElmJsonResult =
-  | ElmJsonError
+  | Omit<ElmJsonError, "outputPath">
   | {
       tag: "ElmJsonPath";
       elmJsonPath: ElmJsonPath;
     };
-
-type ElmJsonError = {
-  tag: "ElmJsonError";
-  elmJsonNotFound: Array<InputPath>;
-  nonUniqueElmJsonPaths: Array<{
-    inputPath: InputPath;
-    elmJsonPath: ElmJsonPath;
-  }>;
-};
 
 function resolveElmJson(
   inputs: NonEmptyArray<InputPath>

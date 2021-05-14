@@ -78,7 +78,7 @@ export async function run(
           return 1;
 
         case "State":
-          return Compile.run(initStateResult.state);
+          return Compile.run(logger, initStateResult.state);
       }
     }
   }
