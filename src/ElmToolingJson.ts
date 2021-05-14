@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
 
+import { join } from "./helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -26,16 +27,19 @@ export function isValidOutputName(name: string): boolean {
 
 const Output = Decode.fieldsAuto(
   {
-    inputs: NonEmptyArray(
-      Decode.chain(Decode.string, (string) => {
-        if (isValidInputName(string)) {
-          return string;
-        }
-        throw new Decode.DecoderError({
-          message: "Inputs must have a valid module name and end with .elm",
-          value: string,
-        });
-      })
+    inputs: Decode.chain(
+      NonEmptyArray(
+        Decode.chain(Decode.string, (string) => {
+          if (isValidInputName(string)) {
+            return string;
+          }
+          throw new Decode.DecoderError({
+            message: "Inputs must have a valid module name and end with .elm",
+            value: string,
+          });
+        })
+      ),
+      uniquePaths
     ),
     mode: Decode.optional(
       Decode.stringUnion({
@@ -47,6 +51,39 @@ const Output = Decode.fieldsAuto(
   },
   { exact: "throw" }
 );
+
+function uniquePaths(paths: NonEmptyArray<string>): NonEmptyArray<string> {
+  const grouped = new Map<string, NonEmptyArray<string>>();
+
+  for (const pathString of paths) {
+    const normalized = path.normalize(pathString);
+    const previous = grouped.get(normalized);
+    if (previous === undefined) {
+      grouped.set(normalized, [pathString]);
+    } else {
+      previous.push(pathString);
+    }
+  }
+
+  const duplicates = Array.from(grouped.values()).filter(
+    (array) => array.length >= 2
+  );
+
+  if (isNonEmptyArray(duplicates)) {
+    throw new Decode.DecoderError({
+      message: join(
+        [
+          "Expected unique inputs, but got duplicates:",
+          ...duplicates.map((array) => join(array, "\n")),
+        ],
+        "\n\n"
+      ),
+      value: Decode.DecoderError.MISSING_VALUE,
+    });
+  }
+
+  return paths;
+}
 
 export type Config = ReturnType<typeof Config>;
 const Config = Decode.fieldsAuto({

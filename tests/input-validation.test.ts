@@ -248,6 +248,34 @@ describe("input validation", () => {
       `);
     });
 
+    test("duplicate inputs", async () => {
+      expect(
+        await validateFailHelper(
+          "elm-tooling-json-decode-error/duplicate-inputs",
+          ["make"]
+        )
+      ).toMatchInlineSnapshot(`
+        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+
+        I found an ⧙elm-tooling.json⧘ here:
+
+        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/duplicate-inputs/elm-tooling.json
+
+        ⧙But I had trouble with the JSON inside:⧘
+
+        At root["x-elm-watch"]["outputs"]["main.js"]["inputs"]:
+        Expected unique inputs, but got duplicates:
+
+        src/Main.elm
+        src/Main.elm
+
+        ../../App.elm
+        ./../../App.elm
+        ../lib/../..//App.elm
+
+      `);
+    });
+
     test("bad compilation mode", async () => {
       expect(
         await validateFailHelper(
