@@ -177,8 +177,8 @@ describe("input validation", () => {
         ⧙But I had trouble with the JSON inside:⧘
 
         At root["x-elm-watch"]["outputs"]["main.js"]:
-        Expected only these fields: "inputs", "mode"
-        Found extra fields: "node"
+        Expected only these fields: "inputs"
+        Found extra fields: "mode"
 
     `);
     });
@@ -247,28 +247,6 @@ describe("input validation", () => {
 
       `);
     });
-
-    test("bad compilation mode", async () => {
-      expect(
-        await validateFailHelper(
-          "elm-tooling-json-decode-error/bad-compilation-mode",
-          ["make"]
-        )
-      ).toMatchInlineSnapshot(`
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
-
-        I found an ⧙elm-tooling.json⧘ here:
-
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/bad-compilation-mode/elm-tooling.json
-
-        ⧙But I had trouble with the JSON inside:⧘
-
-        At root["x-elm-watch"]["outputs"]["main.js"]["mode"] (optional):
-        Expected one of these variants: "standard", "debug", "optimize"
-        Got: "production"
-
-      `);
-    });
   });
 
   test("elm-tooling.json not found", async () => {
@@ -313,7 +291,6 @@ describe("input validation", () => {
         src/App.elm
         src/Admin.elm
         --output
-        --debug
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
@@ -328,8 +305,7 @@ describe("input validation", () => {
                         "inputs": [
                             "src/App.elm",
                             "src/Admin.elm"
-                        ],
-                        "mode": "debug"
+                        ]
                     }
                 }
             }
@@ -445,74 +421,44 @@ describe("input validation", () => {
 
       `);
     });
+  });
 
-    test("the last of --debug and --optimize wins", async () => {
-      expect(
-        await validateFailHelper("valid-elm-tooling-json", [
-          "make",
-          "--debug",
-          "--optimize",
-        ])
-      ).toMatchInlineSnapshot(`
-        ⧙I only accept JS file paths as arguments, but I got some that don’t look like that:⧘
+  test("Using --debug and --optimize for hot", async () => {
+    const output = await validateFailHelper("valid-elm-tooling-json", [
+      "hot",
+      "--debug",
+    ]);
 
-        --debug
-        --optimize
+    expect(output).toMatchInlineSnapshot(`
+      ⧙--debug⧘ and ⧙--optimize⧘ only make sense for ⧙elm-watch make⧘.
+      When using ⧙elm-watch hot⧘, you can switch mode in the browser.
 
-        You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
+    `);
 
-        /Users/you/project/fixtures/input-validation/valid-elm-tooling-json/elm-tooling.json
+    expect(
+      await validateFailHelper("valid-elm-tooling-json", ["hot", "--optimize"])
+    ).toBe(output);
 
-        For example, you could add some JSON like this:
+    expect(
+      await validateFailHelper("valid-elm-tooling-json", [
+        "hot",
+        "--optimize",
+        "--debug",
+      ])
+    ).toBe(output);
+  });
 
-        {
-            "x-elm-watch": {
-                "outputs": {
-                    "build/main.js": {
-                        "inputs": [
-                            "src/Main.elm"
-                        ],
-                        "mode": "optimize"
-                    }
-                }
-            }
-        }
+  test("using both --debug and --optimize for make", async () => {
+    expect(
+      await validateFailHelper("valid-elm-tooling-json", [
+        "make",
+        "--debug",
+        "--optimize",
+      ])
+    ).toMatchInlineSnapshot(`
+      ⧙--debug⧘ and ⧙--optimize⧘ cannot be used at the same time.
 
-      `);
-
-      expect(
-        await validateFailHelper("valid-elm-tooling-json", [
-          "make",
-          "--optimize",
-          "--debug",
-        ])
-      ).toMatchInlineSnapshot(`
-        ⧙I only accept JS file paths as arguments, but I got some that don’t look like that:⧘
-
-        --optimize
-        --debug
-
-        You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
-
-        /Users/you/project/fixtures/input-validation/valid-elm-tooling-json/elm-tooling.json
-
-        For example, you could add some JSON like this:
-
-        {
-            "x-elm-watch": {
-                "outputs": {
-                    "build/main.js": {
-                        "inputs": [
-                            "src/Main.elm"
-                        ],
-                        "mode": "debug"
-                    }
-                }
-            }
-        }
-
-      `);
-    });
+    `);
   });
 
   test("unknown outputs", async () => {

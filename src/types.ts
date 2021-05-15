@@ -1,6 +1,6 @@
 import type { AbsolutePath } from "./path-helpers";
 
-export type RunMode = "hot" | "make" | "watch";
+export type RunMode = "hot" | "make";
 
 export type CompilationMode = "debug" | "optimize" | "standard";
 

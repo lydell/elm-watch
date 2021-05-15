@@ -32,14 +32,12 @@ describe("help", () => {
     const output = await helpHelper(["help"]);
 
     expect(output).toMatchInlineSnapshot(`
-      ⧙elm-watch make [outputs...]⧘
+      ⧙elm-watch make [--debug|--optimize] [outputs...]⧘
           Compile Elm code into JS
 
-      ⧙elm-watch watch [outputs...]⧘
-          Also recompile whenever your Elm files change
-
       ⧙elm-watch hot [outputs...]⧘
-          Also reload the compiled JS in the browser
+          Recompile whenever your Elm files change,
+          and reload the compiled JS in the browser
 
       All commands read their inputs and outputs from the closest ⧙elm-tooling.json⧘.
       By default they build all outputs. Pass output JS file paths to only build some.
@@ -72,14 +70,12 @@ describe("help", () => {
 
   test("NO_COLOR", async () => {
     expect(await helpHelper(["help"], { NO_COLOR: "" })).toMatchInlineSnapshot(`
-      elm-watch make [outputs...]
+      elm-watch make [--debug|--optimize] [outputs...]
           Compile Elm code into JS
 
-      elm-watch watch [outputs...]
-          Also recompile whenever your Elm files change
-
       elm-watch hot [outputs...]
-          Also reload the compiled JS in the browser
+          Recompile whenever your Elm files change,
+          and reload the compiled JS in the browser
 
       All commands read their inputs and outputs from the closest elm-tooling.json.
       By default they build all outputs. Pass output JS file paths to only build some.

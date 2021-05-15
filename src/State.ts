@@ -85,13 +85,21 @@ export type InitStateResult =
       state: State;
     };
 
-export function init(
-  cwd: Cwd,
-  runMode: RunMode,
-  elmToolingJsonPath: ElmToolingJsonPath,
-  config: ElmToolingJson.Config,
-  enabledOutputs: Set<string>
-): InitStateResult {
+export function init({
+  cwd,
+  runMode,
+  compilationMode,
+  elmToolingJsonPath,
+  config,
+  enabledOutputs,
+}: {
+  cwd: Cwd;
+  runMode: RunMode;
+  compilationMode: CompilationMode;
+  elmToolingJsonPath: ElmToolingJsonPath;
+  config: ElmToolingJson.Config;
+  enabledOutputs: Set<string>;
+}): InitStateResult {
   const disabledOutputs = new HashSet<OutputPath>();
   const elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }> =
     [];
@@ -122,7 +130,7 @@ export function init(
             new HashMap<OutputPath, OutputState>();
           previous.set(outputPath, {
             inputs: resolveElmJsonResult.inputs,
-            mode: output.mode ?? "standard",
+            mode: compilationMode,
             status: { tag: "NotWrittenToDisk" },
           });
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);

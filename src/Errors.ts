@@ -66,6 +66,21 @@ ${example}
   `.trim();
 }
 
+export function debugOptimizeForHot(): string {
+  const make = bold("elm-watch make");
+  const hot = bold("elm-watch hot");
+  return `
+${bold("--debug")} and ${bold("--optimize")} only make sense for ${make}.
+When using ${hot}, you can switch mode in the browser.
+  `.trim();
+}
+
+export function debugOptimizeClash(): string {
+  return `
+${bold("--debug")} and ${bold("--optimize")} cannot be used at the same time.
+  `.trim();
+}
+
 export function badArgs(
   cwd: Cwd,
   elmToolingJsonPath: ElmToolingJsonPath,

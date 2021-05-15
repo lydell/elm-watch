@@ -3,7 +3,7 @@
     "outputs": {
       "main.js": {
         "inputs": ["src/Main.elm"],
-        "node": "debug"
+        "mode": "debug"
       }
     }
   }

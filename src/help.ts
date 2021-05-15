@@ -4,14 +4,12 @@ export function render(): string {
   const elmToolingJson = bold("elm-tooling.json");
 
   return `
-${bold("elm-watch make [outputs...]")}
+${bold("elm-watch make [--debug|--optimize] [outputs...]")}
     Compile Elm code into JS
 
-${bold("elm-watch watch [outputs...]")}
-    Also recompile whenever your Elm files change
-
 ${bold("elm-watch hot [outputs...]")}
-    Also reload the compiled JS in the browser
+    Recompile whenever your Elm files change,
+    and reload the compiled JS in the browser
 
 All commands read their inputs and outputs from the closest ${elmToolingJson}.
 By default they build all outputs. Pass output JS file paths to only build some.

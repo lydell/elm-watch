@@ -49,7 +49,6 @@ export async function elmWatchCli(
       return 0;
 
     case "make":
-    case "watch":
     case "hot":
       return run(
         cwd,

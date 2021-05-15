@@ -8,7 +8,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { Cwd, findClosest } from "./path-helpers";
-import type { CliArg, CompilationMode, ElmToolingJsonPath } from "./types";
+import type { CliArg, ElmToolingJsonPath } from "./types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
@@ -35,13 +35,6 @@ const Output = Decode.fieldsAuto(
           message: "Inputs must have a valid module name and end with .elm",
           value: string,
         });
-      })
-    ),
-    mode: Decode.optional(
-      Decode.stringUnion({
-        standard: null,
-        debug: null,
-        optimize: null,
       })
     ),
   },
@@ -145,11 +138,7 @@ export function example(
   elmToolingJsonPath: ElmToolingJsonPath,
   args: Array<CliArg>
 ): string {
-  const {
-    elmFiles,
-    compilationMode,
-    output = "build/main.js",
-  } = parseArgsLikeElmMake(args);
+  const { elmFiles, output = "build/main.js" } = parseArgsLikeElmMake(args);
 
   const json: ElmToolingJson = {
     "x-elm-watch": {
@@ -165,7 +154,6 @@ export function example(
                 )
               )
             : ["src/Main.elm"],
-          mode: compilationMode === "standard" ? undefined : compilationMode,
         },
       },
     },
@@ -176,7 +164,6 @@ export function example(
 
 type ElmMakeParsed = {
   elmFiles: Array<string>;
-  compilationMode: CompilationMode;
   output: string | undefined;
 };
 
@@ -188,10 +175,8 @@ function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
       const parsed = { ...passedParsed, justSawOutputFlag: false };
       switch (arg) {
         case "--debug":
-          return { ...parsed, compilationMode: "debug" };
-
         case "--optimize":
-          return { ...parsed, compilationMode: "optimize" };
+          return parsed;
 
         case "--output":
           return { ...parsed, justSawOutputFlag: true };
@@ -217,7 +202,6 @@ function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
     },
     {
       elmFiles: [],
-      compilationMode: "standard",
       output: undefined,
       justSawOutputFlag: false,
     }
