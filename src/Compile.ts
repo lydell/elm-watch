@@ -2,10 +2,10 @@ import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
 import { join } from "./helpers";
 import { Logger } from "./Logger";
-import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray";
+import { isNonEmptyArray } from "./NonEmptyArray";
 import * as SpawnElm from "./SpawnElm";
 import { State } from "./State";
-import { OutputPath, outputPathToString } from "./types";
+import { OutputPath, outputPathToOriginalString } from "./types";
 
 export async function run(logger: Logger, state: State): Promise<number> {
   await Promise.all(
@@ -14,10 +14,7 @@ export async function run(logger: Logger, state: State): Promise<number> {
         SpawnElm.make({
           elmJsonPath,
           mode: outputState.mode,
-          inputs: mapNonEmptyArray(
-            outputState.inputs,
-            ({ inputPath }) => inputPath
-          ),
+          inputs: outputState.inputs,
           output: outputPath,
         }).then((result) => {
           outputState.status = result;
@@ -33,7 +30,7 @@ export async function run(logger: Logger, state: State): Promise<number> {
       [
         ...summary.messages.map(
           ({ outputPath, message }) =>
-            `${outputPathToString(outputPath)}\n${message}`
+            `${outputPathToOriginalString(outputPath)}\n${message}`
         ),
         ...summary.compileErrors,
         ...printOutputPaths("Succeeded:", summary.succeeded),
@@ -174,6 +171,6 @@ function printOutputPaths(
   paths: Array<OutputPath>
 ): Array<string> {
   return isNonEmptyArray(paths)
-    ? [label, ...paths.map(outputPathToString)]
+    ? [label, ...paths.map(outputPathToOriginalString)]
     : [];
 }

@@ -1,9 +1,10 @@
 import type { DecoderError } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
-import { bold, join } from "./helpers";
+import { bold, dim, join } from "./helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./path-helpers";
+import { UncheckedInputPath } from "./State";
 import type {
   CliArg,
   ElmJsonPath,
@@ -146,7 +147,7 @@ ${join(
   "\n"
 )}
 
-${bold("Files on different drives is not supported.")}
+${bold("Compiling files on different drives is not supported.")}
   `.trim();
 }
 
@@ -155,7 +156,7 @@ export function elmJsonNotFound(inputs: NonEmptyArray<InputPath>): string {
 I could not find an ${bold("elm.json")} for these inputs:
 
 ${join(
-  mapNonEmptyArray(inputs, (input) => input.theInputPath.absolutePath),
+  mapNonEmptyArray(inputs, (inputPath) => inputPath.originalString),
   "\n"
 )}
 
@@ -177,24 +178,32 @@ ${join(
   mapNonEmptyArray(
     theNonUniqueElmJsonPaths,
     ({ inputPath, elmJsonPath }) =>
-      `${inputPath.theInputPath.absolutePath}\n-> ${elmJsonPath.theElmJsonPath.absolutePath}`
+      `${inputPath.originalString}\n-> ${elmJsonPath.theElmJsonPath.absolutePath}`
   ),
   "\n\n"
 )}
 
 It doesn't make sense to compile Elm files from different projects into one output.
 
-Either split this output into several, or move the inputs to the same project
-with the same ${bold("elm.json")}.
+Either split this output, or move the inputs to the same project with the same
+${bold("elm.json")}.
   `.trim();
 }
 
-export function inputsNotFound(inputs: NonEmptyArray<InputPath>): string {
+export function inputsNotFound(
+  inputs: NonEmptyArray<UncheckedInputPath>
+): string {
   return `
 You asked me to compile these inputs:
 
 ${join(
-  mapNonEmptyArray(inputs, (input) => input.theInputPath.absolutePath),
+  mapNonEmptyArray(
+    inputs,
+    (inputPath) =>
+      `${inputPath.originalString} ${dim(
+        `(${inputPath.theUncheckedInputPath.absolutePath})`
+      )}`
+  ),
   "\n"
 )}
 
@@ -205,7 +214,7 @@ Is something misspelled? Or do you need to create them?
 }
 
 export function inputsFailedToResolve(
-  inputs: NonEmptyArray<{ inputPath: InputPath; error: Error }>
+  inputs: NonEmptyArray<{ inputPath: UncheckedInputPath; error: Error }>
 ): string {
   return `
 I start by checking if the inputs you give me exist,
@@ -214,8 +223,7 @@ but doing so resulted in errors!
 ${join(
   mapNonEmptyArray(
     inputs,
-    ({ inputPath, error }) =>
-      `${inputPath.theInputPath.absolutePath}:\n${error.message}`
+    ({ inputPath, error }) => `${inputPath.originalString}:\n${error.message}`
   ),
   "\n\n"
 )}
@@ -230,6 +238,15 @@ export function duplicateInputs(
     resolved: AbsolutePath;
   }>
 ): string {
+  const isSymlink = (inputPath: InputPath): boolean =>
+    inputPath.theInputPath.absolutePath !== inputPath.realpath.absolutePath;
+
+  const hasSymlink = duplicates.some(({ inputs }) => inputs.some(isSymlink));
+
+  const symlinkText = hasSymlink
+    ? `\nNote that at least one of the inputs seem to be a symlink. They can be tricky!`
+    : "";
+
   return `
 Some of your inputs seem to be duplicates!
 
@@ -237,7 +254,11 @@ ${join(
   mapNonEmptyArray(duplicates, ({ inputs, resolved }) =>
     join(
       [
-        ...mapNonEmptyArray(inputs, (input) => input.theInputPath.absolutePath),
+        ...mapNonEmptyArray(inputs, (inputPath) =>
+          isSymlink(inputPath)
+            ? `${inputPath.originalString} ${dim("(symlink)")}`
+            : inputPath.originalString
+        ),
         `-> ${resolved.absolutePath}`,
       ],
       "\n"
@@ -246,6 +267,6 @@ ${join(
   "\n\n"
 )}
 
-Make sure every input is listed just once!
+Make sure every input is listed just once!${symlinkText}
   `.trim();
 }

@@ -10,7 +10,7 @@ import {
   ElmJsonPath,
   InputPath,
   OutputPath,
-  outputPathToString,
+  outputPathToAbsoluteString,
 } from "./types";
 
 export type ElmMakeResult =
@@ -64,7 +64,7 @@ export async function make({
       "json",
       ...compilationModeToArgs(mode),
       "--output",
-      outputPathToString(output),
+      outputPathToAbsoluteString(output),
       ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
     ];
 

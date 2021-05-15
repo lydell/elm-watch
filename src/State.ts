@@ -39,15 +39,9 @@ export type State = {
 };
 
 export type OutputState = {
-  inputs: NonEmptyArray<InputPathWithMetadata>;
+  inputs: NonEmptyArray<InputPath>;
   mode: CompilationMode;
   status: ElmMakeResult | { tag: "NotWrittenToDisk" };
-};
-
-export type InputPathWithMetadata = {
-  inputPath: InputPath;
-  inputRealPath: AbsolutePath;
-  originalString: string;
 };
 
 type ElmJsonError =
@@ -65,13 +59,13 @@ type ElmJsonError =
   | {
       tag: "InputsFailedToResolve";
       inputsFailedToResolve: NonEmptyArray<{
-        inputPath: InputPath;
+        inputPath: UncheckedInputPath;
         error: Error;
       }>;
     }
   | {
       tag: "InputsNotFound";
-      inputsNotFound: NonEmptyArray<InputPath>;
+      inputsNotFound: NonEmptyArray<UncheckedInputPath>;
     }
   | {
       tag: "NonUniqueElmJsonPaths";
@@ -80,6 +74,12 @@ type ElmJsonError =
         elmJsonPath: ElmJsonPath;
       }>;
     };
+
+export type UncheckedInputPath = {
+  tag: "UncheckedInputPath";
+  theUncheckedInputPath: AbsolutePath;
+  originalString: string;
+};
 
 export type InitStateResult =
   | {
@@ -121,6 +121,7 @@ export function init({
               elmToolingJsonPath.theElmToolingJsonPath,
               outputPathString
             ),
+            originalString: outputPathString,
           };
 
     if (enabledOutputs.has(outputPathString)) {
@@ -195,53 +196,59 @@ type ResolveElmJsonResult =
   | {
       tag: "Success";
       elmJsonPath: ElmJsonPath;
-      inputs: NonEmptyArray<InputPathWithMetadata>;
+      inputs: NonEmptyArray<InputPath>;
     };
 
 function resolveElmJson(
   elmToolingJsonPath: ElmToolingJsonPath,
   inputStrings: NonEmptyArray<string>
 ): ResolveElmJsonResult {
-  const inputs: Array<InputPathWithMetadata> = [];
-  const inputsNotFound: Array<InputPath> = [];
-  const inputsFailedToResolve: Array<{ inputPath: InputPath; error: Error }> =
-    [];
+  const inputs: Array<InputPath> = [];
+  const inputsNotFound: Array<UncheckedInputPath> = [];
+  const inputsFailedToResolve: Array<{
+    inputPath: UncheckedInputPath;
+    error: Error;
+  }> = [];
   const resolved = new HashMap<AbsolutePath, NonEmptyArray<InputPath>>();
 
   for (const inputString of inputStrings) {
-    const inputPath: InputPath = {
-      tag: "InputPath",
-      theInputPath: absolutePathFromString(
+    const uncheckedInputPath: UncheckedInputPath = {
+      tag: "UncheckedInputPath",
+      theUncheckedInputPath: absolutePathFromString(
         elmToolingJsonPath.theElmToolingJsonPath,
         inputString
       ),
+      originalString: inputString,
     };
 
-    let resolvedPath;
+    let realpath;
     try {
-      resolvedPath = absoluteRealpath(inputPath.theInputPath);
+      realpath = absoluteRealpath(uncheckedInputPath.theUncheckedInputPath);
     } catch (errorAny) {
       const error = errorAny as Error & { code?: string };
       if (error.code === "ENOENT") {
-        inputsNotFound.push(inputPath);
+        inputsNotFound.push(uncheckedInputPath);
       } else {
-        inputsFailedToResolve.push({ inputPath, error });
+        inputsFailedToResolve.push({ inputPath: uncheckedInputPath, error });
       }
       continue;
     }
 
-    const previous = resolved.get(resolvedPath);
+    const inputPath: InputPath = {
+      tag: "InputPath",
+      theInputPath: uncheckedInputPath.theUncheckedInputPath,
+      originalString: inputString,
+      realpath,
+    };
+
+    const previous = resolved.get(realpath);
     if (previous === undefined) {
-      resolved.set(resolvedPath, [inputPath]);
+      resolved.set(realpath, [inputPath]);
     } else {
       previous.push(inputPath);
     }
 
-    inputs.push({
-      inputPath,
-      inputRealPath: resolvedPath,
-      originalString: inputString,
-    });
+    inputs.push(inputPath);
   }
 
   if (isNonEmptyArray(inputsNotFound)) {
@@ -278,7 +285,7 @@ function resolveElmJson(
     elmJsonPath: ElmJsonPath;
   }> = [];
 
-  for (const { inputPath } of inputs) {
+  for (const inputPath of inputs) {
     const elmJsonPathRaw = findClosest(
       "elm.json",
       absoluteDirname(inputPath.theInputPath)
@@ -321,6 +328,6 @@ function resolveElmJson(
     tag: "Success",
     elmJsonPath: uniqueElmJsonPath,
     // At this point we know for sure that `inputs` must be non-empty.
-    inputs: inputs as NonEmptyArray<InputPathWithMetadata>,
+    inputs: inputs as NonEmptyArray<InputPath>,
   };
 }
