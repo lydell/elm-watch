@@ -1,16 +1,16 @@
-import * as childProcess from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import { DecoderError } from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { Env, IS_WINDOWS } from "./helpers";
+import { Env } from "./helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,
   AbsolutePath,
   absolutePathFromString,
 } from "./path-helpers";
+import { Command, ExitReason, spawn } from "./spawn";
 import {
   CompilationMode,
   ElmJsonPath,
@@ -51,15 +51,6 @@ export type ElmMakeResult =
       command: Command;
     };
 
-export type Command = {
-  command: string;
-  args: Array<string>;
-  options: {
-    cwd: AbsolutePath;
-    env: Env;
-  };
-};
-
 export type JsonPath =
   | AbsolutePath
   | { tag: "WritingJsonFailed"; error: Error; attemptedPath: AbsolutePath };
@@ -77,70 +68,51 @@ export async function make({
   output: OutputPath;
   env: Env;
 }): Promise<ElmMakeResult> {
-  return new Promise((resolve) => {
-    const command: Command = {
-      command: "elm",
-      args: [
-        "make",
-        "--report=json",
-        ...compilationModeToArgs(mode),
-        `--output=${outputPathToAbsoluteString(output)}`,
-        ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
-      ],
-      options: {
-        cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
-        env,
-      },
-    };
+  const command: Command = {
+    command: "elm",
+    args: [
+      "make",
+      "--report=json",
+      ...compilationModeToArgs(mode),
+      `--output=${outputPathToAbsoluteString(output)}`,
+      ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
+    ],
+    options: {
+      cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+      env,
+    },
+  };
 
-    const elm = childProcess.spawn(
-      command.command,
-      IS_WINDOWS ? command.args.map(cmdEscapeArg) : command.args,
-      {
-        ...command.options,
-        cwd: command.options.cwd.absolutePath,
-        shell: IS_WINDOWS,
-      }
-    );
+  const spawnResult = await spawn(command);
 
-    let stdout = "";
-    let stderr = "";
+  switch (spawnResult.tag) {
+    case "CommandNotFoundError":
+      return { tag: "ElmNotFoundError", command };
 
-    elm.on("error", (error: Error & { code?: string }) => {
-      resolve(
-        error.code === "ENOENT"
-          ? { tag: "ElmNotFoundError", command }
-          : { tag: "OtherSpawnError", error, command }
-      );
-    });
+    case "OtherSpawnError":
+      return spawnResult;
 
-    elm.stdout.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString();
-    });
-
-    elm.stderr.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString();
-    });
-
-    elm.on("close", (exitCode, signal) => {
-      resolve(
-        exitCode === 0 && signal === null && stdout === "" && stderr === ""
-          ? { tag: "Success", timestamp: Date.now() }
-          : exitCode === 1 &&
-            signal === null &&
-            stdout === "" &&
-            stderr.startsWith("{")
-          ? parseElmMakeJson(command, stderr)
-          : {
-              tag: "UnexpectedOutput",
-              exitReason: exitReason(exitCode, signal),
-              stdout,
-              stderr,
-              command,
-            }
-      );
-    });
-  });
+    case "Exit": {
+      const { exitReason, stdout, stderr } = spawnResult;
+      return exitReason.tag === "ExitCode" &&
+        exitReason.exitCode === 0 &&
+        stdout === "" &&
+        stderr === ""
+        ? { tag: "Success", timestamp: Date.now() }
+        : exitReason.tag === "ExitCode" &&
+          exitReason.exitCode === 1 &&
+          stdout === "" &&
+          stderr.startsWith("{")
+        ? parseElmMakeJson(command, stderr)
+        : {
+            tag: "UnexpectedOutput",
+            exitReason,
+            stdout,
+            stderr,
+            command,
+          };
+    }
+  }
 }
 
 function compilationModeToArgs(mode: CompilationMode): Array<string> {
@@ -152,37 +124,6 @@ function compilationModeToArgs(mode: CompilationMode): Array<string> {
     case "optimize":
       return ["--optimize"];
   }
-}
-
-function cmdEscapeArg(arg: string): string {
-  // https://qntm.org/cmd
-  return `"${arg
-    .replace(/(\\*)"/g, '$1$1\\"')
-    .replace(/(\\+)$/, "$1$1")}"`.replace(/[()%!^"<>&|;, ]/g, "^$&");
-}
-
-export type ExitReason =
-  | {
-      tag: "ExitCode";
-      exitCode: number;
-    }
-  | {
-      tag: "Signal";
-      signal: NodeJS.Signals;
-    }
-  | {
-      tag: "Unknown";
-    };
-
-function exitReason(
-  exitCode: number | null,
-  signal: NodeJS.Signals | null
-): ExitReason {
-  return exitCode !== null
-    ? { tag: "ExitCode", exitCode }
-    : signal !== null
-    ? { tag: "Signal", signal }
-    : { tag: "Unknown" };
 }
 
 function parseElmMakeJson(command: Command, jsonString: string): ElmMakeResult {

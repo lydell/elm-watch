@@ -37,6 +37,7 @@ const Output = Decode.fieldsAuto(
         });
       })
     ),
+    postprocess: Decode.optional(NonEmptyArray(Decode.string)),
   },
   { exact: "throw" }
 );

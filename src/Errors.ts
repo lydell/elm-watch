@@ -4,7 +4,8 @@ import * as ElmToolingJson from "./ElmToolingJson";
 import { bold, dim, Env, IS_WINDOWS, join } from "./helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./path-helpers";
-import { Command, ExitReason, JsonPath } from "./SpawnElm";
+import { Command, ExitReason } from "./spawn";
+import { JsonPath } from "./SpawnElm";
 import { UncheckedInputPath } from "./State";
 import type {
   CliArg,
@@ -274,17 +275,23 @@ Make sure every input is listed just once!${symlinkText}
 
 export function elmNotFoundError(command: Command): string {
   return `
+${commandNotFoundError(command)}
+
+Note: If you have installed Elm locally (for example using npm or elm-tooling),
+execute elm-watch using npx to make elm-watch automatically pick up that local
+installation: ${bold("npx elm-watch")}
+  `.trim();
+}
+
+export function commandNotFoundError(command: Command): string {
+  return `
 I tried to execute ${bold(command.command)}, but it does not appear to exist!
 
 This is what the PATH environment variable looks like:
 
 ${printPATH(command.options.env)}
 
-Is Elm installed?
-
-Note: If you have installed Elm locally (for example using npm or elm-tooling),
-execute elm-watch using npx to make elm-watch automatically pick up that local
-installation: ${bold("npx elm-watch")}
+Is ${bold(command.command)} installed?
   `.trim();
 }
 
@@ -321,6 +328,37 @@ STDOUT:
 ${stdout === "" ? "(empty)" : stdout}
 STDERR:
 ${stderr === "" ? "(empty)" : stderr}
+  `.trim();
+}
+
+export function nonZeroExit(
+  exitReason: ExitReason,
+  stdout: string,
+  stderr: string,
+  command: Command
+): string {
+  return `
+I ran your postprocess command:
+
+${printCommand(command)}
+
+${bold("It exited with an error:")}
+
+${printExitReason(exitReason)}
+${
+  stdout !== "" && stderr === ""
+    ? stdout
+    : stdout === "" && stderr !== ""
+    ? stderr
+    : stdout === "" && stderr === ""
+    ? "(no output)"
+    : `
+STDOUT:
+${stdout === "" ? "(empty)" : stdout}
+STDERR:
+${stderr === "" ? "(empty)" : stderr}
+    `.trim()
+}
   `.trim();
 }
 

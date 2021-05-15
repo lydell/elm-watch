@@ -3,6 +3,7 @@ import * as Errors from "./Errors";
 import { Env, join } from "./helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
+import { postprocess } from "./postprocess";
 import * as SpawnElm from "./SpawnElm";
 import { State } from "./State";
 import { OutputPath, outputPathToOriginalString } from "./types";
@@ -21,8 +22,24 @@ export async function run(
           inputs: outputState.inputs,
           output: outputPath,
           env,
-        }).then((result) => {
-          outputState.status = result;
+        }).then((elmMakeResult) => {
+          if (
+            elmMakeResult.tag === "Success" &&
+            outputState.postprocess !== undefined
+          ) {
+            return postprocess({
+              elmJsonPath,
+              mode: outputState.mode,
+              output: outputPath,
+              postprocessArray: outputState.postprocess,
+              env,
+            }).then((postprocessResult) => {
+              outputState.status = postprocessResult;
+            });
+          } else {
+            outputState.status = elmMakeResult;
+            return undefined;
+          }
         })
       )
     )
@@ -122,6 +139,14 @@ function summarize(state: State): Summary {
           });
           break;
 
+        case "CommandNotFoundError":
+          summary.failed.push(outputPath);
+          summary.messages.push({
+            outputPath,
+            message: Errors.commandNotFoundError(status.command),
+          });
+          break;
+
         case "OtherSpawnError":
           summary.failed.push(outputPath);
           summary.messages.push({
@@ -135,6 +160,19 @@ function summarize(state: State): Summary {
           summary.messages.push({
             outputPath,
             message: Errors.unexpectedOutput(
+              status.exitReason,
+              status.stdout,
+              status.stderr,
+              status.command
+            ),
+          });
+          break;
+
+        case "NonZeroExit":
+          summary.failed.push(outputPath);
+          summary.messages.push({
+            outputPath,
+            message: Errors.nonZeroExit(
               status.exitReason,
               status.stdout,
               status.stderr,

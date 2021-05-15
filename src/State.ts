@@ -16,6 +16,7 @@ import {
   findClosest,
   longestCommonAncestorPath,
 } from "./path-helpers";
+import { PostprocessResult } from "./postprocess";
 import { ElmMakeResult } from "./SpawnElm";
 import type {
   CompilationMode,
@@ -41,7 +42,8 @@ export type State = {
 export type OutputState = {
   inputs: NonEmptyArray<InputPath>;
   mode: CompilationMode;
-  status: ElmMakeResult | { tag: "NotWrittenToDisk" };
+  postprocess?: NonEmptyArray<string>;
+  status: ElmMakeResult | PostprocessResult | { tag: "NotWrittenToDisk" };
 };
 
 type ElmJsonError =
