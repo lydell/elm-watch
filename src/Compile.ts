@@ -1,7 +1,7 @@
 import * as ElmMakeError from "./ElmMakeError";
 import { join } from "./helpers";
 import { Logger } from "./Logger";
-import { isNonEmptyArray } from "./NonEmptyArray";
+import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray";
 import * as SpawnElm from "./SpawnElm";
 import { State } from "./State";
 import { OutputPath, outputPathToString } from "./types";
@@ -13,7 +13,10 @@ export async function run(logger: Logger, state: State): Promise<number> {
         SpawnElm.make({
           elmJsonPath,
           mode: outputState.mode,
-          inputs: outputState.inputs,
+          inputs: mapNonEmptyArray(
+            outputState.inputs,
+            ({ inputPath }) => inputPath
+          ),
           output: outputPath,
         }).then((result) => {
           outputState.status = result;
