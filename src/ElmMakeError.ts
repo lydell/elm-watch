@@ -87,8 +87,16 @@ export type ElmMakeError = ReturnType<typeof ElmMakeError>;
 export const ElmMakeError = Decode.fieldsUnion("type", {
   error: Decode.fieldsAuto({
     tag: () => "GeneralError" as const,
-    // This can be just "elm.json" (not absolute) when elm.json contains `"type": "invalid"`.
-    path: Decode.nullable(Decode.string, undefined),
+    // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
+    path: Decode.nullable(
+      Decode.chain(
+        Decode.stringUnion({
+          "elm.json": null,
+        }),
+        (tag) => ({ tag })
+      ),
+      { tag: "NoPath" as const }
+    ),
     title: Decode.string,
     message: Decode.array(MessageChunk),
   }),
