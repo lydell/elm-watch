@@ -1,9 +1,10 @@
-import type { DecoderError } from "tiny-decoders";
+import { DecoderError } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
-import { bold, dim, join } from "./helpers";
+import { bold, dim, Env, IS_WINDOWS, join } from "./helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./path-helpers";
+import { Command, ExitReason, JsonPath } from "./SpawnElm";
 import { UncheckedInputPath } from "./State";
 import type {
   CliArg,
@@ -269,4 +270,148 @@ ${join(
 
 Make sure every input is listed just once!${symlinkText}
   `.trim();
+}
+
+export function elmNotFoundError(command: Command): string {
+  return `
+I tried to execute ${bold(command.command)}, but it does not appear to exist!
+
+This is what the PATH environment variable looks like:
+
+${printPATH(command.options.env)}
+
+Is Elm installed?
+
+Note: If you have installed Elm locally (for example using npm or elm-tooling),
+execute elm-watch using npx to make elm-watch automatically pick up that local
+installation: ${bold("npx elm-watch")}
+  `.trim();
+}
+
+export function otherSpawnError(error: Error, command: Command): string {
+  return `
+I tried to execute ${bold(command.command)}, but I ran into an error!
+
+${error.message}
+
+This happen when trying to run the following commands:
+
+${printCommand(command)}
+  `.trim();
+}
+
+export function unexpectedOutput(
+  exitReason: ExitReason,
+  stdout: string,
+  stderr: string,
+  command: Command
+): string {
+  return `
+I ran the following commands:
+
+${printCommand(command)}
+
+I expected it to either exit 0 with no output (success),
+or exit 1 with JSON on stderr (compile errors).
+
+${bold("But it exited like this:")}
+
+${printExitReason(exitReason)}
+STDOUT:
+${stdout === "" ? "(empty)" : stdout}
+STDERR:
+${stderr === "" ? "(empty)" : stderr}
+  `.trim();
+}
+
+export function jsonParseError(
+  error: DecoderError | SyntaxError,
+  jsonPath: JsonPath,
+  command: Command
+): string {
+  return `
+I ran the following commands:
+
+${printCommand(command)}
+
+I seem to have gotten some JSON back as expected,
+but I ran into an error when decoding it:
+
+${error instanceof DecoderError ? error.format() : error.message}
+
+${printJsonPath(jsonPath)}
+  `.trim();
+}
+
+function printPATH(env: Env): string {
+  const { PATH } = env;
+
+  if (PATH === undefined) {
+    return "`process.env.PATH` is somehow undefined!";
+  }
+
+  const pathList = PATH.split(IS_WINDOWS ? ";" : ":");
+
+  return join(pathList, "\n");
+}
+
+function printCommand(command: Command): string {
+  return `
+${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
+${commandToPresentationName([command.command, ...command.args])}
+  `.trim();
+}
+
+function commandToPresentationName(command: NonEmptyArray<string>): string {
+  return command
+    .map((part) =>
+      part === ""
+        ? "''"
+        : part
+            .split(/(')/)
+            .map((subPart) =>
+              subPart === ""
+                ? ""
+                : subPart === "'"
+                ? "\\'"
+                : /^[\w.,:/=@%+-]+$/.test(subPart)
+                ? subPart
+                : `'${subPart}'`
+            )
+            .join("")
+    )
+    .join(" ");
+}
+
+function printExitReason(exitReason: ExitReason): string {
+  switch (exitReason.tag) {
+    case "ExitCode":
+      return `exit ${exitReason.exitCode}`;
+    case "Signal":
+      return `signal ${exitReason.signal}`;
+    case "Unknown":
+      return "unknown exit reason";
+  }
+}
+
+function printJsonPath(jsonPath: JsonPath): string {
+  switch (jsonPath.tag) {
+    case "AbsolutePath":
+      return `
+I wrote the JSON to this file so you can inspect it:
+
+${jsonPath.absolutePath}
+      `.trim();
+
+    case "WritingJsonFailed":
+      return `
+I tried to write the JSON to this file:
+
+${jsonPath.attemptedPath.absolutePath}
+
+${bold("But that failed too:")}
+
+${jsonPath.error.message}
+      `.trim();
+  }
 }

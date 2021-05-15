@@ -52,6 +52,7 @@ export async function elmWatchCli(
     case "hot":
       return run(
         cwd,
+        env,
         logger,
         args[0],
         args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg }))

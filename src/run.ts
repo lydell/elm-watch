@@ -1,6 +1,7 @@
 import * as Compile from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
+import { Env } from "./helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { Cwd } from "./path-helpers";
@@ -9,6 +10,7 @@ import type { CliArg, CompilationMode, RunMode } from "./types";
 
 export async function run(
   cwd: Cwd,
+  env: Env,
   logger: Logger,
   runMode: RunMode,
   args: Array<CliArg>
@@ -96,7 +98,7 @@ export async function run(
               return 1;
 
             case "State":
-              return Compile.run(logger, initStateResult.state);
+              return Compile.run(env, logger, initStateResult.state);
           }
         }
       }

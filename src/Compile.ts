@@ -1,13 +1,17 @@
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { join } from "./helpers";
+import { Env, join } from "./helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import * as SpawnElm from "./SpawnElm";
 import { State } from "./State";
 import { OutputPath, outputPathToOriginalString } from "./types";
 
-export async function run(logger: Logger, state: State): Promise<number> {
+export async function run(
+  env: Env,
+  logger: Logger,
+  state: State
+): Promise<number> {
   await Promise.all(
     Array.from(state.elmJsons).flatMap(([elmJsonPath, outputs]) =>
       Array.from(outputs, ([outputPath, outputState]) =>
@@ -16,6 +20,7 @@ export async function run(logger: Logger, state: State): Promise<number> {
           mode: outputState.mode,
           inputs: outputState.inputs,
           output: outputPath,
+          env,
         }).then((result) => {
           outputState.status = result;
         })
@@ -100,8 +105,8 @@ function summarize(state: State): Summary {
   }
 
   for (const [elmJsonPath, outputs] of state.elmJsons) {
-    for (const [outputPath, outputState] of outputs) {
-      switch (outputState.status.tag) {
+    for (const [outputPath, { status }] of outputs) {
+      switch (status.tag) {
         case "NotWrittenToDisk":
           break;
 
@@ -111,45 +116,61 @@ function summarize(state: State): Summary {
 
         case "ElmNotFoundError":
           summary.failed.push(outputPath);
-          summary.messages.push({ outputPath, message: "TODO" });
+          summary.messages.push({
+            outputPath,
+            message: Errors.elmNotFoundError(status.command),
+          });
           break;
 
         case "OtherSpawnError":
           summary.failed.push(outputPath);
-          summary.messages.push({ outputPath, message: "TODO" });
+          summary.messages.push({
+            outputPath,
+            message: Errors.otherSpawnError(status.error, status.command),
+          });
           break;
 
         case "UnexpectedOutput":
           summary.failed.push(outputPath);
-          summary.messages.push({ outputPath, message: "TODO" });
+          summary.messages.push({
+            outputPath,
+            message: Errors.unexpectedOutput(
+              status.exitReason,
+              status.stdout,
+              status.stderr,
+              status.command
+            ),
+          });
           break;
 
         case "JsonParseError":
           summary.failed.push(outputPath);
-          summary.messages.push({ outputPath, message: "TODO" });
-          break;
-
-        case "DecodeError":
-          summary.failed.push(outputPath);
-          summary.messages.push({ outputPath, message: "TODO" });
+          summary.messages.push({
+            outputPath,
+            message: Errors.jsonParseError(
+              status.error,
+              status.jsonPath,
+              status.command
+            ),
+          });
           break;
 
         case "ElmMakeError":
           summary.failed.push(outputPath);
 
-          switch (outputState.status.error.tag) {
+          switch (status.error.tag) {
             case "GeneralError":
               summary.messages.push({
                 outputPath,
                 message: ElmMakeError.renderGeneralError(
                   elmJsonPath,
-                  outputState.status.error
+                  status.error
                 ),
               });
               break;
 
             case "CompileErrors":
-              for (const error of outputState.status.error.errors) {
+              for (const error of status.error.errors) {
                 for (const problem of error.problems) {
                   summary.compileErrors.add(
                     ElmMakeError.renderProblem(error.path, problem)

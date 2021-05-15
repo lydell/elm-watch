@@ -1,10 +1,16 @@
 import * as childProcess from "child_process";
+import * as crypto from "crypto";
+import * as fs from "fs";
 import { DecoderError } from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { IS_WINDOWS } from "./helpers";
+import { Env, IS_WINDOWS } from "./helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname } from "./path-helpers";
+import {
+  absoluteDirname,
+  AbsolutePath,
+  absolutePathFromString,
+} from "./path-helpers";
 import {
   CompilationMode,
   ElmJsonPath,
@@ -15,25 +21,23 @@ import {
 
 export type ElmMakeResult =
   | {
-      tag: "DecodeError";
-      error: DecoderError;
-      rawJson: unknown;
-    }
-  | {
       tag: "ElmMakeError";
       error: ElmMakeError;
     }
   | {
       tag: "ElmNotFoundError";
+      command: Command;
     }
   | {
       tag: "JsonParseError";
-      error: SyntaxError;
-      rawJsonString: string;
+      error: DecoderError | SyntaxError;
+      jsonPath: JsonPath;
+      command: Command;
     }
   | {
       tag: "OtherSpawnError";
       error: Error;
+      command: Command;
     }
   | {
       tag: "Success";
@@ -44,36 +48,58 @@ export type ElmMakeResult =
       exitReason: ExitReason;
       stdout: string;
       stderr: string;
+      command: Command;
     };
+
+export type Command = {
+  command: string;
+  args: Array<string>;
+  options: {
+    cwd: AbsolutePath;
+    env: Env;
+  };
+};
+
+export type JsonPath =
+  | AbsolutePath
+  | { tag: "WritingJsonFailed"; error: Error; attemptedPath: AbsolutePath };
 
 export async function make({
   elmJsonPath,
   mode,
   inputs,
   output,
+  env,
 }: {
   elmJsonPath: ElmJsonPath;
   mode: CompilationMode;
   inputs: NonEmptyArray<InputPath>;
   output: OutputPath;
+  env: Env;
 }): Promise<ElmMakeResult> {
   return new Promise((resolve) => {
-    const args = [
-      "make",
-      "--report",
-      "json",
-      ...compilationModeToArgs(mode),
-      "--output",
-      outputPathToAbsoluteString(output),
-      ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
-    ];
+    const command: Command = {
+      command: "elm",
+      args: [
+        "make",
+        "--report=json",
+        ...compilationModeToArgs(mode),
+        `--output=${outputPathToAbsoluteString(output)}`,
+        ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
+      ],
+      options: {
+        cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+        env,
+      },
+    };
 
     const elm = childProcess.spawn(
-      "elm",
-      IS_WINDOWS ? args.map(cmdEscapeArg) : args,
+      command.command,
+      IS_WINDOWS ? command.args.map(cmdEscapeArg) : command.args,
       {
+        ...command.options,
+        cwd: command.options.cwd.absolutePath,
         shell: IS_WINDOWS,
-        cwd: absoluteDirname(elmJsonPath.theElmJsonPath).absolutePath,
       }
     );
 
@@ -83,8 +109,8 @@ export async function make({
     elm.on("error", (error: Error & { code?: string }) => {
       resolve(
         error.code === "ENOENT"
-          ? { tag: "ElmNotFoundError" }
-          : { tag: "OtherSpawnError", error }
+          ? { tag: "ElmNotFoundError", command }
+          : { tag: "OtherSpawnError", error, command }
       );
     });
 
@@ -104,12 +130,13 @@ export async function make({
             signal === null &&
             stdout === "" &&
             stderr.startsWith("{")
-          ? parseElmMakeJson(stderr)
+          ? parseElmMakeJson(command, stderr)
           : {
               tag: "UnexpectedOutput",
               exitReason: exitReason(exitCode, signal),
               stdout,
               stderr,
+              command,
             }
       );
     });
@@ -134,7 +161,7 @@ function cmdEscapeArg(arg: string): string {
     .replace(/(\\+)$/, "$1$1")}"`.replace(/[()%!^"<>&|;, ]/g, "^$&");
 }
 
-type ExitReason =
+export type ExitReason =
   | {
       tag: "ExitCode";
       exitCode: number;
@@ -158,7 +185,7 @@ function exitReason(
     : { tag: "Unknown" };
 }
 
-function parseElmMakeJson(jsonString: string): ElmMakeResult {
+function parseElmMakeJson(command: Command, jsonString: string): ElmMakeResult {
   let json: unknown;
 
   try {
@@ -168,7 +195,8 @@ function parseElmMakeJson(jsonString: string): ElmMakeResult {
     return {
       tag: "JsonParseError",
       error,
-      rawJsonString: jsonString,
+      jsonPath: tryWriteJson(command.options.cwd, jsonString),
+      command,
     };
   }
 
@@ -180,9 +208,32 @@ function parseElmMakeJson(jsonString: string): ElmMakeResult {
   } catch (errorAny) {
     const error = errorAny as DecoderError;
     return {
-      tag: "DecodeError",
+      tag: "JsonParseError",
       error,
-      rawJson: json,
+      jsonPath: tryWriteJson(command.options.cwd, JSON.stringify(json)),
+      command,
     };
   }
+}
+
+function tryWriteJson(cwd: AbsolutePath, json: string): JsonPath {
+  const jsonPath = absolutePathFromString(
+    cwd,
+    `elm-watch-JsonParseError-${sha256(json)}.json`
+  );
+  try {
+    fs.writeFileSync(jsonPath.absolutePath, json);
+    return jsonPath;
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    return {
+      tag: "WritingJsonFailed",
+      error,
+      attemptedPath: jsonPath,
+    };
+  }
+}
+
+function sha256(string: string): string {
+  return crypto.createHash("sha256").update(string).digest("hex");
 }
