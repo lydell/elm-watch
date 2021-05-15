@@ -29,6 +29,16 @@ export function absoluteDirname({ absolutePath }: AbsolutePath): AbsolutePath {
   };
 }
 
+/**
+ * Note that this can throw fs errors.
+ */
+export function absoluteRealpath({ absolutePath }: AbsolutePath): AbsolutePath {
+  return {
+    tag: "AbsolutePath",
+    absolutePath: fs.realpathSync(absolutePath),
+  };
+}
+
 export function findClosest(
   name: string,
   absoluteDir: AbsolutePath

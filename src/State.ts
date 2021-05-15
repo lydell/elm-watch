@@ -11,6 +11,7 @@ import {
   absoluteDirname,
   AbsolutePath,
   absolutePathFromString,
+  absoluteRealpath,
   Cwd,
   findClosest,
   longestCommonAncestorPath,
@@ -32,20 +33,41 @@ export type State = {
   runMode: RunMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   disabledOutputs: HashSet<OutputPath>;
-  elmJsonsErrors: Array<ElmJsonError>;
+  elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }>;
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   // Maybe also websocket connections in the future.
 };
 
-type ElmJsonError = {
-  tag: "ElmJsonError";
-  outputPath: OutputPath;
-  elmJsonNotFound: Array<InputPath>;
-  nonUniqueElmJsonPaths: Array<{
-    inputPath: InputPath;
-    elmJsonPath: ElmJsonPath;
-  }>;
-};
+type ElmJsonError =
+  | {
+      tag: "DuplicateInputs";
+      duplicates: NonEmptyArray<{
+        inputs: NonEmptyArray<InputPath>;
+        resolved: AbsolutePath;
+      }>;
+    }
+  | {
+      tag: "ElmJsonNotFound";
+      elmJsonNotFound: Array<InputPath>;
+    }
+  | {
+      tag: "InputsFailedToResolve";
+      inputsFailedToResolve: NonEmptyArray<{
+        inputPath: InputPath;
+        error: Error;
+      }>;
+    }
+  | {
+      tag: "InputsNotFound";
+      inputsNotFound: NonEmptyArray<InputPath>;
+    }
+  | {
+      tag: "NonUniqueElmJsonPaths";
+      nonUniqueElmJsonPaths: Array<{
+        inputPath: InputPath;
+        elmJsonPath: ElmJsonPath;
+      }>;
+    };
 
 export type OutputState = {
   inputs: NonEmptyArray<InputPath>;
@@ -71,7 +93,8 @@ export function init(
   enabledOutputs: Set<string>
 ): InitStateResult {
   const disabledOutputs = new HashSet<OutputPath>();
-  const elmJsonsErrors: Array<ElmJsonError> = [];
+  const elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }> =
+    [];
   const elmJsons = new HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>();
 
   for (const [outputPathString, output] of Object.entries(config.outputs)) {
@@ -87,27 +110,18 @@ export function init(
           };
 
     if (enabledOutputs.has(outputPathString)) {
-      const inputs = mapNonEmptyArray(
-        output.inputs,
-        (inputString): InputPath => ({
-          tag: "InputPath",
-          theInputPath: absolutePathFromString(
-            elmToolingJsonPath.theElmToolingJsonPath,
-            inputString
-          ),
-        })
+      const resolveElmJsonResult = resolveElmJson(
+        elmToolingJsonPath,
+        output.inputs
       );
 
-      const resolveElmJsonResult = resolveElmJson(inputs);
-
       switch (resolveElmJsonResult.tag) {
-        case "ElmJsonPath": {
+        case "Success": {
           const previous =
             elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
             new HashMap<OutputPath, OutputState>();
-
           previous.set(outputPath, {
-            inputs,
+            inputs: resolveElmJsonResult.inputs,
             mode: output.mode ?? "standard",
             status: { tag: "NotWrittenToDisk" },
           });
@@ -115,8 +129,8 @@ export function init(
           break;
         }
 
-        case "ElmJsonError":
-          elmJsonsErrors.push({ ...resolveElmJsonResult, outputPath });
+        default:
+          elmJsonsErrors.push({ outputPath, error: resolveElmJsonResult });
           break;
       }
     } else {
@@ -163,15 +177,91 @@ export function init(
 }
 
 type ResolveElmJsonResult =
-  | Omit<ElmJsonError, "outputPath">
+  | ElmJsonError
   | {
-      tag: "ElmJsonPath";
+      tag: "Success";
       elmJsonPath: ElmJsonPath;
+      inputs: NonEmptyArray<InputPath>;
     };
 
 function resolveElmJson(
-  inputs: NonEmptyArray<InputPath>
+  elmToolingJsonPath: ElmToolingJsonPath,
+  inputStrings: NonEmptyArray<string>
 ): ResolveElmJsonResult {
+  const inputs = mapNonEmptyArray(
+    inputStrings,
+    (inputString): InputPath => ({
+      tag: "InputPath",
+      theInputPath: absolutePathFromString(
+        elmToolingJsonPath.theElmToolingJsonPath,
+        inputString
+      ),
+    })
+  );
+
+  const inputsNotFound: Array<InputPath> = [];
+  const inputsFailedToResolve: Array<{ inputPath: InputPath; error: Error }> =
+    [];
+  const resolved = new HashMap<AbsolutePath, NonEmptyArray<InputPath>>();
+
+  for (const inputString of inputStrings) {
+    const inputPath: InputPath = {
+      tag: "InputPath",
+      theInputPath: absolutePathFromString(
+        elmToolingJsonPath.theElmToolingJsonPath,
+        inputString
+      ),
+    };
+
+    let resolvedPath;
+    try {
+      resolvedPath = absoluteRealpath(inputPath.theInputPath);
+    } catch (errorAny) {
+      const error = errorAny as Error & { code?: string };
+      if (error.code === "ENOENT") {
+        inputsNotFound.push(inputPath);
+      } else {
+        inputsFailedToResolve.push({ inputPath, error });
+      }
+      continue;
+    }
+
+    const previous = resolved.get(resolvedPath);
+    if (previous === undefined) {
+      resolved.set(resolvedPath, [inputPath]);
+    } else {
+      previous.push(inputPath);
+    }
+  }
+
+  if (isNonEmptyArray(inputsNotFound)) {
+    return {
+      tag: "InputsNotFound",
+      inputsNotFound,
+    };
+  }
+
+  if (isNonEmptyArray(inputsFailedToResolve)) {
+    return {
+      tag: "InputsFailedToResolve",
+      inputsFailedToResolve,
+    };
+  }
+
+  const duplicates = Array.from(resolved)
+    .filter(([_, inputPaths]) => inputPaths.length >= 2)
+    .map(([resolvedPath, inputPaths]) => ({
+      resolved: resolvedPath,
+      inputs: inputPaths,
+    }));
+
+  if (isNonEmptyArray(duplicates)) {
+    return {
+      tag: "DuplicateInputs",
+      duplicates,
+    };
+  }
+
   const elmJsonNotFound: Array<InputPath> = [];
   const elmJsonPaths: Array<{
     inputPath: InputPath;
@@ -193,27 +283,29 @@ function resolveElmJson(
     }
   }
 
+  if (isNonEmptyArray(elmJsonNotFound)) {
+    return {
+      tag: "ElmJsonNotFound",
+      elmJsonNotFound,
+    };
+  }
+
   const elmJsonPathsSet = new HashSet(
     elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath)
   );
 
   const uniqueElmJsonPath = getSetSingleton(elmJsonPathsSet);
 
-  return isNonEmptyArray(elmJsonNotFound)
-    ? {
-        tag: "ElmJsonError",
-        elmJsonNotFound,
-        nonUniqueElmJsonPaths:
-          uniqueElmJsonPath === undefined ? elmJsonPaths : [],
-      }
-    : uniqueElmJsonPath === undefined
-    ? {
-        tag: "ElmJsonError",
-        elmJsonNotFound: [],
-        nonUniqueElmJsonPaths: elmJsonPaths,
-      }
-    : {
-        tag: "ElmJsonPath",
-        elmJsonPath: uniqueElmJsonPath,
-      };
+  if (uniqueElmJsonPath === undefined) {
+    return {
+      tag: "NonUniqueElmJsonPaths",
+      nonUniqueElmJsonPaths: elmJsonPaths,
+    };
+  }
+
+  return {
+    tag: "Success",
+    elmJsonPath: uniqueElmJsonPath,
+    inputs,
+  };
 }
