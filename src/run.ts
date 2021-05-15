@@ -18,13 +18,19 @@ export async function run(
   switch (parseResult.tag) {
     case "ReadAsJsonError":
       logger.error(
-        Errors.readAsJson(parseResult.elmToolingJsonPath, parseResult.error)
+        Errors.readElmToolingJsonAsJson(
+          parseResult.elmToolingJsonPath,
+          parseResult.error
+        )
       );
       return 1;
 
     case "DecodeError":
       logger.error(
-        Errors.decode(parseResult.elmToolingJsonPath, parseResult.error)
+        Errors.decodeElmToolingJson(
+          parseResult.elmToolingJsonPath,
+          parseResult.error
+        )
       );
       return 1;
 

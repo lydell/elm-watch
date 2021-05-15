@@ -1,4 +1,5 @@
 import * as ElmMakeError from "./ElmMakeError";
+import * as Errors from "./Errors";
 import { join } from "./helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray";
@@ -30,7 +31,10 @@ export async function run(logger: Logger, state: State): Promise<number> {
   logger.log(
     join(
       [
-        ...summary.messages,
+        ...summary.messages.map(
+          ({ outputPath, message }) =>
+            `${outputPathToString(outputPath)}\n${message}`
+        ),
         ...summary.compileErrors,
         ...printOutputPaths("Succeeded:", summary.succeeded),
         ...printOutputPaths("Failed:", summary.failed),
@@ -45,7 +49,7 @@ export async function run(logger: Logger, state: State): Promise<number> {
 type Summary = {
   succeeded: Array<OutputPath>;
   failed: Array<OutputPath>;
-  messages: Array<string>;
+  messages: Array<{ outputPath: OutputPath; message: string }>;
   compileErrors: Set<string>;
 };
 
@@ -57,12 +61,48 @@ function summarize(state: State): Summary {
     compileErrors: new Set(),
   };
 
-  for (const elmJsonError of state.elmJsonsErrors) {
-    summary.failed.push(elmJsonError.outputPath);
-    summary.messages.push("TODO");
+  for (const { outputPath, error } of state.elmJsonsErrors) {
+    summary.failed.push(outputPath);
+
+    switch (error.tag) {
+      case "ElmJsonNotFound":
+        summary.messages.push({
+          outputPath,
+          message: Errors.elmJsonNotFound(error.elmJsonNotFound),
+        });
+        break;
+
+      case "NonUniqueElmJsonPaths":
+        summary.messages.push({
+          outputPath,
+          message: Errors.nonUniqueElmJsonPaths(error.nonUniqueElmJsonPaths),
+        });
+        break;
+
+      case "InputsNotFound":
+        summary.messages.push({
+          outputPath,
+          message: Errors.inputsNotFound(error.inputsNotFound),
+        });
+        break;
+
+      case "InputsFailedToResolve":
+        summary.messages.push({
+          outputPath,
+          message: Errors.inputsFailedToResolve(error.inputsFailedToResolve),
+        });
+        break;
+
+      case "DuplicateInputs":
+        summary.messages.push({
+          outputPath,
+          message: Errors.duplicateInputs(error.duplicates),
+        });
+        break;
+    }
   }
 
-  for (const [_elmJsonPath, outputs] of state.elmJsons) {
+  for (const [elmJsonPath, outputs] of state.elmJsons) {
     for (const [outputPath, outputState] of outputs) {
       switch (outputState.status.tag) {
         case "NotWrittenToDisk":
@@ -74,27 +114,27 @@ function summarize(state: State): Summary {
 
         case "ElmNotFoundError":
           summary.failed.push(outputPath);
-          summary.messages.push("TODO");
+          summary.messages.push({ outputPath, message: "TODO" });
           break;
 
         case "OtherSpawnError":
           summary.failed.push(outputPath);
-          summary.messages.push("TODO");
+          summary.messages.push({ outputPath, message: "TODO" });
           break;
 
         case "UnexpectedOutput":
           summary.failed.push(outputPath);
-          summary.messages.push("TODO");
+          summary.messages.push({ outputPath, message: "TODO" });
           break;
 
         case "JsonParseError":
           summary.failed.push(outputPath);
-          summary.messages.push("TODO");
+          summary.messages.push({ outputPath, message: "TODO" });
           break;
 
         case "DecodeError":
           summary.failed.push(outputPath);
-          summary.messages.push("TODO");
+          summary.messages.push({ outputPath, message: "TODO" });
           break;
 
         case "ElmMakeError":
@@ -102,7 +142,13 @@ function summarize(state: State): Summary {
 
           switch (outputState.status.error.tag) {
             case "GeneralError":
-              summary.messages.push("TODO");
+              summary.messages.push({
+                outputPath,
+                message: ElmMakeError.renderGeneralError(
+                  elmJsonPath,
+                  outputState.status.error
+                ),
+              });
               break;
 
             case "CompileErrors":

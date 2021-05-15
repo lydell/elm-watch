@@ -2,13 +2,18 @@ import type { DecoderError } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
 import { bold, join } from "./helpers";
-import type { NonEmptyArray } from "./NonEmptyArray";
+import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./path-helpers";
-import type { CliArg, ElmToolingJsonPath } from "./types";
+import type {
+  CliArg,
+  ElmJsonPath,
+  ElmToolingJsonPath,
+  InputPath,
+} from "./types";
 
 const elmToolingJson = bold("elm-tooling.json");
 
-export function readAsJson(
+export function readElmToolingJsonAsJson(
   elmToolingJsonPath: ElmToolingJsonPath,
   error: Error
 ): string {
@@ -25,7 +30,7 @@ ${error.message}
   `.trim();
 }
 
-export function decode(
+export function decodeElmToolingJson(
   elmToolingJsonPath: ElmToolingJsonPath,
   error: DecoderError
 ): string {
@@ -58,7 +63,7 @@ export function elmToolingJsonNotFound(cwd: Cwd, args: Array<CliArg>): string {
   return `
 I read inputs, outputs and options from ${elmToolingJson}.
 
-${bold("But I couldn’t find one!")}
+${bold("But I couldn't find one!")}
 
 You need to create one with JSON like this:
 
@@ -89,7 +94,7 @@ export function badArgs(
 ): string {
   return `
 ${bold(
-  "I only accept JS file paths as arguments, but I got some that don’t look like that:"
+  "I only accept JS file paths as arguments, but I got some that don't look like that:"
 )}
 
 ${join(
@@ -123,7 +128,7 @@ It contains these outputs:
 
 ${join(knownOutputs, "\n")}
 
-${bold("But those don’t include these outputs you asked me to build:")}
+${bold("But those don't include these outputs you asked me to build:")}
 
 ${join(theUnknownOutputs, "\n")}
 
@@ -137,10 +142,110 @@ export function noCommonRoot(paths: NonEmptyArray<AbsolutePath>): string {
 I could not find a common ancestor for these paths:
 
 ${join(
-  paths.map((thePath) => thePath.absolutePath),
+  mapNonEmptyArray(paths, (thePath) => thePath.absolutePath),
   "\n"
 )}
 
 ${bold("Files on different drives is not supported.")}
+  `.trim();
+}
+
+export function elmJsonNotFound(inputs: NonEmptyArray<InputPath>): string {
+  return `
+I could not find an ${bold("elm.json")} for these inputs:
+
+${join(
+  mapNonEmptyArray(inputs, (input) => input.theInputPath.absolutePath),
+  "\n"
+)}
+
+Has it gone missing? Maybe run ${bold("elm init")} to create one?
+  `.trim();
+}
+
+export function nonUniqueElmJsonPaths(
+  theNonUniqueElmJsonPaths: NonEmptyArray<{
+    inputPath: InputPath;
+    elmJsonPath: ElmJsonPath;
+  }>
+): string {
+  return `
+I went looking for an ${bold("elm.json")} for your inputs,
+but I found more than one!
+
+${join(
+  mapNonEmptyArray(
+    theNonUniqueElmJsonPaths,
+    ({ inputPath, elmJsonPath }) =>
+      `${inputPath.theInputPath.absolutePath}\n-> ${elmJsonPath.theElmJsonPath.absolutePath}`
+  ),
+  "\n\n"
+)}
+
+It doesn't make sense to compile Elm files from different projects into one output.
+
+Either split this output into several, or move the inputs to the same project
+with the same ${bold("elm.json")}.
+  `.trim();
+}
+
+export function inputsNotFound(inputs: NonEmptyArray<InputPath>): string {
+  return `
+You asked me to compile these inputs:
+
+${join(
+  mapNonEmptyArray(inputs, (input) => input.theInputPath.absolutePath),
+  "\n"
+)}
+
+${bold("But they don't exist!")}
+
+Is something misspelled? Or do you need to create them?
+  `.trim();
+}
+
+export function inputsFailedToResolve(
+  inputs: NonEmptyArray<{ inputPath: InputPath; error: Error }>
+): string {
+  return `
+I start by checking if the inputs you give me exist,
+but doing so resulted in errors!
+
+${join(
+  mapNonEmptyArray(
+    inputs,
+    ({ inputPath, error }) =>
+      `${inputPath.theInputPath.absolutePath}:\n${error.message}`
+  ),
+  "\n\n"
+)}
+
+${bold("That's all I know, unfortunately!")}
+  `.trim();
+}
+
+export function duplicateInputs(
+  duplicates: NonEmptyArray<{
+    inputs: NonEmptyArray<InputPath>;
+    resolved: AbsolutePath;
+  }>
+): string {
+  return `
+Some of your inputs seem to be duplicates!
+
+${join(
+  mapNonEmptyArray(duplicates, ({ inputs, resolved }) =>
+    join(
+      [
+        ...mapNonEmptyArray(inputs, (input) => input.theInputPath.absolutePath),
+        `-> ${resolved.absolutePath}`,
+      ],
+      "\n"
+    )
+  ),
+  "\n\n"
+)}
+
+Make sure every input is listed just once!
   `.trim();
 }

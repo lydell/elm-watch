@@ -3,6 +3,7 @@ import * as Decode from "tiny-decoders";
 import { bold, join, RESET_COLOR } from "./helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath } from "./path-helpers";
+import { ElmJsonPath } from "./types";
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L412-L431
 // Lowercase means “dull” and uppercase means “vivid”:
@@ -82,29 +83,55 @@ const CompileError = Decode.fieldsAuto({
   problems: NonEmptyArray(Problem),
 });
 
+type GeneralError = ReturnType<typeof GeneralError>;
+const GeneralError = Decode.fieldsAuto({
+  tag: () => "GeneralError" as const,
+  // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
+  path: Decode.nullable(
+    Decode.chain(
+      Decode.stringUnion({
+        "elm.json": null,
+      }),
+      (tag) => ({ tag })
+    ),
+    { tag: "NoPath" as const }
+  ),
+  title: Decode.string,
+  message: Decode.array(MessageChunk),
+});
+
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/builder/src/Reporting/Exit/Help.hs#L94-L109
 export type ElmMakeError = ReturnType<typeof ElmMakeError>;
 export const ElmMakeError = Decode.fieldsUnion("type", {
-  error: Decode.fieldsAuto({
-    tag: () => "GeneralError" as const,
-    // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
-    path: Decode.nullable(
-      Decode.chain(
-        Decode.stringUnion({
-          "elm.json": null,
-        }),
-        (tag) => ({ tag })
-      ),
-      { tag: "NoPath" as const }
-    ),
-    title: Decode.string,
-    message: Decode.array(MessageChunk),
-  }),
+  error: GeneralError,
   "compile-errors": Decode.fieldsAuto({
     tag: () => "CompileErrors" as const,
     errors: NonEmptyArray(CompileError),
   }),
 });
+
+export function renderGeneralError(
+  elmJsonPath: ElmJsonPath,
+  error: GeneralError
+): string {
+  return `
+${renderGeneralErrorPath(elmJsonPath, error.path)}${bold(error.title)}
+
+${join(error.message.map(renderMessageChunk), "")}
+  `;
+}
+
+function renderGeneralErrorPath(
+  elmJsonPath: ElmJsonPath,
+  path: GeneralError["path"]
+): string {
+  switch (path.tag) {
+    case "NoPath":
+      return "";
+    case "elm.json":
+      return `${elmJsonPath.theElmJsonPath.absolutePath}\n`;
+  }
+}
 
 export function renderProblem(
   filePath: AbsolutePath,
