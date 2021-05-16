@@ -8,19 +8,13 @@ import {
   stringSnapshotSerializer,
 } from "./helpers";
 
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "input-validation");
+const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 
-async function validateFailHelper(
-  fixture: string,
-  args: Array<string>
-): Promise<string> {
-  return validateFailHelperAbsolute(path.join(FIXTURES_DIR, fixture), args);
+async function run(fixture: string, args: Array<string>): Promise<string> {
+  return runAbsolute(path.join(FIXTURES_DIR, fixture), args);
 }
 
-async function validateFailHelperAbsolute(
-  dir: string,
-  args: Array<string>
-): Promise<string> {
+async function runAbsolute(dir: string, args: Array<string>): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
 
@@ -40,15 +34,22 @@ async function validateFailHelperAbsolute(
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
-describe("input validation", () => {
+describe("errors", () => {
+  test("unknown command", async () => {
+    expect(await run("wherever", ["nope"])).toMatchInlineSnapshot(`
+      Unknown command: nope
+
+    `);
+  });
+
   test("elm-tooling.json is a folder", async () => {
-    expect(await validateFailHelper("elm-tooling-json-is-folder", ["make"]))
+    expect(await run("elm-tooling-json-is-folder", ["make"]))
       .toMatchInlineSnapshot(`
       I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
       I found an ⧙elm-tooling.json⧘ here:
 
-      /Users/you/project/fixtures/input-validation/elm-tooling-json-is-folder/elm-tooling.json
+      /Users/you/project/fixtures/errors/elm-tooling-json-is-folder/elm-tooling.json
 
       ⧙But I had trouble reading it as JSON:⧘
 
@@ -58,13 +59,13 @@ describe("input validation", () => {
   });
 
   test("elm-tooling.json bad json", async () => {
-    expect(await validateFailHelper("elm-tooling-json-bad-json", ["make"]))
+    expect(await run("elm-tooling-json-bad-json", ["make"]))
       .toMatchInlineSnapshot(`
       I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
       I found an ⧙elm-tooling.json⧘ here:
 
-      /Users/you/project/fixtures/input-validation/elm-tooling-json-bad-json/elm-tooling.json
+      /Users/you/project/fixtures/errors/elm-tooling-json-bad-json/elm-tooling.json
 
       ⧙But I had trouble reading it as JSON:⧘
 
@@ -76,16 +77,13 @@ describe("input validation", () => {
   describe("elm-tooling.json decode errors", () => {
     test("missing x-elm-watch", async () => {
       expect(
-        await validateFailHelper(
-          "elm-tooling-json-decode-error/missing-x-elm-watch",
-          ["make"]
-        )
+        await run("elm-tooling-json-decode-error/missing-x-elm-watch", ["make"])
       ).toMatchInlineSnapshot(`
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/missing-x-elm-watch/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/missing-x-elm-watch/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -97,17 +95,13 @@ describe("input validation", () => {
     });
 
     test("empty outputs", async () => {
-      expect(
-        await validateFailHelper(
-          "elm-tooling-json-decode-error/empty-outputs",
-          ["make"]
-        )
-      ).toMatchInlineSnapshot(`
+      expect(await run("elm-tooling-json-decode-error/empty-outputs", ["make"]))
+        .toMatchInlineSnapshot(`
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/empty-outputs/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/empty-outputs/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -120,16 +114,15 @@ describe("input validation", () => {
 
     test("bad output extension", async () => {
       expect(
-        await validateFailHelper(
-          "elm-tooling-json-decode-error/bad-output-extension",
-          ["make"]
-        )
+        await run("elm-tooling-json-decode-error/bad-output-extension", [
+          "make",
+        ])
       ).toMatchInlineSnapshot(`
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/bad-output-extension/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -142,7 +135,7 @@ describe("input validation", () => {
     test("bad output extension – just .js", async () => {
       // The error message isn’t the best here but this very much an edge case anyway.
       expect(
-        await validateFailHelper(
+        await run(
           "elm-tooling-json-decode-error/bad-output-extension-just-dot-js",
           ["make"]
         )
@@ -151,7 +144,7 @@ describe("input validation", () => {
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/bad-output-extension-just-dot-js/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension-just-dot-js/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -162,17 +155,13 @@ describe("input validation", () => {
     });
 
     test("unknown field", async () => {
-      expect(
-        await validateFailHelper(
-          "elm-tooling-json-decode-error/unknown-field",
-          ["make"]
-        )
-      ).toMatchInlineSnapshot(`
+      expect(await run("elm-tooling-json-decode-error/unknown-field", ["make"]))
+        .toMatchInlineSnapshot(`
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/unknown-field/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/unknown-field/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -184,16 +173,13 @@ describe("input validation", () => {
     });
 
     test("empty list of inputs", async () => {
-      expect(
-        await validateFailHelper("elm-tooling-json-decode-error/empty-inputs", [
-          "make",
-        ])
-      ).toMatchInlineSnapshot(`
+      expect(await run("elm-tooling-json-decode-error/empty-inputs", ["make"]))
+        .toMatchInlineSnapshot(`
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/empty-inputs/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/empty-inputs/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -206,16 +192,13 @@ describe("input validation", () => {
 
     test("bad input extension", async () => {
       expect(
-        await validateFailHelper(
-          "elm-tooling-json-decode-error/bad-input-extension",
-          ["make"]
-        )
+        await run("elm-tooling-json-decode-error/bad-input-extension", ["make"])
       ).toMatchInlineSnapshot(`
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/bad-input-extension/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-input-extension/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -228,16 +211,15 @@ describe("input validation", () => {
 
     test("bad input module name", async () => {
       expect(
-        await validateFailHelper(
-          "elm-tooling-json-decode-error/bad-input-module-name",
-          ["make"]
-        )
+        await run("elm-tooling-json-decode-error/bad-input-module-name", [
+          "make",
+        ])
       ).toMatchInlineSnapshot(`
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
         I found an ⧙elm-tooling.json⧘ here:
 
-        /Users/you/project/fixtures/input-validation/elm-tooling-json-decode-error/bad-input-module-name/elm-tooling.json
+        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-input-module-name/elm-tooling.json
 
         ⧙But I had trouble with the JSON inside:⧘
 
@@ -250,34 +232,33 @@ describe("input validation", () => {
   });
 
   test("elm-tooling.json not found", async () => {
-    expect(
-      await validateFailHelperAbsolute(path.parse(__dirname).root, ["make"])
-    ).toMatchInlineSnapshot(`
-      I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+    expect(await runAbsolute(path.parse(__dirname).root, ["make"]))
+      .toMatchInlineSnapshot(`
+        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
-      ⧙But I couldn't find one!⧘
+        ⧙But I couldn't find one!⧘
 
-      You need to create one with JSON like this:
+        You need to create one with JSON like this:
 
-      {
-          "x-elm-watch": {
-              "outputs": {
-                  "build/main.js": {
-                      "inputs": [
-                          "src/Main.elm"
-                      ]
-                  }
-              }
-          }
-      }
+        {
+            "x-elm-watch": {
+                "outputs": {
+                    "build/main.js": {
+                        "inputs": [
+                            "src/Main.elm"
+                        ]
+                    }
+                }
+            }
+        }
 
-    `);
+      `);
   });
 
   describe("suggest JSON from args", () => {
     test("with typical `elm make`-like args", async () => {
       expect(
-        await validateFailHelper("valid-elm-tooling-json", [
+        await run("valid-elm-tooling-json", [
           "make",
           "src/App.elm",
           "src/Admin.elm",
@@ -294,7 +275,7 @@ describe("input validation", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/input-validation/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -316,7 +297,7 @@ describe("input validation", () => {
 
     test("suggested inputs are relative to elm-tooling.json, not cwd", async () => {
       expect(
-        await validateFailHelper("valid-elm-tooling-json/src", [
+        await run("valid-elm-tooling-json/src", [
           "make",
           "src/App.elm",
           "../lib/Admin.elm",
@@ -329,7 +310,7 @@ describe("input validation", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/input-validation/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -351,10 +332,7 @@ describe("input validation", () => {
 
     test("support --output=/dev/null", async () => {
       expect(
-        await validateFailHelper("valid-elm-tooling-json", [
-          "make",
-          "--output=/dev/null",
-        ])
+        await run("valid-elm-tooling-json", ["make", "--output=/dev/null"])
       ).toMatchInlineSnapshot(`
         ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
 
@@ -362,7 +340,7 @@ describe("input validation", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/input-validation/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -383,7 +361,7 @@ describe("input validation", () => {
 
     test("ignore invalid stuff", async () => {
       expect(
-        await validateFailHelper("valid-elm-tooling-json", [
+        await run("valid-elm-tooling-json", [
           "make",
           "src/app.elm",
           "--output",
@@ -403,7 +381,7 @@ describe("input validation", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/input-validation/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -424,10 +402,7 @@ describe("input validation", () => {
   });
 
   test("Using --debug and --optimize for hot", async () => {
-    const output = await validateFailHelper("valid-elm-tooling-json", [
-      "hot",
-      "--debug",
-    ]);
+    const output = await run("valid-elm-tooling-json", ["hot", "--debug"]);
 
     expect(output).toMatchInlineSnapshot(`
       ⧙--debug⧘ and ⧙--optimize⧘ only make sense for ⧙elm-watch make⧘.
@@ -435,26 +410,18 @@ describe("input validation", () => {
 
     `);
 
-    expect(
-      await validateFailHelper("valid-elm-tooling-json", ["hot", "--optimize"])
-    ).toBe(output);
+    expect(await run("valid-elm-tooling-json", ["hot", "--optimize"])).toBe(
+      output
+    );
 
     expect(
-      await validateFailHelper("valid-elm-tooling-json", [
-        "hot",
-        "--optimize",
-        "--debug",
-      ])
+      await run("valid-elm-tooling-json", ["hot", "--optimize", "--debug"])
     ).toBe(output);
   });
 
   test("using both --debug and --optimize for make", async () => {
     expect(
-      await validateFailHelper("valid-elm-tooling-json", [
-        "make",
-        "--debug",
-        "--optimize",
-      ])
+      await run("valid-elm-tooling-json", ["make", "--debug", "--optimize"])
     ).toMatchInlineSnapshot(`
       ⧙--debug⧘ and ⧙--optimize⧘ cannot be used at the same time.
 
@@ -463,7 +430,7 @@ describe("input validation", () => {
 
   test("unknown outputs", async () => {
     expect(
-      await validateFailHelper("valid-elm-tooling-json", [
+      await run("valid-elm-tooling-json", [
         "make",
         "build/app.js",
         "build/adnim.js",
@@ -474,7 +441,7 @@ describe("input validation", () => {
 
       I found an ⧙elm-tooling.json⧘ here:
 
-      /Users/you/project/fixtures/input-validation/valid-elm-tooling-json/elm-tooling.json
+      /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
 
       It contains these outputs:
 
@@ -490,5 +457,126 @@ describe("input validation", () => {
       Or do you need to add some more outputs?
 
     `);
+  });
+
+  describe("inputs errors", () => {
+    test("inputs not found", async () => {
+      expect(await run("inputs-not-found", ["make"])).toMatchInlineSnapshot(`
+        main.js
+        You asked me to compile these inputs:
+
+        Main.elm ⧙(/Users/you/project/fixtures/errors/inputs-not-found/Main.elm)⧘
+        pages/About.elm ⧙(/Users/you/project/fixtures/errors/inputs-not-found/pages/About.elm)⧘
+
+        ⧙But they don't exist!⧘
+
+        Is something misspelled? Or do you need to create them?
+
+      `);
+    });
+
+    test("symlink loop", async () => {
+      expect(await run("symlink-loop", ["make"])).toMatchInlineSnapshot(`
+        main.js
+        I start by checking if the inputs you give me exist,
+        but doing so resulted in errors!
+
+        Main.elm:
+        ELOOP: too many symbolic links encountered, stat '/Users/you/project/fixtures/errors/symlink-loop/Main.elm'
+
+        ⧙That's all I know, unfortunately!⧘
+
+      `);
+    });
+
+    test("duplicate inputs", async () => {
+      expect(await run("duplicate-inputs", ["make"])).toMatchInlineSnapshot(`
+        main.js
+        Some of your inputs seem to be duplicates!
+
+        Main.elm
+        ../duplicate-inputs/./Main.elm
+        -> /Users/you/project/fixtures/errors/duplicate-inputs/Main.elm
+
+        Make sure every input is listed just once!
+
+      `);
+    });
+
+    test("duplicate inputs with symlinks", async () => {
+      expect(await run("duplicate-inputs-with-symlinks", ["make"]))
+        .toMatchInlineSnapshot(`
+        main.js
+        Some of your inputs seem to be duplicates!
+
+        Main.elm
+        Symlink1.elm ⧙(symlink)⧘
+        Symlink2.elm ⧙(symlink)⧘
+        -> /Users/you/project/fixtures/errors/duplicate-inputs-with-symlinks/Main.elm
+
+        Other.elm
+        Other.elm
+        -> /Users/you/project/fixtures/errors/duplicate-inputs-with-symlinks/Other.elm
+
+        Make sure every input is listed just once!
+        Note that at least one of the inputs seems to be a symlink. They can be tricky!
+
+      `);
+    });
+  });
+
+  describe("elm.json errors", () => {
+    test("elm.json not found", async () => {
+      expect(await run("elm-json-not-found", ["make"])).toMatchInlineSnapshot(`
+        main.js
+        I could not find an ⧙elm.json⧘ for these inputs:
+
+        Main.elm
+        pages/About.elm
+
+        Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+      `);
+    });
+
+    test("elm.json not found for all inputs", async () => {
+      expect(await run("elm-json-not-found-for-all", ["make"]))
+        .toMatchInlineSnapshot(`
+        main.js
+        I could not find an ⧙elm.json⧘ for these inputs:
+
+        Main.elm
+
+        Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+        Note that I did find an ⧙elm.json⧘ for some inputs:
+
+        pages/About.elm
+        -> /Users/you/project/fixtures/errors/elm-json-not-found-for-all/pages/elm.json
+
+        Make sure that one single ⧙elm.json⧘ covers all the inputs together!
+
+      `);
+    });
+
+    test("non unique elm.json", async () => {
+      expect(await run("non-unique-elm-json", ["make"])).toMatchInlineSnapshot(`
+        main.js
+        I went looking for an ⧙elm.json⧘ for your inputs,
+        but I found more than one!
+
+        Main.elm
+        -> /Users/you/project/fixtures/errors/non-unique-elm-json/elm.json
+
+        pages/About.elm
+        -> /Users/you/project/fixtures/errors/non-unique-elm-json/pages/elm.json
+
+        It doesn't make sense to compile Elm files from different projects into one output.
+
+        Either split this output, or move the inputs to the same project with the same
+        ⧙elm.json⧘.
+
+      `);
+    });
   });
 });
