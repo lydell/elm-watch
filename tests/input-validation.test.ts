@@ -177,10 +177,10 @@ describe("input validation", () => {
         ⧙But I had trouble with the JSON inside:⧘
 
         At root["x-elm-watch"]["outputs"]["main.js"]:
-        Expected only these fields: "inputs"
+        Expected only these fields: "inputs", "postprocess"
         Found extra fields: "mode"
 
-    `);
+      `);
     });
 
     test("empty list of inputs", async () => {
@@ -253,25 +253,25 @@ describe("input validation", () => {
     expect(
       await validateFailHelperAbsolute(path.parse(__dirname).root, ["make"])
     ).toMatchInlineSnapshot(`
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+      I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
-        ⧙But I couldn’t find one!⧘
+      ⧙But I couldn't find one!⧘
 
-        You need to create one with JSON like this:
+      You need to create one with JSON like this:
 
-        {
-            "x-elm-watch": {
-                "outputs": {
-                    "build/main.js": {
-                        "inputs": [
-                            "src/Main.elm"
-                        ]
-                    }
-                }
-            }
-        }
+      {
+          "x-elm-watch": {
+              "outputs": {
+                  "build/main.js": {
+                      "inputs": [
+                          "src/Main.elm"
+                      ]
+                  }
+              }
+          }
+      }
 
-      `);
+    `);
   });
 
   describe("suggest JSON from args", () => {
@@ -286,7 +286,7 @@ describe("input validation", () => {
           "--debug",
         ])
       ).toMatchInlineSnapshot(`
-        ⧙I only accept JS file paths as arguments, but I got some that don’t look like that:⧘
+        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
 
         src/App.elm
         src/Admin.elm
@@ -322,7 +322,7 @@ describe("input validation", () => {
           "../lib/Admin.elm",
         ])
       ).toMatchInlineSnapshot(`
-        ⧙I only accept JS file paths as arguments, but I got some that don’t look like that:⧘
+        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
 
         src/App.elm
         ../lib/Admin.elm
@@ -356,7 +356,7 @@ describe("input validation", () => {
           "--output=/dev/null",
         ])
       ).toMatchInlineSnapshot(`
-        ⧙I only accept JS file paths as arguments, but I got some that don’t look like that:⧘
+        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
 
         --output=/dev/null
 
@@ -393,7 +393,7 @@ describe("input validation", () => {
           "docs.json",
         ])
       ).toMatchInlineSnapshot(`
-        ⧙I only accept JS file paths as arguments, but I got some that don’t look like that:⧘
+        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
 
         src/app.elm
         --output
@@ -481,7 +481,7 @@ describe("input validation", () => {
       build/app.js
       build/admin.js
 
-      ⧙But those don’t include these outputs you asked me to build:⧘
+      ⧙But those don't include these outputs you asked me to build:⧘
 
       build/adnim.js
       app.js
