@@ -10,11 +10,15 @@ const READ_MORE =
 
 type Package = {
   version: string;
+  dependencies: unknown;
 };
 
-const PKG = JSON.parse(
-  fs.readFileSync(path.join(DIR, "package-real.json"), "utf8")
-) as Package;
+function readPackage(name: string): Package {
+  return JSON.parse(fs.readFileSync(path.join(DIR, name), "utf8")) as Package;
+}
+
+const PACKAGE = readPackage("package.json");
+const PACKAGE_REAL = readPackage("package-real.json");
 
 type FileToCopy = {
   src: string;
@@ -24,7 +28,6 @@ type FileToCopy = {
 
 const FILES_TO_COPY: Array<FileToCopy> = [
   { src: "LICENSE" },
-  { src: "package-real.json", dest: "package.json" },
   {
     src: "README.md",
     transform: (content) => content.replace(/^##[^]*/m, READ_MORE),
@@ -50,6 +53,15 @@ for (const { src, dest = src, transform } of FILES_TO_COPY) {
   }
 }
 
+fs.writeFileSync(
+  path.join(BUILD, "package.json"),
+  JSON.stringify(
+    { ...PACKAGE_REAL, dependencies: PACKAGE.dependencies },
+    null,
+    2
+  )
+);
+
 childProcess.spawnSync("npx", ["--no-install", "tsc"], {
   shell: true,
   stdio: "inherit",
@@ -63,7 +75,7 @@ function modifyFile(
 }
 
 modifyFile(path.join(BUILD, "help.js"), (content) =>
-  content.replace(/%VERSION%/g, PKG.version)
+  content.replace(/%VERSION%/g, PACKAGE_REAL.version)
 );
 
 fs.chmodSync(path.join(BUILD, "index.js"), "755");

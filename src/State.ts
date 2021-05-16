@@ -43,8 +43,15 @@ export type OutputState = {
   inputs: NonEmptyArray<InputPath>;
   mode: CompilationMode;
   postprocess?: NonEmptyArray<string>;
-  status: ElmMakeResult | PostprocessResult | { tag: "NotWrittenToDisk" };
+  status: OutputStatus;
 };
+
+export type OutputStatus =
+  | ElmMakeResult
+  | PostprocessResult
+  | { tag: "ElmMake" }
+  | { tag: "NotWrittenToDisk" }
+  | { tag: "Postprocess" };
 
 type ElmJsonError =
   | {

@@ -365,6 +365,15 @@ ${printJsonPath(jsonPath)}
   `.trim();
 }
 
+export function stuckInProgressState(state: string): string {
+  return `
+I thought that all outputs had finished compiling, but my inner state says
+this output is still in the ${bold(state)} phase.
+
+${bold("This is not supposed to ever happen.")}
+  `.trim();
+}
+
 function printPATH(env: Env): string {
   const { PATH } = env;
 

@@ -4,6 +4,11 @@ export type Logger = {
   handleColor: (string: string) => string;
   log: (message: string) => void;
   error: (message: string) => void;
+  raw: {
+    NO_COLOR: boolean;
+    stdout: WriteStream;
+    stderr: WriteStream;
+  };
 };
 
 export function makeLogger({
@@ -26,6 +31,11 @@ export function makeLogger({
     },
     error(message) {
       stderr.write(`${handleColor(message)}\n`);
+    },
+    raw: {
+      NO_COLOR,
+      stdout,
+      stderr,
     },
   };
 }

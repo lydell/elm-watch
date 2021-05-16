@@ -1,11 +1,13 @@
+import * as readline from "readline";
+
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { Env, join } from "./helpers";
+import { Env, IS_WINDOWS, join } from "./helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./postprocess";
 import * as SpawnElm from "./SpawnElm";
-import { State } from "./State";
+import { OutputStatus, State } from "./State";
 import { OutputPath, outputPathToOriginalString } from "./types";
 
 export async function compile(
@@ -13,36 +15,67 @@ export async function compile(
   logger: Logger,
   state: State
 ): Promise<number> {
-  await Promise.all(
-    Array.from(state.elmJsons).flatMap(([elmJsonPath, outputs]) =>
-      Array.from(outputs, ([outputPath, outputState]) =>
-        SpawnElm.make({
-          elmJsonPath,
-          mode: outputState.mode,
-          inputs: outputState.inputs,
-          output: outputPath,
-          env,
-        }).then((elmMakeResult) => {
-          if (
-            elmMakeResult.tag === "Success" &&
-            outputState.postprocess !== undefined
-          ) {
-            return postprocess({
-              elmJsonPath,
-              mode: outputState.mode,
-              output: outputPath,
-              postprocessArray: outputState.postprocess,
-              env,
-            }).then((postprocessResult) => {
-              outputState.status = postprocessResult;
-            });
-          } else {
-            outputState.status = elmMakeResult;
-            return undefined;
-          }
-        })
+  const toCompile = Array.from(state.elmJsons).flatMap(
+    ([elmJsonPath, outputs]) =>
+      Array.from(
+        outputs,
+        ([outputPath, outputState]) =>
+          [elmJsonPath, outputPath, outputState] as const
       )
-    )
+  );
+
+  const fancy = !IS_WINDOWS && !logger.raw.NO_COLOR;
+
+  const updateStatusLine = (
+    outputPath: OutputPath,
+    status: OutputStatus,
+    index?: number
+  ): void => {
+    if (index !== undefined) {
+      readline.moveCursor(logger.raw.stdout, 0, -toCompile.length + index);
+      readline.clearLine(logger.raw.stdout, 0);
+    }
+    logger.log(
+      statusLine(outputPath, status, logger.raw.stdout.columns, fancy)
+    );
+    if (index !== undefined) {
+      readline.moveCursor(logger.raw.stdout, 0, toCompile.length - index - 1);
+    }
+  };
+
+  await Promise.all(
+    toCompile.map(([elmJsonPath, outputPath, outputState], index) => {
+      outputState.status = { tag: "ElmMake" };
+      updateStatusLine(outputPath, outputState.status);
+      return SpawnElm.make({
+        elmJsonPath,
+        mode: outputState.mode,
+        inputs: outputState.inputs,
+        output: outputPath,
+        env,
+      }).then((elmMakeResult) => {
+        if (
+          elmMakeResult.tag === "Success" &&
+          outputState.postprocess !== undefined
+        ) {
+          outputState.status = { tag: "Postprocess" };
+          updateStatusLine(outputPath, outputState.status, index);
+          return postprocess({
+            elmJsonPath,
+            mode: outputState.mode,
+            output: outputPath,
+            postprocessArray: outputState.postprocess,
+            env,
+          }).then((postprocessResult) => {
+            outputState.status = postprocessResult;
+          });
+        } else {
+          outputState.status = elmMakeResult;
+          updateStatusLine(outputPath, outputState.status, index);
+          return undefined;
+        }
+      });
+    })
   );
 
   const summary = summarize(state);
@@ -55,34 +88,69 @@ export async function compile(
             `${outputPathToOriginalString(outputPath)}\n${message}`
         ),
         ...summary.compileErrors,
-        ...printOutputPaths("Succeeded:", summary.succeeded),
-        ...printOutputPaths("Failed:", summary.failed),
       ],
       "\n\n\n"
     )
   );
 
-  return isNonEmptyArray(summary.failed) ? 1 : 0;
+  return isNonEmptyArray(summary.messages) || summary.compileErrors.size > 0
+    ? 1
+    : 0;
+}
+
+function statusLine(
+  outputPath: OutputPath,
+  status: OutputStatus,
+  maxWidth: number,
+  fancy: boolean
+): string {
+  const output = outputPathToOriginalString(outputPath);
+
+  const truncate = (string: string): string => {
+    // Emojis take two terminal columns.
+    const length = fancy ? string.length + 1 : string.length;
+    return length <= maxWidth
+      ? string
+      : fancy
+      ? // Again, account for the emoji.
+        `${string.slice(0, maxWidth - 2)}…`
+      : `${string.slice(0, maxWidth - 3)}...`;
+  };
+
+  switch (status.tag) {
+    case "NotWrittenToDisk":
+    case "Success":
+      return truncate(fancy ? `✅ ${output}` : `${output}: success`);
+
+    case "ElmMake":
+      return truncate(`${fancy ? "⏳ " : ""}${output}: elm make`);
+
+    case "Postprocess":
+      return truncate(`${fancy ? "⏳ " : ""}${output}: postprocess`);
+
+    case "ElmNotFoundError":
+    case "CommandNotFoundError":
+    case "OtherSpawnError":
+    case "UnexpectedElmMakeOutput":
+    case "PostprocessNonZeroExit":
+    case "ElmMakeJsonParseError":
+    case "ElmMakeError":
+      return truncate(fancy ? `🚨 ${output}` : `${output}: error`);
+  }
 }
 
 type Summary = {
-  succeeded: Array<OutputPath>;
-  failed: Array<OutputPath>;
   messages: Array<{ outputPath: OutputPath; message: string }>;
   compileErrors: Set<string>;
 };
 
 function summarize(state: State): Summary {
   const summary: Summary = {
-    succeeded: [],
-    failed: [],
     messages: [],
     compileErrors: new Set(),
   };
 
   for (const { outputPath, error } of state.elmJsonsErrors) {
-    summary.failed.push(outputPath);
-
     switch (error.tag) {
       case "ElmJsonNotFound":
         summary.messages.push({
@@ -127,12 +195,24 @@ function summarize(state: State): Summary {
         case "NotWrittenToDisk":
           break;
 
+        case "ElmMake":
+          summary.messages.push({
+            outputPath,
+            message: Errors.stuckInProgressState("elm make"),
+          });
+          break;
+
+        case "Postprocess":
+          summary.messages.push({
+            outputPath,
+            message: Errors.stuckInProgressState("postprocess"),
+          });
+          break;
+
         case "Success":
-          summary.succeeded.push(outputPath);
           break;
 
         case "ElmNotFoundError":
-          summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
             message: Errors.elmNotFoundError(status.command),
@@ -140,7 +220,6 @@ function summarize(state: State): Summary {
           break;
 
         case "CommandNotFoundError":
-          summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
             message: Errors.commandNotFoundError(status.command),
@@ -148,7 +227,6 @@ function summarize(state: State): Summary {
           break;
 
         case "OtherSpawnError":
-          summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
             message: Errors.otherSpawnError(status.error, status.command),
@@ -156,7 +234,6 @@ function summarize(state: State): Summary {
           break;
 
         case "UnexpectedElmMakeOutput":
-          summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
             message: Errors.unexpectedElmMakeOutput(
@@ -169,7 +246,6 @@ function summarize(state: State): Summary {
           break;
 
         case "PostprocessNonZeroExit":
-          summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
             message: Errors.postprocessNonZeroExit(
@@ -182,7 +258,6 @@ function summarize(state: State): Summary {
           break;
 
         case "ElmMakeJsonParseError":
-          summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
             message: Errors.elmMakeJsonParseError(
@@ -194,8 +269,6 @@ function summarize(state: State): Summary {
           break;
 
         case "ElmMakeError":
-          summary.failed.push(outputPath);
-
           switch (status.error.tag) {
             case "GeneralError":
               summary.messages.push({
@@ -223,13 +296,4 @@ function summarize(state: State): Summary {
   }
 
   return summary;
-}
-
-function printOutputPaths(
-  label: string,
-  paths: Array<OutputPath>
-): Array<string> {
-  return isNonEmptyArray(paths)
-    ? [label, ...paths.map(outputPathToOriginalString)]
-    : [];
 }
