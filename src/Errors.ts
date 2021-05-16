@@ -2,7 +2,11 @@ import { DecoderError } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
 import { bold, dim, Env, IS_WINDOWS, join } from "./helpers";
-import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import {
+  isNonEmptyArray,
+  mapNonEmptyArray,
+  NonEmptyArray,
+} from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./path-helpers";
 import { Command, ExitReason } from "./spawn";
 import { JsonPath } from "./SpawnElm";
@@ -14,6 +18,7 @@ import type {
   InputPath,
 } from "./types";
 
+const elmJson = bold("elm.json");
 const elmToolingJson = bold("elm-tooling.json");
 
 export function readElmToolingJsonAsJson(
@@ -153,16 +158,40 @@ ${bold("Compiling files on different drives is not supported.")}
   `.trim();
 }
 
-export function elmJsonNotFound(inputs: NonEmptyArray<InputPath>): string {
+export function elmJsonNotFound(
+  inputs: NonEmptyArray<InputPath>,
+  foundElmJsonPaths: Array<{
+    inputPath: InputPath;
+    elmJsonPath: ElmJsonPath;
+  }>
+): string {
+  const extra = isNonEmptyArray(foundElmJsonPaths)
+    ? `
+
+Note that I did find an ${elmJson} for some inputs:
+
+${join(
+  mapNonEmptyArray(
+    foundElmJsonPaths,
+    ({ inputPath, elmJsonPath }) =>
+      `${inputPath.originalString}\n-> ${elmJsonPath.theElmJsonPath.absolutePath}`
+  ),
+  "\n\n"
+)}
+
+Make sure that one single ${elmJson} covers all the inputs together!
+      `.trimEnd()
+    : "";
+
   return `
-I could not find an ${bold("elm.json")} for these inputs:
+I could not find an ${elmJson} for these inputs:
 
 ${join(
   mapNonEmptyArray(inputs, (inputPath) => inputPath.originalString),
   "\n"
 )}
 
-Has it gone missing? Maybe run ${bold("elm init")} to create one?
+Has it gone missing? Maybe run ${bold("elm init")} to create one?${extra}
   `.trim();
 }
 
@@ -173,7 +202,7 @@ export function nonUniqueElmJsonPaths(
   }>
 ): string {
   return `
-I went looking for an ${bold("elm.json")} for your inputs,
+I went looking for an ${elmJson} for your inputs,
 but I found more than one!
 
 ${join(
@@ -188,7 +217,7 @@ ${join(
 It doesn't make sense to compile Elm files from different projects into one output.
 
 Either split this output, or move the inputs to the same project with the same
-${bold("elm.json")}.
+${elmJson}.
   `.trim();
 }
 

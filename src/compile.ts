@@ -155,7 +155,10 @@ function summarize(state: State): Summary {
       case "ElmJsonNotFound":
         summary.messages.push({
           outputPath,
-          message: Errors.elmJsonNotFound(error.elmJsonNotFound),
+          message: Errors.elmJsonNotFound(
+            error.elmJsonNotFound,
+            error.foundElmJsonPaths
+          ),
         });
         break;
 

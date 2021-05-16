@@ -121,4 +121,45 @@ describe("precompilation errors", () => {
 
       `);
   });
+
+  test("elm.json not found for all inputs", async () => {
+    expect(await validateFailHelper("elm-json-not-found-for-all", ["make"]))
+      .toMatchInlineSnapshot(`
+        main.js
+        I could not find an ⧙elm.json⧘ for these inputs:
+
+        Main.elm
+
+        Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+        Note that I did find an ⧙elm.json⧘ for some inputs:
+
+        pages/About.elm
+        -> /Users/you/project/fixtures/precompilation-errors/elm-json-not-found-for-all/pages/elm.json
+
+        Make sure that one single ⧙elm.json⧘ covers all the inputs together!
+
+      `);
+  });
+
+  test("non unique elm.json", async () => {
+    expect(await validateFailHelper("non-unique-elm-json", ["make"]))
+      .toMatchInlineSnapshot(`
+        main.js
+        I went looking for an ⧙elm.json⧘ for your inputs,
+        but I found more than one!
+
+        Main.elm
+        -> /Users/you/project/fixtures/precompilation-errors/non-unique-elm-json/elm.json
+
+        pages/About.elm
+        -> /Users/you/project/fixtures/precompilation-errors/non-unique-elm-json/pages/elm.json
+
+        It doesn't make sense to compile Elm files from different projects into one output.
+
+        Either split this output, or move the inputs to the same project with the same
+        ⧙elm.json⧘.
+
+      `);
+  });
 });

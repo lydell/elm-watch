@@ -64,6 +64,10 @@ type ElmJsonError =
   | {
       tag: "ElmJsonNotFound";
       elmJsonNotFound: NonEmptyArray<InputPath>;
+      foundElmJsonPaths: Array<{
+        inputPath: InputPath;
+        elmJsonPath: ElmJsonPath;
+      }>;
     }
   | {
       tag: "InputsFailedToResolve";
@@ -307,6 +311,7 @@ function resolveElmJson(
     return {
       tag: "ElmJsonNotFound",
       elmJsonNotFound,
+      foundElmJsonPaths: elmJsonPaths,
     };
   }
 
