@@ -1,0 +1,9 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "main.js": {
+        "inputs": ["Main.elm", "../duplicate-inputs/./Main.elm", "Symlink1.elm", "Symlink2.elm", "Other.elm", "Other.elm"]
+      }
+    }
+  }
+}

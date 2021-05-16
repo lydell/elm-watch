@@ -246,7 +246,7 @@ export function duplicateInputs(
   const hasSymlink = duplicates.some(({ inputs }) => inputs.some(isSymlink));
 
   const symlinkText = hasSymlink
-    ? `\nNote that at least one of the inputs seem to be a symlink. They can be tricky!`
+    ? `\nNote that at least one of the inputs seems to be a symlink. They can be tricky!`
     : "";
 
   return `
