@@ -160,7 +160,7 @@ function parseElmMakeJson(command: Command, jsonString: string): ElmMakeResult {
 function tryWriteJson(cwd: AbsolutePath, json: string): JsonPath {
   const jsonPath = absolutePathFromString(
     cwd,
-    `elm-watch-JsonParseError-${sha256(json)}.json`
+    `elm-watch-ElmMakeJsonParseError-${sha256(json)}.json`
   );
   try {
     fs.writeFileSync(jsonPath.absolutePath, json);

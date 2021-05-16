@@ -127,7 +127,7 @@ export function init({
         : {
             tag: "OutputPath",
             theOutputPath: absolutePathFromString(
-              elmToolingJsonPath.theElmToolingJsonPath,
+              absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
               outputPathString
             ),
             originalString: outputPathString,
@@ -218,7 +218,7 @@ function resolveElmJson(
     const uncheckedInputPath: UncheckedInputPath = {
       tag: "UncheckedInputPath",
       theUncheckedInputPath: absolutePathFromString(
-        elmToolingJsonPath.theElmToolingJsonPath,
+        absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
         inputString
       ),
       originalString: inputString,
@@ -229,7 +229,7 @@ function resolveElmJson(
       realpath = absoluteRealpath(uncheckedInputPath.theUncheckedInputPath);
     } catch (errorAny) {
       const error = errorAny as Error & { code?: string };
-      if (error.code === "ENOENT") {
+      if (error.code === "ENOENT" || error.code === "ENOTDIR") {
         inputsNotFound.push(uncheckedInputPath);
       } else {
         inputsFailedToResolve.push({ inputPath: uncheckedInputPath, error });

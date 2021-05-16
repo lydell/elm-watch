@@ -80,7 +80,7 @@ export async function compile(
 
   const summary = summarize(state);
 
-  logger.log(
+  logger.error(
     join(
       [
         ...summary.messages.map(
