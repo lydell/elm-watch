@@ -97,7 +97,8 @@ export function duoStream(): {
   };
 }
 
-const cursorMove = /^\x1B\[(\d+)([ABCD])$/;
+const cursorMove = /^\x1B\[(\d*)([ABCD])$/;
+const clearLine = /^\x1B\[2K$/;
 const split = /(\n|\x1B\[\d+[ABCD]|\x1B\[\?25[hl])/;
 const color = /(\x1B\[\d*m)/g;
 
@@ -173,9 +174,12 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
           break;
 
         default: {
-          const match = cursorMove.exec(part);
-          if (match?.[2] !== undefined) {
-            const { dx, dy } = parseCursorMove(Number(match[1]), match[2]);
+          const cursorMoveMatch = cursorMove.exec(part);
+          if (cursorMoveMatch !== null) {
+            const { dx, dy } = parseCursorMove(
+              Number(cursorMoveMatch[1] ?? "1"),
+              cursorMoveMatch[2] as string
+            );
             const cursor = { x: this.cursor.x + dx, y: this.cursor.y + dy };
             if (cursor.x < 0 || cursor.y < 0) {
               callback(
@@ -191,6 +195,8 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
             } else {
               this.cursor = cursor;
             }
+          } else if (clearLine.test(part)) {
+            this.lines[this.cursor.y] = "";
           } else {
             const yDiff = this.cursor.y - this.lines.length + 1;
             if (yDiff > 0) {

@@ -4,6 +4,7 @@ import { elmWatchCli } from "../src";
 import { Env } from "../src/helpers";
 import {
   clean,
+  CursorWriteStream,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
@@ -25,7 +26,7 @@ async function runAbsolute(
   env: Env = {}
 ): Promise<string> {
   const stdout = new MemoryWriteStream();
-  const stderr = new MemoryWriteStream();
+  const stderr = new CursorWriteStream();
 
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
@@ -38,17 +39,16 @@ async function runAbsolute(
   expect(stdout.content).toBe("");
   expect(exitCode).toBe(1);
 
-  return clean(stderr.content);
+  return clean(stderr.getOutput());
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("errors", () => {
   test("unknown command", async () => {
-    expect(await run("wherever", ["nope"])).toMatchInlineSnapshot(`
-      Unknown command: nope
-
-    `);
+    expect(await run("wherever", ["nope"])).toMatchInlineSnapshot(
+      `Unknown command: nope`
+    );
   });
 
   test("elm-tooling.json is a folder", async () => {
@@ -63,7 +63,6 @@ describe("errors", () => {
       ⧙But I had trouble reading it as JSON:⧘
 
       EISDIR: illegal operation on a directory, read
-
     `);
   });
 
@@ -79,7 +78,6 @@ describe("errors", () => {
       ⧙But I had trouble reading it as JSON:⧘
 
       Unexpected end of JSON input
-
     `);
   });
 
@@ -99,7 +97,6 @@ describe("errors", () => {
         At root["x-elm-watch"]:
         Expected an object
         Got: undefined
-
       `);
     });
 
@@ -117,7 +114,6 @@ describe("errors", () => {
         At root["x-elm-watch"]["outputs"]:
         Expected a non-empty object
         Got: {}
-
       `);
     });
 
@@ -137,7 +133,6 @@ describe("errors", () => {
 
         At root["x-elm-watch"]["outputs"]["index.html"]:
         Outputs must end with .js or be /dev/null
-
       `);
     });
 
@@ -159,7 +154,6 @@ describe("errors", () => {
 
         At root["x-elm-watch"]["outputs"][".js"]:
         Outputs must end with .js or be /dev/null
-
       `);
     });
 
@@ -177,7 +171,6 @@ describe("errors", () => {
         At root["x-elm-watch"]["outputs"]["main.js"]:
         Expected only these fields: "inputs", "postprocess"
         Found extra fields: "mode"
-
       `);
     });
 
@@ -195,7 +188,6 @@ describe("errors", () => {
         At root["x-elm-watch"]["outputs"]["main.js"]["inputs"]:
         Expected a non-empty array
         Got: []
-
       `);
     });
 
@@ -214,7 +206,6 @@ describe("errors", () => {
         At root["x-elm-watch"]["outputs"]["main.js"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/Main.js"
-
       `);
     });
 
@@ -235,7 +226,6 @@ describe("errors", () => {
         At root["x-elm-watch"]["outputs"]["main.js"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/main.elm"
-
       `);
     });
   });
@@ -243,25 +233,24 @@ describe("errors", () => {
   test("elm-tooling.json not found", async () => {
     expect(await runAbsolute(path.parse(__dirname).root, ["make"]))
       .toMatchInlineSnapshot(`
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+      I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
-        ⧙But I couldn't find one!⧘
+      ⧙But I couldn't find one!⧘
 
-        You need to create one with JSON like this:
+      You need to create one with JSON like this:
 
-        {
-            "x-elm-watch": {
-                "outputs": {
-                    "build/main.js": {
-                        "inputs": [
-                            "src/Main.elm"
-                        ]
-                    }
-                }
-            }
-        }
-
-      `);
+      {
+          "x-elm-watch": {
+              "outputs": {
+                  "build/main.js": {
+                      "inputs": [
+                          "src/Main.elm"
+                      ]
+                  }
+              }
+          }
+      }
+    `);
   });
 
   describe("suggest JSON from args", () => {
@@ -300,7 +289,6 @@ describe("errors", () => {
                 }
             }
         }
-
       `);
     });
 
@@ -331,7 +319,6 @@ describe("errors", () => {
                 }
             }
         }
-
       `);
     });
 
@@ -359,7 +346,6 @@ describe("errors", () => {
                 }
             }
         }
-
       `);
     });
 
@@ -400,7 +386,6 @@ describe("errors", () => {
                 }
             }
         }
-
       `);
     });
   });
@@ -411,7 +396,6 @@ describe("errors", () => {
     expect(output).toMatchInlineSnapshot(`
       ⧙--debug⧘ and ⧙--optimize⧘ only make sense for ⧙elm-watch make⧘.
       When using ⧙elm-watch hot⧘, you can switch mode in the browser.
-
     `);
 
     expect(await run("valid", ["hot", "--optimize"])).toBe(output);
@@ -420,11 +404,11 @@ describe("errors", () => {
   });
 
   test("using both --debug and --optimize for make", async () => {
-    expect(await run("valid", ["make", "--debug", "--optimize"]))
-      .toMatchInlineSnapshot(`
-      ⧙--debug⧘ and ⧙--optimize⧘ cannot be used at the same time.
-
-    `);
+    expect(
+      await run("valid", ["make", "--debug", "--optimize"])
+    ).toMatchInlineSnapshot(
+      `⧙--debug⧘ and ⧙--optimize⧘ cannot be used at the same time.`
+    );
   });
 
   test("unknown outputs", async () => {
@@ -449,7 +433,6 @@ describe("errors", () => {
 
       Is something misspelled? (You need to type them exactly the same.)
       Or do you need to add some more outputs?
-
     `);
   });
 
@@ -465,7 +448,6 @@ describe("errors", () => {
         ⧙But they don't exist!⧘
 
         Is something misspelled? Or do you need to create them?
-
       `);
     });
 
@@ -479,7 +461,6 @@ describe("errors", () => {
         ELOOP: too many symbolic links encountered, stat '/Users/you/project/fixtures/errors/symlink-loop/Main.elm'
 
         ⧙That's all I know, unfortunately!⧘
-
       `);
     });
 
@@ -493,7 +474,6 @@ describe("errors", () => {
         -> /Users/you/project/fixtures/errors/duplicate-inputs/Main.elm
 
         Make sure every input is listed just once!
-
       `);
     });
 
@@ -514,7 +494,6 @@ describe("errors", () => {
 
         Make sure every input is listed just once!
         Note that at least one of the inputs seems to be a symlink. They can be tricky!
-
       `);
     });
   });
@@ -529,7 +508,6 @@ describe("errors", () => {
         pages/About.elm
 
         Has it gone missing? Maybe run ⧙elm init⧘ to create one?
-
       `);
     });
 
@@ -549,7 +527,6 @@ describe("errors", () => {
         -> /Users/you/project/fixtures/errors/elm-json-not-found-for-all/pages/elm.json
 
         Make sure that one single ⧙elm.json⧘ covers all the inputs together!
-
       `);
     });
 
@@ -569,7 +546,6 @@ describe("errors", () => {
 
         Either split this output, or move the inputs to the same project with the same
         ⧙elm.json⧘.
-
       `);
     });
 
@@ -581,10 +557,8 @@ describe("errors", () => {
           ),
         })
       ).toMatchInlineSnapshot(`
-        ⏳ build/app.js: elm make
-        ⏳ build/admin.js: elm make
-        [2A[2K🚨 build/app.js
-        [1B[1A[2K🚨 build/admin.js
+        🚨 build/app.js
+        🚨 build/admin.js
         build/app.js
         I tried to execute ⧙elm⧘, but it does not appear to exist!
 
@@ -613,7 +587,6 @@ describe("errors", () => {
         Note: If you have installed Elm locally (for example using npm or elm-tooling),
         execute elm-watch using npx to make elm-watch automatically pick up that local
         installation: ⧙npx elm-watch⧘
-
       `);
     });
   });
