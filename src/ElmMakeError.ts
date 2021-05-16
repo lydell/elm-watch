@@ -1,9 +1,10 @@
 import * as Decode from "tiny-decoders";
 
-import { bold, join, RESET_COLOR } from "./helpers";
+import { ErrorTemplate, fancyError } from "./Errors";
+import { join, RESET_COLOR } from "./helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath } from "./path-helpers";
-import { ElmJsonPath } from "./types";
+import { ElmJsonPath, OutputPath } from "./types";
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L412-L431
 // Lowercase means “dull” and uppercase means “vivid”:
@@ -111,40 +112,46 @@ export const ElmMakeError = Decode.fieldsUnion("type", {
 });
 
 export function renderGeneralError(
+  outputPath: OutputPath,
   elmJsonPath: ElmJsonPath,
   error: GeneralError
-): string {
-  return `
-${renderGeneralErrorPath(elmJsonPath, error.path)}${bold(error.title)}
-
+): ErrorTemplate {
+  return fancyError(
+    error.title,
+    generalErrorPath(outputPath, elmJsonPath, error.path)
+  )`
 ${join(error.message.map(renderMessageChunk), "")}
   `;
 }
 
-function renderGeneralErrorPath(
+function generalErrorPath(
+  outputPath: OutputPath,
   elmJsonPath: ElmJsonPath,
   path: GeneralError["path"]
-): string {
+): ElmJsonPath | OutputPath {
   switch (path.tag) {
     case "NoPath":
-      return "";
+      return outputPath;
     case "elm.json":
-      return `${elmJsonPath.theElmJsonPath.absolutePath}\n`;
+      return elmJsonPath;
   }
 }
 
 export function renderProblem(
   filePath: AbsolutePath,
   problem: Problem
-): string {
-  return `
-${filePath.absolutePath}:${problem.region.start.line}:${
-    problem.region.start.column
-  }
-${bold(problem.title)}
-
+): ErrorTemplate {
+  const location = join(
+    [
+      filePath.absolutePath,
+      problem.region.start.line.toString(),
+      problem.region.start.column.toString(),
+    ],
+    ":"
+  );
+  return fancyError(problem.title, { tag: "Custom", location })`
 ${join(problem.message.map(renderMessageChunk), "")}
-  `.trim();
+`;
 }
 
 function renderMessageChunk(chunk: MessageChunk): string {

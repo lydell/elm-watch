@@ -19,7 +19,7 @@ export async function run(
 
   switch (parseResult.tag) {
     case "ReadAsJsonError":
-      logger.error(
+      logger.errorTemplate(
         Errors.readElmToolingJsonAsJson(
           parseResult.elmToolingJsonPath,
           parseResult.error
@@ -28,7 +28,7 @@ export async function run(
       return 1;
 
     case "DecodeError":
-      logger.error(
+      logger.errorTemplate(
         Errors.decodeElmToolingJson(
           parseResult.elmToolingJsonPath,
           parseResult.error
@@ -37,7 +37,7 @@ export async function run(
       return 1;
 
     case "ElmToolingJsonNotFound":
-      logger.error(Errors.elmToolingJsonNotFound(cwd, args));
+      logger.errorTemplate(Errors.elmToolingJsonNotFound(cwd, args));
       return 1;
 
     case "Parsed": {
@@ -45,7 +45,7 @@ export async function run(
 
       switch (parseArgsResult.tag) {
         case "BadArgs":
-          logger.error(
+          logger.errorTemplate(
             Errors.badArgs(
               cwd,
               parseResult.elmToolingJsonPath,
@@ -56,11 +56,11 @@ export async function run(
           return 1;
 
         case "DebugOptimizeForHot":
-          logger.error(Errors.debugOptimizeForHot());
+          logger.errorTemplate(Errors.debugOptimizeForHot());
           return 1;
 
         case "DebugOptimizeClash":
-          logger.error(Errors.debugOptimizeClash());
+          logger.errorTemplate(Errors.debugOptimizeClash());
           return 1;
 
         case "Success": {
@@ -70,7 +70,7 @@ export async function run(
           );
 
           if (isNonEmptyArray(unknownOutputs)) {
-            logger.error(
+            logger.errorTemplate(
               Errors.unknownOutputs(
                 parseResult.elmToolingJsonPath,
                 // The decoder validates that there’s at least one output.
@@ -95,7 +95,7 @@ export async function run(
           switch (initStateResult.tag) {
             // istanbul ignore next
             case "NoCommonRoot":
-              logger.error(Errors.noCommonRoot(initStateResult.paths));
+              logger.errorTemplate(Errors.noCommonRoot(initStateResult.paths));
               return 1;
 
             case "State":

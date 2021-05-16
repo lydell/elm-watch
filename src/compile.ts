@@ -2,7 +2,7 @@ import * as readline from "readline";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { dim, Env, IS_WINDOWS, join } from "./helpers";
+import { Env, IS_WINDOWS, join } from "./helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./postprocess";
@@ -85,25 +85,19 @@ export async function compile(
     })
   );
 
-  const summary = summarize(state);
+  const errors = extractErrors(state);
 
   logger.error("");
   logger.error(
     join(
-      [
-        ...summary.messages.map(
-          ({ outputPath, message }) =>
-            `${outputPathToOriginalString(outputPath)}\n${message}`
-        ),
-        ...summary.compileErrors,
-      ],
-      `\n\n${dim("-".repeat(logger.raw.stderr.columns))}\n\n`
+      Array.from(
+        new Set(errors.map((template) => template(logger.raw.stderr.columns)))
+      ),
+      "\n\n"
     )
   );
 
-  return isNonEmptyArray(summary.messages) || summary.compileErrors.size > 0
-    ? 1
-    : 0;
+  return isNonEmptyArray(errors) ? 1 : 0;
 }
 
 function statusLine(
@@ -148,166 +142,111 @@ function statusLine(
   }
 }
 
-type Summary = {
-  messages: Array<{ outputPath: OutputPath; message: string }>;
-  compileErrors: Set<string>;
-};
-
-function summarize(state: State): Summary {
-  const summary: Summary = {
-    messages: [],
-    compileErrors: new Set(),
-  };
-
-  for (const { outputPath, error } of state.elmJsonsErrors) {
-    switch (error.tag) {
-      case "ElmJsonNotFound":
-        summary.messages.push({
-          outputPath,
-          message: Errors.elmJsonNotFound(
+function extractErrors(state: State): Array<Errors.ErrorTemplate> {
+  return [
+    ...state.elmJsonsErrors.map(({ outputPath, error }) => {
+      switch (error.tag) {
+        case "ElmJsonNotFound":
+          return Errors.elmJsonNotFound(
+            outputPath,
             error.elmJsonNotFound,
             error.foundElmJsonPaths
-          ),
-        });
-        break;
+          );
 
-      case "NonUniqueElmJsonPaths":
-        summary.messages.push({
-          outputPath,
-          message: Errors.nonUniqueElmJsonPaths(error.nonUniqueElmJsonPaths),
-        });
-        break;
-
-      case "InputsNotFound":
-        summary.messages.push({
-          outputPath,
-          message: Errors.inputsNotFound(error.inputsNotFound),
-        });
-        break;
-
-      case "InputsFailedToResolve":
-        summary.messages.push({
-          outputPath,
-          message: Errors.inputsFailedToResolve(error.inputsFailedToResolve),
-        });
-        break;
-
-      case "DuplicateInputs":
-        summary.messages.push({
-          outputPath,
-          message: Errors.duplicateInputs(error.duplicates),
-        });
-        break;
-    }
-  }
-
-  for (const [elmJsonPath, outputs] of state.elmJsons) {
-    for (const [outputPath, { status }] of outputs) {
-      switch (status.tag) {
-        case "NotWrittenToDisk":
-          break;
-
-        // istanbul ignore next
-        case "ElmMake":
-          summary.messages.push({
+        case "NonUniqueElmJsonPaths":
+          return Errors.nonUniqueElmJsonPaths(
             outputPath,
-            message: Errors.stuckInProgressState("elm make"),
-          });
-          break;
+            error.nonUniqueElmJsonPaths
+          );
 
-        // istanbul ignore next
-        case "Postprocess":
-          summary.messages.push({
+        case "InputsNotFound":
+          return Errors.inputsNotFound(outputPath, error.inputsNotFound);
+
+        case "InputsFailedToResolve":
+          return Errors.inputsFailedToResolve(
             outputPath,
-            message: Errors.stuckInProgressState("postprocess"),
-          });
-          break;
+            error.inputsFailedToResolve
+          );
 
-        case "Success":
-          break;
+        case "DuplicateInputs":
+          return Errors.duplicateInputs(outputPath, error.duplicates);
+      }
+    }),
 
-        case "ElmNotFoundError":
-          summary.messages.push({
-            outputPath,
-            message: Errors.elmNotFoundError(status.command),
-          });
-          break;
+    ...Array.from(state.elmJsons).flatMap(([elmJsonPath, outputs]) =>
+      Array.from(outputs).flatMap(([outputPath, { status }]) => {
+        switch (status.tag) {
+          case "NotWrittenToDisk":
+            return [];
 
-        case "CommandNotFoundError":
-          summary.messages.push({
-            outputPath,
-            message: Errors.commandNotFoundError(status.command),
-          });
-          break;
+          // istanbul ignore next
+          case "ElmMake":
+            return Errors.stuckInProgressState(outputPath, "elm make");
 
-        case "OtherSpawnError":
-          summary.messages.push({
-            outputPath,
-            message: Errors.otherSpawnError(status.error, status.command),
-          });
-          break;
+          // istanbul ignore next
+          case "Postprocess":
+            return Errors.stuckInProgressState(outputPath, "postprocess");
 
-        case "UnexpectedElmMakeOutput":
-          summary.messages.push({
-            outputPath,
-            message: Errors.unexpectedElmMakeOutput(
+          case "Success":
+            return [];
+
+          case "ElmNotFoundError":
+            return Errors.elmNotFoundError(outputPath, status.command);
+
+          case "CommandNotFoundError":
+            return Errors.commandNotFoundError(outputPath, status.command);
+
+          case "OtherSpawnError":
+            return Errors.otherSpawnError(
+              outputPath,
+              status.error,
+              status.command
+            );
+
+          case "UnexpectedElmMakeOutput":
+            return Errors.unexpectedElmMakeOutput(
+              outputPath,
               status.exitReason,
               status.stdout,
               status.stderr,
               status.command
-            ),
-          });
-          break;
+            );
 
-        case "PostprocessNonZeroExit":
-          summary.messages.push({
-            outputPath,
-            message: Errors.postprocessNonZeroExit(
+          case "PostprocessNonZeroExit":
+            return Errors.postprocessNonZeroExit(
+              outputPath,
               status.exitReason,
               status.stdout,
               status.stderr,
               status.command
-            ),
-          });
-          break;
+            );
 
-        case "ElmMakeJsonParseError":
-          summary.messages.push({
-            outputPath,
-            message: Errors.elmMakeJsonParseError(
+          case "ElmMakeJsonParseError":
+            return Errors.elmMakeJsonParseError(
+              outputPath,
               status.error,
               status.jsonPath,
               status.command
-            ),
-          });
-          break;
+            );
 
-        case "ElmMakeError":
-          switch (status.error.tag) {
-            case "GeneralError":
-              summary.messages.push({
-                outputPath,
-                message: ElmMakeError.renderGeneralError(
+          case "ElmMakeError":
+            switch (status.error.tag) {
+              case "GeneralError":
+                return ElmMakeError.renderGeneralError(
+                  outputPath,
                   elmJsonPath,
                   status.error
-                ),
-              });
-              break;
+                );
 
-            case "CompileErrors":
-              for (const error of status.error.errors) {
-                for (const problem of error.problems) {
-                  summary.compileErrors.add(
+              case "CompileErrors":
+                return status.error.errors.flatMap((error) =>
+                  error.problems.map((problem) =>
                     ElmMakeError.renderProblem(error.path, problem)
-                  );
-                }
-              }
-              break;
-          }
-          break;
-      }
-    }
-  }
-
-  return summary;
+                  )
+                );
+            }
+        }
+      })
+    ),
+  ];
 }

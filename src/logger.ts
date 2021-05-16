@@ -1,9 +1,11 @@
+import { ErrorTemplate } from "./Errors";
 import { Env, removeColor, WriteStream } from "./helpers";
 
 export type Logger = {
   handleColor: (string: string) => string;
   log: (message: string) => void;
   error: (message: string) => void;
+  errorTemplate: (template: ErrorTemplate) => void;
   raw: {
     NO_COLOR: boolean;
     stdout: WriteStream;
@@ -31,6 +33,9 @@ export function makeLogger({
     },
     error(message) {
       stderr.write(`${handleColor(message)}\n`);
+    },
+    errorTemplate(template) {
+      stderr.write(`${handleColor(template(stderr.columns))}\n`);
     },
     raw: {
       NO_COLOR,

@@ -12,51 +12,98 @@ import { AbsolutePath, absolutePathFromString, Cwd } from "./path-helpers";
 import { Command, ExitReason } from "./spawn";
 import { JsonPath } from "./SpawnElm";
 import { UncheckedInputPath } from "./State";
-import type {
+import {
   CliArg,
   ElmJsonPath,
   ElmToolingJsonPath,
   InputPath,
+  OutputPath,
 } from "./types";
 
 const elmJson = bold("elm.json");
 const elmToolingJson = bold("elm-tooling.json");
 
+type FancyErrorLocation =
+  | ElmJsonPath
+  | ElmToolingJsonPath
+  | OutputPath
+  | { tag: "Custom"; location: string }
+  | { tag: "NoLocation" };
+
+export const fancyError =
+  (title: string, location: FancyErrorLocation) =>
+  (strings: TemplateStringsArray, ...values: Array<string>) =>
+  (width: number): string => {
+    const content = join(
+      strings.flatMap((string, index) => [string, values[index] ?? ""]),
+      ""
+    ).trim();
+
+    const prefix = `-- ${title} `;
+    const line = "-".repeat(width - prefix.length);
+    const titleWithSeparator = bold(`${prefix}${line}`);
+    const maybeLocation = fancyErrorLocation(location);
+
+    return join(
+      [
+        titleWithSeparator,
+        ...(maybeLocation === undefined ? [] : [maybeLocation]),
+        "",
+        content,
+      ],
+      "\n"
+    );
+  };
+
+function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
+  switch (location.tag) {
+    case "ElmJsonPath":
+      return location.theElmJsonPath.absolutePath;
+    case "ElmToolingJsonPath":
+      return location.theElmToolingJsonPath.absolutePath;
+    case "OutputPath":
+      return dim(`When compiling: ${location.originalString}`);
+    case "NullOutputPath":
+      return dim("When compiling to /dev/null");
+    case "Custom":
+      return location.location;
+    case "NoLocation":
+      return undefined;
+  }
+}
+
+export type ErrorTemplate = (width: number) => string;
+
 export function readElmToolingJsonAsJson(
   elmToolingJsonPath: ElmToolingJsonPath,
   error: Error
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("TROUBLE READING elm-tooling.json", elmToolingJsonPath)`
 I read inputs, outputs and options from ${elmToolingJson}.
 
-I found an ${elmToolingJson} here:
-
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
-
-${bold("But I had trouble reading it as JSON:")}
+${bold("I had trouble reading it as JSON:")}
 
 ${error.message}
-  `.trim();
+`;
 }
 
 export function decodeElmToolingJson(
   elmToolingJsonPath: ElmToolingJsonPath,
   error: DecoderError
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("INVALID elm-tooling.json FORMAT", elmToolingJsonPath)`
 I read inputs, outputs and options from ${elmToolingJson}.
 
-I found an ${elmToolingJson} here:
-
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
-
-${bold("But I had trouble with the JSON inside:")}
+${bold("I had trouble with the JSON inside:")}
 
 ${error.format()}
-  `.trim();
+`;
 }
 
-export function elmToolingJsonNotFound(cwd: Cwd, args: Array<CliArg>): string {
+export function elmToolingJsonNotFound(
+  cwd: Cwd,
+  args: Array<CliArg>
+): ErrorTemplate {
   const example = ElmToolingJson.example(
     cwd,
     {
@@ -69,7 +116,7 @@ export function elmToolingJsonNotFound(cwd: Cwd, args: Array<CliArg>): string {
     args
   );
 
-  return `
+  return fancyError("elm-tooling.json NOT FOUND", { tag: "NoLocation" })`
 I read inputs, outputs and options from ${elmToolingJson}.
 
 ${bold("But I couldn't find one!")}
@@ -77,22 +124,22 @@ ${bold("But I couldn't find one!")}
 You need to create one with JSON like this:
 
 ${example}
-  `.trim();
+`;
 }
 
-export function debugOptimizeForHot(): string {
+export function debugOptimizeForHot(): ErrorTemplate {
   const make = bold("elm-watch make");
   const hot = bold("elm-watch hot");
-  return `
+  return fancyError("REDUNDANT FLAGS", { tag: "NoLocation" })`
 ${bold("--debug")} and ${bold("--optimize")} only make sense for ${make}.
 When using ${hot}, you can switch mode in the browser.
-  `.trim();
+`;
 }
 
-export function debugOptimizeClash(): string {
-  return `
+export function debugOptimizeClash(): ErrorTemplate {
+  return fancyError("CLASHING FLAGS", { tag: "NoLocation" })`
 ${bold("--debug")} and ${bold("--optimize")} cannot be used at the same time.
-  `.trim();
+`;
 }
 
 export function badArgs(
@@ -100,8 +147,8 @@ export function badArgs(
   elmToolingJsonPath: ElmToolingJsonPath,
   args: Array<CliArg>,
   theBadArgs: NonEmptyArray<CliArg>
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("UNEXPECTED ARGUMENTS", { tag: "NoLocation" })`
 ${bold(
   "I only accept JS file paths as arguments, but I got some that don't look like that:"
 )}
@@ -118,20 +165,16 @@ ${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
 For example, you could add some JSON like this:
 
 ${ElmToolingJson.example(cwd, elmToolingJsonPath, args)}
-  `.trim();
+`;
 }
 
 export function unknownOutputs(
   elmToolingJsonPath: ElmToolingJsonPath,
   knownOutputs: NonEmptyArray<string>,
   theUnknownOutputs: NonEmptyArray<string>
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("UNKNOWN OUTPUTS", elmToolingJsonPath)`
 I read inputs, outputs and options from ${elmToolingJson}.
-
-I found an ${elmToolingJson} here:
-
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
 
 It contains these outputs:
 
@@ -143,11 +186,13 @@ ${join(theUnknownOutputs, "\n")}
 
 Is something misspelled? (You need to type them exactly the same.)
 Or do you need to add some more outputs?
-  `.trim();
+`;
 }
 
-export function noCommonRoot(paths: NonEmptyArray<AbsolutePath>): string {
-  return `
+export function noCommonRoot(
+  paths: NonEmptyArray<AbsolutePath>
+): ErrorTemplate {
+  return fancyError("NO COMMON ROOT", { tag: "NoLocation" })`
 I could not find a common ancestor for these paths:
 
 ${join(
@@ -156,19 +201,19 @@ ${join(
 )}
 
 ${bold("Compiling files on different drives is not supported.")}
-  `.trim();
+`;
 }
 
 export function elmJsonNotFound(
+  outputPath: OutputPath,
   inputs: NonEmptyArray<InputPath>,
   foundElmJsonPaths: Array<{
     inputPath: InputPath;
     elmJsonPath: ElmJsonPath;
   }>
-): string {
+): ErrorTemplate {
   const extra = isNonEmptyArray(foundElmJsonPaths)
     ? `
-
 Note that I did find an ${elmJson} for some inputs:
 
 ${join(
@@ -181,10 +226,10 @@ ${join(
 )}
 
 Make sure that one single ${elmJson} covers all the inputs together!
-      `.trimEnd()
+      `.trim()
     : "";
 
-  return `
+  return fancyError("elm.json NOT FOUND", outputPath)`
 I could not find an ${elmJson} for these inputs:
 
 ${join(
@@ -192,19 +237,21 @@ ${join(
   "\n"
 )}
 
-Has it gone missing? Maybe run ${bold("elm init")} to create one?${extra}
-  `.trim();
+Has it gone missing? Maybe run ${bold("elm init")} to create one?
+
+${extra}
+`;
 }
 
 export function nonUniqueElmJsonPaths(
+  outputPath: OutputPath,
   theNonUniqueElmJsonPaths: NonEmptyArray<{
     inputPath: InputPath;
     elmJsonPath: ElmJsonPath;
   }>
-): string {
-  return `
-I went looking for an ${elmJson} for your inputs,
-but I found more than one!
+): ErrorTemplate {
+  return fancyError("NO UNIQUE elm.json", outputPath)`
+I went looking for an ${elmJson} for your inputs, but I found more than one!
 
 ${join(
   mapNonEmptyArray(
@@ -219,13 +266,14 @@ It doesn't make sense to compile Elm files from different projects into one outp
 
 Either split this output, or move the inputs to the same project with the same
 ${elmJson}.
-  `.trim();
+`;
 }
 
 export function inputsNotFound(
+  outputPath: OutputPath,
   inputs: NonEmptyArray<UncheckedInputPath>
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("INPUTS NOT FOUND", outputPath)`
 You asked me to compile these inputs:
 
 ${join(
@@ -242,13 +290,14 @@ ${join(
 ${bold("But they don't exist!")}
 
 Is something misspelled? Or do you need to create them?
-  `.trim();
+`;
 }
 
 export function inputsFailedToResolve(
+  outputPath: OutputPath,
   inputs: NonEmptyArray<{ inputPath: UncheckedInputPath; error: Error }>
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("INPUTS FAILED TO RESOLVE", outputPath)`
 I start by checking if the inputs you give me exist,
 but doing so resulted in errors!
 
@@ -261,25 +310,26 @@ ${join(
 )}
 
 ${bold("That's all I know, unfortunately!")}
-  `.trim();
+`;
 }
 
 export function duplicateInputs(
+  outputPath: OutputPath,
   duplicates: NonEmptyArray<{
     inputs: NonEmptyArray<InputPath>;
     resolved: AbsolutePath;
   }>
-): string {
+): ErrorTemplate {
   const isSymlink = (inputPath: InputPath): boolean =>
     inputPath.theInputPath.absolutePath !== inputPath.realpath.absolutePath;
 
   const hasSymlink = duplicates.some(({ inputs }) => inputs.some(isSymlink));
 
   const symlinkText = hasSymlink
-    ? `\nNote that at least one of the inputs seems to be a symlink. They can be tricky!`
+    ? "Note that at least one of the inputs seems to be a symlink. They can be tricky!"
     : "";
 
-  return `
+  return fancyError("DUPLICATE INPUTS", outputPath)`
 Some of your inputs seem to be duplicates!
 
 ${join(
@@ -299,22 +349,36 @@ ${join(
   "\n\n"
 )}
 
-Make sure every input is listed just once!${symlinkText}
-  `.trim();
+Make sure every input is listed just once!
+
+${symlinkText}
+`;
 }
 
-export function elmNotFoundError(command: Command): string {
-  return `
-${commandNotFoundError(command)}
+export function elmNotFoundError(
+  outputPath: OutputPath,
+  command: Command
+): ErrorTemplate {
+  return fancyError("ELM NOT FOUND", outputPath)`
+I tried to execute ${bold(command.command)}, but it does not appear to exist!
+
+This is what the PATH environment variable looks like:
+
+${printPATH(command.options.env)}
+
+Is Elm installed?
 
 Note: If you have installed Elm locally (for example using npm or elm-tooling),
 execute elm-watch using npx to make elm-watch automatically pick up that local
 installation: ${bold("npx elm-watch")}
-  `.trim();
+`;
 }
 
-export function commandNotFoundError(command: Command): string {
-  return `
+export function commandNotFoundError(
+  outputPath: OutputPath,
+  command: Command
+): ErrorTemplate {
+  return fancyError("COMMAND NOT FOUND", outputPath)`
 I tried to execute ${bold(command.command)}, but it does not appear to exist!
 
 This is what the PATH environment variable looks like:
@@ -322,11 +386,15 @@ This is what the PATH environment variable looks like:
 ${printPATH(command.options.env)}
 
 Is ${bold(command.command)} installed?
-  `.trim();
+`;
 }
 
-export function otherSpawnError(error: Error, command: Command): string {
-  return `
+export function otherSpawnError(
+  outputPath: OutputPath,
+  error: Error,
+  command: Command
+): ErrorTemplate {
+  return fancyError("TROUBLE SPAWNING COMMAND", outputPath)`
 I tried to execute ${bold(command.command)}, but I ran into an error!
 
 ${error.message}
@@ -334,16 +402,17 @@ ${error.message}
 This happen when trying to run the following commands:
 
 ${printCommand(command)}
-  `.trim();
+`;
 }
 
 export function unexpectedElmMakeOutput(
+  outputPath: OutputPath,
   exitReason: ExitReason,
   stdout: string,
   stderr: string,
   command: Command
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("UNEXPECTED ELM OUTPUT", outputPath)`
 I ran the following commands:
 
 ${printCommand(command)}
@@ -355,16 +424,17 @@ ${bold("But it exited like this:")}
 
 ${printExitReason(exitReason)}
 ${printStdio(stdout, stderr)}
-  `.trim();
+`;
 }
 
 export function postprocessNonZeroExit(
+  outputPath: OutputPath,
   exitReason: ExitReason,
   stdout: string,
   stderr: string,
   command: Command
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("POSTPROCESS ERROR", outputPath)`
 I ran your postprocess command:
 
 ${printCommand(command)}
@@ -373,15 +443,16 @@ ${bold("It exited with an error:")}
 
 ${printExitReason(exitReason)}
 ${printStdio(stdout, stderr)}
-  `.trim();
+`;
 }
 
 export function elmMakeJsonParseError(
+  outputPath: OutputPath,
   error: DecoderError | SyntaxError,
   jsonPath: JsonPath,
   command: Command
-): string {
-  return `
+): ErrorTemplate {
+  return fancyError("TROUBLE WITH JSON REPORT", outputPath)`
 I ran the following commands:
 
 ${printCommand(command)}
@@ -392,16 +463,19 @@ but I ran into an error when decoding it:
 ${error instanceof DecoderError ? error.format() : error.message}
 
 ${printJsonPath(jsonPath)}
-  `.trim();
+`;
 }
 
-export function stuckInProgressState(state: string): string {
-  return `
+export function stuckInProgressState(
+  outputPath: OutputPath,
+  state: string
+): ErrorTemplate {
+  return fancyError("STUCK IN PROGRESS", outputPath)`
 I thought that all outputs had finished compiling, but my inner state says
 this output is still in the ${bold(state)} phase.
 
 ${bold("This is not supposed to ever happen.")}
-  `.trim();
+`;
 }
 
 function printPATH(env: Env): string {
@@ -420,28 +494,31 @@ function printCommand(command: Command): string {
   return `
 ${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
 ${commandToPresentationName([command.command, ...command.args])}
-  `.trim();
+`;
 }
 
 function commandToPresentationName(command: NonEmptyArray<string>): string {
-  return command
-    .map((part) =>
+  return join(
+    command.map((part) =>
       part === ""
         ? "''"
-        : part
-            .split(/(')/)
-            .map((subPart) =>
-              subPart === ""
-                ? ""
-                : subPart === "'"
-                ? "\\'"
-                : /^[\w.,:/=@%+-]+$/.test(subPart)
-                ? subPart
-                : `'${subPart}'`
-            )
-            .join("")
-    )
-    .join(" ");
+        : join(
+            part
+              .split(/(')/)
+              .map((subPart) =>
+                subPart === ""
+                  ? ""
+                  : subPart === "'"
+                  ? "\\'"
+                  : /^[\w.,:/=@%+-]+$/.test(subPart)
+                  ? subPart
+                  : `'${subPart}'`
+              ),
+            ""
+          )
+    ),
+    " "
+  );
 }
 
 function printExitReason(exitReason: ExitReason): string {
@@ -467,7 +544,7 @@ STDOUT:
 ${stdout === "" ? "(empty)" : stdout}
 STDERR:
 ${stderr === "" ? "(empty)" : stderr}
-    `.trim();
+  `;
 }
 
 function printJsonPath(jsonPath: JsonPath): string {
@@ -477,7 +554,7 @@ function printJsonPath(jsonPath: JsonPath): string {
 I wrote the JSON to this file so you can inspect it:
 
 ${jsonPath.absolutePath}
-      `.trim();
+    `;
 
     case "WritingJsonFailed":
       return `
@@ -488,6 +565,6 @@ ${jsonPath.attemptedPath.absolutePath}
 ${bold("But that failed too:")}
 
 ${jsonPath.error.message}
-      `.trim();
+    `;
   }
 }

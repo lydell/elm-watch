@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { getSetSingleton } from "./helpers";
+import { getSetSingleton, join } from "./helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -72,7 +72,7 @@ export function longestCommonAncestorPath(
   }
 
   return isNonEmptyArray(commonSegments)
-    ? { tag: "AbsolutePath", absolutePath: commonSegments.join(path.sep) }
+    ? { tag: "AbsolutePath", absolutePath: join(commonSegments, path.sep) }
     : // On Windows, a `C:` path and a `D:` path has no common ancestor.
       // istanbul ignore next
       undefined;
