@@ -8,7 +8,7 @@ import * as SpawnElm from "./SpawnElm";
 import { State } from "./State";
 import { OutputPath, outputPathToOriginalString } from "./types";
 
-export async function run(
+export async function compile(
   env: Env,
   logger: Logger,
   state: State

@@ -1,4 +1,4 @@
-import * as Compile from "./Compile";
+import { compile } from "./compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
 import { Env } from "./helpers";
@@ -98,7 +98,7 @@ export async function run(
               return 1;
 
             case "State":
-              return Compile.run(env, logger, initStateResult.state);
+              return compile(env, logger, initStateResult.state);
           }
         }
       }
