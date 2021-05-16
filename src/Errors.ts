@@ -307,7 +307,7 @@ ${printCommand(command)}
   `.trim();
 }
 
-export function unexpectedOutput(
+export function unexpectedElmMakeOutput(
   exitReason: ExitReason,
   stdout: string,
   stderr: string,
@@ -324,14 +324,11 @@ or exit 1 with JSON on stderr (compile errors).
 ${bold("But it exited like this:")}
 
 ${printExitReason(exitReason)}
-STDOUT:
-${stdout === "" ? "(empty)" : stdout}
-STDERR:
-${stderr === "" ? "(empty)" : stderr}
+${printStdio(stdout, stderr)}
   `.trim();
 }
 
-export function nonZeroExit(
+export function postprocessNonZeroExit(
   exitReason: ExitReason,
   stdout: string,
   stderr: string,
@@ -345,24 +342,11 @@ ${printCommand(command)}
 ${bold("It exited with an error:")}
 
 ${printExitReason(exitReason)}
-${
-  stdout !== "" && stderr === ""
-    ? stdout
-    : stdout === "" && stderr !== ""
-    ? stderr
-    : stdout === "" && stderr === ""
-    ? "(no output)"
-    : `
-STDOUT:
-${stdout === "" ? "(empty)" : stdout}
-STDERR:
-${stderr === "" ? "(empty)" : stderr}
-    `.trim()
-}
+${printStdio(stdout, stderr)}
   `.trim();
 }
 
-export function jsonParseError(
+export function elmMakeJsonParseError(
   error: DecoderError | SyntaxError,
   jsonPath: JsonPath,
   command: Command
@@ -430,6 +414,21 @@ function printExitReason(exitReason: ExitReason): string {
     case "Unknown":
       return "unknown exit reason";
   }
+}
+
+function printStdio(stdout: string, stderr: string): string {
+  return stdout !== "" && stderr === ""
+    ? stdout
+    : stdout === "" && stderr !== ""
+    ? stderr
+    : stdout === "" && stderr === ""
+    ? "(no output)"
+    : `
+STDOUT:
+${stdout === "" ? "(empty)" : stdout}
+STDERR:
+${stderr === "" ? "(empty)" : stderr}
+    `.trim();
 }
 
 function printJsonPath(jsonPath: JsonPath): string {

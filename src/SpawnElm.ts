@@ -25,13 +25,13 @@ export type ElmMakeResult =
       error: ElmMakeError;
     }
   | {
-      tag: "ElmNotFoundError";
+      tag: "ElmMakeJsonParseError";
+      error: DecoderError | SyntaxError;
+      jsonPath: JsonPath;
       command: Command;
     }
   | {
-      tag: "JsonParseError";
-      error: DecoderError | SyntaxError;
-      jsonPath: JsonPath;
+      tag: "ElmNotFoundError";
       command: Command;
     }
   | {
@@ -44,7 +44,7 @@ export type ElmMakeResult =
       timestamp: number;
     }
   | {
-      tag: "UnexpectedOutput";
+      tag: "UnexpectedElmMakeOutput";
       exitReason: ExitReason;
       stdout: string;
       stderr: string;
@@ -105,7 +105,7 @@ export async function make({
           stderr.startsWith("{")
         ? parseElmMakeJson(command, stderr)
         : {
-            tag: "UnexpectedOutput",
+            tag: "UnexpectedElmMakeOutput",
             exitReason,
             stdout,
             stderr,
@@ -134,7 +134,7 @@ function parseElmMakeJson(command: Command, jsonString: string): ElmMakeResult {
   } catch (errorAny) {
     const error = errorAny as SyntaxError;
     return {
-      tag: "JsonParseError",
+      tag: "ElmMakeJsonParseError",
       error,
       jsonPath: tryWriteJson(command.options.cwd, jsonString),
       command,
@@ -149,7 +149,7 @@ function parseElmMakeJson(command: Command, jsonString: string): ElmMakeResult {
   } catch (errorAny) {
     const error = errorAny as DecoderError;
     return {
-      tag: "JsonParseError",
+      tag: "ElmMakeJsonParseError",
       error,
       jsonPath: tryWriteJson(command.options.cwd, JSON.stringify(json)),
       command,

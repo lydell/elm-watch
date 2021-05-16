@@ -15,15 +15,15 @@ export type PostprocessResult =
       command: Command;
     }
   | {
-      tag: "NonZeroExit";
-      exitReason: ExitReason;
-      stdout: string;
-      stderr: string;
+      tag: "OtherSpawnError";
+      error: Error;
       command: Command;
     }
   | {
-      tag: "OtherSpawnError";
-      error: Error;
+      tag: "PostprocessNonZeroExit";
+      exitReason: ExitReason;
+      stdout: string;
+      stderr: string;
       command: Command;
     }
   | { tag: "Success" };
@@ -66,7 +66,7 @@ export async function postprocess({
       return exitReason.tag === "ExitCode" && exitReason.exitCode === 0
         ? { tag: "Success" }
         : {
-            tag: "NonZeroExit",
+            tag: "PostprocessNonZeroExit",
             exitReason,
             stdout,
             stderr,

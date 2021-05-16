@@ -155,11 +155,11 @@ function summarize(state: State): Summary {
           });
           break;
 
-        case "UnexpectedOutput":
+        case "UnexpectedElmMakeOutput":
           summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
-            message: Errors.unexpectedOutput(
+            message: Errors.unexpectedElmMakeOutput(
               status.exitReason,
               status.stdout,
               status.stderr,
@@ -168,11 +168,11 @@ function summarize(state: State): Summary {
           });
           break;
 
-        case "NonZeroExit":
+        case "PostprocessNonZeroExit":
           summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
-            message: Errors.nonZeroExit(
+            message: Errors.postprocessNonZeroExit(
               status.exitReason,
               status.stdout,
               status.stderr,
@@ -181,11 +181,11 @@ function summarize(state: State): Summary {
           });
           break;
 
-        case "JsonParseError":
+        case "ElmMakeJsonParseError":
           summary.failed.push(outputPath);
           summary.messages.push({
             outputPath,
-            message: Errors.jsonParseError(
+            message: Errors.elmMakeJsonParseError(
               status.error,
               status.jsonPath,
               status.command
