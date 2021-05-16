@@ -2,7 +2,7 @@ import * as readline from "readline";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { Env, IS_WINDOWS, join } from "./helpers";
+import { bold, Env, IS_WINDOWS, join } from "./helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./postprocess";
@@ -87,6 +87,10 @@ export async function compile(
 
   const errors = extractErrors(state);
 
+  if (!isNonEmptyArray(errors)) {
+    return 0;
+  }
+
   logger.error("");
   logger.error(
     join(
@@ -96,8 +100,14 @@ export async function compile(
       "\n\n"
     )
   );
+  logger.error("");
+  logger.error(
+    `${fancy ? "🚨 " : ""}${bold(errors.length.toString())} error${
+      errors.length === 1 ? "" : "s"
+    } found`
+  );
 
-  return isNonEmptyArray(errors) ? 1 : 0;
+  return 1;
 }
 
 function statusLine(

@@ -483,6 +483,8 @@ describe("errors", () => {
         ⧙But they don't exist!⧘
 
         Is something misspelled? Or do you need to create them?
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -500,6 +502,8 @@ describe("errors", () => {
         ELOOP: too many symbolic links encountered, stat '/Users/you/project/fixtures/errors/symlink-loop/Main.elm'
 
         ⧙That's all I know, unfortunately!⧘
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -517,6 +521,8 @@ describe("errors", () => {
         -> /Users/you/project/fixtures/errors/duplicate-inputs/Main.elm
 
         Make sure every input is listed just once!
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -542,6 +548,8 @@ describe("errors", () => {
         Make sure every input is listed just once!
 
         Note that at least one of the inputs seems to be a symlink. They can be tricky!
+
+        🚨 ⧙1⧘ error found
       `);
     });
   });
@@ -560,6 +568,8 @@ describe("errors", () => {
         pages/About.elm
 
         Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -583,6 +593,8 @@ describe("errors", () => {
         -> /Users/you/project/fixtures/errors/elm-json-not-found-for-all/pages/elm.json
 
         Make sure that one single ⧙elm.json⧘ covers all the inputs together!
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -605,6 +617,8 @@ describe("errors", () => {
 
         Either split this output, or move the inputs to the same project with the same
         ⧙elm.json⧘.
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -650,6 +664,8 @@ describe("errors", () => {
         Note: If you have installed Elm locally (for example using npm or elm-tooling),
         execute elm-watch using npx to make elm-watch automatically pick up that local
         installation: ⧙npx elm-watch⧘
+
+        🚨 ⧙2⧘ errors found
       `);
     });
 
@@ -674,6 +690,8 @@ describe("errors", () => {
         I wrote the JSON to this file so you can inspect it:
 
         /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.json
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -704,6 +722,8 @@ describe("errors", () => {
         I wrote the JSON to this file so you can inspect it:
 
         /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fe311e7464d5d116f8fa1ddccbc22767d9b6c74bfdd28d0719fb55ef7c1037a6.json
+
+        🚨 ⧙1⧘ error found
       `);
     });
 
@@ -738,6 +758,8 @@ describe("errors", () => {
         ⧙But that failed too:⧘
 
         EISDIR: illegal operation on a directory, open '/Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json'
+
+        🚨 ⧙1⧘ error found
       `);
     });
   });
