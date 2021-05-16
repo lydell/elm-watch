@@ -1,6 +1,7 @@
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
+import { Env } from "../src/helpers";
 import {
   clean,
   FailReadStream,
@@ -10,17 +11,25 @@ import {
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 
-async function run(fixture: string, args: Array<string>): Promise<string> {
-  return runAbsolute(path.join(FIXTURES_DIR, fixture), args);
+async function run(
+  fixture: string,
+  args: Array<string>,
+  env: Env = {}
+): Promise<string> {
+  return runAbsolute(path.join(FIXTURES_DIR, fixture), args, env);
 }
 
-async function runAbsolute(dir: string, args: Array<string>): Promise<string> {
+async function runAbsolute(
+  dir: string,
+  args: Array<string>,
+  env: Env = {}
+): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
 
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
-    env: {},
+    env,
     stdin: new FailReadStream(),
     stdout,
     stderr,
@@ -258,7 +267,7 @@ describe("errors", () => {
   describe("suggest JSON from args", () => {
     test("with typical `elm make`-like args", async () => {
       expect(
-        await run("valid-elm-tooling-json", [
+        await run("valid", [
           "make",
           "src/App.elm",
           "src/Admin.elm",
@@ -275,7 +284,7 @@ describe("errors", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -297,11 +306,7 @@ describe("errors", () => {
 
     test("suggested inputs are relative to elm-tooling.json, not cwd", async () => {
       expect(
-        await run("valid-elm-tooling-json/src", [
-          "make",
-          "src/App.elm",
-          "../lib/Admin.elm",
-        ])
+        await run("valid/src", ["make", "src/App.elm", "../lib/Admin.elm"])
       ).toMatchInlineSnapshot(`
         ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
 
@@ -310,7 +315,7 @@ describe("errors", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -331,16 +336,15 @@ describe("errors", () => {
     });
 
     test("support --output=/dev/null", async () => {
-      expect(
-        await run("valid-elm-tooling-json", ["make", "--output=/dev/null"])
-      ).toMatchInlineSnapshot(`
+      expect(await run("valid", ["make", "--output=/dev/null"]))
+        .toMatchInlineSnapshot(`
         ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
 
         --output=/dev/null
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -361,7 +365,7 @@ describe("errors", () => {
 
     test("ignore invalid stuff", async () => {
       expect(
-        await run("valid-elm-tooling-json", [
+        await run("valid", [
           "make",
           "src/app.elm",
           "--output",
@@ -381,7 +385,7 @@ describe("errors", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
+        /Users/you/project/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -402,7 +406,7 @@ describe("errors", () => {
   });
 
   test("Using --debug and --optimize for hot", async () => {
-    const output = await run("valid-elm-tooling-json", ["hot", "--debug"]);
+    const output = await run("valid", ["hot", "--debug"]);
 
     expect(output).toMatchInlineSnapshot(`
       ⧙--debug⧘ and ⧙--optimize⧘ only make sense for ⧙elm-watch make⧘.
@@ -410,19 +414,14 @@ describe("errors", () => {
 
     `);
 
-    expect(await run("valid-elm-tooling-json", ["hot", "--optimize"])).toBe(
-      output
-    );
+    expect(await run("valid", ["hot", "--optimize"])).toBe(output);
 
-    expect(
-      await run("valid-elm-tooling-json", ["hot", "--optimize", "--debug"])
-    ).toBe(output);
+    expect(await run("valid", ["hot", "--optimize", "--debug"])).toBe(output);
   });
 
   test("using both --debug and --optimize for make", async () => {
-    expect(
-      await run("valid-elm-tooling-json", ["make", "--debug", "--optimize"])
-    ).toMatchInlineSnapshot(`
+    expect(await run("valid", ["make", "--debug", "--optimize"]))
+      .toMatchInlineSnapshot(`
       ⧙--debug⧘ and ⧙--optimize⧘ cannot be used at the same time.
 
     `);
@@ -430,18 +429,13 @@ describe("errors", () => {
 
   test("unknown outputs", async () => {
     expect(
-      await run("valid-elm-tooling-json", [
-        "make",
-        "build/app.js",
-        "build/adnim.js",
-        "app.js",
-      ])
+      await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"])
     ).toMatchInlineSnapshot(`
       I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
       I found an ⧙elm-tooling.json⧘ here:
 
-      /Users/you/project/fixtures/errors/valid-elm-tooling-json/elm-tooling.json
+      /Users/you/project/fixtures/errors/valid/elm-tooling.json
 
       It contains these outputs:
 
@@ -575,6 +569,50 @@ describe("errors", () => {
 
         Either split this output, or move the inputs to the same project with the same
         ⧙elm.json⧘.
+
+      `);
+    });
+
+    test("elm not found", async () => {
+      expect(
+        await run("valid", ["make"], {
+          PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
+            path.delimiter
+          ),
+        })
+      ).toMatchInlineSnapshot(`
+        ⏳ build/app.js: elm make
+        ⏳ build/admin.js: elm make
+        [2A[2K🚨 build/app.js
+        [1B[1A[2K🚨 build/admin.js
+        build/app.js
+        I tried to execute ⧙elm⧘, but it does not appear to exist!
+
+        This is what the PATH environment variable looks like:
+
+        /Users/you/project
+        /Users/you/project/some/bin
+
+        Is ⧙elm⧘ installed?
+
+        Note: If you have installed Elm locally (for example using npm or elm-tooling),
+        execute elm-watch using npx to make elm-watch automatically pick up that local
+        installation: ⧙npx elm-watch⧘
+
+
+        build/admin.js
+        I tried to execute ⧙elm⧘, but it does not appear to exist!
+
+        This is what the PATH environment variable looks like:
+
+        /Users/you/project
+        /Users/you/project/some/bin
+
+        Is ⧙elm⧘ installed?
+
+        Note: If you have installed Elm locally (for example using npm or elm-tooling),
+        execute elm-watch using npx to make elm-watch automatically pick up that local
+        installation: ⧙npx elm-watch⧘
 
       `);
     });

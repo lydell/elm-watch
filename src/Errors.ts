@@ -1,7 +1,8 @@
+import * as path from "path";
 import { DecoderError } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
-import { bold, dim, Env, IS_WINDOWS, join } from "./helpers";
+import { bold, dim, Env, join } from "./helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -410,7 +411,7 @@ function printPATH(env: Env): string {
     return "`process.env.PATH` is somehow undefined!";
   }
 
-  const pathList = PATH.split(IS_WINDOWS ? ";" : ":");
+  const pathList = PATH.split(path.delimiter);
 
   return join(pathList, "\n");
 }

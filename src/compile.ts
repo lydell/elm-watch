@@ -32,14 +32,14 @@ export async function compile(
     index?: number
   ): void => {
     if (index !== undefined) {
-      readline.moveCursor(logger.raw.stdout, 0, -toCompile.length + index);
-      readline.clearLine(logger.raw.stdout, 0);
+      readline.moveCursor(logger.raw.stderr, 0, -toCompile.length + index);
+      readline.clearLine(logger.raw.stderr, 0);
     }
-    logger.log(
-      statusLine(outputPath, status, logger.raw.stdout.columns, fancy)
+    logger.error(
+      statusLine(outputPath, status, logger.raw.stderr.columns, fancy)
     );
     if (index !== undefined) {
-      readline.moveCursor(logger.raw.stdout, 0, toCompile.length - index - 1);
+      readline.moveCursor(logger.raw.stderr, 0, toCompile.length - index - 1);
     }
   };
 
