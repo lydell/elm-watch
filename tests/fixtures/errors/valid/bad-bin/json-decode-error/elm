@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+process.stderr.write(JSON.stringify({ type: "laser-error" }));
+process.exit(1);

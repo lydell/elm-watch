@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import * as os from "os";
 import type { Readable, Writable } from "stream";
 
@@ -24,6 +25,10 @@ export function join(array: Array<string>, separator: string): string {
 
 export function getSetSingleton<T>(set: Set<T>): T | undefined {
   return set.size === 1 ? Array.from(set)[0] : undefined;
+}
+
+export function sha256(string: string): string {
+  return crypto.createHash("sha256").update(string).digest("hex");
 }
 
 export const RESET_COLOR = "\x1B[0m";

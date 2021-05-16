@@ -4,3 +4,4 @@ coverage
 dist
 elm-stuff
 node_modules
+elm-watch-*.json

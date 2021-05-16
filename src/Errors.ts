@@ -35,7 +35,10 @@ export const fancyError =
   (strings: TemplateStringsArray, ...values: Array<string>) =>
   (width: number): string => {
     const content = join(
-      strings.flatMap((string, index) => [string, values[index] ?? ""]),
+      strings.flatMap((string, index) => [
+        string,
+        (values[index] ?? "").trim(),
+      ]),
       ""
     ).trim();
 
@@ -226,7 +229,7 @@ ${join(
 )}
 
 Make sure that one single ${elmJson} covers all the inputs together!
-      `.trim()
+      `
     : "";
 
   return fancyError("elm.json NOT FOUND", outputPath)`
@@ -554,7 +557,7 @@ function printJsonPath(jsonPath: JsonPath): string {
 I wrote the JSON to this file so you can inspect it:
 
 ${jsonPath.absolutePath}
-    `;
+      `;
 
     case "WritingJsonFailed":
       return `
@@ -565,6 +568,6 @@ ${jsonPath.attemptedPath.absolutePath}
 ${bold("But that failed too:")}
 
 ${jsonPath.error.message}
-    `;
+      `;
   }
 }

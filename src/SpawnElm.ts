@@ -1,9 +1,8 @@
-import * as crypto from "crypto";
 import * as fs from "fs";
 import { DecoderError } from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { Env } from "./helpers";
+import { Env, sha256 } from "./helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,
@@ -151,7 +150,10 @@ function parseElmMakeJson(command: Command, jsonString: string): ElmMakeResult {
     return {
       tag: "ElmMakeJsonParseError",
       error,
-      jsonPath: tryWriteJson(command.options.cwd, JSON.stringify(json)),
+      jsonPath: tryWriteJson(
+        command.options.cwd,
+        JSON.stringify(json, null, 2)
+      ),
       command,
     };
   }
@@ -173,8 +175,4 @@ function tryWriteJson(cwd: AbsolutePath, json: string): JsonPath {
       attemptedPath: jsonPath,
     };
   }
-}
-
-function sha256(string: string): string {
-  return crypto.createHash("sha256").update(string).digest("hex");
 }

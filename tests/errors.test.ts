@@ -1,7 +1,8 @@
+import * as fs from "fs";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
-import { Env } from "../src/helpers";
+import { Env, sha256 } from "../src/helpers";
 import {
   clean,
   CursorWriteStream,
@@ -40,6 +41,34 @@ async function runAbsolute(
   expect(exitCode).toBe(1);
 
   return clean(stderr.getOutput());
+}
+
+async function runWithBadElmBin(
+  fixture: string,
+  expectedWrittenJson: string
+): Promise<string> {
+  const dir = path.join(FIXTURES_DIR, "valid");
+  const jsonPath = path.join(
+    dir,
+    `elm-watch-ElmMakeJsonParseError-${sha256(expectedWrittenJson)}.json`
+  );
+
+  if (fs.existsSync(jsonPath)) {
+    fs.unlinkSync(jsonPath);
+  }
+
+  const output = await runAbsolute(dir, ["make", "build/app.js"], {
+    PATH: prependPATH(path.join(dir, "bad-bin", fixture)),
+  });
+
+  const writtenJson = fs.readFileSync(jsonPath, "utf8");
+  expect(writtenJson).toBe(expectedWrittenJson);
+
+  return output;
+}
+
+function prependPATH(folder: string): string {
+  return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -621,6 +650,94 @@ describe("errors", () => {
         Note: If you have installed Elm locally (for example using npm or elm-tooling),
         execute elm-watch using npx to make elm-watch automatically pick up that local
         installation: ⧙npx elm-watch⧘
+      `);
+    });
+
+    test("elm make json syntax error", async () => {
+      expect(await runWithBadElmBin("json-syntax-error", "{"))
+        .toMatchInlineSnapshot(`
+        🚨 build/app.js
+
+        ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
+        ⧙When compiling: build/app.js⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+        I seem to have gotten some JSON back as expected,
+        but I ran into an error when decoding it:
+
+        Unexpected end of JSON input
+
+        I wrote the JSON to this file so you can inspect it:
+
+        /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.json
+      `);
+    });
+
+    test("elm make json decode error", async () => {
+      expect(
+        await runWithBadElmBin(
+          "json-decode-error",
+          JSON.stringify({ type: "laser-error" }, null, 2)
+        )
+      ).toMatchInlineSnapshot(`
+        🚨 build/app.js
+
+        ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
+        ⧙When compiling: build/app.js⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+        I seem to have gotten some JSON back as expected,
+        but I ran into an error when decoding it:
+
+        At root["type"]:
+        Expected one of these tags: "error", "compile-errors"
+        Got: "laser-error"
+
+        I wrote the JSON to this file so you can inspect it:
+
+        /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fe311e7464d5d116f8fa1ddccbc22767d9b6c74bfdd28d0719fb55ef7c1037a6.json
+      `);
+    });
+
+    test("elm make json error failed to write", async () => {
+      const dir = path.join(FIXTURES_DIR, "valid");
+      expect(
+        await runAbsolute(dir, ["make", "build/app.js"], {
+          PATH: prependPATH(
+            path.join(dir, "bad-bin", "json-error-failed-write")
+          ),
+        })
+      ).toMatchInlineSnapshot(`
+        🚨 build/app.js
+
+        ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
+        ⧙When compiling: build/app.js⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+        I seem to have gotten some JSON back as expected,
+        but I ran into an error when decoding it:
+
+        Unexpected token { in JSON at position 1
+
+        I tried to write the JSON to this file:
+
+        /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json
+
+        ⧙But that failed too:⧘
+
+        EISDIR: illegal operation on a directory, open '/Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json'
       `);
     });
   });
