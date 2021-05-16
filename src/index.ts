@@ -68,13 +68,13 @@ export async function elmWatchCli(
 if (require.main === module) {
   elmWatchCli(process.argv.slice(2)).then(
     (exitCode) => {
-      process.exit(exitCode);
+      process.exitCode = exitCode;
     },
     (error: Error) => {
       process.stderr.write(
         `Unexpected error:\n${error.stack ?? error.message}\n`
       );
-      process.exit(1);
+      process.exitCode = 1;
     }
   );
 }
