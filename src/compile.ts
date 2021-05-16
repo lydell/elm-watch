@@ -2,7 +2,7 @@ import * as readline from "readline";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { Env, IS_WINDOWS, join } from "./helpers";
+import { dim, Env, IS_WINDOWS, join } from "./helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./postprocess";
@@ -43,43 +43,51 @@ export async function compile(
     }
   };
 
+  for (const { outputPath } of state.elmJsonsErrors) {
+    logger.error(
+      statusLine(
+        outputPath,
+        { tag: "ElmJsonsErrors" },
+        logger.raw.stderr.columns,
+        fancy
+      )
+    );
+  }
+
   await Promise.all(
-    toCompile.map(([elmJsonPath, outputPath, outputState], index) => {
+    toCompile.map(async ([elmJsonPath, outputPath, outputState], index) => {
       outputState.status = { tag: "ElmMake" };
       updateStatusLine(outputPath, outputState.status);
-      return SpawnElm.make({
+      const elmMakeResult = await SpawnElm.make({
         elmJsonPath,
         mode: outputState.mode,
         inputs: outputState.inputs,
         output: outputPath,
         env,
-      }).then((elmMakeResult) => {
-        if (
-          elmMakeResult.tag === "Success" &&
-          outputState.postprocess !== undefined
-        ) {
-          outputState.status = { tag: "Postprocess" };
-          updateStatusLine(outputPath, outputState.status, index);
-          return postprocess({
-            elmJsonPath,
-            mode: outputState.mode,
-            output: outputPath,
-            postprocessArray: outputState.postprocess,
-            env,
-          }).then((postprocessResult) => {
-            outputState.status = postprocessResult;
-          });
-        } else {
-          outputState.status = elmMakeResult;
-          updateStatusLine(outputPath, outputState.status, index);
-          return undefined;
-        }
       });
+      if (
+        elmMakeResult.tag === "Success" &&
+        outputState.postprocess !== undefined
+      ) {
+        outputState.status = { tag: "Postprocess" };
+        updateStatusLine(outputPath, outputState.status, index);
+        outputState.status = await postprocess({
+          elmJsonPath,
+          mode: outputState.mode,
+          output: outputPath,
+          postprocessArray: outputState.postprocess,
+          env,
+        });
+      } else {
+        outputState.status = elmMakeResult;
+        updateStatusLine(outputPath, outputState.status, index);
+      }
     })
   );
 
   const summary = summarize(state);
 
+  logger.error("");
   logger.error(
     join(
       [
@@ -89,7 +97,7 @@ export async function compile(
         ),
         ...summary.compileErrors,
       ],
-      "\n\n\n"
+      `\n\n${dim("-".repeat(logger.raw.stderr.columns))}\n\n`
     )
   );
 
@@ -100,7 +108,7 @@ export async function compile(
 
 function statusLine(
   outputPath: OutputPath,
-  status: OutputStatus,
+  status: OutputStatus | { tag: "ElmJsonsErrors" },
   maxWidth: number,
   fancy: boolean
 ): string {
@@ -135,6 +143,7 @@ function statusLine(
     case "PostprocessNonZeroExit":
     case "ElmMakeJsonParseError":
     case "ElmMakeError":
+    case "ElmJsonsErrors":
       return truncate(fancy ? `🚨 ${output}` : `${output}: error`);
   }
 }

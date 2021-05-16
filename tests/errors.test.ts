@@ -439,6 +439,8 @@ describe("errors", () => {
   describe("inputs errors", () => {
     test("inputs not found", async () => {
       expect(await run("inputs-not-found", ["make"])).toMatchInlineSnapshot(`
+        🚨 main.js
+
         main.js
         You asked me to compile these inputs:
 
@@ -453,6 +455,8 @@ describe("errors", () => {
 
     test("symlink loop", async () => {
       expect(await run("symlink-loop", ["make"])).toMatchInlineSnapshot(`
+        🚨 main.js
+
         main.js
         I start by checking if the inputs you give me exist,
         but doing so resulted in errors!
@@ -466,6 +470,8 @@ describe("errors", () => {
 
     test("duplicate inputs", async () => {
       expect(await run("duplicate-inputs", ["make"])).toMatchInlineSnapshot(`
+        🚨 main.js
+
         main.js
         Some of your inputs seem to be duplicates!
 
@@ -480,6 +486,8 @@ describe("errors", () => {
     test("duplicate inputs with symlinks", async () => {
       expect(await run("duplicate-inputs-with-symlinks", ["make"]))
         .toMatchInlineSnapshot(`
+        🚨 main.js
+
         main.js
         Some of your inputs seem to be duplicates!
 
@@ -501,6 +509,8 @@ describe("errors", () => {
   describe("elm.json errors", () => {
     test("elm.json not found", async () => {
       expect(await run("elm-json-not-found", ["make"])).toMatchInlineSnapshot(`
+        🚨 main.js
+
         main.js
         I could not find an ⧙elm.json⧘ for these inputs:
 
@@ -514,6 +524,8 @@ describe("errors", () => {
     test("elm.json not found for all inputs", async () => {
       expect(await run("elm-json-not-found-for-all", ["make"]))
         .toMatchInlineSnapshot(`
+        🚨 main.js
+
         main.js
         I could not find an ⧙elm.json⧘ for these inputs:
 
@@ -532,6 +544,8 @@ describe("errors", () => {
 
     test("non unique elm.json", async () => {
       expect(await run("non-unique-elm-json", ["make"])).toMatchInlineSnapshot(`
+        🚨 main.js
+
         main.js
         I went looking for an ⧙elm.json⧘ for your inputs,
         but I found more than one!
@@ -559,6 +573,7 @@ describe("errors", () => {
       ).toMatchInlineSnapshot(`
         🚨 build/app.js
         🚨 build/admin.js
+
         build/app.js
         I tried to execute ⧙elm⧘, but it does not appear to exist!
 
@@ -573,6 +588,7 @@ describe("errors", () => {
         execute elm-watch using npx to make elm-watch automatically pick up that local
         installation: ⧙npx elm-watch⧘
 
+        ⧙--------------------------------------------------------------------------------⧘
 
         build/admin.js
         I tried to execute ⧙elm⧘, but it does not appear to exist!
