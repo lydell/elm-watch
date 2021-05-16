@@ -166,17 +166,11 @@ export function init({
     (absolutePath) => absoluteDirname(absolutePath)
   );
 
-  const watchRoot =
-    longestCommonAncestorPath(paths) ??
-    // On Windows, you can have one `C:` and one `D:` path and they don’t have
-    // any overlap. Just go with the elm-tooling.json path in that case.
-    elmToolingJsonPath.theElmToolingJsonPath;
+  const watchRoot = longestCommonAncestorPath(paths);
 
+  // istanbul ignore if
   if (watchRoot === undefined) {
-    return {
-      tag: "NoCommonRoot",
-      paths,
-    };
+    return { tag: "NoCommonRoot", paths };
   }
 
   return {
