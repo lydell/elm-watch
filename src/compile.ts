@@ -198,6 +198,7 @@ function summarize(state: State): Summary {
         case "NotWrittenToDisk":
           break;
 
+        // istanbul ignore next
         case "ElmMake":
           summary.messages.push({
             outputPath,
@@ -205,6 +206,7 @@ function summarize(state: State): Summary {
           });
           break;
 
+        // istanbul ignore next
         case "Postprocess":
           summary.messages.push({
             outputPath,

@@ -93,6 +93,7 @@ export async function run(
           });
 
           switch (initStateResult.tag) {
+            // istanbul ignore next
             case "NoCommonRoot":
               logger.error(Errors.noCommonRoot(initStateResult.paths));
               return 1;
