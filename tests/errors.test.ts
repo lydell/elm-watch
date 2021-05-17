@@ -16,7 +16,7 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 async function run(
   fixture: string,
   args: Array<string>,
-  env: Env = {}
+  env?: Env
 ): Promise<string> {
   return runAbsolute(path.join(FIXTURES_DIR, fixture), args, env);
 }
@@ -24,7 +24,7 @@ async function run(
 async function runAbsolute(
   dir: string,
   args: Array<string>,
-  env: Env = {}
+  env?: Env
 ): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new CursorWriteStream();
@@ -676,6 +676,30 @@ describe("errors", () => {
       `);
     });
 
+    test("elm not found – undefined PATH", async () => {
+      expect(await run("valid", ["make", "build/app.js"], {}))
+        .toMatchInlineSnapshot(`
+        🚨 build/app.js
+
+        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
+        ⧙When compiling: build/app.js⧘
+
+        I tried to execute ⧙elm⧘, but it does not appear to exist!
+
+        This is what the PATH environment variable looks like:
+
+        \`process.env.PATH\` is somehow undefined!
+
+        Is Elm installed?
+
+        Note: If you have installed Elm locally (for example using npm or elm-tooling),
+        execute elm-watch using npx to make elm-watch automatically pick up that local
+        installation: ⧙npx elm-watch⧘
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
     test("elm make json syntax error", async () => {
       expect(await runWithBadElmBinAndExpectedJson("json-syntax-error", "{"))
         .toMatchInlineSnapshot(`
@@ -926,6 +950,28 @@ describe("errors", () => {
           🚨 ⧙1⧘ error found
         `);
       });
+    });
+  });
+
+  describe("elm compilation errors", () => {
+    test('wrong "type" in elm.json', async () => {
+      expect(await run("wrong-elm-json-type", ["make"])).toMatchInlineSnapshot(`
+        🚨 main.js
+
+        ⧙-- UNEXPECTED TYPE -------------------------------------------------------------⧘
+        /Users/you/project/fixtures/errors/wrong-elm-json-type/elm.json
+
+        I got stuck while reading your elm.json file. I cannot handle a "type" like
+        this:
+
+        1|⧙>⧘{
+        2|⧙>⧘  "type": "pakage"
+        3|⧙>⧘}
+
+        Try changing the "type" to ⧙"application"⧘ or ⧙"package"⧘ instead.
+
+        🚨 ⧙1⧘ error found
+      `);
     });
   });
 });
