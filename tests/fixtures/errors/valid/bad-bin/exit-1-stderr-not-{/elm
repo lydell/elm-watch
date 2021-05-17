@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+process.stdout.write(`This flag was given a bad value:
+
+    --output=.js
+
+I need a valid <output-file> value. For example:
+
+    --output=elm.js
+    --output=index.html
+    --output=/dev/null
+`);
+process.exit(1);

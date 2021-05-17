@@ -43,7 +43,14 @@ async function runAbsolute(
   return clean(stderr.getOutput());
 }
 
-async function runWithBadElmBin(
+async function runWithBadElmBin(fixture: string): Promise<string> {
+  const dir = path.join(FIXTURES_DIR, "valid");
+  return runAbsolute(dir, ["make", "build/app.js"], {
+    PATH: prependPATH(path.join(dir, "bad-bin", fixture)),
+  });
+}
+
+async function runWithBadElmBinAndExpectedJson(
   fixture: string,
   expectedWrittenJson: string
 ): Promise<string> {
@@ -670,7 +677,7 @@ describe("errors", () => {
     });
 
     test("elm make json syntax error", async () => {
-      expect(await runWithBadElmBin("json-syntax-error", "{"))
+      expect(await runWithBadElmBinAndExpectedJson("json-syntax-error", "{"))
         .toMatchInlineSnapshot(`
         🚨 build/app.js
 
@@ -697,7 +704,7 @@ describe("errors", () => {
 
     test("elm make json decode error", async () => {
       expect(
-        await runWithBadElmBin(
+        await runWithBadElmBinAndExpectedJson(
           "json-decode-error",
           JSON.stringify({ type: "laser-error" }, null, 2)
         )
@@ -728,14 +735,8 @@ describe("errors", () => {
     });
 
     test("elm make json error failed to write", async () => {
-      const dir = path.join(FIXTURES_DIR, "valid");
-      expect(
-        await runAbsolute(dir, ["make", "build/app.js"], {
-          PATH: prependPATH(
-            path.join(dir, "bad-bin", "json-error-failed-write")
-          ),
-        })
-      ).toMatchInlineSnapshot(`
+      expect(await runWithBadElmBin("json-error-failed-write"))
+        .toMatchInlineSnapshot(`
         🚨 build/app.js
 
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
@@ -761,6 +762,170 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
       `);
+    });
+
+    describe("unexpected `elm make` output", () => {
+      test("exit 0 + stdout", async () => {
+        expect(await runWithBadElmBin("exit-0-stdout")).toMatchInlineSnapshot(`
+          🚨 build/app.js
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙When compiling: build/app.js⧘
+
+          I ran the following commands:
+
+          cd /Users/you/project/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
+
+          ⧙But it exited like this:⧘
+
+          exit 0
+          some output
+          on stdout
+
+          🚨 ⧙1⧘ error found
+        `);
+      });
+
+      test("exit 0 + stderr", async () => {
+        expect(await runWithBadElmBin("exit-0-stderr")).toMatchInlineSnapshot(`
+          🚨 build/app.js
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙When compiling: build/app.js⧘
+
+          I ran the following commands:
+
+          cd /Users/you/project/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
+
+          ⧙But it exited like this:⧘
+
+          exit 0
+          some output
+          on stderr
+
+          🚨 ⧙1⧘ error found
+        `);
+      });
+
+      test("exit 1 + stdout", async () => {
+        expect(await runWithBadElmBin("exit-1-stdout")).toMatchInlineSnapshot(`
+          🚨 build/app.js
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙When compiling: build/app.js⧘
+
+          I ran the following commands:
+
+          cd /Users/you/project/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
+
+          ⧙But it exited like this:⧘
+
+          exit 1
+          some output
+          on stdout
+
+          🚨 ⧙1⧘ error found
+        `);
+      });
+
+      test("exit 1 + stderr that isn’t json", async () => {
+        expect(await runWithBadElmBin("exit-1-stderr-not-{"))
+          .toMatchInlineSnapshot(`
+          🚨 build/app.js
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙When compiling: build/app.js⧘
+
+          I ran the following commands:
+
+          cd /Users/you/project/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
+
+          ⧙But it exited like this:⧘
+
+          exit 1
+          This flag was given a bad value:
+
+              --output=.js
+
+          I need a valid <output-file> value. For example:
+
+              --output=elm.js
+              --output=index.html
+              --output=/dev/null
+
+          🚨 ⧙1⧘ error found
+        `);
+      });
+
+      test("exit 2 + no output", async () => {
+        expect(await runWithBadElmBin("exit-2-no-output"))
+          .toMatchInlineSnapshot(`
+          🚨 build/app.js
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙When compiling: build/app.js⧘
+
+          I ran the following commands:
+
+          cd /Users/you/project/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
+
+          ⧙But it exited like this:⧘
+
+          exit 2
+          (no output)
+
+          🚨 ⧙1⧘ error found
+        `);
+      });
+
+      test("exit 2 + both stdout and stderr", async () => {
+        expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
+          .toMatchInlineSnapshot(`
+          🚨 build/app.js
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙When compiling: build/app.js⧘
+
+          I ran the following commands:
+
+          cd /Users/you/project/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
+
+          ⧙But it exited like this:⧘
+
+          exit 2
+          STDOUT:
+          stuff on stdout
+          second write to stdout
+          STDERR:
+          stuff on stderr
+
+          🚨 ⧙1⧘ error found
+        `);
+      });
     });
   });
 });

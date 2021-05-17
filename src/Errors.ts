@@ -544,10 +544,10 @@ function printStdio(stdout: string, stderr: string): string {
     ? "(no output)"
     : `
 STDOUT:
-${stdout === "" ? "(empty)" : stdout}
+${stdout}
 STDERR:
-${stderr === "" ? "(empty)" : stderr}
-  `;
+${stderr}
+`;
 }
 
 function printJsonPath(jsonPath: JsonPath): string {
