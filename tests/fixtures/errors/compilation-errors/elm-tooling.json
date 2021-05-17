@@ -1,0 +1,24 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "Dir.js": {
+        "inputs": ["src/Dir.elm"]
+      },
+      "SyntaxError.js": {
+        "inputs": ["src/SyntaxError.elm"]
+      },
+      "ModuleNameMismatch.js": {
+        "inputs": ["src/ModuleNameMismatch.elm"]
+      },
+      "TypeError.js": {
+        "inputs": ["src/TypeError.elm"]
+      },
+      "MissingMain.js": {
+        "inputs": ["src/MissingMain.elm"]
+      },
+      "DebugLog.js": {
+        "inputs": ["src/DebugLog.elm"]
+      }
+    }
+  }
+}

@@ -973,5 +973,161 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
       `);
     });
+
+    test("Elm file is actually a directory", async () => {
+      // Elm’s message is a bit odd.
+      expect(await run("compilation-errors", ["make", "Dir.js"]))
+        .toMatchInlineSnapshot(`
+        🚨 Dir.js
+
+        ⧙-- FILE NOT FOUND --------------------------------------------------------------⧘
+        ⧙When compiling: Dir.js⧘
+
+        I cannot find this file:
+
+            ⧙/Users/you/project/fixtures/errors/compilation-errors/src/Dir.elm⧘
+
+        Is there a typo?
+
+        ⧙Note⧘: If you are just getting started, try working through the examples in the
+        official guide https://guide.elm-lang.org to get an idea of the kinds of things
+        that typically go in a src/Main.elm file.
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("Elm syntax error", async () => {
+      expect(await run("compilation-errors", ["make", "SyntaxError.js"]))
+        .toMatchInlineSnapshot(`
+        🚨 SyntaxError.js
+
+        ⧙-- UNFINISHED MODULE DECLARATION -----------------------------------------------⧘
+        /Users/you/project/fixtures/errors/compilation-errors/src/SyntaxError.elm:1:28
+
+        I am parsing an \`module\` declaration, but I got stuck here:
+
+        1| module SyntaxError exposing
+                                      ⧙^⧘
+        Here are some examples of valid \`module\` declarations:
+
+            ⧙module⧘ Main ⧙exposing⧘ (..)
+            ⧙module⧘ Dict ⧙exposing⧘ (Dict, empty, get)
+
+        I generally recommend using an explicit exposing list. I can skip compiling a
+        bunch of files when the public interface of a module stays the same, so exposing
+        fewer values can help improve compile times!
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("module name and file name mismatch", async () => {
+      expect(await run("compilation-errors", ["make", "ModuleNameMismatch.js"]))
+        .toMatchInlineSnapshot(`
+        🚨 ModuleNameMismatch.js
+
+        ⧙-- MODULE NAME MISMATCH --------------------------------------------------------⧘
+        /Users/you/project/fixtures/errors/compilation-errors/src/ModuleNameMismatch.elm:1:8
+
+        It looks like this module name is out of sync:
+
+        1| module OtherModuleName exposing (a)
+                  ⧙^^^^^^^^^^^^^^^⧘
+        I need it to match the file path, so I was expecting to see \`ModuleNameMismatch\`
+        here. Make the following change, and you should be all set!
+
+            ⧙OtherModuleName⧘ -> ⧙ModuleNameMismatch⧘
+
+        ⧙Note⧘: I require that module names correspond to file paths. This makes it much
+        easier to explore unfamiliar codebases! So if you want to keep the current
+        module name, try renaming the file instead.
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("type error", async () => {
+      expect(await run("compilation-errors", ["make", "TypeError.js"]))
+        .toMatchInlineSnapshot(`
+        🚨 TypeError.js
+
+        ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+        /Users/you/project/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
+
+        I cannot do addition with ⧙String⧘ values like this one:
+
+        3| error = "a" + 1
+                   ⧙^^^⧘
+        The (+) operator only works with ⧙Int⧘ and ⧙Float⧘ values.
+
+        ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("missing main", async () => {
+      expect(await run("compilation-errors", ["make", "MissingMain.js"]))
+        .toMatchInlineSnapshot(`
+        🚨 MissingMain.js
+
+        ⧙-- NO MAIN ---------------------------------------------------------------------⧘
+        ⧙When compiling: MissingMain.js⧘
+
+        When producing a JS file, I require that the given file has a \`main\` value. That
+        way Elm.MissingMain.init() is definitely defined in the resulting file!
+
+        Try adding a \`main\` value to your file? Or if you just want to verify that this
+        module compiles, switch to --output=/dev/null to skip the code gen phase
+        altogether.
+
+        ⧙Note⧘: Adding a \`main\` value can be as brief as adding something like this:
+
+        ⧙import⧘ Html
+
+        ⧙main⧘ =
+          ⧙Html⧘.text ⧙"Hello!"⧘
+
+        Or use https://package.elm-lang.org/packages/elm/core/latest/Platform#worker to
+        make a \`main\` with no user interface.
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("--optimize with Debug.log", async () => {
+      expect(
+        await run("compilation-errors", ["make", "DebugLog.js", "--optimize"])
+      ).toMatchInlineSnapshot(`
+        🚨 DebugLog.js
+
+        ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
+        ⧙When compiling: DebugLog.js⧘
+
+        There are uses of the \`Debug\` module in the following modules:
+
+            ⧙DebugLog⧘
+
+        But the --optimize flag only works if all \`Debug\` functions are removed!
+
+        ⧙Note⧘: The issue is that --optimize strips out info needed by \`Debug\` functions.
+        Here are two examples:
+
+            (1) It shortens record field names. This makes the generated JavaScript is
+            smaller, but \`Debug.toString\` cannot know the real field names anymore.
+
+            (2) Values like \`type Height = Height Float\` are unboxed. This reduces
+            allocation, but it also means that \`Debug.toString\` cannot tell if it is
+            looking at a \`Height\` or \`Float\` value.
+
+        There are a few other cases like that, and it will be much worse once we start
+        inlining code. That optimization could move \`Debug.log\` and \`Debug.todo\` calls,
+        resulting in unpredictable behavior. I hope that clarifies why this restriction
+        exists!
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
   });
 });
