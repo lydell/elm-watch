@@ -31,16 +31,15 @@ export type Command = {
 };
 
 export async function spawn(command: Command): Promise<SpawnResult> {
+  const actualSpawn = IS_WINDOWS
+    ? (await import("cross-spawn")).spawn
+    : childProcess.spawn;
   return new Promise((resolve) => {
-    const child = childProcess.spawn(
-      IS_WINDOWS ? cmdEscapeMetaChars(command.command) : command.command,
-      IS_WINDOWS ? command.args.map(cmdEscapeArg) : command.args,
-      {
-        ...command.options,
-        cwd: command.options.cwd.absolutePath,
-        shell: IS_WINDOWS,
-      }
-    );
+    const child = actualSpawn(command.command, command.args, {
+      ...command.options,
+      cwd: command.options.cwd.absolutePath,
+      shell: IS_WINDOWS,
+    });
 
     let stdout = "";
     let stderr = "";
@@ -71,18 +70,6 @@ export async function spawn(command: Command): Promise<SpawnResult> {
       });
     });
   });
-}
-
-function cmdEscapeMetaChars(arg: string): string {
-  // https://qntm.org/cmd
-  return arg.replace(/[()%!^"<>&|;, ]/g, "^$&");
-}
-
-function cmdEscapeArg(arg: string): string {
-  // https://qntm.org/cmd
-  return cmdEscapeMetaChars(
-    `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, "$1$1")}"`
-  );
 }
 
 export type ExitReason =

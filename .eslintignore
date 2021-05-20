@@ -4,3 +4,4 @@ coverage
 dist
 example
 *.d.ts
+tests/fixtures
