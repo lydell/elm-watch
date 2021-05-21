@@ -38,7 +38,6 @@ export async function spawn(command: Command): Promise<SpawnResult> {
     const child = actualSpawn(command.command, command.args, {
       ...command.options,
       cwd: command.options.cwd.absolutePath,
-      shell: IS_WINDOWS,
     });
 
     let stdout = "";
