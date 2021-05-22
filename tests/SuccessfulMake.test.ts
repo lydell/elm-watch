@@ -89,4 +89,12 @@ describe("successful make", () => {
       `✅ /dev/null`
     );
   });
+
+  test("multiple elm.json", async () => {
+    expect(await run("multiple-elm-json/config", ["make"]))
+      .toMatchInlineSnapshot(`
+      ✅ ../build/app.js
+      ✅ ../build/admin.js
+    `);
+  });
 });
