@@ -1,4 +1,5 @@
 import * as path from "path";
+import getPathKey from "path-key";
 import { DecoderError } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
@@ -482,10 +483,11 @@ ${bold("This is not supposed to ever happen.")}
 }
 
 function printPATH(env: Env): string {
-  const { PATH } = env;
+  const pathKey = getPathKey(env);
+  const { [pathKey]: PATH } = env;
 
   if (PATH === undefined) {
-    return "`process.env.PATH` is somehow undefined!";
+    return `process.env.${pathKey} is somehow undefined!`;
   }
 
   const pathList = PATH.split(path.delimiter);

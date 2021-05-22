@@ -688,7 +688,7 @@ describe("errors", () => {
 
         This is what the PATH environment variable looks like:
 
-        \`process.env.PATH\` is somehow undefined!
+        process.env.PATH is somehow undefined!
 
         Is Elm installed?
 
