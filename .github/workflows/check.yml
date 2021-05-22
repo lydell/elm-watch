@@ -49,6 +49,3 @@ jobs:
 
       - name: Prettier
         run: npx --no-install prettier --check .
-
-      # - name: elm-format
-      #   run: npx --no-install elm-format --validate src tests
