@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as stream from "stream";
 
-import type { ReadStream, WriteStream } from "../src/helpers";
+import type { ReadStream, WriteStream } from "../src/Helpers";
 
 // Read file with normalized line endings to make snapshotting easier
 // cross-platform.

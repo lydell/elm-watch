@@ -1,7 +1,7 @@
 import * as ElmToolingJson from "./ElmToolingJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
-import { getSetSingleton } from "./helpers";
+import { getSetSingleton } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -15,8 +15,8 @@ import {
   Cwd,
   findClosest,
   longestCommonAncestorPath,
-} from "./path-helpers";
-import { PostprocessResult } from "./postprocess";
+} from "./PathHelpers";
+import { PostprocessResult } from "./Postprocess";
 import { ElmMakeResult } from "./SpawnElm";
 import type {
   CompilationMode,
@@ -25,7 +25,7 @@ import type {
   InputPath,
   OutputPath,
   RunMode,
-} from "./types";
+} from "./Types";
 
 export type State = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.

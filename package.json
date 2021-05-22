@@ -7,7 +7,7 @@
     "pretest": "prettier --check . && eslint . --report-unused-disable-directives",
     "test": "jest --coverage",
     "posttest": "npm run build",
-    "build": "ts-node scripts/build.ts"
+    "build": "ts-node scripts/Build.ts"
   },
   "devDependencies": {
     "@types/cross-spawn": "6.0.2",

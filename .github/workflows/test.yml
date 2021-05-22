@@ -46,3 +46,6 @@ jobs:
 
       - name: Jest
         run: npx --no-install jest --coverage
+
+      - name: Build
+        run: npm run build

@@ -2,13 +2,13 @@ import * as readline from "readline";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { bold, Env, IS_WINDOWS, join } from "./helpers";
+import { bold, Env, IS_WINDOWS, join } from "./Helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { postprocess } from "./postprocess";
+import { postprocess } from "./Postprocess";
 import * as SpawnElm from "./SpawnElm";
 import { OutputStatus, State } from "./State";
-import { OutputPath, outputPathToOriginalString } from "./types";
+import { OutputPath, outputPathToOriginalString } from "./Types";
 
 export async function compile(
   env: Env,

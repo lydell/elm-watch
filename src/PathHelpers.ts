@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { getSetSingleton, join } from "./helpers";
+import { getSetSingleton, join } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,

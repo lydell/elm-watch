@@ -2,21 +2,21 @@ import * as fs from "fs";
 import { DecoderError } from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { Env, sha256 } from "./helpers";
+import { Env, sha256 } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,
   AbsolutePath,
   absolutePathFromString,
-} from "./path-helpers";
-import { Command, ExitReason, spawn } from "./spawn";
+} from "./PathHelpers";
+import { Command, ExitReason, spawn } from "./Spawn";
 import {
   CompilationMode,
   ElmJsonPath,
   InputPath,
   OutputPath,
   outputPathToAbsoluteString,
-} from "./types";
+} from "./Types";
 
 export type ElmMakeResult =
   | {

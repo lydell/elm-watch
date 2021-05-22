@@ -7,8 +7,8 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { Cwd, findClosest } from "./path-helpers";
-import type { CliArg, ElmToolingJsonPath } from "./types";
+import { Cwd, findClosest } from "./PathHelpers";
+import type { CliArg, ElmToolingJsonPath } from "./Types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335

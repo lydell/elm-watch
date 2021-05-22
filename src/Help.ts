@@ -1,4 +1,4 @@
-import { bold, dim } from "./helpers";
+import { bold, dim } from "./Helpers";
 
 export function render(): string {
   const elmToolingJson = bold("elm-tooling.json");

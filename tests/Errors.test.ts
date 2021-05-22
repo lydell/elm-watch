@@ -2,14 +2,14 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
-import { Env, sha256 } from "../src/helpers";
+import { Env, sha256 } from "../src/Helpers";
 import {
   clean,
   CursorWriteStream,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
-} from "./helpers";
+} from "./Helpers";
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 

@@ -1,12 +1,12 @@
-import { compile } from "./compile";
+import { compile } from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
-import { Env } from "./helpers";
+import { Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import { Cwd } from "./path-helpers";
+import { Cwd } from "./PathHelpers";
 import * as State from "./State";
-import type { CliArg, CompilationMode, RunMode } from "./types";
+import type { CliArg, CompilationMode, RunMode } from "./Types";
 
 export async function run(
   cwd: Cwd,

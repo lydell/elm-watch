@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import * as Help from "./help";
-import type { Env, ReadStream, WriteStream } from "./helpers";
+import * as Help from "./Help";
+import type { Env, ReadStream, WriteStream } from "./Helpers";
 import { makeLogger } from "./Logger";
-import { absolutePathFromString, Cwd } from "./path-helpers";
-import { run } from "./run";
+import { absolutePathFromString, Cwd } from "./PathHelpers";
+import { run } from "./Run";
 
 type Options = {
   cwd?: string;

@@ -1,13 +1,13 @@
-import { Env } from "./helpers";
+import { Env } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname } from "./path-helpers";
-import { Command, ExitReason, spawn } from "./spawn";
+import { absoluteDirname } from "./PathHelpers";
+import { Command, ExitReason, spawn } from "./Spawn";
 import {
   CompilationMode,
   ElmJsonPath,
   OutputPath,
   outputPathToAbsoluteString,
-} from "./types";
+} from "./Types";
 
 export type PostprocessResult =
   | {

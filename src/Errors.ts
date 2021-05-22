@@ -3,14 +3,14 @@ import getPathKey from "path-key";
 import { DecoderError } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
-import { bold, dim, Env, join } from "./helpers";
+import { bold, dim, Env, join } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { AbsolutePath, absolutePathFromString, Cwd } from "./path-helpers";
-import { Command, ExitReason } from "./spawn";
+import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
+import { Command, ExitReason } from "./Spawn";
 import { JsonPath } from "./SpawnElm";
 import { UncheckedInputPath } from "./State";
 import {
@@ -19,7 +19,7 @@ import {
   ElmToolingJsonPath,
   InputPath,
   OutputPath,
-} from "./types";
+} from "./Types";
 
 const elmJson = bold("elm.json");
 const elmToolingJson = bold("elm-tooling.json");

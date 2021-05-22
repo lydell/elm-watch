@@ -1,5 +1,5 @@
 import { ErrorTemplate } from "./Errors";
-import { Env, removeColor, WriteStream } from "./helpers";
+import { Env, removeColor, WriteStream } from "./Helpers";
 
 export type Logger = {
   handleColor: (string: string) => string;

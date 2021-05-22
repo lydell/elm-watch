@@ -1,11 +1,11 @@
 import { elmWatchCli } from "../src";
-import type { Env } from "../src/helpers";
+import type { Env } from "../src/Helpers";
 import {
   clean,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
-} from "./helpers";
+} from "./Helpers";
 
 async function helpHelper(args: Array<string>, env?: Env): Promise<string> {
   const stdout = new MemoryWriteStream();

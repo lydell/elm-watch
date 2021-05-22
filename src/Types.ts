@@ -1,4 +1,4 @@
-import type { AbsolutePath } from "./path-helpers";
+import type { AbsolutePath } from "./PathHelpers";
 
 export type RunMode = "hot" | "make";
 

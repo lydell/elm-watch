@@ -1,10 +1,10 @@
 import * as Decode from "tiny-decoders";
 
 import { ErrorTemplate, fancyError } from "./Errors";
-import { join, RESET_COLOR } from "./helpers";
+import { join, RESET_COLOR } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
-import { AbsolutePath } from "./path-helpers";
-import { ElmJsonPath, OutputPath } from "./types";
+import { AbsolutePath } from "./PathHelpers";
+import { ElmJsonPath, OutputPath } from "./Types";
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L412-L431
 // Lowercase means “dull” and uppercase means “vivid”:
