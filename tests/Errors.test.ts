@@ -42,10 +42,15 @@ async function runAbsolute(
     stderr,
   });
 
-  expect(stdout.content).toBe("");
-  expect(exitCode).toBe(1);
+  const stderrString = clean(stderr.getOutput());
 
-  return clean(stderr.getOutput());
+  if (exitCode !== 1) {
+    throw new Error(`exit ${exitCode}\n${stderrString}`);
+  }
+
+  expect(stdout.content).toBe("");
+
+  return stderrString;
 }
 
 async function runWithBadElmBin(fixture: string): Promise<string> {
