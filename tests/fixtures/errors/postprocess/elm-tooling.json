@@ -4,6 +4,26 @@
       "build/command-not-found.js": {
         "inputs": ["src/Main.elm"],
         "postprocess": ["nope"]
+      },
+      "build/exit-1-stdout.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["node", "-e", "console.log('some stdout'); process.exit(1)"]
+      },
+      "build/exit-2-stderr.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["node", "-e", "console.error('some stderr'); process.exit(2)"]
+      },
+      "build/exit-3-no-output.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["node", "-e", "process.exit(3)"]
+      },
+      "build/exit-4-both-stdout-and-stderr.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["node", "-e", "console.log(\"stdout\"); console.error(\"stderr\"); process.exit(4)"]
+      },
+      "build/exit-5-tricky-args.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["node", "-e", "process.exit(5)", "--", "", "'a'b'", "$x"]
       }
     }
   }

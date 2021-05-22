@@ -1154,5 +1154,129 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
       `);
     });
+
+    test("exit 1 + stdout", async () => {
+      expect(await run("postprocess", ["make", "build/exit-1-stdout.js"]))
+        .toMatchInlineSnapshot(`
+        🚨 build/exit-1-stdout.js
+
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling: build/exit-1-stdout.js⧘
+
+        I ran your postprocess command:
+
+        cd /Users/you/project/tests/fixtures/errors/postprocess
+        node -e 'console.log('\\''some stdout'\\''); process.exit(1)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stdout.js standard
+
+        ⧙It exited with an error:⧘
+
+        exit 1
+        some stdout
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("exit 2 + stderr + debug", async () => {
+      expect(
+        await run("postprocess", ["make", "build/exit-2-stderr.js", "--debug"])
+      ).toMatchInlineSnapshot(`
+        🚨 build/exit-2-stderr.js
+
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling: build/exit-2-stderr.js⧘
+
+        I ran your postprocess command:
+
+        cd /Users/you/project/tests/fixtures/errors/postprocess
+        node -e 'console.error('\\''some stderr'\\''); process.exit(2)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-2-stderr.js debug
+
+        ⧙It exited with an error:⧘
+
+        exit 2
+        some stderr
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("exit 3 + no output + optimize", async () => {
+      expect(
+        await run("postprocess", [
+          "make",
+          "build/exit-3-no-output.js",
+          "--optimize",
+        ])
+      ).toMatchInlineSnapshot(`
+        🚨 build/exit-3-no-output.js
+
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling: build/exit-3-no-output.js⧘
+
+        I ran your postprocess command:
+
+        cd /Users/you/project/tests/fixtures/errors/postprocess
+        node -e 'process.exit(3)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-3-no-output.js optimize
+
+        ⧙It exited with an error:⧘
+
+        exit 3
+        (no output)
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("exit 4 + both stdout and stderr", async () => {
+      expect(
+        await run("postprocess", [
+          "make",
+          "build/exit-4-both-stdout-and-stderr.js",
+        ])
+      ).toMatchInlineSnapshot(`
+        🚨 build/exit-4-both-stdout-and-stderr.js
+
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling: build/exit-4-both-stdout-and-stderr.js⧘
+
+        I ran your postprocess command:
+
+        cd /Users/you/project/tests/fixtures/errors/postprocess
+        node -e 'console.log("stdout"); console.error("stderr"); process.exit(4)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-4-both-stdout-and-stderr.js standard
+
+        ⧙It exited with an error:⧘
+
+        exit 4
+        STDOUT:
+        stdout
+
+        STDERR:
+        stderr
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("exit 5 + tricky args", async () => {
+      expect(await run("postprocess", ["make", "build/exit-5-tricky-args.js"]))
+        .toMatchInlineSnapshot(`
+        🚨 build/exit-5-tricky-args.js
+
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling: build/exit-5-tricky-args.js⧘
+
+        I ran your postprocess command:
+
+        cd /Users/you/project/tests/fixtures/errors/postprocess
+        node -e 'process.exit(5)' -- '' \\'a\\'b\\' '$x' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-5-tricky-args.js standard
+
+        ⧙It exited with an error:⧘
+
+        exit 5
+        (no output)
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
   });
 });
