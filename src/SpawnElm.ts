@@ -88,6 +88,7 @@ export async function make({
     case "CommandNotFoundError":
       return { tag: "ElmNotFoundError", command };
 
+    // istanbul ignore next
     case "OtherSpawnError":
       return spawnResult;
 

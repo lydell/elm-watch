@@ -395,6 +395,7 @@ describe("errors", () => {
           "src/app.elm",
           "--output",
           ".js",
+          "--output=.js",
           "ignored.js",
           "--docs",
           "docs.json",
@@ -407,6 +408,7 @@ describe("errors", () => {
         src/app.elm
         --output
         .js
+        --output=.js
         --docs
         docs.json
 
@@ -482,10 +484,10 @@ describe("errors", () => {
   describe("inputs errors", () => {
     test("inputs not found", async () => {
       expect(await run("inputs-not-found", ["make"])).toMatchInlineSnapshot(`
-        🚨 main.js
+        🚨 /dev/null
 
         ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
-        ⧙When compiling: main.js⧘
+        ⧙When compiling to /dev/null⧘
 
         You asked me to compile these inputs:
 

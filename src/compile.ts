@@ -208,6 +208,7 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
           case "CommandNotFoundError":
             return Errors.commandNotFoundError(outputPath, status.command);
 
+          // istanbul ignore next
           case "OtherSpawnError":
             return Errors.otherSpawnError(
               outputPath,

@@ -193,6 +193,7 @@ Or do you need to add some more outputs?
 `;
 }
 
+// istanbul ignore next
 export function noCommonRoot(
   paths: NonEmptyArray<AbsolutePath>
 ): ErrorTemplate {
@@ -393,6 +394,7 @@ Is ${bold(command.command)} installed?
 `;
 }
 
+// istanbul ignore next
 export function otherSpawnError(
   outputPath: OutputPath,
   error: Error,
@@ -470,6 +472,7 @@ ${printJsonPath(jsonPath)}
 `;
 }
 
+// istanbul ignore next
 export function stuckInProgressState(
   outputPath: OutputPath,
   state: string
@@ -530,8 +533,10 @@ function printExitReason(exitReason: ExitReason): string {
   switch (exitReason.tag) {
     case "ExitCode":
       return `exit ${exitReason.exitCode}`;
+    // istanbul ignore next
     case "Signal":
       return `signal ${exitReason.signal}`;
+    // istanbul ignore next
     case "Unknown":
       return "unknown exit reason";
   }

@@ -162,7 +162,7 @@ function renderMessageChunk(chunk: MessageChunk): string {
     case "StyledText": {
       const { style } = chunk;
       return (
-        (style.bold ? "\x1B[1m" : "") +
+        (style.bold ? /* istanbul ignore next */ "\x1B[1m" : "") +
         (style.underline ? "\x1B[4m" : "") +
         (style.color === undefined ? "" : renderColor(style.color)) +
         style.string +
@@ -174,6 +174,7 @@ function renderMessageChunk(chunk: MessageChunk): string {
 
 //https://github.com/chalk/ansi-styles/blob/cd0b0cb59337bfd7d3669b2d0fcde7ff661a83a6/index.js#L25-L42
 function renderColor(color: Color): string {
+  // istanbul ignore next
   switch (color) {
     case "red":
       return "\x1B[31m";

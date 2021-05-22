@@ -1,7 +1,7 @@
 {
   "x-elm-watch": {
     "outputs": {
-      "main.js": {
+      "/dev/null": {
         "inputs": ["Main.elm", "pages/About.elm"]
       }
     }

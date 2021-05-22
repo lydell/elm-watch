@@ -32,7 +32,8 @@ export type Command = {
 
 export async function spawn(command: Command): Promise<SpawnResult> {
   const actualSpawn = IS_WINDOWS
-    ? (await import("cross-spawn")).spawn
+    ? // istanbul ignore next
+      (await import("cross-spawn")).spawn
     : childProcess.spawn;
   return new Promise((resolve) => {
     const child = actualSpawn(command.command, command.args, {

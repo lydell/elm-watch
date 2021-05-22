@@ -21,7 +21,11 @@ export function isValidInputName(name: string): boolean {
 
 export function isValidOutputName(name: string): boolean {
   // `elm make` doesn’t accept just `.js` but `a.js` and `a/.js`.
-  return (name.endsWith(".js") && name !== ".js") || name === "/dev/null";
+  // Disallow stuff starting with `-` so output CLI args don’t look like flags.
+  return (
+    (!name.startsWith("-") && name.endsWith(".js") && name !== ".js") ||
+    name === "/dev/null"
+  );
 }
 
 const Output = Decode.fieldsAuto(
