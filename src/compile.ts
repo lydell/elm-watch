@@ -25,20 +25,21 @@ export async function compile(
   );
 
   const fancy = !IS_WINDOWS && !logger.raw.NO_COLOR;
+  const isInteractive = logger.raw.stderr.isTTY;
 
   const updateStatusLine = (
     outputPath: OutputPath,
     status: OutputStatus,
     index?: number
   ): void => {
-    if (index !== undefined) {
+    if (index !== undefined && isInteractive) {
       readline.moveCursor(logger.raw.stderr, 0, -toCompile.length + index);
       readline.clearLine(logger.raw.stderr, 0);
     }
     logger.error(
       statusLine(outputPath, status, logger.raw.stderr.columns, fancy)
     );
-    if (index !== undefined) {
+    if (index !== undefined && isInteractive) {
       readline.moveCursor(logger.raw.stderr, 0, toCompile.length - index - 1);
     }
   };

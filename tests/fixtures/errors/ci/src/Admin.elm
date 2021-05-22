@@ -4,4 +4,4 @@ import Html
 
 
 main =
-    Html.text "Admin"
+    Html.div [ Html.text "Admin" ]

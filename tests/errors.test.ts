@@ -16,18 +16,23 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 async function run(
   fixture: string,
   args: Array<string>,
-  env?: Env
+  env?: Env,
+  options?: { isTTY?: boolean }
 ): Promise<string> {
-  return runAbsolute(path.join(FIXTURES_DIR, fixture), args, env);
+  return runAbsolute(path.join(FIXTURES_DIR, fixture), args, env, options);
 }
 
 async function runAbsolute(
   dir: string,
   args: Array<string>,
-  env?: Env
+  env?: Env,
+  { isTTY = true } = {}
 ): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new CursorWriteStream();
+
+  stdout.isTTY = isTTY;
+  stderr.isTTY = isTTY;
 
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
@@ -1278,5 +1283,97 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
       `);
     });
+  });
+
+  test("CI scenario", async () => {
+    expect(await run("ci", ["make"], process.env, { isTTY: false }))
+      .toMatchInlineSnapshot(`
+      ⏳ build/app.js: elm make
+      ⏳ build/admin.js: elm make
+      ⏳ build/postprocess-error.js: elm make
+      ✅ build/app.js
+      🚨 build/admin.js
+      ⏳ build/postprocess-error.js: postprocess
+      🚨 build/postprocess-error.js
+
+      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:7:14
+
+      The 1st argument to \`div\` is not what I expect:
+
+      7|     Html.div [ Html.text "Admin" ]
+                      ⧙^^^^^^^^^^^^^^^^^^^^^⧘
+      This argument is a list of type:
+
+          List ⧙(Html.Html msg)⧘
+
+      But \`div\` needs the 1st argument to be:
+
+          List ⧙(Html.Attribute msg)⧘
+
+      ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+      ⧙When compiling: build/postprocess-error.js⧘
+
+      I ran your postprocess command:
+
+      cd /Users/you/project/tests/fixtures/errors/ci
+      node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
+
+      ⧙It exited with an error:⧘
+
+      exit 1
+      (no output)
+
+      🚨 ⧙2⧘ errors found
+    `);
+  });
+
+  test("CI scenario – no color", async () => {
+    expect(
+      await run(
+        "ci",
+        ["make"],
+        { ...process.env, NO_COLOR: "" },
+        { isTTY: false }
+      )
+    ).toMatchInlineSnapshot(`
+      build/app.js: elm make
+      build/admin.js: elm make
+      build/postprocess-error.js: elm make
+      build/app.js: success
+      build/admin.js: error
+      build/postprocess-error.js: postprocess
+      build/postprocess-error.js: error
+
+      -- TYPE MISMATCH ---------------------------------------------------------------
+      /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:7:14
+
+      The 1st argument to \`div\` is not what I expect:
+
+      7|     Html.div [ Html.text "Admin" ]
+                      ^^^^^^^^^^^^^^^^^^^^^
+      This argument is a list of type:
+
+          List (Html.Html msg)
+
+      But \`div\` needs the 1st argument to be:
+
+          List (Html.Attribute msg)
+
+      -- POSTPROCESS ERROR -----------------------------------------------------------
+      When compiling: build/postprocess-error.js
+
+      I ran your postprocess command:
+
+      cd /Users/you/project/tests/fixtures/errors/ci
+      node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
+
+      It exited with an error:
+
+      exit 1
+      (no output)
+
+      2 errors found
+    `);
   });
 });

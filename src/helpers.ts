@@ -42,5 +42,5 @@ export function dim(string: string): string {
 }
 
 export function removeColor(string: string): string {
-  return string.replace(/\x1B\[\dm/g, "");
+  return string.replace(/\x1B\[\d+m/g, "");
 }

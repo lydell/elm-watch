@@ -96,7 +96,7 @@ export function duoStream(): {
 
 const cursorMove = /^\x1B\[(\d*)([ABCD])$/;
 const clearLine = /^\x1B\[2K$/;
-const split = /(\n|\x1B\[\d+[ABCD]|\x1B\[\?25[hl])/;
+const split = /(\n|\x1B\[\d+[ABCD]|\x1B\[2K])/;
 const color = /(\x1B\[\d*m)/g;
 
 function parseCursorMove(

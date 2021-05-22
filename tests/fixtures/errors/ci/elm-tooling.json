@@ -1,0 +1,16 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "build/app.js": {
+        "inputs": ["src/App.elm"]
+      },
+      "build/admin.js": {
+        "inputs": ["src/Admin.elm"]
+      },
+      "build/postprocess-error.js": {
+        "inputs": ["src/App.elm"],
+        "postprocess": ["node", "-e", "process.exit(1)"]
+      }
+    }
+  }
+}
