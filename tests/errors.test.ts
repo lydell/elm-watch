@@ -91,7 +91,7 @@ describe("errors", () => {
     expect(await run("elm-tooling-json-is-folder", ["make"]))
       .toMatchInlineSnapshot(`
       ⧙-- TROUBLE READING elm-tooling.json --------------------------------------------⧘
-      /Users/you/project/fixtures/errors/elm-tooling-json-is-folder/elm-tooling.json
+      /Users/you/project/tests/fixtures/errors/elm-tooling-json-is-folder/elm-tooling.json
 
       I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -105,7 +105,7 @@ describe("errors", () => {
     expect(await run("elm-tooling-json-bad-json", ["make"]))
       .toMatchInlineSnapshot(`
       ⧙-- TROUBLE READING elm-tooling.json --------------------------------------------⧘
-      /Users/you/project/fixtures/errors/elm-tooling-json-bad-json/elm-tooling.json
+      /Users/you/project/tests/fixtures/errors/elm-tooling-json-bad-json/elm-tooling.json
 
       I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -121,7 +121,7 @@ describe("errors", () => {
         await run("elm-tooling-json-decode-error/missing-x-elm-watch", ["make"])
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/missing-x-elm-watch/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/missing-x-elm-watch/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -137,7 +137,7 @@ describe("errors", () => {
       expect(await run("elm-tooling-json-decode-error/empty-outputs", ["make"]))
         .toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/empty-outputs/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/empty-outputs/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -156,7 +156,7 @@ describe("errors", () => {
         ])
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -176,7 +176,7 @@ describe("errors", () => {
         )
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension-just-dot-js/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension-just-dot-js/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -191,7 +191,7 @@ describe("errors", () => {
       expect(await run("elm-tooling-json-decode-error/unknown-field", ["make"]))
         .toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/unknown-field/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/unknown-field/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -207,7 +207,7 @@ describe("errors", () => {
       expect(await run("elm-tooling-json-decode-error/empty-inputs", ["make"]))
         .toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/empty-inputs/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/empty-inputs/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -224,7 +224,7 @@ describe("errors", () => {
         await run("elm-tooling-json-decode-error/bad-input-extension", ["make"])
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-input-extension/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-input-extension/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -243,7 +243,7 @@ describe("errors", () => {
         ])
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/fixtures/errors/elm-tooling-json-decode-error/bad-input-module-name/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-input-module-name/elm-tooling.json
 
         I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -303,7 +303,7 @@ describe("errors", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -335,7 +335,7 @@ describe("errors", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -365,7 +365,7 @@ describe("errors", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -407,7 +407,7 @@ describe("errors", () => {
 
         You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
 
-        /Users/you/project/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
 
         For example, you could add some JSON like this:
 
@@ -455,7 +455,7 @@ describe("errors", () => {
       await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"])
     ).toMatchInlineSnapshot(`
       ⧙-- UNKNOWN OUTPUTS -------------------------------------------------------------⧘
-      /Users/you/project/fixtures/errors/valid/elm-tooling.json
+      /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
 
       I read inputs, outputs and options from ⧙elm-tooling.json⧘.
 
@@ -484,8 +484,8 @@ describe("errors", () => {
 
         You asked me to compile these inputs:
 
-        Main.elm ⧙(/Users/you/project/fixtures/errors/inputs-not-found/Main.elm)⧘
-        pages/About.elm ⧙(/Users/you/project/fixtures/errors/inputs-not-found/pages/About.elm)⧘
+        Main.elm ⧙(/Users/you/project/tests/fixtures/errors/inputs-not-found/Main.elm)⧘
+        pages/About.elm ⧙(/Users/you/project/tests/fixtures/errors/inputs-not-found/pages/About.elm)⧘
 
         ⧙But they don't exist!⧘
 
@@ -506,7 +506,7 @@ describe("errors", () => {
         but doing so resulted in errors!
 
         Main.elm:
-        ELOOP: too many symbolic links encountered, stat '/Users/you/project/fixtures/errors/symlink-loop/Main.elm'
+        ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
 
         ⧙That's all I know, unfortunately!⧘
 
@@ -525,7 +525,7 @@ describe("errors", () => {
 
         Main.elm
         ../duplicate-inputs/./Main.elm
-        -> /Users/you/project/fixtures/errors/duplicate-inputs/Main.elm
+        -> /Users/you/project/tests/fixtures/errors/duplicate-inputs/Main.elm
 
         Make sure every input is listed just once!
 
@@ -546,11 +546,11 @@ describe("errors", () => {
         Main.elm
         Symlink1.elm ⧙(symlink)⧘
         Symlink2.elm ⧙(symlink)⧘
-        -> /Users/you/project/fixtures/errors/duplicate-inputs-with-symlinks/Main.elm
+        -> /Users/you/project/tests/fixtures/errors/duplicate-inputs-with-symlinks/Main.elm
 
         Other.elm
         Other.elm
-        -> /Users/you/project/fixtures/errors/duplicate-inputs-with-symlinks/Other.elm
+        -> /Users/you/project/tests/fixtures/errors/duplicate-inputs-with-symlinks/Other.elm
 
         Make sure every input is listed just once!
 
@@ -597,7 +597,7 @@ describe("errors", () => {
         Note that I did find an ⧙elm.json⧘ for some inputs:
 
         pages/About.elm
-        -> /Users/you/project/fixtures/errors/elm-json-not-found-for-all/pages/elm.json
+        -> /Users/you/project/tests/fixtures/errors/elm-json-not-found-for-all/pages/elm.json
 
         Make sure that one single ⧙elm.json⧘ covers all the inputs together!
 
@@ -615,10 +615,10 @@ describe("errors", () => {
         I went looking for an ⧙elm.json⧘ for your inputs, but I found more than one!
 
         Main.elm
-        -> /Users/you/project/fixtures/errors/non-unique-elm-json/elm.json
+        -> /Users/you/project/tests/fixtures/errors/non-unique-elm-json/elm.json
 
         pages/About.elm
-        -> /Users/you/project/fixtures/errors/non-unique-elm-json/pages/elm.json
+        -> /Users/you/project/tests/fixtures/errors/non-unique-elm-json/pages/elm.json
 
         It doesn't make sense to compile Elm files from different projects into one output.
 
@@ -647,8 +647,8 @@ describe("errors", () => {
 
         This is what the PATH environment variable looks like:
 
-        /Users/you/project
-        /Users/you/project/some/bin
+        /Users/you/project/tests
+        /Users/you/project/tests/some/bin
 
         Is Elm installed?
 
@@ -663,8 +663,8 @@ describe("errors", () => {
 
         This is what the PATH environment variable looks like:
 
-        /Users/you/project
-        /Users/you/project/some/bin
+        /Users/you/project/tests
+        /Users/you/project/tests/some/bin
 
         Is Elm installed?
 
@@ -710,8 +710,8 @@ describe("errors", () => {
 
         I ran the following commands:
 
-        cd /Users/you/project/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -720,7 +720,7 @@ describe("errors", () => {
 
         I wrote the JSON to this file so you can inspect it:
 
-        /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.json
 
         🚨 ⧙1⧘ error found
       `);
@@ -740,8 +740,8 @@ describe("errors", () => {
 
         I ran the following commands:
 
-        cd /Users/you/project/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -752,7 +752,7 @@ describe("errors", () => {
 
         I wrote the JSON to this file so you can inspect it:
 
-        /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fe311e7464d5d116f8fa1ddccbc22767d9b6c74bfdd28d0719fb55ef7c1037a6.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fe311e7464d5d116f8fa1ddccbc22767d9b6c74bfdd28d0719fb55ef7c1037a6.json
 
         🚨 ⧙1⧘ error found
       `);
@@ -768,8 +768,8 @@ describe("errors", () => {
 
         I ran the following commands:
 
-        cd /Users/you/project/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -778,11 +778,11 @@ describe("errors", () => {
 
         I tried to write the JSON to this file:
 
-        /Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json
 
         ⧙But that failed too:⧘
 
-        EISDIR: illegal operation on a directory, open '/Users/you/project/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json'
+        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json'
 
         🚨 ⧙1⧘ error found
       `);
@@ -798,8 +798,8 @@ describe("errors", () => {
 
           I ran the following commands:
 
-          cd /Users/you/project/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
           I expected it to either exit 0 with no output (success),
           or exit 1 with JSON on stderr (compile errors).
@@ -823,8 +823,8 @@ describe("errors", () => {
 
           I ran the following commands:
 
-          cd /Users/you/project/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
           I expected it to either exit 0 with no output (success),
           or exit 1 with JSON on stderr (compile errors).
@@ -848,8 +848,8 @@ describe("errors", () => {
 
           I ran the following commands:
 
-          cd /Users/you/project/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
           I expected it to either exit 0 with no output (success),
           or exit 1 with JSON on stderr (compile errors).
@@ -874,8 +874,8 @@ describe("errors", () => {
 
           I ran the following commands:
 
-          cd /Users/you/project/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
           I expected it to either exit 0 with no output (success),
           or exit 1 with JSON on stderr (compile errors).
@@ -907,8 +907,8 @@ describe("errors", () => {
 
           I ran the following commands:
 
-          cd /Users/you/project/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
           I expected it to either exit 0 with no output (success),
           or exit 1 with JSON on stderr (compile errors).
@@ -932,8 +932,8 @@ describe("errors", () => {
 
           I ran the following commands:
 
-          cd /Users/you/project/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/fixtures/errors/valid/build/app.js /Users/you/project/fixtures/errors/valid/src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
           I expected it to either exit 0 with no output (success),
           or exit 1 with JSON on stderr (compile errors).
@@ -959,7 +959,7 @@ describe("errors", () => {
         🚨 main.js
 
         ⧙-- UNEXPECTED TYPE -------------------------------------------------------------⧘
-        /Users/you/project/fixtures/errors/wrong-elm-json-type/elm.json
+        /Users/you/project/tests/fixtures/errors/wrong-elm-json-type/elm.json
 
         I got stuck while reading your elm.json file. I cannot handle a "type" like
         this:
@@ -985,7 +985,7 @@ describe("errors", () => {
 
         I cannot find this file:
 
-            ⧙/Users/you/project/fixtures/errors/compilation-errors/src/Dir.elm⧘
+            ⧙/Users/you/project/tests/fixtures/errors/compilation-errors/src/Dir.elm⧘
 
         Is there a typo?
 
@@ -1003,7 +1003,7 @@ describe("errors", () => {
         🚨 SyntaxError.js
 
         ⧙-- UNFINISHED MODULE DECLARATION -----------------------------------------------⧘
-        /Users/you/project/fixtures/errors/compilation-errors/src/SyntaxError.elm:1:28
+        /Users/you/project/tests/fixtures/errors/compilation-errors/src/SyntaxError.elm:1:28
 
         I am parsing an \`module\` declaration, but I got stuck here:
 
@@ -1028,7 +1028,7 @@ describe("errors", () => {
         🚨 ModuleNameMismatch.js
 
         ⧙-- MODULE NAME MISMATCH --------------------------------------------------------⧘
-        /Users/you/project/fixtures/errors/compilation-errors/src/ModuleNameMismatch.elm:1:8
+        /Users/you/project/tests/fixtures/errors/compilation-errors/src/ModuleNameMismatch.elm:1:8
 
         It looks like this module name is out of sync:
 
@@ -1053,7 +1053,7 @@ describe("errors", () => {
         🚨 TypeError.js
 
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
-        /Users/you/project/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
+        /Users/you/project/tests/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
 
         I cannot do addition with ⧙String⧘ values like this one:
 
@@ -1125,6 +1125,31 @@ describe("errors", () => {
         inlining code. That optimization could move \`Debug.log\` and \`Debug.todo\` calls,
         resulting in unpredictable behavior. I hope that clarifies why this restriction
         exists!
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+  });
+
+  describe("postprocess errors", () => {
+    test("command not found", async () => {
+      expect(
+        await run("postprocess", ["make", "build/command-not-found.js"], {
+          PATH: path.join(path.dirname(__dirname), "node_modules", ".bin"),
+        })
+      ).toMatchInlineSnapshot(`
+        🚨 build/command-not-found.js
+
+        ⧙-- COMMAND NOT FOUND -----------------------------------------------------------⧘
+        ⧙When compiling: build/command-not-found.js⧘
+
+        I tried to execute ⧙nope⧘, but it does not appear to exist!
+
+        This is what the PATH environment variable looks like:
+
+        /Users/you/project/node_modules/.bin
+
+        Is ⧙nope⧘ installed?
 
         🚨 ⧙1⧘ error found
       `);

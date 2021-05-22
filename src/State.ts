@@ -151,6 +151,7 @@ export function init({
           previous.set(outputPath, {
             inputs: resolveElmJsonResult.inputs,
             mode: compilationMode,
+            postprocess: output.postprocess,
             status: { tag: "NotWrittenToDisk" },
           });
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);

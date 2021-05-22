@@ -78,6 +78,7 @@ export async function compile(
           postprocessArray: outputState.postprocess,
           env,
         });
+        updateStatusLine(outputPath, outputState.status, index);
       } else {
         outputState.status = elmMakeResult;
         updateStatusLine(outputPath, outputState.status, index);

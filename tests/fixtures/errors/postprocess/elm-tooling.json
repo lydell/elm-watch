@@ -1,0 +1,10 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "build/command-not-found.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["nope"]
+      }
+    }
+  }
+}

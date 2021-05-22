@@ -227,7 +227,7 @@ export function clean(string: string): string {
   // Replace start of absolute paths with hardcoded stuff so the tests pass on
   // more than one computer. Replace colors for snapshots.
   return string
-    .split(__dirname)
+    .split(path.dirname(__dirname))
     .join(path.join(root, "Users", "you", "project"))
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘");
