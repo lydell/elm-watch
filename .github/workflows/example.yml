@@ -1,0 +1,65 @@
+name: Example
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: example
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      # Build elm-watch so we can use it in this example repo.
+      - name: Internal cache node_modules
+        id: internal-cache-node_modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: internal-node_modules-ubuntu-latest-16.x-${{ hashFiles('package-lock.json') }}
+      - name: Internal npm ci
+        if: steps.internal-cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci
+        working-directory: .
+      - name: Internal build
+        run: npm run build
+        working-directory: .
+
+      - name: Cache node_modules
+        id: cache-node_modules
+        uses: actions/cache@v2
+        with:
+          path: example/node_modules
+          key: node_modules-${{ hashFiles('example/package-lock.json') }}
+
+      - name: Cache ~/.elm
+        uses: actions/cache@v2
+        with:
+          path: ~/.elm
+          key: elm-${{ hashFiles('elm-tooling.json', 'example/elm.json', 'example/elm-tooling.json', 'example/legacy/elm.json') }}
+
+      - name: npm ci
+        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        env:
+          NO_ELM_TOOLING_INSTALL: 1
+        run: npm ci
+
+      - name: elm-tooling install
+        run: npx --no-install elm-tooling install
+
+      - name: elm-watch make
+        run: npx --no-install elm-watch make --optimize
+
+      - name: elm-format
+        run: npx --no-install elm-format --validate src legacy

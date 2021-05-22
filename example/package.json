@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "name": "example",
+  "scripts": {
+    "postinstall": "elm-tooling install",
+    "start": "node server.js",
+    "build": "elm-watch make"
+  },
+  "devDependencies": {
+    "elm-tooling": "1.3.0",
+    "elm-watch": "file:../build",
+    "express": "4.17.1",
+    "prettier": "2.3.0",
+    "uglify-js": "3.13.7"
+  }
+}
