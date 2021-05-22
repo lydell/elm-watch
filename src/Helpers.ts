@@ -11,7 +11,7 @@ export type ReadStream = Readable & {
 
 export type WriteStream = Writable & {
   isTTY: boolean;
-  columns: number;
+  columns?: number;
 };
 
 export const IS_WINDOWS = os.platform() === "win32";

@@ -37,7 +37,7 @@ export async function compile(
       readline.clearLine(logger.raw.stderr, 0);
     }
     logger.error(
-      statusLine(outputPath, status, logger.raw.stderr.columns, fancy)
+      statusLine(outputPath, status, logger.raw.stderrColumns, fancy)
     );
     if (index !== undefined && isInteractive) {
       readline.moveCursor(logger.raw.stderr, 0, toCompile.length - index - 1);
@@ -49,7 +49,7 @@ export async function compile(
       statusLine(
         outputPath,
         { tag: "ElmJsonsErrors" },
-        logger.raw.stderr.columns,
+        logger.raw.stderrColumns,
         fancy
       )
     );
@@ -97,7 +97,7 @@ export async function compile(
   logger.error(
     join(
       Array.from(
-        new Set(errors.map((template) => template(logger.raw.stderr.columns)))
+        new Set(errors.map((template) => template(logger.raw.stderrColumns)))
       ),
       "\n\n"
     )

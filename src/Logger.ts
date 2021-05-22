@@ -10,6 +10,7 @@ export type Logger = {
     NO_COLOR: boolean;
     stdout: WriteStream;
     stderr: WriteStream;
+    stderrColumns: number;
   };
 };
 
@@ -26,6 +27,9 @@ export function makeLogger({
   const handleColor = (string: string): string =>
     NO_COLOR ? removeColor(string) : string;
 
+  // `.columns` is `undefined` if not a TTY.
+  const stderrColumns = stderr.columns ?? 80;
+
   return {
     handleColor,
     log(message) {
@@ -35,12 +39,13 @@ export function makeLogger({
       stderr.write(`${handleColor(message)}\n`);
     },
     errorTemplate(template) {
-      stderr.write(`${handleColor(template(stderr.columns))}\n`);
+      stderr.write(`${handleColor(template(stderrColumns))}\n`);
     },
     raw: {
       NO_COLOR,
       stdout,
       stderr,
+      stderrColumns,
     },
   };
 }

@@ -53,7 +53,7 @@ export class RawReadStream extends stream.Readable implements ReadStream {
 export class MemoryWriteStream extends stream.Writable implements WriteStream {
   isTTY = true;
 
-  columns = 80;
+  columns = undefined;
 
   content = "";
 
