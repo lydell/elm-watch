@@ -1285,95 +1285,129 @@ describe("errors", () => {
     });
   });
 
-  test("CI scenario", async () => {
-    expect(await run("ci", ["make"], process.env, { isTTY: false }))
-      .toMatchInlineSnapshot(`
-      ⏳ build/app.js: elm make
-      ⏳ build/admin.js: elm make
-      ⏳ build/postprocess-error.js: elm make
-      ✅ build/app.js
-      🚨 build/admin.js
-      ⏳ build/postprocess-error.js: postprocess
-      🚨 build/postprocess-error.js
+  describe("CI", () => {
+    const appPath = path.join(FIXTURES_DIR, "ci", "build", "app.js");
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
-      /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:7:14
+    test("CI scenario", async () => {
+      if (fs.existsSync(appPath)) {
+        fs.unlinkSync(appPath);
+      }
 
-      The 1st argument to \`div\` is not what I expect:
+      expect(await run("ci", ["make"], process.env, { isTTY: false }))
+        .toMatchInlineSnapshot(`
+        ⏳ build/admin.js: elm make
+        ⏳ build/app.js: elm make
+        ⏳ build/postprocess-error.js: elm make
+        🚨 build/admin.js
+        ✅ build/app.js
+        ⏳ build/postprocess-error.js: postprocess
+        🚨 build/postprocess-error.js
 
-      7|     Html.div [ Html.text "Admin" ]
-                      ⧙^^^^^^^^^^^^^^^^^^^^^⧘
-      This argument is a list of type:
+        ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
 
-          List ⧙(Html.Html msg)⧘
+        The 1st argument to \`text\` is not what I expect:
 
-      But \`div\` needs the 1st argument to be:
+        8|     Html.text Shared.greet "Admin"
+                         ⧙^^^^^^^^^^^^⧘
+        This \`greet\` value is a:
 
-          List ⧙(Html.Attribute msg)⧘
+            ⧙String -> String⧘
 
-      ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-      ⧙When compiling: build/postprocess-error.js⧘
+        But \`text\` needs the 1st argument to be:
 
-      I ran your postprocess command:
+            ⧙String⧘
 
-      cd /Users/you/project/tests/fixtures/errors/ci
-      node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
+        ⧙-- TOO MANY ARGS ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:5
 
-      ⧙It exited with an error:⧘
+        The \`text\` function expects 1 argument, but it got 2 instead.
 
-      exit 1
-      (no output)
+        8|     Html.text Shared.greet "Admin"
+               ⧙^^^^^^^^^⧘
+        Are there any missing commas? Or missing parentheses?
 
-      🚨 ⧙2⧘ errors found
-    `);
-  });
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling: build/postprocess-error.js⧘
 
-  test("CI scenario – no color", async () => {
-    expect(
-      await run(
-        "ci",
-        ["make"],
-        { ...process.env, NO_COLOR: "" },
-        { isTTY: false }
-      )
-    ).toMatchInlineSnapshot(`
-      build/app.js: elm make
-      build/admin.js: elm make
-      build/postprocess-error.js: elm make
-      build/app.js: success
-      build/admin.js: error
-      build/postprocess-error.js: postprocess
-      build/postprocess-error.js: error
+        I ran your postprocess command:
 
-      -- TYPE MISMATCH ---------------------------------------------------------------
-      /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:7:14
+        cd /Users/you/project/tests/fixtures/errors/ci
+        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
 
-      The 1st argument to \`div\` is not what I expect:
+        ⧙It exited with an error:⧘
 
-      7|     Html.div [ Html.text "Admin" ]
-                      ^^^^^^^^^^^^^^^^^^^^^
-      This argument is a list of type:
+        exit 1
+        (no output)
 
-          List (Html.Html msg)
+        🚨 ⧙3⧘ errors found
+      `);
 
-      But \`div\` needs the 1st argument to be:
+      expect(fs.existsSync(appPath)).toBe(true);
+    });
 
-          List (Html.Attribute msg)
+    test("CI scenario – no color", async () => {
+      if (fs.existsSync(appPath)) {
+        fs.unlinkSync(appPath);
+      }
 
-      -- POSTPROCESS ERROR -----------------------------------------------------------
-      When compiling: build/postprocess-error.js
+      expect(
+        await run(
+          "ci",
+          ["make"],
+          { ...process.env, NO_COLOR: "" },
+          { isTTY: false }
+        )
+      ).toMatchInlineSnapshot(`
+        build/admin.js: elm make
+        build/app.js: elm make
+        build/postprocess-error.js: elm make
+        build/admin.js: error
+        build/app.js: success
+        build/postprocess-error.js: postprocess
+        build/postprocess-error.js: error
 
-      I ran your postprocess command:
+        -- TYPE MISMATCH ---------------------------------------------------------------
+        /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
 
-      cd /Users/you/project/tests/fixtures/errors/ci
-      node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
+        The 1st argument to \`text\` is not what I expect:
 
-      It exited with an error:
+        8|     Html.text Shared.greet "Admin"
+                         ^^^^^^^^^^^^
+        This \`greet\` value is a:
 
-      exit 1
-      (no output)
+            String -> String
 
-      2 errors found
-    `);
+        But \`text\` needs the 1st argument to be:
+
+            String
+
+        -- TOO MANY ARGS ---------------------------------------------------------------
+        /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:5
+
+        The \`text\` function expects 1 argument, but it got 2 instead.
+
+        8|     Html.text Shared.greet "Admin"
+               ^^^^^^^^^
+        Are there any missing commas? Or missing parentheses?
+
+        -- POSTPROCESS ERROR -----------------------------------------------------------
+        When compiling: build/postprocess-error.js
+
+        I ran your postprocess command:
+
+        cd /Users/you/project/tests/fixtures/errors/ci
+        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
+
+        It exited with an error:
+
+        exit 1
+        (no output)
+
+        3 errors found
+      `);
+
+      expect(fs.existsSync(appPath)).toBe(true);
+    });
   });
 });

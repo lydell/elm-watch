@@ -1,7 +1,8 @@
 module App exposing (main)
 
 import Html
+import Shared
 
 
 main =
-    Html.text "App"
+    Html.text (Shared.greet "App")

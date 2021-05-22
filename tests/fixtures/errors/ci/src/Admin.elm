@@ -1,7 +1,8 @@
 module Admin exposing (main)
 
 import Html
+import Shared
 
 
 main =
-    Html.div [ Html.text "Admin" ]
+    Html.text Shared.greet "Admin"
