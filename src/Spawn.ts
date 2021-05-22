@@ -31,9 +31,9 @@ export type Command = {
 };
 
 export async function spawn(command: Command): Promise<SpawnResult> {
+  // istanbul ignore next
   const actualSpawn = IS_WINDOWS
-    ? // istanbul ignore next
-      (await import("cross-spawn")).spawn
+    ? (await import("cross-spawn")).spawn
     : childProcess.spawn;
   return new Promise((resolve) => {
     const child = actualSpawn(command.command, command.args, {
@@ -46,6 +46,7 @@ export async function spawn(command: Command): Promise<SpawnResult> {
 
     child.on("error", (error: Error & { code?: string }) => {
       resolve(
+        // istanbul ignore next
         error.code === "ENOENT"
           ? { tag: "CommandNotFoundError", command }
           : { tag: "OtherSpawnError", error, command }
@@ -89,6 +90,7 @@ function exitReason(
   exitCode: number | null,
   signal: NodeJS.Signals | null
 ): ExitReason {
+  // istanbul ignore next
   return exitCode !== null
     ? { tag: "ExitCode", exitCode }
     : signal !== null
