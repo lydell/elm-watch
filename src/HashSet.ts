@@ -39,6 +39,7 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
   /**
    * forEach is not implemented. Use a for-of loop instead.
    */
+  // istanbul ignore next
   forEach(callback: never): never {
     return callback;
   }
@@ -69,7 +70,7 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 function hash(value: Record<string, unknown>): string {
   return JSON.stringify(
     Object.fromEntries(
-      Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1))
     )
   );
 }
