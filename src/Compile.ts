@@ -57,7 +57,9 @@ export async function compile(
       return 1;
     };
 
+    console.time("install");
     const result = await SpawnElm.install({ elmJsonPath, env });
+    console.timeEnd("install");
     clearTimeout(timeoutId);
 
     switch (result.tag) {
