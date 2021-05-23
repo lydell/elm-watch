@@ -266,7 +266,6 @@ export async function install({
         stdout !== "" &&
         stderr === ""
       ) {
-        console.log("OUTPUT", `${JSON.stringify(stdout)}\n`);
         return {
           tag: "Success",
           elmInstallOutput: stdout

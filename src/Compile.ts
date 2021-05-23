@@ -40,7 +40,7 @@ export async function compile(
     const timeoutId = setTimeout(() => {
       logger.error(loadingMessage);
       didWriteLoadingMessage = true;
-    }, 500);
+    }, 100);
 
     const clearLoadingMessage = (): void => {
       if (didWriteLoadingMessage && isInteractive) {
@@ -57,9 +57,7 @@ export async function compile(
       return 1;
     };
 
-    console.time("install");
     const result = await SpawnElm.install({ elmJsonPath, env });
-    console.timeEnd("install");
     clearTimeout(timeoutId);
 
     switch (result.tag) {
