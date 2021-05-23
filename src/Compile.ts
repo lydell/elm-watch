@@ -40,7 +40,7 @@ export async function compile(
     const timeoutId = setTimeout(() => {
       logger.error(loadingMessage);
       didWriteLoadingMessage = true;
-    }, 100);
+    }, 500);
 
     const clearLoadingMessage = (): void => {
       if (didWriteLoadingMessage && isInteractive) {
