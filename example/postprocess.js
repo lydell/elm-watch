@@ -11,15 +11,50 @@ switch (mode) {
   case "optimize": {
     const code = fs.readFileSync(outputPath, "utf8");
 
-    // TODO: Pass compress/mangle options.
-    const result = UglifyJs.minify(code);
+    const result1 = UglifyJs.minify(code, {
+      compress: {
+        pure_funcs: [
+          "F2",
+          "F3",
+          "F4",
+          "F5",
+          "F6",
+          "F7",
+          "F8",
+          "F9",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
+          "A6",
+          "A7",
+          "A8",
+          "A9",
+        ],
+        pure_getters: true,
+        keep_fargs: false,
+        unsafe_comps: true,
+        unsafe: true,
+      },
+      mangle: false
+    });
 
-    if (result.error !== undefined) {
-      process.stderr.write(error);
+    if (result1.error !== undefined) {
+      process.stderr.write(result1.error.message);
       process.exit(1);
     }
 
-    fs.writeFileSync(outputPath, result.code);
+    const result2 = UglifyJs.minify(result1.code, {
+      compress: false,
+      mangle: true
+    });
+
+    if (result2.error !== undefined) {
+      process.stderr.write(result2.error.message);
+      process.exit(1);
+    }
+
+    fs.writeFileSync(outputPath, result2.code);
     process.exit(0);
   }
 
