@@ -361,10 +361,10 @@ ${symlinkText}
 }
 
 export function elmNotFoundError(
-  outputPath: OutputPath,
+  location: ElmJsonPath | OutputPath,
   command: Command
 ): ErrorTemplate {
-  return fancyError("ELM NOT FOUND", outputPath)`
+  return fancyError("ELM NOT FOUND", location)`
 I tried to execute ${bold(command.command)}, but it does not appear to exist!
 
 This is what the PATH environment variable looks like:
@@ -396,16 +396,16 @@ Is ${bold(command.command)} installed?
 
 // istanbul ignore next
 export function otherSpawnError(
-  outputPath: OutputPath,
+  location: ElmJsonPath | OutputPath,
   error: Error,
   command: Command
 ): ErrorTemplate {
-  return fancyError("TROUBLE SPAWNING COMMAND", outputPath)`
+  return fancyError("TROUBLE SPAWNING COMMAND", location)`
 I tried to execute ${bold(command.command)}, but I ran into an error!
 
 ${error.message}
 
-This happen when trying to run the following commands:
+This happened when trying to run the following commands:
 
 ${printCommand(command)}
 `;
@@ -425,6 +425,28 @@ ${printCommand(command)}
 
 I expected it to either exit 0 with no output (success),
 or exit 1 with JSON on stderr (compile errors).
+
+${bold("But it exited like this:")}
+
+${printExitReason(exitReason)}
+${printStdio(stdout, stderr)}
+`;
+}
+
+export function unexpectedElmInstallOutput(
+  elmJsonPath: ElmJsonPath,
+  exitReason: ExitReason,
+  stdout: string,
+  stderr: string,
+  command: Command
+): ErrorTemplate {
+  return fancyError("UNEXPECTED ELM OUTPUT", elmJsonPath)`
+I tried to make sure all packages are installed by running the following commands:
+
+${printCommand(command)}
+
+I expected it to either exit 0 with no output (success),
+or exit 1 with an error I can recognize (using regex) on stderr.
 
 ${bold("But it exited like this:")}
 
@@ -482,6 +504,28 @@ I thought that all outputs had finished compiling, but my inner state says
 this output is still in the ${bold(state)} phase.
 
 ${bold("This is not supposed to ever happen.")}
+`;
+}
+
+export function creatingDummyFailed(
+  elmJsonPath: ElmJsonPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError("FILE SYSTEM TROUBLE", elmJsonPath)`
+I tried to make sure that all packages are installed. To do that, I need to
+create a temporary dummy .elm file but that failed:
+
+${error.message}
+`;
+}
+
+export function elmInstallError(
+  elmJsonPath: ElmJsonPath,
+  title: string,
+  message: string
+): ErrorTemplate {
+  return fancyError(title, elmJsonPath)`
+${message}
 `;
 }
 

@@ -15,17 +15,109 @@ export async function compile(
   logger: Logger,
   state: State
 ): Promise<number> {
-  const toCompile = Array.from(state.elmJsons).flatMap(
-    ([elmJsonPath, outputs]) =>
-      Array.from(
-        outputs,
-        ([outputPath, outputState]) =>
-          [elmJsonPath, outputPath, outputState] as const
-      )
-  );
-
   const fancy = !IS_WINDOWS && !logger.raw.NO_COLOR;
   const isInteractive = logger.raw.stderr.isTTY;
+
+  const elmJsonsArray = Array.from(state.elmJsons);
+
+  // First make sure all packages are installed. Otherwise compilation sometimes
+  // fails when you’ve got multiple outputs for the same elm.json. The error is
+  // “not enough bytes”/“corrupt file” for `elm-stuff/0.19.1/{d,i,o}.dat`.
+  // This is done in sequence, in an attempt to avoid:
+  // - Downloading the same package twice.
+  // - Two Elm processes writing to `~/.elm` at the same time.
+  for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
+    // Don’t print `(x/y)` the first time, because chances are all packages are
+    // downloaded via the first elm.json and that looks nicer.
+    const message = `Download packages${
+      index === 0 ? "" : ` (${index + 1}/${elmJsonsArray.length})`
+    }`;
+
+    const loadingMessage = fancy ? `⏳ ${message}` : `${message}: in progress`;
+
+    // Avoid printing `loadingMessage` if there’s nothing to download.
+    let didWriteLoadingMessage = false;
+    const timeoutId = setTimeout(() => {
+      logger.error(loadingMessage);
+      didWriteLoadingMessage = true;
+    }, 100);
+
+    const clearLoadingMessage = (): void => {
+      if (didWriteLoadingMessage && isInteractive) {
+        readline.moveCursor(logger.raw.stderr, 0, -1);
+        readline.clearLine(logger.raw.stderr, 0);
+      }
+    };
+
+    const onError = (error: Errors.ErrorTemplate): number => {
+      clearLoadingMessage();
+      logger.error(fancy ? `🚨 ${message}` : `${message}: error`);
+      logger.error("");
+      logger.errorTemplate(error);
+      return 1;
+    };
+
+    const result = await SpawnElm.install({ elmJsonPath, env });
+    clearTimeout(timeoutId);
+
+    switch (result.tag) {
+      // If the elm.json is invalid we can just ignore that and let the “real”
+      // compilation later catch it. This way we get colored error messages.
+      case "ElmJsonError":
+        if (didWriteLoadingMessage) {
+          clearLoadingMessage();
+          logger.error(fancy ? `⛔️ ${message}` : `${message}: skipped`);
+        }
+        break;
+
+      case "Success": {
+        const gotOutput = result.elmInstallOutput !== "";
+        if (didWriteLoadingMessage || gotOutput) {
+          clearLoadingMessage();
+          logger.error(fancy ? `✅ ${message}` : `${message}: success`);
+        }
+        if (gotOutput) {
+          logger.error(result.elmInstallOutput);
+        }
+        break;
+      }
+
+      case "CreatingDummyFailed":
+        return onError(Errors.creatingDummyFailed(elmJsonPath, result.error));
+
+      case "ElmNotFoundError":
+        return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
+
+      case "OtherSpawnError":
+        return onError(
+          Errors.otherSpawnError(elmJsonPath, result.error, result.command)
+        );
+
+      case "ElmInstallError":
+        return onError(
+          Errors.elmInstallError(elmJsonPath, result.title, result.message)
+        );
+
+      case "UnexpectedElmInstallOutput":
+        return onError(
+          Errors.unexpectedElmInstallOutput(
+            elmJsonPath,
+            result.exitReason,
+            result.stdout,
+            result.stderr,
+            result.command
+          )
+        );
+    }
+  }
+
+  const toCompile = elmJsonsArray.flatMap(([elmJsonPath, outputs]) =>
+    Array.from(
+      outputs,
+      ([outputPath, outputState]) =>
+        [elmJsonPath, outputPath, outputState] as const
+    )
+  );
 
   const updateStatusLine = (
     outputPath: OutputPath,
@@ -93,19 +185,16 @@ export async function compile(
     return 0;
   }
 
-  logger.error("");
-  logger.error(
-    join(
-      Array.from(
-        new Set(errors.map((template) => template(logger.raw.stderrColumns)))
-      ),
-      "\n\n"
-    )
+  const errorStrings = Array.from(
+    new Set(errors.map((template) => template(logger.raw.stderrColumns)))
   );
+
+  logger.error("");
+  logger.error(join(errorStrings, "\n\n"));
   logger.error("");
   logger.error(
-    `${fancy ? "🚨 " : ""}${bold(errors.length.toString())} error${
-      errors.length === 1 ? "" : "s"
+    `${fancy ? "🚨 " : ""}${bold(errorStrings.length.toString())} error${
+      errorStrings.length === 1 ? "" : "s"
     } found`
   );
 

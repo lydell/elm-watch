@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as os from "os";
 import { DecoderError } from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
@@ -176,4 +177,152 @@ function tryWriteJson(cwd: AbsolutePath, json: string): JsonPath {
       attemptedPath: jsonPath,
     };
   }
+}
+
+export type ElmInstallResult =
+  | {
+      tag: "CreatingDummyFailed";
+      error: Error;
+    }
+  | {
+      tag: "ElmInstallError";
+      title: string;
+      message: string;
+    }
+  | {
+      tag: "ElmNotFoundError";
+      command: Command;
+    }
+  | {
+      tag: "OtherSpawnError";
+      error: Error;
+      command: Command;
+    }
+  | {
+      tag: "Success";
+      elmInstallOutput: string;
+    }
+  | {
+      tag: "UnexpectedElmInstallOutput";
+      exitReason: ExitReason;
+      stdout: string;
+      stderr: string;
+      command: Command;
+    }
+  | { tag: "ElmJsonError" };
+
+const elmErrorMessageRegex = /^-- (.+) -+( elm\.json)?\r?\n([^]+)$/;
+
+export async function install({
+  elmJsonPath,
+  env,
+}: {
+  elmJsonPath: ElmJsonPath;
+  env: Env;
+}): Promise<ElmInstallResult> {
+  const dummy = absolutePathFromString(
+    { tag: "AbsolutePath", absolutePath: os.tmpdir() },
+    "ElmWatchDummy.elm"
+  );
+
+  try {
+    fs.writeFileSync(dummy.absolutePath, elmWatchDummy());
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    return {
+      tag: "CreatingDummyFailed",
+      error,
+    };
+  }
+
+  const command: Command = {
+    command: "elm",
+    // Don’t use `--report=json` here, because then Elm won’t print downloading
+    // of packages. We unfortunately lose colors this way, but package download
+    // errors aren’t very colorful anyway.
+    args: ["make", `--output=/dev/null`, dummy.absolutePath],
+    options: {
+      cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+      env,
+    },
+  };
+
+  const spawnResult = await spawn(command);
+
+  switch (spawnResult.tag) {
+    case "CommandNotFoundError":
+      return { tag: "ElmNotFoundError", command };
+
+    // istanbul ignore next
+    case "OtherSpawnError":
+      return spawnResult;
+
+    case "Exit": {
+      const { exitReason, stdout, stderr } = spawnResult;
+
+      if (
+        exitReason.tag === "ExitCode" &&
+        exitReason.exitCode === 0 &&
+        stdout !== "" &&
+        stderr === ""
+      ) {
+        return {
+          tag: "Success",
+          elmInstallOutput: stdout
+            // Elm uses `\r` to overwrite the same line multiple times.
+            .split(/\r?\n|\r/)
+            // Only include lines like `● elm/core 1.0.5` (they are indented).
+            // Ignore stuff like "Starting downloads..." and "Verifying dependencies (4/7)".
+            .filter((line) => line.startsWith("  "))
+            // One more space looks nicer in our output.
+            .map((line) => ` ${line}`)
+            .join("\n")
+            .trimEnd(),
+        };
+      }
+
+      const match = elmErrorMessageRegex.exec(stderr);
+
+      if (
+        exitReason.tag === "ExitCode" &&
+        exitReason.exitCode === 1 &&
+        // Don’t bother checking stdout. Elm likes to print
+        // "Dependencies ready!" even on failure.
+        match !== null
+      ) {
+        const [, title, elmJson, message] = match;
+
+        if (elmJson !== undefined) {
+          return { tag: "ElmJsonError" };
+        }
+
+        if (title !== undefined && message !== undefined) {
+          return {
+            tag: "ElmInstallError",
+            title,
+            message,
+          };
+        }
+      }
+
+      return {
+        tag: "UnexpectedElmInstallOutput",
+        exitReason,
+        stdout,
+        stderr,
+        command,
+      };
+    }
+  }
+}
+
+function elmWatchDummy(): string {
+  return `
+module ElmWatchDummy exposing (dummy)
+
+
+dummy : ()
+dummy =
+    ()
+  `.trim();
 }
