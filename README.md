@@ -1,6 +1,6 @@
 # elm-watch
 
-> `elm make` in watch mode.
+> `elm make` in watch mode. Fast and reliable.
 
 `elm-watch make` is basically like `elm make`.
 

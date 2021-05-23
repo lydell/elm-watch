@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "author": "Simon Lydell",
   "license": "MIT",
-  "description": "`elm make` in watch mode.",
+  "description": "`elm make` in watch mode. Fast and reliable.",
   "repository": "lydell/elm-watch",
   "type": "commonjs",
   "exports": {},
