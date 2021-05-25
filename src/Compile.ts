@@ -17,7 +17,9 @@ export async function compile(
 ): Promise<number> {
   const fancy = !IS_WINDOWS && !logger.raw.NO_COLOR;
   const isInteractive = logger.raw.stderr.isTTY;
-  const loadingMessageDelay = getLoadingMessageDelay(env);
+  const loadingMessageDelay = Number(
+    env.__ELM_WATCH_LOADING_MESSAGE_DELAY ?? "100"
+  );
 
   const elmJsonsArray = Array.from(state.elmJsons);
 
@@ -352,21 +354,4 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
       })
     ),
   ];
-}
-
-function getLoadingMessageDelay(env: Env): number {
-  const defaultValue = 100;
-  const raw = env.__ELM_WATCH_LOADING_MESSAGE_DELAY;
-
-  if (raw === undefined) {
-    return defaultValue;
-  }
-
-  const number = Number(raw);
-
-  if (Number.isFinite(number) && Number.isInteger(number)) {
-    return number;
-  }
-
-  return defaultValue;
 }

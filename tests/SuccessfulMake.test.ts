@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
-import { Env } from "../src/Helpers";
 import {
   clean,
   CursorWriteStream,
@@ -16,7 +15,6 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures");
 async function run(
   fixture: string,
   args: Array<string>,
-  env?: Env,
   { isTTY = true } = {}
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, fixture);
@@ -36,7 +34,10 @@ async function run(
 
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
-    env,
+    env: {
+      ...process.env,
+      __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
+    },
     stdin: new FailReadStream(),
     stdout,
     stderr,
@@ -57,27 +58,33 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("successful make", () => {
   test("standard mode", async () => {
-    expect(await run("successful-make", ["make"])).toMatchInlineSnapshot(
-      `✅ build/main.js`
-    );
+    expect(await run("successful-make", ["make"])).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ build/main.js
+    `);
   });
 
   test("--debug", async () => {
-    expect(
-      await run("successful-make", ["make", "--debug"])
-    ).toMatchInlineSnapshot(`✅ build/main.js`);
+    expect(await run("successful-make", ["make", "--debug"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ build/main.js
+    `);
   });
 
   test("--optimize", async () => {
-    expect(
-      await run("successful-make", ["make", "--optimize"])
-    ).toMatchInlineSnapshot(`✅ build/main.js`);
+    expect(await run("successful-make", ["make", "--optimize"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ build/main.js
+    `);
   });
 
   test("CI", async () => {
-    expect(
-      await run("successful-make", ["make"], process.env, { isTTY: false })
-    ).toMatchInlineSnapshot(`
+    expect(await run("successful-make", ["make"], { isTTY: false }))
+      .toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
       ⏳ build/main.js: elm make
       ⏳ build/main.js: postprocess
       ✅ build/main.js
@@ -85,14 +92,17 @@ describe("successful make", () => {
   });
 
   test("postprocess /dev/null", async () => {
-    expect(await run("postprocess-dev-null", ["make"])).toMatchInlineSnapshot(
-      `✅ /dev/null`
-    );
+    expect(await run("postprocess-dev-null", ["make"])).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ /dev/null
+    `);
   });
 
   test("multiple elm.json", async () => {
     expect(await run("multiple-elm-json/config", ["make"]))
       .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ Dependencies (2/2)
       ✅ ../build/app.js
       ✅ ../build/admin.js
     `);
