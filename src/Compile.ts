@@ -17,6 +17,7 @@ export async function compile(
 ): Promise<number> {
   const fancy = !IS_WINDOWS && !logger.raw.NO_COLOR;
   const isInteractive = logger.raw.stderr.isTTY;
+  const loadingMessageDelay = getLoadingMessageDelay(env);
 
   const elmJsonsArray = Array.from(state.elmJsons);
 
@@ -29,7 +30,7 @@ export async function compile(
   for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
     // Don’t print `(x/y)` the first time, because chances are all packages are
     // downloaded via the first elm.json and that looks nicer.
-    const message = `Download packages${
+    const message = `Dependencies${
       index === 0 ? "" : ` (${index + 1}/${elmJsonsArray.length})`
     }`;
 
@@ -40,7 +41,7 @@ export async function compile(
     const timeoutId = setTimeout(() => {
       logger.error(loadingMessage);
       didWriteLoadingMessage = true;
-    }, 100);
+    }, loadingMessageDelay);
 
     const clearLoadingMessage = (): void => {
       if (didWriteLoadingMessage && isInteractive) {
@@ -351,4 +352,21 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
       })
     ),
   ];
+}
+
+function getLoadingMessageDelay(env: Env): number {
+  const defaultValue = 100;
+  const raw = env.__ELM_WATCH_LOADING_MESSAGE_DELAY;
+
+  if (raw === undefined) {
+    return defaultValue;
+  }
+
+  const number = Number(raw);
+
+  if (Number.isFinite(number) && Number.isInteger(number)) {
+    return number;
+  }
+
+  return defaultValue;
 }

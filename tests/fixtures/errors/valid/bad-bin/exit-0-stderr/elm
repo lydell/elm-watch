@@ -1,3 +1,5 @@
 #!/usr/bin/env node
-process.stderr.write("some output\non stderr");
-process.exit(0);
+if (require("../elm-install")) {
+  process.stderr.write("some output\non stderr");
+  process.exit(0);
+}

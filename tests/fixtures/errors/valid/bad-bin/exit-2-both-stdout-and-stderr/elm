@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-process.stdout.write("stuff on stdout\n");
-process.stderr.write("stuff on stderr");
-process.stdout.write("second write to stdout");
-process.exit(2);
+if (require("../elm-install")) {
+  process.stdout.write("stuff on stdout\n");
+  process.stderr.write("stuff on stderr");
+  process.stdout.write("second write to stdout");
+  process.exit(2);
+}

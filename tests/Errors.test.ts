@@ -53,11 +53,20 @@ async function runAbsolute(
   return stderrString;
 }
 
+function badElmBinEnv(dir: string, fixture: string): Env {
+  return {
+    ...process.env,
+    PATH: prependPATH(path.join(dir, "bad-bin", fixture)),
+    // The default timeout is optimized for calling Elm directly.
+    // The bad-bin `elm`s are Node.js scripts – just starting Node.js can take
+    // 100ms. So raise the bar to stabilize the tests.
+    __ELM_WATCH_LOADING_MESSAGE_DELAY: "10000",
+  };
+}
+
 async function runWithBadElmBin(fixture: string): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
-  return runAbsolute(dir, ["make", "build/app.js"], {
-    PATH: prependPATH(path.join(dir, "bad-bin", fixture)),
-  });
+  return runAbsolute(dir, ["make", "build/app.js"], badElmBinEnv(dir, fixture));
 }
 
 async function runWithBadElmBinAndExpectedJson(
@@ -74,11 +83,21 @@ async function runWithBadElmBinAndExpectedJson(
     fs.unlinkSync(jsonPath);
   }
 
-  const output = await runAbsolute(dir, ["make", "build/app.js"], {
-    PATH: prependPATH(path.join(dir, "bad-bin", fixture)),
-  });
+  const output = await runAbsolute(
+    dir,
+    ["make", "build/app.js"],
+    badElmBinEnv(dir, fixture)
+  );
 
-  const writtenJson = fs.readFileSync(jsonPath, "utf8");
+  let writtenJson;
+  try {
+    writtenJson = fs.readFileSync(jsonPath, "utf8");
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    throw new Error(
+      `Expected ${jsonPath} to exist.\n\n${error.message}\n\n${output}`
+    );
+  }
   expect(writtenJson).toBe(expectedWrittenJson);
 
   return output;

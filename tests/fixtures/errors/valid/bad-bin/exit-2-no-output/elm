@@ -1,2 +1,4 @@
 #!/usr/bin/env node
-process.exit(2);
+if (require("../elm-install")) {
+  process.exit(2);
+}
