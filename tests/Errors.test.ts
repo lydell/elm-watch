@@ -668,11 +668,10 @@ describe("errors", () => {
           ),
         })
       ).toMatchInlineSnapshot(`
-        🚨 build/app.js
-        🚨 build/admin.js
+        🚨 Dependencies
 
         ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
-        ⧙When compiling: build/app.js⧘
+        /Users/you/project/tests/fixtures/errors/valid/elm.json
 
         I tried to execute ⧙elm⧘, but it does not appear to exist!
 
@@ -686,34 +685,16 @@ describe("errors", () => {
         Note: If you have installed Elm locally (for example using npm or elm-tooling),
         execute elm-watch using npx to make elm-watch automatically pick up that local
         installation: ⧙npx elm-watch⧘
-
-        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
-        ⧙When compiling: build/admin.js⧘
-
-        I tried to execute ⧙elm⧘, but it does not appear to exist!
-
-        This is what the PATH environment variable looks like:
-
-        /Users/you/project/tests
-        /Users/you/project/tests/some/bin
-
-        Is Elm installed?
-
-        Note: If you have installed Elm locally (for example using npm or elm-tooling),
-        execute elm-watch using npx to make elm-watch automatically pick up that local
-        installation: ⧙npx elm-watch⧘
-
-        🚨 ⧙2⧘ errors found
       `);
     });
 
     test("elm not found – undefined PATH", async () => {
       expect(await run("valid", ["make", "build/app.js"], {}))
         .toMatchInlineSnapshot(`
-        🚨 build/app.js
+        🚨 Dependencies
 
         ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
-        ⧙When compiling: build/app.js⧘
+        /Users/you/project/tests/fixtures/errors/valid/elm.json
 
         I tried to execute ⧙elm⧘, but it does not appear to exist!
 
@@ -726,8 +707,6 @@ describe("errors", () => {
         Note: If you have installed Elm locally (for example using npm or elm-tooling),
         execute elm-watch using npx to make elm-watch automatically pick up that local
         installation: ⧙npx elm-watch⧘
-
-        🚨 ⧙1⧘ error found
       `);
     });
 
