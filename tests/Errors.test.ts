@@ -36,7 +36,13 @@ async function runAbsolute(
 
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
-    env,
+    env:
+      env === undefined
+        ? {
+            ...process.env,
+            __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
+          }
+        : env,
     stdin: new FailReadStream(),
     stdout,
     stderr,
@@ -966,6 +972,7 @@ describe("errors", () => {
   describe("elm compilation errors", () => {
     test('wrong "type" in elm.json', async () => {
       expect(await run("wrong-elm-json-type", ["make"])).toMatchInlineSnapshot(`
+        ⛔️ Dependencies
         🚨 main.js
 
         ⧙-- UNEXPECTED TYPE -------------------------------------------------------------⧘
@@ -988,6 +995,7 @@ describe("errors", () => {
       // Elm’s message is a bit odd.
       expect(await run("compilation-errors", ["make", "Dir.js"]))
         .toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 Dir.js
 
         ⧙-- FILE NOT FOUND --------------------------------------------------------------⧘
@@ -1010,6 +1018,7 @@ describe("errors", () => {
     test("Elm syntax error", async () => {
       expect(await run("compilation-errors", ["make", "SyntaxError.js"]))
         .toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 SyntaxError.js
 
         ⧙-- UNFINISHED MODULE DECLARATION -----------------------------------------------⧘
@@ -1035,6 +1044,7 @@ describe("errors", () => {
     test("module name and file name mismatch", async () => {
       expect(await run("compilation-errors", ["make", "ModuleNameMismatch.js"]))
         .toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 ModuleNameMismatch.js
 
         ⧙-- MODULE NAME MISMATCH --------------------------------------------------------⧘
@@ -1060,6 +1070,7 @@ describe("errors", () => {
     test("type error", async () => {
       expect(await run("compilation-errors", ["make", "TypeError.js"]))
         .toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 TypeError.js
 
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
@@ -1080,6 +1091,7 @@ describe("errors", () => {
     test("missing main", async () => {
       expect(await run("compilation-errors", ["make", "MissingMain.js"]))
         .toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 MissingMain.js
 
         ⧙-- NO MAIN ---------------------------------------------------------------------⧘
@@ -1110,6 +1122,7 @@ describe("errors", () => {
       expect(
         await run("compilation-errors", ["make", "DebugLog.js", "--optimize"])
       ).toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 DebugLog.js
 
         ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
@@ -1168,6 +1181,7 @@ describe("errors", () => {
     test("exit 1 + stdout", async () => {
       expect(await run("postprocess", ["make", "build/exit-1-stdout.js"]))
         .toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 build/exit-1-stdout.js
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
@@ -1191,6 +1205,7 @@ describe("errors", () => {
       expect(
         await run("postprocess", ["make", "build/exit-2-stderr.js", "--debug"])
       ).toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 build/exit-2-stderr.js
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
@@ -1218,6 +1233,7 @@ describe("errors", () => {
           "--optimize",
         ])
       ).toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 build/exit-3-no-output.js
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
@@ -1244,6 +1260,7 @@ describe("errors", () => {
           "build/exit-4-both-stdout-and-stderr.js",
         ])
       ).toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 build/exit-4-both-stdout-and-stderr.js
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
@@ -1270,6 +1287,7 @@ describe("errors", () => {
     test("exit 5 + tricky args", async () => {
       expect(await run("postprocess", ["make", "build/exit-5-tricky-args.js"]))
         .toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 build/exit-5-tricky-args.js
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
