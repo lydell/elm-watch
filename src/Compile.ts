@@ -91,6 +91,7 @@ export async function compile(
       case "ElmNotFoundError":
         return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
 
+      // istanbul ignore next
       case "OtherSpawnError":
         return onError(
           Errors.otherSpawnError(elmJsonPath, result.error, result.command)
@@ -294,6 +295,7 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
           case "Success":
             return [];
 
+          // istanbul ignore next
           case "ElmNotFoundError":
             return Errors.elmNotFoundError(outputPath, status.command);
 

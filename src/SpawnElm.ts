@@ -86,6 +86,7 @@ export async function make({
   const spawnResult = await spawn(command);
 
   switch (spawnResult.tag) {
+    // istanbul ignore next
     case "CommandNotFoundError":
       return { tag: "ElmNotFoundError", command };
 
