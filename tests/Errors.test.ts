@@ -716,6 +716,29 @@ describe("errors", () => {
       `);
     });
 
+    test("elm install error", async () => {
+      expect(await runWithBadElmBin("install-error")).toMatchInlineSnapshot(`
+        🚨 Dependencies
+
+        ⧙-- PROBLEM LOADING PACKAGE LIST ------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+        I need the list of published packages to verify your dependencies, so I tried to
+        fetch:
+
+            https://package.elm-lang.org/all-packages
+
+        But my HTTP library is giving me the following error message:
+
+            ConnectionFailure Network.Socket.getAddrInfo (called with preferred socket type/protocol: AddrInfo {addrFlags = [AI_ADDRCONFIG], addrFamily = AF_UNSPEC, addrSocketType = Stream, addrProtocol = 0, addrAddress = <assumed to be undefined>, addrCanonName = <assumed to be undefined>}, host name: Just "package.elm-lang.org", service name: Just "443"): does not exist (nodename nor servname provided, or not known)
+
+        Are you somewhere with a slow internet connection? Or no internet? Does the link
+        I am trying to fetch work in your browser? Maybe the site is down? Does your
+        internet connection have a firewall that blocks certain domains? It is usually
+        something like that!
+      `);
+    });
+
     test("elm make json syntax error", async () => {
       expect(await runWithBadElmBinAndExpectedJson("json-syntax-error", "{"))
         .toMatchInlineSnapshot(`
