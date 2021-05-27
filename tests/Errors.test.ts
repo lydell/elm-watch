@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
@@ -714,6 +715,46 @@ describe("errors", () => {
         execute elm-watch using npx to make elm-watch automatically pick up that local
         installation: ⧙npx elm-watch⧘
       `);
+    });
+
+    describe("elm install dummy file creation error", () => {
+      const tmpDir = os.tmpdir();
+      const dummy = path.join(tmpDir, "ElmWatchDummy.elm");
+
+      beforeEach(() => {
+        if (fs.existsSync(dummy)) {
+          fs.unlinkSync(dummy);
+        }
+        fs.mkdirSync(dummy);
+      });
+
+      afterEach(() => {
+        if (fs.existsSync(dummy) && fs.statSync(dummy).isDirectory()) {
+          fs.rmdirSync(dummy);
+        }
+      });
+
+      test("is directory", async () => {
+        const rawOutput = await run("valid", ["make", "build/app.js"]);
+
+        const { root } = path.parse(__dirname);
+        const output = rawOutput.replace(
+          tmpDir,
+          path.join(root, "tmp", "fake")
+        );
+
+        expect(output).toMatchInlineSnapshot(`
+          🚨 Dependencies
+
+          ⧙-- FILE SYSTEM TROUBLE ---------------------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+          I tried to make sure that all packages are installed. To do that, I need to
+          create a temporary dummy .elm file but that failed:
+
+          EISDIR: illegal operation on a directory, open '/tmp/fake/ElmWatchDummy.elm'
+        `);
+      });
     });
 
     test("elm install error", async () => {
