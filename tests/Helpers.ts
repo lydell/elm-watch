@@ -13,7 +13,7 @@ export function readFile(filePath: string): string {
 export class FailReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 
-  _read(size: number): void {
+  override _read(size: number): void {
     throw new Error(
       `Expected FailReadStream not to be read but tried to read ${size} bytes.`
     );
@@ -35,7 +35,7 @@ export class RawReadStream extends stream.Readable implements ReadStream {
     super();
   }
 
-  _read(size: number): void {
+  override _read(size: number): void {
     if (!this.isRaw) {
       throw new Error(
         `Expected \`.setRawMode(true)\` to be called before reading, but tried to read ${size} bytes with \`.isRaw = false\`.`
@@ -57,7 +57,7 @@ export class MemoryWriteStream extends stream.Writable implements WriteStream {
 
   content = "";
 
-  _write(
+  override _write(
     chunk: Buffer | string,
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void
@@ -78,7 +78,7 @@ export function duoStream(): {
 
     columns = unmarkedStream.columns;
 
-    _write(
+    override _write(
       chunk: Buffer | string,
       _encoding: BufferEncoding,
       callback: (error?: Error | null) => void
@@ -154,7 +154,7 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
 
   private cursor = { x: 0, y: 0 };
 
-  _write(
+  override _write(
     chunk: Buffer | string,
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void
