@@ -18,17 +18,15 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 async function run(
   fixture: string,
   args: Array<string>,
-  env?: Env,
-  options?: { isTTY?: boolean }
+  options?: { env?: Env; isTTY?: boolean }
 ): Promise<string> {
-  return runAbsolute(path.join(FIXTURES_DIR, fixture), args, env, options);
+  return runAbsolute(path.join(FIXTURES_DIR, fixture), args, options);
 }
 
 async function runAbsolute(
   dir: string,
   args: Array<string>,
-  env?: Env,
-  { isTTY = true } = {}
+  { env, isTTY = true }: { env?: Env; isTTY?: boolean } = {}
 ): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new CursorWriteStream();
@@ -74,7 +72,9 @@ function badElmBinEnv(dir: string, fixture: string): Env {
 
 async function runWithBadElmBin(fixture: string): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
-  return runAbsolute(dir, ["make", "build/app.js"], badElmBinEnv(dir, fixture));
+  return runAbsolute(dir, ["make", "build/app.js"], {
+    env: badElmBinEnv(dir, fixture),
+  });
 }
 
 async function runWithBadElmBinAndExpectedJson(
@@ -91,11 +91,9 @@ async function runWithBadElmBinAndExpectedJson(
     fs.unlinkSync(jsonPath);
   }
 
-  const output = await runAbsolute(
-    dir,
-    ["make", "build/app.js"],
-    badElmBinEnv(dir, fixture)
-  );
+  const output = await runAbsolute(dir, ["make", "build/app.js"], {
+    env: badElmBinEnv(dir, fixture),
+  });
 
   let writtenJson;
   try {
@@ -667,9 +665,12 @@ describe("errors", () => {
     test("elm not found", async () => {
       expect(
         await run("valid", ["make"], {
-          PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
-            path.delimiter
-          ),
+          env: {
+            ...process.env,
+            PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
+              path.delimiter
+            ),
+          },
         })
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
@@ -693,7 +694,7 @@ describe("errors", () => {
     });
 
     test("elm not found – undefined PATH", async () => {
-      expect(await run("valid", ["make", "build/app.js"], {}))
+      expect(await run("valid", ["make", "build/app.js"], { env: {} }))
         .toMatchInlineSnapshot(`
         🚨 Dependencies
 
@@ -1287,7 +1288,10 @@ describe("errors", () => {
     test("command not found", async () => {
       expect(
         await run("postprocess", ["make", "build/command-not-found.js"], {
-          PATH: path.join(path.dirname(__dirname), "node_modules", ".bin"),
+          env: {
+            ...process.env,
+            PATH: path.join(path.dirname(__dirname), "node_modules", ".bin"),
+          },
         })
       ).toMatchInlineSnapshot(`
         🚨 build/command-not-found.js
@@ -1445,8 +1449,10 @@ describe("errors", () => {
         fs.unlinkSync(appPath);
       }
 
-      expect(await run("ci", ["make"], process.env, { isTTY: false }))
+      expect(await run("ci", ["make"], { isTTY: false }))
         .toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
         ⏳ build/admin.js: elm make
         ⏳ build/app.js: elm make
         ⏳ build/postprocess-error.js: elm make
@@ -1504,12 +1510,10 @@ describe("errors", () => {
       }
 
       expect(
-        await run(
-          "ci",
-          ["make"],
-          { ...process.env, NO_COLOR: "" },
-          { isTTY: false }
-        )
+        await run("ci", ["make"], {
+          env: { ...process.env, NO_COLOR: "" },
+          isTTY: false,
+        })
       ).toMatchInlineSnapshot(`
         build/admin.js: elm make
         build/app.js: elm make
