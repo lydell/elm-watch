@@ -796,6 +796,56 @@ describe("errors", () => {
           on stderr
         `);
       });
+
+      test("exit 1 + stderr not matching", async () => {
+        expect(await runWithBadElmBin("exit-1-stderr-not-install-error-match"))
+          .toMatchInlineSnapshot(`
+          🚨 Dependencies
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+          I tried to make sure all packages are installed by running the following commands:
+
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with an error I can recognize (using regex) on stderr.
+
+          ⧙But it exited like this:⧘
+
+          exit 1
+          STDOUT:
+          Dependencies ready!
+
+          STDERR:
+          I ran into an unexpected problem!
+        `);
+      });
+
+      test("exit 2 + no output", async () => {
+        expect(await runWithBadElmBin("exit-2-no-output-install"))
+          .toMatchInlineSnapshot(`
+          🚨 Dependencies
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+          I tried to make sure all packages are installed by running the following commands:
+
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with an error I can recognize (using regex) on stderr.
+
+          ⧙But it exited like this:⧘
+
+          exit 2
+          (no output)
+        `);
+      });
     });
 
     test("elm make json syntax error", async () => {

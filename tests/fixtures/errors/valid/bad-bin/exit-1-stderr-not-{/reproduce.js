@@ -1,5 +1,3 @@
-// Run this script with your Internet connection turned off!
-
 const crossSpawn = require("cross-spawn");
 const fs = require("fs");
 const path = require("path");

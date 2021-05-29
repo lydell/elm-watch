@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+process.stdout.write("Dependencies ready!\n");
+process.stderr.write("I ran into an unexpected problem!");
+process.exit(1);
