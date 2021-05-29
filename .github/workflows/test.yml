@@ -44,5 +44,12 @@ jobs:
       - name: elm-tooling install
         run: npx --no-install elm-tooling install
 
+      # The idea is that this will install all packages mentioned in test
+      # fixtures, so that nothing needs to be downloaded while the tests
+      # run, which could result in flaky tests.
+      - name: fill ELM_HOME with packages
+        run: npx --no-install elm make Main.elm --output=/dev/null
+        working-directory: tests/install-packages
+
       - name: Jest
         run: npx --no-install jest --coverage
