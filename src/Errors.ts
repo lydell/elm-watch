@@ -530,7 +530,7 @@ ${message}
 }
 
 function printPATH(env: Env): string {
-  const pathKey = getPathKey(env);
+  const pathKey = getPathKey({ env });
   const { [pathKey]: PATH } = env;
 
   if (PATH === undefined) {
