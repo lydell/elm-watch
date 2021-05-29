@@ -1,3 +1,11 @@
 {
-  "proseWrap": "never"
+  "proseWrap": "never",
+  "overrides": [
+    {
+      "files": "*.ts",
+      "options": {
+        "parser": "babel-ts"
+      }
+    }
+  ]
 }
