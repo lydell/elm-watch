@@ -9,6 +9,7 @@ import {
   CursorWriteStream,
   FailReadStream,
   MemoryWriteStream,
+  prependPATH,
   stringSnapshotSerializer,
 } from "./Helpers";
 
@@ -108,10 +109,6 @@ async function runWithBadElmBinAndExpectedJson(
   expect(writtenJson).toBe(expectedWrittenJson);
 
   return output;
-}
-
-function prependPATH(folder: string): string {
-  return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);

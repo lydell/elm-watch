@@ -11,6 +11,10 @@ export function readFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
 }
 
+export function prependPATH(folder: string): string {
+  return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
+}
+
 export class FailReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 
