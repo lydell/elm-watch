@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
 
@@ -229,6 +230,8 @@ export function clean(string: string): string {
   return string
     .split(path.dirname(__dirname))
     .join(path.join(root, "Users", "you", "project"))
+    .split(os.tmpdir())
+    .join(path.join(root, "tmp", "fake"))
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘");
 }

@@ -264,7 +264,6 @@ export async function install({
       if (
         exitReason.tag === "ExitCode" &&
         exitReason.exitCode === 0 &&
-        stdout !== "" &&
         stderr === ""
       ) {
         return {

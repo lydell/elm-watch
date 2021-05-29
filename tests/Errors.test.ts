@@ -718,8 +718,7 @@ describe("errors", () => {
     });
 
     describe("elm install dummy file creation error", () => {
-      const tmpDir = os.tmpdir();
-      const dummy = path.join(tmpDir, "ElmWatchDummy.elm");
+      const dummy = path.join(os.tmpdir(), "ElmWatchDummy.elm");
 
       beforeEach(() => {
         if (fs.existsSync(dummy)) {
@@ -735,15 +734,8 @@ describe("errors", () => {
       });
 
       test("is directory", async () => {
-        const rawOutput = await run("valid", ["make", "build/app.js"]);
-
-        const { root } = path.parse(__dirname);
-        const output = rawOutput.replace(
-          tmpDir,
-          path.join(root, "tmp", "fake")
-        );
-
-        expect(output).toMatchInlineSnapshot(`
+        expect(await run("valid", ["make", "build/app.js"]))
+          .toMatchInlineSnapshot(`
           🚨 Dependencies
 
           ⧙-- FILE SYSTEM TROUBLE ---------------------------------------------------------⧘
@@ -778,6 +770,32 @@ describe("errors", () => {
         internet connection have a firewall that blocks certain domains? It is usually
         something like that!
       `);
+    });
+
+    describe("unexpected elm install output", () => {
+      test("exit 0 + stderr", async () => {
+        expect(await runWithBadElmBin("exit-0-stderr-install"))
+          .toMatchInlineSnapshot(`
+          🚨 Dependencies
+
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+          I tried to make sure all packages are installed by running the following commands:
+
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with an error I can recognize (using regex) on stderr.
+
+          ⧙But it exited like this:⧘
+
+          exit 0
+          some output
+          on stderr
+        `);
+      });
     });
 
     test("elm make json syntax error", async () => {
