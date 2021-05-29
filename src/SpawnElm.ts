@@ -296,6 +296,7 @@ export async function install({
           return { tag: "ElmJsonError" };
         }
 
+        // istanbul ignore else
         if (title !== undefined && message !== undefined) {
           return {
             tag: "ElmInstallError",
