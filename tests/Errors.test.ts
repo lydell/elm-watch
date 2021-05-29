@@ -15,6 +15,8 @@ import {
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 
+const NO_DELAY = { __ELM_WATCH_LOADING_MESSAGE_DELAY: "0" };
+
 async function run(
   fixture: string,
   args: Array<string>,
@@ -40,7 +42,7 @@ async function runAbsolute(
       env === undefined
         ? {
             ...process.env,
-            __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
+            ...NO_DELAY,
           }
         : env,
     stdin: new FailReadStream(),
@@ -667,6 +669,7 @@ describe("errors", () => {
         await run("valid", ["make"], {
           env: {
             ...process.env,
+            ...NO_DELAY,
             PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
               path.delimiter
             ),
@@ -1290,10 +1293,12 @@ describe("errors", () => {
         await run("postprocess", ["make", "build/command-not-found.js"], {
           env: {
             ...process.env,
+            ...NO_DELAY,
             PATH: path.join(path.dirname(__dirname), "node_modules", ".bin"),
           },
         })
       ).toMatchInlineSnapshot(`
+        ✅ Dependencies
         🚨 build/command-not-found.js
 
         ⧙-- COMMAND NOT FOUND -----------------------------------------------------------⧘
@@ -1511,10 +1516,17 @@ describe("errors", () => {
 
       expect(
         await run("ci", ["make"], {
-          env: { ...process.env, NO_COLOR: "" },
+          env: {
+            ...process.env,
+            ...NO_DELAY,
+            NO_COLOR: "",
+          },
+
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
+        Dependencies: in progress
+        Dependencies: success
         build/admin.js: elm make
         build/app.js: elm make
         build/postprocess-error.js: elm make
