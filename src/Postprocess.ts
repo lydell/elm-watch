@@ -4,7 +4,7 @@ import { absoluteDirname } from "./PathHelpers";
 import { Command, ExitReason, spawn } from "./Spawn";
 import {
   CompilationMode,
-  ElmJsonPath,
+  ElmToolingJsonPath,
   OutputPath,
   outputPathToAbsoluteString,
 } from "./Types";
@@ -29,13 +29,13 @@ export type PostprocessResult =
   | { tag: "Success" };
 
 export async function postprocess({
-  elmJsonPath,
+  elmToolingJsonPath,
   mode,
   output,
   postprocessArray,
   env,
 }: {
-  elmJsonPath: ElmJsonPath;
+  elmToolingJsonPath: ElmToolingJsonPath;
   mode: CompilationMode;
   output: OutputPath;
   postprocessArray: NonEmptyArray<string>;
@@ -49,7 +49,7 @@ export async function postprocess({
       mode,
     ],
     options: {
-      cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+      cwd: absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
       env,
     },
   };

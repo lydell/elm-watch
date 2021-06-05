@@ -169,7 +169,7 @@ export async function compile(
         outputState.status = { tag: "Postprocess" };
         updateStatusLine(outputPath, outputState.status, index);
         outputState.status = await postprocess({
-          elmJsonPath,
+          elmToolingJsonPath: state.elmToolingJsonPath,
           mode: outputState.mode,
           output: outputPath,
           postprocessArray: outputState.postprocess,

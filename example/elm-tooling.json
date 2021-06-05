@@ -72,6 +72,10 @@
             "build/LegacyMain.js": {
                 "inputs": [
                     "legacy/Main.elm"
+                ],
+                "postprocess": [
+                    "node",
+                    "postprocess.js"
                 ]
             }
         }
