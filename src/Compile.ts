@@ -245,7 +245,7 @@ function statusLine(
     case "ElmWatchNodeDefaultExportNotFunction":
     case "ElmWatchNodeRunError":
     case "ElmWatchNodeResultDecodeError":
-    case "ElmWatchNodePostprocessNonZeroExitCode":
+    case "StdoutDecodeError":
     case "ElmMakeJsonParseError":
     case "ElmMakeError":
     case "ElmJsonsErrors":
@@ -331,7 +331,7 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
               status.exitReason,
               status.stdout,
               status.stderr,
-              status.command
+              status.executedCommand
             );
 
           case "ElmWatchNodeMissingScript":
@@ -363,11 +363,10 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
               status.error
             );
 
-          case "ElmWatchNodePostprocessNonZeroExitCode":
-            return Errors.elmWatchNodePostprocessNonZeroExitCode(
-              status.scriptPath,
-              status.args,
-              status.result
+          case "StdoutDecodeError":
+            return Errors.stdoutDecodeError(
+              status.error,
+              status.executedCommand
             );
 
           case "ElmMakeJsonParseError":

@@ -10,7 +10,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
-import { ElmWatchNodeResult } from "./Postprocess";
+import { ExecutedCommand } from "./Postprocess";
 import { Command, ExitReason } from "./Spawn";
 import { JsonPath } from "./SpawnElm";
 import { UncheckedInputPath } from "./State";
@@ -465,12 +465,12 @@ export function postprocessNonZeroExit(
   exitReason: ExitReason,
   stdout: string,
   stderr: string,
-  command: Command
+  executedCommand: ExecutedCommand
 ): ErrorTemplate {
   return fancyError("POSTPROCESS ERROR", outputPath)`
 I ran your postprocess command:
 
-${printCommand(command)}
+${printExecutedCommand(executedCommand)}
 
 ${bold("It exited with an error:")}
 
@@ -571,21 +571,18 @@ ${error.format()}
 `;
 }
 
-export function elmWatchNodePostprocessNonZeroExitCode(
-  scriptPath: ElmWatchNodeScriptPath,
-  args: Array<string>,
-  result: ElmWatchNodeResult
+export function stdoutDecodeError(
+  error: DecoderError | SyntaxError,
+  executedCommand: ExecutedCommand
 ): ErrorTemplate {
-  return fancyError("POSTPROCESS ERROR", scriptPath)`
+  return fancyError("INVALID POSTPROCESS STDOUT", { tag: "NoLocation" })`
 I ran your postprocess command:
 
-${printElmWatchNodeImportCommand(scriptPath)}
-${printElmWatchNodeRunCommand(args)}
+${printExecutedCommand(executedCommand)}
 
-${bold("It exited with an error:")}
+But ${bold("stdout")} doesn't look like I expected:
 
-${printExitReason({ tag: "ExitCode", exitCode: result.exitCode })}
-${printStdio(result.stdout, result.stderr)}
+${error instanceof DecoderError ? error.format() : error.message}
 `;
 }
 
@@ -662,6 +659,19 @@ function printCommand(command: Command): string {
 ${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
 ${commandToPresentationName([command.command, ...command.args])}
 `;
+}
+
+function printExecutedCommand(executedCommand: ExecutedCommand): string {
+  switch (executedCommand.tag) {
+    case "Command":
+      return printCommand(executedCommand.command);
+
+    case "ElmWatchNode":
+      return `
+${printElmWatchNodeImportCommand(executedCommand.scriptPath)}
+${printElmWatchNodeRunCommand(executedCommand.args)}
+      `;
+  }
 }
 
 function commandToPresentationName(command: NonEmptyArray<string>): string {
