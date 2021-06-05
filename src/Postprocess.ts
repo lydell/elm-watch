@@ -117,8 +117,8 @@ export async function postprocess({
 export type ElmWatchNodeResult = ReturnType<typeof ElmWatchNodeResult>;
 const ElmWatchNodeResult = Decode.fieldsAuto({
   exitCode: Decode.number,
-  stdout: Decode.string,
-  stderr: Decode.string,
+  stdout: Decode.optional(Decode.string, ""),
+  stderr: Decode.optional(Decode.string, ""),
 });
 
 async function elmWatchNode(
@@ -133,7 +133,7 @@ async function elmWatchNode(
   const scriptPath: ElmWatchNodeScriptPath = {
     tag: "ElmWatchNodeScriptPath",
     theElmWatchNodeScriptPath: absolutePathFromString(
-      elmToolingJsonPath.theElmToolingJsonPath,
+      absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
       userArgs[0]
     ),
     originalString: userArgs[0],

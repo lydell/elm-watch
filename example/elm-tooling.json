@@ -20,7 +20,7 @@
                     "src/ApplicationMain.elm"
                 ],
                 "postprocess": [
-                    "node",
+                    "elm-watch-node",
                     "postprocess.js"
                 ]
             },
@@ -29,7 +29,7 @@
                     "src/DocumentMain.elm"
                 ],
                 "postprocess": [
-                    "node",
+                    "elm-watch-node",
                     "postprocess.js"
                 ]
             },
@@ -38,7 +38,7 @@
                     "src/ElementMain.elm"
                 ],
                 "postprocess": [
-                    "node",
+                    "elm-watch-node",
                     "postprocess.js"
                 ]
             },
@@ -47,7 +47,7 @@
                     "src/HtmlMain.elm"
                 ],
                 "postprocess": [
-                    "node",
+                    "elm-watch-node",
                     "postprocess.js"
                 ]
             },
@@ -56,7 +56,7 @@
                     "src/SandboxMain.elm"
                 ],
                 "postprocess": [
-                    "node",
+                    "elm-watch-node",
                     "postprocess.js"
                 ]
             },
@@ -65,7 +65,7 @@
                     "src/WorkerMain.elm"
                 ],
                 "postprocess": [
-                    "node",
+                    "elm-watch-node",
                     "postprocess.js"
                 ]
             },
@@ -75,7 +75,7 @@
                 ],
                 "postprocess": [
                     "node",
-                    "postprocess.js"
+                    "legacy/postprocess.cjs"
                 ]
             }
         }

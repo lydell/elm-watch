@@ -1,7 +1,5 @@
-const fs = require("fs");
-const UglifyJs = require("uglify-js");
-
-const [outputPath, mode] = process.argv.slice(2);
+import * as fs from "fs";
+import * as UglifyJs from "uglify-js";
 
 const pureFuncs = [
   "F2",
@@ -20,40 +18,46 @@ const pureFuncs = [
   "A7",
   "A8",
   "A9",
-]
+];
 
-switch (mode) {
-  case "standard":
-  case "debug":
-    process.exit(0);
+export default function postprocess([outputPath, mode]) {
+  switch (mode) {
+    case "standard":
+    case "debug":
+      return { exitCode: 0 };
 
-  case "optimize": {
-    const code = fs.readFileSync(outputPath, "utf8");
+    case "optimize": {
+      const code = fs.readFileSync(outputPath, "utf8");
 
-    const result = UglifyJs.minify(code, {
-      compress: {
-        pure_funcs: pureFuncs,
-        pure_getters: true,
-        keep_fargs: false,
-        unsafe_comps: true,
-        unsafe: true,
-        passes: 2
-      },
-      mangle: {
-        reserved: pureFuncs
+      const result = UglifyJs.minify(code, {
+        compress: {
+          pure_funcs: pureFuncs,
+          pure_getters: true,
+          keep_fargs: false,
+          unsafe_comps: true,
+          unsafe: true,
+          passes: 2,
+        },
+        mangle: {
+          reserved: pureFuncs,
+        },
+      });
+
+      if (result.error !== undefined) {
+        return {
+          exitCode: 1,
+          stderr: result.error.message,
+        };
       }
-    });
 
-    if (result.error !== undefined) {
-      process.stderr.write(result.error.message);
-      process.exit(1);
+      fs.writeFileSync(outputPath, result.code);
+      return { exitCode: 0 };
     }
 
-    fs.writeFileSync(outputPath, result.code);
-    process.exit(0);
+    default:
+      return {
+        exitCode: 1,
+        stderr: `Unknown mode: ${JSON.stringify(mode)}`,
+      };
   }
-
-  default:
-    process.stderr.write(`Unknown mode: ${JSON.stringify(mode)}`);
-    process.exit(1);
 }

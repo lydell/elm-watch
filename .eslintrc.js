@@ -192,5 +192,11 @@ module.exports = {
         project: ["./tests/tsconfig.json"],
       },
     },
+    {
+      files: "example/**/*.js",
+      parserOptions: {
+        sourceType: "module",
+      },
+    },
   ],
 };

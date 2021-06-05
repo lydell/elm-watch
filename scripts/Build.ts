@@ -78,4 +78,8 @@ modifyFile(path.join(BUILD, "Help.js"), (content) =>
   content.replace(/%VERSION%/g, PACKAGE_REAL.version)
 );
 
+modifyFile(path.join(BUILD, "Postprocess.js"), (content) =>
+  content.replace(/\(\) => require\(/g, "() => import(")
+);
+
 fs.chmodSync(path.join(BUILD, "index.js"), "755");
