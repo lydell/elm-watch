@@ -34,6 +34,14 @@ export type OutputPath =
     }
   | { tag: "NullOutputPath" };
 
+// "postprocess": ["elm-watch-node", "postprocess.js"]
+//                                    ^^^^^^^^^^^^^^
+export type ElmWatchNodeScriptPath = {
+  tag: "ElmWatchNodeScriptPath";
+  theElmWatchNodeScriptPath: AbsolutePath;
+  originalString: string;
+};
+
 export type CliArg = {
   tag: "CliArg";
   theArg: string;

@@ -10,6 +10,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
+import { ElmWatchNodeResult } from "./Postprocess";
 import { Command, ExitReason } from "./Spawn";
 import { JsonPath } from "./SpawnElm";
 import { UncheckedInputPath } from "./State";
@@ -17,6 +18,7 @@ import {
   CliArg,
   ElmJsonPath,
   ElmToolingJsonPath,
+  ElmWatchNodeScriptPath,
   InputPath,
   OutputPath,
 } from "./Types";
@@ -27,6 +29,7 @@ const elmToolingJson = bold("elm-tooling.json");
 type FancyErrorLocation =
   | ElmJsonPath
   | ElmToolingJsonPath
+  | ElmWatchNodeScriptPath
   | OutputPath
   | { tag: "Custom"; location: string }
   | { tag: "NoLocation" };
@@ -69,6 +72,8 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
       return dim(`When compiling: ${location.originalString}`);
     case "NullOutputPath":
       return dim("When compiling to /dev/null");
+    case "ElmWatchNodeScriptPath":
+      return location.theElmWatchNodeScriptPath.absolutePath;
     case "Custom":
       return location.location;
     case "NoLocation":
@@ -474,6 +479,116 @@ ${printStdio(stdout, stderr)}
 `;
 }
 
+export function elmWatchNodeMissingScript(
+  elmToolingJsonPath: ElmToolingJsonPath
+): ErrorTemplate {
+  return fancyError("MISSING POSTPROCESS SCRIPT", elmToolingJsonPath)`
+You have specified this in ${elmToolingJson}:
+
+"postprocess": ["elm-watch-node"]
+
+You need to specify a JavaScript file to run as well, like so:
+
+"postprocess": ["elm-watch-node", "postprocess.js"]
+`;
+}
+
+export function elmWatchNodeImportError(
+  scriptPath: ElmWatchNodeScriptPath,
+  error: unknown
+): ErrorTemplate {
+  const errorString: string =
+    error instanceof Error
+      ? (error as Error & { code?: string }).code === "ERR_MODULE_NOT_FOUND"
+        ? error.message
+        : error.stack ?? error.message
+      : String(error);
+
+  return fancyError("POSTPROCESS IMPORT ERROR", scriptPath)`
+I tried to import your postprocess file:
+
+${printElmWatchNodeImportCommand(scriptPath)}
+
+But that resulted in this error:
+
+${errorString}
+`;
+}
+
+export function elmWatchNodeDefaultExportNotFunction(
+  scriptPath: ElmWatchNodeScriptPath,
+  imported: Record<string, unknown>
+): ErrorTemplate {
+  return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", scriptPath)`
+I imported your postprocess file:
+
+${printElmWatchNodeImportCommand(scriptPath)}
+
+I expected ${bold("imported.default")} to be a function, but it isn't!
+
+typeof imported.default === ${JSON.stringify(typeof imported.default)}
+
+These are the keys of ${bold("imported")}:
+
+${JSON.stringify(Object.keys(imported), null, 2)}
+`;
+}
+
+export function elmWatchNodeRunError(
+  scriptPath: ElmWatchNodeScriptPath,
+  args: Array<string>,
+  error: unknown
+): ErrorTemplate {
+  const errorString: string =
+    error instanceof Error ? error.stack ?? error.message : String(error);
+
+  return fancyError("POSTPROCESS RUN ERROR", scriptPath)`
+I tried to run your postprocess command:
+
+${printElmWatchNodeImportCommand(scriptPath)}
+${printElmWatchNodeRunCommand(args)}
+
+But that resulted in this error:
+
+${errorString}
+`;
+}
+
+export function elmWatchNodeResultDecodeError(
+  scriptPath: ElmWatchNodeScriptPath,
+  args: Array<string>,
+  error: DecoderError
+): ErrorTemplate {
+  return fancyError("INVALID POSTPROCESS RESULT", scriptPath)`
+I ran your postprocess command:
+
+${printElmWatchNodeImportCommand(scriptPath)}
+${printElmWatchNodeRunCommand(args)}
+
+But ${bold("result")} doesn't look like I expected:
+
+${error.format()}
+`;
+}
+
+export function elmWatchNodePostprocessNonZeroExitCode(
+  scriptPath: ElmWatchNodeScriptPath,
+  args: Array<string>,
+  result: ElmWatchNodeResult
+): ErrorTemplate {
+  return fancyError("POSTPROCESS ERROR", scriptPath)`
+I ran your postprocess command:
+
+${printElmWatchNodeImportCommand(scriptPath)}
+${printElmWatchNodeRunCommand(args)}
+
+${bold("It exited with an error:")}
+
+${printExitReason({ tag: "ExitCode", exitCode: result.exitCode })}
+${printStdio(result.stdout, result.stderr)}
+`;
+}
+
 export function elmMakeJsonParseError(
   outputPath: OutputPath,
   error: DecoderError | SyntaxError,
@@ -621,4 +736,16 @@ ${bold("But that failed too:")}
 ${jsonPath.error.message}
       `;
   }
+}
+
+function printElmWatchNodeImportCommand(
+  scriptPath: ElmWatchNodeScriptPath
+): string {
+  const scriptPathString: string =
+    scriptPath.theElmWatchNodeScriptPath.absolutePath;
+  return `const imported = await import(${JSON.stringify(scriptPathString)})`;
+}
+
+function printElmWatchNodeRunCommand(args: Array<string>): string {
+  return `const result = await imported.default(${JSON.stringify(args)})`;
 }
