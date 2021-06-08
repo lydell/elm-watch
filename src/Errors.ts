@@ -1,6 +1,6 @@
 import * as path from "path";
 import getPathKey from "path-key";
-import { DecoderError } from "tiny-decoders";
+import { DecoderError, repr } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
 import { bold, dim, Env, join } from "./Helpers";
@@ -497,12 +497,15 @@ export function elmWatchNodeImportError(
   scriptPath: ElmWatchNodeScriptPath,
   error: unknown
 ): ErrorTemplate {
+  const code: unknown = (error as { code: unknown } | undefined)?.code;
   const errorString: string =
-    error instanceof Error
-      ? (error as Error & { code?: string }).code === "ERR_MODULE_NOT_FOUND"
-        ? error.message
-        : error.stack ?? error.message
-      : String(error);
+    // `import()` is used for real (since it supports both CJS and MJS).
+    // In Jest tests its seems to be impossible to use `import()` so we have to
+    // support `require()` too.
+    code === "ERR_MODULE_NOT_FOUND" || // `import()`
+    code === "MODULE_NOT_FOUND" // `require()`
+      ? (error as { message: string }).message
+      : unknownErrorToString(error);
 
   return fancyError("POSTPROCESS IMPORT ERROR", scriptPath)`
 I tried to import your postprocess file:
@@ -519,6 +522,15 @@ export function elmWatchNodeDefaultExportNotFunction(
   scriptPath: ElmWatchNodeScriptPath,
   imported: Record<string, unknown>
 ): ErrorTemplate {
+  const keysMessage =
+    "default" in imported
+      ? ""
+      : `
+These are the keys of ${bold("imported")}:
+
+${JSON.stringify(Object.keys(imported), null, 2)}
+      `;
+
   return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", scriptPath)`
 I imported your postprocess file:
 
@@ -528,9 +540,7 @@ I expected ${bold("imported.default")} to be a function, but it isn't!
 
 typeof imported.default === ${JSON.stringify(typeof imported.default)}
 
-These are the keys of ${bold("imported")}:
-
-${JSON.stringify(Object.keys(imported), null, 2)}
+${keysMessage}
 `;
 }
 
@@ -539,8 +549,7 @@ export function elmWatchNodeRunError(
   args: Array<string>,
   error: unknown
 ): ErrorTemplate {
-  const errorString: string =
-    error instanceof Error ? error.stack ?? error.message : String(error);
+  const errorString = unknownErrorToString(error);
 
   return fancyError("POSTPROCESS RUN ERROR", scriptPath)`
 I tried to run your postprocess command:
@@ -758,4 +767,10 @@ function printElmWatchNodeImportCommand(
 
 function printElmWatchNodeRunCommand(args: Array<string>): string {
   return `const result = await imported.default(${JSON.stringify(args)})`;
+}
+
+function unknownErrorToString(error: unknown): string {
+  return typeof (error as { stack?: string } | undefined)?.stack === "string"
+    ? (error as { stack: string }).stack
+    : repr(error);
 }

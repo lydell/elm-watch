@@ -135,11 +135,14 @@ export async function postprocess({
   }
 }
 
-const ElmWatchNodeResult = Decode.fieldsAuto({
-  exitCode: Decode.number,
-  stdout: Decode.optional(Decode.string, ""),
-  stderr: Decode.optional(Decode.string, ""),
-});
+const ElmWatchNodeResult = Decode.fieldsAuto(
+  {
+    exitCode: Decode.number,
+    stdout: Decode.optional(Decode.string, ""),
+    stderr: Decode.optional(Decode.string, ""),
+  },
+  { exact: "throw" }
+);
 
 async function elmWatchNode(
   cwd: AbsolutePath,

@@ -1446,6 +1446,281 @@ describe("errors", () => {
     });
   });
 
+  describe("elm-watch-node errors", () => {
+    test("missing script", async () => {
+      expect(await run("postprocess", ["make", "build/missing-script.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/missing-script.js
+
+        ⧙-- MISSING POSTPROCESS SCRIPT --------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/elm-tooling.json
+
+        You have specified this in ⧙elm-tooling.json⧘:
+
+        "postprocess": ["elm-watch-node"]
+
+        You need to specify a JavaScript file to run as well, like so:
+
+        "postprocess": ["elm-watch-node", "postprocess.js"]
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("script not found", async () => {
+      expect(await run("postprocess", ["make", "build/script-not-found.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/script-not-found.js
+
+        ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/not-found.js
+
+        I tried to import your postprocess file:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/not-found.js")
+
+        But that resulted in this error:
+
+        Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/not-found.js' from 'src/Postprocess.ts'
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("throw at import", async () => {
+      expect(await run("postprocess", ["make", "build/throw-at-import.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/throw-at-import.js
+
+        ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-at-import.js
+
+        I tried to import your postprocess file:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-at-import.js")
+
+        But that resulted in this error:
+
+        Error: Failed to initialize!
+            at fake/stacktrace.js
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("throw non-error at import", async () => {
+      expect(
+        await run("postprocess", ["make", "build/throw-non-error-at-import.js"])
+      ).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/throw-non-error-at-import.js
+
+        ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-non-error-at-import.js
+
+        I tried to import your postprocess file:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-non-error-at-import.js")
+
+        But that resulted in this error:
+
+        [null, "error"]
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("empty file", async () => {
+      expect(await run("postprocess", ["make", "build/empty-file.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/empty-file.js
+
+        ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/empty-file.js
+
+        I imported your postprocess file:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/empty-file.js")
+
+        I expected ⧙imported.default⧘ to be a function, but it isn't!
+
+        typeof imported.default === "undefined"
+
+        These are the keys of ⧙imported⧘:
+
+        []
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("wrong default export", async () => {
+      expect(
+        await run("postprocess", ["make", "build/wrong-default-export.js"])
+      ).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/wrong-default-export.js
+
+        ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/wrong-default-export.js
+
+        I imported your postprocess file:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/wrong-default-export.js")
+
+        I expected ⧙imported.default⧘ to be a function, but it isn't!
+
+        typeof imported.default === "object"
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("throw error", async () => {
+      expect(await run("postprocess", ["make", "build/throw-error.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/throw-error.js
+
+        ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-error.js
+
+        I tried to run your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-error.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-error.js","standard"])
+
+        But that resulted in this error:
+
+        Error: Failed to run postprocess!
+            at fake/stacktrace.js
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("reject promise", async () => {
+      expect(await run("postprocess", ["make", "build/reject-promise.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/reject-promise.js
+
+        ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/reject-promise.js
+
+        I tried to run your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/reject-promise.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/reject-promise.js","standard"])
+
+        But that resulted in this error:
+
+        "rejected!"
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("return undefined", async () => {
+      expect(await run("postprocess", ["make", "build/return-undefined.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/return-undefined.js
+
+        ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/return-undefined.js
+
+        I ran your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/return-undefined.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/return-undefined.js","standard"])
+
+        But ⧙result⧘ doesn't look like I expected:
+
+        At root:
+        Expected an object
+        Got: undefined
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("exitCode typo", async () => {
+      expect(await run("postprocess", ["make", "build/exit-code-typo.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/exit-code-typo.js
+
+        ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/exit-code-typo.js
+
+        I ran your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/exit-code-typo.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/exit-code-typo.js","standard"])
+
+        But ⧙result⧘ doesn't look like I expected:
+
+        At root["exitCode"]:
+        Expected a number
+        Got: undefined
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("stdout typo", async () => {
+      expect(await run("postprocess", ["make", "build/stdout-typo.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/stdout-typo.js
+
+        ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/stdout-typo.js
+
+        I ran your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/stdout-typo.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/stdout-typo.js","standard"])
+
+        But ⧙result⧘ doesn't look like I expected:
+
+        At root:
+        Expected only these fields: "exitCode", "stdout", "stderr"
+        Found extra fields: "stdOut"
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("exit 1 + stderr", async () => {
+      expect(await run("postprocess", ["make", "build/exit-1-stderr.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/exit-1-stderr.js
+
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling: build/exit-1-stderr.js⧘
+
+        I ran your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/exit-1-stderr.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stderr.js","standard"])
+
+        ⧙It exited with an error:⧘
+
+        exit 1
+        Some text on stderr
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+  });
+
   describe("CI", () => {
     const appPath = path.join(FIXTURES_DIR, "ci", "build", "app.js");
 
