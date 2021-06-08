@@ -1603,6 +1603,28 @@ describe("errors", () => {
       `);
     });
 
+    test("throw null", async () => {
+      expect(await run("postprocess", ["make", "build/throw-null.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/throw-null.js
+
+        ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-null.js
+
+        I tried to run your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-null.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-null.js","standard"])
+
+        But that resulted in this error:
+
+        null
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
     test("reject promise", async () => {
       expect(await run("postprocess", ["make", "build/reject-promise.js"]))
         .toMatchInlineSnapshot(`
@@ -1715,6 +1737,50 @@ describe("errors", () => {
 
         exit 1
         Some text on stderr
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("invalid stdout JSON", async () => {
+      expect(await run("postprocess", ["make", "build/invalid-stdout-json.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/invalid-stdout-json.js
+
+        ⧙-- INVALID POSTPROCESS STDOUT --------------------------------------------------⧘
+
+        I ran your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/invalid-stdout-json.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-json.js","standard"])
+
+        But ⧙stdout⧘ doesn't look like I expected:
+
+        Unexpected token } in JSON at position 17
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("stdout JSON newOutputPath typo", async () => {
+      expect(await run("postprocess", ["make", "build/invalid-stdout-typo.js"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 build/invalid-stdout-typo.js
+
+        ⧙-- INVALID POSTPROCESS STDOUT --------------------------------------------------⧘
+
+        I ran your postprocess command:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/invalid-stdout-typo.js")
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-typo.js","standard"])
+
+        But ⧙stdout⧘ doesn't look like I expected:
+
+        At root:
+        Expected only these fields: "newOutputPath"
+        Found extra fields: "newOutput"
 
         🚨 ⧙1⧘ error found
       `);

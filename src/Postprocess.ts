@@ -77,9 +77,12 @@ export type ExecutedCommand =
     };
 
 type Stdout = ReturnType<typeof Stdout>;
-const Stdout = Decode.fieldsAuto({
-  newOutputPath: Decode.optional(Decode.string),
-});
+const Stdout = Decode.fieldsAuto(
+  {
+    newOutputPath: Decode.optional(Decode.string),
+  },
+  { exact: "throw" }
+);
 
 export async function postprocess({
   elmToolingJsonPath,

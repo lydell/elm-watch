@@ -57,6 +57,10 @@
         "inputs": ["src/Main.elm"],
         "postprocess": ["elm-watch-node", "postprocess/throw-error.js"]
       },
+      "build/throw-null.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["elm-watch-node", "postprocess/throw-null.js"]
+      },
       "build/reject-promise.js": {
         "inputs": ["src/Main.elm"],
         "postprocess": ["elm-watch-node", "postprocess/reject-promise.js"]
@@ -76,6 +80,14 @@
       "build/exit-1-stderr.js": {
         "inputs": ["src/Main.elm"],
         "postprocess": ["elm-watch-node", "postprocess/exit-1-stderr.js"]
+      },
+      "build/invalid-stdout-json.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["elm-watch-node", "postprocess/invalid-stdout-json.js"]
+      },
+      "build/invalid-stdout-typo.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["elm-watch-node", "postprocess/invalid-stdout-typo.js"]
       }
     }
   }

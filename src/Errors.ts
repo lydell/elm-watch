@@ -497,6 +497,8 @@ export function elmWatchNodeImportError(
   scriptPath: ElmWatchNodeScriptPath,
   error: unknown
 ): ErrorTemplate {
+  // It’s not possible to test `throw null` at import – Jest crashes then…
+  // istanbul ignore next
   const code: unknown = (error as { code: unknown } | undefined)?.code;
   const errorString: string =
     // `import()` is used for real (since it supports both CJS and MJS).
