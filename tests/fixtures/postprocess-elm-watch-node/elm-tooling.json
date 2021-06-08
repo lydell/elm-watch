@@ -1,0 +1,10 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "build/main.js": {
+        "inputs": ["src/Main.elm"],
+        "postprocess": ["elm-watch-node", "postprocess.js", "arg1", "arg number $two"]
+      }
+    }
+  }
+}

@@ -119,6 +119,14 @@ describe("successful make", () => {
     `);
   });
 
+  test("postprocess with elm-watch-node", async () => {
+    expect(await run("postprocess-elm-watch-node", ["make"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ build/main.js
+    `);
+  });
+
   test("multiple elm.json", async () => {
     expect(await run("multiple-elm-json/config", ["make"]))
       .toMatchInlineSnapshot(`
