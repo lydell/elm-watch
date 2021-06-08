@@ -1,3 +1,3 @@
 module.exports = require("./hack")(async () => ({
-  exit: 0
+  exit: 0,
 }));
