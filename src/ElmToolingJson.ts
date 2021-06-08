@@ -47,29 +47,32 @@ const Output = Decode.fieldsAuto(
 );
 
 export type Config = ReturnType<typeof Config>;
-const Config = Decode.fieldsAuto({
-  outputs: Decode.chain(Decode.record(Output), (record) => {
-    const entries = Object.entries(record);
-    if (!isNonEmptyArray(entries)) {
-      throw new Decode.DecoderError({
-        message: "Expected a non-empty object",
-        value: record,
-      });
-    }
-    return Object.fromEntries(
-      entries.map(([key, value]) => {
-        if (isValidOutputName(key)) {
-          return [key, value];
-        }
+const Config = Decode.fieldsAuto(
+  {
+    outputs: Decode.chain(Decode.record(Output), (record) => {
+      const entries = Object.entries(record);
+      if (!isNonEmptyArray(entries)) {
         throw new Decode.DecoderError({
-          message: "Outputs must end with .js or be /dev/null",
-          value: Decode.DecoderError.MISSING_VALUE,
-          key,
+          message: "Expected a non-empty object",
+          value: record,
         });
-      })
-    );
-  }),
-});
+      }
+      return Object.fromEntries(
+        entries.map(([key, value]) => {
+          if (isValidOutputName(key)) {
+            return [key, value];
+          }
+          throw new Decode.DecoderError({
+            message: "Outputs must end with .js or be /dev/null",
+            value: Decode.DecoderError.MISSING_VALUE,
+            key,
+          });
+        })
+      );
+    }),
+  },
+  { exact: "throw" }
+);
 
 export type ElmToolingJson = ReturnType<typeof ElmToolingJson>;
 const ElmToolingJson = Decode.fieldsAuto({
