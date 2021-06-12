@@ -27,7 +27,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: node_modules
-          key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+          key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package.json', 'package-lock.json') }}
 
       - name: Cache ~/.elm
         uses: actions/cache@v2
