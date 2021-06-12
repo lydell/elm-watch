@@ -1,6 +1,7 @@
 import { elmWatchCli } from "../src";
 import type { Env } from "../src/Helpers";
 import {
+  assertExitCode,
   clean,
   FailReadStream,
   MemoryWriteStream,
@@ -19,8 +20,8 @@ async function helpHelper(args: Array<string>, env?: Env): Promise<string> {
     stderr,
   });
 
+  assertExitCode(0, exitCode, stdout.content, stderr.content);
   expect(stderr.content).toBe("");
-  expect(exitCode).toBe(0);
 
   return clean(stdout.content);
 }

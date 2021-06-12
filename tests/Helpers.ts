@@ -3,6 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
 
+import { printStdio } from "../src/Errors";
 import type { ReadStream, WriteStream } from "../src/Helpers";
 
 // Read file with normalized line endings to make snapshotting easier
@@ -238,6 +239,23 @@ export function clean(string: string): string {
     .join(path.join(root, "tmp", "fake"))
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘");
+}
+
+export function assertExitCode(
+  expectedExitCode: number,
+  actualExitCode: number,
+  stdout: string,
+  stderr: string
+): void {
+  if (expectedExitCode !== actualExitCode) {
+    throw new Error(
+      `
+exit ${actualExitCode} (expected ${expectedExitCode})
+
+${printStdio(stdout, stderr)}
+      `.trim()
+    );
+  }
 }
 
 // Make snapshots easier to read.

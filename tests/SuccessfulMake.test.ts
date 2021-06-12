@@ -3,6 +3,7 @@ import * as path from "path";
 
 import { elmWatchCli } from "../src";
 import {
+  assertExitCode,
   clean,
   CursorWriteStream,
   FailReadStream,
@@ -48,10 +49,7 @@ async function run(
 
   const stderrString = clean(stderr.getOutput());
 
-  if (exitCode !== 0) {
-    throw new Error(`exit ${exitCode}\n${stderrString}`);
-  }
-
+  assertExitCode(0, exitCode, stdout.content, stderrString);
   expect(stdout.content).toBe("");
 
   return stderrString;

@@ -722,7 +722,7 @@ function printExitReason(exitReason: ExitReason): string {
   }
 }
 
-function printStdio(stdout: string, stderr: string): string {
+export function printStdio(stdout: string, stderr: string): string {
   return stdout !== "" && stderr === ""
     ? stdout
     : stdout === "" && stderr !== ""
@@ -734,7 +734,7 @@ STDOUT:
 ${stdout}
 STDERR:
 ${stderr}
-`;
+`.trim();
 }
 
 function printJsonPath(jsonPath: JsonPath): string {

@@ -5,6 +5,7 @@ import * as path from "path";
 import { elmWatchCli } from "../src";
 import { Env, sha256 } from "../src/Helpers";
 import {
+  assertExitCode,
   clean,
   CursorWriteStream,
   FailReadStream,
@@ -52,10 +53,7 @@ async function runAbsolute(
 
   const stderrString = clean(stderr.getOutput());
 
-  if (exitCode !== 1) {
-    throw new Error(`exit ${exitCode}\n${stderrString}`);
-  }
-
+  assertExitCode(1, exitCode, stdout.content, stderrString);
   expect(stdout.content).toBe("");
 
   return stderrString;
