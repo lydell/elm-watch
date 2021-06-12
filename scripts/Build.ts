@@ -1,6 +1,7 @@
-import * as childProcess from "child_process";
+import typescript from "@rollup/plugin-typescript";
 import * as fs from "fs";
 import * as path from "path";
+import { rollup } from "rollup";
 
 const DIR = path.dirname(__dirname);
 const BUILD = path.join(DIR, "build");
@@ -34,52 +35,78 @@ const FILES_TO_COPY: Array<FileToCopy> = [
   },
 ];
 
-if (fs.rmSync !== undefined) {
-  fs.rmSync(BUILD, { recursive: true, force: true });
-} else if (fs.existsSync(BUILD)) {
-  fs.rmdirSync(BUILD, { recursive: true });
-}
+async function run(): Promise<void> {
+  if (fs.rmSync !== undefined) {
+    fs.rmSync(BUILD, { recursive: true, force: true });
+  } else if (fs.existsSync(BUILD)) {
+    fs.rmdirSync(BUILD, { recursive: true });
+  }
 
-fs.mkdirSync(BUILD);
+  fs.mkdirSync(BUILD);
 
-for (const { src, dest = src, transform } of FILES_TO_COPY) {
-  if (transform !== undefined) {
-    fs.writeFileSync(
-      path.join(BUILD, dest),
-      transform(fs.readFileSync(path.join(DIR, src), "utf8"))
-    );
-  } else {
-    fs.copyFileSync(path.join(DIR, src), path.join(BUILD, dest));
+  for (const { src, dest = src, transform } of FILES_TO_COPY) {
+    if (transform !== undefined) {
+      fs.writeFileSync(
+        path.join(BUILD, dest),
+        transform(fs.readFileSync(path.join(DIR, src), "utf8"))
+      );
+    } else {
+      fs.copyFileSync(path.join(DIR, src), path.join(BUILD, dest));
+    }
+  }
+
+  fs.writeFileSync(
+    path.join(BUILD, "package.json"),
+    JSON.stringify(
+      { ...PACKAGE_REAL, dependencies: PACKAGE.dependencies },
+      null,
+      2
+    )
+  );
+
+  const bundle = await rollup({
+    input: path.join(DIR, "src", "index.ts"),
+    // external: builtinModules,
+    external: (source) => /^[a-z@]/.test(source),
+    plugins: [typescript({ module: "ESNext" })],
+    onwarn: (warning) => {
+      // Rollup warnings _do_ have a real `.toString()` method.
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      throw new Error(warning.toString());
+    },
+  });
+
+  const { output } = await bundle.generate({
+    format: "cjs",
+    // hoistTransitiveImports: false,
+    // chunkFileNames: "[name].js",
+    interop: "esModule",
+  });
+
+  for (const item of output) {
+    switch (item.type) {
+      case "asset":
+        throw new Error(`Unexpectedly got an "asset".`);
+
+      case "chunk": {
+        const code = item.code
+          .replace(/%VERSION%/g, PACKAGE_REAL.version)
+          .replace(
+            /function \(\) \{ return require\(/g,
+            "() => { return import("
+          )
+          .replace(/^exports.elmWatchCli = elmWatchCli;/m, "")
+          .trim();
+        const fullCode = `#!/usr/bin/env node\n${code}`;
+        fs.writeFileSync(path.join(BUILD, item.fileName), fullCode, {
+          mode: "755",
+        });
+      }
+    }
   }
 }
 
-fs.writeFileSync(
-  path.join(BUILD, "package.json"),
-  JSON.stringify(
-    { ...PACKAGE_REAL, dependencies: PACKAGE.dependencies },
-    null,
-    2
-  )
-);
-
-childProcess.spawnSync("npx", ["--no-install", "tsc"], {
-  shell: true,
-  stdio: "inherit",
+run().catch((error: Error) => {
+  process.stderr.write(`${error.message}\n`);
+  process.exit(1);
 });
-
-function modifyFile(
-  file: string,
-  transform: (content: string) => string
-): void {
-  fs.writeFileSync(file, transform(fs.readFileSync(file, "utf8")));
-}
-
-modifyFile(path.join(BUILD, "Help.js"), (content) =>
-  content.replace(/%VERSION%/g, PACKAGE_REAL.version)
-);
-
-modifyFile(path.join(BUILD, "Postprocess.js"), (content) =>
-  content.replace(/\(\) => require\(/g, "() => import(")
-);
-
-fs.chmodSync(path.join(BUILD, "index.js"), "755");

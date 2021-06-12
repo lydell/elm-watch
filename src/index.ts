@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import * as Help from "./Help";
 import type { Env, ReadStream, WriteStream } from "./Helpers";
 import { makeLogger } from "./Logger";

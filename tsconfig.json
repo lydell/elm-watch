@@ -5,6 +5,7 @@
     "isolatedModules": true,
     "module": "CommonJS",
     "moduleResolution": "node",
+    "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
@@ -17,7 +18,6 @@
     "lib": [
       "ES2019",
     ],
-    "outDir": "build"
   },
   "exclude": [
     "scripts",
