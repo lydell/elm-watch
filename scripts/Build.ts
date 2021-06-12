@@ -66,7 +66,6 @@ async function run(): Promise<void> {
 
   const bundle = await rollup({
     input: path.join(DIR, "src", "index.ts"),
-    // external: builtinModules,
     external: (source) => /^[a-z@]/.test(source),
     plugins: [typescript({ module: "ESNext" })],
     onwarn: (warning) => {
@@ -78,8 +77,6 @@ async function run(): Promise<void> {
 
   const { output } = await bundle.generate({
     format: "cjs",
-    // hoistTransitiveImports: false,
-    // chunkFileNames: "[name].js",
     interop: "esModule",
   });
 
