@@ -2,6 +2,8 @@ import * as crypto from "crypto";
 import * as os from "os";
 import type { Readable, Writable } from "stream";
 
+import { NonEmptyArray } from "./NonEmptyArray";
+
 export type Env = Record<string, string | undefined>;
 
 export type ReadStream = Readable & {
@@ -21,6 +23,10 @@ export const IS_WINDOWS = os.platform() === "win32";
  */
 export function join(array: Array<string>, separator: string): string {
   return array.join(separator);
+}
+
+export function split(string: string, splitter: string): NonEmptyArray<string> {
+  return string.split(splitter) as NonEmptyArray<string>;
 }
 
 export function getSetSingleton<T>(set: Set<T>): T | undefined {
