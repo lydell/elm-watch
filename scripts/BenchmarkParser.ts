@@ -109,8 +109,9 @@ function readSyncStrategy(elmFile: AbsolutePath): Array<Parser.ModuleName> {
   const readState = Parser.initialReadState();
   const handle = fs.openSync(elmFile.absolutePath, "r");
   const buffer = Buffer.alloc(2048);
-  outer: while (fs.readSync(handle, buffer) > 0) {
-    for (const char of buffer.toString()) {
+  let bytesRead = 0;
+  outer: while ((bytesRead = fs.readSync(handle, buffer)) > 0) {
+    for (const char of buffer.slice(0, bytesRead).toString()) {
       Parser.readChar(char, readState);
       if (Parser.isNonImport(readState)) {
         break outer;
@@ -127,10 +128,11 @@ async function readStrategy(
   const readState = Parser.initialReadState();
   const fileHandle = await fsPromises.open(elmFile.absolutePath, "r");
   const buffer = Buffer.alloc(2048);
+  let result;
   outer: while (
-    (await fileHandle.read(buffer, 0, buffer.byteLength)).bytesRead > 0
+    (result = await fileHandle.read(buffer, 0, buffer.byteLength)).bytesRead > 0
   ) {
-    for (const char of buffer.toString()) {
+    for (const char of buffer.slice(0, result.bytesRead).toString()) {
       Parser.readChar(char, readState);
       if (Parser.isNonImport(readState)) {
         break outer;
