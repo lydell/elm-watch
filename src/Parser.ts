@@ -1,6 +1,10 @@
 import { split } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 
+// Note: This was initially written in a beatiful, immutable way. But I changed
+// it to use mutation, since it turned out to be much faster. Basically, every
+// time we mutate state we used to return a new one.
+
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
 // https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-Char.html#v:isLetter
@@ -14,39 +18,24 @@ export type ReadState = {
   importedModules: Array<ModuleName>;
 };
 
-export const initialReadState: ReadState = {
-  tokenizerState: { tag: "Initial", chars: "" },
+export const initialReadState = (): ReadState => ({
+  tokenizerState: { tag: "Initial", chars: "", multilineCommentLevel: 0 },
   parserState: { tag: "StartOfFile" },
   importedModules: [],
-};
+});
 
-export function readChar(char: string, readState: ReadState): ReadState {
-  const [nextTokenizerState, maybeToken] = tokenize(
-    char,
-    readState.tokenizerState
-  );
+export function readChar(char: string, readState: ReadState): void {
+  const maybeToken = tokenize(char, readState.tokenizerState);
 
   if (maybeToken === undefined) {
-    return {
-      tokenizerState: nextTokenizerState,
-      parserState: readState.parserState,
-      importedModules: readState.importedModules,
-    };
+    return;
   }
 
-  const [nextParserState, maybeModuleName] = parse(
-    maybeToken,
-    readState.parserState
-  );
+  const maybeModuleName = parse(maybeToken, readState.parserState);
 
-  return {
-    tokenizerState: nextTokenizerState,
-    parserState: nextParserState,
-    importedModules:
-      maybeModuleName === undefined
-        ? readState.importedModules
-        : [...readState.importedModules, maybeModuleName],
-  };
+  if (maybeModuleName !== undefined) {
+    readState.importedModules.push(maybeModuleName);
+  }
 }
 
 export function isNonImport(readState: ReadState): boolean {
@@ -54,164 +43,167 @@ export function isNonImport(readState: ReadState): boolean {
 }
 
 export function finalize(readState: ReadState): Array<ModuleName> {
-  const maybeLastToken =
-    readState.tokenizerState.tag === "Initial"
-      ? flush(readState.tokenizerState.chars)
-      : undefined;
+  if (readState.tokenizerState.tag !== "Initial") {
+    return readState.importedModules;
+  }
 
-  const maybeLastModuleName =
-    maybeLastToken === undefined
-      ? undefined
-      : parse(maybeLastToken, readState.parserState)[1];
+  const maybeLastToken = flush(readState.tokenizerState.chars);
 
-  return maybeLastModuleName === undefined
-    ? readState.importedModules
-    : [...readState.importedModules, maybeLastModuleName];
+  if (maybeLastToken === undefined) {
+    return readState.importedModules;
+  }
+
+  const maybeLastModuleName = parse(maybeLastToken, readState.parserState);
+
+  if (maybeLastModuleName === undefined) {
+    return readState.importedModules;
+  }
+
+  readState.importedModules.push(maybeLastModuleName);
+  return readState.importedModules;
 }
 
 type Token = { tag: "NewChunk" } | { tag: "Word"; chars: string };
 
-type TokenizerState =
-  | { tag: "Initial"; chars: string }
-  | { tag: "MaybeMultilineComment{" }
-  | { tag: "MaybeNewChunk" }
-  | { tag: "MaybeSinglelineComment-" }
-  | { tag: "MultilineComment-"; level: number }
-  | { tag: "MultilineComment"; level: number }
-  | { tag: "MultilineComment{"; level: number }
-  | { tag: "SinglelineComment" };
+type TokenizerState = {
+  tag:
+    | "Initial"
+    | "MaybeMultilineComment{"
+    | "MaybeNewChunk"
+    | "MaybeSinglelineComment-"
+    | "MultilineComment-"
+    | "MultilineComment"
+    | "MultilineComment{"
+    | "SinglelineComment";
+  chars: string;
+  multilineCommentLevel: number;
+};
 
 function tokenize(
   char: string,
   tokenizerState: TokenizerState
-): [TokenizerState, Token | undefined] {
+): Token | undefined {
   switch (tokenizerState.tag) {
     case "Initial":
       switch (char) {
-        case " ":
-          return [{ tag: "Initial", chars: "" }, flush(tokenizerState.chars)];
+        case " ": {
+          const maybeToken = flush(tokenizerState.chars);
+          tokenizerState.chars = "";
+          return maybeToken;
+        }
         case "\r":
         case "\n":
-          return [{ tag: "MaybeNewChunk" }, flush(tokenizerState.chars)];
+          tokenizerState.tag = "MaybeNewChunk";
+          return flush(tokenizerState.chars);
         case "{":
-          return [
-            { tag: "MaybeMultilineComment{" },
-            flush(tokenizerState.chars),
-          ];
+          tokenizerState.tag = "MaybeMultilineComment{";
+          return flush(tokenizerState.chars);
         case "-":
-          return [
-            { tag: "MaybeSinglelineComment-" },
-            flush(tokenizerState.chars),
-          ];
+          tokenizerState.tag = "MaybeSinglelineComment-";
+          return flush(tokenizerState.chars);
         default:
-          return [
-            { tag: "Initial", chars: tokenizerState.chars + char },
-            undefined,
-          ];
+          tokenizerState.chars += char;
+          return undefined;
       }
 
     case "MaybeNewChunk":
       switch (char) {
         case " ":
-          return [{ tag: "Initial", chars: "" }, undefined];
+          tokenizerState.tag = "Initial";
+          tokenizerState.chars = "";
+          return undefined;
         case "\r":
         case "\n":
-          return [{ tag: "MaybeNewChunk" }, undefined];
+          return undefined;
         case "{":
-          return [{ tag: "MaybeMultilineComment{" }, undefined];
+          tokenizerState.tag = "MaybeMultilineComment{";
+          return undefined;
         case "-":
-          return [{ tag: "MaybeSinglelineComment-" }, undefined];
+          tokenizerState.tag = "MaybeSinglelineComment-";
+          return undefined;
         default:
-          return [{ tag: "Initial", chars: char }, { tag: "NewChunk" }];
+          tokenizerState.tag = "Initial";
+          tokenizerState.chars = char;
+          return { tag: "NewChunk" };
       }
 
     case "MaybeMultilineComment{":
       switch (char) {
         case "-":
-          return [{ tag: "MultilineComment", level: 1 }, undefined];
+          tokenizerState.tag = "MultilineComment";
+          tokenizerState.multilineCommentLevel = 1;
+          return undefined;
         default:
-          return tokenize(char, { tag: "Initial", chars: "{" });
+          tokenizerState.tag = "Initial";
+          tokenizerState.chars = "{";
+          return tokenize(char, tokenizerState);
       }
 
     case "MultilineComment":
       switch (char) {
         case "{":
-          return [
-            { tag: "MultilineComment{", level: tokenizerState.level },
-            undefined,
-          ];
+          tokenizerState.tag = "MultilineComment{";
+          return undefined;
         case "-":
-          return [
-            { tag: "MultilineComment-", level: tokenizerState.level },
-            undefined,
-          ];
+          tokenizerState.tag = "MultilineComment-";
+          return undefined;
         default:
-          return [tokenizerState, undefined];
+          return undefined;
       }
 
     case "MultilineComment{":
       switch (char) {
         case "-":
-          return [
-            { tag: "MultilineComment", level: tokenizerState.level + 1 },
-            undefined,
-          ];
+          tokenizerState.tag = "MultilineComment";
+          tokenizerState.multilineCommentLevel++;
+          return undefined;
         case "{":
-          return [
-            { tag: "MultilineComment{", level: tokenizerState.level },
-            undefined,
-          ];
+          return undefined;
         default:
-          return [
-            { tag: "MultilineComment", level: tokenizerState.level },
-            undefined,
-          ];
+          tokenizerState.tag = "MultilineComment";
+          return undefined;
       }
 
     case "MultilineComment-":
       switch (char) {
         case "}":
-          return [
-            tokenizerState.level <= 1
-              ? { tag: "Initial", chars: "" }
-              : { tag: "MultilineComment", level: tokenizerState.level - 1 },
-            undefined,
-          ];
+          if (tokenizerState.multilineCommentLevel <= 1) {
+            tokenizerState.tag = "Initial";
+            tokenizerState.chars = "";
+          } else {
+            tokenizerState.tag = "MultilineComment";
+            tokenizerState.multilineCommentLevel--;
+          }
+          return undefined;
         case "{":
-          return [
-            { tag: "MultilineComment{", level: tokenizerState.level },
-            undefined,
-          ];
+          tokenizerState.tag = "MultilineComment{";
+          return undefined;
         case "-":
-          return [
-            { tag: "MultilineComment-", level: tokenizerState.level },
-            undefined,
-          ];
+          return undefined;
         default:
-          return [
-            { tag: "MultilineComment", level: tokenizerState.level },
-            undefined,
-          ];
+          tokenizerState.tag = "MultilineComment";
+          return undefined;
       }
 
     case "MaybeSinglelineComment-":
       switch (char) {
         case "-":
-          return [{ tag: "SinglelineComment" }, undefined];
+          tokenizerState.tag = "SinglelineComment";
+          return undefined;
         default:
-          return tokenize(char, {
-            tag: "Initial",
-            chars: "-",
-          });
+          tokenizerState.tag = "Initial";
+          tokenizerState.chars = "-";
+          return tokenize(char, tokenizerState);
       }
 
     case "SinglelineComment":
       switch (char) {
         case "\r":
         case "\n":
-          return [{ tag: "MaybeNewChunk" }, undefined];
+          tokenizerState.tag = "MaybeNewChunk";
+          return undefined;
         default:
-          return [tokenizerState, undefined];
+          return undefined;
       }
   }
 }
@@ -220,27 +212,23 @@ function flush(chars: string): Token | undefined {
   return chars.length === 0 ? undefined : { tag: "Word", chars };
 }
 
-type ParserState =
-  | { tag: "Ignore" }
-  | { tag: "Import" }
-  | { tag: "NewChunk" }
-  | { tag: "NonImport" }
-  | { tag: "StartOfFile" };
+type ParserState = {
+  tag: "Ignore" | "Import" | "NewChunk" | "NonImport" | "StartOfFile";
+};
 
-function parse(
-  token: Token,
-  parserState: ParserState
-): [ParserState, ModuleName | undefined] {
+function parse(token: Token, parserState: ParserState): ModuleName | undefined {
   switch (parserState.tag) {
     case "StartOfFile":
       switch (token.tag) {
         case "NewChunk":
-          return [{ tag: "StartOfFile" }, undefined];
+          return undefined;
         case "Word":
           if (token.chars === "import") {
-            return [{ tag: "Import" }, undefined];
+            parserState.tag = "Import";
+            return undefined;
           } else {
-            return [{ tag: "Ignore" }, undefined];
+            parserState.tag = "Ignore";
+            return undefined;
           }
       }
 
@@ -248,36 +236,42 @@ function parse(
       switch (token.tag) {
         // istanbul ignore next
         case "NewChunk":
-          return [{ tag: "NewChunk" }, undefined];
+          return undefined;
         case "Word":
           if (token.chars === "import") {
-            return [{ tag: "Import" }, undefined];
+            parserState.tag = "Import";
+            return undefined;
           } else {
-            return [{ tag: "NonImport" }, undefined];
+            parserState.tag = "NonImport";
+            return undefined;
           }
       }
 
     case "Import":
       switch (token.tag) {
         case "NewChunk":
-          return [{ tag: "NewChunk" }, undefined];
+          parserState.tag = "NewChunk";
+          return undefined;
         case "Word":
           if (MODULE_NAME.test(token.chars)) {
-            return [{ tag: "Ignore" }, split(token.chars, ".")];
+            parserState.tag = "Ignore";
+            return split(token.chars, ".");
           } else {
-            return [{ tag: "Ignore" }, undefined];
+            parserState.tag = "Ignore";
+            return undefined;
           }
       }
 
     case "Ignore":
       switch (token.tag) {
         case "NewChunk":
-          return [{ tag: "NewChunk" }, undefined];
+          parserState.tag = "NewChunk";
+          return undefined;
         case "Word":
-          return [parserState, undefined];
+          return undefined;
       }
 
     case "NonImport":
-      return [parserState, undefined];
+      return undefined;
   }
 }
