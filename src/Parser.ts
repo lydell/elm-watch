@@ -49,6 +49,10 @@ export function readChar(char: string, readState: ReadState): ReadState {
   };
 }
 
+export function isNonImport(readState: ReadState): boolean {
+  return readState.parserState.tag === "NonImport";
+}
+
 export function finalize(readState: ReadState): Array<ModuleName> {
   const maybeLastToken =
     readState.tokenizerState.tag === "Initial"
