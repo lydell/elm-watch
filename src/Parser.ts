@@ -17,7 +17,17 @@ const LF = 0x0a;
 const RIGHT_BRACE = 0x7d;
 const SPACE = 0x20;
 
-const IMPORT = Buffer.from("import");
+function isImport(chars: NonEmptyArray<number>): boolean {
+  return (
+    chars.length === 6 &&
+    chars[0] === 0x69 &&
+    chars[1] === 0x6d &&
+    chars[2] === 0x70 &&
+    chars[3] === 0x6f &&
+    chars[4] === 0x72 &&
+    chars[5] === 0x74
+  );
+}
 
 export type ModuleName = NonEmptyArray<string>;
 
@@ -234,7 +244,7 @@ function parse(token: Token, parserState: ParserState): ModuleName | undefined {
         case "NewChunk":
           return undefined;
         case "Word":
-          if (Buffer.from(token.chars).equals(IMPORT)) {
+          if (isImport(token.chars)) {
             parserState.tag = "Import";
             return undefined;
           } else {
@@ -249,7 +259,7 @@ function parse(token: Token, parserState: ParserState): ModuleName | undefined {
         case "NewChunk":
           return undefined;
         case "Word":
-          if (Buffer.from(token.chars).equals(IMPORT)) {
+          if (isImport(token.chars)) {
             parserState.tag = "Import";
             return undefined;
           } else {
