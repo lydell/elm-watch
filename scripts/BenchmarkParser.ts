@@ -70,11 +70,7 @@ async function runStrategy(
       return (await Promise.all(elmFiles.map(createReadStreamStrategy))).flat();
     case "createReadStreamForAwait":
       return (
-        await Promise.all(
-          elmFiles.map((elmFile) =>
-            createReadStreamForAwaitStrategy(2048, elmFile)
-          )
-        )
+        await Promise.all(elmFiles.map(createReadStreamForAwaitStrategy))
       ).flat();
   }
 }
@@ -168,12 +164,11 @@ async function createReadStreamStrategy(
 }
 
 async function createReadStreamForAwaitStrategy(
-  highWaterMark: number | undefined,
   elmFile: AbsolutePath
 ): Promise<Array<Parser.ModuleName>> {
   const readState = Parser.initialReadState();
   const stream = fs.createReadStream(elmFile.absolutePath, {
-    highWaterMark,
+    highWaterMark: 2048,
   });
   outer: for await (const chunk of stream) {
     for (const char of chunk) {
