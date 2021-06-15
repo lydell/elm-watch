@@ -80,7 +80,7 @@ async function runStrategy(
 }
 
 function readFileSyncStrategy(elmFile: AbsolutePath): Array<Parser.ModuleName> {
-  const elm = fs.readFileSync(elmFile.absolutePath, "utf8");
+  const elm = fs.readFileSync(elmFile.absolutePath);
   const readState = Parser.initialReadState();
   for (const char of elm) {
     Parser.readChar(char, readState);
@@ -94,7 +94,7 @@ function readFileSyncStrategy(elmFile: AbsolutePath): Array<Parser.ModuleName> {
 async function readFileStrategy(
   elmFile: AbsolutePath
 ): Promise<Array<Parser.ModuleName>> {
-  const elm = await fsPromises.readFile(elmFile.absolutePath, "utf8");
+  const elm = await fsPromises.readFile(elmFile.absolutePath);
   const readState = Parser.initialReadState();
   for (const char of elm) {
     Parser.readChar(char, readState);
@@ -111,7 +111,7 @@ function readSyncStrategy(elmFile: AbsolutePath): Array<Parser.ModuleName> {
   const buffer = Buffer.alloc(2048);
   let bytesRead = 0;
   outer: while ((bytesRead = fs.readSync(handle, buffer)) > 0) {
-    for (const char of buffer.slice(0, bytesRead).toString()) {
+    for (const char of buffer.slice(0, bytesRead)) {
       Parser.readChar(char, readState);
       if (Parser.isNonImport(readState)) {
         break outer;
@@ -132,7 +132,7 @@ async function readStrategy(
   outer: while (
     (result = await fileHandle.read(buffer, 0, buffer.byteLength)).bytesRead > 0
   ) {
-    for (const char of buffer.slice(0, result.bytesRead).toString()) {
+    for (const char of buffer.slice(0, result.bytesRead)) {
       Parser.readChar(char, readState);
       if (Parser.isNonImport(readState)) {
         break outer;
@@ -149,11 +149,10 @@ async function createReadStreamStrategy(
   return new Promise((resolve, reject) => {
     const readState = Parser.initialReadState();
     const stream = fs.createReadStream(elmFile.absolutePath, {
-      encoding: "utf8",
       highWaterMark: 2048,
     });
     stream.on("error", reject);
-    stream.on("data", (chunk: string) => {
+    stream.on("data", (chunk: Buffer) => {
       for (const char of chunk) {
         Parser.readChar(char, readState);
         if (Parser.isNonImport(readState)) {
@@ -174,12 +173,11 @@ async function createReadStreamForAwaitStrategy(
 ): Promise<Array<Parser.ModuleName>> {
   const readState = Parser.initialReadState();
   const stream = fs.createReadStream(elmFile.absolutePath, {
-    encoding: "utf8",
     highWaterMark,
   });
   outer: for await (const chunk of stream) {
     for (const char of chunk) {
-      Parser.readChar(char as string, readState);
+      Parser.readChar(char as number, readState);
       if (Parser.isNonImport(readState)) {
         break outer;
       }

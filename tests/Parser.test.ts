@@ -2,7 +2,7 @@ import * as Parser from "../src/Parser";
 
 function parse(elmFile: string): Array<Parser.ModuleName> {
   const readState = Parser.initialReadState();
-  for (const char of elmFile) {
+  for (const char of Buffer.from(elmFile)) {
     Parser.readChar(char, readState);
     if (Parser.isNonImport(readState)) {
       break;
