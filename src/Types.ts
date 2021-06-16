@@ -16,6 +16,13 @@ export type ElmJsonPath = {
   theElmJsonPath: AbsolutePath;
 };
 
+// applications: "source-directories": [...]
+// packages: src
+export type SourceDirectory = {
+  tag: "SourceDirectory";
+  theSourceDirectory: AbsolutePath;
+};
+
 // src/Main.elm
 export type InputPath = {
   tag: "InputPath";
