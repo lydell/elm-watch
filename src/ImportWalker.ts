@@ -61,10 +61,10 @@ function walkImportsHelper(
     if (!visitedModules.has(relativePath)) {
       visitedModules.add(relativePath);
       for (const sourceDirectory of sourceDirectories) {
-        const newElmFilePath = path.resolve(
-          sourceDirectory.theSourceDirectory.absolutePath,
-          relativePath
-        );
+        const newElmFilePath =
+          sourceDirectory.theSourceDirectory.absolutePath +
+          path.sep +
+          relativePath;
         allRelatedElmFilePaths.add(newElmFilePath);
         walkImportsHelper(
           sourceDirectories,
@@ -103,13 +103,13 @@ function initialRelatedElmFilePaths(
   return new Set([
     inputPath.theInputPath.absolutePath,
     ...sourceDirectories.flatMap((sourceDirectory) => {
-      const prefix = `${sourceDirectory.theSourceDirectory.absolutePath}${path.sep}`;
+      const prefix = sourceDirectory.theSourceDirectory.absolutePath + path.sep;
       return inputPathString.startsWith(prefix)
-        ? sourceDirectories.map((sourceDirectory2) =>
-            path.resolve(
-              sourceDirectory2.theSourceDirectory.absolutePath,
+        ? sourceDirectories.map(
+            (sourceDirectory2) =>
+              sourceDirectory2.theSourceDirectory.absolutePath +
+              path.sep +
               inputPathString.slice(prefix.length)
-            )
           )
         : [];
     }),
