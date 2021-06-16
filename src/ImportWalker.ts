@@ -49,16 +49,12 @@ function walkImportsHelper(
   allRelatedElmFilePaths: HashSet<AbsolutePath>,
   visitedModules: Set<string>
 ): void {
-  let importedModules;
-  try {
-    importedModules = parse(elmFilePath);
-  } catch (errorAny) {
-    const error = errorAny as Error & { code?: string };
-    if (error.code === "ENOENT") {
-      return;
-    }
-    throw error;
+  // This is much faster than `try-catch` around `parse` and checking for ENOENT.
+  if (!fs.existsSync(elmFilePath.absolutePath)) {
+    return;
   }
+
+  const importedModules = parse(elmFilePath);
 
   for (const importedModule of importedModules) {
     const relativePath = `${path.join(...importedModule)}.elm`;
