@@ -2,11 +2,11 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { HashSet } from "./HashSet";
 import { NonEmptyArray } from "./NonEmptyArray";
 import * as Parser from "./Parser";
-import { AbsolutePath, absolutePathFromString } from "./PathHelpers";
 import { InputPath, SourceDirectory } from "./Types";
+
+// NOTE: This module uses just `string` instead of `AbsolutePath` for performance!
 
 export type WalkImportsResult =
   | {
@@ -15,7 +15,7 @@ export type WalkImportsResult =
     }
   | {
       tag: "Success";
-      allRelatedElmFilePaths: HashSet<AbsolutePath>;
+      allRelatedElmFilePaths: Set<string>;
     };
 
 export function walkImports(
@@ -31,7 +31,7 @@ export function walkImports(
   try {
     walkImportsHelper(
       sourceDirectories,
-      inputPath.theInputPath,
+      inputPath.theInputPath.absolutePath,
       allRelatedElmFilePaths,
       visitedModules
     );
@@ -45,12 +45,12 @@ export function walkImports(
 
 function walkImportsHelper(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
-  elmFilePath: AbsolutePath,
-  allRelatedElmFilePaths: HashSet<AbsolutePath>,
+  elmFilePath: string,
+  allRelatedElmFilePaths: Set<string>,
   visitedModules: Set<string>
 ): void {
   // This is much faster than `try-catch` around `parse` and checking for ENOENT.
-  if (!fs.existsSync(elmFilePath.absolutePath)) {
+  if (!fs.existsSync(elmFilePath)) {
     return;
   }
 
@@ -61,8 +61,8 @@ function walkImportsHelper(
     if (!visitedModules.has(relativePath)) {
       visitedModules.add(relativePath);
       for (const sourceDirectory of sourceDirectories) {
-        const newElmFilePath = absolutePathFromString(
-          sourceDirectory.theSourceDirectory,
+        const newElmFilePath = path.resolve(
+          sourceDirectory.theSourceDirectory.absolutePath,
           relativePath
         );
         allRelatedElmFilePaths.add(newElmFilePath);
@@ -77,9 +77,9 @@ function walkImportsHelper(
   }
 }
 
-function parse(elmFilePath: AbsolutePath): Array<Parser.ModuleName> {
+function parse(elmFilePath: string): Array<Parser.ModuleName> {
   const readState = Parser.initialReadState();
-  const handle = fs.openSync(elmFilePath.absolutePath, "r");
+  const handle = fs.openSync(elmFilePath, "r");
   const buffer = Buffer.alloc(2048);
   let bytesRead = 0;
   outer: while ((bytesRead = fs.readSync(handle, buffer)) > 0) {
@@ -97,17 +97,17 @@ function parse(elmFilePath: AbsolutePath): Array<Parser.ModuleName> {
 function initialRelatedElmFilePaths(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
   inputPath: InputPath
-): HashSet<AbsolutePath> {
+): Set<string> {
   const inputPathString = inputPath.theInputPath.absolutePath;
 
-  return new HashSet([
-    inputPath.theInputPath,
+  return new Set([
+    inputPath.theInputPath.absolutePath,
     ...sourceDirectories.flatMap((sourceDirectory) => {
       const prefix = `${sourceDirectory.theSourceDirectory.absolutePath}${path.sep}`;
       return inputPathString.startsWith(prefix)
         ? sourceDirectories.map((sourceDirectory2) =>
-            absolutePathFromString(
-              sourceDirectory2.theSourceDirectory,
+            path.resolve(
+              sourceDirectory2.theSourceDirectory.absolutePath,
               inputPathString.slice(prefix.length)
             )
           )
