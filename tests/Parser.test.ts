@@ -251,4 +251,34 @@ y = 2
     `.replace(/\n/g, "\r");
     expect(parse(elm)).toEqual([["A"], ["B"], ["C"]]);
   });
+
+  test("handles unclosed comment", () => {
+    const elm = `import A {-`;
+    expect(parse(elm)).toEqual([["A"]]);
+  });
+
+  test("code coverage – last token leads to no import", () => {
+    const elm = `import A.`;
+    expect(parse(elm)).toEqual([]);
+  });
+
+  test("code coverage – braces that aren’t comments", () => {
+    const elm = `import {A}`;
+    expect(parse(elm)).toEqual([]);
+  });
+
+  test("forgetting Parser.isNonImport", () => {
+    const elm = `
+import A
+
+x =
+    1
+    `.trim();
+    const readState = Parser.initialReadState();
+    for (const char of Buffer.from(elm)) {
+      Parser.readChar(char, readState);
+    }
+    const result = Parser.finalize(readState);
+    expect(result).toEqual([["A"]]);
+  });
 });
