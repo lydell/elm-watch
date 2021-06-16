@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { NonEmptyArray } from "./NonEmptyArray";
+import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import * as Parser from "./Parser";
 import { InputPath, SourceDirectory } from "./Types";
 
@@ -30,7 +30,12 @@ export function walkImports(
 
   try {
     walkImportsHelper(
-      sourceDirectories,
+      mapNonEmptyArray(sourceDirectories, (sourceDirectory) => ({
+        sourceDirectory,
+        children: new Set(
+          fs.readdirSync(sourceDirectory.theSourceDirectory.absolutePath)
+        ),
+      })),
       inputPath.theInputPath.absolutePath,
       allRelatedElmFilePaths,
       visitedModules
@@ -43,8 +48,13 @@ export function walkImports(
   return { tag: "Success", allRelatedElmFilePaths };
 }
 
+type SourceDirectoryWithChildren = {
+  sourceDirectory: SourceDirectory;
+  children: Set<string>;
+};
+
 function walkImportsHelper(
-  sourceDirectories: NonEmptyArray<SourceDirectory>,
+  sourceDirectories: NonEmptyArray<SourceDirectoryWithChildren>,
   elmFilePath: string,
   allRelatedElmFilePaths: Set<string>,
   visitedModules: Set<string>
@@ -60,18 +70,26 @@ function walkImportsHelper(
     const relativePath = `${importedModule.join(path.sep)}.elm`;
     if (!visitedModules.has(relativePath)) {
       visitedModules.add(relativePath);
-      for (const sourceDirectory of sourceDirectories) {
+      for (const { sourceDirectory, children } of sourceDirectories) {
         const newElmFilePath =
           sourceDirectory.theSourceDirectory.absolutePath +
           path.sep +
           relativePath;
         allRelatedElmFilePaths.add(newElmFilePath);
-        walkImportsHelper(
-          sourceDirectories,
-          newElmFilePath,
-          allRelatedElmFilePaths,
-          visitedModules
-        );
+        const child =
+          importedModule.length === 1
+            ? `${importedModule[0]}.elm`
+            : importedModule[0];
+        // This check is a cheap way to avoid many `fs.existsSync` calls,
+        // which saves a lot of time.
+        if (children.has(child)) {
+          walkImportsHelper(
+            sourceDirectories,
+            newElmFilePath,
+            allRelatedElmFilePaths,
+            visitedModules
+          );
+        }
       }
     }
   }
