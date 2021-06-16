@@ -57,7 +57,7 @@ function walkImportsHelper(
   const importedModules = parse(elmFilePath);
 
   for (const importedModule of importedModules) {
-    const relativePath = `${path.join(...importedModule)}.elm`;
+    const relativePath = `${importedModule.join(path.sep)}.elm`;
     if (!visitedModules.has(relativePath)) {
       visitedModules.add(relativePath);
       for (const sourceDirectory of sourceDirectories) {
