@@ -18,6 +18,8 @@ export type WalkImportsResult =
       allRelatedElmFilePaths: Set<string>;
     };
 
+// Returns Elm file paths that if created, deleted or changed, `inputPath` needs
+// to be recompiled.
 export function walkImports(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
   inputPath: InputPath
@@ -26,6 +28,8 @@ export function walkImports(
     sourceDirectories,
     inputPath
   );
+
+  // To avoid reading the same file twice, and to handle circular imports.
   const visitedModules = new Set<string>();
 
   try {
@@ -61,6 +65,9 @@ function walkImportsHelper(
 ): void {
   // This is much faster than `try-catch` around `parse` and checking for ENOENT.
   if (!fs.existsSync(elmFilePath)) {
+    // The file doesn’t exist now, but it might exist in the future. If it’s
+    // created that triggers a recompile, but of course there’s no file to read
+    // right now.
     return;
   }
 
@@ -98,9 +105,12 @@ function walkImportsHelper(
 function parse(elmFilePath: string): Array<Parser.ModuleName> {
   const readState = Parser.initialReadState();
   const handle = fs.openSync(elmFilePath, "r");
+  // Benchmarking has shown that synchronously reading around 2048 bytes at a
+  // time is the fastest.
   const buffer = Buffer.alloc(2048);
   let bytesRead = 0;
   outer: while ((bytesRead = fs.readSync(handle, buffer)) > 0) {
+    // The last read might contain less bytes than we asked for.
     for (const char of buffer.slice(0, bytesRead)) {
       Parser.readChar(char, readState);
       if (Parser.isNonImport(readState)) {
@@ -112,6 +122,16 @@ function parse(elmFilePath: string): Array<Parser.ModuleName> {
   return Parser.finalize(readState);
 }
 
+// If the input is `src/Main.elm` and you have `"source-directories": ["src",
+// "lib"]`, then creating `lib/Main.elm` will cause a compilation error, and
+// should therefore trigger a recompile. The tricky part here is that we only
+// have the absolute path to the input file, not its module name. It’s possible
+// to figure out the module name: In a valid Elm project, exactly 1 source
+// directory is a prefix of the input. In practice, 0 or more source directories
+// can match. This function returns the original input path as well as all
+// alternative paths in other source directories using all possible module names
+// (valid or not). (Note: The `module` line cannot be trusted – it might contain
+// a name not matching the file name (which of course is invalid, but still).)
 function initialRelatedElmFilePaths(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
   inputPath: InputPath
