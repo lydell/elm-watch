@@ -4,6 +4,7 @@ import * as path from "path";
 
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import * as Parser from "./Parser";
+import { AbsolutePath } from "./PathHelpers";
 import { InputPath, SourceDirectory } from "./Types";
 
 // NOTE: This module uses just `string` instead of `AbsolutePath` for performance!
@@ -36,9 +37,7 @@ export function walkImports(
     walkImportsHelper(
       mapNonEmptyArray(sourceDirectories, (sourceDirectory) => ({
         sourceDirectory,
-        children: new Set(
-          fs.readdirSync(sourceDirectory.theSourceDirectory.absolutePath)
-        ),
+        children: new Set(readdirSync(sourceDirectory.theSourceDirectory)),
       })),
       inputPath.theInputPath.absolutePath,
       allRelatedElmFilePaths,
@@ -152,4 +151,14 @@ function initialRelatedElmFilePaths(
         : [];
     }),
   ]);
+}
+
+// This is only used in an optimization, so it shouldn’t affect the outcome –
+// errors should not be considered at this point.
+function readdirSync(dir: AbsolutePath): Array<string> {
+  try {
+    return fs.readdirSync(dir.absolutePath);
+  } catch {
+    return [];
+  }
 }
