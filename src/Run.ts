@@ -141,6 +141,8 @@ async function hot(
   passedRestart: () => Promise<number>,
   state: State.State
 ): Promise<number> {
+  const isInteractive = logger.raw.stderr.isTTY;
+
   return new Promise((resolve, reject) => {
     let currentCompile: Promise<void> | undefined = undefined;
     let panicked = false;
@@ -153,7 +155,7 @@ async function hot(
     });
 
     const logInfoMessage = (message: string): void => {
-      if (lastInfoMessage !== undefined) {
+      if (lastInfoMessage !== undefined && isInteractive) {
         readline.moveCursor(
           logger.raw.stderr,
           0,
@@ -191,7 +193,7 @@ async function hot(
           currentCompile = undefined;
           const duration = getNow().getTime() - start.getTime();
           logInfoMessage(
-            compileFinishedMessage(state.lastChangedFile, duration)
+            compileFinishedMessage(state.lastChangedElmFile, duration)
           );
           if (onIdle !== undefined && !state.fullRestartRequested) {
             const response = onIdle();
@@ -231,10 +233,10 @@ async function hot(
             absolutePath: absolutePathString,
           };
           if (dirty) {
-            state.lastChangedFile = absolutePath;
+            state.lastChangedElmFile = absolutePath;
             runCompile();
           } else {
-            logger.error(
+            logInfoMessage(
               notInterestingElmFileChangedMessage(
                 absolutePath,
                 event,
@@ -311,20 +313,20 @@ function restartMessage(
   changedFile: "elm-tooling.json" | "elm.json",
   event: WatcherEvent
 ): string {
-  return `A ${bold(changedFile)} file ${event}. Restarting!`;
+  return `An ${bold(changedFile)} file ${event}. Restarting!`;
 }
 
 function compileFinishedMessage(
-  lastChangedFile: AbsolutePath | undefined,
+  lastChangedElmFile: AbsolutePath | undefined,
   duration: number
 ): string {
   const common = `Compilation finished in ${bold(duration.toString())} ms.`;
-  return lastChangedFile === undefined
+  return lastChangedElmFile === undefined
     ? common
     : `
 ${common}
-${dim("The last changed file was:")}
-${dim(lastChangedFile.absolutePath)}
+${dim("The last changed Elm file:")}
+${dim(lastChangedElmFile.absolutePath)}
       `.trim();
 }
 
@@ -336,7 +338,8 @@ function notInterestingElmFileChangedMessage(
   const what =
     disabledOutputs.size > 0 ? "any of the enabled outputs" : "anything";
   return `
-FYI: An Elm file was ${event}, but it did not affect ${what}. The Elm file:
+FYI: An Elm file was ${event}, but it did not affect ${what}.
+${dim(`The ${event} Elm file:`)}
 ${dim(elmFile.absolutePath)}
   `.trim();
 }
