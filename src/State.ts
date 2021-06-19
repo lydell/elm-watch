@@ -36,6 +36,8 @@ export type State = {
   disabledOutputs: HashSet<OutputPath>;
   elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }>;
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
+  hasRunInstall: boolean;
+  fullRestartRequested: boolean;
   // Maybe also websocket connections in the future.
 };
 
@@ -44,6 +46,8 @@ export type OutputState = {
   mode: CompilationMode;
   postprocess?: NonEmptyArray<string>;
   status: OutputStatus;
+  allRelatedElmFilePaths: Set<string>;
+  dirty: boolean;
 };
 
 export type OutputStatus =
@@ -153,6 +157,8 @@ export function init({
             mode: compilationMode,
             postprocess: output.postprocess,
             status: { tag: "NotWrittenToDisk" },
+            allRelatedElmFilePaths: new Set(),
+            dirty: true,
           });
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
           break;
@@ -195,6 +201,8 @@ export function init({
       disabledOutputs,
       elmJsonsErrors,
       elmJsons,
+      hasRunInstall: false,
+      fullRestartRequested: false,
     },
   };
 }

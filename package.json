@@ -28,6 +28,7 @@
     "typescript": "4.3.2"
   },
   "dependencies": {
+    "chokidar": "^3.5.2",
     "cross-spawn": "^7.0.3",
     "path-key": "^3.1.1",
     "tiny-decoders": "^6.0.0"

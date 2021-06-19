@@ -3,6 +3,7 @@ import type { Env, ReadStream, WriteStream } from "./Helpers";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString, Cwd } from "./PathHelpers";
 import { run } from "./Run";
+import { OnIdle } from "./Types";
 
 type Options = {
   cwd?: string;
@@ -10,6 +11,7 @@ type Options = {
   stdin?: ReadStream;
   stdout?: WriteStream;
   stderr?: WriteStream;
+  onIdle?: OnIdle;
 };
 
 export async function elmWatchCli(
@@ -21,6 +23,7 @@ export async function elmWatchCli(
     // stdin = process.stdin,
     stdout = process.stdout,
     stderr = process.stderr,
+    onIdle,
   }: Options = {}
 ): Promise<number> {
   const logger = makeLogger({ env, stdout, stderr });
@@ -52,6 +55,7 @@ export async function elmWatchCli(
         cwd,
         env,
         logger,
+        onIdle,
         args[0],
         args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg }))
       );

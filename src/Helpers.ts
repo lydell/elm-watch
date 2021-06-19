@@ -37,6 +37,7 @@ export function sha256(string: string): string {
   return crypto.createHash("sha256").update(string).digest("hex");
 }
 
+export const CLEAR = "\x1B[2J\x1B[3J\x1B[H";
 export const RESET_COLOR = "\x1B[0m";
 
 export function bold(string: string): string {

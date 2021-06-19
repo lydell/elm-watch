@@ -1,20 +1,27 @@
+import * as chokidar from "chokidar";
+import * as path from "path";
+
 import { compile } from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
-import { Env } from "./Helpers";
+import { CLEAR, Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { Cwd } from "./PathHelpers";
 import * as State from "./State";
-import type { CliArg, CompilationMode, RunMode } from "./Types";
+import type { CliArg, CompilationMode, OnIdle, RunMode } from "./Types";
 
 export async function run(
   cwd: Cwd,
   env: Env,
   logger: Logger,
+  onIdle: OnIdle | undefined,
   runMode: RunMode,
   args: Array<CliArg>
 ): Promise<number> {
+  const restart = (): Promise<number> =>
+    run(cwd, env, logger, onIdle, runMode, args);
+
   const parseResult = ElmToolingJson.findReadAndParse(cwd);
 
   switch (parseResult.tag) {
@@ -98,13 +105,179 @@ export async function run(
               logger.errorTemplate(Errors.noCommonRoot(initStateResult.paths));
               return 1;
 
-            case "State":
-              return compile(env, logger, initStateResult.state);
+            case "State": {
+              switch (runMode) {
+                case "make":
+                  return compile(env, logger, runMode, initStateResult.state);
+                case "hot":
+                  return hot(
+                    env,
+                    logger,
+                    onIdle,
+                    restart,
+                    initStateResult.state
+                  );
+              }
+            }
           }
         }
       }
     }
   }
+}
+
+async function hot(
+  env: Env,
+  logger: Logger,
+  onIdle: OnIdle | undefined,
+  passedRestart: () => Promise<number>,
+  state: State.State
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let currentCompile: Promise<void> | undefined = undefined;
+
+    const watcher = chokidar.watch(state.watchRoot.absolutePath, {
+      ignoreInitial: true,
+      ignored: ["**/elm-stuff/**", "**/node_modules/**"],
+      disableGlobbing: true,
+    });
+
+    const panic = (error: Error): void => {
+      // `watcher.close()` sets `watcher.closed` immediately, and then does async stuff.
+      // `watcher.closed` is not in the type definition. `watcher._emit()`
+      // checks `watcher.closed` and does not emit events if `watcher.close()`
+      // has been called.
+      if ((watcher as chokidar.FSWatcher & { closed: boolean }).closed) {
+        reject(error);
+      } else {
+        watcher.close().then(
+          () => {
+            reject(error);
+          },
+          (error2) => {
+            /* eslint-disable no-console */
+            console.error("Panic: Failed to close watcher on error.");
+            console.error("Actual error:", error);
+            console.error("watcher.close() error:", error2);
+            /* eslint-enable no-console */
+            process.exit(1);
+          }
+        );
+      }
+    };
+
+    const restart = (): void => {
+      logger.raw.stderr.write(CLEAR);
+      state.fullRestartRequested = true;
+      Promise.all([watcher.close(), currentCompile]).then(() => {
+        passedRestart().then(resolve, reject);
+      }, panic);
+    };
+
+    const runCompile = (): void => {
+      if (currentCompile === undefined) {
+        logger.raw.stderr.write(CLEAR);
+        currentCompile = compile(env, logger, "hot", state).then(() => {
+          currentCompile = undefined;
+          if (onIdle !== undefined && !state.fullRestartRequested) {
+            const response = onIdle();
+            switch (response) {
+              case "KeepGoing":
+                return;
+              case "Stop":
+                watcher.close().then(() => {
+                  resolve(0);
+                }, panic);
+                return;
+            }
+          }
+        }, panic);
+      }
+    };
+
+    const onWatcherEvent =
+      (event: "added" | "changed" | "removed") =>
+      (absolutePathString: string): void => {
+        if (state.fullRestartRequested) {
+          return;
+        }
+
+        if (absolutePathString.endsWith(".elm")) {
+          let dirty = false;
+          for (const [, outputs] of state.elmJsons) {
+            for (const [, outputState] of outputs) {
+              if (outputState.allRelatedElmFilePaths.has(absolutePathString)) {
+                dirty = true;
+                outputState.dirty = true;
+              }
+            }
+          }
+          if (dirty) {
+            runCompile();
+          } else {
+            // TODO: Better log. Show which file? Overwrite previous. Show time? Also show time on last ran compilation.
+            // Can show extra message if state.disabledOutputs isn’t empty
+            logger.error(
+              `An Elm file was ${event}, but it did not affect any enabled outputs.`
+            );
+          }
+          return;
+        }
+
+        const basename = path.basename(absolutePathString);
+
+        switch (basename) {
+          case "elm-tooling.json":
+            switch (event) {
+              case "added":
+                restart();
+                return;
+              case "changed":
+              case "removed":
+                if (
+                  absolutePathString ===
+                  state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
+                ) {
+                  restart();
+                }
+                return;
+            }
+
+          case "elm.json":
+            switch (event) {
+              case "added":
+                restart();
+                return;
+              case "changed":
+              case "removed":
+                if (
+                  Array.from(state.elmJsons).some(
+                    ([elmJsonPath]) =>
+                      absolutePathString ===
+                      elmJsonPath.theElmJsonPath.absolutePath
+                  )
+                ) {
+                  restart();
+                }
+                return;
+            }
+
+          default:
+            // Ignore other types of files.
+            return;
+        }
+      };
+
+    watcher.on("add", onWatcherEvent("added"));
+    watcher.on("change", onWatcherEvent("changed"));
+    watcher.on("unlink", onWatcherEvent("removed"));
+
+    // As far as I can tell, the watcher is never supposed to emit error events
+    // during normal operation.
+    watcher.on("error", panic);
+
+    runCompile();
+  });
 }
 
 type ParseArgsResult =

@@ -8,11 +8,12 @@ import { isNonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
 import * as SpawnElm from "./SpawnElm";
 import { OutputStatus, State } from "./State";
-import { OutputPath, outputPathToOriginalString } from "./Types";
+import { OutputPath, outputPathToOriginalString, RunMode } from "./Types";
 
 export async function compile(
   env: Env,
   logger: Logger,
+  runMode: RunMode,
   state: State
 ): Promise<number> {
   const fancy = !IS_WINDOWS && !logger.raw.NO_COLOR;
@@ -29,89 +30,97 @@ export async function compile(
   // This is done in sequence, in an attempt to avoid:
   // - Downloading the same package twice.
   // - Two Elm processes writing to `~/.elm` at the same time.
-  for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
-    // Don’t print `(x/y)` the first time, because chances are all packages are
-    // downloaded via the first elm.json and that looks nicer.
-    const message = `Dependencies${
-      index === 0 ? "" : ` (${index + 1}/${elmJsonsArray.length})`
-    }`;
+  if (!state.hasRunInstall) {
+    for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
+      // Don’t print `(x/y)` the first time, because chances are all packages are
+      // downloaded via the first elm.json and that looks nicer.
+      const message = `Dependencies${
+        index === 0 ? "" : ` (${index + 1}/${elmJsonsArray.length})`
+      }`;
 
-    const loadingMessage = fancy ? `⏳ ${message}` : `${message}: in progress`;
+      const loadingMessage = fancy
+        ? `⏳ ${message}`
+        : `${message}: in progress`;
 
-    // Avoid printing `loadingMessage` if there’s nothing to download.
-    let didWriteLoadingMessage = false;
-    const timeoutId = setTimeout(() => {
-      logger.error(loadingMessage);
-      didWriteLoadingMessage = true;
-    }, loadingMessageDelay);
+      // Avoid printing `loadingMessage` if there’s nothing to download.
+      let didWriteLoadingMessage = false;
+      const timeoutId = setTimeout(() => {
+        logger.error(loadingMessage);
+        didWriteLoadingMessage = true;
+      }, loadingMessageDelay);
 
-    const clearLoadingMessage = (): void => {
-      if (didWriteLoadingMessage && isInteractive) {
-        readline.moveCursor(logger.raw.stderr, 0, -1);
-        readline.clearLine(logger.raw.stderr, 0);
+      const clearLoadingMessage = (): void => {
+        if (didWriteLoadingMessage && isInteractive) {
+          readline.moveCursor(logger.raw.stderr, 0, -1);
+          readline.clearLine(logger.raw.stderr, 0);
+        }
+      };
+
+      const onError = (error: Errors.ErrorTemplate): number => {
+        clearLoadingMessage();
+        logger.error(fancy ? `🚨 ${message}` : `${message}: error`);
+        logger.error("");
+        logger.errorTemplate(error);
+        return 1;
+      };
+
+      const result = await SpawnElm.install({ elmJsonPath, env });
+      clearTimeout(timeoutId);
+
+      switch (result.tag) {
+        // If the elm.json is invalid we can just ignore that and let the “real”
+        // compilation later catch it. This way we get colored error messages.
+        case "ElmJsonError":
+          if (didWriteLoadingMessage) {
+            clearLoadingMessage();
+            logger.error(fancy ? `⛔️ ${message}` : `${message}: skipped`);
+          }
+          break;
+
+        case "Success": {
+          const gotOutput = result.elmInstallOutput !== "";
+          if (didWriteLoadingMessage || gotOutput) {
+            clearLoadingMessage();
+            logger.error(fancy ? `✅ ${message}` : `${message}: success`);
+          }
+          if (gotOutput) {
+            logger.error(result.elmInstallOutput);
+          }
+          break;
+        }
+
+        case "CreatingDummyFailed":
+          return onError(Errors.creatingDummyFailed(elmJsonPath, result.error));
+
+        case "ElmNotFoundError":
+          return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
+
+        // istanbul ignore next
+        case "OtherSpawnError":
+          return onError(
+            Errors.otherSpawnError(elmJsonPath, result.error, result.command)
+          );
+
+        case "ElmInstallError":
+          return onError(
+            Errors.elmInstallError(elmJsonPath, result.title, result.message)
+          );
+
+        case "UnexpectedElmInstallOutput":
+          return onError(
+            Errors.unexpectedElmInstallOutput(
+              elmJsonPath,
+              result.exitReason,
+              result.stdout,
+              result.stderr,
+              result.command
+            )
+          );
       }
-    };
-
-    const onError = (error: Errors.ErrorTemplate): number => {
-      clearLoadingMessage();
-      logger.error(fancy ? `🚨 ${message}` : `${message}: error`);
-      logger.error("");
-      logger.errorTemplate(error);
-      return 1;
-    };
-
-    const result = await SpawnElm.install({ elmJsonPath, env });
-    clearTimeout(timeoutId);
-
-    switch (result.tag) {
-      // If the elm.json is invalid we can just ignore that and let the “real”
-      // compilation later catch it. This way we get colored error messages.
-      case "ElmJsonError":
-        if (didWriteLoadingMessage) {
-          clearLoadingMessage();
-          logger.error(fancy ? `⛔️ ${message}` : `${message}: skipped`);
-        }
-        break;
-
-      case "Success": {
-        const gotOutput = result.elmInstallOutput !== "";
-        if (didWriteLoadingMessage || gotOutput) {
-          clearLoadingMessage();
-          logger.error(fancy ? `✅ ${message}` : `${message}: success`);
-        }
-        if (gotOutput) {
-          logger.error(result.elmInstallOutput);
-        }
-        break;
-      }
-
-      case "CreatingDummyFailed":
-        return onError(Errors.creatingDummyFailed(elmJsonPath, result.error));
-
-      case "ElmNotFoundError":
-        return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
-
-      // istanbul ignore next
-      case "OtherSpawnError":
-        return onError(
-          Errors.otherSpawnError(elmJsonPath, result.error, result.command)
-        );
-
-      case "ElmInstallError":
-        return onError(
-          Errors.elmInstallError(elmJsonPath, result.title, result.message)
-        );
-
-      case "UnexpectedElmInstallOutput":
-        return onError(
-          Errors.unexpectedElmInstallOutput(
-            elmJsonPath,
-            result.exitReason,
-            result.stdout,
-            result.stderr,
-            result.command
-          )
-        );
+    }
+    state.hasRunInstall = true;
+    if (state.fullRestartRequested) {
+      return 0;
     }
   }
 
@@ -151,37 +160,75 @@ export async function compile(
     );
   }
 
-  await Promise.all(
-    toCompile.map(async ([elmJsonPath, outputPath, outputState], index) => {
-      outputState.status = { tag: "ElmMake" };
-      updateStatusLine(outputPath, outputState.status);
-      const elmMakeResult = await SpawnElm.make({
-        elmJsonPath,
-        mode: outputState.mode,
-        inputs: outputState.inputs,
-        output: outputPath,
-        env,
-      });
-      if (
-        elmMakeResult.tag === "Success" &&
-        outputState.postprocess !== undefined
-      ) {
-        outputState.status = { tag: "Postprocess" };
-        updateStatusLine(outputPath, outputState.status, index);
-        outputState.status = await postprocess({
-          elmToolingJsonPath: state.elmToolingJsonPath,
-          mode: outputState.mode,
-          output: outputPath,
-          postprocessArray: outputState.postprocess,
-          env,
-        });
-        updateStatusLine(outputPath, outputState.status, index);
-      } else {
-        outputState.status = elmMakeResult;
-        updateStatusLine(outputPath, outputState.status, index);
-      }
-    })
-  );
+  while (someOutputIsDirty(state)) {
+    await Promise.all(
+      toCompile.map(
+        async (
+          [elmJsonPath, outputPath, outputState],
+          index: number
+        ): Promise<void> => {
+          if (!outputState.dirty) {
+            return;
+          }
+          outputState.status = { tag: "ElmMake" };
+          outputState.dirty = false;
+          updateStatusLine(outputPath, outputState.status);
+          const [elmMakeResult] = await Promise.all([
+            SpawnElm.make({
+              elmJsonPath,
+              mode: outputState.mode,
+              inputs: outputState.inputs,
+              output: outputPath,
+              env,
+            }),
+            Promise.resolve().then(() => {
+              switch (runMode) {
+                case "make":
+                  return;
+                case "hot":
+                  // Note: It doesn’t matter if a file changes before we’ve had
+                  // chance to compute this the first time (during packages
+                  // installation or `elm make` above). Everything is marked as
+                  // dirty by default anyway and will get compiled.
+                  // TODO: Read elm.json, walkImports – for all inputs! Need a smarter way there
+                  // Maybe walkImports should take a NonEmptyArray of inputs
+                  // outputState.allRelatedElmFilePaths = walkImports();
+                  return;
+              }
+            }),
+          ]);
+          if (state.fullRestartRequested || outputState.dirty) {
+            return;
+          }
+          if (
+            elmMakeResult.tag === "Success" &&
+            outputState.postprocess !== undefined
+          ) {
+            outputState.status = { tag: "Postprocess" };
+            updateStatusLine(outputPath, outputState.status, index);
+            outputState.status = await postprocess({
+              elmToolingJsonPath: state.elmToolingJsonPath,
+              mode: outputState.mode,
+              output: outputPath,
+              postprocessArray: outputState.postprocess,
+              env,
+            });
+            if (state.fullRestartRequested || outputState.dirty) {
+              return;
+            }
+            updateStatusLine(outputPath, outputState.status, index);
+          } else {
+            outputState.status = elmMakeResult;
+            updateStatusLine(outputPath, outputState.status, index);
+          }
+        }
+      )
+    );
+  }
+
+  if (state.fullRestartRequested) {
+    return 0;
+  }
 
   const errors = extractErrors(state);
 
@@ -397,4 +444,15 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
       })
     ),
   ];
+}
+
+function someOutputIsDirty(state: State): boolean {
+  for (const [, outputs] of state.elmJsons) {
+    for (const [, outputState] of outputs) {
+      if (outputState.dirty) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
