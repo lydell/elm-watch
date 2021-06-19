@@ -4,7 +4,7 @@ import * as path from "path";
 import { compile } from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
-import { CLEAR, Env } from "./Helpers";
+import { bold, CLEAR, Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { Cwd } from "./PathHelpers";
@@ -148,8 +148,8 @@ async function hot(
       reject(error);
     };
 
-    const restart = (): void => {
-      logger.raw.stderr.write(CLEAR);
+    const restart = (changedFile: string): void => {
+      logger.error(`${CLEAR}A ${bold(changedFile)} file changed. Restarting!`);
       state.fullRestartRequested = true;
       Promise.all([watcher.close(), currentCompile]).then(() => {
         passedRestart().then(resolve, reject);
@@ -161,6 +161,7 @@ async function hot(
         logger.raw.stderr.write(CLEAR);
         currentCompile = compile(env, logger, "hot", state).then(() => {
           currentCompile = undefined;
+          logger.error("Compiled!");
           if (onIdle !== undefined && !state.fullRestartRequested) {
             const response = onIdle();
             switch (response) {
@@ -185,16 +186,17 @@ async function hot(
         }
 
         if (absolutePathString.endsWith(".elm")) {
+          let dirty = false;
           for (const [, outputs] of state.elmJsons) {
             for (const [, outputState] of outputs) {
               if (outputState.allRelatedElmFilePaths.has(absolutePathString)) {
+                dirty = true;
                 outputState.dirty = true;
               }
             }
           }
-          if (State.someOutputIsDirty(state)) {
+          if (dirty) {
             runCompile();
-            logger.error("Compiled!");
           } else {
             // TODO: Better log. Show which file? Overwrite previous. Show time? Also show time on last ran compilation (above).
             // Can show extra message if state.disabledOutputs isn’t empty
@@ -211,7 +213,7 @@ async function hot(
           case "elm-tooling.json":
             switch (event) {
               case "added":
-                restart();
+                restart(basename);
                 return;
 
               case "changed":
@@ -220,7 +222,7 @@ async function hot(
                   absolutePathString ===
                   state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
                 ) {
-                  restart();
+                  restart(basename);
                 }
                 return;
             }
@@ -228,7 +230,7 @@ async function hot(
           case "elm.json":
             switch (event) {
               case "added":
-                restart();
+                restart(basename);
                 return;
 
               case "changed": {
@@ -245,7 +247,6 @@ async function hot(
                 }
                 if (!state.hasRunInstall) {
                   runCompile();
-                  logger.error("Compiled!");
                 }
                 return;
               }
@@ -258,7 +259,7 @@ async function hot(
                       elmJsonPath.theElmJsonPath.absolutePath
                   )
                 ) {
-                  restart();
+                  restart(basename);
                 }
                 return;
             }

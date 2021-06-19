@@ -9,7 +9,7 @@ import { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
 import * as SpawnElm from "./SpawnElm";
-import { OutputState, OutputStatus, someOutputIsDirty, State } from "./State";
+import { OutputState, OutputStatus, State } from "./State";
 import {
   ElmJsonPath,
   InputPath,
@@ -168,18 +168,17 @@ export async function compile(
     );
   }
 
-  while (someOutputIsDirty(state)) {
-    await Promise.all(
-      toCompile.map(
-        async (
-          [elmJsonPath, outputPath, outputState],
-          index: number
-        ): Promise<void> => {
-          if (!outputState.dirty) {
-            return;
-          }
-          outputState.status = { tag: "ElmMake" };
+  await Promise.all(
+    toCompile.map(
+      async (
+        [elmJsonPath, outputPath, outputState],
+        index: number
+      ): Promise<void> => {
+        while (outputState.dirty) {
+          // Watcher events that happen while waiting for `elm make` and
+          // postprocessing can flip `dirty` back to `true`.
           outputState.dirty = false;
+          outputState.status = { tag: "ElmMake" };
           updateStatusLine(outputPath, outputState.status);
           const [elmMakeResult] = await Promise.all([
             SpawnElm.make({
@@ -207,8 +206,11 @@ export async function compile(
               }
             }),
           ]);
-          if (state.fullRestartRequested || outputState.dirty) {
+          if (state.fullRestartRequested) {
             return;
+          }
+          if (outputState.dirty) {
+            continue;
           }
           if (
             elmMakeResult.tag === "Success" &&
@@ -223,8 +225,11 @@ export async function compile(
               postprocessArray: outputState.postprocess,
               env,
             });
-            if (state.fullRestartRequested || outputState.dirty) {
+            if (state.fullRestartRequested) {
               return;
+            }
+            if (outputState.dirty) {
+              continue;
             }
             updateStatusLine(outputPath, outputState.status, index);
           } else {
@@ -232,9 +237,9 @@ export async function compile(
             updateStatusLine(outputPath, outputState.status, index);
           }
         }
-      )
-    );
-  }
+      }
+    )
+  );
 
   if (state.fullRestartRequested) {
     return 0;

@@ -28,6 +28,8 @@ import type {
   RunMode,
 } from "./Types";
 
+// The code base leans towards pure functions, but this data structure is going
+// to be mutated a lot, so it’s the trickiest part.
 export type State = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.
   watchRoot: AbsolutePath;
@@ -350,15 +352,4 @@ function resolveElmJson(
     // At this point we know for sure that `inputs` must be non-empty.
     inputs: inputs as NonEmptyArray<InputPath>,
   };
-}
-
-export function someOutputIsDirty(state: State): boolean {
-  for (const [, outputs] of state.elmJsons) {
-    for (const [, outputState] of outputs) {
-      if (outputState.dirty) {
-        return true;
-      }
-    }
-  }
-  return false;
 }
