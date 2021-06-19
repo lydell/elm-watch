@@ -51,3 +51,11 @@ export function dim(string: string): string {
 export function removeColor(string: string): string {
   return string.replace(/\x1B\[\d+m/g, "");
 }
+
+export function formatTime(date: Date): string {
+  const pad = (number: number): string => number.toString().padStart(2, "0");
+  return join(
+    [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())],
+    ":"
+  );
+}

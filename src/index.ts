@@ -3,28 +3,29 @@ import type { Env, ReadStream, WriteStream } from "./Helpers";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString, Cwd } from "./PathHelpers";
 import { run } from "./Run";
-import { OnIdle } from "./Types";
+import { GetNow, OnIdle } from "./Types";
 
 type Options = {
-  cwd?: string;
-  env?: Env;
-  stdin?: ReadStream;
-  stdout?: WriteStream;
-  stderr?: WriteStream;
-  onIdle?: OnIdle;
+  cwd: string;
+  env: Env;
+  stdin: ReadStream;
+  stdout: WriteStream;
+  stderr: WriteStream;
+  getNow: GetNow;
+  onIdle: OnIdle | undefined;
 };
 
 export async function elmWatchCli(
   args: Array<string>,
-  // istanbul ignore next
   {
-    cwd: cwdString = process.cwd(),
-    env = process.env,
-    // stdin = process.stdin,
-    stdout = process.stdout,
-    stderr = process.stderr,
+    cwd: cwdString,
+    env,
+    // stdin,
+    stdout,
+    stderr,
+    getNow,
     onIdle,
-  }: Options = {}
+  }: Options
 ): Promise<number> {
   const logger = makeLogger({ env, stdout, stderr });
   const cwd: Cwd = {
@@ -55,6 +56,7 @@ export async function elmWatchCli(
         cwd,
         env,
         logger,
+        getNow,
         onIdle,
         args[0],
         args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg }))
@@ -68,7 +70,15 @@ export async function elmWatchCli(
 
 // istanbul ignore if
 if (require.main === module) {
-  elmWatchCli(process.argv.slice(2)).then(
+  elmWatchCli(process.argv.slice(2), {
+    cwd: process.cwd(),
+    env: process.env,
+    stdin: process.stdin,
+    stdout: process.stdout,
+    stderr: process.stderr,
+    getNow: () => new Date(),
+    onIdle: undefined,
+  }).then(
     (exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.
       process.exitCode = exitCode;

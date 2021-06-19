@@ -41,7 +41,6 @@ export type ElmMakeResult =
     }
   | {
       tag: "Success";
-      timestamp: number;
     }
   | {
       tag: "UnexpectedElmMakeOutput";
@@ -100,7 +99,7 @@ export async function make({
         exitReason.exitCode === 0 &&
         stdout === "" &&
         stderr === ""
-        ? { tag: "Success", timestamp: Date.now() }
+        ? { tag: "Success" }
         : exitReason.tag === "ExitCode" &&
           exitReason.exitCode === 1 &&
           stdout === "" &&

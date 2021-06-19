@@ -3,12 +3,16 @@ import type { Env } from "../src/Helpers";
 import {
   assertExitCode,
   clean,
+  failGetNow,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
 } from "./Helpers";
 
-async function helpHelper(args: Array<string>, env?: Env): Promise<string> {
+async function helpHelper(
+  args: Array<string>,
+  env: Env = process.env
+): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
 
@@ -18,6 +22,8 @@ async function helpHelper(args: Array<string>, env?: Env): Promise<string> {
     stdin: new FailReadStream(),
     stdout,
     stderr,
+    getNow: failGetNow,
+    onIdle: undefined,
   });
 
   assertExitCode(0, exitCode, stdout.content, stderr.content);

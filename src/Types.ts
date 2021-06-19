@@ -54,6 +54,8 @@ export type CliArg = {
   theArg: string;
 };
 
+export type GetNow = () => Date;
+
 export type OnIdle = () => "KeepGoing" | "Stop";
 
 export function outputPathToAbsoluteString(output: OutputPath): string {

@@ -8,6 +8,7 @@ import {
   assertExitCode,
   clean,
   CursorWriteStream,
+  failGetNow,
   FailReadStream,
   MemoryWriteStream,
   prependPATH,
@@ -49,6 +50,8 @@ async function runAbsolute(
     stdin: new FailReadStream(),
     stdout,
     stderr,
+    getNow: failGetNow,
+    onIdle: undefined,
   });
 
   const stderrString = clean(stderr.getOutput());

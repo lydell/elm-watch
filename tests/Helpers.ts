@@ -16,6 +16,10 @@ export function prependPATH(folder: string): string {
   return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
 }
 
+export function failGetNow(): never {
+  throw new Error("Expected getNow not to be called!");
+}
+
 export class FailReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 

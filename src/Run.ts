@@ -1,26 +1,30 @@
 import * as chokidar from "chokidar";
 import * as path from "path";
+import * as readline from "readline";
 
+import * as CliArgs from "./CliArgs";
 import { compile } from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
-import { bold, CLEAR, Env } from "./Helpers";
+import { HashSet } from "./HashSet";
+import { bold, CLEAR, dim, Env, formatTime } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import { Cwd } from "./PathHelpers";
+import { AbsolutePath, Cwd } from "./PathHelpers";
 import * as State from "./State";
-import type { CliArg, CompilationMode, OnIdle, RunMode } from "./Types";
+import type { CliArg, GetNow, OnIdle, OutputPath, RunMode } from "./Types";
 
 export async function run(
   cwd: Cwd,
   env: Env,
   logger: Logger,
+  getNow: GetNow,
   onIdle: OnIdle | undefined,
   runMode: RunMode,
   args: Array<CliArg>
 ): Promise<number> {
   const restart = (): Promise<number> =>
-    run(cwd, env, logger, onIdle, runMode, args);
+    run(cwd, env, logger, getNow, onIdle, runMode, args);
 
   const parseResult = ElmToolingJson.findReadAndParse(cwd);
 
@@ -48,7 +52,7 @@ export async function run(
       return 1;
 
     case "Parsed": {
-      const parseArgsResult = parseArgs(runMode, args);
+      const parseArgsResult = CliArgs.parseArgs(runMode, args);
 
       switch (parseArgsResult.tag) {
         case "BadArgs":
@@ -113,6 +117,7 @@ export async function run(
                   return hot(
                     env,
                     logger,
+                    getNow,
                     onIdle,
                     restart,
                     initStateResult.state
@@ -126,9 +131,12 @@ export async function run(
   }
 }
 
+type WatcherEvent = "added" | "changed" | "removed";
+
 async function hot(
   env: Env,
   logger: Logger,
+  getNow: GetNow,
   onIdle: OnIdle | undefined,
   passedRestart: () => Promise<number>,
   state: State.State
@@ -136,6 +144,7 @@ async function hot(
   return new Promise((resolve, reject) => {
     let currentCompile: Promise<void> | undefined = undefined;
     let panicked = false;
+    let lastInfoMessage: string | undefined = undefined;
 
     const watcher = chokidar.watch(state.watchRoot.absolutePath, {
       ignoreInitial: true,
@@ -143,13 +152,30 @@ async function hot(
       disableGlobbing: true,
     });
 
+    const logInfoMessage = (message: string): void => {
+      if (lastInfoMessage !== undefined) {
+        readline.moveCursor(
+          logger.raw.stderr,
+          0,
+          -(lastInfoMessage.split("\n").length + 1)
+        );
+        readline.clearScreenDown(logger.raw.stderr);
+      }
+      const fullMessage = infoMessage(getNow(), message);
+      lastInfoMessage = fullMessage;
+      logger.error(fullMessage);
+    };
+
     const panic = (error: Error): void => {
       panicked = true;
       reject(error);
     };
 
-    const restart = (changedFile: string): void => {
-      logger.error(`${CLEAR}A ${bold(changedFile)} file changed. Restarting!`);
+    const restart = (
+      changedFile: "elm-tooling.json" | "elm.json",
+      event: WatcherEvent
+    ): void => {
+      logger.error(`${CLEAR}${restartMessage(changedFile, event)}`);
       state.fullRestartRequested = true;
       Promise.all([watcher.close(), currentCompile]).then(() => {
         passedRestart().then(resolve, reject);
@@ -159,9 +185,14 @@ async function hot(
     const runCompile = (): void => {
       if (currentCompile === undefined) {
         logger.raw.stderr.write(CLEAR);
+        lastInfoMessage = undefined;
+        const start = getNow();
         currentCompile = compile(env, logger, "hot", state).then(() => {
           currentCompile = undefined;
-          logger.error("Compiled!");
+          const duration = getNow().getTime() - start.getTime();
+          logInfoMessage(
+            compileFinishedMessage(state.lastChangedFile, duration)
+          );
           if (onIdle !== undefined && !state.fullRestartRequested) {
             const response = onIdle();
             switch (response) {
@@ -179,7 +210,7 @@ async function hot(
     };
 
     const onWatcherEvent =
-      (event: "added" | "changed" | "removed") =>
+      (event: WatcherEvent) =>
       (absolutePathString: string): void => {
         if (state.fullRestartRequested || panicked) {
           return;
@@ -195,13 +226,20 @@ async function hot(
               }
             }
           }
+          const absolutePath: AbsolutePath = {
+            tag: "AbsolutePath",
+            absolutePath: absolutePathString,
+          };
           if (dirty) {
+            state.lastChangedFile = absolutePath;
             runCompile();
           } else {
-            // TODO: Better log. Show which file? Overwrite previous. Show time? Also show time on last ran compilation (above).
-            // Can show extra message if state.disabledOutputs isn’t empty
             logger.error(
-              `An Elm file was ${event}, but it did not affect any enabled outputs.`
+              notInterestingElmFileChangedMessage(
+                absolutePath,
+                event,
+                state.disabledOutputs
+              )
             );
           }
           return;
@@ -213,7 +251,7 @@ async function hot(
           case "elm-tooling.json":
             switch (event) {
               case "added":
-                restart(basename);
+                restart(basename, event);
                 return;
 
               case "changed":
@@ -222,7 +260,7 @@ async function hot(
                   absolutePathString ===
                   state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
                 ) {
-                  restart(basename);
+                  restart(basename, event);
                 }
                 return;
             }
@@ -230,27 +268,10 @@ async function hot(
           case "elm.json":
             switch (event) {
               case "added":
-                restart(basename);
+                restart(basename, event);
                 return;
 
-              case "changed": {
-                for (const [elmJsonPath, outputs] of state.elmJsons) {
-                  if (
-                    absolutePathString ===
-                    elmJsonPath.theElmJsonPath.absolutePath
-                  ) {
-                    state.hasRunInstall = false;
-                    for (const [, outputState] of outputs) {
-                      outputState.dirty = true;
-                    }
-                  }
-                }
-                if (!state.hasRunInstall) {
-                  runCompile();
-                }
-                return;
-              }
-
+              case "changed":
               case "removed":
                 if (
                   Array.from(state.elmJsons).some(
@@ -259,7 +280,7 @@ async function hot(
                       elmJsonPath.theElmJsonPath.absolutePath
                   )
                 ) {
-                  restart(basename);
+                  restart(basename, event);
                 }
                 return;
             }
@@ -282,68 +303,40 @@ async function hot(
   });
 }
 
-type ParseArgsResult =
-  | {
-      tag: "BadArgs";
-      badArgs: NonEmptyArray<CliArg>;
-    }
-  | {
-      tag: "Success";
-      compilationMode: CompilationMode;
-      outputs: Array<string>;
-    }
-  | { tag: "DebugOptimizeClash" }
-  | { tag: "DebugOptimizeForHot" };
+function infoMessage(date: Date, message: string): string {
+  return `\n${bold(formatTime(date))} ${message}`;
+}
 
-function parseArgs(runMode: RunMode, args: Array<CliArg>): ParseArgsResult {
-  let debug = false;
-  let optimize = false;
-  const badArgs: Array<CliArg> = [];
-  const outputs: Array<string> = [];
+function restartMessage(
+  changedFile: "elm-tooling.json" | "elm.json",
+  event: WatcherEvent
+): string {
+  return `A ${bold(changedFile)} file ${event}. Restarting!`;
+}
 
-  for (const arg of args) {
-    switch (arg.theArg) {
-      case "--debug":
-        debug = true;
-        break;
+function compileFinishedMessage(
+  lastChangedFile: AbsolutePath | undefined,
+  duration: number
+): string {
+  const common = `Compilation finished in ${bold(duration.toString())} ms.`;
+  return lastChangedFile === undefined
+    ? common
+    : `
+${common}
+${dim("The last changed file was:")}
+${dim(lastChangedFile.absolutePath)}
+      `.trim();
+}
 
-      case "--optimize":
-        optimize = true;
-        break;
-
-      default:
-        if (ElmToolingJson.isValidOutputName(arg.theArg)) {
-          outputs.push(arg.theArg);
-        } else {
-          badArgs.push(arg);
-        }
-    }
-  }
-
-  switch (runMode) {
-    case "hot":
-      if (debug || optimize) {
-        return { tag: "DebugOptimizeForHot" };
-      }
-      break;
-
-    case "make":
-      if (debug && optimize) {
-        return { tag: "DebugOptimizeClash" };
-      }
-      break;
-  }
-
-  if (isNonEmptyArray(badArgs)) {
-    return {
-      tag: "BadArgs",
-      badArgs,
-    };
-  }
-
-  return {
-    tag: "Success",
-    compilationMode: debug ? "debug" : optimize ? "optimize" : "standard",
-    outputs,
-  };
+function notInterestingElmFileChangedMessage(
+  elmFile: AbsolutePath,
+  event: WatcherEvent,
+  disabledOutputs: HashSet<OutputPath>
+): string {
+  const what =
+    disabledOutputs.size > 0 ? "any of the enabled outputs" : "anything";
+  return `
+FYI: An Elm file was ${event}, but it did not affect ${what}. The Elm file:
+${dim(elmFile.absolutePath)}
+  `.trim();
 }

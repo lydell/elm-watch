@@ -41,6 +41,7 @@ export type State = {
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   hasRunInstall: boolean;
   fullRestartRequested: boolean;
+  lastChangedFile: AbsolutePath | undefined;
   // Maybe also websocket connections in the future.
 };
 
@@ -208,6 +209,7 @@ export function init({
       elmJsons,
       hasRunInstall: false,
       fullRestartRequested: false,
+      lastChangedFile: undefined,
     },
   };
 }
