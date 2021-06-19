@@ -23,26 +23,29 @@ export type WalkImportsResult =
 // to be recompiled.
 export function walkImports(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
-  inputPath: InputPath
+  inputPaths: NonEmptyArray<InputPath>
 ): WalkImportsResult {
-  const allRelatedElmFilePaths = initialRelatedElmFilePaths(
-    sourceDirectories,
-    inputPath
+  const allRelatedElmFilePaths = new Set(
+    inputPaths.flatMap((inputPath) =>
+      initialRelatedElmFilePaths(sourceDirectories, inputPath)
+    )
   );
 
   // To avoid reading the same file twice, and to handle circular imports.
   const visitedModules = new Set<string>();
 
   try {
-    walkImportsHelper(
-      mapNonEmptyArray(sourceDirectories, (sourceDirectory) => ({
-        sourceDirectory,
-        children: new Set(readdirSync(sourceDirectory.theSourceDirectory)),
-      })),
-      inputPath.theInputPath.absolutePath,
-      allRelatedElmFilePaths,
-      visitedModules
-    );
+    for (const inputPath of inputPaths) {
+      walkImportsHelper(
+        mapNonEmptyArray(sourceDirectories, (sourceDirectory) => ({
+          sourceDirectory,
+          children: new Set(readdirSync(sourceDirectory.theSourceDirectory)),
+        })),
+        inputPath.theInputPath.absolutePath,
+        allRelatedElmFilePaths,
+        visitedModules
+      );
+    }
   } catch (errorAny) {
     const error = errorAny as Error & { code?: string };
     return { tag: "FileSystemError", error };
@@ -134,10 +137,10 @@ function parse(elmFilePath: string): Array<Parser.ModuleName> {
 function initialRelatedElmFilePaths(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
   inputPath: InputPath
-): Set<string> {
+): NonEmptyArray<string> {
   const inputPathString = inputPath.theInputPath.absolutePath;
 
-  return new Set([
+  return [
     inputPath.theInputPath.absolutePath,
     ...sourceDirectories.flatMap((sourceDirectory) => {
       const prefix = sourceDirectory.theSourceDirectory.absolutePath + path.sep;
@@ -150,7 +153,7 @@ function initialRelatedElmFilePaths(
           )
         : [];
     }),
-  ]);
+  ];
 }
 
 // This is only used in an optimization, so it shouldn’t affect the outcome –

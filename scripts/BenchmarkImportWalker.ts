@@ -4,8 +4,14 @@ import * as fs from "fs";
 import * as Decode from "tiny-decoders";
 
 import { ElmJson, getSourceDirectories } from "../src/ElmJson";
+import { HashSet } from "../src/HashSet";
+import { getSetSingleton } from "../src/Helpers";
 import { walkImports } from "../src/ImportWalker";
-import { isNonEmptyArray } from "../src/NonEmptyArray";
+import {
+  isNonEmptyArray,
+  mapNonEmptyArray,
+  NonEmptyArray,
+} from "../src/NonEmptyArray";
 import {
   absoluteDirname,
   absolutePathFromString,
@@ -15,18 +21,8 @@ import {
 import { InputPath } from "../src/Types";
 
 function run(args: Array<string>): void {
-  const [elmFilePathRaw, ...rest] = args;
-
-  if (elmFilePathRaw === undefined || !elmFilePathRaw.endsWith(".elm")) {
-    console.error(
-      "You must pass an Elm file as the first argument. Got:",
-      elmFilePathRaw
-    );
-    process.exit(1);
-  }
-
-  if (isNonEmptyArray(rest)) {
-    console.error(`Expected a single argument, but got ${rest.length} extra.`);
+  if (!isNonEmptyArray(args)) {
+    console.error("You must pass at least one Elm file as the first argument.");
     process.exit(1);
   }
 
@@ -35,29 +31,48 @@ function run(args: Array<string>): void {
     path: { tag: "AbsolutePath", absolutePath: process.cwd() },
   };
 
-  const inputPath: InputPath = {
-    tag: "InputPath",
-    theInputPath: absolutePathFromString(cwd.path, elmFilePathRaw),
-    originalString: elmFilePathRaw,
-    realpath: absolutePathFromString(cwd.path, elmFilePathRaw),
-  };
-
-  const elmJsonPathRaw = findClosest(
-    "elm.json",
-    absoluteDirname(inputPath.theInputPath)
+  const inputPaths: NonEmptyArray<InputPath> = mapNonEmptyArray(
+    args,
+    (elmFilePathRaw) => ({
+      tag: "InputPath",
+      theInputPath: absolutePathFromString(cwd.path, elmFilePathRaw),
+      originalString: elmFilePathRaw,
+      realpath: absolutePathFromString(cwd.path, elmFilePathRaw),
+    })
   );
 
-  if (elmJsonPathRaw === undefined) {
+  const elmJsonPathsRaw = new HashSet(
+    mapNonEmptyArray(
+      inputPaths,
+      (inputPath) =>
+        findClosest("elm.json", absoluteDirname(inputPath.theInputPath)) ?? {
+          tag: "NotFound" as const,
+          inputPath,
+        }
+    )
+  );
+
+  const uniqueElmJsonPathRaw = getSetSingleton(elmJsonPathsRaw);
+
+  if (uniqueElmJsonPathRaw === undefined) {
     console.error(
-      "No elm.json found for:",
-      inputPath.theInputPath.absolutePath
+      "Could not find (a unique) elm.json for all of the input paths:",
+      inputPaths
+    );
+    process.exit(1);
+  }
+
+  if (uniqueElmJsonPathRaw.tag === "NotFound") {
+    console.error(
+      "Could not find elm.json for:",
+      uniqueElmJsonPathRaw.inputPath
     );
     process.exit(1);
   }
 
   const elmJsonPath = {
     tag: "ElmJsonPath" as const,
-    theElmJsonPath: elmJsonPathRaw,
+    theElmJsonPath: uniqueElmJsonPathRaw,
   };
 
   let elmJson;
@@ -80,10 +95,16 @@ function run(args: Array<string>): void {
 
   const sourceDirectories = getSourceDirectories(elmJsonPath, elmJson);
 
-  console.log("Elm file:", inputPath.theInputPath.absolutePath);
+  console.log(
+    "Elm file(s):",
+    mapNonEmptyArray(
+      inputPaths,
+      (inputPath) => inputPath.theInputPath.absolutePath
+    )
+  );
   console.log("elm.json:", elmJsonPath.theElmJsonPath.absolutePath);
   console.time("Run");
-  const result = walkImports(sourceDirectories, inputPath);
+  const result = walkImports(sourceDirectories, inputPaths);
   console.timeEnd("Run");
   switch (result.tag) {
     case "Success":

@@ -13,17 +13,20 @@ const FIXTURES_DIR: AbsolutePath = {
 
 function walkImportsHelper(
   fixture: string,
-  inputFile: string,
+  inputFiles: NonEmptyArray<string>,
   sourceDirectories: NonEmptyArray<string>
 ): string {
   const dir = absolutePathFromString(FIXTURES_DIR, fixture);
 
-  const inputPath: InputPath = {
-    tag: "InputPath",
-    theInputPath: absolutePathFromString(dir, inputFile),
-    originalString: inputFile,
-    realpath: absolutePathFromString(dir, inputFile),
-  };
+  const inputPaths: NonEmptyArray<InputPath> = mapNonEmptyArray(
+    inputFiles,
+    (inputFile) => ({
+      tag: "InputPath",
+      theInputPath: absolutePathFromString(dir, inputFile),
+      originalString: inputFile,
+      realpath: absolutePathFromString(dir, inputFile),
+    })
+  );
 
   const result = walkImports(
     mapNonEmptyArray(
@@ -33,7 +36,7 @@ function walkImportsHelper(
         theSourceDirectory: absolutePathFromString(dir, sourceDirectory),
       })
     ),
-    inputPath
+    inputPaths
   );
 
   switch (result.tag) {
@@ -52,7 +55,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("WalkImports", () => {
   test("diamond import tree", () => {
-    expect(walkImportsHelper("diamond", "Main.elm", ["."]))
+    expect(walkImportsHelper("diamond", ["Main.elm"], ["."]))
       .toMatchInlineSnapshot(`
       /diamond/Main.elm
       /diamond/Left.elm
@@ -63,11 +66,11 @@ describe("WalkImports", () => {
 
   test("multiple source directories", () => {
     expect(
-      walkImportsHelper("multiple-source-directories", "app/Main.elm", [
-        "app",
-        "body-parts",
-        "units",
-      ])
+      walkImportsHelper(
+        "multiple-source-directories",
+        ["app/Main.elm"],
+        ["app", "body-parts", "units"]
+      )
     ).toMatchInlineSnapshot(`
       /multiple-source-directories/app/Main.elm
       /multiple-source-directories/body-parts/Main.elm
@@ -102,9 +105,23 @@ describe("WalkImports", () => {
     `);
   });
 
+  test("multiple inputs", () => {
+    expect(
+      walkImportsHelper("multiple-inputs", ["App.elm", "Admin.elm"], ["."])
+    ).toMatchInlineSnapshot(`
+      /multiple-inputs/App.elm
+      /multiple-inputs/Admin.elm
+      /multiple-inputs/AppHelpers.elm
+      /multiple-inputs/Shared.elm
+      /multiple-inputs/Html.elm
+      /multiple-inputs/SharedHelpers.elm
+      /multiple-inputs/AdminHelpers.elm
+    `);
+  });
+
   test("duplicate imports", () => {
     expect(
-      walkImportsHelper("duplicate-imports", "DuplicateImports.elm", ["."])
+      walkImportsHelper("duplicate-imports", ["DuplicateImports.elm"], ["."])
     ).toMatchInlineSnapshot(`
       /duplicate-imports/DuplicateImports.elm
       /duplicate-imports/A.elm
@@ -116,7 +133,7 @@ describe("WalkImports", () => {
   test("ambiguous source directories", () => {
     expect(
       // Missing source directories don’t matter.
-      walkImportsHelper("anywhere", "Main.elm", [".", "src"])
+      walkImportsHelper("anywhere", ["Main.elm"], [".", "src"])
     ).toMatchInlineSnapshot(`
       /anywhere/Main.elm
       /anywhere/src/Main.elm
@@ -125,11 +142,11 @@ describe("WalkImports", () => {
 
   test("ambiguous source directories – more complex", () => {
     expect(
-      walkImportsHelper("anywhere", "src/App/Main.elm", [
-        "lib",
-        "src",
-        "src/App",
-      ])
+      walkImportsHelper(
+        "anywhere",
+        ["src/App/Main.elm"],
+        ["lib", "src", "src/App"]
+      )
     ).toMatchInlineSnapshot(`
       /anywhere/src/App/Main.elm
       /anywhere/lib/App/Main.elm
@@ -139,32 +156,54 @@ describe("WalkImports", () => {
     `);
   });
 
+  test("ambiguous source directories – multiple inputs", () => {
+    expect(
+      walkImportsHelper(
+        "anywhere",
+        ["src/App/Main.elm", "src/App/Other.elm"],
+        ["lib", "src", "src/App"]
+      )
+    ).toMatchInlineSnapshot(`
+      /anywhere/src/App/Main.elm
+      /anywhere/lib/App/Main.elm
+      /anywhere/src/App/App/Main.elm
+      /anywhere/lib/Main.elm
+      /anywhere/src/Main.elm
+      /anywhere/src/App/Other.elm
+      /anywhere/lib/App/Other.elm
+      /anywhere/src/App/App/Other.elm
+      /anywhere/lib/Other.elm
+      /anywhere/src/Other.elm
+    `);
+  });
+
   describe("cycles", () => {
     test("import self", () => {
       expect(
-        walkImportsHelper("cycles", "ImportSelf.elm", ["."])
+        walkImportsHelper("cycles", ["ImportSelf.elm"], ["."])
       ).toMatchInlineSnapshot(`/cycles/ImportSelf.elm`);
     });
 
     test("import self indirect", () => {
-      expect(walkImportsHelper("cycles", "ImportSelfIndirect.elm", ["."]))
+      expect(walkImportsHelper("cycles", ["ImportSelfIndirect.elm"], ["."]))
         .toMatchInlineSnapshot(`
-              /cycles/ImportSelfIndirect.elm
-              /cycles/ImportSelf.elm
-              /cycles/Other.elm
-          `);
+          /cycles/ImportSelfIndirect.elm
+          /cycles/ImportSelf.elm
+          /cycles/Other.elm
+        `);
     });
 
     test("import entrypoint indirect", () => {
-      expect(walkImportsHelper("cycles", "ImportEntryPointIndirect.elm", ["."]))
-        .toMatchInlineSnapshot(`
-              /cycles/ImportEntryPointIndirect.elm
-              /cycles/Sub.elm
-          `);
+      expect(
+        walkImportsHelper("cycles", ["ImportEntryPointIndirect.elm"], ["."])
+      ).toMatchInlineSnapshot(`
+        /cycles/ImportEntryPointIndirect.elm
+        /cycles/Sub.elm
+      `);
     });
 
     test("longer chains", () => {
-      expect(walkImportsHelper("cycles", "LongerChains.elm", ["."]))
+      expect(walkImportsHelper("cycles", ["LongerChains.elm"], ["."]))
         .toMatchInlineSnapshot(`
         /cycles/LongerChains.elm
         /cycles/A.elm
@@ -181,7 +220,7 @@ describe("WalkImports", () => {
 
   test("file is actually a directory", () => {
     expect(
-      walkImportsHelper("is-directory", "Main.elm", ["."])
+      walkImportsHelper("is-directory", ["Main.elm"], ["."])
     ).toMatchInlineSnapshot(`EISDIR: illegal operation on a directory, read`);
   });
 });
