@@ -70,13 +70,15 @@ export async function elmWatchCli(
 if (require.main === module) {
   elmWatchCli(process.argv.slice(2)).then(
     (exitCode) => {
+      // Let the process exit with this exit code when the event loop is empty.
       process.exitCode = exitCode;
     },
     (error: Error) => {
       process.stderr.write(
         `Unexpected error:\n${error.stack ?? error.message}\n`
       );
-      process.exitCode = 1;
+      // Forcefully exit since the watcher might still be running.
+      process.exit(1);
     }
   );
 }

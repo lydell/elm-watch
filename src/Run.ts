@@ -135,6 +135,7 @@ async function hot(
 ): Promise<number> {
   return new Promise((resolve, reject) => {
     let currentCompile: Promise<void> | undefined = undefined;
+    let panicked = false;
 
     const watcher = chokidar.watch(state.watchRoot.absolutePath, {
       ignoreInitial: true,
@@ -143,27 +144,8 @@ async function hot(
     });
 
     const panic = (error: Error): void => {
-      // `watcher.close()` sets `watcher.closed` immediately, and then does async stuff.
-      // `watcher.closed` is not in the type definition. `watcher._emit()`
-      // checks `watcher.closed` and does not emit events if `watcher.close()`
-      // has been called.
-      if ((watcher as chokidar.FSWatcher & { closed: boolean }).closed) {
-        reject(error);
-      } else {
-        watcher.close().then(
-          () => {
-            reject(error);
-          },
-          (error2) => {
-            /* eslint-disable no-console */
-            console.error("Panic: Failed to close watcher on error.");
-            console.error("Actual error:", error);
-            console.error("watcher.close() error:", error2);
-            /* eslint-enable no-console */
-            process.exit(1);
-          }
-        );
-      }
+      panicked = true;
+      reject(error);
     };
 
     const restart = (): void => {
@@ -198,7 +180,7 @@ async function hot(
     const onWatcherEvent =
       (event: "added" | "changed" | "removed") =>
       (absolutePathString: string): void => {
-        if (state.fullRestartRequested) {
+        if (state.fullRestartRequested || panicked) {
           return;
         }
 
