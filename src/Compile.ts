@@ -9,7 +9,7 @@ import { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
 import * as SpawnElm from "./SpawnElm";
-import { OutputState, OutputStatus, State } from "./State";
+import { OutputState, OutputStatus, someOutputIsDirty, State } from "./State";
 import {
   ElmJsonPath,
   InputPath,
@@ -466,17 +466,6 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
       })
     ),
   ];
-}
-
-function someOutputIsDirty(state: State): boolean {
-  for (const [, outputs] of state.elmJsons) {
-    for (const [, outputState] of outputs) {
-      if (outputState.dirty) {
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 function updateAllRelatedElmFilePaths(

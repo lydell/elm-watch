@@ -351,3 +351,14 @@ function resolveElmJson(
     inputs: inputs as NonEmptyArray<InputPath>,
   };
 }
+
+export function someOutputIsDirty(state: State): boolean {
+  for (const [, outputs] of state.elmJsons) {
+    for (const [, outputState] of outputs) {
+      if (outputState.dirty) {
+        return true;
+      }
+    }
+  }
+  return false;
+}

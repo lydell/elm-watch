@@ -203,16 +203,14 @@ async function hot(
         }
 
         if (absolutePathString.endsWith(".elm")) {
-          let dirty = false;
           for (const [, outputs] of state.elmJsons) {
             for (const [, outputState] of outputs) {
               if (outputState.allRelatedElmFilePaths.has(absolutePathString)) {
-                dirty = true;
                 outputState.dirty = true;
               }
             }
           }
-          if (dirty) {
+          if (State.someOutputIsDirty(state)) {
             runCompile();
             logger.error("Compiled!");
           } else {
@@ -233,6 +231,7 @@ async function hot(
               case "added":
                 restart();
                 return;
+
               case "changed":
               case "removed":
                 if (
@@ -249,7 +248,26 @@ async function hot(
               case "added":
                 restart();
                 return;
-              case "changed":
+
+              case "changed": {
+                for (const [elmJsonPath, outputs] of state.elmJsons) {
+                  if (
+                    absolutePathString ===
+                    elmJsonPath.theElmJsonPath.absolutePath
+                  ) {
+                    state.hasRunInstall = false;
+                    for (const [, outputState] of outputs) {
+                      outputState.dirty = true;
+                    }
+                  }
+                }
+                if (!state.hasRunInstall) {
+                  runCompile();
+                  logger.error("Compiled!");
+                }
+                return;
+              }
+
               case "removed":
                 if (
                   Array.from(state.elmJsons).some(
