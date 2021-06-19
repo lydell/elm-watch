@@ -140,21 +140,24 @@ export async function compile(
     )
   );
 
+  let highestSeenIndex = -1;
   const updateStatusLine = (
     outputPath: OutputPath,
     status: OutputStatus,
-    index?: number
+    index: number
   ): void => {
-    if (index !== undefined && isInteractive) {
+    const shouldMoveCursor = isInteractive && index <= highestSeenIndex;
+    if (shouldMoveCursor) {
       readline.moveCursor(logger.raw.stderr, 0, -toCompile.length + index);
       readline.clearLine(logger.raw.stderr, 0);
     }
     logger.error(
       statusLine(outputPath, status, logger.raw.stderrColumns, fancy)
     );
-    if (index !== undefined && isInteractive) {
+    if (shouldMoveCursor) {
       readline.moveCursor(logger.raw.stderr, 0, toCompile.length - index - 1);
     }
+    highestSeenIndex = Math.max(highestSeenIndex, index);
   };
 
   for (const { outputPath } of state.elmJsonsErrors) {
@@ -174,6 +177,9 @@ export async function compile(
         [elmJsonPath, outputPath, outputState],
         index: number
       ): Promise<void> => {
+        if (!outputState.dirty) {
+          updateStatusLine(outputPath, outputState.status, index);
+        }
         while (outputState.dirty) {
           // Watcher events that happen while waiting for `elm make` and
           // postprocessing can flip `dirty` back to `true`.
@@ -188,7 +194,7 @@ export async function compile(
               // operations results in many files being added/changed/deleted,
               // usually with 0-1 ms between each event.
               outputState.status = { tag: "Sleep" };
-              updateStatusLine(outputPath, outputState.status);
+              updateStatusLine(outputPath, outputState.status, index);
               await sleep(10);
               if (state.fullRestartRequested) {
                 return;
@@ -199,7 +205,7 @@ export async function compile(
               break;
           }
           outputState.status = { tag: "ElmMake" };
-          updateStatusLine(outputPath, outputState.status);
+          updateStatusLine(outputPath, outputState.status, index);
           const [elmMakeResult] = await Promise.all([
             SpawnElm.make({
               elmJsonPath,

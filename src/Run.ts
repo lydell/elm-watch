@@ -159,13 +159,19 @@ async function hot(
         readline.moveCursor(
           logger.raw.stderr,
           0,
-          -(lastInfoMessage.split("\n").length + 1)
+          -lastInfoMessage.split("\n").length
         );
         readline.clearScreenDown(logger.raw.stderr);
       }
       const fullMessage = infoMessage(getNow(), message);
       lastInfoMessage = fullMessage;
       logger.error(fullMessage);
+    };
+
+    const clearScreen = (): void => {
+      if (isInteractive) {
+        logger.raw.stderr.write(CLEAR);
+      }
     };
 
     const panic = (error: Error): void => {
@@ -177,7 +183,8 @@ async function hot(
       changedFile: "elm-tooling.json" | "elm.json",
       event: WatcherEvent
     ): void => {
-      logger.error(`${CLEAR}${restartMessage(changedFile, event)}`);
+      clearScreen();
+      logger.error(restartMessage(changedFile, event));
       state.fullRestartRequested = true;
       Promise.all([watcher.close(), currentCompile]).then(() => {
         passedRestart().then(resolve, reject);
@@ -186,7 +193,7 @@ async function hot(
 
     const runCompile = (): void => {
       if (currentCompile === undefined) {
-        logger.raw.stderr.write(CLEAR);
+        clearScreen();
         lastInfoMessage = undefined;
         const start = getNow();
         currentCompile = compile(env, logger, "hot", state).then(() => {
