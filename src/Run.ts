@@ -7,12 +7,19 @@ import { compile } from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
 import { HashSet } from "./HashSet";
-import { bold, CLEAR, dim, Env, formatTime } from "./Helpers";
+import { bold, dim, Env, formatTime } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, Cwd } from "./PathHelpers";
 import * as State from "./State";
-import type { CliArg, GetNow, OnIdle, OutputPath, RunMode } from "./Types";
+import type {
+  CliArg,
+  ElmToolingJsonPath,
+  GetNow,
+  OnIdle,
+  OutputPath,
+  RunMode,
+} from "./Types";
 
 export async function run(
   cwd: Cwd,
@@ -36,7 +43,13 @@ export async function run(
           parseResult.error
         )
       );
-      return 1;
+      return handleElmToolingJsonError(
+        1,
+        logger,
+        runMode,
+        restart,
+        parseResult.elmToolingJsonPath
+      );
 
     case "DecodeError":
       logger.errorTemplate(
@@ -45,7 +58,13 @@ export async function run(
           parseResult.error
         )
       );
-      return 1;
+      return handleElmToolingJsonError(
+        1,
+        logger,
+        runMode,
+        restart,
+        parseResult.elmToolingJsonPath
+      );
 
     case "ElmToolingJsonNotFound":
       logger.errorTemplate(Errors.elmToolingJsonNotFound(cwd, args));
@@ -168,12 +187,6 @@ async function hot(
       logger.error(fullMessage);
     };
 
-    const clearScreen = (): void => {
-      if (isInteractive) {
-        logger.raw.stderr.write(CLEAR);
-      }
-    };
-
     const panic = (error: Error): void => {
       panicked = true;
       reject(error);
@@ -183,8 +196,10 @@ async function hot(
       changedFile: "elm-tooling.json" | "elm.json",
       event: WatcherEvent
     ): void => {
-      clearScreen();
-      logger.error(restartMessage(changedFile, event));
+      logger.clearScreen();
+      if (currentCompile !== undefined) {
+        logger.error(restartMessage(changedFile, event));
+      }
       state.fullRestartRequested = true;
       Promise.all([watcher.close(), currentCompile]).then(() => {
         passedRestart().then(resolve, reject);
@@ -193,7 +208,7 @@ async function hot(
 
     const runCompile = (): void => {
       if (currentCompile === undefined) {
-        clearScreen();
+        logger.clearScreen();
         lastInfoMessage = undefined;
         const start = getNow();
         currentCompile = compile(env, logger, "hot", state).then(() => {
@@ -310,6 +325,40 @@ async function hot(
 
     runCompile();
   });
+}
+
+async function handleElmToolingJsonError(
+  exitCode: number,
+  logger: Logger,
+  runMode: RunMode,
+  restart: () => Promise<number>,
+  elmToolingJsonPath: ElmToolingJsonPath
+): Promise<number> {
+  switch (runMode) {
+    case "make":
+      return exitCode;
+
+    case "hot":
+      return new Promise((resolve, reject) => {
+        const watcher = chokidar.watch(
+          elmToolingJsonPath.theElmToolingJsonPath.absolutePath,
+          {
+            ignoreInitial: true,
+            disableGlobbing: true,
+          }
+        );
+
+        const onWatcherEvent = (): void => {
+          logger.clearScreen();
+          watcher.close().then(restart).then(resolve, reject);
+        };
+
+        watcher.on("add", onWatcherEvent);
+        watcher.on("change", onWatcherEvent);
+        watcher.on("unlink", onWatcherEvent);
+        watcher.on("error", reject);
+      });
+  }
 }
 
 function infoMessage(date: Date, message: string): string {

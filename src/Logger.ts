@@ -1,11 +1,12 @@
 import { ErrorTemplate } from "./Errors";
-import { Env, removeColor, WriteStream } from "./Helpers";
+import { CLEAR, Env, removeColor, WriteStream } from "./Helpers";
 
 export type Logger = {
   handleColor: (string: string) => string;
   log: (message: string) => void;
   error: (message: string) => void;
   errorTemplate: (template: ErrorTemplate) => void;
+  clearScreen: () => void;
   raw: {
     NO_COLOR: boolean;
     stdout: WriteStream;
@@ -40,6 +41,11 @@ export function makeLogger({
     },
     errorTemplate(template) {
       stderr.write(`${handleColor(template(stderrColumns))}\n`);
+    },
+    clearScreen(): void {
+      if (stderr.isTTY) {
+        stderr.write(CLEAR);
+      }
     },
     raw: {
       NO_COLOR,
