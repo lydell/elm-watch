@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as Decode from "tiny-decoders";
 
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -14,6 +15,55 @@ export const ElmJson = Decode.fieldsUnion("type", {
     tag: "Package" as const,
   }),
 });
+
+export type ParseResult =
+  | ParseError
+  | {
+      tag: "Parsed";
+      elmJson: ElmJson;
+    };
+
+export type ParseError =
+  | {
+      tag: "ElmJsonDecodeError";
+      elmJsonPath: ElmJsonPath;
+      error: Decode.DecoderError;
+    }
+  | {
+      tag: "ElmJsonReadAsJsonError";
+      elmJsonPath: ElmJsonPath;
+      error: Error;
+    };
+
+export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
+  let json: unknown = undefined;
+  try {
+    json = JSON.parse(
+      fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf-8")
+    );
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    return {
+      tag: "ElmJsonReadAsJsonError",
+      elmJsonPath,
+      error,
+    };
+  }
+
+  try {
+    return {
+      tag: "Parsed",
+      elmJson: ElmJson(json),
+    };
+  } catch (errorAny) {
+    const error = errorAny as Decode.DecoderError;
+    return {
+      tag: "ElmJsonDecodeError",
+      elmJsonPath,
+      error,
+    };
+  }
+}
 
 export function getSourceDirectories(
   elmJsonPath: ElmJsonPath,

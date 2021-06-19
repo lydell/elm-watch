@@ -1,3 +1,4 @@
+import * as ElmJson from "./ElmJson";
 import * as ElmToolingJson from "./ElmToolingJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
@@ -51,9 +52,11 @@ export type OutputState = {
 };
 
 export type OutputStatus =
+  | ElmJson.ParseError
   | ElmMakeResult
   | PostprocessResult
   | { tag: "ElmMake" }
+  | { tag: "ImportWalkerFileSystemError"; error: Error }
   | { tag: "NotWrittenToDisk" }
   | { tag: "Postprocess" };
 

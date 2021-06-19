@@ -214,8 +214,9 @@ async function hot(
           }
           if (dirty) {
             runCompile();
+            logger.error("Compiled!");
           } else {
-            // TODO: Better log. Show which file? Overwrite previous. Show time? Also show time on last ran compilation.
+            // TODO: Better log. Show which file? Overwrite previous. Show time? Also show time on last ran compilation (above).
             // Can show extra message if state.disabledOutputs isn’t empty
             logger.error(
               `An Elm file was ${event}, but it did not affect any enabled outputs.`

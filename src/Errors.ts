@@ -652,6 +652,52 @@ ${message}
 `;
 }
 
+export function readElmJsonAsJson(
+  elmJsonPath: ElmJsonPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError("TROUBLE READING elm.json", elmJsonPath)`
+I read "source-directories" from ${elmJson} when figuring out all Elm files that
+your inputs depend on.
+
+${bold("I had trouble reading it as JSON:")}
+
+${error.message}
+
+(I still managed to compile your code, but the watcher will not work properly.)
+`;
+}
+
+export function decodeElmJson(
+  elmJsonPath: ElmJsonPath,
+  error: DecoderError
+): ErrorTemplate {
+  return fancyError("INVALID elm.json FORMAT", elmJsonPath)`
+I read "source-directories" from ${elmJson} when figuring out all Elm files that
+your inputs depend on.
+
+${bold("I had trouble with the JSON inside:")}
+
+${error.format()}
+
+(I still managed to compile your code, but the watcher will not work properly.)
+`;
+}
+
+export function importWalkerFileSystemError(
+  outputPath: OutputPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError("INVALID elm.json FORMAT", outputPath)`
+When figuring out all Elm files that your inputs depend on I read a lot of Elm files.
+Doing so I encountered this error:
+
+${error.message}
+
+(I still managed to compile your code, but the watcher will not work properly.)
+`;
+}
+
 function printPATH(env: Env): string {
   const pathKey = getPathKey({ env });
   const { [pathKey]: PATH } = env;

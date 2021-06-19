@@ -1,14 +1,22 @@
 import * as readline from "readline";
 
+import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
 import { bold, Env, IS_WINDOWS, join } from "./Helpers";
+import { walkImports } from "./ImportWalker";
 import { Logger } from "./Logger";
-import { isNonEmptyArray } from "./NonEmptyArray";
+import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
 import * as SpawnElm from "./SpawnElm";
-import { OutputStatus, State } from "./State";
-import { OutputPath, outputPathToOriginalString, RunMode } from "./Types";
+import { OutputState, OutputStatus, State } from "./State";
+import {
+  ElmJsonPath,
+  InputPath,
+  OutputPath,
+  outputPathToOriginalString,
+  RunMode,
+} from "./Types";
 
 export async function compile(
   env: Env,
@@ -190,9 +198,11 @@ export async function compile(
                   // chance to compute this the first time (during packages
                   // installation or `elm make` above). Everything is marked as
                   // dirty by default anyway and will get compiled.
-                  // TODO: Read elm.json, walkImports – for all inputs! Need a smarter way there
-                  // Maybe walkImports should take a NonEmptyArray of inputs
-                  // outputState.allRelatedElmFilePaths = walkImports();
+                  updateAllRelatedElmFilePaths(
+                    elmJsonPath,
+                    outputState.inputs,
+                    outputState
+                  );
                   return;
               }
             }),
@@ -296,6 +306,9 @@ function statusLine(
     case "ElmMakeJsonParseError":
     case "ElmMakeError":
     case "ElmJsonsErrors":
+    case "ElmJsonReadAsJsonError":
+    case "ElmJsonDecodeError":
+    case "ImportWalkerFileSystemError":
       return truncate(fancy ? `🚨 ${output}` : `${output}: error`);
   }
 }
@@ -440,6 +453,15 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
                   )
                 );
             }
+
+          case "ElmJsonReadAsJsonError":
+            return Errors.readElmJsonAsJson(status.elmJsonPath, status.error);
+
+          case "ElmJsonDecodeError":
+            return Errors.decodeElmJson(status.elmJsonPath, status.error);
+
+          case "ImportWalkerFileSystemError":
+            return Errors.importWalkerFileSystemError(outputPath, status.error);
         }
       })
     ),
@@ -455,4 +477,41 @@ function someOutputIsDirty(state: State): boolean {
     }
   }
   return false;
+}
+
+function updateAllRelatedElmFilePaths(
+  elmJsonPath: ElmJsonPath,
+  inputs: NonEmptyArray<InputPath>,
+  outputState: OutputState
+): void {
+  const parseResult = ElmJson.readAndParse(elmJsonPath);
+
+  switch (parseResult.tag) {
+    case "Parsed": {
+      const importWalkerResult = walkImports(
+        ElmJson.getSourceDirectories(elmJsonPath, parseResult.elmJson),
+        inputs
+      );
+
+      switch (importWalkerResult.tag) {
+        case "Success":
+          outputState.allRelatedElmFilePaths =
+            importWalkerResult.allRelatedElmFilePaths;
+          return;
+
+        case "FileSystemError":
+          outputState.allRelatedElmFilePaths = new Set();
+          outputState.status = {
+            tag: "ImportWalkerFileSystemError",
+            error: importWalkerResult.error,
+          };
+          return;
+      }
+    }
+
+    default:
+      outputState.allRelatedElmFilePaths = new Set();
+      outputState.status = parseResult;
+      return;
+  }
 }
