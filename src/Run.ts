@@ -144,6 +144,7 @@ export async function run(
               switch (runMode) {
                 case "make":
                   return compile(env, logger, runMode, initStateResult.state);
+
                 case "hot":
                   return hot(
                     env,
@@ -203,7 +204,9 @@ async function hot(
   const isInteractive = logger.raw.stderr.isTTY;
 
   return new Promise((resolve, reject) => {
-    let currentCompile: Promise<void> | undefined = undefined;
+    let currentCompile:
+      | { promise: Promise<void>; events: Array<WatcherEvent> }
+      | undefined = undefined;
     let lastInfoMessage: string | undefined = undefined;
 
     const watcher = chokidar.watch(state.watchRoot.absolutePath, {
@@ -261,12 +264,18 @@ async function hot(
         logger.clearScreen();
         lastInfoMessage = undefined;
         const start = getNow();
-        currentCompile = compile(env, logger, "hot", state).then(() => {
-          currentCompile = undefined;
-          const duration = getNow().getTime() - start.getTime();
-          logInfoMessageWithTimeline(compileFinishedMessage(duration), events);
-          runOnIdle();
-        }, reject);
+        currentCompile = {
+          events, // Watcher events can push to this array.
+          promise: compile(env, logger, "hot", state).then(() => {
+            currentCompile = undefined;
+            const duration = getNow().getTime() - start.getTime();
+            logInfoMessageWithTimeline(
+              compileFinishedMessage(duration),
+              events
+            );
+            runOnIdle();
+          }, reject),
+        };
       }
     };
 
@@ -289,7 +298,7 @@ async function hot(
               events
             );
           }
-          Promise.all([watcher.close(), currentCompile]).then(() => {
+          Promise.all([watcher.close(), currentCompile?.promise]).then(() => {
             passedRestart(events).then(resolve, reject);
           }, reject);
           break;
@@ -361,22 +370,27 @@ async function hot(
       }
 
       if (dirty) {
-        switch (passedNextAction.tag) {
-          case "Restart":
-            return passedNextAction;
+        if (currentCompile === undefined) {
+          switch (passedNextAction.tag) {
+            case "Restart":
+              return passedNextAction;
 
-          case "Compile":
-            return {
-              tag: "Compile",
-              events: [...passedNextAction.events, event],
-            };
+            case "Compile":
+              return {
+                tag: "Compile",
+                events: [...passedNextAction.events, event],
+              };
 
-          case "NoAction":
-          case "PrintNonInterestingEvents":
-            return {
-              tag: "Compile",
-              events: [event],
-            };
+            case "NoAction":
+            case "PrintNonInterestingEvents":
+              return {
+                tag: "Compile",
+                events: [event],
+              };
+          }
+        } else {
+          currentCompile.events.push(event);
+          return passedNextAction;
         }
       } else if (currentCompile === undefined) {
         switch (passedNextAction.tag) {
