@@ -3,14 +3,7 @@ import * as readline from "readline";
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import {
-  bold,
-  Env,
-  IS_WINDOWS,
-  join,
-  sleep,
-  WATCHER_SLEEP_MS,
-} from "./Helpers";
+import { bold, Env, IS_WINDOWS, join } from "./Helpers";
 import { walkImports } from "./ImportWalker";
 import { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -191,26 +184,6 @@ export async function compile(
           // Watcher events that happen while waiting for `elm make` and
           // postprocessing can flip `dirty` back to `true`.
           outputState.dirty = false;
-          switch (runMode) {
-            case "make":
-              break;
-            case "hot":
-              // Sleep for a little bit in hot mode to avoid unnecessary
-              // recompilation when using “save all” in an editor, or when
-              // running `git switch some-branch` or `git restore .`. These
-              // operations results in many files being added/changed/deleted,
-              // usually with 0-1 ms between each event.
-              outputState.status = { tag: "Sleep" };
-              updateStatusLine(outputPath, outputState.status, index);
-              await sleep(WATCHER_SLEEP_MS);
-              if (state.fullRestartRequested) {
-                return;
-              }
-              if (outputState.dirty) {
-                continue;
-              }
-              break;
-          }
           outputState.status = { tag: "ElmMake" };
           updateStatusLine(outputPath, outputState.status, index);
           const [elmMakeResult] = await Promise.all([
@@ -324,9 +297,6 @@ function statusLine(
     case "Success":
       return truncate(fancy ? `✅ ${output}` : `${output}: success`);
 
-    case "Sleep":
-      return truncate(`${fancy ? "⏳ " : ""}${output}`);
-
     case "ElmMake":
       return truncate(`${fancy ? "⏳ " : ""}${output}: elm make`);
 
@@ -390,10 +360,6 @@ function extractErrors(state: State): Array<Errors.ErrorTemplate> {
         switch (status.tag) {
           case "NotWrittenToDisk":
             return [];
-
-          // istanbul ignore next
-          case "Sleep":
-            return Errors.stuckInProgressState(outputPath, "sleep");
 
           // istanbul ignore next
           case "ElmMake":

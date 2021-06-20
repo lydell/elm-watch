@@ -7,9 +7,13 @@ import { compile } from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
 import { HashSet } from "./HashSet";
-import { bold, dim, Env, formatTime, join, WATCHER_SLEEP_MS } from "./Helpers";
+import { bold, dim, Env, formatTime, join } from "./Helpers";
 import type { Logger } from "./Logger";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import {
+  isNonEmptyArray,
+  mapNonEmptyArray,
+  NonEmptyArray,
+} from "./NonEmptyArray";
 import { AbsolutePath, Cwd } from "./PathHelpers";
 import * as State from "./State";
 import {
@@ -22,7 +26,9 @@ import {
   RunMode,
 } from "./Types";
 
-type Restart = (nextRestartReason: WatcherEvent) => Promise<number>;
+type Restart = (
+  nextRestartReason: NonEmptyArray<WatcherEvent>
+) => Promise<number>;
 
 export async function run(
   cwd: Cwd,
@@ -32,10 +38,10 @@ export async function run(
   onIdle: OnIdle | undefined,
   runMode: RunMode,
   args: Array<CliArg>,
-  restartReason?: WatcherEvent
+  restartReasons: Array<WatcherEvent>
 ): Promise<number> {
-  const restart: Restart = (nextRestartReason) =>
-    run(cwd, env, logger, getNow, onIdle, runMode, args, nextRestartReason);
+  const restart: Restart = (nextRestartReasons) =>
+    run(cwd, env, logger, getNow, onIdle, runMode, args, nextRestartReasons);
 
   const parseResult = ElmToolingJson.findReadAndParse(cwd);
 
@@ -145,7 +151,7 @@ export async function run(
                     getNow,
                     onIdle,
                     restart,
-                    restartReason,
+                    restartReasons,
                     initStateResult.state
                   );
               }
@@ -165,26 +171,40 @@ type WatcherEvent = {
   file: AbsolutePath;
 };
 
+type NextAction =
+  | {
+      tag: "Compile";
+      events: NonEmptyArray<WatcherEvent>;
+    }
+  | {
+      tag: "NoAction";
+    }
+  | {
+      tag: "PrintNonInterestingEvents";
+      events: NonEmptyArray<WatcherEvent>;
+    }
+  | {
+      tag: "Restart";
+      eventsWithMessages: NonEmptyArray<{
+        event: WatcherEvent;
+        message: string;
+      }>;
+    };
+
 async function hot(
   env: Env,
   logger: Logger,
   getNow: GetNow,
   onIdle: OnIdle | undefined,
   passedRestart: Restart,
-  passedRestartReason: WatcherEvent | undefined,
+  passedRestartReasons: Array<WatcherEvent>,
   state: State.State
 ): Promise<number> {
   const isInteractive = logger.raw.stderr.isTTY;
 
   return new Promise((resolve, reject) => {
     let currentCompile: Promise<void> | undefined = undefined;
-    let panicked = false;
     let lastInfoMessage: string | undefined = undefined;
-    let lastBatchOfEvents: Array<WatcherEvent> =
-      passedRestartReason === undefined ? [] : [passedRestartReason];
-    let lastBatchOfNotInterestingEvents: Array<WatcherEvent> = [];
-    let printNonInterestingEventsTimeoutId: NodeJS.Timeout | undefined =
-      undefined;
 
     const watcher = chokidar.watch(state.watchRoot.absolutePath, {
       ignoreInitial: true,
@@ -209,36 +229,34 @@ async function hot(
       logger.error(fullMessage);
     };
 
-    const maybePrintNonInterestingEvents = (): void => {
-      if (isNonEmptyArray(lastBatchOfNotInterestingEvents)) {
-        logInfoMessageWithTimeline(
-          notInterestingElmFileChangedMessage(
-            lastBatchOfNotInterestingEvents,
-            state.disabledOutputs
-          ),
-          lastBatchOfNotInterestingEvents
-        );
-        lastBatchOfNotInterestingEvents = [];
+    const restart = (
+      message: string,
+      event: WatcherEvent,
+      nextAction: NextAction
+    ): NextAction => ({
+      tag: "Restart",
+      eventsWithMessages:
+        nextAction.tag === "Restart"
+          ? [...nextAction.eventsWithMessages, { event, message }]
+          : [{ event, message }],
+    });
+
+    const runOnIdle = (): void => {
+      if (onIdle !== undefined && !state.fullRestartRequested) {
+        const response = onIdle();
+        switch (response) {
+          case "KeepGoing":
+            return;
+          case "Stop":
+            watcher.close().then(() => {
+              resolve(0);
+            }, reject);
+            return;
+        }
       }
     };
 
-    const panic = (error: Error): void => {
-      panicked = true;
-      reject(error);
-    };
-
-    const restart = (message: string, event: WatcherEvent): void => {
-      logger.clearScreen();
-      if (currentCompile !== undefined) {
-        logInfoMessageWithTimeline(message, [event]);
-      }
-      state.fullRestartRequested = true;
-      Promise.all([watcher.close(), currentCompile]).then(() => {
-        passedRestart(event).then(resolve, reject);
-      }, panic);
-    };
-
-    const runCompile = (): void => {
+    const runCompile = (events: Array<WatcherEvent>): void => {
       if (currentCompile === undefined) {
         logger.clearScreen();
         lastInfoMessage = undefined;
@@ -246,24 +264,51 @@ async function hot(
         currentCompile = compile(env, logger, "hot", state).then(() => {
           currentCompile = undefined;
           const duration = getNow().getTime() - start.getTime();
-          logInfoMessageWithTimeline(
-            compileFinishedMessage(duration),
-            lastBatchOfEvents
+          logInfoMessageWithTimeline(compileFinishedMessage(duration), events);
+          runOnIdle();
+        }, reject);
+      }
+    };
+
+    const runNextAction = (nextAction: NextAction): void => {
+      switch (nextAction.tag) {
+        case "NoAction":
+          break;
+
+        case "Restart": {
+          const { eventsWithMessages } = nextAction;
+          const events = mapNonEmptyArray(
+            eventsWithMessages,
+            ({ event }) => event
           );
-          lastBatchOfEvents = [];
-          if (onIdle !== undefined && !state.fullRestartRequested) {
-            const response = onIdle();
-            switch (response) {
-              case "KeepGoing":
-                return;
-              case "Stop":
-                watcher.close().then(() => {
-                  resolve(0);
-                }, panic);
-                return;
-            }
+          logger.clearScreen();
+          lastInfoMessage = undefined;
+          if (currentCompile !== undefined) {
+            logInfoMessageWithTimeline(
+              restartingMessage(eventsWithMessages),
+              events
+            );
           }
-        }, panic);
+          Promise.all([watcher.close(), currentCompile]).then(() => {
+            passedRestart(events).then(resolve, reject);
+          }, reject);
+          break;
+        }
+
+        case "Compile":
+          runCompile(nextAction.events);
+          break;
+
+        case "PrintNonInterestingEvents":
+          logInfoMessageWithTimeline(
+            notInterestingElmFileChangedMessage(
+              nextAction.events,
+              state.disabledOutputs
+            ),
+            nextAction.events
+          );
+          runOnIdle();
+          break;
       }
     };
 
@@ -279,128 +324,195 @@ async function hot(
       },
     });
 
-    const onWatcherEvent =
-      (eventName: WatcherEventName) =>
-      (absolutePathString: string): void => {
-        if (state.fullRestartRequested || panicked) {
-          return;
+    const onWatcherEvent = (
+      eventName: WatcherEventName,
+      absolutePathString: string,
+      passedNextAction: NextAction
+    ): NextAction | undefined => {
+      if (absolutePathString.endsWith(".elm")) {
+        const event = makeEvent(eventName, absolutePathString);
+        const elmFile = event.file;
+
+        if (isRelatedToElmJsonsErrors(elmFile, state.elmJsonsErrors)) {
+          return restart(
+            restartBecauseRelatedToElmJsonsErrorsMessage(eventName),
+            event,
+            passedNextAction
+          );
         }
 
-        if (absolutePathString.endsWith(".elm")) {
-          const event = makeEvent(eventName, absolutePathString);
-          const elmFile = event.file;
+        let dirty = false;
 
-          if (isRelatedToElmJsonsErrors(elmFile, state.elmJsonsErrors)) {
-            restart(
-              restartBecauseRelatedToElmJsonsErrorsMessage(eventName),
-              event
-            );
-            return;
-          }
-
-          let dirty = false;
-          for (const [, outputs] of state.elmJsons) {
-            for (const [, outputState] of outputs) {
-              if (eventName === "removed") {
-                for (const inputPath of outputState.inputs) {
-                  if (equalsInputPath(elmFile, inputPath)) {
-                    restart(restartBecauseInputWasRemovedMessage(), event);
-                    return;
-                  }
+        for (const [, outputs] of state.elmJsons) {
+          for (const [, outputState] of outputs) {
+            if (eventName === "removed") {
+              for (const inputPath of outputState.inputs) {
+                if (equalsInputPath(elmFile, inputPath)) {
+                  return restart(
+                    restartBecauseInputWasRemovedMessage(),
+                    event,
+                    passedNextAction
+                  );
                 }
               }
+            }
+            if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
+              dirty = true;
+              outputState.dirty = true;
+            }
+          }
+        }
+
+        if (dirty) {
+          switch (passedNextAction.tag) {
+            case "Restart":
+              return passedNextAction;
+
+            case "Compile":
+              return {
+                tag: "Compile",
+                events: [...passedNextAction.events, event],
+              };
+
+            case "NoAction":
+            case "PrintNonInterestingEvents":
+              return {
+                tag: "Compile",
+                events: [event],
+              };
+          }
+        } else if (currentCompile === undefined) {
+          switch (passedNextAction.tag) {
+            case "Restart":
+            case "Compile":
+              return passedNextAction;
+
+            case "NoAction":
+              return {
+                tag: "PrintNonInterestingEvents",
+                events: [event],
+              };
+
+            case "PrintNonInterestingEvents":
+              return {
+                tag: "PrintNonInterestingEvents",
+                events: [...passedNextAction.events, event],
+              };
+          }
+        } else {
+          return undefined;
+        }
+      }
+
+      const basename = path.basename(absolutePathString);
+
+      switch (basename) {
+        case "elm-tooling.json":
+          switch (eventName) {
+            case "added":
+              return restart(
+                restartBecauseJsonFileChangedMessage(basename, eventName),
+                makeEvent(eventName, absolutePathString),
+                passedNextAction
+              );
+
+            case "changed":
+            case "removed":
               if (
-                outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)
+                absolutePathString ===
+                state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
               ) {
-                dirty = true;
-                outputState.dirty = true;
+                return restart(
+                  restartBecauseJsonFileChangedMessage(basename, eventName),
+                  makeEvent(eventName, absolutePathString),
+                  passedNextAction
+                );
               }
-            }
+              return undefined;
           }
-          if (dirty) {
-            lastBatchOfNotInterestingEvents = [];
-            lastBatchOfEvents.push(event);
-            runCompile();
-          } else if (currentCompile === undefined) {
-            lastBatchOfNotInterestingEvents.push(event);
-            if (printNonInterestingEventsTimeoutId !== undefined) {
-              clearTimeout(printNonInterestingEventsTimeoutId);
-            }
-            printNonInterestingEventsTimeoutId = setTimeout(() => {
-              printNonInterestingEventsTimeoutId = undefined;
-              maybePrintNonInterestingEvents();
-            }, WATCHER_SLEEP_MS);
+
+        case "elm.json":
+          switch (eventName) {
+            case "added":
+              return restart(
+                restartBecauseJsonFileChangedMessage(basename, eventName),
+                makeEvent(eventName, absolutePathString),
+                passedNextAction
+              );
+
+            case "changed":
+            case "removed":
+              if (
+                Array.from(state.elmJsons).some(
+                  ([elmJsonPath]) =>
+                    absolutePathString ===
+                    elmJsonPath.theElmJsonPath.absolutePath
+                )
+              ) {
+                return restart(
+                  restartBecauseJsonFileChangedMessage(basename, eventName),
+                  makeEvent(eventName, absolutePathString),
+                  passedNextAction
+                );
+              }
+              return undefined;
           }
-          return;
-        }
 
-        const basename = path.basename(absolutePathString);
+        default:
+          // Ignore other types of files.
+          return undefined;
+      }
+    };
 
-        switch (basename) {
-          case "elm-tooling.json":
-            switch (eventName) {
-              case "added":
-                restart(
-                  restartBecauseJsonFileChangedMessage(basename, eventName),
-                  makeEvent(eventName, absolutePathString)
-                );
-                return;
+    {
+      let nextAction: NextAction = { tag: "NoAction" };
+      let watcherTimeoutId: NodeJS.Timeout | undefined;
 
-              case "changed":
-              case "removed":
-                if (
-                  absolutePathString ===
-                  state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
-                ) {
-                  restart(
-                    restartBecauseJsonFileChangedMessage(basename, eventName),
-                    makeEvent(eventName, absolutePathString)
-                  );
-                }
-                return;
-            }
+      const onWatcherEventWrapper =
+        (eventName: WatcherEventName) =>
+        (absolutePathString: string): void => {
+          const updatedNextAction = onWatcherEvent(
+            eventName,
+            absolutePathString,
+            nextAction
+          );
 
-          case "elm.json":
-            switch (eventName) {
-              case "added":
-                restart(
-                  restartBecauseJsonFileChangedMessage(basename, eventName),
-                  makeEvent(eventName, absolutePathString)
-                );
-                return;
-
-              case "changed":
-              case "removed":
-                if (
-                  Array.from(state.elmJsons).some(
-                    ([elmJsonPath]) =>
-                      absolutePathString ===
-                      elmJsonPath.theElmJsonPath.absolutePath
-                  )
-                ) {
-                  restart(
-                    restartBecauseJsonFileChangedMessage(basename, eventName),
-                    makeEvent(eventName, absolutePathString)
-                  );
-                }
-                return;
-            }
-
-          default:
-            // Ignore other types of files.
+          if (updatedNextAction === undefined) {
             return;
-        }
-      };
+          }
 
-    watcher.on("add", onWatcherEvent("added"));
-    watcher.on("change", onWatcherEvent("changed"));
-    watcher.on("unlink", onWatcherEvent("removed"));
+          if (updatedNextAction.tag === "Restart") {
+            state.fullRestartRequested = true;
+          }
 
-    // As far as I can tell, the watcher is never supposed to emit error events
-    // during normal operation.
-    watcher.on("error", panic);
+          nextAction = updatedNextAction;
 
-    runCompile();
+          if (watcherTimeoutId !== undefined) {
+            clearTimeout(watcherTimeoutId);
+          }
+
+          // Sleep for a little bit in hot mode to avoid unnecessary
+          // recompilation when using “save all” in an editor, or when running
+          // `git switch some-branch` or `git restore .`. These operations
+          // results in many files being added/changed/deleted, usually with
+          // 0-1 ms between each event.
+          setTimeout(() => {
+            watcherTimeoutId = undefined;
+            runNextAction(nextAction);
+            nextAction = { tag: "NoAction" };
+          }, 10);
+        };
+
+      watcher.on("add", onWatcherEventWrapper("added"));
+      watcher.on("change", onWatcherEventWrapper("changed"));
+      watcher.on("unlink", onWatcherEventWrapper("removed"));
+
+      // As far as I can tell, the watcher is never supposed to emit error events
+      // during normal operation.
+      watcher.on("error", reject);
+    }
+
+    runCompile(passedRestartReasons);
   });
 }
 
@@ -434,14 +546,16 @@ async function handleElmToolingJsonError(
             watcher
               .close()
               .then(() =>
-                restart({
-                  date: now,
-                  eventName,
-                  file: {
-                    tag: "AbsolutePath",
-                    absolutePath: absolutePathString,
+                restart([
+                  {
+                    date: now,
+                    eventName,
+                    file: {
+                      tag: "AbsolutePath",
+                      absolutePath: absolutePathString,
+                    },
                   },
-                })
+                ])
               )
               .then(resolve, reject);
           };
@@ -553,17 +667,29 @@ function restartBecauseJsonFileChangedMessage(
   changedFile: "elm-tooling.json" | "elm.json",
   eventName: WatcherEventName
 ): string {
-  return `An ${bold(changedFile)} file ${eventName}. Restarting!`;
+  return `An ${bold(changedFile)} file ${eventName}.`;
 }
 
 function restartBecauseRelatedToElmJsonsErrorsMessage(
   eventName: WatcherEventName
 ): string {
-  return `A problematic input Elm file was ${eventName}. Restarting!`;
+  return `A problematic input Elm file was ${eventName}.`;
 }
 
 function restartBecauseInputWasRemovedMessage(): string {
-  return "An input Elm file was removed. Restarting!";
+  return "An input Elm file was removed.";
+}
+
+function restartingMessage(
+  events: NonEmptyArray<{ event: WatcherEvent; message: string }>
+): string {
+  return join(
+    [
+      ...new Set(mapNonEmptyArray(events, ({ message }) => message)),
+      "Restarting!",
+    ],
+    "\n"
+  );
 }
 
 function compileFinishedMessage(duration: number): string {

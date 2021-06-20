@@ -59,7 +59,8 @@ export async function elmWatchCli(
         getNow,
         onIdle,
         args[0],
-        args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg }))
+        args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg })),
+        []
       );
 
     default:

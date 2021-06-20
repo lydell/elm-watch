@@ -59,12 +59,3 @@ export function formatTime(date: Date): string {
     ":"
   );
 }
-
-// See Compile.ts for what this is.
-export const WATCHER_SLEEP_MS = 10;
-
-export async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}

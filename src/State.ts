@@ -60,8 +60,7 @@ export type OutputStatus =
   | { tag: "ElmMake" }
   | { tag: "ImportWalkerFileSystemError"; error: Error }
   | { tag: "NotWrittenToDisk" }
-  | { tag: "Postprocess" }
-  | { tag: "Sleep" };
+  | { tag: "Postprocess" };
 
 type ElmJsonError =
   | {
