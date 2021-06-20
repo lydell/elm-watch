@@ -324,84 +324,93 @@ async function hot(
       },
     });
 
+    const onElmFileWatcherEvent = (
+      event: WatcherEvent,
+      passedNextAction: NextAction
+    ): NextAction | undefined => {
+      const elmFile = event.file;
+
+      if (isRelatedToElmJsonsErrors(elmFile, state.elmJsonsErrors)) {
+        return restart(
+          restartBecauseRelatedToElmJsonsErrorsMessage(event.eventName),
+          event,
+          passedNextAction
+        );
+      }
+
+      let dirty = false;
+
+      for (const [, outputs] of state.elmJsons) {
+        for (const [, outputState] of outputs) {
+          if (event.eventName === "removed") {
+            for (const inputPath of outputState.inputs) {
+              if (equalsInputPath(elmFile, inputPath)) {
+                return restart(
+                  restartBecauseInputWasRemovedMessage(),
+                  event,
+                  passedNextAction
+                );
+              }
+            }
+          }
+          if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
+            dirty = true;
+            outputState.dirty = true;
+          }
+        }
+      }
+
+      if (dirty) {
+        switch (passedNextAction.tag) {
+          case "Restart":
+            return passedNextAction;
+
+          case "Compile":
+            return {
+              tag: "Compile",
+              events: [...passedNextAction.events, event],
+            };
+
+          case "NoAction":
+          case "PrintNonInterestingEvents":
+            return {
+              tag: "Compile",
+              events: [event],
+            };
+        }
+      } else if (currentCompile === undefined) {
+        switch (passedNextAction.tag) {
+          case "Restart":
+          case "Compile":
+            return passedNextAction;
+
+          case "NoAction":
+            return {
+              tag: "PrintNonInterestingEvents",
+              events: [event],
+            };
+
+          case "PrintNonInterestingEvents":
+            return {
+              tag: "PrintNonInterestingEvents",
+              events: [...passedNextAction.events, event],
+            };
+        }
+      } else {
+        return undefined;
+      }
+    };
+
     const onWatcherEvent = (
       eventName: WatcherEventName,
       absolutePathString: string,
       passedNextAction: NextAction
     ): NextAction | undefined => {
       if (absolutePathString.endsWith(".elm")) {
-        const event = makeEvent(eventName, absolutePathString);
-        const elmFile = event.file;
-
-        if (isRelatedToElmJsonsErrors(elmFile, state.elmJsonsErrors)) {
-          return restart(
-            restartBecauseRelatedToElmJsonsErrorsMessage(eventName),
-            event,
-            passedNextAction
-          );
-        }
-
-        let dirty = false;
-
-        for (const [, outputs] of state.elmJsons) {
-          for (const [, outputState] of outputs) {
-            if (eventName === "removed") {
-              for (const inputPath of outputState.inputs) {
-                if (equalsInputPath(elmFile, inputPath)) {
-                  return restart(
-                    restartBecauseInputWasRemovedMessage(),
-                    event,
-                    passedNextAction
-                  );
-                }
-              }
-            }
-            if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
-              dirty = true;
-              outputState.dirty = true;
-            }
-          }
-        }
-
-        if (dirty) {
-          switch (passedNextAction.tag) {
-            case "Restart":
-              return passedNextAction;
-
-            case "Compile":
-              return {
-                tag: "Compile",
-                events: [...passedNextAction.events, event],
-              };
-
-            case "NoAction":
-            case "PrintNonInterestingEvents":
-              return {
-                tag: "Compile",
-                events: [event],
-              };
-          }
-        } else if (currentCompile === undefined) {
-          switch (passedNextAction.tag) {
-            case "Restart":
-            case "Compile":
-              return passedNextAction;
-
-            case "NoAction":
-              return {
-                tag: "PrintNonInterestingEvents",
-                events: [event],
-              };
-
-            case "PrintNonInterestingEvents":
-              return {
-                tag: "PrintNonInterestingEvents",
-                events: [...passedNextAction.events, event],
-              };
-          }
-        } else {
-          return undefined;
-        }
+        return onElmFileWatcherEvent(
+          makeEvent(eventName, absolutePathString),
+          passedNextAction
+        );
       }
 
       const basename = path.basename(absolutePathString);
