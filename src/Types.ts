@@ -75,3 +75,13 @@ export function outputPathToOriginalString(output: OutputPath): string {
       return "/dev/null";
   }
 }
+
+export function equalsInputPath(
+  elmFile: AbsolutePath,
+  inputPath: InputPath
+): boolean {
+  return (
+    inputPath.theInputPath.absolutePath === elmFile.absolutePath ||
+    inputPath.realpath.absolutePath === elmFile.absolutePath
+  );
+}

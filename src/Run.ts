@@ -12,14 +12,17 @@ import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, Cwd } from "./PathHelpers";
 import * as State from "./State";
-import type {
+import {
   CliArg,
   ElmToolingJsonPath,
+  equalsInputPath,
   GetNow,
   OnIdle,
   OutputPath,
   RunMode,
 } from "./Types";
+
+type Restart = (nextRestartReason: WatcherEvent) => Promise<number>;
 
 export async function run(
   cwd: Cwd,
@@ -28,10 +31,11 @@ export async function run(
   getNow: GetNow,
   onIdle: OnIdle | undefined,
   runMode: RunMode,
-  args: Array<CliArg>
+  args: Array<CliArg>,
+  restartReason?: WatcherEvent
 ): Promise<number> {
-  const restart = (): Promise<number> =>
-    run(cwd, env, logger, getNow, onIdle, runMode, args);
+  const restart: Restart = (nextRestartReason) =>
+    run(cwd, env, logger, getNow, onIdle, runMode, args, nextRestartReason);
 
   const parseResult = ElmToolingJson.findReadAndParse(cwd);
 
@@ -46,6 +50,7 @@ export async function run(
       return handleElmToolingJsonError(
         1,
         logger,
+        getNow,
         runMode,
         restart,
         parseResult.elmToolingJsonPath
@@ -61,6 +66,7 @@ export async function run(
       return handleElmToolingJsonError(
         1,
         logger,
+        getNow,
         runMode,
         restart,
         parseResult.elmToolingJsonPath
@@ -139,6 +145,7 @@ export async function run(
                     getNow,
                     onIdle,
                     restart,
+                    restartReason,
                     initStateResult.state
                   );
               }
@@ -152,10 +159,10 @@ export async function run(
 
 type WatcherEventName = "added" | "changed" | "removed";
 
-type ElmFileWatcherEvent = {
+type WatcherEvent = {
   date: Date;
   eventName: WatcherEventName;
-  elmFile: AbsolutePath;
+  file: AbsolutePath;
 };
 
 async function hot(
@@ -163,7 +170,8 @@ async function hot(
   logger: Logger,
   getNow: GetNow,
   onIdle: OnIdle | undefined,
-  passedRestart: () => Promise<number>,
+  passedRestart: Restart,
+  passedRestartReason: WatcherEvent | undefined,
   state: State.State
 ): Promise<number> {
   const isInteractive = logger.raw.stderr.isTTY;
@@ -172,8 +180,9 @@ async function hot(
     let currentCompile: Promise<void> | undefined = undefined;
     let panicked = false;
     let lastInfoMessage: string | undefined = undefined;
-    let lastBatchOfEvents: Array<ElmFileWatcherEvent> = [];
-    let lastBatchOfNotInterestingEvents: Array<ElmFileWatcherEvent> = [];
+    let lastBatchOfEvents: Array<WatcherEvent> =
+      passedRestartReason === undefined ? [] : [passedRestartReason];
+    let lastBatchOfNotInterestingEvents: Array<WatcherEvent> = [];
     let printNonInterestingEventsTimeoutId: NodeJS.Timeout | undefined =
       undefined;
 
@@ -185,7 +194,7 @@ async function hot(
 
     const logInfoMessageWithTimeline = (
       message: string,
-      events: Array<ElmFileWatcherEvent>
+      events: Array<WatcherEvent>
     ): void => {
       if (lastInfoMessage !== undefined && isInteractive) {
         readline.moveCursor(
@@ -218,17 +227,14 @@ async function hot(
       reject(error);
     };
 
-    const restart = (
-      changedFile: "elm-tooling.json" | "elm.json",
-      event: WatcherEventName
-    ): void => {
+    const restart = (message: string, event: WatcherEvent): void => {
       logger.clearScreen();
       if (currentCompile !== undefined) {
-        logger.error(restartMessage(changedFile, event));
+        logInfoMessageWithTimeline(message, [event]);
       }
       state.fullRestartRequested = true;
       Promise.all([watcher.close(), currentCompile]).then(() => {
-        passedRestart().then(resolve, reject);
+        passedRestart(event).then(resolve, reject);
       }, panic);
     };
 
@@ -261,37 +267,62 @@ async function hot(
       }
     };
 
+    const makeEvent = (
+      eventName: WatcherEventName,
+      absolutePathString: string
+    ): WatcherEvent => ({
+      date: getNow(),
+      eventName,
+      file: {
+        tag: "AbsolutePath",
+        absolutePath: absolutePathString,
+      },
+    });
+
     const onWatcherEvent =
-      (event: WatcherEventName) =>
+      (eventName: WatcherEventName) =>
       (absolutePathString: string): void => {
         if (state.fullRestartRequested || panicked) {
           return;
         }
 
         if (absolutePathString.endsWith(".elm")) {
+          const event = makeEvent(eventName, absolutePathString);
+          const elmFile = event.file;
+
+          if (isRelatedToElmJsonsErrors(elmFile, state.elmJsonsErrors)) {
+            restart(
+              restartBecauseRelatedToElmJsonsErrorsMessage(eventName),
+              event
+            );
+            return;
+          }
+
           let dirty = false;
           for (const [, outputs] of state.elmJsons) {
             for (const [, outputState] of outputs) {
-              if (outputState.allRelatedElmFilePaths.has(absolutePathString)) {
+              if (eventName === "removed") {
+                for (const inputPath of outputState.inputs) {
+                  if (equalsInputPath(elmFile, inputPath)) {
+                    restart(restartBecauseInputWasRemovedMessage(), event);
+                    return;
+                  }
+                }
+              }
+              if (
+                outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)
+              ) {
                 dirty = true;
                 outputState.dirty = true;
               }
             }
           }
-          const elmFileWatcherEvent: ElmFileWatcherEvent = {
-            date: getNow(),
-            eventName: event,
-            elmFile: {
-              tag: "AbsolutePath",
-              absolutePath: absolutePathString,
-            },
-          };
           if (dirty) {
             lastBatchOfNotInterestingEvents = [];
-            lastBatchOfEvents.push(elmFileWatcherEvent);
+            lastBatchOfEvents.push(event);
             runCompile();
           } else if (currentCompile === undefined) {
-            lastBatchOfNotInterestingEvents.push(elmFileWatcherEvent);
+            lastBatchOfNotInterestingEvents.push(event);
             if (printNonInterestingEventsTimeoutId !== undefined) {
               clearTimeout(printNonInterestingEventsTimeoutId);
             }
@@ -307,9 +338,12 @@ async function hot(
 
         switch (basename) {
           case "elm-tooling.json":
-            switch (event) {
+            switch (eventName) {
               case "added":
-                restart(basename, event);
+                restart(
+                  restartBecauseJsonFileChangedMessage(basename, eventName),
+                  makeEvent(eventName, absolutePathString)
+                );
                 return;
 
               case "changed":
@@ -318,15 +352,21 @@ async function hot(
                   absolutePathString ===
                   state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
                 ) {
-                  restart(basename, event);
+                  restart(
+                    restartBecauseJsonFileChangedMessage(basename, eventName),
+                    makeEvent(eventName, absolutePathString)
+                  );
                 }
                 return;
             }
 
           case "elm.json":
-            switch (event) {
+            switch (eventName) {
               case "added":
-                restart(basename, event);
+                restart(
+                  restartBecauseJsonFileChangedMessage(basename, eventName),
+                  makeEvent(eventName, absolutePathString)
+                );
                 return;
 
               case "changed":
@@ -338,7 +378,10 @@ async function hot(
                       elmJsonPath.theElmJsonPath.absolutePath
                   )
                 ) {
-                  restart(basename, event);
+                  restart(
+                    restartBecauseJsonFileChangedMessage(basename, eventName),
+                    makeEvent(eventName, absolutePathString)
+                  );
                 }
                 return;
             }
@@ -364,8 +407,9 @@ async function hot(
 async function handleElmToolingJsonError(
   exitCode: number,
   logger: Logger,
+  getNow: GetNow,
   runMode: RunMode,
-  restart: () => Promise<number>,
+  restart: Restart,
   elmToolingJsonPath: ElmToolingJsonPath
 ): Promise<number> {
   switch (runMode) {
@@ -382,23 +426,83 @@ async function handleElmToolingJsonError(
           }
         );
 
-        const onWatcherEvent = (): void => {
-          logger.clearScreen();
-          watcher.close().then(restart).then(resolve, reject);
-        };
+        const onWatcherEvent =
+          (eventName: WatcherEventName) =>
+          (absolutePathString: string): void => {
+            const now = getNow();
+            logger.clearScreen();
+            watcher
+              .close()
+              .then(() =>
+                restart({
+                  date: now,
+                  eventName,
+                  file: {
+                    tag: "AbsolutePath",
+                    absolutePath: absolutePathString,
+                  },
+                })
+              )
+              .then(resolve, reject);
+          };
 
-        watcher.on("add", onWatcherEvent);
-        watcher.on("change", onWatcherEvent);
-        watcher.on("unlink", onWatcherEvent);
+        watcher.on("add", onWatcherEvent("added"));
+        watcher.on("change", onWatcherEvent("changed"));
+        watcher.on("unlink", onWatcherEvent("removed"));
         watcher.on("error", reject);
       });
   }
 }
 
+function isRelatedToElmJsonsErrors(
+  elmFile: AbsolutePath,
+  elmJsonsErrors: State.State["elmJsonsErrors"]
+): boolean {
+  return elmJsonsErrors.some(({ error }) => {
+    switch (error.tag) {
+      case "DuplicateInputs":
+        return error.duplicates.some(
+          ({ inputs, resolved }) =>
+            resolved.absolutePath === elmFile.absolutePath ||
+            inputs.some((inputPath) => equalsInputPath(elmFile, inputPath))
+        );
+
+      case "ElmJsonNotFound":
+        return (
+          error.elmJsonNotFound.some((inputPath) =>
+            equalsInputPath(elmFile, inputPath)
+          ) ||
+          error.foundElmJsonPaths.some(({ inputPath }) =>
+            equalsInputPath(elmFile, inputPath)
+          )
+        );
+
+      case "InputsFailedToResolve":
+        return error.inputsFailedToResolve.some(
+          ({ inputPath }) =>
+            inputPath.theUncheckedInputPath.absolutePath ===
+            elmFile.absolutePath
+        );
+
+      case "InputsNotFound":
+        return error.inputsNotFound.some(
+          (inputPath) =>
+            inputPath.theUncheckedInputPath.absolutePath ===
+            elmFile.absolutePath
+        );
+
+      case "NonUniqueElmJsonPaths":
+        return error.nonUniqueElmJsonPaths.some(({ inputPath }) =>
+          equalsInputPath(elmFile, inputPath)
+        );
+    }
+  });
+}
+
 function infoMessageWithTimeline(
   date: Date,
   message: string,
-  events: Array<ElmFileWatcherEvent>
+  events: Array<WatcherEvent>
 ): string {
   return join(
     [
@@ -410,7 +514,7 @@ function infoMessageWithTimeline(
   );
 }
 
-function printTimeline(events: Array<ElmFileWatcherEvent>): string | undefined {
+function printTimeline(events: Array<WatcherEvent>): string | undefined {
   if (!isNonEmptyArray(events)) {
     return undefined;
   }
@@ -422,18 +526,18 @@ function printTimeline(events: Array<ElmFileWatcherEvent>): string | undefined {
   return dim(
     join(
       [
-        printElmFileWatcherEvent(first),
+        printWatcherEvent(first),
         printNumMoreEvents(numMoreEvents),
-        last === undefined ? undefined : printElmFileWatcherEvent(last),
+        last === undefined ? undefined : printWatcherEvent(last),
       ].flatMap((part) => (part === undefined ? [] : part)),
       "\n"
     )
   );
 }
 
-function printElmFileWatcherEvent(event: ElmFileWatcherEvent): string {
+function printWatcherEvent(event: WatcherEvent): string {
   return `${formatTime(event.date)} ${event.eventName} ${
-    event.elmFile.absolutePath
+    event.file.absolutePath
   }`;
 }
 
@@ -445,11 +549,21 @@ function printNumMoreEvents(numMoreEvents: number): string | undefined {
     : `(${numMoreEvents} more events)`;
 }
 
-function restartMessage(
+function restartBecauseJsonFileChangedMessage(
   changedFile: "elm-tooling.json" | "elm.json",
-  event: WatcherEventName
+  eventName: WatcherEventName
 ): string {
-  return `An ${bold(changedFile)} file ${event}. Restarting!`;
+  return `An ${bold(changedFile)} file ${eventName}. Restarting!`;
+}
+
+function restartBecauseRelatedToElmJsonsErrorsMessage(
+  eventName: WatcherEventName
+): string {
+  return `A problematic input Elm file was ${eventName}. Restarting!`;
+}
+
+function restartBecauseInputWasRemovedMessage(): string {
+  return "An input Elm file was removed. Restarting!";
 }
 
 function compileFinishedMessage(duration: number): string {
@@ -457,7 +571,7 @@ function compileFinishedMessage(duration: number): string {
 }
 
 function notInterestingElmFileChangedMessage(
-  events: NonEmptyArray<ElmFileWatcherEvent>,
+  events: NonEmptyArray<WatcherEvent>,
   disabledOutputs: HashSet<OutputPath>
 ): string {
   const what1 = events.length === 1 ? "file is" : "files are";
