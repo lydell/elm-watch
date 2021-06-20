@@ -3,7 +3,14 @@ import * as readline from "readline";
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { bold, Env, IS_WINDOWS, join, sleep } from "./Helpers";
+import {
+  bold,
+  Env,
+  IS_WINDOWS,
+  join,
+  sleep,
+  WATCHER_SLEEP_MS,
+} from "./Helpers";
 import { walkImports } from "./ImportWalker";
 import { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -195,7 +202,7 @@ export async function compile(
               // usually with 0-1 ms between each event.
               outputState.status = { tag: "Sleep" };
               updateStatusLine(outputPath, outputState.status, index);
-              await sleep(10);
+              await sleep(WATCHER_SLEEP_MS);
               if (state.fullRestartRequested) {
                 return;
               }

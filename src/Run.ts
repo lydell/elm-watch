@@ -7,7 +7,7 @@ import { compile } from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
 import { HashSet } from "./HashSet";
-import { bold, dim, Env, formatTime } from "./Helpers";
+import { bold, dim, Env, formatTime, join, WATCHER_SLEEP_MS } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, Cwd } from "./PathHelpers";
@@ -150,7 +150,13 @@ export async function run(
   }
 }
 
-type WatcherEvent = "added" | "changed" | "removed";
+type WatcherEventName = "added" | "changed" | "removed";
+
+type ElmFileWatcherEvent = {
+  date: Date;
+  eventName: WatcherEventName;
+  elmFile: AbsolutePath;
+};
 
 async function hot(
   env: Env,
@@ -166,6 +172,10 @@ async function hot(
     let currentCompile: Promise<void> | undefined = undefined;
     let panicked = false;
     let lastInfoMessage: string | undefined = undefined;
+    let lastBatchOfEvents: Array<ElmFileWatcherEvent> = [];
+    let lastBatchOfNotInterestingEvents: Array<ElmFileWatcherEvent> = [];
+    let printNonInterestingEventsTimeoutId: NodeJS.Timeout | undefined =
+      undefined;
 
     const watcher = chokidar.watch(state.watchRoot.absolutePath, {
       ignoreInitial: true,
@@ -173,7 +183,10 @@ async function hot(
       disableGlobbing: true,
     });
 
-    const logInfoMessage = (message: string): void => {
+    const logInfoMessageWithTimeline = (
+      message: string,
+      events: Array<ElmFileWatcherEvent>
+    ): void => {
       if (lastInfoMessage !== undefined && isInteractive) {
         readline.moveCursor(
           logger.raw.stderr,
@@ -182,9 +195,22 @@ async function hot(
         );
         readline.clearScreenDown(logger.raw.stderr);
       }
-      const fullMessage = infoMessage(getNow(), message);
+      const fullMessage = infoMessageWithTimeline(getNow(), message, events);
       lastInfoMessage = fullMessage;
       logger.error(fullMessage);
+    };
+
+    const maybePrintNonInterestingEvents = (): void => {
+      if (isNonEmptyArray(lastBatchOfNotInterestingEvents)) {
+        logInfoMessageWithTimeline(
+          notInterestingElmFileChangedMessage(
+            lastBatchOfNotInterestingEvents,
+            state.disabledOutputs
+          ),
+          lastBatchOfNotInterestingEvents
+        );
+        lastBatchOfNotInterestingEvents = [];
+      }
     };
 
     const panic = (error: Error): void => {
@@ -194,7 +220,7 @@ async function hot(
 
     const restart = (
       changedFile: "elm-tooling.json" | "elm.json",
-      event: WatcherEvent
+      event: WatcherEventName
     ): void => {
       logger.clearScreen();
       if (currentCompile !== undefined) {
@@ -214,9 +240,11 @@ async function hot(
         currentCompile = compile(env, logger, "hot", state).then(() => {
           currentCompile = undefined;
           const duration = getNow().getTime() - start.getTime();
-          logInfoMessage(
-            compileFinishedMessage(state.lastChangedElmFile, duration)
+          logInfoMessageWithTimeline(
+            compileFinishedMessage(duration),
+            lastBatchOfEvents
           );
+          lastBatchOfEvents = [];
           if (onIdle !== undefined && !state.fullRestartRequested) {
             const response = onIdle();
             switch (response) {
@@ -234,7 +262,7 @@ async function hot(
     };
 
     const onWatcherEvent =
-      (event: WatcherEvent) =>
+      (event: WatcherEventName) =>
       (absolutePathString: string): void => {
         if (state.fullRestartRequested || panicked) {
           return;
@@ -250,21 +278,27 @@ async function hot(
               }
             }
           }
-          const absolutePath: AbsolutePath = {
-            tag: "AbsolutePath",
-            absolutePath: absolutePathString,
+          const elmFileWatcherEvent: ElmFileWatcherEvent = {
+            date: getNow(),
+            eventName: event,
+            elmFile: {
+              tag: "AbsolutePath",
+              absolutePath: absolutePathString,
+            },
           };
           if (dirty) {
-            state.lastChangedElmFile = absolutePath;
+            lastBatchOfNotInterestingEvents = [];
+            lastBatchOfEvents.push(elmFileWatcherEvent);
             runCompile();
-          } else {
-            logInfoMessage(
-              notInterestingElmFileChangedMessage(
-                absolutePath,
-                event,
-                state.disabledOutputs
-              )
-            );
+          } else if (currentCompile === undefined) {
+            lastBatchOfNotInterestingEvents.push(elmFileWatcherEvent);
+            if (printNonInterestingEventsTimeoutId !== undefined) {
+              clearTimeout(printNonInterestingEventsTimeoutId);
+            }
+            printNonInterestingEventsTimeoutId = setTimeout(() => {
+              printNonInterestingEventsTimeoutId = undefined;
+              maybePrintNonInterestingEvents();
+            }, WATCHER_SLEEP_MS);
           }
           return;
         }
@@ -361,41 +395,73 @@ async function handleElmToolingJsonError(
   }
 }
 
-function infoMessage(date: Date, message: string): string {
-  return `\n${bold(formatTime(date))} ${message}`;
+function infoMessageWithTimeline(
+  date: Date,
+  message: string,
+  events: Array<ElmFileWatcherEvent>
+): string {
+  return join(
+    [
+      "", // Empty line separator.
+      printTimeline(events),
+      `${bold(formatTime(date))} ${message}`,
+    ].flatMap((part) => (part === undefined ? [] : part)),
+    "\n"
+  );
+}
+
+function printTimeline(events: Array<ElmFileWatcherEvent>): string | undefined {
+  if (!isNonEmptyArray(events)) {
+    return undefined;
+  }
+
+  const first = events[0];
+  const last = events.length >= 2 ? events[events.length - 1] : undefined;
+  const numMoreEvents = events.length - 2;
+
+  return dim(
+    join(
+      [
+        printElmFileWatcherEvent(first),
+        printNumMoreEvents(numMoreEvents),
+        last === undefined ? undefined : printElmFileWatcherEvent(last),
+      ].flatMap((part) => (part === undefined ? [] : part)),
+      "\n"
+    )
+  );
+}
+
+function printElmFileWatcherEvent(event: ElmFileWatcherEvent): string {
+  return `${formatTime(event.date)} ${event.eventName} ${
+    event.elmFile.absolutePath
+  }`;
+}
+
+function printNumMoreEvents(numMoreEvents: number): string | undefined {
+  return numMoreEvents <= 0
+    ? undefined
+    : numMoreEvents === 1
+    ? "(1 more event)"
+    : `(${numMoreEvents} more events)`;
 }
 
 function restartMessage(
   changedFile: "elm-tooling.json" | "elm.json",
-  event: WatcherEvent
+  event: WatcherEventName
 ): string {
   return `An ${bold(changedFile)} file ${event}. Restarting!`;
 }
 
-function compileFinishedMessage(
-  lastChangedElmFile: AbsolutePath | undefined,
-  duration: number
-): string {
-  const common = `Compilation finished in ${bold(duration.toString())} ms.`;
-  return lastChangedElmFile === undefined
-    ? common
-    : `
-${common}
-${dim("The last changed Elm file:")}
-${dim(lastChangedElmFile.absolutePath)}
-      `.trim();
+function compileFinishedMessage(duration: number): string {
+  return `Compilation finished in ${bold(duration.toString())} ms.`;
 }
 
 function notInterestingElmFileChangedMessage(
-  elmFile: AbsolutePath,
-  event: WatcherEvent,
+  events: NonEmptyArray<ElmFileWatcherEvent>,
   disabledOutputs: HashSet<OutputPath>
 ): string {
-  const what =
-    disabledOutputs.size > 0 ? "any of the enabled outputs" : "anything";
-  return `
-FYI: An Elm file was ${event}, but it did not affect ${what}.
-${dim(`The ${event} Elm file:`)}
-${dim(elmFile.absolutePath)}
-  `.trim();
+  const what1 = events.length === 1 ? "file is" : "files are";
+  const what2 =
+    disabledOutputs.size > 0 ? "any of the enabled outputs" : "any output";
+  return `FYI: The above Elm ${what1} not imported by ${what2}. Nothing to do!`;
 }
