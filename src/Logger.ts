@@ -1,5 +1,5 @@
 import { ErrorTemplate } from "./Errors";
-import { CLEAR, Env, removeColor, WriteStream } from "./Helpers";
+import { CLEAR, Env, IS_WINDOWS, removeColor, WriteStream } from "./Helpers";
 
 export type Logger = {
   handleColor: (string: string) => string;
@@ -7,6 +7,7 @@ export type Logger = {
   error: (message: string) => void;
   errorTemplate: (template: ErrorTemplate) => void;
   clearScreen: () => void;
+  fancy: boolean;
   raw: {
     NO_COLOR: boolean;
     stdout: WriteStream;
@@ -47,6 +48,7 @@ export function makeLogger({
         stderr.write(CLEAR);
       }
     },
+    fancy: !IS_WINDOWS && !NO_COLOR,
     raw: {
       NO_COLOR,
       stdout,

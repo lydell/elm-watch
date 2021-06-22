@@ -39,8 +39,6 @@ export type State = {
   disabledOutputs: HashSet<OutputPath>;
   elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }>;
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
-  hasRunInstall: boolean;
-  fullRestartRequested: boolean;
   // Maybe also websocket connections in the future.
 };
 
@@ -59,6 +57,7 @@ export type OutputStatus =
   | PostprocessResult
   | { tag: "ElmMake" }
   | { tag: "ImportWalkerFileSystemError"; error: Error }
+  | { tag: "Interrupted" }
   | { tag: "NotWrittenToDisk" }
   | { tag: "Postprocess" };
 
@@ -113,7 +112,7 @@ export type InitStateResult =
       state: State;
     };
 
-export function init({
+export function initState({
   cwd,
   runMode,
   compilationMode,
@@ -206,8 +205,6 @@ export function init({
       disabledOutputs,
       elmJsonsErrors,
       elmJsons,
-      hasRunInstall: false,
-      fullRestartRequested: false,
     },
   };
 }

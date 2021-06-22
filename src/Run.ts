@@ -3,7 +3,7 @@ import * as path from "path";
 import * as readline from "readline";
 
 import * as CliArgs from "./CliArgs";
-import { compile } from "./Compile";
+import * as Compile from "./Compile";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as Errors from "./Errors";
 import { HashSet } from "./HashSet";
@@ -15,9 +15,10 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath, Cwd } from "./PathHelpers";
-import * as State from "./State";
+import { initState, OutputState, State } from "./State";
 import {
   CliArg,
+  ElmJsonPath,
   ElmToolingJsonPath,
   equalsInputPath,
   GetNow,
@@ -123,7 +124,7 @@ export async function run(
             return 1;
           }
 
-          const initStateResult = State.init({
+          const initStateResult = initState({
             cwd,
             runMode,
             compilationMode: parseArgsResult.compilationMode,
@@ -143,7 +144,7 @@ export async function run(
             case "State": {
               switch (runMode) {
                 case "make":
-                  return compile(env, logger, runMode, initStateResult.state);
+                  return make(env, logger, runMode, initStateResult.state);
 
                 case "hot":
                   return hot(
@@ -162,6 +163,59 @@ export async function run(
       }
     }
   }
+}
+
+async function make(
+  env: Env,
+  logger: Logger,
+  runMode: RunMode,
+  state: State
+): Promise<number> {
+  const installResult = await Compile.installDependencies(env, logger, state);
+
+  if (installResult !== 0) {
+    return installResult;
+  }
+
+  const toCompile = Array.from(state.elmJsons).flatMap(
+    ([elmJsonPath, outputs]) =>
+      Array.from(
+        outputs,
+        ([outputPath, outputState]) =>
+          [elmJsonPath, outputPath, outputState] as const
+      )
+  );
+
+  Compile.printElmJsonsErrors(logger, state);
+
+  await Promise.all(
+    toCompile.map(
+      async (
+        [elmJsonPath, outputPath, outputState],
+        index: number
+      ): Promise<void> =>
+        Compile.compileOneOutput({
+          env,
+          logger,
+          runMode,
+          elmToolingJsonPath: state.elmToolingJsonPath,
+          elmJsonPath,
+          outputPath,
+          outputState,
+          index,
+          total: toCompile.length,
+        })
+    )
+  );
+
+  const errors = Compile.extractErrors(state);
+
+  if (isNonEmptyArray(errors)) {
+    Compile.printErrors(logger, errors);
+    return 1;
+  }
+
+  return 0;
 }
 
 type WatcherEventName = "added" | "changed" | "removed";
@@ -192,6 +246,20 @@ type NextAction =
       }>;
     };
 
+type HotState =
+  | {
+      tag: "Compiling";
+      start: Date;
+      events: Array<WatcherEvent>;
+    }
+  | {
+      tag: "Idle";
+    }
+  | {
+      tag: "Restarting";
+      events: NonEmptyArray<WatcherEvent>;
+    };
+
 async function hot(
   env: Env,
   logger: Logger,
@@ -199,15 +267,24 @@ async function hot(
   onIdle: OnIdle | undefined,
   passedRestart: Restart,
   passedRestartReasons: Array<WatcherEvent>,
-  state: State.State
+  state: State
 ): Promise<number> {
   const isInteractive = logger.raw.stderr.isTTY;
 
+  const toCompile = Array.from(state.elmJsons).flatMap(
+    ([elmJsonPath, outputs]) =>
+      Array.from(
+        outputs,
+        ([outputPath, outputState]): [ElmJsonPath, OutputPath, OutputState] => [
+          elmJsonPath,
+          outputPath,
+          outputState,
+        ]
+      )
+  );
+
   return new Promise((resolve, reject) => {
-    let currentCompile:
-      | { promise: Promise<void>; events: Array<WatcherEvent> }
-      | undefined = undefined;
-    let lastInfoMessage: string | undefined = undefined;
+    let hotState: HotState = { tag: "Idle" };
 
     const watcher = chokidar.watch(state.watchRoot.absolutePath, {
       ignoreInitial: true,
@@ -215,6 +292,7 @@ async function hot(
       disableGlobbing: true,
     });
 
+    let lastInfoMessage: string | undefined = undefined;
     const logInfoMessageWithTimeline = (
       message: string,
       events: Array<WatcherEvent>
@@ -245,7 +323,7 @@ async function hot(
     });
 
     const runOnIdle = (): void => {
-      if (onIdle !== undefined && !state.fullRestartRequested) {
+      if (onIdle !== undefined && hotState.tag === "Idle") {
         const response = onIdle();
         switch (response) {
           case "KeepGoing":
@@ -259,30 +337,108 @@ async function hot(
       }
     };
 
-    const runCompile = (events: Array<WatcherEvent>): void => {
-      if (currentCompile === undefined) {
-        logger.clearScreen();
-        lastInfoMessage = undefined;
-        const start = getNow();
-        currentCompile = {
-          events, // Watcher events can push to this array.
-          promise: compile(env, logger, "hot", state).then(() => {
-            currentCompile = undefined;
-            const duration = getNow().getTime() - start.getTime();
+    const compileOneOutput = async (
+      elmJsonPath: ElmJsonPath,
+      outputPath: OutputPath,
+      outputState: OutputState,
+      index: number
+    ): Promise<void> => {
+      await Compile.compileOneOutput({
+        env,
+        logger,
+        runMode: "hot",
+        elmToolingJsonPath: state.elmToolingJsonPath,
+        elmJsonPath,
+        outputPath,
+        outputState,
+        index,
+        total: toCompile.length,
+      });
+
+      switch (hotState.tag) {
+        case "Idle":
+          throw new Error("HotState became Idle while compiling!");
+
+        case "Compiling":
+          if (outputState.dirty) {
+            return compileOneOutput(
+              elmJsonPath,
+              outputPath,
+              outputState,
+              index
+            );
+          } else if (allAreIdle(toCompile)) {
+            const duration = getNow().getTime() - hotState.start.getTime();
+            const errors = Compile.extractErrors(state);
+            if (isNonEmptyArray(errors)) {
+              Compile.printErrors(logger, errors);
+            }
             logInfoMessageWithTimeline(
               compileFinishedMessage(duration),
-              events
+              hotState.events
             );
+            hotState = { tag: "Idle" };
             runOnIdle();
-          }, reject),
-        };
+          }
+          return;
+
+        case "Restarting":
+          if (allAreIdle(toCompile)) {
+            runRestart(hotState.events);
+          }
+          return;
       }
+    };
+
+    const compileAllOutputs = (): void => {
+      for (const [
+        index,
+        [elmJsonPath, outputPath, outputState],
+      ] of toCompile.entries()) {
+        // TODO: If all are idle we don’t want to get stuck.
+        if (isIdle(outputState)) {
+          compileOneOutput(elmJsonPath, outputPath, outputState, index).catch(
+            reject
+          );
+        }
+      }
+    };
+
+    const runCompile = (events: Array<WatcherEvent>): void => {
+      switch (hotState.tag) {
+        case "Idle": {
+          logger.clearScreen();
+          lastInfoMessage = undefined;
+          hotState = {
+            tag: "Compiling",
+            start: getNow(),
+            events,
+          };
+          Compile.printElmJsonsErrors(logger, state);
+          compileAllOutputs();
+          return;
+        }
+
+        case "Compiling":
+          hotState.events.push(...events);
+          compileAllOutputs();
+          return;
+
+        case "Restarting":
+          return;
+      }
+    };
+
+    const runRestart = (events: NonEmptyArray<WatcherEvent>): void => {
+      watcher.close().then(() => {
+        passedRestart(events).then(resolve, reject);
+      }, reject);
     };
 
     const runNextAction = (nextAction: NextAction): void => {
       switch (nextAction.tag) {
         case "NoAction":
-          break;
+          return;
 
         case "Restart": {
           const { eventsWithMessages } = nextAction;
@@ -290,34 +446,54 @@ async function hot(
             eventsWithMessages,
             ({ event }) => event
           );
-          logger.clearScreen();
-          lastInfoMessage = undefined;
-          if (currentCompile !== undefined) {
-            logInfoMessageWithTimeline(
-              restartingMessage(eventsWithMessages),
-              events
-            );
+
+          switch (hotState.tag) {
+            case "Idle": {
+              logger.clearScreen();
+              lastInfoMessage = undefined;
+              hotState = { tag: "Restarting", events };
+              runRestart(events);
+              return;
+            }
+
+            case "Compiling": {
+              logger.clearScreen();
+              lastInfoMessage = undefined;
+              hotState = { tag: "Restarting", events };
+              logInfoMessageWithTimeline(
+                restartingMessage(eventsWithMessages),
+                events
+              );
+              // The actual restart is triggered once the current compilation is over.
+              return;
+            }
+
+            case "Restarting":
+              return;
           }
-          Promise.all([watcher.close(), currentCompile?.promise]).then(() => {
-            passedRestart(events).then(resolve, reject);
-          }, reject);
-          break;
         }
 
         case "Compile":
           runCompile(nextAction.events);
-          break;
+          return;
 
         case "PrintNonInterestingEvents":
-          logInfoMessageWithTimeline(
-            notInterestingElmFileChangedMessage(
-              nextAction.events,
-              state.disabledOutputs
-            ),
-            nextAction.events
-          );
-          runOnIdle();
-          break;
+          switch (hotState.tag) {
+            case "Idle":
+              logInfoMessageWithTimeline(
+                notInterestingElmFileChangedMessage(
+                  nextAction.events,
+                  state.disabledOutputs
+                ),
+                nextAction.events
+              );
+              runOnIdle();
+              return;
+
+            case "Compiling":
+            case "Restarting":
+              return;
+          }
       }
     };
 
@@ -463,6 +639,7 @@ async function hot(
                 passedNextAction
               );
 
+            // TODO: It should be possible to run `Compile.installDependencies` now instead of full restart?
             case "changed":
             case "removed":
               if (
@@ -491,6 +668,9 @@ async function hot(
       let nextAction: NextAction = { tag: "NoAction" };
       let watcherTimeoutId: NodeJS.Timeout | undefined;
 
+      // I think the thing here is that we only want to batch 10 ms on Idle, not
+      // Compiling. Probably not for Restarting – well yes, there could be
+      // several events leading to restart and we want to capture them all.
       const onWatcherEventWrapper =
         (eventName: WatcherEventName) =>
         (absolutePathString: string): void => {
@@ -505,7 +685,17 @@ async function hot(
           }
 
           if (updatedNextAction.tag === "Restart") {
-            state.fullRestartRequested = true;
+            // Interrupt all compilation.
+            // TODO: There might be a little time until we actually start
+            // restarting. Don’t want stuff to recompile here due to `dirty`…
+            // Basically: Want current compile to stop as soon as possible
+            // but don’t do the actual restart until we’re ready waiting here
+            // so it sounds like we might need one more state after all?
+            // also, we do have one state: nextAction, but currently it is not ”exposed”
+            // What if we had one state and an Elm-like update with messages and return next?
+            for (const [, , outputState] of toCompile) {
+              outputState.dirty = true;
+            }
           }
 
           nextAction = updatedNextAction;
@@ -535,6 +725,7 @@ async function hot(
       watcher.on("error", reject);
     }
 
+    // TODO: Run install first.
     runCompile(passedRestartReasons);
   });
 }
@@ -591,9 +782,26 @@ async function handleElmToolingJsonError(
   }
 }
 
+function isIdle(outputState: OutputState): boolean {
+  switch (outputState.status.tag) {
+    case "ElmMake":
+    case "Postprocess":
+    case "Interrupted":
+      return false;
+
+    default:
+      return true;
+  }
+}
+
+function allAreIdle(
+  toCompile: Array<[ElmJsonPath, OutputPath, OutputState]>
+): boolean {
+  return toCompile.every(([, , outputState]) => isIdle(outputState));
+}
 function isRelatedToElmJsonsErrors(
   elmFile: AbsolutePath,
-  elmJsonsErrors: State.State["elmJsonsErrors"]
+  elmJsonsErrors: State["elmJsonsErrors"]
 ): boolean {
   return elmJsonsErrors.some(({ error }) => {
     switch (error.tag) {
