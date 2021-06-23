@@ -255,6 +255,7 @@ type HotState =
     }
   | {
       tag: "Dependencies";
+      start: Date;
       events: Array<WatcherEvent>;
     }
   | {
@@ -411,7 +412,7 @@ async function hot(
       }
     };
 
-    const runCompile = (events: Array<WatcherEvent>): void => {
+    const runCompile = (events: Array<WatcherEvent>, start: Date): void => {
       switch (hotState.tag) {
         case "Idle": {
           if (allAreIdle(toCompile)) {
@@ -421,7 +422,7 @@ async function hot(
           lastInfoMessage = undefined;
           hotState = {
             tag: "Compiling",
-            start: getNow(),
+            start,
             events,
             keepConsumingDirty: false,
           };
@@ -491,7 +492,7 @@ async function hot(
         }
 
         case "Compile":
-          runCompile(nextAction.events);
+          runCompile(nextAction.events, getNow());
           return;
 
         case "PrintNonInterestingEvents":
@@ -734,6 +735,7 @@ async function hot(
 
     hotState = {
       tag: "Dependencies",
+      start: getNow(),
       events: passedRestartReasons,
     };
 
@@ -746,9 +748,9 @@ async function hot(
             return;
           }
 
-          const { events } = hotState;
+          const { events, start } = hotState;
           hotState = { tag: "Idle" };
-          runCompile(events);
+          runCompile(events, start);
           return;
         }
 
