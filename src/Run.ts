@@ -648,7 +648,6 @@ async function hot(
                 passedNextAction
               );
 
-            // TODO: It should be possible to run `Compile.installDependencies` now instead of full restart?
             case "changed":
             case "removed":
               if (
