@@ -32,7 +32,6 @@ import type {
 export type State = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.
   watchRoot: AbsolutePath;
-  runMode: RunMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   disabledOutputs: HashSet<OutputPath>;
   elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }>;
@@ -111,7 +110,6 @@ export type InitStateResult =
     };
 
 export function initState({
-  runMode,
   compilationMode,
   elmToolingJsonPath,
   config,
@@ -195,7 +193,6 @@ export function initState({
     tag: "State",
     state: {
       watchRoot,
-      runMode,
       elmToolingJsonPath,
       disabledOutputs,
       elmJsonsErrors,
