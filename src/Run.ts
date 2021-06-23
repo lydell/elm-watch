@@ -415,9 +415,6 @@ async function hot(
     const runCompile = (events: Array<WatcherEvent>, start: Date): void => {
       switch (hotState.tag) {
         case "Idle": {
-          if (allAreIdle(toCompile)) {
-            return;
-          }
           logger.clearScreen();
           lastInfoMessage = undefined;
           hotState = {
