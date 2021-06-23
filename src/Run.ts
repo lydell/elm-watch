@@ -271,13 +271,14 @@ type HotState =
       events: NonEmptyArray<WatcherEvent>;
     };
 
+// This function encapsulates all the tricky watcher logic and state mutations.
 async function hot(
   env: Env,
   logger: Logger,
   getNow: GetNow,
   onIdle: OnIdle | undefined,
-  passedRestart: Restart,
-  passedRestartReasons: Array<WatcherEvent>,
+  restart: Restart,
+  restartReasons: Array<WatcherEvent>,
   state: State
 ): Promise<number> {
   const isInteractive = logger.raw.stderr.isTTY;
@@ -320,18 +321,6 @@ async function hot(
       lastInfoMessage = fullMessage;
       logger.error(fullMessage);
     };
-
-    const restart = (
-      message: string,
-      event: WatcherEvent,
-      nextAction: NextAction
-    ): NextAction => ({
-      tag: "Restart",
-      eventsWithMessages:
-        nextAction.tag === "Restart"
-          ? [...nextAction.eventsWithMessages, { event, message }]
-          : [{ event, message }],
-    });
 
     const runOnIdle = (): void => {
       if (onIdle !== undefined) {
@@ -450,7 +439,7 @@ async function hot(
 
     const runRestart = (events: NonEmptyArray<WatcherEvent>): void => {
       watcher.close().then(() => {
-        passedRestart(events).then(resolve, reject);
+        restart(events).then(resolve, reject);
       }, reject);
     };
 
@@ -518,18 +507,6 @@ async function hot(
       }
     };
 
-    const makeEvent = (
-      eventName: WatcherEventName,
-      absolutePathString: string
-    ): WatcherEvent => ({
-      date: getNow(),
-      eventName,
-      file: {
-        tag: "AbsolutePath",
-        absolutePath: absolutePathString,
-      },
-    });
-
     const onElmFileWatcherEvent = (
       event: WatcherEvent,
       passedNextAction: NextAction
@@ -537,7 +514,7 @@ async function hot(
       const elmFile = event.file;
 
       if (isRelatedToElmJsonsErrors(elmFile, state.elmJsonsErrors)) {
-        return restart(
+        return makeRestartNextAction(
           restartBecauseRelatedToElmJsonsErrorsMessage(event.eventName),
           event,
           passedNextAction
@@ -551,7 +528,7 @@ async function hot(
           if (event.eventName === "removed") {
             for (const inputPath of outputState.inputs) {
               if (equalsInputPath(elmFile, inputPath)) {
-                return restart(
+                return makeRestartNextAction(
                   restartBecauseInputWasRemovedMessage(),
                   event,
                   passedNextAction
@@ -612,7 +589,7 @@ async function hot(
     ): NextAction | undefined => {
       if (absolutePathString.endsWith(".elm")) {
         return onElmFileWatcherEvent(
-          makeEvent(eventName, absolutePathString),
+          makeEvent(eventName, absolutePathString, getNow()),
           passedNextAction
         );
       }
@@ -623,9 +600,9 @@ async function hot(
         case "elm-tooling.json":
           switch (eventName) {
             case "added":
-              return restart(
+              return makeRestartNextAction(
                 restartBecauseJsonFileChangedMessage(basename, eventName),
-                makeEvent(eventName, absolutePathString),
+                makeEvent(eventName, absolutePathString, getNow()),
                 passedNextAction
               );
 
@@ -635,9 +612,9 @@ async function hot(
                 absolutePathString ===
                 state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
               ) {
-                return restart(
+                return makeRestartNextAction(
                   restartBecauseJsonFileChangedMessage(basename, eventName),
-                  makeEvent(eventName, absolutePathString),
+                  makeEvent(eventName, absolutePathString, getNow()),
                   passedNextAction
                 );
               }
@@ -647,9 +624,9 @@ async function hot(
         case "elm.json":
           switch (eventName) {
             case "added":
-              return restart(
+              return makeRestartNextAction(
                 restartBecauseJsonFileChangedMessage(basename, eventName),
-                makeEvent(eventName, absolutePathString),
+                makeEvent(eventName, absolutePathString, getNow()),
                 passedNextAction
               );
 
@@ -662,9 +639,9 @@ async function hot(
                     elmJsonPath.theElmJsonPath.absolutePath
                 )
               ) {
-                return restart(
+                return makeRestartNextAction(
                   restartBecauseJsonFileChangedMessage(basename, eventName),
-                  makeEvent(eventName, absolutePathString),
+                  makeEvent(eventName, absolutePathString, getNow()),
                   passedNextAction
                 );
               }
@@ -681,9 +658,6 @@ async function hot(
       let nextAction: NextAction = { tag: "NoAction" };
       let watcherTimeoutId: NodeJS.Timeout | undefined;
 
-      // I think the thing here is that we only want to batch 10 ms on Idle, not
-      // Compiling. Probably not for Restarting – well yes, there could be
-      // several events leading to restart and we want to capture them all.
       const onWatcherEventWrapper =
         (eventName: WatcherEventName) =>
         (absolutePathString: string): void => {
@@ -738,7 +712,7 @@ async function hot(
     hotState = {
       tag: "Dependencies",
       start: getNow(),
-      events: passedRestartReasons,
+      events: restartReasons,
     };
 
     Compile.installDependencies(env, logger, state).then((installResult) => {
@@ -826,6 +800,35 @@ async function handleElmToolingJsonError(
         watcher.on("error", reject);
       });
   }
+}
+
+function makeEvent(
+  eventName: WatcherEventName,
+  absolutePathString: string,
+  date: Date
+): WatcherEvent {
+  return {
+    date,
+    eventName,
+    file: {
+      tag: "AbsolutePath",
+      absolutePath: absolutePathString,
+    },
+  };
+}
+
+function makeRestartNextAction(
+  message: string,
+  event: WatcherEvent,
+  nextAction: NextAction
+): NextAction {
+  return {
+    tag: "Restart",
+    eventsWithMessages:
+      nextAction.tag === "Restart"
+        ? [...nextAction.eventsWithMessages, { event, message }]
+        : [{ event, message }],
+  };
 }
 
 function isIdle(outputState: OutputState): boolean {
