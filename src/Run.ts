@@ -738,14 +738,14 @@ async function hot(
     };
 
     Compile.installDependencies(env, logger, state).then((exitCode) => {
-      if (exitCode !== 0) {
-        hotState = { tag: "Idle" };
-        runOnIdle();
-        return;
-      }
-
       switch (hotState.tag) {
         case "Dependencies": {
+          if (exitCode !== 0) {
+            hotState = { tag: "Idle" };
+            runOnIdle();
+            return;
+          }
+
           const { events } = hotState;
           hotState = { tag: "Idle" };
           runCompile(events);
