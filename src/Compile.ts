@@ -19,6 +19,8 @@ import {
   RunMode,
 } from "./Types";
 
+type InstallDependenciesResult = { tag: "Error" } | { tag: "Success" };
+
 // Make sure all dependencies are installed. Otherwise compilation sometimes
 // fails when you’ve got multiple outputs for the same elm.json. The error is
 // “not enough bytes”/“corrupt file” for `elm-stuff/0.19.1/{d,i,o}.dat`.
@@ -29,7 +31,7 @@ export async function installDependencies(
   env: Env,
   logger: Logger,
   state: State
-): Promise<number> {
+): Promise<InstallDependenciesResult> {
   const isInteractive = logger.raw.stderr.isTTY;
   const loadingMessageDelay = Number(
     env.__ELM_WATCH_LOADING_MESSAGE_DELAY ?? "100"
@@ -62,12 +64,14 @@ export async function installDependencies(
       }
     };
 
-    const onError = (error: Errors.ErrorTemplate): number => {
+    const onError = (
+      error: Errors.ErrorTemplate
+    ): InstallDependenciesResult => {
       clearLoadingMessage();
       logger.error(logger.fancy ? `🚨 ${message}` : `${message}: error`);
       logger.error("");
       logger.errorTemplate(error);
-      return 1;
+      return { tag: "Error" };
     };
 
     const result = await SpawnElm.install({ elmJsonPath, env });
@@ -125,7 +129,7 @@ export async function installDependencies(
     }
   }
 
-  return 0;
+  return { tag: "Success" };
 }
 
 export async function compileOneOutput({

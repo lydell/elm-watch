@@ -173,8 +173,13 @@ async function make(
 ): Promise<number> {
   const installResult = await Compile.installDependencies(env, logger, state);
 
-  if (installResult !== 0) {
-    return installResult;
+  switch (installResult.tag) {
+    case "Error":
+      return 1;
+
+    case "Success":
+      // Continue below.
+      break;
   }
 
   const toCompile = Array.from(state.elmJsons).flatMap(
@@ -736,19 +741,22 @@ async function hot(
       events: passedRestartReasons,
     };
 
-    Compile.installDependencies(env, logger, state).then((exitCode) => {
+    Compile.installDependencies(env, logger, state).then((installResult) => {
       switch (hotState.tag) {
         case "Dependencies": {
-          if (exitCode !== 0) {
-            hotState = { tag: "Idle" };
-            runOnIdle();
-            return;
-          }
+          switch (installResult.tag) {
+            case "Error":
+              hotState = { tag: "Idle" };
+              runOnIdle();
+              return;
 
-          const { events, start } = hotState;
-          hotState = { tag: "Idle" };
-          runCompile(events, start);
-          return;
+            case "Success": {
+              const { events, start } = hotState;
+              hotState = { tag: "Idle" };
+              runCompile(events, start);
+              return;
+            }
+          }
         }
 
         case "Restarting":
@@ -837,6 +845,7 @@ function allAreIdle(
 ): boolean {
   return toCompile.every(([, , outputState]) => isIdle(outputState));
 }
+
 function isRelatedToElmJsonsErrors(
   elmFile: AbsolutePath,
   elmJsonsErrors: State["elmJsonsErrors"]
