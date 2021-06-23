@@ -254,6 +254,10 @@ type HotState =
       keepConsumingDirty: boolean;
     }
   | {
+      tag: "Dependencies";
+      events: Array<WatcherEvent>;
+    }
+  | {
       tag: "Idle";
     }
   | {
@@ -357,8 +361,9 @@ async function hot(
       });
 
       switch (hotState.tag) {
+        case "Dependencies":
         case "Idle":
-          throw new Error("HotState became Idle while compiling!");
+          throw new Error(`HotState became ${hotState.tag} while compiling!`);
 
         case "Compiling":
           if (outputState.dirty) {
@@ -429,6 +434,10 @@ async function hot(
           compileAllOutputs();
           return;
 
+        case "Dependencies":
+          hotState.events.push(...events);
+          return;
+
         case "Restarting":
           return;
       }
@@ -461,6 +470,7 @@ async function hot(
               return;
             }
 
+            case "Dependencies":
             case "Compiling": {
               logger.clearScreen();
               lastInfoMessage = undefined;
@@ -496,6 +506,7 @@ async function hot(
               return;
 
             case "Compiling":
+            case "Dependencies":
             case "Restarting":
               return;
           }
@@ -720,8 +731,40 @@ async function hot(
       watcher.on("error", reject);
     }
 
-    // TODO: Run install first.
-    runCompile(passedRestartReasons);
+    hotState = {
+      tag: "Dependencies",
+      events: passedRestartReasons,
+    };
+
+    Compile.installDependencies(env, logger, state).then((exitCode) => {
+      if (exitCode !== 0) {
+        hotState = { tag: "Idle" };
+        runOnIdle();
+        return;
+      }
+
+      switch (hotState.tag) {
+        case "Dependencies": {
+          const { events } = hotState;
+          hotState = { tag: "Idle" };
+          runCompile(events);
+          return;
+        }
+
+        case "Restarting":
+          runRestart(hotState.events);
+          return;
+
+        case "Idle":
+        case "Compiling":
+          reject(
+            new Error(
+              `HotState became ${hotState.tag} while installing dependencies!`
+            )
+          );
+          return;
+      }
+    }, reject);
   });
 }
 
