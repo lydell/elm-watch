@@ -251,6 +251,7 @@ type HotState =
       tag: "Compiling";
       start: Date;
       events: Array<WatcherEvent>;
+      keepConsumingDirty: boolean;
     }
   | {
       tag: "Idle";
@@ -361,12 +362,14 @@ async function hot(
 
         case "Compiling":
           if (outputState.dirty) {
-            return compileOneOutput(
-              elmJsonPath,
-              outputPath,
-              outputState,
-              index
-            );
+            if (hotState.keepConsumingDirty) {
+              return compileOneOutput(
+                elmJsonPath,
+                outputPath,
+                outputState,
+                index
+              );
+            }
           } else if (allAreIdle(toCompile)) {
             const duration = getNow().getTime() - hotState.start.getTime();
             const errors = Compile.extractErrors(state);
@@ -413,6 +416,7 @@ async function hot(
             tag: "Compiling",
             start: getNow(),
             events,
+            keepConsumingDirty: false,
           };
           Compile.printElmJsonsErrors(logger, state);
           compileAllOutputs();
@@ -421,6 +425,7 @@ async function hot(
 
         case "Compiling":
           hotState.events.push(...events);
+          hotState.keepConsumingDirty = true;
           compileAllOutputs();
           return;
 
@@ -546,29 +551,24 @@ async function hot(
       }
 
       if (dirty) {
-        if (currentCompile === undefined) {
-          switch (passedNextAction.tag) {
-            case "Restart":
-              return passedNextAction;
+        switch (passedNextAction.tag) {
+          case "Restart":
+            return passedNextAction;
 
-            case "Compile":
-              return {
-                tag: "Compile",
-                events: [...passedNextAction.events, event],
-              };
+          case "Compile":
+            return {
+              tag: "Compile",
+              events: [...passedNextAction.events, event],
+            };
 
-            case "NoAction":
-            case "PrintNonInterestingEvents":
-              return {
-                tag: "Compile",
-                events: [event],
-              };
-          }
-        } else {
-          currentCompile.events.push(event);
-          return passedNextAction;
+          case "NoAction":
+          case "PrintNonInterestingEvents":
+            return {
+              tag: "Compile",
+              events: [event],
+            };
         }
-      } else if (currentCompile === undefined) {
+      } else {
         switch (passedNextAction.tag) {
           case "Restart":
           case "Compile":
@@ -586,8 +586,6 @@ async function hot(
               events: [...passedNextAction.events, event],
             };
         }
-      } else {
-        return undefined;
       }
     };
 
@@ -684,15 +682,12 @@ async function hot(
             return;
           }
 
+          if (hotState.tag === "Compiling") {
+            hotState.keepConsumingDirty = false;
+          }
+
           if (updatedNextAction.tag === "Restart") {
             // Interrupt all compilation.
-            // TODO: There might be a little time until we actually start
-            // restarting. Don’t want stuff to recompile here due to `dirty`…
-            // Basically: Want current compile to stop as soon as possible
-            // but don’t do the actual restart until we’re ready waiting here
-            // so it sounds like we might need one more state after all?
-            // also, we do have one state: nextAction, but currently it is not ”exposed”
-            // What if we had one state and an Elm-like update with messages and return next?
             for (const [, , outputState] of toCompile) {
               outputState.dirty = true;
             }
