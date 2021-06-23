@@ -329,7 +329,7 @@ async function hot(
     });
 
     const runOnIdle = (): void => {
-      if (onIdle !== undefined && hotState.tag === "Idle") {
+      if (onIdle !== undefined) {
         const response = onIdle();
         switch (response) {
           case "KeepGoing":
