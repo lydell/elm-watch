@@ -234,45 +234,49 @@ type WatcherEvent = {
 
 type NextAction =
   | {
-      tag: "Compile";
-      events: NonEmptyArray<WatcherEvent>;
+      readonly tag: "Compile";
+      readonly events: NonEmptyArray<WatcherEvent>;
     }
   | {
-      tag: "NoAction";
+      readonly tag: "NoAction";
     }
   | {
-      tag: "PrintNonInterestingEvents";
-      events: NonEmptyArray<WatcherEvent>;
+      readonly tag: "PrintNonInterestingEvents";
+      readonly events: NonEmptyArray<WatcherEvent>;
     }
   | {
-      tag: "Restart";
-      eventsWithMessages: NonEmptyArray<{
+      readonly tag: "Restart";
+      readonly eventsWithMessages: NonEmptyArray<{
         event: WatcherEvent;
         message: string;
       }>;
     };
 
+type MutableArray<T> = Array<T>;
+
 type HotState =
   | {
-      tag: "Compiling";
-      start: Date;
-      events: Array<WatcherEvent>;
+      readonly tag: "Compiling";
+      readonly start: Date;
+      readonly events: MutableArray<WatcherEvent>;
       keepConsumingDirty: boolean;
     }
   | {
-      tag: "Dependencies";
-      start: Date;
-      events: Array<WatcherEvent>;
+      readonly tag: "Dependencies";
+      readonly start: Date;
+      readonly events: MutableArray<WatcherEvent>;
     }
   | {
-      tag: "Idle";
+      readonly tag: "Idle";
     }
   | {
-      tag: "Restarting";
-      events: NonEmptyArray<WatcherEvent>;
+      readonly tag: "Restarting";
+      readonly events: NonEmptyArray<WatcherEvent>;
     };
 
 // This function encapsulates all the tricky watcher logic and state mutations.
+// `readonly` and `MutableArray` is used above to show what is and isn’t mutated.
+// `let` variables below of course are re-assigned at times.
 async function hot(
   env: Env,
   logger: Logger,

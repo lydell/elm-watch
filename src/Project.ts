@@ -28,20 +28,24 @@ import type {
 } from "./Types";
 
 // The code base leans towards pure functions, but this data structure is going
-// to be mutated a lot, so it’s the trickiest part.
+// to be mutated a lot, so it’s the trickiest part. The properties without
+// `readonly` are the ones that are mutated.
 export type Project = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.
-  watchRoot: AbsolutePath;
-  elmToolingJsonPath: ElmToolingJsonPath;
-  disabledOutputs: HashSet<OutputPath>;
-  elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }>;
-  elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
+  readonly watchRoot: AbsolutePath;
+  readonly elmToolingJsonPath: ElmToolingJsonPath;
+  readonly disabledOutputs: HashSet<OutputPath>;
+  readonly elmJsonsErrors: Array<{
+    outputPath: OutputPath;
+    error: ElmJsonError;
+  }>;
+  readonly elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
 };
 
 export type OutputState = {
-  inputs: NonEmptyArray<InputPath>;
-  mode: CompilationMode;
-  postprocess?: NonEmptyArray<string>;
+  readonly inputs: NonEmptyArray<InputPath>;
+  readonly mode: CompilationMode;
+  readonly postprocess?: NonEmptyArray<string>;
   status: OutputStatus;
   allRelatedElmFilePaths: Set<string>;
   dirty: boolean;
