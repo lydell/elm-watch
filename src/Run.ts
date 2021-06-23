@@ -403,7 +403,6 @@ async function hot(
         index,
         [elmJsonPath, outputPath, outputState],
       ] of toCompile.entries()) {
-        // TODO: If all are idle we don’t want to get stuck.
         if (isIdle(outputState)) {
           compileOneOutput(elmJsonPath, outputPath, outputState, index).catch(
             reject
@@ -415,6 +414,9 @@ async function hot(
     const runCompile = (events: Array<WatcherEvent>): void => {
       switch (hotState.tag) {
         case "Idle": {
+          if (allAreIdle(toCompile)) {
+            return;
+          }
           logger.clearScreen();
           lastInfoMessage = undefined;
           hotState = {
