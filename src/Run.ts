@@ -125,7 +125,6 @@ export async function run(
           }
 
           const initStateResult = initState({
-            cwd,
             runMode,
             compilationMode: parseArgsResult.compilationMode,
             elmToolingJsonPath: parseResult.elmToolingJsonPath,

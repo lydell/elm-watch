@@ -13,7 +13,6 @@ import {
   AbsolutePath,
   absolutePathFromString,
   absoluteRealpath,
-  Cwd,
   findClosest,
   longestCommonAncestorPath,
 } from "./PathHelpers";
@@ -33,7 +32,6 @@ import type {
 export type State = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.
   watchRoot: AbsolutePath;
-  cwd: Cwd;
   runMode: RunMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   disabledOutputs: HashSet<OutputPath>;
@@ -113,14 +111,12 @@ export type InitStateResult =
     };
 
 export function initState({
-  cwd,
   runMode,
   compilationMode,
   elmToolingJsonPath,
   config,
   enabledOutputs,
 }: {
-  cwd: Cwd;
   runMode: RunMode;
   compilationMode: CompilationMode;
   elmToolingJsonPath: ElmToolingJsonPath;
@@ -199,7 +195,6 @@ export function initState({
     tag: "State",
     state: {
       watchRoot,
-      cwd,
       runMode,
       elmToolingJsonPath,
       disabledOutputs,
