@@ -15,7 +15,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath, Cwd } from "./PathHelpers";
-import { initState, OutputState, State } from "./State";
+import { initProject, OutputState, Project } from "./Project";
 import {
   CliArg,
   ElmJsonPath,
@@ -124,7 +124,7 @@ export async function run(
             return 1;
           }
 
-          const initStateResult = initState({
+          const initProjectResult = initProject({
             runMode,
             compilationMode: parseArgsResult.compilationMode,
             elmToolingJsonPath: parseResult.elmToolingJsonPath,
@@ -134,16 +134,18 @@ export async function run(
               : new Set(Object.keys(outputs)),
           });
 
-          switch (initStateResult.tag) {
+          switch (initProjectResult.tag) {
             // istanbul ignore next
             case "NoCommonRoot":
-              logger.errorTemplate(Errors.noCommonRoot(initStateResult.paths));
+              logger.errorTemplate(
+                Errors.noCommonRoot(initProjectResult.paths)
+              );
               return 1;
 
-            case "State": {
+            case "Project": {
               switch (runMode) {
                 case "make":
-                  return make(env, logger, runMode, initStateResult.state);
+                  return make(env, logger, runMode, initProjectResult.project);
 
                 case "hot":
                   return hot(
@@ -153,7 +155,7 @@ export async function run(
                     onIdle,
                     restart,
                     restartReasons,
-                    initStateResult.state
+                    initProjectResult.project
                   );
               }
             }
@@ -168,9 +170,9 @@ async function make(
   env: Env,
   logger: Logger,
   runMode: RunMode,
-  state: State
+  project: Project
 ): Promise<number> {
-  const installResult = await Compile.installDependencies(env, logger, state);
+  const installResult = await Compile.installDependencies(env, logger, project);
 
   switch (installResult.tag) {
     case "Error":
@@ -181,7 +183,7 @@ async function make(
       break;
   }
 
-  const toCompile = Array.from(state.elmJsons).flatMap(
+  const toCompile = Array.from(project.elmJsons).flatMap(
     ([elmJsonPath, outputs]) =>
       Array.from(
         outputs,
@@ -190,7 +192,7 @@ async function make(
       )
   );
 
-  Compile.printElmJsonsErrors(logger, state);
+  Compile.printElmJsonsErrors(logger, project);
 
   await Promise.all(
     toCompile.map(
@@ -202,7 +204,7 @@ async function make(
           env,
           logger,
           runMode,
-          elmToolingJsonPath: state.elmToolingJsonPath,
+          elmToolingJsonPath: project.elmToolingJsonPath,
           elmJsonPath,
           outputPath,
           outputState,
@@ -212,7 +214,7 @@ async function make(
     )
   );
 
-  const errors = Compile.extractErrors(state);
+  const errors = Compile.extractErrors(project);
 
   if (isNonEmptyArray(errors)) {
     Compile.printErrors(logger, errors);
@@ -278,11 +280,11 @@ async function hot(
   onIdle: OnIdle | undefined,
   restart: Restart,
   restartReasons: Array<WatcherEvent>,
-  state: State
+  project: Project
 ): Promise<number> {
   const isInteractive = logger.raw.stderr.isTTY;
 
-  const toCompile = Array.from(state.elmJsons).flatMap(
+  const toCompile = Array.from(project.elmJsons).flatMap(
     ([elmJsonPath, outputs]) =>
       Array.from(
         outputs,
@@ -297,7 +299,7 @@ async function hot(
   return new Promise((resolve, reject) => {
     let hotState: HotState = { tag: "Idle" };
 
-    const watcher = chokidar.watch(state.watchRoot.absolutePath, {
+    const watcher = chokidar.watch(project.watchRoot.absolutePath, {
       ignoreInitial: true,
       ignored: ["**/elm-stuff/**", "**/node_modules/**"],
       disableGlobbing: true,
@@ -346,7 +348,7 @@ async function hot(
         env,
         logger,
         runMode: "hot",
-        elmToolingJsonPath: state.elmToolingJsonPath,
+        elmToolingJsonPath: project.elmToolingJsonPath,
         elmJsonPath,
         outputPath,
         outputState,
@@ -371,7 +373,7 @@ async function hot(
             }
           } else if (allAreIdle(toCompile)) {
             const duration = getNow().getTime() - hotState.start.getTime();
-            const errors = Compile.extractErrors(state);
+            const errors = Compile.extractErrors(project);
             if (isNonEmptyArray(errors)) {
               Compile.printErrors(logger, errors);
             }
@@ -416,7 +418,7 @@ async function hot(
             events,
             keepConsumingDirty: false,
           };
-          Compile.printElmJsonsErrors(logger, state);
+          Compile.printElmJsonsErrors(logger, project);
           compileAllOutputs();
           return;
         }
@@ -491,7 +493,7 @@ async function hot(
               logInfoMessageWithTimeline(
                 notInterestingElmFileChangedMessage(
                   nextAction.events,
-                  state.disabledOutputs
+                  project.disabledOutputs
                 ),
                 nextAction.events
               );
@@ -512,7 +514,7 @@ async function hot(
     ): NextAction | undefined => {
       const elmFile = event.file;
 
-      if (isRelatedToElmJsonsErrors(elmFile, state.elmJsonsErrors)) {
+      if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
         return makeRestartNextAction(
           restartBecauseRelatedToElmJsonsErrorsMessage(event.eventName),
           event,
@@ -522,7 +524,7 @@ async function hot(
 
       let dirty = false;
 
-      for (const [, outputs] of state.elmJsons) {
+      for (const [, outputs] of project.elmJsons) {
         for (const [, outputState] of outputs) {
           if (event.eventName === "removed") {
             for (const inputPath of outputState.inputs) {
@@ -609,7 +611,7 @@ async function hot(
             case "removed":
               if (
                 absolutePathString ===
-                state.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
+                project.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
               ) {
                 return makeRestartNextAction(
                   restartBecauseJsonFileChangedMessage(basename, eventName),
@@ -632,7 +634,7 @@ async function hot(
             case "changed":
             case "removed":
               if (
-                Array.from(state.elmJsons).some(
+                Array.from(project.elmJsons).some(
                   ([elmJsonPath]) =>
                     absolutePathString ===
                     elmJsonPath.theElmJsonPath.absolutePath
@@ -714,7 +716,7 @@ async function hot(
       events: restartReasons,
     };
 
-    Compile.installDependencies(env, logger, state).then((installResult) => {
+    Compile.installDependencies(env, logger, project).then((installResult) => {
       switch (hotState.tag) {
         case "Dependencies": {
           switch (installResult.tag) {
@@ -850,7 +852,7 @@ function allAreIdle(
 
 function isRelatedToElmJsonsErrors(
   elmFile: AbsolutePath,
-  elmJsonsErrors: State["elmJsonsErrors"]
+  elmJsonsErrors: Project["elmJsonsErrors"]
 ): boolean {
   return elmJsonsErrors.some(({ error }) => {
     switch (error.tag) {

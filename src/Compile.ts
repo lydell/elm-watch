@@ -8,8 +8,8 @@ import { walkImports } from "./ImportWalker";
 import { Logger } from "./Logger";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
+import { OutputState, OutputStatus, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
-import { OutputState, OutputStatus, State } from "./State";
 import {
   ElmJsonPath,
   ElmToolingJsonPath,
@@ -30,14 +30,14 @@ type InstallDependenciesResult = { tag: "Error" } | { tag: "Success" };
 export async function installDependencies(
   env: Env,
   logger: Logger,
-  state: State
+  project: Project
 ): Promise<InstallDependenciesResult> {
   const isInteractive = logger.raw.stderr.isTTY;
   const loadingMessageDelay = Number(
     env.__ELM_WATCH_LOADING_MESSAGE_DELAY ?? "100"
   );
 
-  const elmJsonsArray = Array.from(state.elmJsons);
+  const elmJsonsArray = Array.from(project.elmJsons);
 
   for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
     // Don’t print `(x/y)` the first time, because chances are all packages are
@@ -244,8 +244,8 @@ export async function compileOneOutput({
   }
 }
 
-export function printElmJsonsErrors(logger: Logger, state: State): void {
-  for (const { outputPath } of state.elmJsonsErrors) {
+export function printElmJsonsErrors(logger: Logger, project: Project): void {
+  for (const { outputPath } of project.elmJsonsErrors) {
     logger.error(
       statusLine(
         outputPath,
@@ -329,9 +329,9 @@ function statusLine(
   }
 }
 
-export function extractErrors(state: State): Array<Errors.ErrorTemplate> {
+export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   return [
-    ...state.elmJsonsErrors.map(({ outputPath, error }) => {
+    ...project.elmJsonsErrors.map(({ outputPath, error }) => {
       switch (error.tag) {
         case "ElmJsonNotFound":
           return Errors.elmJsonNotFound(
@@ -360,7 +360,7 @@ export function extractErrors(state: State): Array<Errors.ErrorTemplate> {
       }
     }),
 
-    ...Array.from(state.elmJsons).flatMap(([elmJsonPath, outputs]) =>
+    ...Array.from(project.elmJsons).flatMap(([elmJsonPath, outputs]) =>
       Array.from(outputs).flatMap(([outputPath, { status }]) => {
         switch (status.tag) {
           case "NotWrittenToDisk":
@@ -415,7 +415,7 @@ export function extractErrors(state: State): Array<Errors.ErrorTemplate> {
             );
 
           case "ElmWatchNodeMissingScript":
-            return Errors.elmWatchNodeMissingScript(state.elmToolingJsonPath);
+            return Errors.elmWatchNodeMissingScript(project.elmToolingJsonPath);
 
           case "ElmWatchNodeImportError":
             return Errors.elmWatchNodeImportError(

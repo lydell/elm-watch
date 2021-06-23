@@ -11,9 +11,9 @@ import {
 } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
 import { ExecutedCommand } from "./Postprocess";
+import { UncheckedInputPath } from "./Project";
 import { Command, ExitReason } from "./Spawn";
 import { JsonPath } from "./SpawnElm";
-import { UncheckedInputPath } from "./State";
 import {
   CliArg,
   ElmJsonPath,

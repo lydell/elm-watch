@@ -29,14 +29,13 @@ import type {
 
 // The code base leans towards pure functions, but this data structure is going
 // to be mutated a lot, so it’s the trickiest part.
-export type State = {
+export type Project = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.
   watchRoot: AbsolutePath;
   elmToolingJsonPath: ElmToolingJsonPath;
   disabledOutputs: HashSet<OutputPath>;
   elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }>;
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
-  // Maybe also websocket connections in the future.
 };
 
 export type OutputState = {
@@ -99,17 +98,17 @@ export type UncheckedInputPath = {
   originalString: string;
 };
 
-export type InitStateResult =
+export type InitProjectResult =
   | {
       tag: "NoCommonRoot";
       paths: NonEmptyArray<AbsolutePath>;
     }
   | {
-      tag: "State";
-      state: State;
+      tag: "Project";
+      project: Project;
     };
 
-export function initState({
+export function initProject({
   compilationMode,
   elmToolingJsonPath,
   config,
@@ -120,7 +119,7 @@ export function initState({
   elmToolingJsonPath: ElmToolingJsonPath;
   config: ElmToolingJson.Config;
   enabledOutputs: Set<string>;
-}): InitStateResult {
+}): InitProjectResult {
   const disabledOutputs = new HashSet<OutputPath>();
   const elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }> =
     [];
@@ -190,8 +189,8 @@ export function initState({
   }
 
   return {
-    tag: "State",
-    state: {
+    tag: "Project",
+    project: {
       watchRoot,
       elmToolingJsonPath,
       disabledOutputs,
