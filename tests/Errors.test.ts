@@ -221,6 +221,21 @@ describe("errors", () => {
       `);
     });
 
+    test("/dev/null must be exactly that", async () => {
+      expect(await run("elm-tooling-json-decode-error/bad-dev-null", ["make"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-dev-null/elm-tooling.json
+
+        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+
+        ⧙I had trouble with the JSON inside:⧘
+
+        At root["x-elm-watch"]["outputs"]["/usr/../dev/null"]:
+        Outputs must end with .js or be /dev/null
+      `);
+    });
+
     test("unknown field", async () => {
       expect(await run("elm-tooling-json-decode-error/unknown-field", ["make"]))
         .toMatchInlineSnapshot(`
@@ -508,6 +523,26 @@ describe("errors", () => {
       Is something misspelled? (You need to type them exactly the same.)
       Or do you need to add some more outputs?
     `);
+  });
+
+  test("duplicate outputs", async () => {
+    expect(await run("duplicate-outputs", ["make"])).toMatchInlineSnapshot(`
+⧙-- DUPLICATE OUTPUTS -----------------------------------------------------------⧘
+/Users/you/project/tests/fixtures/errors/duplicate-outputs/elm-tooling.json
+
+Some of your outputs seem to be duplicates!
+
+main.js
+./main.js
+../duplicate-outputs/main.js
+-> /Users/you/project/tests/fixtures/errors/duplicate-outputs/main.js
+
+build/app.js
+build//app.js
+-> /Users/you/project/tests/fixtures/errors/duplicate-outputs/build/app.js
+
+Make sure every output is listed just once!
+`);
   });
 
   describe("inputs errors", () => {

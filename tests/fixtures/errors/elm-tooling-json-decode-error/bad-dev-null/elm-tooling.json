@@ -1,0 +1,9 @@
+{
+  "x-elm-watch": {
+    "outputs": {
+      "/usr/../dev/null": {
+        "inputs": ["src/Main.elm"]
+      }
+    }
+  }
+}

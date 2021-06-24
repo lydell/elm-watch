@@ -244,7 +244,10 @@ export async function compileOneOutput({
   }
 }
 
-export function printElmJsonsErrors(logger: Logger, project: Project): void {
+export function printStatusLinesForElmJsonsErrors(
+  logger: Logger,
+  project: Project
+): void {
   for (const { outputPath } of project.elmJsonsErrors) {
     logger.error(
       statusLine(

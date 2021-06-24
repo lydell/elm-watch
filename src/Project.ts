@@ -104,6 +104,13 @@ export type UncheckedInputPath = {
 
 export type InitProjectResult =
   | {
+      tag: "DuplicateOutputs";
+      duplicates: NonEmptyArray<{
+        originalOutputPathStrings: NonEmptyArray<string>;
+        absolutePath: AbsolutePath;
+      }>;
+    }
+  | {
       tag: "NoCommonRoot";
       paths: NonEmptyArray<AbsolutePath>;
     }
@@ -128,6 +135,10 @@ export function initProject({
   const elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }> =
     [];
   const elmJsons = new HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>();
+  const potentialOutputDuplicates = new HashMap<
+    AbsolutePath,
+    NonEmptyArray<string>
+  >();
 
   for (const [outputPathString, output] of Object.entries(config.outputs)) {
     const outputPath: OutputPath =
@@ -141,6 +152,25 @@ export function initProject({
             ),
             originalString: outputPathString,
           };
+
+    switch (outputPath.tag) {
+      case "NullOutputPath":
+        break;
+
+      case "OutputPath": {
+        const previous = potentialOutputDuplicates.get(
+          outputPath.theOutputPath
+        );
+        if (previous === undefined) {
+          potentialOutputDuplicates.set(outputPath.theOutputPath, [
+            outputPath.originalString,
+          ]);
+        } else {
+          previous.push(outputPath.originalString);
+        }
+        break;
+      }
+    }
 
     if (enabledOutputs.has(outputPathString)) {
       const resolveElmJsonResult = resolveElmJson(
@@ -172,6 +202,20 @@ export function initProject({
     } else {
       disabledOutputs.add(outputPath);
     }
+  }
+
+  const duplicateOutputs = Array.from(potentialOutputDuplicates)
+    .filter(([_, outputPaths]) => outputPaths.length >= 2)
+    .map(([absolutePath, originalOutputPathStrings]) => ({
+      originalOutputPathStrings,
+      absolutePath,
+    }));
+
+  if (isNonEmptyArray(duplicateOutputs)) {
+    return {
+      tag: "DuplicateOutputs",
+      duplicates: duplicateOutputs,
+    };
   }
 
   const paths = mapNonEmptyArray(
@@ -278,17 +322,17 @@ function resolveElmJson(
     };
   }
 
-  const duplicates = Array.from(resolved)
+  const duplicateInputs = Array.from(resolved)
     .filter(([_, inputPaths]) => inputPaths.length >= 2)
     .map(([resolvedPath, inputPaths]) => ({
       resolved: resolvedPath,
       inputs: inputPaths,
     }));
 
-  if (isNonEmptyArray(duplicates)) {
+  if (isNonEmptyArray(duplicateInputs)) {
     return {
       tag: "DuplicateInputs",
-      duplicates,
+      duplicates: duplicateInputs,
     };
   }
 

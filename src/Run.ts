@@ -55,7 +55,6 @@ export async function run(
         )
       );
       return handleElmToolingJsonError(
-        1,
         logger,
         getNow,
         runMode,
@@ -71,7 +70,6 @@ export async function run(
         )
       );
       return handleElmToolingJsonError(
-        1,
         logger,
         getNow,
         runMode,
@@ -135,6 +133,21 @@ export async function run(
           });
 
           switch (initProjectResult.tag) {
+            case "DuplicateOutputs":
+              logger.errorTemplate(
+                Errors.duplicateOutputs(
+                  parseResult.elmToolingJsonPath,
+                  initProjectResult.duplicates
+                )
+              );
+              return handleElmToolingJsonError(
+                logger,
+                getNow,
+                runMode,
+                restart,
+                parseResult.elmToolingJsonPath
+              );
+
             // istanbul ignore next
             case "NoCommonRoot":
               logger.errorTemplate(
@@ -192,7 +205,7 @@ async function make(
       )
   );
 
-  Compile.printElmJsonsErrors(logger, project);
+  Compile.printStatusLinesForElmJsonsErrors(logger, project);
 
   await Promise.all(
     toCompile.map(
@@ -422,7 +435,7 @@ async function hot(
             events,
             keepConsumingDirty: false,
           };
-          Compile.printElmJsonsErrors(logger, project);
+          Compile.printStatusLinesForElmJsonsErrors(logger, project);
           compileAllOutputs();
           return;
         }
@@ -756,7 +769,6 @@ async function hot(
 }
 
 async function handleElmToolingJsonError(
-  exitCode: number,
   logger: Logger,
   getNow: GetNow,
   runMode: RunMode,
@@ -765,7 +777,7 @@ async function handleElmToolingJsonError(
 ): Promise<number> {
   switch (runMode) {
     case "make":
-      return exitCode;
+      return 1;
 
     case "hot":
       return new Promise((resolve, reject) => {

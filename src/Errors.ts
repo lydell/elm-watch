@@ -365,6 +365,30 @@ ${symlinkText}
 `;
 }
 
+export function duplicateOutputs(
+  elmToolingJsonPath: ElmToolingJsonPath,
+  duplicates: NonEmptyArray<{
+    originalOutputPathStrings: NonEmptyArray<string>;
+    absolutePath: AbsolutePath;
+  }>
+): ErrorTemplate {
+  return fancyError("DUPLICATE OUTPUTS", elmToolingJsonPath)`
+Some of your outputs seem to be duplicates!
+
+${join(
+  mapNonEmptyArray(duplicates, ({ originalOutputPathStrings, absolutePath }) =>
+    join(
+      [...originalOutputPathStrings, `-> ${absolutePath.absolutePath}`],
+      "\n"
+    )
+  ),
+  "\n\n"
+)}
+
+Make sure every output is listed just once!
+`;
+}
+
 export function elmNotFoundError(
   location: ElmJsonPath | OutputPath,
   command: Command
@@ -688,7 +712,7 @@ export function importWalkerFileSystemError(
   outputPath: OutputPath,
   error: Error
 ): ErrorTemplate {
-  return fancyError("INVALID elm.json FORMAT", outputPath)`
+  return fancyError("TROUBLE READING ELM FILES", outputPath)`
 When figuring out all Elm files that your inputs depend on I read a lot of Elm files.
 Doing so I encountered this error:
 
