@@ -17,6 +17,13 @@ import {
 } from "./Types";
 
 export type PostprocessResult =
+  | PostprocessError
+  | {
+      tag: "Success";
+      newOutputPath: OutputPath;
+    };
+
+export type PostprocessError =
   | {
       tag: "CommandNotFoundError";
       command: Command;
@@ -62,8 +69,7 @@ export type PostprocessResult =
       tag: "StdoutDecodeError";
       error: Decode.DecoderError | SyntaxError;
       executedCommand: ExecutedCommand;
-    }
-  | { tag: "Success"; newOutputPath: OutputPath };
+    };
 
 export type ExecutedCommand =
   | {

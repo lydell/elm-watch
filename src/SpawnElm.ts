@@ -19,7 +19,9 @@ import {
   outputPathToAbsoluteString,
 } from "./Types";
 
-export type ElmMakeResult =
+export type RunElmMakeResult = RunElmMakeError | { tag: "Success" };
+
+export type RunElmMakeError =
   | {
       tag: "ElmMakeError";
       error: ElmMakeError;
@@ -38,9 +40,6 @@ export type ElmMakeResult =
       tag: "OtherSpawnError";
       error: Error;
       command: Command;
-    }
-  | {
-      tag: "Success";
     }
   | {
       tag: "UnexpectedElmMakeOutput";
@@ -66,7 +65,7 @@ export async function make({
   inputs: NonEmptyArray<InputPath>;
   output: OutputPath;
   env: Env;
-}): Promise<ElmMakeResult> {
+}): Promise<RunElmMakeResult> {
   const command: Command = {
     command: "elm",
     args: [
@@ -127,7 +126,10 @@ function compilationModeToArgs(mode: CompilationMode): Array<string> {
   }
 }
 
-function parseElmMakeJson(command: Command, jsonString: string): ElmMakeResult {
+function parseElmMakeJson(
+  command: Command,
+  jsonString: string
+): RunElmMakeResult {
   let json: unknown;
 
   try {

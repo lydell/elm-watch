@@ -46,7 +46,7 @@ function walkImportsHelper(
           ? filePath.slice(FIXTURES_DIR.absolutePath.length)
           : filePath
       ).join("\n");
-    case "FileSystemError":
+    case "ImportWalkerFileSystemError":
       return clean(result.error.message);
   }
 }

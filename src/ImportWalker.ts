@@ -10,14 +10,16 @@ import { InputPath, SourceDirectory } from "./Types";
 // NOTE: This module uses just `string` instead of `AbsolutePath` for performance!
 
 export type WalkImportsResult =
-  | {
-      tag: "FileSystemError";
-      error: Error & { code?: string };
-    }
+  | WalkImportsError
   | {
       tag: "Success";
       allRelatedElmFilePaths: Set<string>;
     };
+
+export type WalkImportsError = {
+  tag: "ImportWalkerFileSystemError";
+  error: Error & { code?: string };
+};
 
 // Returns Elm file paths that if created, deleted or changed, `inputPath` needs
 // to be recompiled.
@@ -48,7 +50,7 @@ export function walkImports(
     }
   } catch (errorAny) {
     const error = errorAny as Error & { code?: string };
-    return { tag: "FileSystemError", error };
+    return { tag: "ImportWalkerFileSystemError", error };
   }
 
   return { tag: "Success", allRelatedElmFilePaths };

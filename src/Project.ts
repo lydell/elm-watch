@@ -3,6 +3,7 @@ import * as ElmToolingJson from "./ElmToolingJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton } from "./Helpers";
+import { WalkImportsError } from "./ImportWalker";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -16,8 +17,8 @@ import {
   findClosest,
   longestCommonAncestorPath,
 } from "./PathHelpers";
-import { PostprocessResult } from "./Postprocess";
-import { ElmMakeResult } from "./SpawnElm";
+import { PostprocessError } from "./Postprocess";
+import { RunElmMakeError } from "./SpawnElm";
 import type {
   CompilationMode,
   ElmJsonPath,
@@ -53,13 +54,14 @@ export type OutputState = {
 
 export type OutputStatus =
   | ElmJson.ParseError
-  | ElmMakeResult
-  | PostprocessResult
+  | PostprocessError
+  | RunElmMakeError
+  | WalkImportsError
   | { tag: "ElmMake" }
-  | { tag: "ImportWalkerFileSystemError"; error: Error }
   | { tag: "Interrupted" }
   | { tag: "NotWrittenToDisk" }
-  | { tag: "Postprocess" };
+  | { tag: "Postprocess" }
+  | { tag: "Success" };
 
 type ElmJsonError =
   | {

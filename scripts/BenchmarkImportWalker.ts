@@ -110,7 +110,7 @@ function run(args: Array<string>): void {
     case "Success":
       console.log("allRelatedElmFilePaths", result.allRelatedElmFilePaths.size);
       process.exit(0);
-    case "FileSystemError":
+    case "ImportWalkerFileSystemError":
       console.error(result.error.message);
       process.exit(1);
   }

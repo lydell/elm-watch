@@ -221,15 +221,7 @@ export async function compileOneOutput({
       case "Success":
         break;
 
-      case "FileSystemError":
-        outputState.allRelatedElmFilePaths = new Set();
-        outputState.status = {
-          tag: "ImportWalkerFileSystemError",
-          error: allRelatedElmFilePathsResult.error,
-        };
-        updateStatusLine();
-        return;
-
+      case "ImportWalkerFileSystemError":
       case "ElmJsonReadAsJsonError":
       case "ElmJsonDecodeError":
         outputState.allRelatedElmFilePaths = new Set();
