@@ -378,17 +378,28 @@ async function hot(
         case "Idle":
           throw new Error(`HotState became ${hotState.tag} while compiling!`);
 
-        case "Compiling":
+        case "Compiling": {
           if (outputState.dirty) {
-            if (hotState.keepConsumingDirty) {
-              return compileOneOutput(
-                elmJsonPath,
-                outputPath,
-                outputState,
-                index
-              );
+            return hotState.keepConsumingDirty
+              ? compileOneOutput(elmJsonPath, outputPath, outputState, index)
+              : undefined;
+          }
+          const someOutputIsExecutingOrWasInterrupted = toCompile.some(
+            ([, , outputState2]) => {
+              switch (outputState2.status.tag) {
+                case "ElmMake":
+                case "Postprocess":
+                case "Interrupted":
+                  return true;
+
+                default:
+                  return false;
+              }
             }
-          } else if (allAreIdle(toCompile)) {
+          );
+          // Output executing -> wait for that.
+          // Output interrupted -> it will be re-executed soon, so wait for that.
+          if (!someOutputIsExecutingOrWasInterrupted) {
             const duration = getNow().getTime() - hotState.start.getTime();
             const errors = Compile.extractErrors(project);
             if (isNonEmptyArray(errors)) {
@@ -402,12 +413,25 @@ async function hot(
             runOnIdle();
           }
           return;
+        }
 
-        case "Restarting":
-          if (allAreIdle(toCompile)) {
+        case "Restarting": {
+          const someOutputIsExecuting = toCompile.some(([, , outputState2]) => {
+            switch (outputState2.status.tag) {
+              case "ElmMake":
+              case "Postprocess":
+                return true;
+
+              default:
+                return false;
+            }
+          });
+
+          if (!someOutputIsExecuting) {
             runRestart(hotState.events);
           }
           return;
+        }
       }
     };
 
@@ -416,10 +440,17 @@ async function hot(
         index,
         [elmJsonPath, outputPath, outputState],
       ] of toCompile.entries()) {
-        if (isIdle(outputState)) {
-          compileOneOutput(elmJsonPath, outputPath, outputState, index).catch(
-            reject
-          );
+        switch (outputState.status.tag) {
+          case "ElmMake":
+          case "Postprocess":
+            // Already executing – when done they will re-execute if dirty
+            // (unless we’re restarting or something like that).
+            return;
+
+          default:
+            compileOneOutput(elmJsonPath, outputPath, outputState, index).catch(
+              reject
+            );
         }
       }
     };
@@ -846,24 +877,6 @@ function makeRestartNextAction(
         ? [...nextAction.eventsWithMessages, { event, message }]
         : [{ event, message }],
   };
-}
-
-function isIdle(outputState: OutputState): boolean {
-  switch (outputState.status.tag) {
-    case "ElmMake":
-    case "Postprocess":
-    case "Interrupted":
-      return false;
-
-    default:
-      return true;
-  }
-}
-
-function allAreIdle(
-  toCompile: Array<[ElmJsonPath, OutputPath, OutputState]>
-): boolean {
-  return toCompile.every(([, , outputState]) => isIdle(outputState));
 }
 
 function isRelatedToElmJsonsErrors(
