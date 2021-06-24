@@ -688,7 +688,8 @@ ${bold("I had trouble reading it as JSON:")}
 
 ${error.message}
 
-(I still managed to compile your code, but the watcher will not work properly.)
+(I still managed to compile your code, but the watcher will not work properly
+and "postprocess" was not run.)
 `;
 }
 
@@ -704,7 +705,8 @@ ${bold("I had trouble with the JSON inside:")}
 
 ${error.format()}
 
-(I still managed to compile your code, but the watcher will not work properly.)
+(I still managed to compile your code, but the watcher will not work properly
+and "postprocess" was not run.)
 `;
 }
 
@@ -718,7 +720,8 @@ Doing so I encountered this error:
 
 ${error.message}
 
-(I still managed to compile your code, but the watcher will not work properly.)
+(I still managed to compile your code, but the watcher will not work properly
+and "postprocess" was not run.)
 `;
 }
 

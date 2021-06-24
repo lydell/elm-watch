@@ -4,7 +4,7 @@ import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
 import { bold, Env, join } from "./Helpers";
-import { walkImports } from "./ImportWalker";
+import { walkImports, WalkImportsResult } from "./ImportWalker";
 import { Logger } from "./Logger";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
@@ -186,7 +186,7 @@ export async function compileOneOutput({
   outputState.dirty = false;
   outputState.status = { tag: "ElmMake" };
   updateStatusLine();
-  const [elmMakeResult] = await Promise.all([
+  const [elmMakeResult, allRelatedElmFilePathsResult] = await Promise.all([
     SpawnElm.make({
       elmJsonPath,
       mode: outputState.mode,
@@ -203,16 +203,7 @@ export async function compileOneOutput({
           // chance to compute this the first time (during packages
           // installation or `elm make` above). Everything is marked as
           // dirty by default anyway and will get compiled.
-          // TODO: This should return a result, so we can check both the result
-          // from `elm make` and this and decide which error to show. Also check
-          // the error messages if “(I still managed to compile your code, but
-          // the watcher will not work properly.)” is true.
-          updateAllRelatedElmFilePaths(
-            elmJsonPath,
-            outputState.inputs,
-            outputState
-          );
-          return;
+          return getAllRelatedElmFilePaths(elmJsonPath, outputState.inputs);
       }
     }),
   ]);
@@ -225,6 +216,28 @@ export async function compileOneOutput({
     elmMakeResult.tag === "Success" &&
     outputState.postprocess !== undefined
   ) {
+    switch (allRelatedElmFilePathsResult?.tag) {
+      case undefined:
+      case "Success":
+        break;
+
+      case "FileSystemError":
+        outputState.allRelatedElmFilePaths = new Set();
+        outputState.status = {
+          tag: "ImportWalkerFileSystemError",
+          error: allRelatedElmFilePathsResult.error,
+        };
+        updateStatusLine();
+        return;
+
+      case "ElmJsonReadAsJsonError":
+      case "ElmJsonDecodeError":
+        outputState.allRelatedElmFilePaths = new Set();
+        outputState.status = allRelatedElmFilePathsResult;
+        updateStatusLine();
+        return;
+    }
+
     outputState.status = { tag: "Postprocess" };
     updateStatusLine();
     outputState.status = await postprocess({
@@ -239,6 +252,7 @@ export async function compileOneOutput({
     }
     updateStatusLine();
   } else {
+    // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
     outputState.status = elmMakeResult;
     updateStatusLine();
   }
@@ -491,39 +505,20 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   ];
 }
 
-function updateAllRelatedElmFilePaths(
+function getAllRelatedElmFilePaths(
   elmJsonPath: ElmJsonPath,
-  inputs: NonEmptyArray<InputPath>,
-  outputState: OutputState
-): void {
+  inputs: NonEmptyArray<InputPath>
+): ElmJson.ParseError | WalkImportsResult {
   const parseResult = ElmJson.readAndParse(elmJsonPath);
 
   switch (parseResult.tag) {
-    case "Parsed": {
-      const importWalkerResult = walkImports(
+    case "Parsed":
+      return walkImports(
         ElmJson.getSourceDirectories(elmJsonPath, parseResult.elmJson),
         inputs
       );
 
-      switch (importWalkerResult.tag) {
-        case "Success":
-          outputState.allRelatedElmFilePaths =
-            importWalkerResult.allRelatedElmFilePaths;
-          return;
-
-        case "FileSystemError":
-          outputState.allRelatedElmFilePaths = new Set();
-          outputState.status = {
-            tag: "ImportWalkerFileSystemError",
-            error: importWalkerResult.error,
-          };
-          return;
-      }
-    }
-
     default:
-      outputState.allRelatedElmFilePaths = new Set();
-      outputState.status = parseResult;
-      return;
+      return parseResult;
   }
 }
