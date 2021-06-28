@@ -215,7 +215,11 @@ export async function compileOneOutput({
   ) {
     switch (allRelatedElmFilePathsResult?.tag) {
       case undefined:
+        break;
+
       case "Success":
+        outputState.allRelatedElmFilePaths =
+          allRelatedElmFilePathsResult.allRelatedElmFilePaths;
         break;
 
       case "ImportWalkerFileSystemError":
