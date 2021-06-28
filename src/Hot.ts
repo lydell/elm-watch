@@ -495,51 +495,45 @@ export async function run(
       let nextAction: NextAction = { tag: "NoAction" };
       let watcherTimeoutId: NodeJS.Timeout | undefined;
 
-      const onWatcherEventWrapper =
-        (eventName: WatcherEventName) =>
-        (absolutePathString: string): void => {
-          const updatedNextAction = onWatcherEvent(
-            eventName,
-            absolutePathString,
-            nextAction
-          );
+      watcherOnAll(watcher, (eventName, absolutePathString) => {
+        const updatedNextAction = onWatcherEvent(
+          eventName,
+          absolutePathString,
+          nextAction
+        );
 
-          if (updatedNextAction === undefined) {
-            return;
+        if (updatedNextAction === undefined) {
+          return;
+        }
+
+        if (hotState.tag === "Compiling") {
+          hotState.keepConsumingDirty = false;
+        }
+
+        if (updatedNextAction.tag === "Restart") {
+          // Interrupt all compilation.
+          for (const [, , outputState] of toCompile) {
+            outputState.dirty = true;
           }
+        }
 
-          if (hotState.tag === "Compiling") {
-            hotState.keepConsumingDirty = false;
-          }
+        nextAction = updatedNextAction;
 
-          if (updatedNextAction.tag === "Restart") {
-            // Interrupt all compilation.
-            for (const [, , outputState] of toCompile) {
-              outputState.dirty = true;
-            }
-          }
+        if (watcherTimeoutId !== undefined) {
+          clearTimeout(watcherTimeoutId);
+        }
 
-          nextAction = updatedNextAction;
-
-          if (watcherTimeoutId !== undefined) {
-            clearTimeout(watcherTimeoutId);
-          }
-
-          // Sleep for a little bit in hot mode to avoid unnecessary
-          // recompilation when using “save all” in an editor, or when running
-          // `git switch some-branch` or `git restore .`. These operations
-          // results in many files being added/changed/deleted, usually with
-          // 0-1 ms between each event.
-          setTimeout(() => {
-            watcherTimeoutId = undefined;
-            runNextAction(nextAction);
-            nextAction = { tag: "NoAction" };
-          }, 10);
-        };
-
-      watcher.on("add", onWatcherEventWrapper("added"));
-      watcher.on("change", onWatcherEventWrapper("changed"));
-      watcher.on("unlink", onWatcherEventWrapper("removed"));
+        // Sleep for a little bit in hot mode to avoid unnecessary
+        // recompilation when using “save all” in an editor, or when running
+        // `git switch some-branch` or `git restore .`. These operations
+        // results in many files being added/changed/deleted, usually with
+        // 0-1 ms between each event.
+        setTimeout(() => {
+          watcherTimeoutId = undefined;
+          runNextAction(nextAction);
+          nextAction = { tag: "NoAction" };
+        }, 10);
+      });
 
       // As far as I can tell, the watcher is never supposed to emit error events
       // during normal operation.
@@ -600,26 +594,45 @@ export async function watchElmToolingJsonOnce(
       }
     );
 
-    const onWatcherEvent =
-      (eventName: WatcherEventName) =>
-      (absolutePathString: string): void => {
-        const event: WatcherEvent = {
-          date: getNow(),
-          eventName,
-          file: {
-            tag: "AbsolutePath",
-            absolutePath: absolutePathString,
-          },
-        };
-        watcher.close().then(() => {
-          resolve(event);
-        }, reject);
+    watcherOnAll(watcher, (eventName, absolutePathString) => {
+      const event: WatcherEvent = {
+        date: getNow(),
+        eventName,
+        file: {
+          tag: "AbsolutePath",
+          absolutePath: absolutePathString,
+        },
       };
+      watcher.close().then(() => {
+        resolve(event);
+      }, reject);
+    });
+  });
+}
 
-    watcher.on("add", onWatcherEvent("added"));
-    watcher.on("change", onWatcherEvent("changed"));
-    watcher.on("unlink", onWatcherEvent("removed"));
-    watcher.on("error", reject);
+function watcherOnAll(
+  watcher: chokidar.FSWatcher,
+  callback: (eventName: WatcherEventName, absolutePathString: string) => void
+): void {
+  // We generally only care about files – not directories – but adding and
+  // removing directories can cause/fix errors, if they are named
+  // `elm-tooling.json`, `elm.json` or `*.elm`.
+  watcher.on("all", (chokidarEventName, absolutePathString) => {
+    switch (chokidarEventName) {
+      case "add":
+      case "addDir":
+        callback("added", absolutePathString);
+        return;
+
+      case "unlink":
+      case "unlinkDir":
+        callback("removed", absolutePathString);
+        return;
+
+      case "change":
+        callback("changed", absolutePathString);
+        return;
+    }
   });
 }
 
