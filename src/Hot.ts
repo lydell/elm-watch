@@ -883,11 +883,11 @@ const runCmd =
         }
         return;
 
-      case "PrintCompileErrors":
-        Compile.printErrors(logger, cmd.errors);
+      case "NoCmd":
         return;
 
-      case "NoCmd":
+      case "PrintCompileErrors":
+        Compile.printErrors(logger, cmd.errors);
         return;
 
       case "PrintStatusLinesForElmJsonsErrors":
