@@ -10,6 +10,10 @@ import { Cwd } from "./PathHelpers";
 import { initProject } from "./Project";
 import { CliArg, ElmToolingJsonPath, GetNow, OnIdle, RunMode } from "./Types";
 
+type RunResult =
+  | { tag: "Exit"; exitCode: number }
+  | { tag: "Restart"; restartReasons: NonEmptyArray<Hot.WatcherEvent> };
+
 export async function run(
   cwd: Cwd,
   env: Env,
@@ -19,10 +23,7 @@ export async function run(
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.WatcherEvent>
-): Promise<number> {
-  const restart: Hot.Restart = (nextRestartReasons) =>
-    run(cwd, env, logger, getNow, onIdle, runMode, args, nextRestartReasons);
-
+): Promise<RunResult> {
   const parseResult = ElmToolingJson.findReadAndParse(cwd);
 
   switch (parseResult.tag) {
@@ -37,7 +38,6 @@ export async function run(
         logger,
         getNow,
         runMode,
-        restart,
         parseResult.elmToolingJsonPath
       );
 
@@ -52,13 +52,12 @@ export async function run(
         logger,
         getNow,
         runMode,
-        restart,
         parseResult.elmToolingJsonPath
       );
 
     case "ElmToolingJsonNotFound":
       logger.errorTemplate(Errors.elmToolingJsonNotFound(cwd, args));
-      return 1;
+      return { tag: "Exit", exitCode: 1 };
 
     case "Parsed": {
       const parseArgsResult = CliArgs.parseArgs(runMode, args);
@@ -73,15 +72,15 @@ export async function run(
               parseArgsResult.badArgs
             )
           );
-          return 1;
+          return { tag: "Exit", exitCode: 1 };
 
         case "DebugOptimizeForHot":
           logger.errorTemplate(Errors.debugOptimizeForHot());
-          return 1;
+          return { tag: "Exit", exitCode: 1 };
 
         case "DebugOptimizeClash":
           logger.errorTemplate(Errors.debugOptimizeClash());
-          return 1;
+          return { tag: "Exit", exitCode: 1 };
 
         case "Success": {
           const { outputs } = parseResult.config;
@@ -98,7 +97,7 @@ export async function run(
                 unknownOutputs
               )
             );
-            return 1;
+            return { tag: "Exit", exitCode: 1 };
           }
 
           const initProjectResult = initProject({
@@ -123,7 +122,6 @@ export async function run(
                 logger,
                 getNow,
                 runMode,
-                restart,
                 parseResult.elmToolingJsonPath
               );
 
@@ -132,28 +130,37 @@ export async function run(
               logger.errorTemplate(
                 Errors.noCommonRoot(initProjectResult.paths)
               );
-              return 1;
+              return { tag: "Exit", exitCode: 1 };
 
             case "Project": {
               switch (runMode) {
-                case "make":
-                  return Make.run(
+                case "make": {
+                  const exitCode = await Make.run(
                     env,
                     logger,
                     runMode,
                     initProjectResult.project
                   );
+                  return { tag: "Exit", exitCode };
+                }
 
-                case "hot":
-                  return Hot.run(
+                case "hot": {
+                  const result = await Hot.run(
                     env,
                     logger,
                     getNow,
                     onIdle,
-                    restart,
                     restartReasons,
                     initProjectResult.project
                   );
+                  switch (result.tag) {
+                    case "ExitOnIdle":
+                      return { tag: "Exit", exitCode: 0 };
+
+                    case "Restart":
+                      return result;
+                  }
+                }
               }
             }
           }
@@ -167,19 +174,19 @@ async function handleElmToolingJsonError(
   logger: Logger,
   getNow: GetNow,
   runMode: RunMode,
-  restart: Hot.Restart,
   elmToolingJsonPath: ElmToolingJsonPath
-): Promise<number> {
+): Promise<RunResult> {
   switch (runMode) {
     case "make":
-      return 1;
+      return { tag: "Exit", exitCode: 1 };
 
-    case "hot":
-      return Hot.handleElmToolingJsonError(
-        logger,
+    case "hot": {
+      const elmToolingJsonEvent = await Hot.watchElmToolingJsonOnce(
         getNow,
-        restart,
         elmToolingJsonPath
       );
+      logger.clearScreen();
+      return { tag: "Restart", restartReasons: [elmToolingJsonEvent] };
+    }
   }
 }

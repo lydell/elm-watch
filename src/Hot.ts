@@ -22,10 +22,6 @@ import {
   OutputPath,
 } from "./Types";
 
-export type Restart = (
-  nextRestartReason: NonEmptyArray<WatcherEvent>
-) => Promise<number>;
-
 type WatcherEventName = "added" | "changed" | "removed";
 
 export type WatcherEvent = {
@@ -76,6 +72,10 @@ type HotState =
       readonly events: NonEmptyArray<WatcherEvent>;
     };
 
+export type HotRunResult =
+  | { tag: "ExitOnIdle" }
+  | { tag: "Restart"; restartReasons: NonEmptyArray<WatcherEvent> };
+
 // This function encapsulates all the tricky watcher logic and state mutations.
 // `readonly` and `MutableArray` is used above to show what is and isn’t mutated.
 // `let` variables below of course are re-assigned at times.
@@ -84,10 +84,9 @@ export async function run(
   logger: Logger,
   getNow: GetNow,
   onIdle: OnIdle | undefined,
-  restart: Restart,
   restartReasons: Array<WatcherEvent>,
   project: Project
-): Promise<number> {
+): Promise<HotRunResult> {
   const isInteractive = logger.raw.stderr.isTTY;
 
   const toCompile = Array.from(project.elmJsons).flatMap(
@@ -137,7 +136,7 @@ export async function run(
             return;
           case "Stop":
             watcher.close().then(() => {
-              resolve(0);
+              resolve({ tag: "ExitOnIdle" });
             }, reject);
             return;
         }
@@ -277,7 +276,7 @@ export async function run(
 
     const runRestart = (events: NonEmptyArray<WatcherEvent>): void => {
       watcher.close().then(() => {
-        restart(events).then(resolve, reject);
+        resolve({ tag: "Restart", restartReasons: events });
       }, reject);
     };
 
@@ -588,12 +587,10 @@ export async function run(
   });
 }
 
-export async function handleElmToolingJsonError(
-  logger: Logger,
+export async function watchElmToolingJsonOnce(
   getNow: GetNow,
-  restart: Restart,
   elmToolingJsonPath: ElmToolingJsonPath
-): Promise<number> {
+): Promise<WatcherEvent> {
   return new Promise((resolve, reject) => {
     const watcher = chokidar.watch(
       elmToolingJsonPath.theElmToolingJsonPath.absolutePath,
@@ -606,23 +603,17 @@ export async function handleElmToolingJsonError(
     const onWatcherEvent =
       (eventName: WatcherEventName) =>
       (absolutePathString: string): void => {
-        const now = getNow();
-        logger.clearScreen();
-        watcher
-          .close()
-          .then(() =>
-            restart([
-              {
-                date: now,
-                eventName,
-                file: {
-                  tag: "AbsolutePath",
-                  absolutePath: absolutePathString,
-                },
-              },
-            ])
-          )
-          .then(resolve, reject);
+        const event: WatcherEvent = {
+          date: getNow(),
+          eventName,
+          file: {
+            tag: "AbsolutePath",
+            absolutePath: absolutePathString,
+          },
+        };
+        watcher.close().then(() => {
+          resolve(event);
+        }, reject);
       };
 
     watcher.on("add", onWatcherEvent("added"));

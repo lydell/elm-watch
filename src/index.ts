@@ -51,17 +51,25 @@ export async function elmWatchCli(
       return 0;
 
     case "make":
-    case "hot":
-      return run(
-        cwd,
-        env,
-        logger,
-        getNow,
-        onIdle,
-        args[0],
-        args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg })),
-        []
-      );
+    case "hot": {
+      let result;
+      do {
+        result = await run(
+          cwd,
+          env,
+          logger,
+          getNow,
+          onIdle,
+          args[0],
+          args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg })),
+          result === undefined ? [] : result.restartReasons
+        );
+      } while (result.tag === "Restart");
+      switch (result.tag) {
+        case "Exit":
+          return result.exitCode;
+      }
+    }
 
     default:
       logger.error(`Unknown command: ${args[0]}`);
