@@ -153,6 +153,10 @@ type Cmd =
     }
   | {
       tag: "SleepAfterWatcherEvent";
+    }
+  | {
+      tag: "Throw";
+      error: Error;
     };
 
 export type HotRunResult =
@@ -332,12 +336,17 @@ const update =
         switch (model.hotState.tag) {
           case "Dependencies":
           case "Idle":
-            // TODO: Should really throw in `update`?
-            // It COULD be a Cmd (tag: "Throw", message: string)
-            // But we could also figure something else.
-            throw new Error(
-              `HotState became ${model.hotState.tag} while compiling!`
-            );
+            return [
+              model,
+              [
+                {
+                  tag: "Throw",
+                  error: new Error(
+                    `HotState became ${model.hotState.tag} while compiling!`
+                  ),
+                },
+              ],
+            ];
 
           case "Compiling": {
             if (msg.outputState.dirty) {
@@ -448,10 +457,17 @@ const update =
 
           case "Idle":
           case "Compiling":
-            // TODO: Suspect throw here too.
-            throw new Error(
-              `HotState became ${model.hotState.tag} while installing dependencies!`
-            );
+            return [
+              model,
+              [
+                {
+                  tag: "Throw",
+                  error: new Error(
+                    `HotState became ${model.hotState.tag} while installing dependencies!`
+                  ),
+                },
+              ],
+            ];
         }
     }
   };
@@ -914,6 +930,10 @@ const runCmd =
           mutable.watcherTimeoutId = undefined;
           dispatch({ tag: "SleepAfterWatcherEventDone", date: getNow() });
         }, 10);
+        return;
+
+      case "Throw":
+        rejectPromise(cmd.error);
         return;
     }
   };
