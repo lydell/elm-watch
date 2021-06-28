@@ -288,7 +288,7 @@ const update =
   (msg: Msg, model: Model): [Model, Array<Cmd>] => {
     switch (msg.tag) {
       case "GotWatcherEvent": {
-        const updatedNextAction = onWatcherEvent(
+        const result = onWatcherEvent(
           msg.date,
           project,
           msg.eventName,
@@ -296,9 +296,11 @@ const update =
           model.nextAction
         );
 
-        if (updatedNextAction === undefined) {
+        if (result === undefined) {
           return [model, []];
         }
+
+        const [updatedNextAction, cmds] = result;
 
         return [
           {
@@ -309,18 +311,7 @@ const update =
                 : model.hotState,
             nextAction: updatedNextAction,
           },
-          [
-            updatedNextAction.tag === "Restart"
-              ? {
-                  // Interrupt all compilation.
-                  tag: "MarkAsDirty",
-                  outputStates: getToCompile(project).map(
-                    ({ outputState }) => outputState
-                  ),
-                }
-              : { tag: "NoCmd" },
-            { tag: "SleepAfterWatcherEvent" },
-          ],
+          [...cmds, { tag: "SleepAfterWatcherEvent" }],
         ];
       }
 
@@ -468,13 +459,13 @@ function onWatcherEvent(
   project: Project,
   eventName: WatcherEventName,
   absolutePathString: string,
-  passedNextAction: NextAction
-): NextAction | undefined {
+  nextAction: NextAction
+): [NextAction, Array<Cmd>] | undefined {
   if (absolutePathString.endsWith(".elm")) {
     return onElmFileWatcherEvent(
       project,
       makeEvent(eventName, absolutePathString, now),
-      passedNextAction
+      nextAction
     );
   }
 
@@ -487,7 +478,8 @@ function onWatcherEvent(
           return makeRestartNextAction(
             restartBecauseJsonFileChangedMessage(basename, eventName),
             makeEvent(eventName, absolutePathString, now),
-            passedNextAction
+            nextAction,
+            project
           );
 
         case "changed":
@@ -499,7 +491,8 @@ function onWatcherEvent(
             return makeRestartNextAction(
               restartBecauseJsonFileChangedMessage(basename, eventName),
               makeEvent(eventName, absolutePathString, now),
-              passedNextAction
+              nextAction,
+              project
             );
           }
           return undefined;
@@ -511,7 +504,8 @@ function onWatcherEvent(
           return makeRestartNextAction(
             restartBecauseJsonFileChangedMessage(basename, eventName),
             makeEvent(eventName, absolutePathString, now),
-            passedNextAction
+            nextAction,
+            project
           );
 
         case "changed":
@@ -525,7 +519,8 @@ function onWatcherEvent(
             return makeRestartNextAction(
               restartBecauseJsonFileChangedMessage(basename, eventName),
               makeEvent(eventName, absolutePathString, now),
-              passedNextAction
+              nextAction,
+              project
             );
           }
           return undefined;
@@ -541,18 +536,19 @@ function onElmFileWatcherEvent(
   project: Project,
   event: WatcherEvent,
   nextAction: NextAction
-): NextAction | undefined {
+): [NextAction, Array<Cmd>] | undefined {
   const elmFile = event.file;
 
   if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
     return makeRestartNextAction(
       restartBecauseRelatedToElmJsonsErrorsMessage(event.eventName),
       event,
-      nextAction
+      nextAction,
+      project
     );
   }
 
-  let dirty = false;
+  const dirtyOutputs: Array<OutputState> = [];
 
   for (const [, outputs] of project.elmJsons) {
     for (const [, outputState] of outputs) {
@@ -562,54 +558,66 @@ function onElmFileWatcherEvent(
             return makeRestartNextAction(
               restartBecauseInputWasRemovedMessage(),
               event,
-              nextAction
+              nextAction,
+              project
             );
           }
         }
       }
       if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
-        dirty = true;
-        // TODO: This should be a Cmd.
-        outputState.dirty = true;
+        dirtyOutputs.push(outputState);
       }
     }
   }
 
-  if (dirty) {
+  if (isNonEmptyArray(dirtyOutputs)) {
+    const cmd: Cmd = { tag: "MarkAsDirty", outputStates: dirtyOutputs };
     switch (nextAction.tag) {
       case "Restart":
-        return nextAction;
+        return [nextAction, [cmd]];
 
       case "Compile":
-        return {
-          tag: "Compile",
-          events: [...nextAction.events, event],
-        };
+        return [
+          {
+            tag: "Compile",
+            events: [...nextAction.events, event],
+          },
+          [cmd],
+        ];
 
       case "NoAction":
       case "PrintNonInterestingEvents":
-        return {
-          tag: "Compile",
-          events: [event],
-        };
+        return [
+          {
+            tag: "Compile",
+            events: [event],
+          },
+          [cmd],
+        ];
     }
   } else {
     switch (nextAction.tag) {
       case "Restart":
       case "Compile":
-        return nextAction;
+        return [nextAction, []];
 
       case "NoAction":
-        return {
-          tag: "PrintNonInterestingEvents",
-          events: [event],
-        };
+        return [
+          {
+            tag: "PrintNonInterestingEvents",
+            events: [event],
+          },
+          [],
+        ];
 
       case "PrintNonInterestingEvents":
-        return {
-          tag: "PrintNonInterestingEvents",
-          events: [...nextAction.events, event],
-        };
+        return [
+          {
+            tag: "PrintNonInterestingEvents",
+            events: [...nextAction.events, event],
+          },
+          [],
+        ];
     }
   }
 }
@@ -926,15 +934,27 @@ function makeEvent(
 function makeRestartNextAction(
   message: string,
   event: WatcherEvent,
-  nextAction: NextAction
-): NextAction {
-  return {
-    tag: "Restart",
-    eventsWithMessages:
-      nextAction.tag === "Restart"
-        ? [...nextAction.eventsWithMessages, { event, message }]
-        : [{ event, message }],
-  };
+  nextAction: NextAction,
+  project: Project
+): [NextAction, Array<Cmd>] {
+  return [
+    {
+      tag: "Restart",
+      eventsWithMessages:
+        nextAction.tag === "Restart"
+          ? [...nextAction.eventsWithMessages, { event, message }]
+          : [{ event, message }],
+    },
+    [
+      {
+        // Interrupt all compilation.
+        tag: "MarkAsDirty",
+        outputStates: getToCompile(project).map(
+          ({ outputState }) => outputState
+        ),
+      },
+    ],
+  ];
 }
 
 function isRelatedToElmJsonsErrors(
