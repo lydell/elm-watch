@@ -198,7 +198,6 @@ Or do you need to add some more outputs?
 `;
 }
 
-// istanbul ignore next
 export function noCommonRoot(
   paths: NonEmptyArray<AbsolutePath>
 ): ErrorTemplate {
@@ -423,7 +422,6 @@ Is ${bold(command.command)} installed?
 `;
 }
 
-// istanbul ignore next
 export function otherSpawnError(
   location: ElmJsonPath | OutputPath,
   error: Error,
@@ -521,8 +519,6 @@ export function elmWatchNodeImportError(
   scriptPath: ElmWatchNodeScriptPath,
   error: unknown
 ): ErrorTemplate {
-  // It’s not possible to test `throw null` at import – Jest crashes then…
-  // istanbul ignore next
   const code: unknown = (error as { code: unknown } | undefined)?.code;
   const errorString: string =
     // `import()` is used for real (since it supports both CJS and MJS).
@@ -641,7 +637,6 @@ ${printJsonPath(jsonPath)}
 `;
 }
 
-// istanbul ignore next
 export function stuckInProgressState(
   outputPath: OutputPath,
   state: string
@@ -786,10 +781,8 @@ function printExitReason(exitReason: ExitReason): string {
   switch (exitReason.tag) {
     case "ExitCode":
       return `exit ${exitReason.exitCode}`;
-    // istanbul ignore next
     case "Signal":
       return `signal ${exitReason.signal}`;
-    // istanbul ignore next
     case "Unknown":
       return "unknown exit reason";
   }

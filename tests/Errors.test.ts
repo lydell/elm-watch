@@ -3,6 +3,7 @@ import * as os from "os";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
+import * as Errors from "../src/Errors";
 import { Env, sha256 } from "../src/Helpers";
 import {
   assertExitCode,
@@ -110,6 +111,10 @@ async function runWithBadElmBinAndExpectedJson(
   expect(writtenJson).toBe(expectedWrittenJson);
 
   return output;
+}
+
+function printError(errorTemplate: Errors.ErrorTemplate): string {
+  return clean(errorTemplate(80));
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -527,22 +532,22 @@ describe("errors", () => {
 
   test("duplicate outputs", async () => {
     expect(await run("duplicate-outputs", ["make"])).toMatchInlineSnapshot(`
-⧙-- DUPLICATE OUTPUTS -----------------------------------------------------------⧘
-/Users/you/project/tests/fixtures/errors/duplicate-outputs/elm-tooling.json
+      ⧙-- DUPLICATE OUTPUTS -----------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/errors/duplicate-outputs/elm-tooling.json
 
-Some of your outputs seem to be duplicates!
+      Some of your outputs seem to be duplicates!
 
-main.js
-./main.js
-../duplicate-outputs/main.js
--> /Users/you/project/tests/fixtures/errors/duplicate-outputs/main.js
+      main.js
+      ./main.js
+      ../duplicate-outputs/main.js
+      -> /Users/you/project/tests/fixtures/errors/duplicate-outputs/main.js
 
-build/app.js
-build//app.js
--> /Users/you/project/tests/fixtures/errors/duplicate-outputs/build/app.js
+      build/app.js
+      build//app.js
+      -> /Users/you/project/tests/fixtures/errors/duplicate-outputs/build/app.js
 
-Make sure every output is listed just once!
-`);
+      Make sure every output is listed just once!
+    `);
   });
 
   describe("inputs errors", () => {
@@ -1953,6 +1958,198 @@ Make sure every output is listed just once!
       `);
 
       expect(fs.existsSync(appPath)).toBe(true);
+    });
+  });
+
+  describe("hard to test errors", () => {
+    test("noCommonRoot", () => {
+      expect(
+        printError(
+          Errors.noCommonRoot([
+            { tag: "AbsolutePath", absolutePath: "C:\\project\\elm.json" },
+            { tag: "AbsolutePath", absolutePath: "D:\\stuff\\elm\\elm.json" },
+          ])
+        )
+      ).toMatchInlineSnapshot(`
+        ⧙-- NO COMMON ROOT --------------------------------------------------------------⧘
+
+        I could not find a common ancestor for these paths:
+
+        C:\\project\\elm.json
+        D:\\stuff\\elm\\elm.json
+
+        ⧙Compiling files on different drives is not supported.⧘
+      `);
+    });
+
+    test("otherSpawnError", () => {
+      expect(
+        printError(
+          Errors.otherSpawnError(
+            {
+              tag: "ElmJsonPath",
+              theElmJsonPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/Users/you/project/elm.json",
+              },
+            },
+            new Error("Wingardium Leviosa"),
+            {
+              command: "elm",
+              args: ["make", "src/Main.elm"],
+              options: {
+                cwd: {
+                  tag: "AbsolutePath",
+                  absolutePath: "/Users/you/project",
+                },
+
+                env: {},
+              },
+            }
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        ⧙-- TROUBLE SPAWNING COMMAND ----------------------------------------------------⧘
+        /Users/you/project/elm.json
+
+        I tried to execute ⧙elm⧘, but I ran into an error!
+
+        Wingardium Leviosa
+
+        This happened when trying to run the following commands:
+
+        cd /Users/you/project
+        elm make src/Main.elm
+      `);
+    });
+
+    test("elmWatchNodeImportError with null error", () => {
+      expect(
+        printError(
+          Errors.elmWatchNodeImportError(
+            {
+              tag: "ElmWatchNodeScriptPath",
+              theElmWatchNodeScriptPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/Users/you/project/postprocess.cjs",
+              },
+
+              originalString: "postprocess.cjs",
+            },
+            // It’s not possible to test `throw null` at import – Jest crashes then.
+            null
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
+        /Users/you/project/postprocess.cjs
+
+        I tried to import your postprocess file:
+
+        const imported = await import("/Users/you/project/postprocess.cjs")
+
+        But that resulted in this error:
+
+        null
+      `);
+    });
+
+    test("stuckInProgressState", () => {
+      expect(
+        printError(
+          Errors.stuckInProgressState({ tag: "NullOutputPath" }, "elm make")
+        )
+      ).toMatchInlineSnapshot(`
+        ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
+        ⧙When compiling to /dev/null⧘
+
+        I thought that all outputs had finished compiling, but my inner state says
+        this output is still in the ⧙elm make⧘ phase.
+
+        ⧙This is not supposed to ever happen.⧘
+      `);
+    });
+
+    test("ExitReason Signal", () => {
+      expect(
+        printError(
+          Errors.postprocessNonZeroExit(
+            { tag: "NullOutputPath" },
+            { tag: "Signal", signal: "SIGABRT" },
+            "",
+            "",
+            {
+              tag: "Command",
+              command: {
+                command: "node",
+                args: ["postprocess.js"],
+                options: {
+                  cwd: {
+                    tag: "AbsolutePath",
+                    absolutePath: "/Users/you/project",
+                  },
+
+                  env: {},
+                },
+              },
+            }
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling to /dev/null⧘
+
+        I ran your postprocess command:
+
+        cd /Users/you/project
+        node postprocess.js
+
+        ⧙It exited with an error:⧘
+
+        signal SIGABRT
+        (no output)
+      `);
+    });
+
+    test("ExitReason Unknown", () => {
+      expect(
+        printError(
+          Errors.postprocessNonZeroExit(
+            { tag: "NullOutputPath" },
+            { tag: "Unknown" },
+            "",
+            "",
+            {
+              tag: "Command",
+              command: {
+                command: "node",
+                args: ["postprocess.js"],
+                options: {
+                  cwd: {
+                    tag: "AbsolutePath",
+                    absolutePath: "/Users/you/project",
+                  },
+
+                  env: {},
+                },
+              },
+            }
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙When compiling to /dev/null⧘
+
+        I ran your postprocess command:
+
+        cd /Users/you/project
+        node postprocess.js
+
+        ⧙It exited with an error:⧘
+
+        unknown exit reason
+        (no output)
+      `);
     });
   });
 });
