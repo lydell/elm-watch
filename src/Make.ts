@@ -2,7 +2,7 @@ import * as Compile from "./Compile";
 import { Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { Project } from "./Project";
+import { getToCompile, Project } from "./Project";
 import { RunMode } from "./Types";
 
 type MakeResult = { tag: "Error" } | { tag: "Success" };
@@ -24,23 +24,13 @@ export async function run(
       break;
   }
 
-  const toCompile = Array.from(project.elmJsons).flatMap(
-    ([elmJsonPath, outputs]) =>
-      Array.from(
-        outputs,
-        ([outputPath, outputState]) =>
-          [elmJsonPath, outputPath, outputState] as const
-      )
-  );
+  const toCompile = getToCompile(project);
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
 
   await Promise.all(
     toCompile.map(
-      async (
-        [elmJsonPath, outputPath, outputState],
-        index: number
-      ): Promise<void> =>
+      async ({ index, elmJsonPath, outputPath, outputState }): Promise<void> =>
         Compile.compileOneOutput({
           env,
           logger,

@@ -19,7 +19,7 @@ import {
   RunMode,
 } from "./Types";
 
-type InstallDependenciesResult = { tag: "Error" } | { tag: "Success" };
+export type InstallDependenciesResult = { tag: "Error" } | { tag: "Success" };
 
 // Make sure all dependencies are installed. Otherwise compilation sometimes
 // fails when you’ve got multiple outputs for the same elm.json. The error is
@@ -32,7 +32,6 @@ export async function installDependencies(
   logger: Logger,
   project: Project
 ): Promise<InstallDependenciesResult> {
-  const isInteractive = logger.raw.stderr.isTTY;
   const loadingMessageDelay = Number(
     env.__ELM_WATCH_LOADING_MESSAGE_DELAY ?? "100"
   );
@@ -58,7 +57,7 @@ export async function installDependencies(
     }, loadingMessageDelay);
 
     const clearLoadingMessage = (): void => {
-      if (didWriteLoadingMessage && isInteractive) {
+      if (didWriteLoadingMessage && logger.raw.stderr.isTTY) {
         readline.moveCursor(logger.raw.stderr, 0, -1);
         readline.clearLine(logger.raw.stderr, 0);
       }
@@ -153,11 +152,9 @@ export async function compileOneOutput({
   index: number;
   total: number;
 }): Promise<void> {
-  const isInteractive = logger.raw.stderr.isTTY;
-
   let hasPrintedStatusLine = false;
   const updateStatusLine = (): void => {
-    const shouldMoveCursor = isInteractive && hasPrintedStatusLine;
+    const shouldMoveCursor = logger.raw.stderr.isTTY && hasPrintedStatusLine;
     if (shouldMoveCursor) {
       readline.moveCursor(logger.raw.stderr, 0, -total + index);
       readline.clearLine(logger.raw.stderr, 0);

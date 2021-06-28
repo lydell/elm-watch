@@ -391,3 +391,20 @@ function resolveElmJson(
     inputs: inputs as NonEmptyArray<InputPath>,
   };
 }
+
+export function getToCompile(project: Project): Array<{
+  index: number;
+  elmJsonPath: ElmJsonPath;
+  outputPath: OutputPath;
+  outputState: OutputState;
+}> {
+  let index = 0;
+  const result = [];
+  for (const [elmJsonPath, outputs] of project.elmJsons) {
+    for (const [outputPath, outputState] of outputs) {
+      result.push({ index, elmJsonPath, outputPath, outputState });
+      index++;
+    }
+  }
+  return result;
+}

@@ -3,6 +3,7 @@ import * as path from "path";
 import * as readline from "readline";
 
 import * as Compile from "./Compile";
+import { ErrorTemplate } from "./Errors";
 import { HashSet } from "./HashSet";
 import { bold, dim, Env, formatTime, join } from "./Helpers";
 import type { Logger } from "./Logger";
@@ -12,7 +13,8 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath } from "./PathHelpers";
-import { OutputState, Project } from "./Project";
+import { getToCompile, OutputState, Project } from "./Project";
+import { runTeaProgram } from "./TeaProgram";
 import {
   ElmJsonPath,
   ElmToolingJsonPath,
@@ -30,55 +32,135 @@ export type WatcherEvent = {
   file: AbsolutePath;
 };
 
+type Mutable = {
+  watcher: chokidar.FSWatcher;
+  project: Project;
+  lastInfoMessage: string | undefined;
+  watcherTimeoutId: NodeJS.Timeout | undefined;
+};
+
+type Msg =
+  | {
+      tag: "CompileOneOutputDone";
+      date: Date;
+      index: number;
+      elmJsonPath: ElmJsonPath;
+      outputPath: OutputPath;
+      outputState: OutputState;
+    }
+  | {
+      tag: "GotWatcherEvent";
+      date: Date;
+      eventName: WatcherEventName;
+      absolutePathString: string;
+    }
+  | {
+      tag: "InstallDependenciesDone";
+      installResult: Compile.InstallDependenciesResult;
+    }
+  | {
+      tag: "SleepAfterWatcherEventDone";
+      date: Date;
+    };
+
+type Model = {
+  nextAction: NextAction;
+  hotState: HotState;
+};
+
 type NextAction =
   | {
-      readonly tag: "Compile";
-      readonly events: NonEmptyArray<WatcherEvent>;
+      tag: "Compile";
+      events: NonEmptyArray<WatcherEvent>;
     }
   | {
-      readonly tag: "NoAction";
+      tag: "NoAction";
     }
   | {
-      readonly tag: "PrintNonInterestingEvents";
-      readonly events: NonEmptyArray<WatcherEvent>;
+      tag: "PrintNonInterestingEvents";
+      events: NonEmptyArray<WatcherEvent>;
     }
   | {
-      readonly tag: "Restart";
-      readonly eventsWithMessages: NonEmptyArray<{
+      tag: "Restart";
+      eventsWithMessages: NonEmptyArray<{
         event: WatcherEvent;
         message: string;
       }>;
     };
 
-type MutableArray<T> = Array<T>;
-
 type HotState =
   | {
-      readonly tag: "Compiling";
-      readonly start: Date;
-      readonly events: MutableArray<WatcherEvent>;
+      tag: "Compiling";
+      start: Date;
+      events: Array<WatcherEvent>;
       keepConsumingDirty: boolean;
     }
   | {
-      readonly tag: "Dependencies";
-      readonly start: Date;
-      readonly events: MutableArray<WatcherEvent>;
+      tag: "Dependencies";
+      start: Date;
+      events: Array<WatcherEvent>;
     }
   | {
-      readonly tag: "Idle";
+      tag: "Idle";
     }
   | {
-      readonly tag: "Restarting";
-      readonly events: NonEmptyArray<WatcherEvent>;
+      tag: "Restarting";
+      events: NonEmptyArray<WatcherEvent>;
+    };
+
+type Cmd =
+  | {
+      tag: "ClearScreen";
+    }
+  | {
+      tag: "CompileAllOutputs";
+    }
+  | {
+      tag: "CompileOneOutput";
+      index: number;
+      elmJsonPath: ElmJsonPath;
+      outputPath: OutputPath;
+      outputState: OutputState;
+    }
+  | {
+      tag: "InstallDependencies";
+    }
+  | {
+      tag: "LogInfoMessageWithTimeline";
+      message: string;
+      events: Array<WatcherEvent>;
+    }
+  | {
+      tag: "MarkAsDirty";
+      outputStates: Array<OutputState>;
+    }
+  | {
+      tag: "NoCmd";
+    }
+  | {
+      tag: "PrintCompileErrors";
+      errors: NonEmptyArray<ErrorTemplate>;
+    }
+  | {
+      tag: "PrintStatusLinesForElmJsonsErrors";
+    }
+  | {
+      tag: "Restart";
+      restartReasons: NonEmptyArray<WatcherEvent>;
+    }
+  | {
+      tag: "RunOnIdle";
+    }
+  | {
+      tag: "SleepAfterWatcherEvent";
     };
 
 export type HotRunResult =
   | { tag: "ExitOnIdle" }
   | { tag: "Restart"; restartReasons: NonEmptyArray<WatcherEvent> };
 
-// This function encapsulates all the tricky watcher logic and state mutations.
-// `readonly` and `MutableArray` is used above to show what is and isn’t mutated.
-// `let` variables below of course are re-assigned at times.
+// This uses something inspired by The Elm Architecture, since it’s all about
+// keeping state (model) and reacting to events (messages).
 export async function run(
   env: Env,
   logger: Logger,
@@ -87,497 +169,11 @@ export async function run(
   restartReasons: Array<WatcherEvent>,
   project: Project
 ): Promise<HotRunResult> {
-  const isInteractive = logger.raw.stderr.isTTY;
-
-  const toCompile = Array.from(project.elmJsons).flatMap(
-    ([elmJsonPath, outputs]) =>
-      Array.from(
-        outputs,
-        ([outputPath, outputState]): [ElmJsonPath, OutputPath, OutputState] => [
-          elmJsonPath,
-          outputPath,
-          outputState,
-        ]
-      )
-  );
-
-  return new Promise((resolve, reject) => {
-    let hotState: HotState = { tag: "Idle" };
-
-    const watcher = chokidar.watch(project.watchRoot.absolutePath, {
-      ignoreInitial: true,
-      ignored: ["**/elm-stuff/**", "**/node_modules/**"],
-      disableGlobbing: true,
-    });
-
-    let lastInfoMessage: string | undefined = undefined;
-    const logInfoMessageWithTimeline = (
-      message: string,
-      events: Array<WatcherEvent>
-    ): void => {
-      if (lastInfoMessage !== undefined && isInteractive) {
-        readline.moveCursor(
-          logger.raw.stderr,
-          0,
-          -lastInfoMessage.split("\n").length
-        );
-        readline.clearScreenDown(logger.raw.stderr);
-      }
-      const fullMessage = infoMessageWithTimeline(getNow(), message, events);
-      lastInfoMessage = fullMessage;
-      logger.error(fullMessage);
-    };
-
-    const runOnIdle = (): void => {
-      if (onIdle !== undefined) {
-        const response = onIdle();
-        switch (response) {
-          case "KeepGoing":
-            return;
-          case "Stop":
-            watcher.close().then(() => {
-              resolve({ tag: "ExitOnIdle" });
-            }, reject);
-            return;
-        }
-      }
-    };
-
-    const compileOneOutput = async (
-      elmJsonPath: ElmJsonPath,
-      outputPath: OutputPath,
-      outputState: OutputState,
-      index: number
-    ): Promise<void> => {
-      await Compile.compileOneOutput({
-        env,
-        logger,
-        runMode: "hot",
-        elmToolingJsonPath: project.elmToolingJsonPath,
-        elmJsonPath,
-        outputPath,
-        outputState,
-        index,
-        total: toCompile.length,
-      });
-
-      switch (hotState.tag) {
-        case "Dependencies":
-        case "Idle":
-          throw new Error(`HotState became ${hotState.tag} while compiling!`);
-
-        case "Compiling": {
-          if (outputState.dirty) {
-            return hotState.keepConsumingDirty
-              ? compileOneOutput(elmJsonPath, outputPath, outputState, index)
-              : undefined;
-          }
-          const someOutputIsExecutingOrWasInterrupted = toCompile.some(
-            ([, , outputState2]) => {
-              switch (outputState2.status.tag) {
-                case "ElmMake":
-                case "Postprocess":
-                case "Interrupted":
-                  return true;
-
-                default:
-                  return false;
-              }
-            }
-          );
-          // Output executing -> wait for that.
-          // Output interrupted -> it will be re-executed soon, so wait for that.
-          if (!someOutputIsExecutingOrWasInterrupted) {
-            const duration = getNow().getTime() - hotState.start.getTime();
-            const errors = Compile.extractErrors(project);
-            if (isNonEmptyArray(errors)) {
-              Compile.printErrors(logger, errors);
-            }
-            logInfoMessageWithTimeline(
-              compileFinishedMessage(duration),
-              hotState.events
-            );
-            hotState = { tag: "Idle" };
-            runOnIdle();
-          }
-          return;
-        }
-
-        case "Restarting": {
-          const someOutputIsExecuting = toCompile.some(([, , outputState2]) => {
-            switch (outputState2.status.tag) {
-              case "ElmMake":
-              case "Postprocess":
-                return true;
-
-              default:
-                return false;
-            }
-          });
-
-          if (!someOutputIsExecuting) {
-            runRestart(hotState.events);
-          }
-          return;
-        }
-      }
-    };
-
-    const compileAllOutputs = (): void => {
-      for (const [
-        index,
-        [elmJsonPath, outputPath, outputState],
-      ] of toCompile.entries()) {
-        switch (outputState.status.tag) {
-          case "ElmMake":
-          case "Postprocess":
-            // Already executing – when done they will re-execute if dirty
-            // (unless we’re restarting or something like that).
-            return;
-
-          default:
-            compileOneOutput(elmJsonPath, outputPath, outputState, index).catch(
-              reject
-            );
-        }
-      }
-    };
-
-    const runCompile = (events: Array<WatcherEvent>, start: Date): void => {
-      switch (hotState.tag) {
-        case "Idle": {
-          logger.clearScreen();
-          lastInfoMessage = undefined;
-          hotState = {
-            tag: "Compiling",
-            start,
-            events,
-            keepConsumingDirty: false,
-          };
-          Compile.printStatusLinesForElmJsonsErrors(logger, project);
-          compileAllOutputs();
-          return;
-        }
-
-        case "Compiling":
-          hotState.events.push(...events);
-          hotState.keepConsumingDirty = true;
-          compileAllOutputs();
-          return;
-
-        case "Dependencies":
-          hotState.events.push(...events);
-          return;
-
-        case "Restarting":
-          return;
-      }
-    };
-
-    const runRestart = (events: NonEmptyArray<WatcherEvent>): void => {
-      watcher.close().then(() => {
-        resolve({ tag: "Restart", restartReasons: events });
-      }, reject);
-    };
-
-    const runNextAction = (nextAction: NextAction): void => {
-      switch (nextAction.tag) {
-        case "NoAction":
-          return;
-
-        case "Restart": {
-          const { eventsWithMessages } = nextAction;
-          const events = mapNonEmptyArray(
-            eventsWithMessages,
-            ({ event }) => event
-          );
-
-          switch (hotState.tag) {
-            case "Idle": {
-              logger.clearScreen();
-              lastInfoMessage = undefined;
-              hotState = { tag: "Restarting", events };
-              runRestart(events);
-              return;
-            }
-
-            case "Dependencies":
-            case "Compiling": {
-              logger.clearScreen();
-              lastInfoMessage = undefined;
-              hotState = { tag: "Restarting", events };
-              logInfoMessageWithTimeline(
-                restartingMessage(eventsWithMessages),
-                events
-              );
-              // The actual restart is triggered once the current compilation is over.
-              return;
-            }
-
-            case "Restarting":
-              return;
-          }
-        }
-
-        case "Compile":
-          runCompile(nextAction.events, getNow());
-          return;
-
-        case "PrintNonInterestingEvents":
-          switch (hotState.tag) {
-            case "Idle":
-              logInfoMessageWithTimeline(
-                notInterestingElmFileChangedMessage(
-                  nextAction.events,
-                  project.disabledOutputs
-                ),
-                nextAction.events
-              );
-              runOnIdle();
-              return;
-
-            case "Compiling":
-            case "Dependencies":
-            case "Restarting":
-              return;
-          }
-      }
-    };
-
-    const onElmFileWatcherEvent = (
-      event: WatcherEvent,
-      passedNextAction: NextAction
-    ): NextAction | undefined => {
-      const elmFile = event.file;
-
-      if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
-        return makeRestartNextAction(
-          restartBecauseRelatedToElmJsonsErrorsMessage(event.eventName),
-          event,
-          passedNextAction
-        );
-      }
-
-      let dirty = false;
-
-      for (const [, outputs] of project.elmJsons) {
-        for (const [, outputState] of outputs) {
-          if (event.eventName === "removed") {
-            for (const inputPath of outputState.inputs) {
-              if (equalsInputPath(elmFile, inputPath)) {
-                return makeRestartNextAction(
-                  restartBecauseInputWasRemovedMessage(),
-                  event,
-                  passedNextAction
-                );
-              }
-            }
-          }
-          if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
-            dirty = true;
-            outputState.dirty = true;
-          }
-        }
-      }
-
-      if (dirty) {
-        switch (passedNextAction.tag) {
-          case "Restart":
-            return passedNextAction;
-
-          case "Compile":
-            return {
-              tag: "Compile",
-              events: [...passedNextAction.events, event],
-            };
-
-          case "NoAction":
-          case "PrintNonInterestingEvents":
-            return {
-              tag: "Compile",
-              events: [event],
-            };
-        }
-      } else {
-        switch (passedNextAction.tag) {
-          case "Restart":
-          case "Compile":
-            return passedNextAction;
-
-          case "NoAction":
-            return {
-              tag: "PrintNonInterestingEvents",
-              events: [event],
-            };
-
-          case "PrintNonInterestingEvents":
-            return {
-              tag: "PrintNonInterestingEvents",
-              events: [...passedNextAction.events, event],
-            };
-        }
-      }
-    };
-
-    const onWatcherEvent = (
-      eventName: WatcherEventName,
-      absolutePathString: string,
-      passedNextAction: NextAction
-    ): NextAction | undefined => {
-      if (absolutePathString.endsWith(".elm")) {
-        return onElmFileWatcherEvent(
-          makeEvent(eventName, absolutePathString, getNow()),
-          passedNextAction
-        );
-      }
-
-      const basename = path.basename(absolutePathString);
-
-      switch (basename) {
-        case "elm-tooling.json":
-          switch (eventName) {
-            case "added":
-              return makeRestartNextAction(
-                restartBecauseJsonFileChangedMessage(basename, eventName),
-                makeEvent(eventName, absolutePathString, getNow()),
-                passedNextAction
-              );
-
-            case "changed":
-            case "removed":
-              if (
-                absolutePathString ===
-                project.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
-              ) {
-                return makeRestartNextAction(
-                  restartBecauseJsonFileChangedMessage(basename, eventName),
-                  makeEvent(eventName, absolutePathString, getNow()),
-                  passedNextAction
-                );
-              }
-              return undefined;
-          }
-
-        case "elm.json":
-          switch (eventName) {
-            case "added":
-              return makeRestartNextAction(
-                restartBecauseJsonFileChangedMessage(basename, eventName),
-                makeEvent(eventName, absolutePathString, getNow()),
-                passedNextAction
-              );
-
-            case "changed":
-            case "removed":
-              if (
-                Array.from(project.elmJsons).some(
-                  ([elmJsonPath]) =>
-                    absolutePathString ===
-                    elmJsonPath.theElmJsonPath.absolutePath
-                )
-              ) {
-                return makeRestartNextAction(
-                  restartBecauseJsonFileChangedMessage(basename, eventName),
-                  makeEvent(eventName, absolutePathString, getNow()),
-                  passedNextAction
-                );
-              }
-              return undefined;
-          }
-
-        default:
-          // Ignore other types of files.
-          return undefined;
-      }
-    };
-
-    {
-      let nextAction: NextAction = { tag: "NoAction" };
-      let watcherTimeoutId: NodeJS.Timeout | undefined;
-
-      watcherOnAll(watcher, (eventName, absolutePathString) => {
-        const updatedNextAction = onWatcherEvent(
-          eventName,
-          absolutePathString,
-          nextAction
-        );
-
-        if (updatedNextAction === undefined) {
-          return;
-        }
-
-        if (hotState.tag === "Compiling") {
-          hotState.keepConsumingDirty = false;
-        }
-
-        if (updatedNextAction.tag === "Restart") {
-          // Interrupt all compilation.
-          for (const [, , outputState] of toCompile) {
-            outputState.dirty = true;
-          }
-        }
-
-        nextAction = updatedNextAction;
-
-        if (watcherTimeoutId !== undefined) {
-          clearTimeout(watcherTimeoutId);
-        }
-
-        // Sleep for a little bit in hot mode to avoid unnecessary
-        // recompilation when using “save all” in an editor, or when running
-        // `git switch some-branch` or `git restore .`. These operations
-        // results in many files being added/changed/deleted, usually with
-        // 0-1 ms between each event.
-        watcherTimeoutId = setTimeout(() => {
-          watcherTimeoutId = undefined;
-          runNextAction(nextAction);
-          nextAction = { tag: "NoAction" };
-        }, 10);
-      });
-
-      // As far as I can tell, the watcher is never supposed to emit error events
-      // during normal operation.
-      watcher.on("error", reject);
-    }
-
-    hotState = {
-      tag: "Dependencies",
-      start: getNow(),
-      events: restartReasons,
-    };
-
-    Compile.installDependencies(env, logger, project).then((installResult) => {
-      switch (hotState.tag) {
-        case "Dependencies": {
-          switch (installResult.tag) {
-            case "Error":
-              hotState = { tag: "Idle" };
-              runOnIdle();
-              return;
-
-            case "Success": {
-              const { events, start } = hotState;
-              hotState = { tag: "Idle" };
-              runCompile(events, start);
-              return;
-            }
-          }
-        }
-
-        case "Restarting":
-          runRestart(hotState.events);
-          return;
-
-        case "Idle":
-        case "Compiling":
-          reject(
-            new Error(
-              `HotState became ${hotState.tag} while installing dependencies!`
-            )
-          );
-          return;
-      }
-    }, reject);
+  return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
+    initMutable: initMutable(getNow, project),
+    init: init(getNow(), restartReasons),
+    update: update(project),
+    runCmd: runCmd(env, logger, getNow, onIdle),
   });
 }
 
@@ -610,6 +206,42 @@ export async function watchElmToolingJsonOnce(
   });
 }
 
+const initMutable =
+  (getNow: GetNow, project: Project) =>
+  (
+    dispatch: (msg: Msg) => void,
+    rejectPromise: (error: Error) => void
+  ): Mutable => {
+    const watcher = chokidar.watch(project.watchRoot.absolutePath, {
+      ignoreInitial: true,
+      ignored: ["**/elm-stuff/**", "**/node_modules/**"],
+      disableGlobbing: true,
+    });
+
+    watcherOnAll(
+      watcher,
+      (eventName: WatcherEventName, absolutePathString: string): void => {
+        dispatch({
+          tag: "GotWatcherEvent",
+          date: getNow(),
+          eventName,
+          absolutePathString,
+        });
+      }
+    );
+
+    // As far as I can tell, the watcher is never supposed to emit error events
+    // during normal operation.
+    watcher.on("error", rejectPromise);
+
+    return {
+      watcher,
+      project,
+      lastInfoMessage: undefined,
+      watcherTimeoutId: undefined,
+    };
+  };
+
 function watcherOnAll(
   watcher: chokidar.FSWatcher,
   callback: (eventName: WatcherEventName, absolutePathString: string) => void
@@ -635,6 +267,646 @@ function watcherOnAll(
     }
   });
 }
+
+const init = (
+  now: Date,
+  restartReasons: Array<WatcherEvent>
+): [Model, Array<Cmd>] => [
+  {
+    nextAction: { tag: "NoAction" },
+    hotState: {
+      tag: "Dependencies",
+      start: now,
+      events: restartReasons,
+    },
+  },
+  [{ tag: "InstallDependencies" }],
+];
+
+const update =
+  (project: Project) =>
+  (msg: Msg, model: Model): [Model, Array<Cmd>] => {
+    switch (msg.tag) {
+      case "GotWatcherEvent": {
+        const updatedNextAction = onWatcherEvent(
+          msg.date,
+          project,
+          msg.eventName,
+          msg.absolutePathString,
+          model.nextAction
+        );
+
+        if (updatedNextAction === undefined) {
+          return [model, []];
+        }
+
+        return [
+          {
+            ...model,
+            hotState:
+              model.hotState.tag === "Compiling"
+                ? { ...model.hotState, keepConsumingDirty: false }
+                : model.hotState,
+            nextAction: updatedNextAction,
+          },
+          [
+            updatedNextAction.tag === "Restart"
+              ? {
+                  // Interrupt all compilation.
+                  tag: "MarkAsDirty",
+                  outputStates: getToCompile(project).map(
+                    ({ outputState }) => outputState
+                  ),
+                }
+              : { tag: "NoCmd" },
+            { tag: "SleepAfterWatcherEvent" },
+          ],
+        ];
+      }
+
+      case "SleepAfterWatcherEventDone": {
+        const [nextModel, cmds] = runNextAction(msg.date, project, model);
+        return [
+          {
+            ...nextModel,
+            nextAction: { tag: "NoAction" },
+          },
+          cmds,
+        ];
+      }
+
+      case "CompileOneOutputDone":
+        switch (model.hotState.tag) {
+          case "Dependencies":
+          case "Idle":
+            // TODO: Should really throw in `update`?
+            // It COULD be a Cmd (tag: "Throw", message: string)
+            // But we could also figure something else.
+            throw new Error(
+              `HotState became ${model.hotState.tag} while compiling!`
+            );
+
+          case "Compiling": {
+            if (msg.outputState.dirty) {
+              return model.hotState.keepConsumingDirty
+                ? [
+                    model,
+                    [
+                      {
+                        tag: "CompileOneOutput",
+                        index: msg.index,
+                        elmJsonPath: msg.elmJsonPath,
+                        outputPath: msg.outputPath,
+                        outputState: msg.outputState,
+                      },
+                    ],
+                  ]
+                : [model, []];
+            }
+
+            const someOutputIsExecutingOrWasInterrupted = getToCompile(
+              project
+            ).some(({ outputState }) => {
+              switch (outputState.status.tag) {
+                case "ElmMake":
+                case "Postprocess":
+                case "Interrupted":
+                  return true;
+
+                default:
+                  return false;
+              }
+            });
+
+            // Output executing -> wait for that.
+            // Output interrupted -> it will be re-executed soon, so wait for that.
+            if (someOutputIsExecutingOrWasInterrupted) {
+              return [model, []];
+            }
+
+            const duration =
+              msg.date.getTime() - model.hotState.start.getTime();
+            const errors = Compile.extractErrors(project);
+            return [
+              { ...model, hotState: { tag: "Idle" } },
+              [
+                isNonEmptyArray(errors)
+                  ? { tag: "PrintCompileErrors", errors }
+                  : { tag: "NoCmd" },
+                {
+                  tag: "LogInfoMessageWithTimeline",
+                  message: compileFinishedMessage(duration),
+                  events: model.hotState.events,
+                },
+                {
+                  tag: "RunOnIdle",
+                },
+              ],
+            ];
+          }
+
+          case "Restarting": {
+            const someOutputIsExecuting = getToCompile(project).some(
+              ({ outputState }) => {
+                switch (outputState.status.tag) {
+                  case "ElmMake":
+                  case "Postprocess":
+                    return true;
+
+                  default:
+                    return false;
+                }
+              }
+            );
+            return someOutputIsExecuting
+              ? [model, []]
+              : [
+                  model,
+                  [{ tag: "Restart", restartReasons: model.hotState.events }],
+                ];
+          }
+        }
+
+      case "InstallDependenciesDone":
+        switch (model.hotState.tag) {
+          case "Dependencies": {
+            switch (msg.installResult.tag) {
+              case "Error":
+                return [
+                  { ...model, hotState: { tag: "Idle" } },
+                  [{ tag: "RunOnIdle" }],
+                ];
+
+              case "Success": {
+                return runCompile(
+                  { ...model, hotState: { tag: "Idle" } },
+                  model.hotState.events,
+                  model.hotState.start
+                );
+              }
+            }
+          }
+
+          case "Restarting":
+            return [
+              model,
+              [{ tag: "Restart", restartReasons: model.hotState.events }],
+            ];
+
+          case "Idle":
+          case "Compiling":
+            // TODO: Suspect throw here too.
+            throw new Error(
+              `HotState became ${model.hotState.tag} while installing dependencies!`
+            );
+        }
+    }
+  };
+
+function onWatcherEvent(
+  now: Date,
+  project: Project,
+  eventName: WatcherEventName,
+  absolutePathString: string,
+  passedNextAction: NextAction
+): NextAction | undefined {
+  if (absolutePathString.endsWith(".elm")) {
+    return onElmFileWatcherEvent(
+      project,
+      makeEvent(eventName, absolutePathString, now),
+      passedNextAction
+    );
+  }
+
+  const basename = path.basename(absolutePathString);
+
+  switch (basename) {
+    case "elm-tooling.json":
+      switch (eventName) {
+        case "added":
+          return makeRestartNextAction(
+            restartBecauseJsonFileChangedMessage(basename, eventName),
+            makeEvent(eventName, absolutePathString, now),
+            passedNextAction
+          );
+
+        case "changed":
+        case "removed":
+          if (
+            absolutePathString ===
+            project.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
+          ) {
+            return makeRestartNextAction(
+              restartBecauseJsonFileChangedMessage(basename, eventName),
+              makeEvent(eventName, absolutePathString, now),
+              passedNextAction
+            );
+          }
+          return undefined;
+      }
+
+    case "elm.json":
+      switch (eventName) {
+        case "added":
+          return makeRestartNextAction(
+            restartBecauseJsonFileChangedMessage(basename, eventName),
+            makeEvent(eventName, absolutePathString, now),
+            passedNextAction
+          );
+
+        case "changed":
+        case "removed":
+          if (
+            Array.from(project.elmJsons).some(
+              ([elmJsonPath]) =>
+                absolutePathString === elmJsonPath.theElmJsonPath.absolutePath
+            )
+          ) {
+            return makeRestartNextAction(
+              restartBecauseJsonFileChangedMessage(basename, eventName),
+              makeEvent(eventName, absolutePathString, now),
+              passedNextAction
+            );
+          }
+          return undefined;
+      }
+
+    default:
+      // Ignore other types of files.
+      return undefined;
+  }
+}
+
+function onElmFileWatcherEvent(
+  project: Project,
+  event: WatcherEvent,
+  nextAction: NextAction
+): NextAction | undefined {
+  const elmFile = event.file;
+
+  if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
+    return makeRestartNextAction(
+      restartBecauseRelatedToElmJsonsErrorsMessage(event.eventName),
+      event,
+      nextAction
+    );
+  }
+
+  let dirty = false;
+
+  for (const [, outputs] of project.elmJsons) {
+    for (const [, outputState] of outputs) {
+      if (event.eventName === "removed") {
+        for (const inputPath of outputState.inputs) {
+          if (equalsInputPath(elmFile, inputPath)) {
+            return makeRestartNextAction(
+              restartBecauseInputWasRemovedMessage(),
+              event,
+              nextAction
+            );
+          }
+        }
+      }
+      if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
+        dirty = true;
+        // TODO: This should be a Cmd.
+        outputState.dirty = true;
+      }
+    }
+  }
+
+  if (dirty) {
+    switch (nextAction.tag) {
+      case "Restart":
+        return nextAction;
+
+      case "Compile":
+        return {
+          tag: "Compile",
+          events: [...nextAction.events, event],
+        };
+
+      case "NoAction":
+      case "PrintNonInterestingEvents":
+        return {
+          tag: "Compile",
+          events: [event],
+        };
+    }
+  } else {
+    switch (nextAction.tag) {
+      case "Restart":
+      case "Compile":
+        return nextAction;
+
+      case "NoAction":
+        return {
+          tag: "PrintNonInterestingEvents",
+          events: [event],
+        };
+
+      case "PrintNonInterestingEvents":
+        return {
+          tag: "PrintNonInterestingEvents",
+          events: [...nextAction.events, event],
+        };
+    }
+  }
+}
+
+function runNextAction(
+  start: Date,
+  project: Project,
+  model: Model
+): [Model, Array<Cmd>] {
+  switch (model.nextAction.tag) {
+    case "NoAction":
+      return [model, []];
+
+    case "Restart": {
+      const { eventsWithMessages } = model.nextAction;
+      const events = mapNonEmptyArray(eventsWithMessages, ({ event }) => event);
+
+      switch (model.hotState.tag) {
+        case "Idle":
+          return [
+            { ...model, hotState: { tag: "Restarting", events } },
+            [
+              { tag: "ClearScreen" },
+              { tag: "Restart", restartReasons: events },
+            ],
+          ];
+
+        case "Dependencies":
+        case "Compiling": {
+          return [
+            { ...model, hotState: { tag: "Restarting", events } },
+            // The actual restart is triggered once the current compilation is over.
+            [
+              { tag: "ClearScreen" },
+              {
+                tag: "LogInfoMessageWithTimeline",
+                message: restartingMessage(eventsWithMessages),
+                events,
+              },
+            ],
+          ];
+        }
+
+        case "Restarting":
+          return [model, []];
+      }
+    }
+
+    case "Compile":
+      return runCompile(model, model.nextAction.events, start);
+
+    case "PrintNonInterestingEvents":
+      switch (model.hotState.tag) {
+        case "Idle":
+          return [
+            model,
+            [
+              {
+                tag: "LogInfoMessageWithTimeline",
+                message: notInterestingElmFileChangedMessage(
+                  model.nextAction.events,
+                  project.disabledOutputs
+                ),
+                events: model.nextAction.events,
+              },
+              {
+                tag: "RunOnIdle",
+              },
+            ],
+          ];
+
+        case "Compiling":
+        case "Dependencies":
+        case "Restarting":
+          return [model, []];
+      }
+  }
+}
+
+function runCompile(
+  model: Model,
+  events: Array<WatcherEvent>,
+  start: Date
+): [Model, Array<Cmd>] {
+  switch (model.hotState.tag) {
+    case "Idle": {
+      return [
+        {
+          ...model,
+          hotState: {
+            tag: "Compiling",
+            start,
+            events,
+            keepConsumingDirty: false,
+          },
+        },
+        [
+          { tag: "ClearScreen" },
+          { tag: "PrintStatusLinesForElmJsonsErrors" },
+          { tag: "CompileAllOutputs" },
+        ],
+      ];
+    }
+
+    case "Compiling":
+      return [
+        {
+          ...model,
+          hotState: {
+            ...model.hotState,
+            keepConsumingDirty: true,
+            events: [...model.hotState.events, ...events],
+          },
+        },
+        [{ tag: "CompileAllOutputs" }],
+      ];
+
+    case "Dependencies":
+      return [
+        {
+          ...model,
+          hotState: {
+            ...model.hotState,
+            events: [...model.hotState.events, ...events],
+          },
+        },
+        [],
+      ];
+
+    case "Restarting":
+      return [model, []];
+  }
+}
+
+const runCmd =
+  (env: Env, logger: Logger, getNow: GetNow, onIdle: OnIdle | undefined) =>
+  (
+    cmd: Cmd,
+    mutable: Mutable,
+    dispatch: (msg: Msg) => void,
+    resolvePromise: (result: HotRunResult) => void,
+    rejectPromise: (error: Error) => void
+  ): void => {
+    switch (cmd.tag) {
+      case "ClearScreen":
+        logger.clearScreen();
+        mutable.lastInfoMessage = undefined;
+        return;
+
+      case "CompileAllOutputs": {
+        const toCompile = getToCompile(mutable.project);
+        for (const {
+          index,
+          elmJsonPath,
+          outputPath,
+          outputState,
+        } of toCompile) {
+          switch (outputState.status.tag) {
+            case "ElmMake":
+            case "Postprocess":
+              // Already executing – when done they will re-execute if dirty
+              // (unless we’re restarting or something like that).
+              continue;
+
+            default:
+              Compile.compileOneOutput({
+                env,
+                logger,
+                runMode: "hot",
+                elmToolingJsonPath: mutable.project.elmToolingJsonPath,
+                elmJsonPath,
+                outputPath,
+                outputState,
+                index,
+                total: toCompile.length,
+              }).then(() => {
+                dispatch({
+                  tag: "CompileOneOutputDone",
+                  date: getNow(),
+                  index,
+                  elmJsonPath,
+                  outputPath,
+                  outputState,
+                });
+              }, rejectPromise);
+          }
+        }
+        return;
+      }
+
+      case "CompileOneOutput":
+        Compile.compileOneOutput({
+          env,
+          logger,
+          runMode: "hot",
+          elmToolingJsonPath: mutable.project.elmToolingJsonPath,
+          index: cmd.index,
+          elmJsonPath: cmd.elmJsonPath,
+          outputPath: cmd.outputPath,
+          outputState: cmd.outputState,
+          total: getToCompile(mutable.project).length,
+        }).then(() => {
+          dispatch({
+            tag: "CompileOneOutputDone",
+            date: getNow(),
+            index: cmd.index,
+            elmJsonPath: cmd.elmJsonPath,
+            outputPath: cmd.outputPath,
+            outputState: cmd.outputState,
+          });
+        }, rejectPromise);
+        return;
+
+      case "InstallDependencies":
+        Compile.installDependencies(env, logger, mutable.project).then(
+          (installResult) => {
+            dispatch({ tag: "InstallDependenciesDone", installResult });
+          },
+          rejectPromise
+        );
+        return;
+
+      case "LogInfoMessageWithTimeline": {
+        if (mutable.lastInfoMessage !== undefined && logger.raw.stderr.isTTY) {
+          readline.moveCursor(
+            logger.raw.stderr,
+            0,
+            -mutable.lastInfoMessage.split("\n").length
+          );
+          readline.clearScreenDown(logger.raw.stderr);
+        }
+        const fullMessage = infoMessageWithTimeline(
+          getNow(),
+          cmd.message,
+          cmd.events
+        );
+        logger.error(fullMessage);
+        mutable.lastInfoMessage = fullMessage;
+        return;
+      }
+
+      case "MarkAsDirty":
+        for (const outputState of cmd.outputStates) {
+          outputState.dirty = true;
+        }
+        return;
+
+      case "PrintCompileErrors":
+        Compile.printErrors(logger, cmd.errors);
+        return;
+
+      case "NoCmd":
+        return;
+
+      case "PrintStatusLinesForElmJsonsErrors":
+        Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
+        return;
+
+      case "Restart":
+        mutable.watcher.close().then(() => {
+          resolvePromise({
+            tag: "Restart",
+            restartReasons: cmd.restartReasons,
+          });
+        }, rejectPromise);
+        return;
+
+      case "RunOnIdle":
+        if (onIdle !== undefined) {
+          const response = onIdle();
+          switch (response) {
+            case "KeepGoing":
+              return;
+            case "Stop":
+              mutable.watcher.close().then(() => {
+                resolvePromise({ tag: "ExitOnIdle" });
+              }, rejectPromise);
+              return;
+          }
+        }
+        return;
+
+      case "SleepAfterWatcherEvent":
+        // Sleep for a little bit to avoid unnecessary recompilation when using
+        // “save all” in an editor, or when running `git switch some-branch` or
+        // `git restore .`. These operations results in many files being
+        // added/changed/deleted, usually with 0-1 ms between each event.
+        if (mutable.watcherTimeoutId !== undefined) {
+          clearTimeout(mutable.watcherTimeoutId);
+        }
+        mutable.watcherTimeoutId = setTimeout(() => {
+          mutable.watcherTimeoutId = undefined;
+          dispatch({ tag: "SleepAfterWatcherEventDone", date: getNow() });
+        }, 10);
+        return;
+    }
+  };
 
 function makeEvent(
   eventName: WatcherEventName,
