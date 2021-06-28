@@ -528,7 +528,7 @@ export async function run(
         // `git switch some-branch` or `git restore .`. These operations
         // results in many files being added/changed/deleted, usually with
         // 0-1 ms between each event.
-        setTimeout(() => {
+        watcherTimeoutId = setTimeout(() => {
           watcherTimeoutId = undefined;
           runNextAction(nextAction);
           nextAction = { tag: "NoAction" };
