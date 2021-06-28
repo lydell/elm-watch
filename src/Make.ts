@@ -5,17 +5,19 @@ import { isNonEmptyArray } from "./NonEmptyArray";
 import { Project } from "./Project";
 import { RunMode } from "./Types";
 
+type MakeResult = { tag: "Error" } | { tag: "Success" };
+
 export async function run(
   env: Env,
   logger: Logger,
   runMode: RunMode,
   project: Project
-): Promise<number> {
+): Promise<MakeResult> {
   const installResult = await Compile.installDependencies(env, logger, project);
 
   switch (installResult.tag) {
     case "Error":
-      return 1;
+      return { tag: "Error" };
 
     case "Success":
       // Continue below.
@@ -57,8 +59,8 @@ export async function run(
 
   if (isNonEmptyArray(errors)) {
     Compile.printErrors(logger, errors);
-    return 1;
+    return { tag: "Error" };
   }
 
-  return 0;
+  return { tag: "Success" };
 }

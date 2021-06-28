@@ -135,13 +135,19 @@ export async function run(
             case "Project": {
               switch (runMode) {
                 case "make": {
-                  const exitCode = await Make.run(
+                  const result = await Make.run(
                     env,
                     logger,
                     runMode,
                     initProjectResult.project
                   );
-                  return { tag: "Exit", exitCode };
+                  switch (result.tag) {
+                    case "Error":
+                      return { tag: "Exit", exitCode: 1 };
+
+                    case "Success":
+                      return { tag: "Exit", exitCode: 0 };
+                  }
                 }
 
                 case "hot": {
