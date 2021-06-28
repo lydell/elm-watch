@@ -190,7 +190,7 @@ export async function watchElmToolingJsonOnce(
       }
     );
 
-    watcherOnAll(watcher, (eventName, absolutePathString) => {
+    watcherOnAll(watcher, reject, (eventName, absolutePathString) => {
       const event: WatcherEvent = {
         date: getNow(),
         eventName,
@@ -220,6 +220,7 @@ const initMutable =
 
     watcherOnAll(
       watcher,
+      rejectPromise,
       (eventName: WatcherEventName, absolutePathString: string): void => {
         dispatch({
           tag: "GotWatcherEvent",
@@ -229,10 +230,6 @@ const initMutable =
         });
       }
     );
-
-    // As far as I can tell, the watcher is never supposed to emit error events
-    // during normal operation.
-    watcher.on("error", rejectPromise);
 
     return {
       watcher,
@@ -244,6 +241,7 @@ const initMutable =
 
 function watcherOnAll(
   watcher: chokidar.FSWatcher,
+  rejectPromise: (error: Error) => void,
   callback: (eventName: WatcherEventName, absolutePathString: string) => void
 ): void {
   // We generally only care about files – not directories – but adding and
@@ -266,6 +264,10 @@ function watcherOnAll(
         return;
     }
   });
+
+  // As far as I can tell, the watcher is never supposed to emit error events
+  // during normal operation.
+  watcher.on("error", rejectPromise);
 }
 
 const init = (
