@@ -1,6 +1,9 @@
 import * as chokidar from "chokidar";
 import * as path from "path";
 import * as readline from "readline";
+import * as Decode from "tiny-decoders";
+import { URLSearchParams } from "url";
+import WebSocket from "ws";
 
 import * as Compile from "./Compile";
 import { ErrorTemplate } from "./Errors";
@@ -34,9 +37,16 @@ export type WatcherEvent = {
 
 type Mutable = {
   watcher: chokidar.FSWatcher;
+  webSocketServer: WebSocket.Server;
+  webSocketConnections: Array<WebSocketConnection>;
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
+};
+
+type WebSocketConnection = {
+  webSocket: WebSocket;
+  outputPath: OutputPath | { tag: "OutputPathError" };
 };
 
 type Msg =
@@ -61,6 +71,20 @@ type Msg =
   | {
       tag: "SleepAfterWatcherEventDone";
       date: Date;
+    }
+  | {
+      tag: "WebSocketClosed";
+      webSocket: WebSocket;
+    }
+  | {
+      tag: "WebSocketConnected";
+      webSocket: WebSocket;
+      urlString: string;
+    }
+  | {
+      tag: "WebSocketMessageReceived";
+      webSocket: WebSocket;
+      data: WebSocket.Data;
     };
 
 type Model = {
@@ -157,6 +181,14 @@ type Cmd =
   | {
       tag: "Throw";
       error: Error;
+    }
+  | {
+      tag: "WebSocketAdd";
+      webSocketConnection: WebSocketConnection;
+    }
+  | {
+      tag: "WebSocketRemove";
+      webSocket: WebSocket;
     };
 
 export type HotRunResult =
@@ -235,8 +267,40 @@ const initMutable =
       }
     );
 
+    // TODO: Re-use current server if restarting.
+    const webSocketServer = new WebSocket.Server({
+      // TODO: Allow configuring in elm-tooling.json for Docker, and prefer the same port number as used last time (elm-stuff/elm-watch.json).
+      port: 0,
+    });
+
+    console.log("address", webSocketServer.address());
+
+    webSocketServer.on("connection", (webSocket, request) => {
+      dispatch({
+        tag: "WebSocketConnected",
+        webSocket,
+        // `request.url` is always a string here, but the types says it can be undefined:
+        // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
+        urlString: request.url ?? "/",
+      });
+
+      webSocket.on("message", (data) => {
+        dispatch({ tag: "WebSocketMessageReceived", webSocket, data });
+      });
+
+      webSocket.on("close", () => {
+        dispatch({ tag: "WebSocketClosed", webSocket });
+      });
+
+      webSocket.on("error", rejectPromise);
+    });
+
+    webSocketServer.on("error", rejectPromise);
+
     return {
       watcher,
+      webSocketServer,
+      webSocketConnections: [],
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
@@ -288,6 +352,12 @@ const init = (
   },
   [{ tag: "InstallDependencies" }],
 ];
+
+const WebSocketConnectedParams = Decode.fieldsAuto({
+  elmWatchVersion: Decode.string,
+  output: Decode.string,
+  compiledTimestamp: Decode.number,
+});
 
 const update =
   (project: Project) =>
@@ -469,6 +539,61 @@ const update =
               ],
             ];
         }
+
+      case "WebSocketConnected": {
+        // parse url (output, version, timestamp)
+        // update mutable
+        // cause compilation if needed
+        // respond
+        if (!msg.urlString.startsWith("/?")) {
+          // Should probably not return like this.
+          // Move parsing to a function and act upon its return value
+          return TODO_ERROR;
+        }
+        // This never throws as far as I can tell.
+        const params = new URLSearchParams(msg.urlString.slice(2));
+        let webSocketConnectedParams;
+        try {
+          webSocketConnectedParams = WebSocketConnectedParams(
+            Object.fromEntries(params)
+          );
+        } catch (errorAny) {
+          const error = errorAny as Decode.DecoderError;
+          return TODO_ERROR;
+        }
+        if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
+          return TODO_ERROR;
+        }
+        // find matching output (if any)
+        // check status:
+        //   compiled: compare timestamps
+        //   not compiled: compile it!
+        //   compiling: do nothing (I think)
+        //   error: respond with error
+        return [
+          model,
+          [
+            {
+              tag: "WebSocketAdd",
+              webSocketConnection: {
+                webSocket: msg.webSocket,
+                outputPath: TODO,
+              },
+            },
+          ],
+        ];
+      }
+
+      case "WebSocketMessageReceived":
+        // parse message
+        // do stuff based on message
+        // respond
+        // don’t have to implement this right now
+        return [model, []];
+
+      case "WebSocketClosed":
+        // just remove from mutable?
+        return [model, [{ tag: "WebSocketRemove", webSocket: msg.webSocket }]];
     }
   };
 
@@ -934,6 +1059,16 @@ const runCmd =
 
       case "Throw":
         rejectPromise(cmd.error);
+        return;
+
+      case "WebSocketAdd":
+        mutable.webSocketConnections.push(cmd.webSocketConnection);
+        return;
+
+      case "WebSocketRemove":
+        mutable.webSocketConnections = mutable.webSocketConnections.filter(
+          ({ webSocket }) => webSocket !== cmd.webSocket
+        );
         return;
     }
   };
