@@ -11,8 +11,15 @@ import { initProject } from "./Project";
 import { CliArg, ElmToolingJsonPath, GetNow, OnIdle, RunMode } from "./Types";
 
 type RunResult =
-  | { tag: "Exit"; exitCode: number }
-  | { tag: "Restart"; restartReasons: NonEmptyArray<Hot.WatcherEvent> };
+  | {
+      tag: "Exit";
+      exitCode: number;
+    }
+  | {
+      tag: "Restart";
+      restartReasons: NonEmptyArray<Hot.WatcherEvent>;
+      webSocketState: Hot.WebSocketState | undefined;
+    };
 
 export async function run(
   cwd: Cwd,
@@ -22,7 +29,8 @@ export async function run(
   onIdle: OnIdle | undefined,
   runMode: RunMode,
   args: Array<CliArg>,
-  restartReasons: Array<Hot.WatcherEvent>
+  restartReasons: Array<Hot.WatcherEvent>,
+  webSocketState: Hot.WebSocketState | undefined
 ): Promise<RunResult> {
   const parseResult = ElmToolingJson.findReadAndParse(cwd);
 
@@ -157,6 +165,7 @@ export async function run(
                     getNow,
                     onIdle,
                     restartReasons,
+                    webSocketState,
                     initProjectResult.project
                   );
                   switch (result.tag) {
@@ -192,7 +201,11 @@ async function handleElmToolingJsonError(
         elmToolingJsonPath
       );
       logger.clearScreen();
-      return { tag: "Restart", restartReasons: [elmToolingJsonEvent] };
+      return {
+        tag: "Restart",
+        restartReasons: [elmToolingJsonEvent],
+        webSocketState: undefined,
+      };
     }
   }
 }

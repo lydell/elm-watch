@@ -26,6 +26,7 @@ import {
   OnIdle,
   OutputPath,
 } from "./Types";
+import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
 type WatcherEventName = "added" | "changed" | "removed";
 
@@ -37,7 +38,7 @@ export type WatcherEvent = {
 
 type Mutable = {
   watcher: chokidar.FSWatcher;
-  webSocketServer: WebSocket.Server;
+  webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
   project: Project;
   lastInfoMessage: string | undefined;
@@ -50,6 +51,7 @@ type WebSocketConnection = {
 };
 
 type Msg =
+  | WebSocketServerMsg
   | {
       tag: "CompileOneOutputDone";
       date: Date;
@@ -71,20 +73,6 @@ type Msg =
   | {
       tag: "SleepAfterWatcherEventDone";
       date: Date;
-    }
-  | {
-      tag: "WebSocketClosed";
-      webSocket: WebSocket;
-    }
-  | {
-      tag: "WebSocketConnected";
-      webSocket: WebSocket;
-      urlString: string;
-    }
-  | {
-      tag: "WebSocketMessageReceived";
-      webSocket: WebSocket;
-      data: WebSocket.Data;
     };
 
 type Model = {
@@ -192,8 +180,19 @@ type Cmd =
     };
 
 export type HotRunResult =
-  | { tag: "ExitOnIdle" }
-  | { tag: "Restart"; restartReasons: NonEmptyArray<WatcherEvent> };
+  | {
+      tag: "ExitOnIdle";
+    }
+  | {
+      tag: "Restart";
+      restartReasons: NonEmptyArray<WatcherEvent>;
+      webSocketState: WebSocketState | undefined;
+    };
+
+export type WebSocketState = {
+  webSocketServer: WebSocketServer;
+  webSocketConnections: Array<WebSocketConnection>;
+};
 
 // This uses something inspired by The Elm Architecture, since it’s all about
 // keeping state (model) and reacting to events (messages).
@@ -203,10 +202,11 @@ export async function run(
   getNow: GetNow,
   onIdle: OnIdle | undefined,
   restartReasons: Array<WatcherEvent>,
+  webSocketState: WebSocketState | undefined,
   project: Project
 ): Promise<HotRunResult> {
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
-    initMutable: initMutable(getNow, project),
+    initMutable: initMutable(getNow, webSocketState, project),
     init: init(getNow(), restartReasons),
     update: update(project),
     runCmd: runCmd(env, logger, getNow, onIdle),
@@ -243,7 +243,11 @@ export async function watchElmToolingJsonOnce(
 }
 
 const initMutable =
-  (getNow: GetNow, project: Project) =>
+  (
+    getNow: GetNow,
+    webSocketState: WebSocketState | undefined,
+    project: Project
+  ) =>
   (
     dispatch: (msg: Msg) => void,
     rejectPromise: (error: Error) => void
@@ -267,40 +271,19 @@ const initMutable =
       }
     );
 
-    // TODO: Re-use current server if restarting.
-    const webSocketServer = new WebSocket.Server({
-      // TODO: Allow configuring in elm-tooling.json for Docker, and prefer the same port number as used last time (elm-stuff/elm-watch.json).
-      port: 0,
-    });
+    // TODO: Allow configuring in elm-tooling.json for Docker, and prefer the same port number as used last time (elm-stuff/elm-watch.json).
+    //     port should be >= 0 and < 65536
+    const {
+      webSocketServer = new WebSocketServer({ port: 0, rejectPromise }),
+      webSocketConnections = [],
+    } = webSocketState ?? {};
 
-    console.log("address", webSocketServer.address());
-
-    webSocketServer.on("connection", (webSocket, request) => {
-      dispatch({
-        tag: "WebSocketConnected",
-        webSocket,
-        // `request.url` is always a string here, but the types says it can be undefined:
-        // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
-        urlString: request.url ?? "/",
-      });
-
-      webSocket.on("message", (data) => {
-        dispatch({ tag: "WebSocketMessageReceived", webSocket, data });
-      });
-
-      webSocket.on("close", () => {
-        dispatch({ tag: "WebSocketClosed", webSocket });
-      });
-
-      webSocket.on("error", rejectPromise);
-    });
-
-    webSocketServer.on("error", rejectPromise);
+    webSocketServer.setDispatch(dispatch);
 
     return {
       watcher,
       webSocketServer,
-      webSocketConnections: [],
+      webSocketConnections,
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
@@ -545,6 +528,7 @@ const update =
         // update mutable
         // cause compilation if needed
         // respond
+        const TODO_ERROR: [Model, Array<Cmd>] = [model, []];
         if (!msg.urlString.startsWith("/?")) {
           // Should probably not return like this.
           // Move parsing to a function and act upon its return value
@@ -558,7 +542,7 @@ const update =
             Object.fromEntries(params)
           );
         } catch (errorAny) {
-          const error = errorAny as Decode.DecoderError;
+          // const error = errorAny as Decode.DecoderError;
           return TODO_ERROR;
         }
         if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
@@ -577,7 +561,9 @@ const update =
               tag: "WebSocketAdd",
               webSocketConnection: {
                 webSocket: msg.webSocket,
-                outputPath: TODO,
+                outputPath: (() => {
+                  throw new Error("TODO outputPath");
+                })(),
               },
             },
           ],
@@ -1019,14 +1005,29 @@ const runCmd =
         Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
         return;
 
-      case "Restart":
-        mutable.watcher.close().then(() => {
+      case "Restart": {
+        // Outputs and port may have changed if elm-tooling.json changes.
+        const elmToolingJsonChanged = cmd.restartReasons.some(
+          ({ file }) => path.basename(file.absolutePath) === "elm-tooling.json"
+        );
+        mutable.webSocketServer.unsetDispatch();
+        Promise.all([
+          mutable.watcher.close(),
+          elmToolingJsonChanged ? mutable.webSocketServer.close() : undefined,
+        ]).then(() => {
           resolvePromise({
             tag: "Restart",
             restartReasons: cmd.restartReasons,
+            webSocketState: elmToolingJsonChanged
+              ? undefined
+              : {
+                  webSocketServer: mutable.webSocketServer,
+                  webSocketConnections: mutable.webSocketConnections,
+                },
           });
         }, rejectPromise);
         return;
+      }
 
       case "RunOnIdle":
         if (onIdle !== undefined) {

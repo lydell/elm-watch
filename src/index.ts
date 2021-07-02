@@ -62,7 +62,8 @@ export async function elmWatchCli(
           onIdle,
           args[0],
           args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg })),
-          result === undefined ? [] : result.restartReasons
+          result === undefined ? [] : result.restartReasons,
+          result === undefined ? undefined : result.webSocketState
         );
       } while (result.tag === "Restart");
       switch (result.tag) {
