@@ -16,6 +16,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath } from "./PathHelpers";
+import { Port } from "./Port";
 import { getToCompile, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
@@ -203,10 +204,11 @@ export async function run(
   onIdle: OnIdle | undefined,
   restartReasons: Array<WatcherEvent>,
   webSocketState: WebSocketState | undefined,
-  project: Project
+  project: Project,
+  port: Port | undefined
 ): Promise<HotRunResult> {
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
-    initMutable: initMutable(getNow, webSocketState, project),
+    initMutable: initMutable(getNow, webSocketState, project, port),
     init: init(getNow(), restartReasons),
     update: update(project),
     runCmd: runCmd(env, logger, getNow, onIdle),
@@ -246,7 +248,8 @@ const initMutable =
   (
     getNow: GetNow,
     webSocketState: WebSocketState | undefined,
-    project: Project
+    project: Project,
+    port: Port | undefined
   ) =>
   (
     dispatch: (msg: Msg) => void,
@@ -274,7 +277,10 @@ const initMutable =
     // TODO: Allow configuring in elm-tooling.json for Docker, and prefer the same port number as used last time (elm-stuff/elm-watch.json).
     //     port should be >= 0 and < 65536
     const {
-      webSocketServer = new WebSocketServer({ port: 0, rejectPromise }),
+      webSocketServer = new WebSocketServer({
+        port: port === undefined ? 0 : port.thePort,
+        rejectPromise,
+      }),
       webSocketConnections = [],
     } = webSocketState ?? {};
 

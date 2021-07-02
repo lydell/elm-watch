@@ -91,7 +91,7 @@ export async function run(
           return { tag: "Exit", exitCode: 1 };
 
         case "Success": {
-          const { outputs } = parseResult.config;
+          const { outputs, port } = parseResult.config;
           const unknownOutputs = parseArgsResult.outputs.filter(
             (arg) => !Object.prototype.hasOwnProperty.call(outputs, arg)
           );
@@ -109,7 +109,6 @@ export async function run(
           }
 
           const initProjectResult = initProject({
-            runMode,
             compilationMode: parseArgsResult.compilationMode,
             elmToolingJsonPath: parseResult.elmToolingJsonPath,
             config: parseResult.config,
@@ -166,7 +165,8 @@ export async function run(
                     onIdle,
                     restartReasons,
                     webSocketState,
-                    initProjectResult.project
+                    initProjectResult.project,
+                    port
                   );
                   switch (result.tag) {
                     case "ExitOnIdle":

@@ -8,6 +8,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { Cwd, findClosest } from "./PathHelpers";
+import { Port } from "./Port";
 import type { CliArg, ElmToolingJsonPath } from "./Types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
@@ -28,6 +29,7 @@ export function isValidOutputName(name: string): boolean {
   );
 }
 
+type Output = ReturnType<typeof Output>;
 const Output = Decode.fieldsAuto(
   {
     inputs: NonEmptyArray(
@@ -46,30 +48,35 @@ const Output = Decode.fieldsAuto(
   { exact: "throw" }
 );
 
+function outputRecordHelper(
+  record: Record<string, Output>
+): Record<string, Output> {
+  const entries = Object.entries(record);
+  if (!isNonEmptyArray(entries)) {
+    throw new Decode.DecoderError({
+      message: "Expected a non-empty object",
+      value: record,
+    });
+  }
+  return Object.fromEntries(
+    entries.map(([key, value]) => {
+      if (isValidOutputName(key)) {
+        return [key, value];
+      }
+      throw new Decode.DecoderError({
+        message: "Outputs must end with .js or be /dev/null",
+        value: Decode.DecoderError.MISSING_VALUE,
+        key,
+      });
+    })
+  );
+}
+
 export type Config = ReturnType<typeof Config>;
 const Config = Decode.fieldsAuto(
   {
-    outputs: Decode.chain(Decode.record(Output), (record) => {
-      const entries = Object.entries(record);
-      if (!isNonEmptyArray(entries)) {
-        throw new Decode.DecoderError({
-          message: "Expected a non-empty object",
-          value: record,
-        });
-      }
-      return Object.fromEntries(
-        entries.map(([key, value]) => {
-          if (isValidOutputName(key)) {
-            return [key, value];
-          }
-          throw new Decode.DecoderError({
-            message: "Outputs must end with .js or be /dev/null",
-            value: Decode.DecoderError.MISSING_VALUE,
-            key,
-          });
-        })
-      );
-    }),
+    outputs: Decode.chain(Decode.record(Output), outputRecordHelper),
+    port: Decode.optional(Port),
   },
   { exact: "throw" }
 );

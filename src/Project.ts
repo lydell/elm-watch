@@ -25,7 +25,6 @@ import type {
   ElmToolingJsonPath,
   InputPath,
   OutputPath,
-  RunMode,
 } from "./Types";
 
 // The code base leans towards pure functions, but this data structure is going
@@ -127,7 +126,6 @@ export function initProject({
   config,
   enabledOutputs,
 }: {
-  runMode: RunMode;
   compilationMode: CompilationMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   config: ElmToolingJson.Config;
