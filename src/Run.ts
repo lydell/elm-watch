@@ -1,5 +1,6 @@
 import * as CliArgs from "./CliArgs";
 import * as ElmToolingJson from "./ElmToolingJson";
+import * as ElmWatchJson from "./ElmWatchJson";
 import * as Errors from "./Errors";
 import { Env } from "./Helpers";
 import * as Hot from "./Hot";
@@ -108,72 +109,108 @@ export async function run(
             return { tag: "Exit", exitCode: 1 };
           }
 
-          const initProjectResult = initProject({
-            compilationMode: parseArgsResult.compilationMode,
-            elmToolingJsonPath: parseResult.elmToolingJsonPath,
-            config: parseResult.config,
-            enabledOutputs: isNonEmptyArray(parseArgsResult.outputs)
-              ? new Set(parseArgsResult.outputs)
-              : new Set(Object.keys(outputs)),
-          });
+          const elmWatchJsonParseResult =
+            runMode === "hot"
+              ? ElmWatchJson.readAndParse(parseResult.elmToolingJsonPath)
+              : undefined;
 
-          switch (initProjectResult.tag) {
-            case "DuplicateOutputs":
+          switch (elmWatchJsonParseResult?.tag) {
+            case "ElmWatchJsonReadAsJsonError":
               logger.errorTemplate(
-                Errors.duplicateOutputs(
-                  parseResult.elmToolingJsonPath,
-                  initProjectResult.duplicates
+                Errors.readElmWatchJsonAsJson(
+                  elmWatchJsonParseResult.elmWatchJsonPath,
+                  elmWatchJsonParseResult.error
                 )
-              );
-              return handleElmToolingJsonError(
-                logger,
-                getNow,
-                runMode,
-                parseResult.elmToolingJsonPath
-              );
-
-            // istanbul ignore next
-            case "NoCommonRoot":
-              logger.errorTemplate(
-                Errors.noCommonRoot(initProjectResult.paths)
               );
               return { tag: "Exit", exitCode: 1 };
 
-            case "Project": {
-              switch (runMode) {
-                case "make": {
-                  const result = await Make.run(
-                    env,
-                    logger,
-                    runMode,
-                    initProjectResult.project
+            case "ElmWatchJsonDecodeError":
+              logger.errorTemplate(
+                Errors.decodeElmWatchJson(
+                  elmWatchJsonParseResult.elmWatchJsonPath,
+                  elmWatchJsonParseResult.error
+                )
+              );
+              return { tag: "Exit", exitCode: 1 };
+
+            case undefined:
+            case "Parsed":
+            case "NoElmWatchJson": {
+              const elmWatchJson =
+                elmWatchJsonParseResult?.tag === "Parsed"
+                  ? elmWatchJsonParseResult.elmWatchJson
+                  : undefined;
+              const initProjectResult = initProject({
+                compilationMode: parseArgsResult.compilationMode,
+                elmToolingJsonPath: parseResult.elmToolingJsonPath,
+                config: parseResult.config,
+                enabledOutputs: isNonEmptyArray(parseArgsResult.outputs)
+                  ? new Set(parseArgsResult.outputs)
+                  : new Set(Object.keys(outputs)),
+                elmWatchJson,
+              });
+
+              switch (initProjectResult.tag) {
+                case "DuplicateOutputs":
+                  logger.errorTemplate(
+                    Errors.duplicateOutputs(
+                      parseResult.elmToolingJsonPath,
+                      initProjectResult.duplicates
+                    )
                   );
-                  switch (result.tag) {
-                    case "Error":
-                      return { tag: "Exit", exitCode: 1 };
-
-                    case "Success":
-                      return { tag: "Exit", exitCode: 0 };
-                  }
-                }
-
-                case "hot": {
-                  const result = await Hot.run(
-                    env,
+                  return handleElmToolingJsonError(
                     logger,
                     getNow,
-                    onIdle,
-                    restartReasons,
-                    webSocketState,
-                    initProjectResult.project,
-                    port
+                    runMode,
+                    parseResult.elmToolingJsonPath
                   );
-                  switch (result.tag) {
-                    case "ExitOnIdle":
-                      return { tag: "Exit", exitCode: 0 };
 
-                    case "Restart":
-                      return result;
+                // istanbul ignore next
+                case "NoCommonRoot":
+                  logger.errorTemplate(
+                    Errors.noCommonRoot(initProjectResult.paths)
+                  );
+                  return { tag: "Exit", exitCode: 1 };
+
+                case "Project": {
+                  switch (runMode) {
+                    case "make": {
+                      const result = await Make.run(
+                        env,
+                        logger,
+                        runMode,
+                        initProjectResult.project
+                      );
+                      switch (result.tag) {
+                        case "Error":
+                          return { tag: "Exit", exitCode: 1 };
+
+                        case "Success":
+                          return { tag: "Exit", exitCode: 0 };
+                      }
+                    }
+
+                    case "hot": {
+                      const result = await Hot.run(
+                        env,
+                        logger,
+                        getNow,
+                        onIdle,
+                        restartReasons,
+                        webSocketState,
+                        initProjectResult.project,
+                        port === undefined && elmWatchJson !== undefined
+                          ? elmWatchJson.port
+                          : port
+                      );
+                      switch (result.tag) {
+                        case "ExitOnIdle":
+                          return { tag: "Exit", exitCode: 0 };
+
+                        case "Restart":
+                          return result;
+                      }
+                    }
                   }
                 }
               }

@@ -18,6 +18,7 @@ import {
   CliArg,
   ElmJsonPath,
   ElmToolingJsonPath,
+  ElmWatchJsonPath,
   ElmWatchNodeScriptPath,
   InputPath,
   OutputPath,
@@ -25,10 +26,12 @@ import {
 
 const elmJson = bold("elm.json");
 const elmToolingJson = bold("elm-tooling.json");
+const elmWatchJson = bold("elm-stuff/elm-watch.json");
 
 type FancyErrorLocation =
   | ElmJsonPath
   | ElmToolingJsonPath
+  | ElmWatchJsonPath
   | ElmWatchNodeScriptPath
   | OutputPath
   | { tag: "Custom"; location: string }
@@ -68,6 +71,8 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
       return location.theElmJsonPath.absolutePath;
     case "ElmToolingJsonPath":
       return location.theElmToolingJsonPath.absolutePath;
+    case "ElmWatchJsonPath":
+      return location.theElmWatchJsonPath.absolutePath;
     case "OutputPath":
       return dim(`When compiling: ${location.originalString}`);
     case "NullOutputPath":
@@ -702,6 +707,44 @@ ${error.format()}
 
 (I still managed to compile your code, but the watcher will not work properly
 and "postprocess" was not run.)
+`;
+}
+
+export function readElmWatchJsonAsJson(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError(
+    "TROUBLE READING elm-stuff/elm-watch.json",
+    elmWatchJsonPath
+  )`
+I read stuff from ${elmWatchJson} to remember some things between runs.
+
+${bold("I had trouble reading it as JSON:")}
+
+${error.message}
+
+This file is created by elm-watch, so reading it should never fail really.
+You could try removing that file (it contains nothing essential).
+`;
+}
+
+export function decodeElmWatchJson(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  error: DecoderError
+): ErrorTemplate {
+  return fancyError(
+    "INVALID elm-stuff/elm-watch.json FORMAT",
+    elmWatchJsonPath
+  )`
+I read stuff from ${elmWatchJson} to remember some things between runs.
+
+${bold("I had trouble with the JSON inside:")}
+
+${error.format()}
+
+This file is created by elm-watch, so reading it should never fail really.
+You could try removing that file (it contains nothing essential).
 `;
 }
 

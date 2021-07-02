@@ -148,6 +148,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
     };
   }
 }
+
 export function example(
   cwd: Cwd,
   elmToolingJsonPath: ElmToolingJsonPath,

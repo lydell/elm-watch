@@ -1,5 +1,6 @@
 import * as ElmJson from "./ElmJson";
 import * as ElmToolingJson from "./ElmToolingJson";
+import { ElmWatchJson } from "./ElmWatchJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton } from "./Helpers";
@@ -125,11 +126,13 @@ export function initProject({
   elmToolingJsonPath,
   config,
   enabledOutputs,
+  elmWatchJson,
 }: {
   compilationMode: CompilationMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   config: ElmToolingJson.Config;
   enabledOutputs: Set<string>;
+  elmWatchJson: ElmWatchJson | undefined;
 }): InitProjectResult {
   const disabledOutputs = new HashSet<OutputPath>();
   const elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }> =
@@ -183,9 +186,13 @@ export function initProject({
           const previous =
             elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
             new HashMap<OutputPath, OutputState>();
+          const persisted = elmWatchJson?.outputs[outputPathString];
           previous.set(outputPath, {
             inputs: resolveElmJsonResult.inputs,
-            mode: compilationMode,
+            mode:
+              persisted === undefined
+                ? compilationMode
+                : persisted.compilationMode,
             postprocess: output.postprocess,
             status: { tag: "NotWrittenToDisk" },
             allRelatedElmFilePaths: new Set(),

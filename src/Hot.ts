@@ -274,10 +274,10 @@ const initMutable =
       }
     );
 
-    // TODO: Allow configuring in elm-tooling.json for Docker, and prefer the same port number as used last time (elm-stuff/elm-watch.json).
-    //     port should be >= 0 and < 65536
+    // TODO: Handle errors, retry on a different port if elm-stuff/elm-watch.json port is bad.
     const {
       webSocketServer = new WebSocketServer({
+        // 0 results in a “random” available port.
         port: port === undefined ? 0 : port.thePort,
         rejectPromise,
       }),
@@ -285,6 +285,15 @@ const initMutable =
     } = webSocketState ?? {};
 
     webSocketServer.setDispatch(dispatch);
+
+    // TODO: Write elm-stuff/elm-watch.json
+    // This and the above requires initMutable to be able to fail.
+    // Unless we do this stuff earlier.
+    // Writing elm-stuff/elm-watch.json can fail later anyway, when switching
+    // mode for an output.
+    // Failing to start the web socket server should probably fail the whole thing.
+    // But what about write failure?
+    // Either hard failure or show something about it.
 
     return {
       watcher,
