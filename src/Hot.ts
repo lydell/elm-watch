@@ -16,7 +16,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath } from "./PathHelpers";
-import { Port } from "./Port";
+import { PortChoice } from "./Port";
 import { getToCompile, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
@@ -205,10 +205,10 @@ export async function run(
   restartReasons: Array<WatcherEvent>,
   webSocketState: WebSocketState | undefined,
   project: Project,
-  port: Port | undefined
+  portChoice: PortChoice
 ): Promise<HotRunResult> {
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
-    initMutable: initMutable(getNow, webSocketState, project, port),
+    initMutable: initMutable(getNow, webSocketState, project, portChoice),
     init: init(getNow(), restartReasons),
     update: update(project),
     runCmd: runCmd(env, logger, getNow, onIdle),
@@ -249,7 +249,7 @@ const initMutable =
     getNow: GetNow,
     webSocketState: WebSocketState | undefined,
     project: Project,
-    port: Port | undefined
+    portChoice: PortChoice
   ) =>
   (
     dispatch: (msg: Msg) => void,
@@ -274,13 +274,8 @@ const initMutable =
       }
     );
 
-    // TODO: Handle errors, retry on a different port if elm-stuff/elm-watch.json port is bad.
     const {
-      webSocketServer = new WebSocketServer({
-        // 0 results in a “random” available port.
-        port: port === undefined ? 0 : port.thePort,
-        rejectPromise,
-      }),
+      webSocketServer = new WebSocketServer({ portChoice, rejectPromise }),
       webSocketConnections = [],
     } = webSocketState ?? {};
 

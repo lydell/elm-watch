@@ -92,9 +92,9 @@ export async function run(
           return { tag: "Exit", exitCode: 1 };
 
         case "Success": {
-          const { outputs, port } = parseResult.config;
+          const { config } = parseResult;
           const unknownOutputs = parseArgsResult.outputs.filter(
-            (arg) => !Object.prototype.hasOwnProperty.call(outputs, arg)
+            (arg) => !Object.prototype.hasOwnProperty.call(config.outputs, arg)
           );
 
           if (isNonEmptyArray(unknownOutputs)) {
@@ -102,7 +102,7 @@ export async function run(
               Errors.unknownOutputs(
                 parseResult.elmToolingJsonPath,
                 // The decoder validates that there’s at least one output.
-                Object.keys(outputs) as NonEmptyArray<string>,
+                Object.keys(config.outputs) as NonEmptyArray<string>,
                 unknownOutputs
               )
             );
@@ -146,7 +146,7 @@ export async function run(
                 config: parseResult.config,
                 enabledOutputs: isNonEmptyArray(parseArgsResult.outputs)
                   ? new Set(parseArgsResult.outputs)
-                  : new Set(Object.keys(outputs)),
+                  : new Set(Object.keys(config.outputs)),
                 elmWatchJson,
               });
 
@@ -199,9 +199,11 @@ export async function run(
                         restartReasons,
                         webSocketState,
                         initProjectResult.project,
-                        port === undefined && elmWatchJson !== undefined
-                          ? elmWatchJson.port
-                          : port
+                        config.port !== undefined
+                          ? { tag: "PortFromConfig", port: config.port }
+                          : elmWatchJson !== undefined
+                          ? { tag: "PersistedPort", port: elmWatchJson.port }
+                          : { tag: "NoPort" }
                       );
                       switch (result.tag) {
                         case "ExitOnIdle":

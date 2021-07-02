@@ -10,6 +10,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
+import { Port } from "./Port";
 import { ExecutedCommand } from "./Postprocess";
 import { UncheckedInputPath } from "./Project";
 import { Command, ExitReason } from "./Spawn";
@@ -761,6 +762,19 @@ ${error.message}
 (I still managed to compile your code, but the watcher will not work properly
 and "postprocess" was not run.)
 `;
+}
+
+export function portConflict(port: Port): string {
+  return `
+In your elm-tooling.json you have this:
+
+"port": ${JSON.stringify(port.thePort)}
+
+But something else seems to already be running on that port!
+
+You need to either find and stop that other thing, switch to another port or
+remove "port" from elm-tooling.json (which will use an arbitrary available port.)
+  `.trim();
 }
 
 function printPATH(env: Env): string {

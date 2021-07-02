@@ -1,5 +1,8 @@
 import WebSocket from "ws";
 
+import * as Errors from "./Errors";
+import { PortChoice } from "./Port";
+
 export type WebSocketServerMsg =
   | {
       tag: "WebSocketClosed";
@@ -16,6 +19,11 @@ export type WebSocketServerMsg =
       data: WebSocket.Data;
     };
 
+type Options = {
+  portChoice: PortChoice;
+  rejectPromise: (error: Error) => void;
+};
+
 export class WebSocketServer {
   webSocketServer: WebSocket.Server;
 
@@ -25,18 +33,24 @@ export class WebSocketServer {
 
   msgQueue: Array<WebSocketServerMsg> = [];
 
-  constructor({
-    port,
-    rejectPromise,
-  }: {
-    port: number;
-    rejectPromise: (error: Error) => void;
-  }) {
-    this.webSocketServer = new WebSocket.Server({ port });
-    this.port = (this.webSocketServer.address() as WebSocket.AddressInfo).port;
+  constructor(options: Options) {
+    const { webSocketServer, port } = this.init(options);
+    this.webSocketServer = webSocketServer;
+    this.port = port;
     this.dispatch = this.dispatchToQueue;
+  }
 
-    this.webSocketServer.on("connection", (webSocket, request) => {
+  init({ portChoice, rejectPromise }: Options): {
+    webSocketServer: WebSocket.Server;
+    port: number;
+  } {
+    const webSocketServer = new WebSocket.Server({
+      // If `port` is 0, the operating system will assign an arbitrary unused port.
+      port: portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
+    });
+    const { port } = this.webSocketServer.address() as WebSocket.AddressInfo;
+
+    webSocketServer.on("connection", (webSocket, request) => {
       this.dispatch({
         tag: "WebSocketConnected",
         webSocket,
@@ -56,7 +70,40 @@ export class WebSocketServer {
       webSocket.on("error", rejectPromise);
     });
 
-    this.webSocketServer.on("error", rejectPromise);
+    webSocketServer.on("error", (error: Error & { code?: string }) => {
+      if (error.code === "EADDRINUSE") {
+        switch (portChoice.tag) {
+          case "PersistedPort": {
+            // The port we used last time is not available. Get a new one.
+            webSocketServer.close();
+            const next = this.init({
+              portChoice: { tag: "NoPort" },
+              rejectPromise,
+            });
+            this.webSocketServer = next.webSocketServer;
+            this.port = next.port;
+            return;
+          }
+
+          case "PortFromConfig":
+            // “Abusing” fatal errors for a nice error is non-ideal, but people
+            // generally won’t have a need to configure a certain port anyway.
+            rejectPromise({
+              name: "Error",
+              message: Errors.portConflict(portChoice.port),
+            });
+            return;
+
+          case "NoPort":
+            rejectPromise(error);
+            return;
+        }
+      } else {
+        rejectPromise(error);
+      }
+    });
+
+    return { webSocketServer, port };
   }
 
   dispatchToQueue = (msg: WebSocketServerMsg): void => {
