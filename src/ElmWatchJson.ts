@@ -27,6 +27,20 @@ export const ElmWatchJson = Decode.fieldsAuto({
   outputs: Decode.record(Output),
 });
 
+export function getPath(
+  elmToolingJsonPath: ElmToolingJsonPath
+): ElmWatchJsonPath {
+  const elmStuff = absolutePathFromString(
+    absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
+    "elm-stuff"
+  );
+
+  return {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: absolutePathFromString(elmStuff, "elm-watch.json"),
+  };
+}
+
 export type ParseResult =
   | ParseError
   | {
@@ -42,28 +56,14 @@ export type ParseResult =
 export type ParseError =
   | {
       tag: "ElmWatchJsonDecodeError";
-      elmWatchJsonPath: ElmWatchJsonPath;
       error: Decode.DecoderError;
     }
   | {
       tag: "ElmWatchJsonReadAsJsonError";
-      elmWatchJsonPath: ElmWatchJsonPath;
       error: Error;
     };
 
-export function readAndParse(
-  elmToolingJsonPath: ElmToolingJsonPath
-): ParseResult {
-  const elmStuff = absolutePathFromString(
-    absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
-    "elm-stuff"
-  );
-
-  const elmWatchJsonPath: ElmWatchJsonPath = {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: absolutePathFromString(elmStuff, "elm-watch.json"),
-  };
-
+export function readAndParse(elmWatchJsonPath: ElmWatchJsonPath): ParseResult {
   let json: unknown = undefined;
   try {
     json = JSON.parse(
@@ -81,7 +81,6 @@ export function readAndParse(
         }
       : {
           tag: "ElmWatchJsonReadAsJsonError",
-          elmWatchJsonPath,
           error,
         };
   }
@@ -96,7 +95,6 @@ export function readAndParse(
     const error = errorAny as Decode.DecoderError;
     return {
       tag: "ElmWatchJsonDecodeError",
-      elmWatchJsonPath,
       error,
     };
   }

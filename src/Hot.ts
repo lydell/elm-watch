@@ -1,4 +1,5 @@
 import * as chokidar from "chokidar";
+import * as fs from "fs";
 import * as path from "path";
 import * as readline from "readline";
 import * as Decode from "tiny-decoders";
@@ -6,6 +7,8 @@ import { URLSearchParams } from "url";
 import WebSocket from "ws";
 
 import * as Compile from "./Compile";
+import { ElmWatchJson } from "./ElmWatchJson";
+import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
 import { HashSet } from "./HashSet";
 import { bold, dim, Env, formatTime, join } from "./Helpers";
@@ -15,7 +18,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { AbsolutePath } from "./PathHelpers";
+import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { getToCompile, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
@@ -26,6 +29,7 @@ import {
   GetNow,
   OnIdle,
   OutputPath,
+  outputPathToOriginalString,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
@@ -44,6 +48,7 @@ type Mutable = {
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
+  elmWatchJsonWriteError: Error | undefined;
 };
 
 type WebSocketConnection = {
@@ -134,6 +139,9 @@ type Cmd =
       elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
+    }
+  | {
+      tag: "HandleElmWatchJsonWriteError";
     }
   | {
       tag: "InstallDependencies";
@@ -281,24 +289,55 @@ const initMutable =
 
     webSocketServer.setDispatch(dispatch);
 
-    // TODO: Write elm-stuff/elm-watch.json
-    // This and the above requires initMutable to be able to fail.
-    // Unless we do this stuff earlier.
-    // Writing elm-stuff/elm-watch.json can fail later anyway, when switching
-    // mode for an output.
-    // Failing to start the web socket server should probably fail the whole thing.
-    // But what about write failure?
-    // Either hard failure or show something about it.
-
-    return {
+    const mutable: Mutable = {
       watcher,
       webSocketServer,
       webSocketConnections,
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
+      elmWatchJsonWriteError: undefined,
     };
+
+    writeElmWatchJson(mutable);
+
+    return mutable;
   };
+
+function writeElmWatchJson(mutable: Mutable): void {
+  const json: ElmWatchJson = {
+    port: mutable.webSocketServer.port,
+    outputs: Object.fromEntries(
+      getToCompile(mutable.project).flatMap(({ outputPath, outputState }) =>
+        outputState.compilationMode === "standard"
+          ? []
+          : [
+              [
+                outputPathToOriginalString(outputPath),
+                { compilationMode: outputState.compilationMode },
+              ],
+            ]
+      )
+    ),
+  };
+
+  try {
+    fs.mkdirSync(
+      absoluteDirname(mutable.project.elmWatchJsonPath.theElmWatchJsonPath)
+        .absolutePath,
+      { recursive: true }
+    );
+
+    fs.writeFileSync(
+      mutable.project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
+      `${JSON.stringify(json, null, 4)}\n`
+    );
+    mutable.elmWatchJsonWriteError = undefined;
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    mutable.elmWatchJsonWriteError = error;
+  }
+}
 
 function watcherOnAll(
   watcher: chokidar.FSWatcher,
@@ -462,6 +501,9 @@ const update =
                   tag: "LogInfoMessageWithTimeline",
                   message: compileFinishedMessage(duration),
                   events: model.hotState.events,
+                },
+                {
+                  tag: "HandleElmWatchJsonWriteError",
                 },
                 {
                   tag: "RunOnIdle",
@@ -968,6 +1010,23 @@ const runCmd =
             outputState: cmd.outputState,
           });
         }, rejectPromise);
+        return;
+
+      case "HandleElmWatchJsonWriteError":
+        if (mutable.elmWatchJsonWriteError !== undefined) {
+          // Retry writing it.
+          writeElmWatchJson(mutable);
+          // If still an error, print it.
+          if (mutable.elmWatchJsonWriteError !== undefined) {
+            logger.error("");
+            logger.errorTemplate(
+              Errors.elmWatchJsonWriteError(
+                mutable.project.elmWatchJsonPath,
+                mutable.elmWatchJsonWriteError
+              )
+            );
+          }
+        }
         return;
 
       case "InstallDependencies":

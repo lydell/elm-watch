@@ -92,20 +92,20 @@ const Stdout = Decode.fieldsAuto(
 
 export async function postprocess({
   elmToolingJsonPath,
-  mode,
+  compilationMode,
   output,
   postprocessArray,
   env,
 }: {
   elmToolingJsonPath: ElmToolingJsonPath;
-  mode: CompilationMode;
+  compilationMode: CompilationMode;
   output: OutputPath;
   postprocessArray: NonEmptyArray<string>;
   env: Env;
 }): Promise<PostprocessResult> {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
-  const extraArgs = [outputPathToAbsoluteString(output), mode];
+  const extraArgs = [outputPathToAbsoluteString(output), compilationMode];
   const cwd = absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath);
 
   if (commandName === "elm-watch-node") {

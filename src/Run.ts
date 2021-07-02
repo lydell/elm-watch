@@ -109,16 +109,20 @@ export async function run(
             return { tag: "Exit", exitCode: 1 };
           }
 
+          const elmWatchJsonPath = ElmWatchJson.getPath(
+            parseResult.elmToolingJsonPath
+          );
+
           const elmWatchJsonParseResult =
             runMode === "hot"
-              ? ElmWatchJson.readAndParse(parseResult.elmToolingJsonPath)
+              ? ElmWatchJson.readAndParse(elmWatchJsonPath)
               : undefined;
 
           switch (elmWatchJsonParseResult?.tag) {
             case "ElmWatchJsonReadAsJsonError":
               logger.errorTemplate(
                 Errors.readElmWatchJsonAsJson(
-                  elmWatchJsonParseResult.elmWatchJsonPath,
+                  elmWatchJsonPath,
                   elmWatchJsonParseResult.error
                 )
               );
@@ -127,7 +131,7 @@ export async function run(
             case "ElmWatchJsonDecodeError":
               logger.errorTemplate(
                 Errors.decodeElmWatchJson(
-                  elmWatchJsonParseResult.elmWatchJsonPath,
+                  elmWatchJsonPath,
                   elmWatchJsonParseResult.error
                 )
               );
@@ -140,6 +144,7 @@ export async function run(
                 elmWatchJsonParseResult?.tag === "Parsed"
                   ? elmWatchJsonParseResult.elmWatchJson
                   : undefined;
+
               const initProjectResult = initProject({
                 compilationMode: parseArgsResult.compilationMode,
                 elmToolingJsonPath: parseResult.elmToolingJsonPath,
@@ -147,6 +152,7 @@ export async function run(
                 enabledOutputs: isNonEmptyArray(parseArgsResult.outputs)
                   ? new Set(parseArgsResult.outputs)
                   : new Set(Object.keys(config.outputs)),
+                elmWatchJsonPath,
                 elmWatchJson,
               });
 

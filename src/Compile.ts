@@ -186,7 +186,7 @@ export async function compileOneOutput({
   const [elmMakeResult, allRelatedElmFilePathsResult] = await Promise.all([
     SpawnElm.make({
       elmJsonPath,
-      mode: outputState.mode,
+      compilationMode: outputState.compilationMode,
       inputs: outputState.inputs,
       output: outputPath,
       env,
@@ -235,7 +235,7 @@ export async function compileOneOutput({
     updateStatusLine();
     outputState.status = await postprocess({
       elmToolingJsonPath,
-      mode: outputState.mode,
+      compilationMode: outputState.compilationMode,
       output: outputPath,
       postprocessArray: outputState.postprocess,
       env,

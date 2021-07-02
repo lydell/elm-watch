@@ -749,6 +749,24 @@ You could try removing that file (it contains nothing essential).
 `;
 }
 
+export function elmWatchJsonWriteError(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError(
+    "TROUBLE WRITING elm-stuff/elm-watch.json",
+    elmWatchJsonPath
+  )`
+I write stuff to ${elmWatchJson} to remember some things between runs.
+
+${bold("I had trouble writing that file:")}
+
+${error.message}
+
+The file contains nothing essential, but something weird is going on.
+`;
+}
+
 export function importWalkerFileSystemError(
   outputPath: OutputPath,
   error: Error

@@ -55,13 +55,13 @@ export type JsonPath =
 
 export async function make({
   elmJsonPath,
-  mode,
+  compilationMode,
   inputs,
   output,
   env,
 }: {
   elmJsonPath: ElmJsonPath;
-  mode: CompilationMode;
+  compilationMode: CompilationMode;
   inputs: NonEmptyArray<InputPath>;
   output: OutputPath;
   env: Env;
@@ -71,7 +71,7 @@ export async function make({
     args: [
       "make",
       "--report=json",
-      ...compilationModeToArgs(mode),
+      ...compilationModeToArgs(compilationMode),
       `--output=${outputPathToAbsoluteString(output)}`,
       ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
     ],
@@ -115,8 +115,10 @@ export async function make({
   }
 }
 
-function compilationModeToArgs(mode: CompilationMode): Array<string> {
-  switch (mode) {
+function compilationModeToArgs(
+  compilationMode: CompilationMode
+): Array<string> {
+  switch (compilationMode) {
     case "standard":
       return [];
     case "debug":

@@ -1,7 +1,7 @@
 import WebSocket from "ws";
 
 import * as Errors from "./Errors";
-import { PortChoice } from "./Port";
+import { Port, PortChoice } from "./Port";
 
 export type WebSocketServerMsg =
   | {
@@ -27,7 +27,7 @@ type Options = {
 export class WebSocketServer {
   webSocketServer: WebSocket.Server;
 
-  port: number;
+  port: Port;
 
   dispatch: (msg: WebSocketServerMsg) => void;
 
@@ -42,7 +42,7 @@ export class WebSocketServer {
 
   init({ portChoice, rejectPromise }: Options): {
     webSocketServer: WebSocket.Server;
-    port: number;
+    port: Port;
   } {
     const webSocketServer = new WebSocket.Server({
       // If `port` is 0, the operating system will assign an arbitrary unused port.
@@ -103,7 +103,7 @@ export class WebSocketServer {
       }
     });
 
-    return { webSocketServer, port };
+    return { webSocketServer, port: { tag: "Port", thePort: port } };
   }
 
   dispatchToQueue = (msg: WebSocketServerMsg): void => {

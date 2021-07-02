@@ -24,6 +24,7 @@ import type {
   CompilationMode,
   ElmJsonPath,
   ElmToolingJsonPath,
+  ElmWatchJsonPath,
   InputPath,
   OutputPath,
 } from "./Types";
@@ -35,6 +36,7 @@ export type Project = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.
   readonly watchRoot: AbsolutePath;
   readonly elmToolingJsonPath: ElmToolingJsonPath;
+  readonly elmWatchJsonPath: ElmWatchJsonPath;
   readonly disabledOutputs: HashSet<OutputPath>;
   readonly elmJsonsErrors: Array<{
     outputPath: OutputPath;
@@ -45,7 +47,7 @@ export type Project = {
 
 export type OutputState = {
   readonly inputs: NonEmptyArray<InputPath>;
-  readonly mode: CompilationMode;
+  compilationMode: CompilationMode;
   readonly postprocess?: NonEmptyArray<string>;
   status: OutputStatus;
   allRelatedElmFilePaths: Set<string>;
@@ -126,12 +128,14 @@ export function initProject({
   elmToolingJsonPath,
   config,
   enabledOutputs,
+  elmWatchJsonPath,
   elmWatchJson,
 }: {
   compilationMode: CompilationMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   config: ElmToolingJson.Config;
   enabledOutputs: Set<string>;
+  elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchJson: ElmWatchJson | undefined;
 }): InitProjectResult {
   const disabledOutputs = new HashSet<OutputPath>();
@@ -189,7 +193,7 @@ export function initProject({
           const persisted = elmWatchJson?.outputs[outputPathString];
           previous.set(outputPath, {
             inputs: resolveElmJsonResult.inputs,
-            mode:
+            compilationMode:
               persisted === undefined
                 ? compilationMode
                 : persisted.compilationMode,
@@ -248,6 +252,7 @@ export function initProject({
     project: {
       watchRoot,
       elmToolingJsonPath,
+      elmWatchJsonPath,
       disabledOutputs,
       elmJsonsErrors,
       elmJsons,
