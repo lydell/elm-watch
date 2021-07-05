@@ -236,6 +236,7 @@ export async function compileOneOutput({
     outputState.status = await postprocess({
       elmToolingJsonPath,
       compilationMode: outputState.compilationMode,
+      runMode,
       output: outputPath,
       postprocessArray: outputState.postprocess,
       env,

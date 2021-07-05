@@ -1,7 +1,7 @@
 const fs = require("fs");
 const UglifyJs = require("uglify-js");
 
-const [outputPath, mode] = process.argv.slice(2);
+const [outputPath, compilationMode] = process.argv.slice(2);
 
 const pureFuncs = [
   "F2",
@@ -22,7 +22,7 @@ const pureFuncs = [
   "A9",
 ]
 
-switch (mode) {
+switch (compilationMode) {
   case "standard":
   case "debug":
     process.exit(0);
@@ -54,6 +54,6 @@ switch (mode) {
   }
 
   default:
-    process.stderr.write(`Unknown mode: ${JSON.stringify(mode)}`);
+    process.stderr.write(`Unknown compilation mode: ${JSON.stringify(compilationMode)}`);
     process.exit(1);
 }

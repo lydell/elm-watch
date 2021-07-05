@@ -14,6 +14,7 @@ import {
   ElmWatchNodeScriptPath,
   OutputPath,
   outputPathToAbsoluteString,
+  RunMode,
 } from "./Types";
 
 export type PostprocessResult =
@@ -93,19 +94,25 @@ const Stdout = Decode.fieldsAuto(
 export async function postprocess({
   elmToolingJsonPath,
   compilationMode,
+  runMode,
   output,
   postprocessArray,
   env,
 }: {
   elmToolingJsonPath: ElmToolingJsonPath;
   compilationMode: CompilationMode;
+  runMode: RunMode;
   output: OutputPath;
   postprocessArray: NonEmptyArray<string>;
   env: Env;
 }): Promise<PostprocessResult> {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
-  const extraArgs = [outputPathToAbsoluteString(output), compilationMode];
+  const extraArgs = [
+    outputPathToAbsoluteString(output),
+    compilationMode,
+    runMode,
+  ];
   const cwd = absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath);
 
   if (commandName === "elm-watch-node") {

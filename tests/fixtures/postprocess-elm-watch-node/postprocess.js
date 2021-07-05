@@ -2,14 +2,14 @@ const fs = require("fs");
 const path = require("path");
 
 const postprocess = (args) => {
-  if (args.length !== 4) {
+  if (args.length !== 5) {
     return {
       exitCode: 1,
-      stderr: `Expected 4 args but got ${args.length}: ${JSON.stringify(args)}`,
+      stderr: `Expected 5 args but got ${args.length}: ${JSON.stringify(args)}`,
     };
   }
 
-  const [arg1, arg2, outputPath, mode] = args;
+  const [arg1, arg2, outputPath, compilationMode, runMode] = args;
 
   const expectedArg1 = "arg1";
   if (arg1 !== expectedArg1) {
@@ -33,7 +33,7 @@ const postprocess = (args) => {
 
   const output = fs.readFileSync(outputPath, "utf8");
 
-  switch (mode) {
+  switch (compilationMode) {
     case "standard": {
       const probe = "Compiled in DEV mode";
       if (!output.includes(probe)) {
@@ -48,7 +48,20 @@ const postprocess = (args) => {
     default:
       return {
         exitCode: 1,
-        stderr: `Unexpected compilation mode: ${JSON.stringify(mode)}`,
+        stderr: `Unexpected compilation mode: ${JSON.stringify(
+          compilationMode
+        )}`,
+      };
+  }
+
+  switch (runMode) {
+    case "make":
+      break;
+
+    default:
+      return {
+        exitCode: 1,
+        stderr: `Unexpected run mode: ${JSON.stringify(runMode)}`,
       };
   }
 

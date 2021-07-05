@@ -3,9 +3,9 @@ const path = require("path");
 
 const args = process.argv.slice(2);
 
-if (args.length !== 2) {
+if (args.length !== 3) {
   console.error(
-    `Expected 2 args but got ${args.length}: ${JSON.stringify(args)}`
+    `Expected 3 args but got ${args.length}: ${JSON.stringify(args)}`
   );
   process.exit(1);
 }

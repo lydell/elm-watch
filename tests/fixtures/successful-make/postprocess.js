@@ -2,14 +2,14 @@ const fs = require("fs");
 
 const args = process.argv.slice(2);
 
-if (args.length !== 4) {
+if (args.length !== 5) {
   console.error(
-    `Expected 4 args but got ${args.length}: ${JSON.stringify(args)}`
+    `Expected 5 args but got ${args.length}: ${JSON.stringify(args)}`
   );
   process.exit(1);
 }
 
-const [arg1, arg2, outputPath, mode] = args;
+const [arg1, arg2, outputPath, compilationMode, runMode] = args;
 
 const expectedArg1 = "first $(arg)";
 if (arg1 !== expectedArg1) {
@@ -33,7 +33,7 @@ if (arg2 !== expectedArg2) {
 
 const output = fs.readFileSync(outputPath, "utf8");
 
-switch (mode) {
+switch (compilationMode) {
   case "standard": {
     const probe = "Compiled in DEV mode";
     if (!output.includes(probe)) {
@@ -68,7 +68,22 @@ switch (mode) {
   }
 
   default:
-    console.error(`Unknown compilation mode: ${JSON.stringify(mode)}`);
+    console.error(
+      `Unknown compilation mode: ${JSON.stringify(compilationMode)}`
+    );
+    process.exit(1);
+}
+
+switch (runMode) {
+  case "make":
+    break;
+
+  case "hot":
+    console.error('Expected run mode to be "make" but got "hot".');
+    process.exit(1);
+
+  default:
+    console.error(`Unknown run mode: ${JSON.stringify(compilationMode)}`);
     process.exit(1);
 }
 

@@ -1418,7 +1418,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'console.log('\\''some stdout'\\''); process.exit(1)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stdout.js standard
+        node -e 'console.log('\\''some stdout'\\''); process.exit(1)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stdout.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1442,7 +1442,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'console.error('\\''some stderr'\\''); process.exit(2)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-2-stderr.js debug
+        node -e 'console.error('\\''some stderr'\\''); process.exit(2)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-2-stderr.js debug make
 
         ⧙It exited with an error:⧘
 
@@ -1470,7 +1470,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'process.exit(3)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-3-no-output.js optimize
+        node -e 'process.exit(3)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-3-no-output.js optimize make
 
         ⧙It exited with an error:⧘
 
@@ -1497,7 +1497,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'console.log("stdout"); console.error("stderr"); process.exit(4)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-4-both-stdout-and-stderr.js standard
+        node -e 'console.log("stdout"); console.error("stderr"); process.exit(4)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-4-both-stdout-and-stderr.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1524,7 +1524,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'process.exit(5)' -- '' \\'a\\'b\\' '$x' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-5-tricky-args.js standard
+        node -e 'process.exit(5)' -- '' \\'a\\'b\\' '$x' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-5-tricky-args.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1682,7 +1682,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-error.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-error.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-error.js","standard","make"])
 
         But that resulted in this error:
 
@@ -1705,7 +1705,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-null.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-null.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-null.js","standard","make"])
 
         But that resulted in this error:
 
@@ -1727,7 +1727,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/reject-promise.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/reject-promise.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/reject-promise.js","standard","make"])
 
         But that resulted in this error:
 
@@ -1749,7 +1749,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/return-undefined.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/return-undefined.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/return-undefined.js","standard","make"])
 
         But ⧙result⧘ doesn't look like I expected:
 
@@ -1773,7 +1773,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/exit-code-typo.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/exit-code-typo.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/exit-code-typo.js","standard","make"])
 
         But ⧙result⧘ doesn't look like I expected:
 
@@ -1797,7 +1797,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/stdout-typo.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/stdout-typo.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/stdout-typo.js","standard","make"])
 
         But ⧙result⧘ doesn't look like I expected:
 
@@ -1821,7 +1821,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/exit-1-stderr.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stderr.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stderr.js","standard","make"])
 
         ⧙It exited with an error:⧘
 
@@ -1843,7 +1843,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/invalid-stdout-json.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-json.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-json.js","standard","make"])
 
         But ⧙stdout⧘ doesn't look like I expected:
 
@@ -1864,7 +1864,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/invalid-stdout-typo.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-typo.js","standard"])
+        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-typo.js","standard","make"])
 
         But ⧙stdout⧘ doesn't look like I expected:
 
@@ -1927,7 +1927,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
+        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1996,7 +1996,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard
+        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
 
         It exited with an error:
 

@@ -20,8 +20,8 @@ const pureFuncs = [
   "A9",
 ];
 
-export default function postprocess([outputPath, mode]) {
-  switch (mode) {
+export default function postprocess([outputPath, compilationMode]) {
+  switch (compilationMode) {
     case "standard":
     case "debug":
       return { exitCode: 0 };
@@ -57,7 +57,7 @@ export default function postprocess([outputPath, mode]) {
     default:
       return {
         exitCode: 1,
-        stderr: `Unknown mode: ${JSON.stringify(mode)}`,
+        stderr: `Unknown mode: ${JSON.stringify(compilationMode)}`,
       };
   }
 }
