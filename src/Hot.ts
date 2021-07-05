@@ -7,7 +7,7 @@ import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
 import * as Compile from "./Compile";
-import { ElmWatchJson } from "./ElmWatchJson";
+import { ElmWatchJsonWritable } from "./ElmWatchJson";
 import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
 import { HashSet } from "./HashSet";
@@ -294,8 +294,8 @@ const initMutable =
   };
 
 function writeElmWatchJson(mutable: Mutable): void {
-  const json: ElmWatchJson = {
-    port: mutable.webSocketServer.port,
+  const json: ElmWatchJsonWritable = {
+    port: mutable.webSocketServer.port.thePort,
     outputs: Object.fromEntries(
       getFlatOutputs(mutable.project).flatMap(({ outputPath, outputState }) =>
         outputState.compilationMode === "standard"

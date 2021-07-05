@@ -27,6 +27,10 @@ export const ElmWatchJson = Decode.fieldsAuto({
   outputs: Decode.record(Output),
 });
 
+export type ElmWatchJsonWritable = Omit<ElmWatchJson, "port"> & {
+  port: number;
+};
+
 export function getPath(
   elmToolingJsonPath: ElmToolingJsonPath
 ): ElmWatchJsonPath {
