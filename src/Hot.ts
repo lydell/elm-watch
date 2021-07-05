@@ -498,12 +498,12 @@ const update =
                   ? { tag: "PrintCompileErrors", errors }
                   : { tag: "NoCmd" },
                 {
+                  tag: "HandleElmWatchJsonWriteError",
+                },
+                {
                   tag: "LogInfoMessageWithTimeline",
                   message: compileFinishedMessage(duration),
                   events: model.hotState.events,
-                },
-                {
-                  tag: "HandleElmWatchJsonWriteError",
                 },
                 {
                   tag: "RunOnIdle",
