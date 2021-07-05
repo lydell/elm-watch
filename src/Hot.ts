@@ -20,7 +20,7 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { PortChoice } from "./Port";
-import { getToCompile, OutputState, Project } from "./Project";
+import { getFlatOutputs, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
   ElmJsonPath,
@@ -308,7 +308,7 @@ function writeElmWatchJson(mutable: Mutable): void {
   const json: ElmWatchJson = {
     port: mutable.webSocketServer.port,
     outputs: Object.fromEntries(
-      getToCompile(mutable.project).flatMap(({ outputPath, outputState }) =>
+      getFlatOutputs(mutable.project).flatMap(({ outputPath, outputState }) =>
         outputState.compilationMode === "standard"
           ? []
           : [
@@ -468,7 +468,7 @@ const update =
                 : [model, []];
             }
 
-            const someOutputIsExecutingOrWasInterrupted = getToCompile(
+            const someOutputIsExecutingOrWasInterrupted = getFlatOutputs(
               project
             ).some(({ outputState }) => {
               switch (outputState.status.tag) {
@@ -513,7 +513,7 @@ const update =
           }
 
           case "Restarting": {
-            const someOutputIsExecuting = getToCompile(project).some(
+            const someOutputIsExecuting = getFlatOutputs(project).some(
               ({ outputState }) => {
                 switch (outputState.status.tag) {
                   case "ElmMake":
@@ -949,13 +949,13 @@ const runCmd =
         return;
 
       case "CompileAllOutputs": {
-        const toCompile = getToCompile(mutable.project);
+        const flatOutputs = getFlatOutputs(mutable.project);
         for (const {
           index,
           elmJsonPath,
           outputPath,
           outputState,
-        } of toCompile) {
+        } of flatOutputs) {
           switch (outputState.status.tag) {
             case "ElmMake":
             case "Postprocess":
@@ -973,7 +973,7 @@ const runCmd =
                 outputPath,
                 outputState,
                 index,
-                total: toCompile.length,
+                total: flatOutputs.length,
               }).then(() => {
                 dispatch({
                   tag: "CompileOneOutputDone",
@@ -999,7 +999,7 @@ const runCmd =
           elmJsonPath: cmd.elmJsonPath,
           outputPath: cmd.outputPath,
           outputState: cmd.outputState,
-          total: getToCompile(mutable.project).length,
+          total: getFlatOutputs(mutable.project).length,
         }).then(() => {
           dispatch({
             tag: "CompileOneOutputDone",
@@ -1176,7 +1176,7 @@ function makeRestartNextAction(
       {
         // Interrupt all compilation.
         tag: "MarkAsDirty",
-        outputStates: getToCompile(project).map(
+        outputStates: getFlatOutputs(project).map(
           ({ outputState }) => outputState
         ),
       },

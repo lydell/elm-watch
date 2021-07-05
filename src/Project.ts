@@ -402,7 +402,7 @@ function resolveElmJson(
   };
 }
 
-export function getToCompile(project: Project): Array<{
+export function getFlatOutputs(project: Project): Array<{
   index: number;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
