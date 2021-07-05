@@ -4,9 +4,17 @@ import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
 import { bold, Env, join } from "./Helpers";
-import { walkImports, WalkImportsResult } from "./ImportWalker";
+import {
+  walkImports,
+  WalkImportsError,
+  WalkImportsResult,
+} from "./ImportWalker";
 import { Logger } from "./Logger";
-import { NonEmptyArray } from "./NonEmptyArray";
+import {
+  flattenNonEmptyArray,
+  mapNonEmptyArray,
+  NonEmptyArray,
+} from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
 import { OutputState, OutputStatus, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
@@ -152,29 +160,18 @@ export async function compileOneOutput({
   index: number;
   total: number;
 }): Promise<void> {
-  let hasPrintedStatusLine = false;
-  const updateStatusLine = (): void => {
-    const shouldMoveCursor = logger.raw.stderr.isTTY && hasPrintedStatusLine;
-    if (shouldMoveCursor) {
-      readline.moveCursor(logger.raw.stderr, 0, -total + index);
-      readline.clearLine(logger.raw.stderr, 0);
-    }
-    logger.error(
-      statusLine(
-        outputPath,
-        outputState.status,
-        logger.raw.stderrColumns,
-        logger.fancy
-      )
-    );
-    if (shouldMoveCursor) {
-      readline.moveCursor(logger.raw.stderr, 0, total - index - 1);
-    }
-    hasPrintedStatusLine = true;
+  const updateStatusLineHelper = (): void => {
+    updateStatusLine({
+      logger,
+      outputPath,
+      outputState,
+      index,
+      total,
+    });
   };
 
   if (!outputState.dirty) {
-    updateStatusLine();
+    updateStatusLineHelper();
     return;
   }
 
@@ -182,7 +179,7 @@ export async function compileOneOutput({
   // postprocessing can flip `dirty` back to `true`.
   outputState.dirty = false;
   outputState.status = { tag: "ElmMake" };
-  updateStatusLine();
+  updateStatusLineHelper();
   const [elmMakeResult, allRelatedElmFilePathsResult] = await Promise.all([
     SpawnElm.make({
       elmJsonPath,
@@ -191,10 +188,13 @@ export async function compileOneOutput({
       output: outputPath,
       env,
     }),
-    Promise.resolve().then(() => {
+    Promise.resolve().then((): GetAllRelatedElmFilePathsResult => {
       switch (runMode) {
         case "make":
-          return;
+          return {
+            tag: "Success",
+            allRelatedElmFilePaths: outputState.allRelatedElmFilePaths,
+          };
         case "hot":
           // Note: It doesn’t matter if a file changes before we’ve had
           // chance to compute this the first time (during packages
@@ -204,51 +204,282 @@ export async function compileOneOutput({
       }
     }),
   ]);
+
   if (outputState.dirty) {
     outputState.status = { tag: "Interrupted" };
-    updateStatusLine();
+    updateStatusLineHelper();
     return;
   }
-  if (
-    elmMakeResult.tag === "Success" &&
-    outputState.postprocess !== undefined
-  ) {
-    switch (allRelatedElmFilePathsResult?.tag) {
-      case undefined:
-        break;
 
-      case "Success":
-        outputState.allRelatedElmFilePaths =
-          allRelatedElmFilePathsResult.allRelatedElmFilePaths;
-        break;
+  const combinedResult = combineResults(
+    elmMakeResult,
+    allRelatedElmFilePathsResult
+  );
 
-      case "ImportWalkerFileSystemError":
-      case "ElmJsonReadAsJsonError":
-      case "ElmJsonDecodeError":
-        outputState.allRelatedElmFilePaths = new Set();
-        outputState.status = allRelatedElmFilePathsResult;
-        updateStatusLine();
-        return;
-    }
+  switch (combinedResult.tag) {
+    case "elm make success + walker success":
+      outputState.allRelatedElmFilePaths =
+        combinedResult.allRelatedElmFilePaths;
+      if (outputState.postprocess === undefined) {
+        outputState.status = { tag: "Success", newOutputPath: undefined };
+        updateStatusLineHelper();
+      } else {
+        outputState.status = { tag: "Postprocess" };
+        updateStatusLineHelper();
+        outputState.status = await postprocess({
+          elmToolingJsonPath,
+          compilationMode: outputState.compilationMode,
+          runMode,
+          output: outputPath,
+          postprocessArray: outputState.postprocess,
+          env,
+        });
+        if (outputState.dirty) {
+          outputState.status = { tag: "Interrupted" };
+        }
+        updateStatusLineHelper();
+      }
+      break;
 
-    outputState.status = { tag: "Postprocess" };
-    updateStatusLine();
-    outputState.status = await postprocess({
-      elmToolingJsonPath,
-      compilationMode: outputState.compilationMode,
-      runMode,
-      output: outputPath,
-      postprocessArray: outputState.postprocess,
-      env,
+    case "elm make success + walker failure":
+      outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
+        combinedResult.walkerError,
+        outputState
+      );
+      outputState.status = combinedResult.walkerError;
+      updateStatusLineHelper();
+      break;
+
+    case "elm make failure + walker success":
+      outputState.allRelatedElmFilePaths =
+        combinedResult.allRelatedElmFilePaths;
+      outputState.status = combinedResult.elmMakeError;
+      updateStatusLineHelper();
+      break;
+
+    case "elm make failure + walker failure":
+      outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
+        combinedResult.walkerError,
+        outputState
+      );
+      // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
+      outputState.status = combinedResult.elmMakeError;
+      updateStatusLineHelper();
+      break;
+  }
+}
+
+export async function typecheck({
+  env,
+  logger,
+  elmJsonPath,
+  outputs,
+  total,
+}: {
+  env: Env;
+  logger: Logger;
+  elmJsonPath: ElmJsonPath;
+  outputs: NonEmptyArray<{
+    index: number;
+    outputPath: OutputPath;
+    outputState: OutputState;
+  }>;
+  total: number;
+}): Promise<void> {
+  for (const { index, outputPath, outputState } of outputs) {
+    outputState.dirty = false;
+    outputState.status = { tag: "ElmMakeTypecheckOnly" };
+    updateStatusLine({
+      logger,
+      outputPath,
+      outputState,
+      index,
+      total,
     });
+  }
+
+  const [elmMakeResult, allRelatedElmFilePathsResults] = await Promise.all([
+    SpawnElm.make({
+      elmJsonPath,
+      compilationMode: "standard",
+      inputs: flattenNonEmptyArray(
+        mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs)
+      ),
+      output: { tag: "NullOutputPath" },
+      env,
+    }),
+    Promise.resolve().then(() =>
+      mapNonEmptyArray(outputs, (output) => ({
+        ...output,
+        allRelatedElmFilePathsResult: getAllRelatedElmFilePaths(
+          elmJsonPath,
+          output.outputState.inputs
+        ),
+      }))
+    ),
+  ]);
+
+  for (const {
+    index,
+    outputPath,
+    outputState,
+    allRelatedElmFilePathsResult,
+  } of allRelatedElmFilePathsResults) {
     if (outputState.dirty) {
       outputState.status = { tag: "Interrupted" };
+      updateStatusLine({
+        logger,
+        outputPath,
+        outputState,
+        index,
+        total,
+      });
+      continue;
     }
-    updateStatusLine();
-  } else {
-    // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
-    outputState.status = elmMakeResult;
-    updateStatusLine();
+
+    const combinedResult = combineResults(
+      elmMakeResult,
+      allRelatedElmFilePathsResult
+    );
+
+    switch (combinedResult.tag) {
+      case "elm make success + walker success":
+        outputState.allRelatedElmFilePaths =
+          combinedResult.allRelatedElmFilePaths;
+        outputState.status = { tag: "NotWrittenToDisk" };
+        break;
+
+      case "elm make success + walker failure":
+        outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
+          combinedResult.walkerError,
+          outputState
+        );
+        outputState.status = combinedResult.walkerError;
+        break;
+
+      case "elm make failure + walker success":
+        outputState.allRelatedElmFilePaths =
+          combinedResult.allRelatedElmFilePaths;
+        outputState.status = combinedResult.elmMakeError;
+        break;
+
+      case "elm make failure + walker failure":
+        outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
+          combinedResult.walkerError,
+          outputState
+        );
+        // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
+        outputState.status = combinedResult.elmMakeError;
+        break;
+    }
+
+    updateStatusLine({
+      logger,
+      outputPath,
+      outputState,
+      index,
+      total,
+    });
+  }
+}
+
+type CombinedResult =
+  | {
+      tag: "elm make failure + walker failure";
+      elmMakeError: SpawnElm.RunElmMakeError;
+      walkerError: GetAllRelatedElmFilePathsError;
+    }
+  | {
+      tag: "elm make failure + walker success";
+      elmMakeError: SpawnElm.RunElmMakeError;
+      allRelatedElmFilePaths: Set<string>;
+    }
+  | {
+      tag: "elm make success + walker failure";
+      walkerError: GetAllRelatedElmFilePathsError;
+    }
+  | {
+      tag: "elm make success + walker success";
+      allRelatedElmFilePaths: Set<string>;
+    };
+
+function combineResults(
+  elmMakeResult: SpawnElm.RunElmMakeResult,
+  allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult
+): CombinedResult {
+  switch (elmMakeResult.tag) {
+    case "Success":
+      switch (allRelatedElmFilePathsResult.tag) {
+        case "Success":
+          return {
+            tag: "elm make success + walker success",
+            allRelatedElmFilePaths:
+              allRelatedElmFilePathsResult.allRelatedElmFilePaths,
+          };
+
+        default:
+          return {
+            tag: "elm make success + walker failure",
+            walkerError: allRelatedElmFilePathsResult,
+          };
+      }
+
+    default:
+      switch (allRelatedElmFilePathsResult.tag) {
+        case "Success":
+          return {
+            tag: "elm make failure + walker success",
+            elmMakeError: elmMakeResult,
+            allRelatedElmFilePaths:
+              allRelatedElmFilePathsResult.allRelatedElmFilePaths,
+          };
+
+        default:
+          return {
+            tag: "elm make failure + walker failure",
+            elmMakeError: elmMakeResult,
+            walkerError: allRelatedElmFilePathsResult,
+          };
+      }
+  }
+}
+
+// This allows us to _always_ move the cursor in `updateStatusLine`, even the
+// “first” time which makes everything so much simpler.
+export function printSpaceForOutputs(logger: Logger, total: number): void {
+  if (logger.raw.stderr.isTTY) {
+    logger.raw.stderr.write("\n".repeat(total));
+  }
+}
+
+function updateStatusLine({
+  logger,
+  outputPath,
+  outputState,
+  index,
+  total,
+}: {
+  logger: Logger;
+  outputPath: OutputPath;
+  outputState: OutputState;
+  index: number;
+  total: number;
+}): void {
+  const shouldMoveCursor = logger.raw.stderr.isTTY;
+  if (shouldMoveCursor) {
+    readline.moveCursor(logger.raw.stderr, 0, -total + index);
+    readline.clearLine(logger.raw.stderr, 0);
+  }
+  logger.error(
+    statusLine(
+      outputPath,
+      outputState.status,
+      logger.raw.stderrColumns,
+      logger.fancy
+    )
+  );
+  if (shouldMoveCursor) {
+    readline.moveCursor(logger.raw.stderr, 0, total - index - 1);
   }
 }
 
@@ -312,6 +543,11 @@ function statusLine(
 
     case "ElmMake":
       return truncate(`${fancy ? "⏳ " : ""}${output}: elm make`);
+
+    case "ElmMakeTypecheckOnly":
+      return truncate(
+        `${fancy ? "⏳ " : ""}${output}: elm make (typecheck only)`
+      );
 
     case "Postprocess":
       return truncate(`${fancy ? "⏳ " : ""}${output}: postprocess`);
@@ -380,6 +616,13 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           // istanbul ignore next
           case "ElmMake":
             return Errors.stuckInProgressState(outputPath, "elm make");
+
+          // istanbul ignore next
+          case "ElmMakeTypecheckOnly":
+            return Errors.stuckInProgressState(
+              outputPath,
+              "elm make (typecheck only)"
+            );
 
           // istanbul ignore next
           case "Postprocess":
@@ -499,10 +742,13 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   ];
 }
 
+type GetAllRelatedElmFilePathsResult = ElmJson.ParseError | WalkImportsResult;
+type GetAllRelatedElmFilePathsError = ElmJson.ParseError | WalkImportsError;
+
 function getAllRelatedElmFilePaths(
   elmJsonPath: ElmJsonPath,
   inputs: NonEmptyArray<InputPath>
-): ElmJson.ParseError | WalkImportsResult {
+): GetAllRelatedElmFilePathsResult {
   const parseResult = ElmJson.readAndParse(elmJsonPath);
 
   switch (parseResult.tag) {
@@ -514,5 +760,24 @@ function getAllRelatedElmFilePaths(
 
     default:
       return parseResult;
+  }
+}
+
+function fallbackAllRelatedElmFilePaths(
+  walkerError: GetAllRelatedElmFilePathsError,
+  outputState: OutputState
+): Set<string> {
+  switch (walkerError.tag) {
+    case "ImportWalkerFileSystemError":
+      return walkerError.relatedElmFilePathsUntilError;
+
+    case "ElmJsonReadAsJsonError":
+    case "ElmJsonDecodeError":
+      return new Set(
+        mapNonEmptyArray(
+          outputState.inputs,
+          (inputPath) => inputPath.theInputPath.absolutePath
+        )
+      );
   }
 }

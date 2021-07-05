@@ -19,6 +19,7 @@ export type WalkImportsResult =
 export type WalkImportsError = {
   tag: "ImportWalkerFileSystemError";
   error: Error & { code?: string };
+  relatedElmFilePathsUntilError: Set<string>;
 };
 
 // Returns Elm file paths that if created, deleted or changed, `inputPath` needs
@@ -50,7 +51,11 @@ export function walkImports(
     }
   } catch (errorAny) {
     const error = errorAny as Error & { code?: string };
-    return { tag: "ImportWalkerFileSystemError", error };
+    return {
+      tag: "ImportWalkerFileSystemError",
+      error,
+      relatedElmFilePathsUntilError: allRelatedElmFilePaths,
+    };
   }
 
   return { tag: "Success", allRelatedElmFilePaths };

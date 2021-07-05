@@ -60,10 +60,11 @@ export type OutputStatus =
   | RunElmMakeError
   | WalkImportsError
   | { tag: "ElmMake" }
+  | { tag: "ElmMakeTypecheckOnly" }
   | { tag: "Interrupted" }
   | { tag: "NotWrittenToDisk" }
   | { tag: "Postprocess" }
-  | { tag: "Success" };
+  | { tag: "Success"; newOutputPath: OutputPath | undefined };
 
 type ElmJsonError =
   | {

@@ -41,14 +41,23 @@ function walkImportsHelper(
 
   switch (result.tag) {
     case "Success":
-      return Array.from(result.allRelatedElmFilePaths, (filePath) =>
-        filePath.startsWith(FIXTURES_DIR.absolutePath)
-          ? filePath.slice(FIXTURES_DIR.absolutePath.length)
-          : filePath
-      ).join("\n");
+      return printRelatedElmFilePaths(result.allRelatedElmFilePaths);
     case "ImportWalkerFileSystemError":
-      return clean(result.error.message);
+      return `
+${clean(result.error.message)}
+
+relatedElmFilePathsUntilError:
+${printRelatedElmFilePaths(result.relatedElmFilePathsUntilError)}
+      `.trim();
   }
+}
+
+function printRelatedElmFilePaths(relatedElmFilePaths: Set<string>): string {
+  return Array.from(relatedElmFilePaths, (filePath) =>
+    filePath.startsWith(FIXTURES_DIR.absolutePath)
+      ? filePath.slice(FIXTURES_DIR.absolutePath.length)
+      : filePath
+  ).join("\n");
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -219,8 +228,12 @@ describe("WalkImports", () => {
   });
 
   test("file is actually a directory", () => {
-    expect(
-      walkImportsHelper("is-directory", ["Main.elm"], ["."])
-    ).toMatchInlineSnapshot(`EISDIR: illegal operation on a directory, read`);
+    expect(walkImportsHelper("is-directory", ["Main.elm"], ["."]))
+      .toMatchInlineSnapshot(`
+      EISDIR: illegal operation on a directory, read
+
+      relatedElmFilePathsUntilError:
+      /is-directory/Main.elm
+    `);
   });
 });

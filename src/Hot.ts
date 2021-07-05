@@ -23,7 +23,6 @@ import { PortChoice } from "./Port";
 import { getFlatOutputs, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
-  ElmJsonPath,
   ElmToolingJsonPath,
   equalsInputPath,
   GetNow,
@@ -59,12 +58,9 @@ type WebSocketConnection = {
 type Msg =
   | WebSocketServerMsg
   | {
-      tag: "CompileOneOutputDone";
+      tag: "CompilationPartDone";
       date: Date;
-      index: number;
-      elmJsonPath: ElmJsonPath;
-      outputPath: OutputPath;
-      outputState: OutputState;
+      dirty: boolean;
     }
   | {
       tag: "GotWatcherEvent";
@@ -132,13 +128,6 @@ type Cmd =
     }
   | {
       tag: "CompileAllOutputs";
-    }
-  | {
-      tag: "CompileOneOutput";
-      index: number;
-      elmJsonPath: ElmJsonPath;
-      outputPath: OutputPath;
-      outputState: OutputState;
     }
   | {
       tag: "HandleElmWatchJsonWriteError";
@@ -434,7 +423,7 @@ const update =
         ];
       }
 
-      case "CompileOneOutputDone":
+      case "CompilationPartDone":
         switch (model.hotState.tag) {
           case "Dependencies":
           case "Idle":
@@ -451,20 +440,9 @@ const update =
             ];
 
           case "Compiling": {
-            if (msg.outputState.dirty) {
+            if (msg.dirty) {
               return model.hotState.keepConsumingDirty
-                ? [
-                    model,
-                    [
-                      {
-                        tag: "CompileOneOutput",
-                        index: msg.index,
-                        elmJsonPath: msg.elmJsonPath,
-                        outputPath: msg.outputPath,
-                        outputState: msg.outputState,
-                      },
-                    ],
-                  ]
+                ? [model, [{ tag: "CompileAllOutputs" }]]
                 : [model, []];
             }
 
@@ -548,7 +526,8 @@ const update =
                 return runCompile(
                   { ...model, hotState: { tag: "Idle" } },
                   model.hotState.events,
-                  model.hotState.start
+                  model.hotState.start,
+                  { clearScreen: false }
                 );
               }
             }
@@ -848,7 +827,9 @@ function runNextAction(
     }
 
     case "Compile":
-      return runCompile(model, model.nextAction.events, start);
+      return runCompile(model, model.nextAction.events, start, {
+        clearScreen: true,
+      });
 
     case "PrintNonInterestingEvents":
       switch (model.hotState.tag) {
@@ -881,7 +862,8 @@ function runNextAction(
 function runCompile(
   model: Model,
   events: Array<WatcherEvent>,
-  start: Date
+  start: Date,
+  { clearScreen = false }
 ): [Model, Array<Cmd>] {
   switch (model.hotState.tag) {
     case "Idle": {
@@ -896,7 +878,7 @@ function runCompile(
           },
         },
         [
-          { tag: "ClearScreen" },
+          clearScreen ? { tag: "ClearScreen" } : { tag: "NoCmd" },
           { tag: "PrintStatusLinesForElmJsonsErrors" },
           { tag: "CompileAllOutputs" },
         ],
@@ -950,6 +932,52 @@ const runCmd =
 
       case "CompileAllOutputs": {
         const flatOutputs = getFlatOutputs(mutable.project);
+
+        Compile.printSpaceForOutputs(logger, flatOutputs.length);
+
+        let outputIndex = -1;
+        for (const [elmJsonPath, outputs] of mutable.project.elmJsons) {
+          const candidates = Array.from(outputs).flatMap(
+            // eslint-disable-next-line @typescript-eslint/no-loop-func
+            ([outputPath, outputState]) => {
+              outputIndex++;
+              switch (outputState.status.tag) {
+                case "ElmMake":
+                case "ElmMakeTypecheckOnly":
+                case "Postprocess":
+                  return [];
+
+                default:
+                  return outputState.dirty &&
+                    mutable.webSocketConnections.some((webSocketConnection) =>
+                      webSocketConnectionIsForOutputPath(
+                        webSocketConnection,
+                        outputPath
+                      )
+                    )
+                    ? [{ index: outputIndex, outputPath, outputState }]
+                    : [];
+              }
+            }
+          );
+
+          if (isNonEmptyArray(candidates)) {
+            Compile.typecheck({
+              env,
+              logger,
+              elmJsonPath,
+              outputs: candidates,
+              total: flatOutputs.length,
+            }).then(() => {
+              dispatch({
+                tag: "CompilationPartDone",
+                date: getNow(),
+                dirty: candidates.some(({ outputState }) => outputState.dirty),
+              });
+            }, rejectPromise);
+          }
+        }
+
         for (const {
           index,
           elmJsonPath,
@@ -958,6 +986,7 @@ const runCmd =
         } of flatOutputs) {
           switch (outputState.status.tag) {
             case "ElmMake":
+            case "ElmMakeTypecheckOnly":
             case "Postprocess":
               // Already executing – when done they will re-execute if dirty
               // (unless we’re restarting or something like that).
@@ -976,41 +1005,15 @@ const runCmd =
                 total: flatOutputs.length,
               }).then(() => {
                 dispatch({
-                  tag: "CompileOneOutputDone",
+                  tag: "CompilationPartDone",
                   date: getNow(),
-                  index,
-                  elmJsonPath,
-                  outputPath,
-                  outputState,
+                  dirty: outputState.dirty,
                 });
               }, rejectPromise);
           }
         }
         return;
       }
-
-      case "CompileOneOutput":
-        Compile.compileOneOutput({
-          env,
-          logger,
-          runMode: "hot",
-          elmToolingJsonPath: mutable.project.elmToolingJsonPath,
-          index: cmd.index,
-          elmJsonPath: cmd.elmJsonPath,
-          outputPath: cmd.outputPath,
-          outputState: cmd.outputState,
-          total: getFlatOutputs(mutable.project).length,
-        }).then(() => {
-          dispatch({
-            tag: "CompileOneOutputDone",
-            date: getNow(),
-            index: cmd.index,
-            elmJsonPath: cmd.elmJsonPath,
-            outputPath: cmd.outputPath,
-            outputState: cmd.outputState,
-          });
-        }, rejectPromise);
-        return;
 
       case "HandleElmWatchJsonWriteError":
         if (mutable.elmWatchJsonWriteError !== undefined) {
@@ -1227,6 +1230,37 @@ function isRelatedToElmJsonsErrors(
         );
     }
   });
+}
+
+function webSocketConnectionIsForOutputPath(
+  webSocketConnection: WebSocketConnection,
+  outputPath: OutputPath
+): boolean {
+  switch (webSocketConnection.outputPath.tag) {
+    case "OutputPathError":
+      return false;
+
+    case "OutputPath":
+      switch (outputPath.tag) {
+        case "OutputPath":
+          return (
+            webSocketConnection.outputPath.theOutputPath.absolutePath ===
+            outputPath.theOutputPath.absolutePath
+          );
+
+        case "NullOutputPath":
+          return false;
+      }
+
+    case "NullOutputPath":
+      switch (outputPath.tag) {
+        case "OutputPath":
+          return false;
+
+        case "NullOutputPath":
+          return true;
+      }
+  }
 }
 
 function infoMessageWithTimeline(

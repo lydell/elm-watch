@@ -27,6 +27,7 @@ export async function run(
   const flatOutputs = getFlatOutputs(project);
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
+  Compile.printSpaceForOutputs(logger, flatOutputs.length);
 
   await Promise.all(
     flatOutputs.map(

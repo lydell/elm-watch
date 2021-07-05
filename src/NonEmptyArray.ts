@@ -26,3 +26,9 @@ export function mapNonEmptyArray<T, U>(
 ): NonEmptyArray<U> {
   return array.map(f) as NonEmptyArray<U>;
 }
+
+export function flattenNonEmptyArray<T>(
+  array: NonEmptyArray<NonEmptyArray<T>>
+): NonEmptyArray<T> {
+  return array.flat() as NonEmptyArray<T>;
+}
