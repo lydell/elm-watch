@@ -59,12 +59,16 @@ export type OutputStatus =
   | PostprocessError
   | RunElmMakeError
   | WalkImportsError
+  | {
+      tag: "Success";
+      newOutputPath: OutputPath | undefined;
+      compiledTimestamp: number;
+    }
   | { tag: "ElmMake" }
   | { tag: "ElmMakeTypecheckOnly" }
   | { tag: "Interrupted" }
   | { tag: "NotWrittenToDisk" }
-  | { tag: "Postprocess" }
-  | { tag: "Success"; newOutputPath: OutputPath | undefined };
+  | { tag: "Postprocess" };
 
 type ElmJsonError =
   | {

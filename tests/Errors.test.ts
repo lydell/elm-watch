@@ -9,7 +9,6 @@ import {
   assertExitCode,
   clean,
   CursorWriteStream,
-  failGetNow,
   FailReadStream,
   MemoryWriteStream,
   prependPATH,
@@ -51,7 +50,7 @@ async function runAbsolute(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: failGetNow,
+    getNow: () => new Date(),
     onIdle: undefined,
   });
 

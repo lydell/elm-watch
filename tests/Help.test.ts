@@ -3,7 +3,6 @@ import type { Env } from "../src/Helpers";
 import {
   assertExitCode,
   clean,
-  failGetNow,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
@@ -22,7 +21,7 @@ async function helpHelper(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: failGetNow,
+    getNow: () => new Date(),
     onIdle: undefined,
   });
 

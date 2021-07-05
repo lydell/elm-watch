@@ -184,6 +184,7 @@ export async function run(
                       const result = await Make.run(
                         env,
                         logger,
+                        getNow,
                         runMode,
                         initProjectResult.project
                       );

@@ -3,13 +3,14 @@ import { Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { getFlatOutputs, Project } from "./Project";
-import { RunMode } from "./Types";
+import { GetNow, RunMode } from "./Types";
 
 type MakeResult = { tag: "Error" } | { tag: "Success" };
 
 export async function run(
   env: Env,
   logger: Logger,
+  getNow: GetNow,
   runMode: RunMode,
   project: Project
 ): Promise<MakeResult> {
@@ -35,6 +36,7 @@ export async function run(
         Compile.compileOneOutput({
           env,
           logger,
+          getNow,
           runMode,
           elmToolingJsonPath: project.elmToolingJsonPath,
           elmJsonPath,

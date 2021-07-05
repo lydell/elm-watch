@@ -374,12 +374,6 @@ const init = (
   [{ tag: "InstallDependencies" }],
 ];
 
-const WebSocketConnectedParams = Decode.fieldsAuto({
-  elmWatchVersion: Decode.string,
-  output: Decode.string,
-  compiledTimestamp: Decode.number,
-});
-
 const update =
   (project: Project) =>
   (msg: Msg, model: Model): [Model, Array<Cmd>] => {
@@ -555,61 +549,53 @@ const update =
         }
 
       case "WebSocketConnected": {
-        // parse url (output, version, timestamp)
-        // update mutable
-        // cause compilation if needed
-        // respond
-        const TODO_ERROR: [Model, Array<Cmd>] = [model, []];
-        if (!msg.urlString.startsWith("/?")) {
-          // Should probably not return like this.
-          // Move parsing to a function and act upon its return value
-          return TODO_ERROR;
+        const result = parseWebSocketConnectRequestUrl(project, msg.urlString);
+
+        switch (result.tag) {
+          case "Success":
+            return [
+              model,
+              [
+                {
+                  tag: "WebSocketAdd",
+                  webSocketConnection: {
+                    webSocket: msg.webSocket,
+                    outputPath: result.outputPath,
+                  },
+                },
+                ...outputStateToCmdsOnConnect(
+                  result.outputState,
+                  result.compiledTimestamp
+                ),
+              ],
+            ];
+
+          default:
+            // TODO: Reply with the error.
+            return [
+              model,
+              [
+                {
+                  tag: "WebSocketAdd",
+                  webSocketConnection: {
+                    webSocket: msg.webSocket,
+                    outputPath: { tag: "OutputPathError" },
+                  },
+                },
+              ],
+            ];
         }
-        // This never throws as far as I can tell.
-        const params = new URLSearchParams(msg.urlString.slice(2));
-        let webSocketConnectedParams;
-        try {
-          webSocketConnectedParams = WebSocketConnectedParams(
-            Object.fromEntries(params)
-          );
-        } catch (errorAny) {
-          // const error = errorAny as Decode.DecoderError;
-          return TODO_ERROR;
-        }
-        if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
-          return TODO_ERROR;
-        }
-        // find matching output (if any)
-        // check status:
-        //   compiled: compare timestamps
-        //   not compiled: compile it!
-        //   compiling: do nothing (I think)
-        //   error: respond with error
-        return [
-          model,
-          [
-            {
-              tag: "WebSocketAdd",
-              webSocketConnection: {
-                webSocket: msg.webSocket,
-                outputPath: (() => {
-                  throw new Error("TODO outputPath");
-                })(),
-              },
-            },
-          ],
-        ];
       }
 
       case "WebSocketMessageReceived":
-        // parse message
+        // TODO: parse message
         // do stuff based on message
         // respond
         // don’t have to implement this right now
         return [model, []];
 
       case "WebSocketClosed":
-        // just remove from mutable?
+        // TODO: just remove from mutable?
         return [model, [{ tag: "WebSocketRemove", webSocket: msg.webSocket }]];
     }
   };
@@ -996,6 +982,7 @@ const runCmd =
               Compile.compileOneOutput({
                 env,
                 logger,
+                getNow,
                 runMode: "hot",
                 elmToolingJsonPath: mutable.project.elmToolingJsonPath,
                 elmJsonPath,
@@ -1260,6 +1247,162 @@ function webSocketConnectionIsForOutputPath(
         case "NullOutputPath":
           return true;
       }
+  }
+}
+
+const WebSocketConnectedParams = Decode.fieldsAuto(
+  {
+    elmWatchVersion: Decode.string,
+    output: Decode.string,
+    compiledTimestamp: Decode.number,
+  },
+  { exact: "throw" }
+);
+
+type ParseWebSocketConnectRequestUrlResult =
+  | ParseWebSocketConnectRequestUrlError
+  | {
+      tag: "Success";
+      outputPath: OutputPath;
+      outputState: OutputState;
+      compiledTimestamp: number;
+    };
+
+type ParseWebSocketConnectRequestUrlError =
+  | {
+      tag: "MissingParams";
+      expectedStart: "/?";
+      actualUrlString: string;
+    }
+  | {
+      tag: "OutputDisabled";
+      output: string;
+      enabledOutputs: Array<OutputPath>;
+      disabledOutputs: Array<OutputPath>;
+    }
+  | {
+      tag: "OutputNotFound";
+      output: string;
+      enabledOutputs: Array<OutputPath>;
+      disabledOutputs: Array<OutputPath>;
+    }
+  | {
+      tag: "ParamsDecodeError";
+      error: Decode.DecoderError;
+      actualUrlString: string;
+    }
+  | {
+      tag: "WrongVersion";
+      expectedVersion: "%VERSION%";
+      actualVersion: string;
+    };
+
+function parseWebSocketConnectRequestUrl(
+  project: Project,
+  urlString: string
+): ParseWebSocketConnectRequestUrlResult {
+  if (!urlString.startsWith("/?")) {
+    return {
+      tag: "MissingParams",
+      expectedStart: "/?",
+      actualUrlString: urlString,
+    };
+  }
+
+  // This never throws as far as I can tell.
+  const params = new URLSearchParams(urlString.slice(2));
+
+  let webSocketConnectedParams;
+  try {
+    webSocketConnectedParams = WebSocketConnectedParams(
+      Object.fromEntries(params)
+    );
+  } catch (errorAny) {
+    const error = errorAny as Decode.DecoderError;
+    return {
+      tag: "ParamsDecodeError",
+      error,
+      actualUrlString: urlString,
+    };
+  }
+
+  if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
+    return {
+      tag: "WrongVersion",
+      expectedVersion: "%VERSION%",
+      actualVersion: webSocketConnectedParams.elmWatchVersion,
+    };
+  }
+
+  const flatOutputs = getFlatOutputs(project);
+
+  const { output } = webSocketConnectedParams;
+  const match = flatOutputs.find(
+    ({ outputPath }) => outputPathToOriginalString(outputPath) === output
+  );
+
+  if (match === undefined) {
+    const enabledOutputs = flatOutputs.map(({ outputPath }) => outputPath);
+    const disabledOutputs = Array.from(project.disabledOutputs);
+    const disabledMatch = disabledOutputs.find(
+      (outputPath) => outputPathToOriginalString(outputPath) === output
+    );
+    return disabledMatch === undefined
+      ? {
+          tag: "OutputNotFound",
+          output,
+          enabledOutputs,
+          disabledOutputs,
+        }
+      : {
+          tag: "OutputDisabled",
+          output,
+          enabledOutputs,
+          disabledOutputs,
+        };
+  }
+
+  return {
+    tag: "Success",
+    outputPath: match.outputPath,
+    outputState: match.outputState,
+    compiledTimestamp: webSocketConnectedParams.compiledTimestamp,
+  };
+}
+
+function outputStateToCmdsOnConnect(
+  outputState: OutputState,
+  compiledTimestamp: number
+): Array<Cmd> {
+  switch (outputState.status.tag) {
+    case "Success":
+      return outputState.status.compiledTimestamp === compiledTimestamp
+        ? [] // TODO: Respond with done.
+        : [
+            { tag: "MarkAsDirty", outputStates: [outputState] },
+            { tag: "CompileAllOutputs" },
+          ];
+
+    case "NotWrittenToDisk":
+      return [
+        { tag: "MarkAsDirty", outputStates: [outputState] },
+        { tag: "CompileAllOutputs" },
+      ];
+
+    case "ElmMake":
+    case "Postprocess":
+    case "Interrupted":
+      // TODO: Possibly respond with “Compiling”
+      return [];
+
+    case "ElmMakeTypecheckOnly":
+      // This results in re-compilation once done. This time, there is a web
+      // socket connection, so it will be compiled to JS.
+      return [{ tag: "MarkAsDirty", outputStates: [outputState] }];
+
+    default:
+      // TODO: Respond with error.
+      return [];
   }
 }
 

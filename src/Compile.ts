@@ -21,6 +21,7 @@ import * as SpawnElm from "./SpawnElm";
 import {
   ElmJsonPath,
   ElmToolingJsonPath,
+  GetNow,
   InputPath,
   OutputPath,
   outputPathToOriginalString,
@@ -142,6 +143,7 @@ export async function installDependencies(
 export async function compileOneOutput({
   env,
   logger,
+  getNow,
   runMode,
   elmToolingJsonPath,
   elmJsonPath,
@@ -152,6 +154,7 @@ export async function compileOneOutput({
 }: {
   env: Env;
   logger: Logger;
+  getNow: GetNow;
   runMode: RunMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   elmJsonPath: ElmJsonPath;
@@ -221,12 +224,16 @@ export async function compileOneOutput({
       outputState.allRelatedElmFilePaths =
         combinedResult.allRelatedElmFilePaths;
       if (outputState.postprocess === undefined) {
-        outputState.status = { tag: "Success", newOutputPath: undefined };
+        outputState.status = {
+          tag: "Success",
+          newOutputPath: undefined,
+          compiledTimestamp: getNow().getTime(),
+        };
         updateStatusLineHelper();
       } else {
         outputState.status = { tag: "Postprocess" };
         updateStatusLineHelper();
-        outputState.status = await postprocess({
+        const postprocessResult = await postprocess({
           elmToolingJsonPath,
           compilationMode: outputState.compilationMode,
           runMode,
@@ -234,9 +241,15 @@ export async function compileOneOutput({
           postprocessArray: outputState.postprocess,
           env,
         });
-        if (outputState.dirty) {
-          outputState.status = { tag: "Interrupted" };
-        }
+        outputState.status = outputState.dirty
+          ? { tag: "Interrupted" }
+          : postprocessResult.tag === "Success"
+          ? {
+              tag: "Success",
+              newOutputPath: postprocessResult.newOutputPath,
+              compiledTimestamp: getNow().getTime(),
+            }
+          : postprocessResult;
         updateStatusLineHelper();
       }
       break;

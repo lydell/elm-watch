@@ -6,7 +6,6 @@ import {
   assertExitCode,
   clean,
   CursorWriteStream,
-  failGetNow,
   FailReadStream,
   MemoryWriteStream,
   prependPATH,
@@ -46,7 +45,7 @@ async function run(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: failGetNow,
+    getNow: () => new Date(),
     onIdle: undefined,
   });
 
