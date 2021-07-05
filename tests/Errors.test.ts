@@ -705,58 +705,107 @@ describe("errors", () => {
       `);
     });
 
-    test("elm not found", async () => {
-      expect(
-        await run("valid", ["make"], {
-          env: {
-            ...process.env,
-            ...NO_DELAY,
-            PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
+    describe("elm not found", () => {
+      test("basic", async () => {
+        expect(
+          await run("valid", ["make"], {
+            env: {
+              ...process.env,
+              ...NO_DELAY,
+              PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
+                path.delimiter
+              ),
+            },
+          })
+        ).toMatchInlineSnapshot(`
+          🚨 Dependencies
+
+          ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+          I tried to execute ⧙elm⧘, but it does not appear to exist!
+
+          This is what the PATH environment variable looks like:
+
+          /Users/you/project/tests
+          /Users/you/project/tests/some/bin
+
+          Is Elm installed?
+
+          Note: If you have installed Elm locally (for example using npm or elm-tooling),
+          execute elm-watch using npx to make elm-watch automatically pick up that local
+          installation: ⧙npx elm-watch⧘
+        `);
+      });
+
+      test("undefined PATH", async () => {
+        expect(await run("valid", ["make", "build/app.js"], { env: {} }))
+          .toMatchInlineSnapshot(`
+            🚨 Dependencies
+
+            ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
+            /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+            I tried to execute ⧙elm⧘, but it does not appear to exist!
+
+            I can't find any program, because process.env.PATH is undefined!
+
+            Is Elm installed?
+
+            Note: If you have installed Elm locally (for example using npm or elm-tooling),
+            execute elm-watch using npx to make elm-watch automatically pick up that local
+            installation: ⧙npx elm-watch⧘
+          `);
+      });
+
+      const printPATHWindows = (env: Env): string =>
+        clean(Errors.printPATH(env, true));
+
+      test("Windows basic", () => {
+        expect(
+          printPATHWindows({
+            Path: [__dirname, path.join(__dirname, "some", "bin")].join(
               path.delimiter
             ),
-          },
-        })
-      ).toMatchInlineSnapshot(`
-        🚨 Dependencies
+          })
+        ).toMatchInlineSnapshot(`
+          This is what the Path environment variable looks like:
 
-        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/valid/elm.json
+          /Users/you/project/tests
+          /Users/you/project/tests/some/bin
+        `);
+      });
 
-        I tried to execute ⧙elm⧘, but it does not appear to exist!
+      test("Windows no PATH-like", () => {
+        expect(printPATHWindows({})).toMatchInlineSnapshot(
+          `I can't find any program, because I can't find any PATH-like environment variables!`
+        );
+      });
 
-        This is what the PATH environment variable looks like:
+      test("Windows multiple PATH-like", () => {
+        expect(
+          printPATHWindows({
+            Path: [__dirname, path.join(__dirname, "some", "bin")].join(
+              path.delimiter
+            ),
+            PATH: [
+              path.join(__dirname, "that", "bin"),
+              path.join(__dirname, "final", "bin"),
+            ].join(path.delimiter),
+          })
+        ).toMatchInlineSnapshot(`
+          You seem to have several PATH-like environment variables set. The last one
+          should be the one that is actually used, but it's better to have a single one!
 
-        /Users/you/project/tests
-        /Users/you/project/tests/some/bin
+          Path:
+          /Users/you/project/tests
+          /Users/you/project/tests/some/bin
 
-        Is Elm installed?
-
-        Note: If you have installed Elm locally (for example using npm or elm-tooling),
-        execute elm-watch using npx to make elm-watch automatically pick up that local
-        installation: ⧙npx elm-watch⧘
-      `);
-    });
-
-    test("elm not found – undefined PATH", async () => {
-      expect(await run("valid", ["make", "build/app.js"], { env: {} }))
-        .toMatchInlineSnapshot(`
-        🚨 Dependencies
-
-        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/valid/elm.json
-
-        I tried to execute ⧙elm⧘, but it does not appear to exist!
-
-        This is what the PATH environment variable looks like:
-
-        process.env.PATH is somehow undefined!
-
-        Is Elm installed?
-
-        Note: If you have installed Elm locally (for example using npm or elm-tooling),
-        execute elm-watch using npx to make elm-watch automatically pick up that local
-        installation: ⧙npx elm-watch⧘
-      `);
+          PATH:
+          /Users/you/project/tests/that/bin
+          /Users/you/project/tests/final/bin
+        `);
+      });
     });
 
     describe("elm install dummy file creation error", () => {

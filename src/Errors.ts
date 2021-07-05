@@ -1,9 +1,8 @@
 import * as path from "path";
-import getPathKey from "path-key";
 import { DecoderError, repr } from "tiny-decoders";
 
 import * as ElmToolingJson from "./ElmToolingJson";
-import { bold, dim, Env, join } from "./Helpers";
+import { bold, dim, Env, IS_WINDOWS, join } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -401,9 +400,7 @@ export function elmNotFoundError(
   return fancyError("ELM NOT FOUND", location)`
 I tried to execute ${bold(command.command)}, but it does not appear to exist!
 
-This is what the PATH environment variable looks like:
-
-${printPATH(command.options.env)}
+${printPATH(command.options.env, IS_WINDOWS)}
 
 Is Elm installed?
 
@@ -420,9 +417,7 @@ export function commandNotFoundError(
   return fancyError("COMMAND NOT FOUND", outputPath)`
 I tried to execute ${bold(command.command)}, but it does not appear to exist!
 
-This is what the PATH environment variable looks like:
-
-${printPATH(command.options.env)}
+${printPATH(command.options.env, IS_WINDOWS)}
 
 Is ${bold(command.command)} installed?
 `;
@@ -795,17 +790,59 @@ remove "port" from elm-tooling.json (which will use an arbitrary available port.
   `.trim();
 }
 
-function printPATH(env: Env): string {
-  const pathKey = getPathKey({ env });
-  const { [pathKey]: PATH } = env;
+export function printPATH(env: Env, isWindows: boolean): string {
+  if (isWindows) {
+    return printPATHWindows(env);
+  }
+
+  const { PATH } = env;
 
   if (PATH === undefined) {
-    return `process.env.${pathKey} is somehow undefined!`;
+    return "I can't find any program, because process.env.PATH is undefined!";
   }
 
   const pathList = PATH.split(path.delimiter);
 
-  return join(pathList, "\n");
+  return `
+This is what the PATH environment variable looks like:
+
+${join(pathList, "\n")}
+  `.trim();
+}
+
+function printPATHWindows(env: Env): string {
+  const pathEntries = Object.entries(env).flatMap(([key, value]) =>
+    key.toUpperCase() === "PATH" && value !== undefined
+      ? [[key, value] as const]
+      : []
+  );
+
+  if (!isNonEmptyArray(pathEntries)) {
+    return "I can't find any program, because I can't find any PATH-like environment variables!";
+  }
+
+  if (pathEntries.length === 1) {
+    const [key, value] = pathEntries[0];
+    return `
+This is what the ${key} environment variable looks like:
+
+${join(value.split(path.delimiter), "\n")}
+    `.trim();
+  }
+
+  const pathEntriesString = join(
+    pathEntries.map(([key, value]) =>
+      join([`${key}:`, ...value.split(path.delimiter)], "\n")
+    ),
+    "\n\n"
+  );
+
+  return `
+You seem to have several PATH-like environment variables set. The last one
+should be the one that is actually used, but it's better to have a single one!
+
+${pathEntriesString}
+  `.trim();
 }
 
 function printCommand(command: Command): string {
@@ -885,7 +922,7 @@ function printJsonPath(jsonPath: JsonPath): string {
 I wrote the JSON to this file so you can inspect it:
 
 ${jsonPath.absolutePath}
-      `;
+      `.trim();
 
     case "WritingJsonFailed":
       return `
@@ -896,7 +933,7 @@ ${jsonPath.attemptedPath.absolutePath}
 ${bold("But that failed too:")}
 
 ${jsonPath.error.message}
-      `;
+      `.trim();
   }
 }
 
