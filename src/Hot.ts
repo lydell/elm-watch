@@ -371,7 +371,7 @@ const init = (
       events: restartReasons,
     },
   },
-  [{ tag: "InstallDependencies" }],
+  [{ tag: "ClearScreen" }, { tag: "InstallDependencies" }],
 ];
 
 const update =
