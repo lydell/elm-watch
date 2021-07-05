@@ -1,4 +1,4 @@
-import WebSocket from "ws";
+import * as WebSocket from "ws";
 
 import * as Errors from "./Errors";
 import { Port, PortChoice } from "./Port";
@@ -48,7 +48,7 @@ export class WebSocketServer {
       // If `port` is 0, the operating system will assign an arbitrary unused port.
       port: portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
     });
-    const { port } = this.webSocketServer.address() as WebSocket.AddressInfo;
+    const { port } = webSocketServer.address() as WebSocket.AddressInfo;
 
     webSocketServer.on("connection", (webSocket, request) => {
       this.dispatch({

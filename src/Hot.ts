@@ -4,7 +4,7 @@ import * as path from "path";
 import * as readline from "readline";
 import * as Decode from "tiny-decoders";
 import { URLSearchParams } from "url";
-import WebSocket from "ws";
+import type WebSocket from "ws";
 
 import * as Compile from "./Compile";
 import { ElmWatchJson } from "./ElmWatchJson";
