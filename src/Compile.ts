@@ -181,7 +181,10 @@ export async function compileOneOutput({
   // Watcher events that happen while waiting for `elm make` and
   // postprocessing can flip `dirty` back to `true`.
   outputState.dirty = false;
-  outputState.status = { tag: "ElmMake" };
+  outputState.status = {
+    tag: "ElmMake",
+    compilationMode: outputState.compilationMode,
+  };
   updateStatusLineHelper();
   const [elmMakeResult, allRelatedElmFilePathsResult] = await Promise.all([
     SpawnElm.make({
@@ -554,8 +557,11 @@ function statusLine(
     case "Success":
       return truncate(fancy ? `✅ ${output}` : `${output}: success`);
 
-    case "ElmMake":
-      return truncate(`${fancy ? "⏳ " : ""}${output}: elm make`);
+    case "ElmMake": {
+      const arg = SpawnElm.compilationModeToArg(status.compilationMode);
+      const flags = arg === undefined ? "" : ` ${arg}`;
+      return truncate(`${fancy ? "⏳ " : ""}${output}: elm make${flags}`);
+    }
 
     case "ElmMakeTypecheckOnly":
       return truncate(

@@ -64,7 +64,7 @@ export type OutputStatus =
       newOutputPath: OutputPath | undefined;
       compiledTimestamp: number;
     }
-  | { tag: "ElmMake" }
+  | { tag: "ElmMake"; compilationMode: CompilationMode }
   | { tag: "ElmMakeTypecheckOnly" }
   | { tag: "Interrupted" }
   | { tag: "NotWrittenToDisk" }

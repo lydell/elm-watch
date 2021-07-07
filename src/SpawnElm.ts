@@ -71,7 +71,7 @@ export async function make({
     args: [
       "make",
       "--report=json",
-      ...compilationModeToArgs(compilationMode),
+      ...maybeToArray(compilationModeToArg(compilationMode)),
       `--output=${outputPathToAbsoluteString(output)}`,
       ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
     ],
@@ -115,17 +115,21 @@ export async function make({
   }
 }
 
-function compilationModeToArgs(
+export function compilationModeToArg(
   compilationMode: CompilationMode
-): Array<string> {
+): string | undefined {
   switch (compilationMode) {
     case "standard":
-      return [];
+      return undefined;
     case "debug":
-      return ["--debug"];
+      return "--debug";
     case "optimize":
-      return ["--optimize"];
+      return "--optimize";
   }
+}
+
+export function maybeToArray<T>(arg: T | undefined): Array<T> {
+  return arg === undefined ? [] : [arg];
 }
 
 function parseElmMakeJson(

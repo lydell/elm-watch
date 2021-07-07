@@ -102,11 +102,12 @@ describe("successful make", () => {
   });
 
   test("CI", async () => {
-    expect(await run("successful-make", ["make"], { isTTY: false }))
-      .toMatchInlineSnapshot(`
+    expect(
+      await run("successful-make", ["make", "--optimize"], { isTTY: false })
+    ).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies
-      ⏳ build/main.js: elm make
+      ⏳ build/main.js: elm make --optimize
       ⏳ build/main.js: postprocess
       ✅ build/main.js
     `);
