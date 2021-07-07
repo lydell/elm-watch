@@ -23,6 +23,7 @@ import { PortChoice } from "./Port";
 import { getFlatOutputs, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
+  CompilationMode,
   ElmToolingJsonPath,
   equalsInputPath,
   GetNow,
@@ -142,7 +143,10 @@ type Cmd =
     }
   | {
       tag: "MarkAsDirty";
-      outputStates: Array<OutputState>;
+      outputs: Array<{
+        outputPath: OutputPath;
+        outputState: OutputState;
+      }>;
     }
   | {
       tag: "NoCmd";
@@ -175,6 +179,16 @@ type Cmd =
   | {
       tag: "WebSocketRemove";
       webSocket: WebSocket;
+    }
+  | {
+      tag: "WebSocketSend";
+      webSocket: WebSocket;
+      message: WebSocketToClientMessage;
+    }
+  | {
+      tag: "WebSocketSendToOutput";
+      outputPath: OutputPath;
+      message: WebSocketToClientMessage;
     };
 
 export type HotRunResult =
@@ -191,6 +205,36 @@ export type WebSocketState = {
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
 };
+
+type WebSocketToClientMessage = ReturnType<typeof WebSocketToClientMessage>;
+const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
+  StatusChanged: Decode.fieldsAuto({
+    tag: () => "StatusChanged" as const,
+    status: Decode.fieldsUnion("tag", {
+      SuccessfullyCompiled: Decode.fieldsAuto({
+        tag: () => "SuccessfullyCompiled" as const,
+      }),
+      Compiling: Decode.fieldsAuto({
+        tag: () => "Compiling" as const,
+      }),
+      CompileError: Decode.fieldsAuto({
+        tag: () => "CompileError" as const,
+      }),
+      ClientError: Decode.fieldsAuto({
+        tag: () => "ClientError" as const,
+        message: Decode.string,
+      }),
+    }),
+  }),
+});
+
+type WebSocketToServerMessage = ReturnType<typeof WebSocketToServerMessage>;
+const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
+  ChangeCompilationMode: Decode.fieldsAuto({
+    tag: () => "ChangeCompilationMode" as const,
+    compilationMode: CompilationMode,
+  }),
+});
 
 // This uses something inspired by The Elm Architecture, since it’s all about
 // keeping state (model) and reacting to events (messages).
@@ -551,6 +595,30 @@ const update =
       case "WebSocketConnected": {
         const result = parseWebSocketConnectRequestUrl(project, msg.urlString);
 
+        const onError = (errorMessage: string): [Model, Array<Cmd>] => [
+          model,
+          [
+            {
+              tag: "WebSocketAdd",
+              webSocketConnection: {
+                webSocket: msg.webSocket,
+                outputPath: { tag: "OutputPathError" },
+              },
+            },
+            {
+              tag: "WebSocketSend",
+              webSocket: msg.webSocket,
+              message: {
+                tag: "StatusChanged",
+                status: {
+                  tag: "ClientError",
+                  message: errorMessage,
+                },
+              },
+            },
+          ],
+        ];
+
         switch (result.tag) {
           case "Success":
             return [
@@ -564,26 +632,27 @@ const update =
                   },
                 },
                 ...outputStateToCmdsOnConnect(
+                  result.outputPath,
                   result.outputState,
                   result.compiledTimestamp
                 ),
               ],
             ];
 
-          default:
-            // TODO: Reply with the error.
-            return [
-              model,
-              [
-                {
-                  tag: "WebSocketAdd",
-                  webSocketConnection: {
-                    webSocket: msg.webSocket,
-                    outputPath: { tag: "OutputPathError" },
-                  },
-                },
-              ],
-            ];
+          case "MissingParams":
+            return onError("TODO");
+
+          case "ParamsDecodeError":
+            return onError("TODO");
+
+          case "WrongVersion":
+            return onError("TODO");
+
+          case "OutputNotFound":
+            return onError("TODO");
+
+          case "OutputDisabled":
+            return onError("TODO");
         }
       }
 
@@ -595,7 +664,6 @@ const update =
         return [model, []];
 
       case "WebSocketClosed":
-        // TODO: just remove from mutable?
         return [model, [{ tag: "WebSocketRemove", webSocket: msg.webSocket }]];
     }
   };
@@ -694,10 +762,13 @@ function onElmFileWatcherEvent(
     );
   }
 
-  const dirtyOutputs: Array<OutputState> = [];
+  const dirtyOutputs: Array<{
+    outputPath: OutputPath;
+    outputState: OutputState;
+  }> = [];
 
   for (const [, outputs] of project.elmJsons) {
-    for (const [, outputState] of outputs) {
+    for (const [outputPath, outputState] of outputs) {
       if (event.eventName === "removed") {
         for (const inputPath of outputState.inputs) {
           if (equalsInputPath(elmFile, inputPath)) {
@@ -711,13 +782,13 @@ function onElmFileWatcherEvent(
         }
       }
       if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
-        dirtyOutputs.push(outputState);
+        dirtyOutputs.push({ outputPath, outputState });
       }
     }
   }
 
   if (isNonEmptyArray(dirtyOutputs)) {
-    const cmd: Cmd = { tag: "MarkAsDirty", outputStates: dirtyOutputs };
+    const cmd: Cmd = { tag: "MarkAsDirty", outputs: dirtyOutputs };
     switch (nextAction.tag) {
       case "Restart":
         return [nextAction, [cmd]];
@@ -1048,8 +1119,14 @@ const runCmd =
       }
 
       case "MarkAsDirty":
-        for (const outputState of cmd.outputStates) {
+        for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;
+          // TODO: Is it _really_ needed to send this here?
+          webSocketSendToOutput(
+            outputPath,
+            { tag: "StatusChanged", status: { tag: "Compiling" } },
+            mutable.webSocketConnections
+          );
         }
         return;
 
@@ -1130,6 +1207,18 @@ const runCmd =
           ({ webSocket }) => webSocket !== cmd.webSocket
         );
         return;
+
+      case "WebSocketSend":
+        webSocketSend(cmd.webSocket, cmd.message);
+        return;
+
+      case "WebSocketSendToOutput":
+        webSocketSendToOutput(
+          cmd.outputPath,
+          cmd.message,
+          mutable.webSocketConnections
+        );
+        return;
     }
   };
 
@@ -1166,9 +1255,7 @@ function makeRestartNextAction(
       {
         // Interrupt all compilation.
         tag: "MarkAsDirty",
-        outputStates: getFlatOutputs(project).map(
-          ({ outputState }) => outputState
-        ),
+        outputs: getFlatOutputs(project),
       },
     ],
   ];
@@ -1371,38 +1458,83 @@ function parseWebSocketConnectRequestUrl(
 }
 
 function outputStateToCmdsOnConnect(
+  outputPath: OutputPath,
   outputState: OutputState,
   compiledTimestamp: number
 ): Array<Cmd> {
   switch (outputState.status.tag) {
     case "Success":
       return outputState.status.compiledTimestamp === compiledTimestamp
-        ? [] // TODO: Respond with done.
+        ? [
+            {
+              tag: "WebSocketSendToOutput",
+              outputPath,
+              message: {
+                tag: "StatusChanged",
+                status: { tag: "SuccessfullyCompiled" },
+              },
+            },
+          ]
         : [
-            { tag: "MarkAsDirty", outputStates: [outputState] },
+            { tag: "MarkAsDirty", outputs: [{ outputPath, outputState }] },
             { tag: "CompileAllOutputs" },
           ];
 
     case "NotWrittenToDisk":
       return [
-        { tag: "MarkAsDirty", outputStates: [outputState] },
+        { tag: "MarkAsDirty", outputs: [{ outputPath, outputState }] },
         { tag: "CompileAllOutputs" },
       ];
 
     case "ElmMake":
     case "Postprocess":
     case "Interrupted":
-      // TODO: Possibly respond with “Compiling”
-      return [];
+      return [
+        {
+          tag: "WebSocketSendToOutput",
+          outputPath,
+          message: {
+            tag: "StatusChanged",
+            status: { tag: "Compiling" },
+          },
+        },
+      ];
 
     case "ElmMakeTypecheckOnly":
       // This results in re-compilation once done. This time, there is a web
       // socket connection, so it will be compiled to JS.
-      return [{ tag: "MarkAsDirty", outputStates: [outputState] }];
+      return [{ tag: "MarkAsDirty", outputs: [{ outputPath, outputState }] }];
 
     default:
-      // TODO: Respond with error.
-      return [];
+      return [
+        {
+          tag: "WebSocketSendToOutput",
+          outputPath,
+          message: {
+            tag: "StatusChanged",
+            status: { tag: "CompileError" },
+          },
+        },
+      ];
+  }
+}
+
+function webSocketSend(
+  webSocket: WebSocket,
+  message: WebSocketToClientMessage
+): void {
+  webSocket.send(JSON.stringify(message));
+}
+
+function webSocketSendToOutput(
+  outputPath: OutputPath,
+  message: WebSocketToClientMessage,
+  webSocketConnections: Array<WebSocketConnection>
+): void {
+  for (const webSocketConnection of webSocketConnections) {
+    if (webSocketConnectionIsForOutputPath(webSocketConnection, outputPath)) {
+      webSocketSend(webSocketConnection.webSocket, message);
+    }
   }
 }
 

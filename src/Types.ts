@@ -1,8 +1,15 @@
+import * as Decode from "tiny-decoders";
+
 import type { AbsolutePath } from "./PathHelpers";
 
 export type RunMode = "hot" | "make";
 
-export type CompilationMode = "debug" | "optimize" | "standard";
+export type CompilationMode = ReturnType<typeof CompilationMode>;
+export const CompilationMode = Decode.stringUnion({
+  debug: null,
+  standard: null,
+  optimize: null,
+});
 
 // elm-tooling.json
 export type ElmToolingJsonPath = {
