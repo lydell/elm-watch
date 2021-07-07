@@ -125,6 +125,11 @@ type HotState =
 
 type Cmd =
   | {
+      tag: "ChangeCompilationMode";
+      webSocket: WebSocket;
+      compilationMode: CompilationMode;
+    }
+  | {
       tag: "ClearScreen";
     }
   | {
@@ -656,12 +661,41 @@ const update =
         }
       }
 
-      case "WebSocketMessageReceived":
-        // TODO: parse message
-        // do stuff based on message
-        // respond
-        // don’t have to implement this right now
-        return [model, []];
+      case "WebSocketMessageReceived": {
+        const onError = (errorMessage: string): [Model, Array<Cmd>] => [
+          model,
+          [
+            {
+              tag: "WebSocketSend",
+              webSocket: msg.webSocket,
+              message: {
+                tag: "StatusChanged",
+                status: {
+                  tag: "ClientError",
+                  message: errorMessage,
+                },
+              },
+            },
+          ],
+        ];
+
+        const result = parseWebSocketToServerMessage(msg.data);
+
+        switch (result.tag) {
+          case "Success":
+            return onWebSocketToServerMessage(
+              model,
+              msg.webSocket,
+              result.message
+            );
+
+          case "UnsupportedDataType":
+            return onError("TODO");
+
+          case "DecodeError":
+            return onError("TODO");
+        }
+      }
 
       case "WebSocketClosed":
         return [model, [{ tag: "WebSocketRemove", webSocket: msg.webSocket }]];
@@ -982,6 +1016,30 @@ const runCmd =
     rejectPromise: (error: Error) => void
   ): void => {
     switch (cmd.tag) {
+      case "ChangeCompilationMode": {
+        const flatOutputs = getFlatOutputs(mutable.project);
+        for (const webSocketConnection of mutable.webSocketConnections) {
+          if (webSocketConnection.webSocket === cmd.webSocket) {
+            for (const { outputPath, outputState } of flatOutputs) {
+              if (
+                webSocketConnectionIsForOutputPath(
+                  webSocketConnection,
+                  outputPath
+                )
+              ) {
+                outputState.compilationMode = cmd.compilationMode;
+                outputState.dirty = true;
+                webSocketSend(webSocketConnection.webSocket, {
+                  tag: "StatusChanged",
+                  status: { tag: "Compiling" },
+                });
+              }
+            }
+          }
+        }
+        return;
+      }
+
       case "ClearScreen":
         logger.clearScreen();
         mutable.lastInfoMessage = undefined;
@@ -1457,6 +1515,42 @@ function parseWebSocketConnectRequestUrl(
   };
 }
 
+type ParseWebSocketToServerMessageResult =
+  | ParseWebSocketToServerMessageError
+  | {
+      tag: "Success";
+      message: WebSocketToServerMessage;
+    };
+
+type ParseWebSocketToServerMessageError =
+  | {
+      tag: "DecodeError";
+      error: Decode.DecoderError | SyntaxError;
+    }
+  | {
+      tag: "UnsupportedDataType";
+    };
+
+function parseWebSocketToServerMessage(
+  data: WebSocket.Data
+): ParseWebSocketToServerMessageResult {
+  if (typeof data !== "string") {
+    return {
+      tag: "UnsupportedDataType",
+    };
+  }
+
+  try {
+    return {
+      tag: "Success",
+      message: WebSocketToServerMessage(JSON.parse(data)),
+    };
+  } catch (errorAny) {
+    const error = errorAny as Decode.DecoderError | SyntaxError;
+    return { tag: "DecodeError", error };
+  }
+}
+
 function outputStateToCmdsOnConnect(
   outputPath: OutputPath,
   outputState: OutputState,
@@ -1515,6 +1609,26 @@ function outputStateToCmdsOnConnect(
             status: { tag: "CompileError" },
           },
         },
+      ];
+  }
+}
+
+function onWebSocketToServerMessage(
+  model: Model,
+  webSocket: WebSocket,
+  message: WebSocketToServerMessage
+): [Model, Array<Cmd>] {
+  switch (message.tag) {
+    case "ChangeCompilationMode":
+      return [
+        model,
+        [
+          {
+            tag: "ChangeCompilationMode",
+            webSocket,
+            compilationMode: message.compilationMode,
+          },
+        ],
       ];
   }
 }
