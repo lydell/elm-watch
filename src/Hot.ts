@@ -62,6 +62,7 @@ type Msg =
       tag: "CompilationPartDone";
       date: Date;
       dirty: boolean;
+      outputPath: OutputPath;
     }
   | {
       tag: "GotWatcherEvent";
@@ -325,7 +326,9 @@ const initMutable =
       webSocketConnections = [],
     } = webSocketState ?? {};
 
-    webSocketServer.setDispatch(dispatch);
+    Promise.resolve().then(() => {
+      webSocketServer.setDispatch(dispatch);
+    }, rejectPromise);
 
     const mutable: Mutable = {
       watcher,
@@ -503,18 +506,34 @@ const update =
               }
             });
 
+            const duration =
+              msg.date.getTime() - model.hotState.start.getTime();
+
+            const errors = Compile.extractErrors(project);
+
+            const cmd: Cmd = {
+              tag: "WebSocketSendToOutput",
+              outputPath: msg.outputPath,
+              message: {
+                tag: "StatusChanged",
+                status: isNonEmptyArray(errors)
+                  ? { tag: "CompileError" }
+                  : // TODO: Send along new JS to eval here! Probably good to avoid JSON encoding of it. Maybe separate web socket message?
+                    // Also, if msg.outputPath is /dev/null, don’t send anything.
+                    { tag: "SuccessfullyCompiled" },
+              },
+            };
+
             // Output executing -> wait for that.
             // Output interrupted -> it will be re-executed soon, so wait for that.
             if (someOutputIsExecutingOrWasInterrupted) {
-              return [model, []];
+              return [model, [cmd]];
             }
 
-            const duration =
-              msg.date.getTime() - model.hotState.start.getTime();
-            const errors = Compile.extractErrors(project);
             return [
               { ...model, hotState: { tag: "Idle" } },
               [
+                cmd,
                 isNonEmptyArray(errors)
                   ? { tag: "PrintCompileErrors", errors }
                   : { tag: "NoCmd" },
@@ -1115,6 +1134,7 @@ const runCmd =
                 tag: "CompilationPartDone",
                 date: getNow(),
                 dirty: candidates.some(({ outputState }) => outputState.dirty),
+                outputPath: { tag: "NullOutputPath" },
               });
             }, rejectPromise);
           }
@@ -1151,6 +1171,7 @@ const runCmd =
                   tag: "CompilationPartDone",
                   date: getNow(),
                   dirty: outputState.dirty,
+                  outputPath,
                 });
               }, rejectPromise);
           }
@@ -1582,6 +1603,7 @@ function outputStateToCmdsOnConnect(
   outputState: OutputState,
   compiledTimestamp: number
 ): Array<Cmd> {
+  // TODO: Don’t want to start compiling things while installing Dependencies!
   switch (outputState.status.tag) {
     case "Success":
       return outputState.status.compiledTimestamp === compiledTimestamp

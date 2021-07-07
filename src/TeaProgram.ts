@@ -16,7 +16,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
   return new Promise((resolve, reject) => {
     const [initialModel, initialCmds] = options.init;
     let model: Model = initialModel;
-    let runningCmds = false;
+    let runningCmds = true;
 
     const dispatch = (msg: Msg): void => {
       if (runningCmds) {
