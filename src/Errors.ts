@@ -22,6 +22,7 @@ import {
   ElmWatchNodeScriptPath,
   InputPath,
   OutputPath,
+  outputPathToOriginalString,
 } from "./Types";
 
 const elmJson = bold("elm.json");
@@ -787,6 +788,133 @@ But something else seems to already be running on that port!
 
 You need to either find and stop that other thing, switch to another port or
 remove "port" from elm-tooling.json (which will use an arbitrary available port.)
+  `.trim();
+}
+
+export function webSocketBadUrl(
+  expectedStart: string,
+  actualUrlString: string
+): string {
+  return `
+I expected the web socket connection URL to start with:
+
+${expectedStart}
+
+But it looks like this:
+
+${actualUrlString}
+
+The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
+  `.trim();
+}
+
+export function webSocketParamsDecodeError(
+  error: DecoderError,
+  actualUrlString: string
+): string {
+  return `
+I ran into trouble parsing the web socket connection URL parameters:
+
+${error.format()}
+
+The URL looks like this:
+
+${actualUrlString}
+
+The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+  `.trim();
+}
+
+export function webSocketWrongVersion(
+  expectedVersion: string,
+  actualVersion: string
+): string {
+  return `
+The compiled JavaScript code running in the browser says it was compiled with:
+
+elm-watch ${actualVersion}
+
+But the server is:
+
+elm-watch ${expectedVersion}
+
+Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+  `.trim();
+}
+
+export function webSocketOutputNotFound(
+  output: string,
+  enabledOutputs: Array<OutputPath>,
+  disabledOutputs: Array<OutputPath>
+): string {
+  const extra = isNonEmptyArray(disabledOutputs)
+    ? `
+These outputs are also available in elm-tooling.json, but are not enabled (because of the CLI arguments passed):
+
+${join(mapNonEmptyArray(disabledOutputs, outputPathToOriginalString), "\n")}
+  `.trim()
+    : "";
+
+  return `
+The compiled JavaScript code running in the browser says it is this output:
+
+${output}
+
+But I can't find that output in elm-tooling.json!
+
+These outputs are available in elm-tooling.json:
+
+${join(enabledOutputs.map(outputPathToOriginalString), "\n")}
+
+${extra}
+
+Maybe this output used to exist in elm-tooling.json, but you removed or changed it?
+  `.trim();
+}
+
+export function webSocketOutputDisabled(
+  output: string,
+  enabledOutputs: Array<OutputPath>,
+  disabledOutputs: Array<OutputPath>
+): string {
+  return `
+The compiled JavaScript code running in the browser says it is this output:
+
+${output}
+
+That output does exist in elm-tooling.json, but isn't enabled.
+
+These outputs are enabled via CLI arguments:
+
+${join(enabledOutputs.map(outputPathToOriginalString), "\n")}
+
+These outputs exist in elm-tooling.json but aren't enabled:
+
+${join(disabledOutputs.map(outputPathToOriginalString), "\n")}
+
+If you want to have this output compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
+  `.trim();
+}
+
+export function webSocketUnsupportedDataType(): string {
+  return `
+The compiled JavaScript code running in the browser seems to have sent a message that isn't a string!
+
+The elm-watch web socket server can only handle string messages.
+
+The web socket code I generate is supposed to always send messages with the correct JSON format, so something is up here.
+  `.trim();
+}
+
+export function webSocketDecodeError(
+  error: DecoderError | SyntaxError
+): string {
+  return `
+The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
+
+${error instanceof DecoderError ? error.format() : error.message}
+
+The web socket code I generate is supposed to always send string messages, so something is up here.
   `.trim();
 }
 

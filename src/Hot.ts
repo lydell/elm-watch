@@ -644,20 +644,47 @@ const update =
               ],
             ];
 
-          case "MissingParams":
-            return onError("TODO");
+          case "BadUrl":
+            return onError(
+              Errors.webSocketBadUrl(
+                result.expectedStart,
+                result.actualUrlString
+              )
+            );
 
           case "ParamsDecodeError":
-            return onError("TODO");
+            return onError(
+              Errors.webSocketParamsDecodeError(
+                result.error,
+                result.actualUrlString
+              )
+            );
 
           case "WrongVersion":
-            return onError("TODO");
+            return onError(
+              Errors.webSocketWrongVersion(
+                result.expectedVersion,
+                result.actualVersion
+              )
+            );
 
           case "OutputNotFound":
-            return onError("TODO");
+            return onError(
+              Errors.webSocketOutputNotFound(
+                result.output,
+                result.enabledOutputs,
+                result.disabledOutputs
+              )
+            );
 
           case "OutputDisabled":
-            return onError("TODO");
+            return onError(
+              Errors.webSocketOutputDisabled(
+                result.output,
+                result.enabledOutputs,
+                result.disabledOutputs
+              )
+            );
         }
       }
 
@@ -690,10 +717,10 @@ const update =
             );
 
           case "UnsupportedDataType":
-            return onError("TODO");
+            return onError(Errors.webSocketUnsupportedDataType());
 
           case "DecodeError":
-            return onError("TODO");
+            return onError(Errors.webSocketDecodeError(result.error));
         }
       }
 
@@ -1179,7 +1206,6 @@ const runCmd =
       case "MarkAsDirty":
         for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;
-          // TODO: Is it _really_ needed to send this here?
           webSocketSendToOutput(
             outputPath,
             { tag: "StatusChanged", status: { tag: "Compiling" } },
@@ -1415,7 +1441,7 @@ type ParseWebSocketConnectRequestUrlResult =
 
 type ParseWebSocketConnectRequestUrlError =
   | {
-      tag: "MissingParams";
+      tag: "BadUrl";
       expectedStart: "/?";
       actualUrlString: string;
     }
@@ -1448,7 +1474,7 @@ function parseWebSocketConnectRequestUrl(
 ): ParseWebSocketConnectRequestUrlResult {
   if (!urlString.startsWith("/?")) {
     return {
-      tag: "MissingParams",
+      tag: "BadUrl",
       expectedStart: "/?",
       actualUrlString: urlString,
     };
