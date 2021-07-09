@@ -2,6 +2,7 @@ import * as WebSocket from "ws";
 
 import * as Errors from "./Errors";
 import { Port, PortChoice } from "./Port";
+import { GetNow } from "./Types";
 
 export type WebSocketServerMsg =
   | {
@@ -10,6 +11,7 @@ export type WebSocketServerMsg =
     }
   | {
       tag: "WebSocketConnected";
+      date: Date;
       webSocket: WebSocket;
       urlString: string;
     }
@@ -20,6 +22,7 @@ export type WebSocketServerMsg =
     };
 
 type Options = {
+  getNow: GetNow;
   portChoice: PortChoice;
   rejectPromise: (error: Error) => void;
 };
@@ -40,7 +43,7 @@ export class WebSocketServer {
     this.dispatch = this.dispatchToQueue;
   }
 
-  init({ portChoice, rejectPromise }: Options): {
+  init({ getNow, portChoice, rejectPromise }: Options): {
     webSocketServer: WebSocket.Server;
     port: Port;
   } {
@@ -53,6 +56,7 @@ export class WebSocketServer {
     webSocketServer.on("connection", (webSocket, request) => {
       this.dispatch({
         tag: "WebSocketConnected",
+        date: getNow(),
         webSocket,
         // `request.url` is always a string here, but the types says it can be undefined:
         // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
@@ -77,6 +81,7 @@ export class WebSocketServer {
             // The port we used last time is not available. Get a new one.
             webSocketServer.close();
             const next = this.init({
+              getNow,
               portChoice: { tag: "NoPort" },
               rejectPromise,
             });

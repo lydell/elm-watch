@@ -55,10 +55,7 @@ export type OutputState = {
 };
 
 export type OutputStatus =
-  | ElmJson.ParseError
-  | PostprocessError
-  | RunElmMakeError
-  | WalkImportsError
+  | OutputError
   | {
       tag: "Success";
       newOutputPath: OutputPath | undefined;
@@ -69,6 +66,12 @@ export type OutputStatus =
   | { tag: "Interrupted" }
   | { tag: "NotWrittenToDisk" }
   | { tag: "Postprocess" };
+
+export type OutputError =
+  | ElmJson.ParseError
+  | PostprocessError
+  | RunElmMakeError
+  | WalkImportsError;
 
 type ElmJsonError =
   | {

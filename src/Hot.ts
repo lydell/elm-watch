@@ -20,7 +20,7 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { PortChoice } from "./Port";
-import { getFlatOutputs, OutputState, Project } from "./Project";
+import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
   CompilationMode,
@@ -36,9 +36,16 @@ import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 type WatcherEventName = "added" | "changed" | "removed";
 
 export type WatcherEvent = {
+  tag: "WatcherEvent";
   date: Date;
   eventName: WatcherEventName;
   file: AbsolutePath;
+};
+
+export type WebSocketConnectedEvent = {
+  tag: "WebSocketConnectedEvent";
+  date: Date;
+  outputPath: OutputPath;
 };
 
 type Mutable = {
@@ -75,7 +82,7 @@ type Msg =
       installResult: Compile.InstallDependenciesResult;
     }
   | {
-      tag: "SleepAfterWatcherEventDone";
+      tag: "SleepBeforeNextActionDone";
       date: Date;
     };
 
@@ -87,7 +94,7 @@ type Model = {
 type NextAction =
   | {
       tag: "Compile";
-      events: NonEmptyArray<WatcherEvent>;
+      events: NonEmptyArray<WatcherEvent | WebSocketConnectedEvent>;
     }
   | {
       tag: "NoAction";
@@ -108,20 +115,20 @@ type HotState =
   | {
       tag: "Compiling";
       start: Date;
-      events: Array<WatcherEvent>;
+      events: Array<WatcherEvent | WebSocketConnectedEvent>;
       keepConsumingDirty: boolean;
     }
   | {
       tag: "Dependencies";
       start: Date;
-      events: Array<WatcherEvent>;
+      events: Array<WatcherEvent | WebSocketConnectedEvent>;
     }
   | {
       tag: "Idle";
     }
   | {
       tag: "Restarting";
-      events: NonEmptyArray<WatcherEvent>;
+      events: NonEmptyArray<WatcherEvent | WebSocketConnectedEvent>;
     };
 
 type Cmd =
@@ -145,7 +152,7 @@ type Cmd =
   | {
       tag: "LogInfoMessageWithTimeline";
       message: string;
-      events: Array<WatcherEvent>;
+      events: Array<WatcherEvent | WebSocketConnectedEvent>;
     }
   | {
       tag: "MarkAsDirty";
@@ -166,13 +173,13 @@ type Cmd =
     }
   | {
       tag: "Restart";
-      restartReasons: NonEmptyArray<WatcherEvent>;
+      restartReasons: NonEmptyArray<WatcherEvent | WebSocketConnectedEvent>;
     }
   | {
       tag: "RunOnIdle";
     }
   | {
-      tag: "SleepAfterWatcherEvent";
+      tag: "SleepBeforeNextAction";
     }
   | {
       tag: "Throw";
@@ -203,7 +210,7 @@ export type HotRunResult =
     }
   | {
       tag: "Restart";
-      restartReasons: NonEmptyArray<WatcherEvent>;
+      restartReasons: NonEmptyArray<WatcherEvent | WebSocketConnectedEvent>;
       webSocketState: WebSocketState | undefined;
     };
 
@@ -220,8 +227,8 @@ const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
       SuccessfullyCompiled: Decode.fieldsAuto({
         tag: () => "SuccessfullyCompiled" as const,
       }),
-      Compiling: Decode.fieldsAuto({
-        tag: () => "Compiling" as const,
+      Busy: Decode.fieldsAuto({
+        tag: () => "Busy" as const,
       }),
       CompileError: Decode.fieldsAuto({
         tag: () => "CompileError" as const,
@@ -249,7 +256,7 @@ export async function run(
   logger: Logger,
   getNow: GetNow,
   onIdle: OnIdle | undefined,
-  restartReasons: Array<WatcherEvent>,
+  restartReasons: Array<WatcherEvent | WebSocketConnectedEvent>,
   webSocketState: WebSocketState | undefined,
   project: Project,
   portChoice: PortChoice
@@ -277,6 +284,7 @@ export async function watchElmToolingJsonOnce(
 
     watcherOnAll(watcher, reject, (eventName, absolutePathString) => {
       const event: WatcherEvent = {
+        tag: "WatcherEvent",
         date: getNow(),
         eventName,
         file: {
@@ -322,7 +330,11 @@ const initMutable =
     );
 
     const {
-      webSocketServer = new WebSocketServer({ portChoice, rejectPromise }),
+      webSocketServer = new WebSocketServer({
+        getNow,
+        portChoice,
+        rejectPromise,
+      }),
       webSocketConnections = [],
     } = webSocketState ?? {};
 
@@ -413,7 +425,7 @@ function watcherOnAll(
 
 const init = (
   now: Date,
-  restartReasons: Array<WatcherEvent>
+  restartReasons: Array<WatcherEvent | WebSocketConnectedEvent>
 ): [Model, Array<Cmd>] => [
   {
     nextAction: { tag: "NoAction" },
@@ -454,11 +466,11 @@ const update =
                 : model.hotState,
             nextAction: updatedNextAction,
           },
-          [...cmds, { tag: "SleepAfterWatcherEvent" }],
+          [...cmds, { tag: "SleepBeforeNextAction" }],
         ];
       }
 
-      case "SleepAfterWatcherEventDone": {
+      case "SleepBeforeNextActionDone": {
         const [nextModel, cmds] = runNextAction(msg.date, project, model);
         return [
           {
@@ -644,9 +656,16 @@ const update =
         ];
 
         switch (result.tag) {
-          case "Success":
-            return [
+          case "Success": {
+            const [nextModel, cmds] = onWebSocketConnected(
+              msg.date,
               model,
+              result.outputPath,
+              result.outputState,
+              result.compiledTimestamp
+            );
+            return [
+              nextModel,
               [
                 {
                   tag: "WebSocketAdd",
@@ -655,13 +674,11 @@ const update =
                     outputPath: result.outputPath,
                   },
                 },
-                ...outputStateToCmdsOnConnect(
-                  result.outputPath,
-                  result.outputState,
-                  result.compiledTimestamp
-                ),
+                ...cmds,
+                { tag: "SleepBeforeNextAction" },
               ],
             ];
+          }
 
           case "BadUrl":
             return onError(
@@ -758,7 +775,7 @@ function onWatcherEvent(
   if (absolutePathString.endsWith(".elm")) {
     return onElmFileWatcherEvent(
       project,
-      makeEvent(eventName, absolutePathString, now),
+      makeWatcherEvent(eventName, absolutePathString, now),
       nextAction
     );
   }
@@ -771,7 +788,7 @@ function onWatcherEvent(
         case "added":
           return makeRestartNextAction(
             restartBecauseJsonFileChangedMessage(basename, eventName),
-            makeEvent(eventName, absolutePathString, now),
+            makeWatcherEvent(eventName, absolutePathString, now),
             nextAction,
             project
           );
@@ -784,7 +801,7 @@ function onWatcherEvent(
           ) {
             return makeRestartNextAction(
               restartBecauseJsonFileChangedMessage(basename, eventName),
-              makeEvent(eventName, absolutePathString, now),
+              makeWatcherEvent(eventName, absolutePathString, now),
               nextAction,
               project
             );
@@ -797,7 +814,7 @@ function onWatcherEvent(
         case "added":
           return makeRestartNextAction(
             restartBecauseJsonFileChangedMessage(basename, eventName),
-            makeEvent(eventName, absolutePathString, now),
+            makeWatcherEvent(eventName, absolutePathString, now),
             nextAction,
             project
           );
@@ -812,7 +829,7 @@ function onWatcherEvent(
           ) {
             return makeRestartNextAction(
               restartBecauseJsonFileChangedMessage(basename, eventName),
-              makeEvent(eventName, absolutePathString, now),
+              makeWatcherEvent(eventName, absolutePathString, now),
               nextAction,
               project
             );
@@ -998,7 +1015,7 @@ function runNextAction(
 
 function runCompile(
   model: Model,
-  events: Array<WatcherEvent>,
+  events: Array<WatcherEvent | WebSocketConnectedEvent>,
   start: Date,
   { clearScreen = false }
 ): [Model, Array<Cmd>] {
@@ -1077,7 +1094,7 @@ const runCmd =
                 outputState.dirty = true;
                 webSocketSend(webSocketConnection.webSocket, {
                   tag: "StatusChanged",
-                  status: { tag: "Compiling" },
+                  status: { tag: "Busy" },
                 });
               }
             }
@@ -1229,7 +1246,7 @@ const runCmd =
           outputState.dirty = true;
           webSocketSendToOutput(
             outputPath,
-            { tag: "StatusChanged", status: { tag: "Compiling" } },
+            { tag: "StatusChanged", status: { tag: "Busy" } },
             mutable.webSocketConnections
           );
         }
@@ -1248,9 +1265,16 @@ const runCmd =
 
       case "Restart": {
         // Outputs and port may have changed if elm-tooling.json changes.
-        const elmToolingJsonChanged = cmd.restartReasons.some(
-          ({ file }) => path.basename(file.absolutePath) === "elm-tooling.json"
-        );
+        const elmToolingJsonChanged = cmd.restartReasons.some((event) => {
+          switch (event.tag) {
+            case "WatcherEvent":
+              return (
+                path.basename(event.file.absolutePath) === "elm-tooling.json"
+              );
+            case "WebSocketConnectedEvent":
+              return false;
+          }
+        });
         mutable.webSocketServer.unsetDispatch();
         Promise.all([
           mutable.watcher.close(),
@@ -1285,7 +1309,7 @@ const runCmd =
         }
         return;
 
-      case "SleepAfterWatcherEvent":
+      case "SleepBeforeNextAction":
         // Sleep for a little bit to avoid unnecessary recompilation when using
         // “save all” in an editor, or when running `git switch some-branch` or
         // `git restore .`. These operations results in many files being
@@ -1295,7 +1319,7 @@ const runCmd =
         }
         mutable.watcherTimeoutId = setTimeout(() => {
           mutable.watcherTimeoutId = undefined;
-          dispatch({ tag: "SleepAfterWatcherEventDone", date: getNow() });
+          dispatch({ tag: "SleepBeforeNextActionDone", date: getNow() });
         }, 10);
         return;
 
@@ -1327,12 +1351,13 @@ const runCmd =
     }
   };
 
-function makeEvent(
+function makeWatcherEvent(
   eventName: WatcherEventName,
   absolutePathString: string,
   date: Date
 ): WatcherEvent {
   return {
+    tag: "WatcherEvent",
     date,
     eventName,
     file: {
@@ -1598,65 +1623,202 @@ function parseWebSocketToServerMessage(
   }
 }
 
-function outputStateToCmdsOnConnect(
+function onWebSocketConnected(
+  now: Date,
+  model: Model,
   outputPath: OutputPath,
   outputState: OutputState,
   compiledTimestamp: number
-): Array<Cmd> {
-  // TODO: Don’t want to start compiling things while installing Dependencies!
-  switch (outputState.status.tag) {
-    case "Success":
-      return outputState.status.compiledTimestamp === compiledTimestamp
-        ? [
-            {
-              tag: "WebSocketSendToOutput",
-              outputPath,
-              message: {
-                tag: "StatusChanged",
-                status: { tag: "SuccessfullyCompiled" },
-              },
+): [Model, Array<Cmd>] {
+  const event: WebSocketConnectedEvent = {
+    tag: "WebSocketConnectedEvent",
+    date: now,
+    outputPath,
+  };
+
+  switch (model.hotState.tag) {
+    case "Restarting":
+      return [
+        model,
+        [
+          {
+            tag: "WebSocketSendToOutput",
+            outputPath,
+            message: {
+              tag: "StatusChanged",
+              status: { tag: "Busy" },
             },
-          ]
-        : [
-            { tag: "MarkAsDirty", outputs: [{ outputPath, outputState }] },
-            { tag: "CompileAllOutputs" },
+          },
+        ],
+      ];
+
+    case "Dependencies":
+      return [
+        {
+          ...model,
+          hotState: {
+            ...model.hotState,
+            events: [...model.hotState.events, event],
+          },
+        },
+        [
+          {
+            tag: "WebSocketSendToOutput",
+            outputPath,
+            message: {
+              tag: "StatusChanged",
+              status: { tag: "Busy" },
+            },
+          },
+        ],
+      ];
+
+    case "Idle":
+    case "Compiling":
+      switch (outputState.status.tag) {
+        case "Success":
+          if (outputState.status.compiledTimestamp === compiledTimestamp) {
+            return [
+              model,
+              [
+                {
+                  tag: "WebSocketSendToOutput",
+                  outputPath,
+                  message: {
+                    tag: "StatusChanged",
+                    status: { tag: "SuccessfullyCompiled" },
+                  },
+                },
+              ],
+            ];
+          }
+          return onWebSocketConnectedRecompileNeeded(
+            event,
+            model,
+            outputPath,
+            outputState
+          );
+
+        case "NotWrittenToDisk":
+        case "ElmMakeTypecheckOnly":
+          return onWebSocketConnectedRecompileNeeded(
+            event,
+            model,
+            outputPath,
+            outputState
+          );
+
+        case "ElmMake":
+        case "Postprocess":
+        case "Interrupted":
+          switch (model.hotState.tag) {
+            case "Idle":
+              return onWebSocketConnectedRecompileNeeded(
+                event,
+                model,
+                outputPath,
+                outputState
+              );
+
+            case "Compiling":
+              return [
+                {
+                  ...model,
+                  hotState: {
+                    ...model.hotState,
+                    events: [...model.hotState.events, event],
+                  },
+                },
+                [
+                  {
+                    tag: "WebSocketSendToOutput",
+                    outputPath,
+                    message: {
+                      tag: "StatusChanged",
+                      status: { tag: "Busy" },
+                    },
+                  },
+                ],
+              ];
+          }
+
+        default: {
+          // Make sure only error statuses are left.
+          const _: OutputError = outputState.status;
+          void _;
+          return [
+            model,
+            [
+              {
+                tag: "WebSocketSendToOutput",
+                outputPath,
+                message: {
+                  tag: "StatusChanged",
+                  status: { tag: "CompileError" },
+                },
+              },
+            ],
           ];
+        }
+      }
+  }
+}
 
-    case "NotWrittenToDisk":
+function onWebSocketConnectedRecompileNeeded(
+  event: WebSocketConnectedEvent,
+  model: Model,
+  outputPath: OutputPath,
+  outputState: OutputState
+): [Model, Array<Cmd>] {
+  switch (model.nextAction.tag) {
+    case "Restart":
       return [
-        { tag: "MarkAsDirty", outputs: [{ outputPath, outputState }] },
-        { tag: "CompileAllOutputs" },
+        model,
+        [
+          {
+            tag: "WebSocketSendToOutput",
+            outputPath,
+            message: {
+              tag: "StatusChanged",
+              status: { tag: "Busy" },
+            },
+          },
+        ],
       ];
 
-    case "ElmMake":
-    case "Postprocess":
-    case "Interrupted":
+    case "Compile":
       return [
         {
-          tag: "WebSocketSendToOutput",
-          outputPath,
-          message: {
-            tag: "StatusChanged",
-            status: { tag: "Compiling" },
+          ...model,
+          nextAction: {
+            tag: "Compile",
+            events: [...model.nextAction.events, event],
           },
         },
+        [
+          {
+            tag: "MarkAsDirty",
+            outputs: [{ outputPath, outputState }],
+          },
+        ],
       ];
 
-    case "ElmMakeTypecheckOnly":
-      // This results in re-compilation once done. This time, there is a web
-      // socket connection, so it will be compiled to JS.
-      return [{ tag: "MarkAsDirty", outputs: [{ outputPath, outputState }] }];
-
-    default:
+    case "NoAction":
+    case "PrintNonInterestingEvents":
       return [
         {
-          tag: "WebSocketSendToOutput",
-          outputPath,
-          message: {
-            tag: "StatusChanged",
-            status: { tag: "CompileError" },
+          ...model,
+          nextAction: {
+            tag: "Compile",
+            events: [event],
           },
         },
+        [
+          {
+            tag: "MarkAsDirty",
+            outputs: [{ outputPath, outputState }],
+          },
+        ],
       ];
   }
 }
@@ -1703,7 +1865,7 @@ function webSocketSendToOutput(
 function infoMessageWithTimeline(
   date: Date,
   message: string,
-  events: Array<WatcherEvent>
+  events: Array<WatcherEvent | WebSocketConnectedEvent>
 ): string {
   return join(
     [
@@ -1715,7 +1877,9 @@ function infoMessageWithTimeline(
   );
 }
 
-function printTimeline(events: Array<WatcherEvent>): string | undefined {
+function printTimeline(
+  events: Array<WatcherEvent | WebSocketConnectedEvent>
+): string | undefined {
   if (!isNonEmptyArray(events)) {
     return undefined;
   }
@@ -1727,19 +1891,29 @@ function printTimeline(events: Array<WatcherEvent>): string | undefined {
   return dim(
     join(
       [
-        printWatcherEvent(first),
+        printEvent(first),
         printNumMoreEvents(numMoreEvents),
-        last === undefined ? undefined : printWatcherEvent(last),
+        last === undefined ? undefined : printEvent(last),
       ].flatMap((part) => (part === undefined ? [] : part)),
       "\n"
     )
   );
 }
 
-function printWatcherEvent(event: WatcherEvent): string {
-  return `${formatTime(event.date)} ${event.eventName} ${
-    event.file.absolutePath
-  }`;
+function printEvent(event: WatcherEvent | WebSocketConnectedEvent): string {
+  switch (event.tag) {
+    case "WatcherEvent":
+      return `${formatTime(event.date)} ${event.eventName} ${
+        event.file.absolutePath
+      }`;
+
+    case "WebSocketConnectedEvent":
+      return `${formatTime(
+        event.date
+      )} web socket connected needing compilation of ${outputPathToOriginalString(
+        event.outputPath
+      )}`;
+  }
 }
 
 function printNumMoreEvents(numMoreEvents: number): string | undefined {
