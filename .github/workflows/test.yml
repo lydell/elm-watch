@@ -23,6 +23,7 @@ jobs:
           node-version: "${{ matrix.node-version }}"
 
       - name: Number of CPUs
+        shell: bash
         run: |
           node -p 'require("os").cpus().length'
 
