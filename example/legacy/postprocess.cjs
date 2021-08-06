@@ -20,7 +20,7 @@ const pureFuncs = [
   "A7",
   "A8",
   "A9",
-]
+];
 
 switch (compilationMode) {
   case "standard":
@@ -37,11 +37,11 @@ switch (compilationMode) {
         keep_fargs: false,
         unsafe_comps: true,
         unsafe: true,
-        passes: 2
+        passes: 2,
       },
       mangle: {
-        reserved: pureFuncs
-      }
+        reserved: pureFuncs,
+      },
     });
 
     if (result.error !== undefined) {
@@ -54,6 +54,8 @@ switch (compilationMode) {
   }
 
   default:
-    process.stderr.write(`Unknown compilation mode: ${JSON.stringify(compilationMode)}`);
+    process.stderr.write(
+      `Unknown compilation mode: ${JSON.stringify(compilationMode)}`
+    );
     process.exit(1);
 }

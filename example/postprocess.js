@@ -1,5 +1,41 @@
+import * as esbuild from "esbuild";
 import * as fs from "fs";
-import * as UglifyJs from "uglify-js";
+import * as path from "path";
+import * as UglifyJS from "uglify-js";
+
+export default function postprocess([outputPath, compilationMode]) {
+  switch (compilationMode) {
+    case "standard":
+    case "debug":
+      return { exitCode: 0 };
+
+    case "optimize": {
+      const code = fs.readFileSync(outputPath, "utf8");
+
+      let newCode;
+
+      try {
+        newCode = minify(code, {
+          minimal: path.basename(outputPath) === "ApplicationMain.js",
+        });
+      } catch (error) {
+        return {
+          exitCode: 1,
+          stderr: error.message,
+        };
+      }
+
+      fs.writeFileSync(outputPath, newCode);
+      return { exitCode: 0 };
+    }
+
+    default:
+      return {
+        exitCode: 1,
+        stderr: `Unknown mode: ${JSON.stringify(compilationMode)}`,
+      };
+  }
+}
 
 const pureFuncs = [
   "F2",
@@ -20,44 +56,59 @@ const pureFuncs = [
   "A9",
 ];
 
-export default function postprocess([outputPath, compilationMode]) {
-  switch (compilationMode) {
-    case "standard":
-    case "debug":
-      return { exitCode: 0 };
+// Source: https://discourse.elm-lang.org/t/what-i-ve-learned-about-minifying-elm-code/7632
+function minify(code, { minimal }) {
+  return minimal ? runUglifyJSAndEsbuild(code) : runEsbuild(code);
+}
 
-    case "optimize": {
-      const code = fs.readFileSync(outputPath, "utf8");
+function runUglifyJSAndEsbuild(code) {
+  const result = UglifyJS.minify(code, {
+    compress: {
+      ...Object.fromEntries(
+        Object.entries(UglifyJS.default_options().compress).map(
+          ([key, value]) => [key, value === true ? false : value]
+        )
+      ),
+      pure_funcs: pureFuncs,
+      pure_getters: true,
+      strings: true,
+      sequences: true,
+      merge_vars: true,
+      switches: true,
+      dead_code: true,
+      if_return: true,
+      inline: true,
+      join_vars: true,
+      reduce_vars: true,
+      conditionals: true,
+      collapse_vars: true,
+      unused: true,
+    },
+    mangle: false,
+  });
 
-      const result = UglifyJs.minify(code, {
-        compress: {
-          pure_funcs: pureFuncs,
-          pure_getters: true,
-          keep_fargs: false,
-          unsafe_comps: true,
-          unsafe: true,
-          passes: 2,
-        },
-        mangle: {
-          reserved: pureFuncs,
-        },
-      });
-
-      if (result.error !== undefined) {
-        return {
-          exitCode: 1,
-          stderr: result.error.message,
-        };
-      }
-
-      fs.writeFileSync(outputPath, result.code);
-      return { exitCode: 0 };
-    }
-
-    default:
-      return {
-        exitCode: 1,
-        stderr: `Unknown mode: ${JSON.stringify(compilationMode)}`,
-      };
+  if (result.error !== undefined) {
+    throw result.error;
   }
+
+  return esbuild.transformSync(result.code, {
+    minify: true,
+    target: "es5",
+  }).code;
+}
+
+function runEsbuild(code) {
+  return esbuild.transformSync(removeIIFE(code), {
+    minify: true,
+    pure: pureFuncs,
+    target: "es5",
+    format: "iife",
+  }).code;
+}
+
+function removeIIFE(code) {
+  return `var scope = window;${code.slice(
+    code.indexOf("{") + 1,
+    code.lastIndexOf("}")
+  )}`;
 }
