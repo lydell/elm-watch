@@ -11,8 +11,7 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
-  project: Project,
-  maxParallel: number
+  project: Project
 ): Promise<MakeResult> {
   const installResult = await Compile.installDependencies(env, logger, project);
 
@@ -25,7 +24,7 @@ export async function run(
       break;
   }
 
-  const initialOutputActions = getOutputActions(project, "make", maxParallel);
+  const initialOutputActions = getOutputActions(project, "make");
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
   Compile.printSpaceForOutputs(logger, initialOutputActions.total);
@@ -42,11 +41,7 @@ export async function run(
           total: outputActions.total,
           action,
         }).then(() => {
-          const nextOutputActions = getOutputActions(
-            project,
-            "make",
-            maxParallel
-          );
+          const nextOutputActions = getOutputActions(project, "make");
           if (isNonEmptyArray(nextOutputActions.actions)) {
             cycle(nextOutputActions);
           } else if (nextOutputActions.numExecuting === 0) {

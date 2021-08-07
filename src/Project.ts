@@ -1,9 +1,11 @@
+import * as os from "os";
+
 import * as ElmJson from "./ElmJson";
 import * as ElmToolingJson from "./ElmToolingJson";
 import { ElmWatchJson } from "./ElmWatchJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
-import { getSetSingleton } from "./Helpers";
+import { Env, getSetSingleton, silentlyReadIntEnvValue } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
 import {
   isNonEmptyArray,
@@ -44,6 +46,7 @@ export type Project = {
     error: ElmJsonError;
   }>;
   readonly elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
+  readonly maxParallel: number;
 };
 
 export type OutputState = {
@@ -135,6 +138,7 @@ export type InitProjectResult =
     };
 
 export function initProject({
+  env,
   compilationMode,
   elmToolingJsonPath,
   config,
@@ -142,6 +146,7 @@ export function initProject({
   elmWatchJsonPath,
   elmWatchJson,
 }: {
+  env: Env;
   compilationMode: CompilationMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   config: ElmToolingJson.Config;
@@ -258,6 +263,11 @@ export function initProject({
     return { tag: "NoCommonRoot", paths };
   }
 
+  const maxParallel = silentlyReadIntEnvValue(
+    env.ELM_WATCH_MAX_PARALLEL,
+    os.cpus().length
+  );
+
   return {
     tag: "Project",
     project: {
@@ -267,6 +277,7 @@ export function initProject({
       disabledOutputs,
       elmJsonsErrors,
       elmJsons,
+      maxParallel,
     },
   };
 }
@@ -488,7 +499,6 @@ export type OutputActions = {
 export function getOutputActions(
   project: Project,
   runMode: RunMode,
-  maxParallel: number,
   prioritizedOutputs?: HashMap<OutputPath, number>
 ): OutputActions {
   let index = 0;
@@ -613,7 +623,7 @@ export function getOutputActions(
     postprocessActions
   );
 
-  const threadsLeft = Math.max(0, maxParallel - numExecuting);
+  const threadsLeft = Math.max(0, project.maxParallel - numExecuting);
 
   const actions = prioritizedActions.slice(0, threadsLeft);
 

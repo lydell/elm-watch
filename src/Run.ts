@@ -1,10 +1,8 @@
-import * as os from "os";
-
 import * as CliArgs from "./CliArgs";
 import * as ElmToolingJson from "./ElmToolingJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import * as Errors from "./Errors";
-import { Env, silentlyReadIntEnvValue } from "./Helpers";
+import { Env } from "./Helpers";
 import * as Hot from "./Hot";
 import type { Logger } from "./Logger";
 import * as Make from "./Make";
@@ -150,6 +148,7 @@ export async function run(
                   : undefined;
 
               const initProjectResult = initProject({
+                env,
                 compilationMode: parseArgsResult.compilationMode,
                 elmToolingJsonPath: parseResult.elmToolingJsonPath,
                 config: parseResult.config,
@@ -183,19 +182,13 @@ export async function run(
                   return { tag: "Exit", exitCode: 1 };
 
                 case "Project": {
-                  const maxParallel = silentlyReadIntEnvValue(
-                    env.ELM_WATCH_MAX_PARALLEL,
-                    os.cpus().length
-                  );
-
                   switch (runMode) {
                     case "make": {
                       const result = await Make.run(
                         env,
                         logger,
                         getNow,
-                        initProjectResult.project,
-                        maxParallel
+                        initProjectResult.project
                       );
                       switch (result.tag) {
                         case "Error":
