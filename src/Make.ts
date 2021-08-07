@@ -27,31 +27,34 @@ export async function run(
   const initialOutputActions = getOutputActions(project, "make");
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
-  Compile.printSpaceForOutputs(logger, initialOutputActions.total);
 
-  await new Promise<void>((resolve, reject) => {
-    const cycle = (outputActions: OutputActions): void => {
-      for (const action of outputActions.actions) {
-        Compile.handleOutputAction({
-          env,
-          logger,
-          getNow,
-          runMode: "make",
-          elmToolingJsonPath: project.elmToolingJsonPath,
-          total: outputActions.total,
-          action,
-        }).then(() => {
-          const nextOutputActions = getOutputActions(project, "make");
-          if (isNonEmptyArray(nextOutputActions.actions)) {
-            cycle(nextOutputActions);
-          } else if (nextOutputActions.numExecuting === 0) {
-            resolve();
-          }
-        }, reject);
-      }
-    };
-    cycle(initialOutputActions);
-  });
+  if (isNonEmptyArray(initialOutputActions.actions)) {
+    Compile.printSpaceForOutputs(logger, initialOutputActions.total);
+
+    await new Promise<void>((resolve, reject) => {
+      const cycle = (outputActions: OutputActions): void => {
+        for (const action of outputActions.actions) {
+          Compile.handleOutputAction({
+            env,
+            logger,
+            getNow,
+            runMode: "make",
+            elmToolingJsonPath: project.elmToolingJsonPath,
+            total: outputActions.total,
+            action,
+          }).then(() => {
+            const nextOutputActions = getOutputActions(project, "make");
+            if (isNonEmptyArray(nextOutputActions.actions)) {
+              cycle(nextOutputActions);
+            } else if (nextOutputActions.numExecuting === 0) {
+              resolve();
+            }
+          }, reject);
+        }
+      };
+      cycle(initialOutputActions);
+    });
+  }
 
   const errors = Compile.extractErrors(project);
 
