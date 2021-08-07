@@ -17,7 +17,10 @@ import {
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 
-const NO_DELAY = { __ELM_WATCH_LOADING_MESSAGE_DELAY: "0" };
+const TEST_ENV = {
+  __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
+  ELM_WATCH_MAX_PARALLEL: "2",
+};
 
 async function run(
   fixture: string,
@@ -44,7 +47,7 @@ async function runAbsolute(
       env === undefined
         ? {
             ...process.env,
-            ...NO_DELAY,
+            ...TEST_ENV,
           }
         : env,
     stdin: new FailReadStream(),
@@ -65,6 +68,7 @@ async function runAbsolute(
 function badElmBinEnv(dir: string, fixture: string): Env {
   return {
     ...process.env,
+    ...TEST_ENV,
     PATH: prependPATH(path.join(dir, "bad-bin", fixture)),
     // The default timeout is optimized for calling Elm directly.
     // The bad-bin `elm`s are Node.js scripts – just starting Node.js can take
@@ -710,7 +714,7 @@ describe("errors", () => {
           await run("valid", ["make"], {
             env: {
               ...process.env,
-              ...NO_DELAY,
+              ...TEST_ENV,
               PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
                 path.delimiter
               ),
@@ -1382,7 +1386,7 @@ describe("errors", () => {
         await run("postprocess", ["make", "build/command-not-found.js"], {
           env: {
             ...process.env,
-            ...NO_DELAY,
+            ...TEST_ENV,
             PATH: path.join(path.dirname(__dirname), "node_modules", ".bin"),
           },
         })
@@ -1889,10 +1893,13 @@ describe("errors", () => {
         ⏳ Dependencies
         ✅ Dependencies
         ⏳ build/admin.js: elm make
-        ⏳ build/app.js: elm make
-        ⏳ build/postprocess-error.js: elm make
+        ⚪️ build/app.js: queued
+        ⚪️ build/postprocess-error.js: queued
         🚨 build/admin.js
+        ⏳ build/app.js: elm make
         ✅ build/app.js
+        ⏳ build/postprocess-error.js: elm make
+        ️🟢 build/postprocess-error.js: queued
         ⏳ build/postprocess-error.js: postprocess
         🚨 build/postprocess-error.js
 
@@ -1948,7 +1955,7 @@ describe("errors", () => {
         await run("ci", ["make"], {
           env: {
             ...process.env,
-            ...NO_DELAY,
+            ...TEST_ENV,
             NO_COLOR: "",
           },
 
@@ -1958,10 +1965,13 @@ describe("errors", () => {
         Dependencies: in progress
         Dependencies: success
         build/admin.js: elm make
-        build/app.js: elm make
-        build/postprocess-error.js: elm make
+        build/app.js: queued
+        build/postprocess-error.js: queued
         build/admin.js: error
+        build/app.js: elm make
         build/app.js: success
+        build/postprocess-error.js: elm make
+        build/postprocess-error.js: queued
         build/postprocess-error.js: postprocess
         build/postprocess-error.js: error
 
