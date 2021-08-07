@@ -194,7 +194,6 @@ export async function run(
                         env,
                         logger,
                         getNow,
-                        runMode,
                         initProjectResult.project,
                         maxParallel
                       );

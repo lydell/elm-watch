@@ -2,8 +2,8 @@ import * as Compile from "./Compile";
 import { Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { getFlatOutputs, Project } from "./Project";
-import { GetNow, RunMode } from "./Types";
+import { getOutputActions, OutputActions, Project } from "./Project";
+import { GetNow } from "./Types";
 
 type MakeResult = { tag: "Error" } | { tag: "Success" };
 
@@ -11,7 +11,6 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
-  runMode: RunMode,
   project: Project,
   maxParallel: number
 ): Promise<MakeResult> {
@@ -26,28 +25,38 @@ export async function run(
       break;
   }
 
-  const flatOutputs = getFlatOutputs(project);
+  const initialOutputActions = getOutputActions(project, "make", maxParallel);
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
-  Compile.printSpaceForOutputs(logger, flatOutputs.length);
+  Compile.printSpaceForOutputs(logger, initialOutputActions.total);
 
-  await Promise.all(
-    flatOutputs.map(
-      async ({ index, elmJsonPath, outputPath, outputState }): Promise<void> =>
-        Compile.compileOneOutput({
+  await new Promise<void>((resolve, reject) => {
+    const cycle = (outputActions: OutputActions): void => {
+      for (const action of outputActions.actions) {
+        Compile.handleOutputAction({
           env,
           logger,
           getNow,
-          runMode,
+          runMode: "make",
           elmToolingJsonPath: project.elmToolingJsonPath,
-          elmJsonPath,
-          outputPath,
-          outputState,
-          index,
-          total: flatOutputs.length,
-        })
-    )
-  );
+          total: outputActions.total,
+          action,
+        }).then(() => {
+          const nextOutputActions = getOutputActions(
+            project,
+            "make",
+            maxParallel
+          );
+          if (isNonEmptyArray(nextOutputActions.actions)) {
+            cycle(nextOutputActions);
+          } else if (nextOutputActions.numExecuting === 0) {
+            resolve();
+          }
+        }, reject);
+      }
+    };
+    cycle(initialOutputActions);
+  });
 
   const errors = Compile.extractErrors(project);
 

@@ -16,7 +16,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
-import { OutputState, OutputStatus, Project } from "./Project";
+import { OutputAction, OutputState, OutputStatus, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
 import {
   ElmJsonPath,
@@ -141,12 +141,72 @@ export async function installDependencies(
   return { tag: "Success" };
 }
 
-export async function compileOneOutput({
+export async function handleOutputAction({
   env,
   logger,
   getNow,
   runMode,
   elmToolingJsonPath,
+  total,
+  action,
+}: {
+  env: Env;
+  logger: Logger;
+  getNow: GetNow;
+  runMode: RunMode;
+  elmToolingJsonPath: ElmToolingJsonPath;
+  total: number;
+  action: OutputAction;
+}): Promise<void> {
+  switch (action.tag) {
+    case "NeedsElmMake":
+      return compileOneOutput({
+        env,
+        logger,
+        getNow,
+        runMode,
+        total,
+        ...action.output,
+      });
+
+    case "NeedsElmMakeTypecheckOnly":
+      return typecheck({
+        env,
+        logger,
+        elmJsonPath: action.elmJsonPath,
+        outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
+        total,
+      });
+
+    case "NeedsPostprocess":
+      return postprocessHelper({
+        env,
+        logger,
+        getNow,
+        runMode,
+        elmToolingJsonPath,
+        total,
+        ...action.output,
+        postprocessArray: action.postprocessArray,
+      });
+
+    case "QueueForElmMake":
+      action.output.outputState.status = { tag: "QueuedForElmMake" };
+      updateStatusLine({
+        logger,
+        total,
+        ...action.output,
+      });
+      return;
+  }
+}
+
+// TODO: No need to `export` this and some other functions anymore?
+export async function compileOneOutput({
+  env,
+  logger,
+  getNow,
+  runMode,
   elmJsonPath,
   outputPath,
   outputState,
@@ -157,7 +217,6 @@ export async function compileOneOutput({
   logger: Logger;
   getNow: GetNow;
   runMode: RunMode;
-  elmToolingJsonPath: ElmToolingJsonPath;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
@@ -173,11 +232,6 @@ export async function compileOneOutput({
       total,
     });
   };
-
-  if (!outputState.dirty) {
-    updateStatusLineHelper();
-    return;
-  }
 
   // Watcher events that happen while waiting for `elm make` and
   // postprocessing can flip `dirty` back to `true`.
@@ -235,25 +289,10 @@ export async function compileOneOutput({
         };
         updateStatusLineHelper();
       } else {
-        outputState.status = { tag: "Postprocess" };
-        updateStatusLineHelper();
-        const postprocessResult = await postprocess({
-          elmToolingJsonPath,
-          compilationMode: outputState.compilationMode,
-          runMode,
-          output: outputPath,
+        outputState.status = {
+          tag: "QueuedForPostprocess",
           postprocessArray: outputState.postprocess,
-          env,
-        });
-        outputState.status = outputState.dirty
-          ? { tag: "Interrupted" }
-          : postprocessResult.tag === "Success"
-          ? {
-              tag: "Success",
-              newOutputPath: postprocessResult.newOutputPath,
-              compiledTimestamp: getNow().getTime(),
-            }
-          : postprocessResult;
+        };
         updateStatusLineHelper();
       }
       break;
@@ -284,6 +323,63 @@ export async function compileOneOutput({
       updateStatusLineHelper();
       break;
   }
+}
+
+async function postprocessHelper({
+  env,
+  logger,
+  getNow,
+  runMode,
+  elmToolingJsonPath,
+  outputPath,
+  outputState,
+  index,
+  total,
+  postprocessArray,
+}: {
+  env: Env;
+  logger: Logger;
+  getNow: GetNow;
+  runMode: RunMode;
+  elmToolingJsonPath: ElmToolingJsonPath;
+  outputPath: OutputPath;
+  outputState: OutputState;
+  index: number;
+  total: number;
+  postprocessArray: NonEmptyArray<string>;
+}): Promise<void> {
+  const updateStatusLineHelper = (): void => {
+    updateStatusLine({
+      logger,
+      outputPath,
+      outputState,
+      index,
+      total,
+    });
+  };
+
+  outputState.status = { tag: "Postprocess" };
+  updateStatusLineHelper();
+
+  const postprocessResult = await postprocess({
+    elmToolingJsonPath,
+    compilationMode: outputState.compilationMode,
+    runMode,
+    output: outputPath,
+    postprocessArray,
+    env,
+  });
+
+  outputState.status = outputState.dirty
+    ? { tag: "Interrupted" }
+    : postprocessResult.tag === "Success"
+    ? {
+        tag: "Success",
+        newOutputPath: postprocessResult.newOutputPath,
+        compiledTimestamp: getNow().getTime(),
+      }
+    : postprocessResult;
+  updateStatusLineHelper();
 }
 
 export async function typecheck({
@@ -469,7 +565,7 @@ export function printSpaceForOutputs(logger: Logger, total: number): void {
   }
 }
 
-export function updateStatusLine({
+function updateStatusLine({
   logger,
   outputPath,
   outputState,
@@ -575,6 +671,12 @@ function statusLine(
     case "Interrupted":
       return truncate(`${fancy ? "⏳ " : ""}${output}: interrupted`);
 
+    case "QueuedForElmMake":
+      return truncate(`${fancy ? "⚪️ " : ""}${output}: queued`);
+
+    case "QueuedForPostprocess":
+      return truncate(`${fancy ? "️🟢 " : ""}${output}: queued`);
+
     case "ElmNotFoundError":
     case "CommandNotFoundError":
     case "OtherSpawnError":
@@ -635,22 +737,12 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
 
           // istanbul ignore next
           case "ElmMake":
-            return Errors.stuckInProgressState(outputPath, "elm make");
-
-          // istanbul ignore next
           case "ElmMakeTypecheckOnly":
-            return Errors.stuckInProgressState(
-              outputPath,
-              "elm make (typecheck only)"
-            );
-
-          // istanbul ignore next
           case "Postprocess":
-            return Errors.stuckInProgressState(outputPath, "postprocess");
-
-          // istanbul ignore next
           case "Interrupted":
-            return Errors.stuckInProgressState(outputPath, "interrupted");
+          case "QueuedForElmMake":
+          case "QueuedForPostprocess":
+            return Errors.stuckInProgressState(outputPath, status.tag);
 
           case "Success":
             return [];

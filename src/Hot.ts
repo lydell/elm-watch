@@ -1162,7 +1162,6 @@ const runCmd =
             logger,
             getNow,
             runMode: "hot",
-            elmToolingJsonPath: mutable.project.elmToolingJsonPath,
             elmJsonPath,
             outputPath,
             outputState,
@@ -1695,6 +1694,8 @@ function onWebSocketConnected(
         case "ElmMake":
         case "Postprocess":
         case "Interrupted":
+        case "QueuedForElmMake":
+        case "QueuedForPostprocess":
           switch (model.hotState.tag) {
             case "Idle":
               return onWebSocketConnectedRecompileNeeded(

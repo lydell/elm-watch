@@ -68,7 +68,7 @@ export type OutputStatus =
   | { tag: "NotWrittenToDisk" }
   | { tag: "Postprocess" }
   | { tag: "QueuedForElmMake" }
-  | { tag: "QueuedForPostprocess" };
+  | { tag: "QueuedForPostprocess"; postprocessArray: NonEmptyArray<string> };
 
 export type OutputError =
   | ElmJson.ParseError
@@ -449,11 +449,11 @@ export function getFlatOutputs(project: Project): Array<FlatOutput> {
   return result;
 }
 
-type OutputAction =
+export type OutputAction =
   | NeedsElmMakeOutputAction
   | NeedsElmMakeTypecheckOnlyOutputAction
   | NeedsPostprocessOutputAction
-  | QueueOutputAction;
+  | QueueForElmMakeOutputAction;
 
 type NeedsElmMakeOutputAction = FlatOutputWithSource & {
   tag: "NeedsElmMake";
@@ -462,42 +462,42 @@ type NeedsElmMakeOutputAction = FlatOutputWithSource & {
 
 type NeedsElmMakeTypecheckOnlyOutputAction = {
   tag: "NeedsElmMakeTypecheckOnly";
+  elmJsonPath: ElmJsonPath;
   outputs: NonEmptyArray<FlatOutputWithSource>;
 };
 
 type NeedsPostprocessOutputAction = {
   tag: "NeedsPostprocess";
   output: FlatOutput;
+  postprocessArray: NonEmptyArray<string>;
   priority: number;
 };
 
-type QueueOutputAction =
-  | {
-      tag: "QueueForElmMake";
-      output: FlatOutput;
-    }
-  | {
-      tag: "QueueForPostprocess";
-      output: FlatOutput;
-    };
+type QueueForElmMakeOutputAction = {
+  tag: "QueueForElmMake";
+  output: FlatOutput;
+};
+
+export type OutputActions = {
+  total: number;
+  numExecuting: number;
+  actions: Array<OutputAction>;
+  outputsWithoutAction: Array<FlatOutput>;
+};
 
 export function getOutputActions(
   project: Project,
   runMode: RunMode,
   maxParallel: number,
-  prioritizedOutputs: HashMap<OutputPath, number>
-): {
-  total: number;
-  actions: Array<OutputAction>;
-  outputsWithoutAction: Array<FlatOutput>;
-} {
+  prioritizedOutputs?: HashMap<OutputPath, number>
+): OutputActions {
   let index = 0;
   let numExecuting = 0;
   const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
   const elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction> =
     [];
   const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
-  const queueActions: Array<QueueOutputAction> = [];
+  const queueActions: Array<QueueForElmMakeOutputAction> = [];
   const outputsWithoutAction: Array<FlatOutput> = [];
 
   for (const [elmJsonPath, outputs] of project.elmJsons) {
@@ -525,10 +525,11 @@ export function getOutputActions(
       if (isExecuting(outputState)) {
         numExecuting++;
         outputsWithoutAction.push(flatOutput);
-      } else if (!outputState.dirty) {
-        outputsWithoutAction.push(flatOutput);
       } else {
-        const priority = prioritizedOutputs.get(outputPath);
+        const priority =
+          prioritizedOutputs === undefined
+            ? 0
+            : prioritizedOutputs.get(outputPath);
         switch (outputState.status.tag) {
           case "QueuedForElmMake":
             if (elmMakeBusy) {
@@ -550,12 +551,15 @@ export function getOutputActions(
             postprocessActions.push({
               tag: "NeedsPostprocess",
               output: flatOutput,
+              postprocessArray: outputState.status.postprocessArray,
               priority: priority ?? 0,
             });
             break;
 
           default:
-            if (elmMakeBusy) {
+            if (!outputState.dirty) {
+              outputsWithoutAction.push(flatOutput);
+            } else if (elmMakeBusy) {
               queueActions.push({
                 tag: "QueueForElmMake",
                 output: flatOutput,
@@ -594,6 +598,7 @@ export function getOutputActions(
         } else {
           elmMakeTypecheckOnlyActions.push({
             tag: "NeedsElmMakeTypecheckOnly",
+            elmJsonPath,
             outputs: typecheckOnly,
           });
         }
@@ -654,6 +659,7 @@ export function getOutputActions(
 
   return {
     total: index,
+    numExecuting,
     actions: [...actions, ...queueActions],
     outputsWithoutAction,
   };
