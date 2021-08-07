@@ -735,7 +735,6 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           case "NotWrittenToDisk":
             return [];
 
-          // istanbul ignore next
           case "ElmMake":
           case "ElmMakeTypecheckOnly":
           case "Postprocess":

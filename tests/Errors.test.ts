@@ -2019,6 +2019,40 @@ describe("errors", () => {
     });
   });
 
+  test("stuck in progress", async () => {
+    expect(
+      await run("valid", ["make"], {
+        env: {
+          ...process.env,
+          ...TEST_ENV,
+          ELM_WATCH_MAX_PARALLEL: "0",
+        },
+      })
+    ).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ⚪️ build/app.js: queued
+      ⚪️ build/admin.js: queued
+
+      ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
+      ⧙When compiling: build/app.js⧘
+
+      I thought that all outputs had finished compiling, but my inner state says
+      this output is still in the ⧙QueuedForElmMake⧘ phase.
+
+      ⧙This is not supposed to ever happen.⧘
+
+      ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
+      ⧙When compiling: build/admin.js⧘
+
+      I thought that all outputs had finished compiling, but my inner state says
+      this output is still in the ⧙QueuedForElmMake⧘ phase.
+
+      ⧙This is not supposed to ever happen.⧘
+
+      🚨 ⧙2⧘ errors found
+    `);
+  });
+
   describe("hard to test errors", () => {
     test("noCommonRoot", () => {
       expect(
@@ -2109,22 +2143,6 @@ describe("errors", () => {
         But that resulted in this error:
 
         null
-      `);
-    });
-
-    test("stuckInProgressState", () => {
-      expect(
-        printError(
-          Errors.stuckInProgressState({ tag: "NullOutputPath" }, "elm make")
-        )
-      ).toMatchInlineSnapshot(`
-        ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
-        ⧙When compiling to /dev/null⧘
-
-        I thought that all outputs had finished compiling, but my inner state says
-        this output is still in the ⧙elm make⧘ phase.
-
-        ⧙This is not supposed to ever happen.⧘
       `);
     });
 
