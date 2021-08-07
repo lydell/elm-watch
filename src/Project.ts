@@ -27,6 +27,7 @@ import type {
   ElmWatchJsonPath,
   InputPath,
   OutputPath,
+  RunMode,
 } from "./Types";
 
 // The code base leans towards pure functions, but this data structure is going
@@ -65,7 +66,9 @@ export type OutputStatus =
   | { tag: "ElmMakeTypecheckOnly" }
   | { tag: "Interrupted" }
   | { tag: "NotWrittenToDisk" }
-  | { tag: "Postprocess" };
+  | { tag: "Postprocess" }
+  | { tag: "QueuedForElmMake" }
+  | { tag: "QueuedForPostprocess" };
 
 export type OutputError =
   | ElmJson.ParseError
@@ -410,12 +413,26 @@ function resolveElmJson(
   };
 }
 
-export function getFlatOutputs(project: Project): Array<{
+export function isExecuting(outputState: OutputState): boolean {
+  switch (outputState.status.tag) {
+    case "ElmMake":
+    case "ElmMakeTypecheckOnly":
+    case "Postprocess":
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+type FlatOutput = {
   index: number;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
-}> {
+};
+
+export function getFlatOutputs(project: Project): Array<FlatOutput> {
   let index = 0;
   const result = [];
   for (const [elmJsonPath, outputs] of project.elmJsons) {
@@ -425,4 +442,171 @@ export function getFlatOutputs(project: Project): Array<{
     }
   }
   return result;
+}
+
+type OutputAction =
+  | NeedsElmMakeOutputAction
+  | NeedsPostprocessOutputAction
+  | QueueOutputAction;
+
+type NeedsElmMakeOutputAction = {
+  tag: "NeedsElmMake";
+  output: FlatOutput;
+  source: "Dirty" | "Queued";
+};
+
+type NeedsPostprocessOutputAction = {
+  tag: "NeedsPostprocess";
+  output: FlatOutput;
+};
+
+type QueueOutputAction =
+  | {
+      tag: "QueueForElmMake";
+      output: FlatOutput;
+    }
+  | {
+      tag: "QueueForPostprocess";
+      output: FlatOutput;
+    };
+
+export function getOutputActions(
+  project: Project,
+  runMode: RunMode,
+  maxParallel: number
+): {
+  total: number;
+  actions: Array<OutputAction>;
+  outputsWithoutAction: Array<FlatOutput>;
+} {
+  let index = 0;
+  let numExecuting = 0;
+  const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
+  const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
+  const queueActions: Array<QueueOutputAction> = [];
+  const outputsWithoutAction: Array<FlatOutput> = [];
+
+  for (const [elmJsonPath, outputs] of project.elmJsons) {
+    let elmMakeBusy = Array.from(outputs.values()).some((outputState) => {
+      switch (outputState.status.tag) {
+        case "ElmMake":
+        case "ElmMakeTypecheckOnly":
+          return true;
+        default:
+          return false;
+      }
+    });
+
+    for (const [outputPath, outputState] of outputs) {
+      const flatOutput: FlatOutput = {
+        index,
+        elmJsonPath,
+        outputPath,
+        outputState,
+      };
+      index++;
+
+      if (isExecuting(outputState)) {
+        numExecuting++;
+        outputsWithoutAction.push(flatOutput);
+      } else if (!outputState.dirty) {
+        outputsWithoutAction.push(flatOutput);
+      } else {
+        switch (outputState.status.tag) {
+          case "QueuedForElmMake":
+            if (elmMakeBusy) {
+              outputsWithoutAction.push(flatOutput);
+            } else {
+              elmMakeActions.push({
+                tag: "NeedsElmMake",
+                output: flatOutput,
+                source: "Queued",
+              });
+              elmMakeBusy = true;
+            }
+            break;
+
+          case "QueuedForPostprocess":
+            postprocessActions.push({
+              tag: "NeedsPostprocess",
+              output: flatOutput,
+            });
+            break;
+
+          default:
+            if (elmMakeBusy) {
+              queueActions.push({
+                tag: "QueueForElmMake",
+                output: flatOutput,
+              });
+            } else {
+              elmMakeActions.push({
+                tag: "NeedsElmMake",
+                output: flatOutput,
+                source: "Dirty",
+              });
+              elmMakeBusy = true;
+            }
+            break;
+        }
+      }
+    }
+  }
+
+  const prioritizedActions = prioritizeActions(
+    runMode,
+    elmMakeActions,
+    postprocessActions
+  );
+
+  const threadsLeft = Math.max(0, maxParallel - numExecuting);
+
+  const actions = prioritizedActions.slice(0, threadsLeft);
+
+  for (const action of prioritizedActions.slice(threadsLeft)) {
+    switch (action.tag) {
+      case "NeedsElmMake":
+        switch (action.source) {
+          case "Dirty":
+            queueActions.push({
+              tag: "QueueForElmMake",
+              output: action.output,
+            });
+            break;
+
+          case "Queued":
+            outputsWithoutAction.push(action.output);
+            break;
+        }
+        break;
+
+      case "NeedsPostprocess":
+        outputsWithoutAction.push(action.output);
+        break;
+    }
+  }
+
+  return {
+    total: index,
+    actions: [...actions, ...queueActions],
+    outputsWithoutAction,
+  };
+}
+
+function prioritizeActions(
+  runMode: RunMode,
+  elmMakeActions: Array<NeedsElmMakeOutputAction>,
+  postprocessActions: Array<NeedsPostprocessOutputAction>
+): Array<NeedsElmMakeOutputAction | NeedsPostprocessOutputAction> {
+  switch (runMode) {
+    // In `make` mode, you want to find type errors as quickly as possible (the
+    // most likely CI failure). Don’t let slow postprocessing delay that.
+    case "make":
+      return [...elmMakeActions, ...postprocessActions];
+
+    // In `hot` mode, try to finish each output as fast as possible, rather than
+    // make all of them “evenly slow”.
+    case "hot":
+      return [...postprocessActions, ...elmMakeActions];
+  }
 }

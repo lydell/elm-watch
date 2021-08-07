@@ -20,7 +20,13 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { PortChoice } from "./Port";
-import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
+import {
+  getFlatOutputs,
+  isExecuting,
+  OutputError,
+  OutputState,
+  Project,
+} from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
   CompilationMode,
@@ -506,17 +512,11 @@ const update =
 
             const someOutputIsExecutingOrWasInterrupted = getFlatOutputs(
               project
-            ).some(({ outputState }) => {
-              switch (outputState.status.tag) {
-                case "ElmMake":
-                case "Postprocess":
-                case "Interrupted":
-                  return true;
-
-                default:
-                  return false;
-              }
-            });
+            ).some(
+              ({ outputState }) =>
+                isExecuting(outputState) ||
+                outputState.status.tag === "Interrupted"
+            );
 
             const duration =
               msg.date.getTime() - model.hotState.start.getTime();
@@ -566,16 +566,7 @@ const update =
 
           case "Restarting": {
             const someOutputIsExecuting = getFlatOutputs(project).some(
-              ({ outputState }) => {
-                switch (outputState.status.tag) {
-                  case "ElmMake":
-                  case "Postprocess":
-                    return true;
-
-                  default:
-                    return false;
-                }
-              }
+              ({ outputState }) => isExecuting(outputState)
             );
             return someOutputIsExecuting
               ? [model, []]
@@ -1119,23 +1110,17 @@ const runCmd =
             // eslint-disable-next-line @typescript-eslint/no-loop-func
             ([outputPath, outputState]) => {
               outputIndex++;
-              switch (outputState.status.tag) {
-                case "ElmMake":
-                case "ElmMakeTypecheckOnly":
-                case "Postprocess":
-                  return [];
-
-                default:
-                  return outputState.dirty &&
-                    mutable.webSocketConnections.some((webSocketConnection) =>
-                      webSocketConnectionIsForOutputPath(
-                        webSocketConnection,
-                        outputPath
-                      )
+              return isExecuting(outputState)
+                ? []
+                : outputState.dirty &&
+                  !mutable.webSocketConnections.some((webSocketConnection) =>
+                    webSocketConnectionIsForOutputPath(
+                      webSocketConnection,
+                      outputPath
                     )
-                    ? [{ index: outputIndex, outputPath, outputState }]
-                    : [];
-              }
+                  )
+                ? [{ index: outputIndex, outputPath, outputState }]
+                : [];
             }
           );
 
@@ -1163,35 +1148,31 @@ const runCmd =
           outputPath,
           outputState,
         } of flatOutputs) {
-          switch (outputState.status.tag) {
-            case "ElmMake":
-            case "ElmMakeTypecheckOnly":
-            case "Postprocess":
-              // Already executing – when done they will re-execute if dirty
-              // (unless we’re restarting or something like that).
-              continue;
-
-            default:
-              Compile.compileOneOutput({
-                env,
-                logger,
-                getNow,
-                runMode: "hot",
-                elmToolingJsonPath: mutable.project.elmToolingJsonPath,
-                elmJsonPath,
-                outputPath,
-                outputState,
-                index,
-                total: flatOutputs.length,
-              }).then(() => {
-                dispatch({
-                  tag: "CompilationPartDone",
-                  date: getNow(),
-                  dirty: outputState.dirty,
-                  outputPath,
-                });
-              }, rejectPromise);
+          if (isExecuting(outputState)) {
+            // Already executing – when done they will re-execute if dirty
+            // (unless we’re restarting or something like that).
+            continue;
           }
+
+          Compile.compileOneOutput({
+            env,
+            logger,
+            getNow,
+            runMode: "hot",
+            elmToolingJsonPath: mutable.project.elmToolingJsonPath,
+            elmJsonPath,
+            outputPath,
+            outputState,
+            index,
+            total: flatOutputs.length,
+          }).then(() => {
+            dispatch({
+              tag: "CompilationPartDone",
+              date: getNow(),
+              dirty: outputState.dirty,
+              outputPath,
+            });
+          }, rejectPromise);
         }
         return;
       }

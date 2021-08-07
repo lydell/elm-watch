@@ -59,3 +59,10 @@ export function formatTime(date: Date): string {
     ":"
   );
 }
+
+export function silentlyReadIntEnvValue(
+  value: string | undefined,
+  defaultValue: number
+): number {
+  return /^\d+$/.test(value ?? "") ? Number(value) : defaultValue;
+}

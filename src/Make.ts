@@ -12,7 +12,8 @@ export async function run(
   logger: Logger,
   getNow: GetNow,
   runMode: RunMode,
-  project: Project
+  project: Project,
+  maxParallel: number
 ): Promise<MakeResult> {
   const installResult = await Compile.installDependencies(env, logger, project);
 

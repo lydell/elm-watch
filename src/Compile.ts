@@ -3,7 +3,7 @@ import * as readline from "readline";
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
-import { bold, Env, join } from "./Helpers";
+import { bold, Env, join, silentlyReadIntEnvValue } from "./Helpers";
 import {
   walkImports,
   WalkImportsError,
@@ -41,8 +41,9 @@ export async function installDependencies(
   logger: Logger,
   project: Project
 ): Promise<InstallDependenciesResult> {
-  const loadingMessageDelay = Number(
-    env.__ELM_WATCH_LOADING_MESSAGE_DELAY ?? "100"
+  const loadingMessageDelay = silentlyReadIntEnvValue(
+    env.__ELM_WATCH_LOADING_MESSAGE_DELAY,
+    100
   );
 
   const elmJsonsArray = Array.from(project.elmJsons);
@@ -468,7 +469,7 @@ export function printSpaceForOutputs(logger: Logger, total: number): void {
   }
 }
 
-function updateStatusLine({
+export function updateStatusLine({
   logger,
   outputPath,
   outputState,
