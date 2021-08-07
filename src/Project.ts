@@ -432,6 +432,11 @@ type FlatOutput = {
   outputState: OutputState;
 };
 
+type FlatOutputWithSource = {
+  output: FlatOutput;
+  source: "Dirty" | "Queued";
+};
+
 export function getFlatOutputs(project: Project): Array<FlatOutput> {
   let index = 0;
   const result = [];
@@ -446,18 +451,24 @@ export function getFlatOutputs(project: Project): Array<FlatOutput> {
 
 type OutputAction =
   | NeedsElmMakeOutputAction
+  | NeedsElmMakeTypecheckOnlyOutputAction
   | NeedsPostprocessOutputAction
   | QueueOutputAction;
 
-type NeedsElmMakeOutputAction = {
+type NeedsElmMakeOutputAction = FlatOutputWithSource & {
   tag: "NeedsElmMake";
-  output: FlatOutput;
-  source: "Dirty" | "Queued";
+  priority: number;
+};
+
+type NeedsElmMakeTypecheckOnlyOutputAction = {
+  tag: "NeedsElmMakeTypecheckOnly";
+  outputs: NonEmptyArray<FlatOutputWithSource>;
 };
 
 type NeedsPostprocessOutputAction = {
   tag: "NeedsPostprocess";
   output: FlatOutput;
+  priority: number;
 };
 
 type QueueOutputAction =
@@ -473,7 +484,8 @@ type QueueOutputAction =
 export function getOutputActions(
   project: Project,
   runMode: RunMode,
-  maxParallel: number
+  maxParallel: number,
+  prioritizedOutputs: HashMap<OutputPath, number>
 ): {
   total: number;
   actions: Array<OutputAction>;
@@ -482,6 +494,8 @@ export function getOutputActions(
   let index = 0;
   let numExecuting = 0;
   const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
+  const elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction> =
+    [];
   const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
   const queueActions: Array<QueueOutputAction> = [];
   const outputsWithoutAction: Array<FlatOutput> = [];
@@ -506,23 +520,29 @@ export function getOutputActions(
       };
       index++;
 
+      const typecheckOnly: Array<FlatOutputWithSource> = [];
+
       if (isExecuting(outputState)) {
         numExecuting++;
         outputsWithoutAction.push(flatOutput);
       } else if (!outputState.dirty) {
         outputsWithoutAction.push(flatOutput);
       } else {
+        const priority = prioritizedOutputs.get(outputPath);
         switch (outputState.status.tag) {
           case "QueuedForElmMake":
             if (elmMakeBusy) {
               outputsWithoutAction.push(flatOutput);
-            } else {
+            } else if (priority !== undefined) {
               elmMakeActions.push({
                 tag: "NeedsElmMake",
                 output: flatOutput,
                 source: "Queued",
+                priority,
               });
               elmMakeBusy = true;
+            } else {
+              typecheckOnly.push({ output: flatOutput, source: "Queued" });
             }
             break;
 
@@ -530,6 +550,7 @@ export function getOutputActions(
             postprocessActions.push({
               tag: "NeedsPostprocess",
               output: flatOutput,
+              priority: priority ?? 0,
             });
             break;
 
@@ -539,15 +560,42 @@ export function getOutputActions(
                 tag: "QueueForElmMake",
                 output: flatOutput,
               });
-            } else {
+            } else if (priority !== undefined) {
               elmMakeActions.push({
                 tag: "NeedsElmMake",
                 output: flatOutput,
                 source: "Dirty",
+                priority,
               });
               elmMakeBusy = true;
+            } else {
+              typecheckOnly.push({ output: flatOutput, source: "Dirty" });
             }
             break;
+        }
+      }
+
+      if (isNonEmptyArray(typecheckOnly)) {
+        if (elmMakeBusy) {
+          for (const { output, source } of typecheckOnly) {
+            switch (source) {
+              case "Dirty":
+                queueActions.push({
+                  tag: "QueueForElmMake",
+                  output: flatOutput,
+                });
+                break;
+
+              case "Queued":
+                outputsWithoutAction.push(output);
+                break;
+            }
+          }
+        } else {
+          elmMakeTypecheckOnlyActions.push({
+            tag: "NeedsElmMakeTypecheckOnly",
+            outputs: typecheckOnly,
+          });
         }
       }
     }
@@ -556,6 +604,7 @@ export function getOutputActions(
   const prioritizedActions = prioritizeActions(
     runMode,
     elmMakeActions,
+    elmMakeTypecheckOnlyActions,
     postprocessActions
   );
 
@@ -580,6 +629,23 @@ export function getOutputActions(
         }
         break;
 
+      case "NeedsElmMakeTypecheckOnly":
+        for (const { output, source } of action.outputs) {
+          switch (source) {
+            case "Dirty":
+              queueActions.push({
+                tag: "QueueForElmMake",
+                output,
+              });
+              break;
+
+            case "Queued":
+              outputsWithoutAction.push(output);
+              break;
+          }
+        }
+        break;
+
       case "NeedsPostprocess":
         outputsWithoutAction.push(action.output);
         break;
@@ -596,17 +662,37 @@ export function getOutputActions(
 function prioritizeActions(
   runMode: RunMode,
   elmMakeActions: Array<NeedsElmMakeOutputAction>,
+  elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction>,
   postprocessActions: Array<NeedsPostprocessOutputAction>
-): Array<NeedsElmMakeOutputAction | NeedsPostprocessOutputAction> {
+): Array<
+  | NeedsElmMakeOutputAction
+  | NeedsElmMakeTypecheckOnlyOutputAction
+  | NeedsPostprocessOutputAction
+> {
   switch (runMode) {
     // In `make` mode, you want to find type errors as quickly as possible (the
     // most likely CI failure). Don’t let slow postprocessing delay that.
+    // All outputs have the same priority in `make` mode so don’t bother sorting.
     case "make":
-      return [...elmMakeActions, ...postprocessActions];
+      return [
+        ...elmMakeActions,
+        ...elmMakeTypecheckOnlyActions,
+        ...postprocessActions,
+      ];
 
     // In `hot` mode, try to finish each output as fast as possible, rather than
     // make all of them “evenly slow”.
     case "hot":
-      return [...postprocessActions, ...elmMakeActions];
+      return [
+        ...sortByPriority(postprocessActions),
+        ...sortByPriority(elmMakeActions),
+        ...elmMakeTypecheckOnlyActions,
+      ];
   }
+}
+
+function sortByPriority<T extends { priority: number }>(
+  array: Array<T>
+): Array<T> {
+  return array.slice().sort((a, b) => b.priority - a.priority);
 }

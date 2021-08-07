@@ -67,6 +67,7 @@ type Mutable = {
 type WebSocketConnection = {
   webSocket: WebSocket;
   outputPath: OutputPath | { tag: "OutputPathError" };
+  priority: number;
 };
 
 type Msg =
@@ -630,6 +631,7 @@ const update =
               webSocketConnection: {
                 webSocket: msg.webSocket,
                 outputPath: { tag: "OutputPathError" },
+                priority: msg.date.getTime(),
               },
             },
             {
@@ -663,6 +665,7 @@ const update =
                   webSocketConnection: {
                     webSocket: msg.webSocket,
                     outputPath: result.outputPath,
+                    priority: msg.date.getTime(),
                   },
                 },
                 ...cmds,
