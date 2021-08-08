@@ -966,7 +966,7 @@ function statusLine(
       return truncate(`${fancy ? "⚪️ " : ""}${output}: queued`);
 
     case "QueuedForPostprocess":
-      return truncate(`${fancy ? "️🟢 " : ""}${output}: elm make done`);
+      return truncate(`${fancy ? "🟢 " : ""}${output}: elm make done`);
 
     case "ElmNotFoundError":
     case "CommandNotFoundError":
