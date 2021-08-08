@@ -28,6 +28,7 @@ export async function run(
     project,
     runMode: "make",
     includeInterrupted: true,
+    prioritizedOutputs: "AllEqualPriority",
   });
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
@@ -82,6 +83,7 @@ function getNextOutputActions(project: Project): OutputActions {
     project,
     runMode: "make",
     includeInterrupted: true,
+    prioritizedOutputs: "AllEqualPriority",
   });
   const errors = Compile.extractErrors(project);
   // Skip postprocess if there are `elm make` errors (fail fast).

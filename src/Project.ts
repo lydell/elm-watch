@@ -480,6 +480,7 @@ type QueueForElmMakeOutputAction = {
 export type OutputActions = {
   total: number;
   numExecuting: number;
+  numInterrupted: number;
   actions: Array<OutputAction>;
   outputsWithoutAction: Array<IndexedOutput>;
 };
@@ -493,10 +494,11 @@ export function getOutputActions({
   project: Project;
   runMode: RunMode;
   includeInterrupted: boolean;
-  prioritizedOutputs?: HashMap<OutputPath, number>;
+  prioritizedOutputs: HashMap<OutputPath, number> | "AllEqualPriority";
 }): OutputActions {
   let index = 0;
   let numExecuting = 0;
+  let numInterrupted = 0;
   const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
   const elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction> =
     [];
@@ -546,7 +548,7 @@ export function getOutputActions({
       const typecheckOnly: Array<IndexedOutputWithSource> = [];
 
       const priority =
-        prioritizedOutputs === undefined
+        prioritizedOutputs === "AllEqualPriority"
           ? 0
           : prioritizedOutputs.get(outputPath);
 
@@ -584,6 +586,7 @@ export function getOutputActions({
           break;
 
         case "Interrupted":
+          numInterrupted++;
           if (includeInterrupted) {
             if (elmMakeBusy) {
               queueActions.push({
@@ -683,6 +686,7 @@ export function getOutputActions({
   return {
     total: index,
     numExecuting,
+    numInterrupted,
     actions: [...actions, ...queueActions],
     outputsWithoutAction,
   };

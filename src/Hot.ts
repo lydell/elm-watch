@@ -10,6 +10,7 @@ import * as Compile from "./Compile";
 import { ElmWatchJsonWritable } from "./ElmWatchJson";
 import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
+import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { bold, dim, Env, formatTime, join } from "./Helpers";
 import type { Logger } from "./Logger";
@@ -75,6 +76,7 @@ type Msg =
   | {
       tag: "CompilationPartDone";
       date: Date;
+      prioritizedOutputs: HashMap<OutputPath, number>;
       // dirty: boolean;
       // outputPath: OutputPath;
     }
@@ -482,7 +484,15 @@ const update =
         ];
       }
 
-      case "CompilationPartDone":
+      case "CompilationPartDone": {
+        const includeInterrupted = model.nextAction.tag !== "Compile";
+        const outputActions = getOutputActions({
+          project,
+          runMode: "hot",
+          includeInterrupted,
+          prioritizedOutputs: msg.prioritizedOutputs,
+        });
+
         switch (model.hotState.tag) {
           case "Dependencies":
           case "Idle":
@@ -499,12 +509,6 @@ const update =
             ];
 
           case "Compiling": {
-            const outputActions = getOutputActions({
-              project,
-              runMode: "hot",
-              includeInterrupted: true,
-            });
-
             const duration =
               msg.date.getTime() - model.hotState.start.getTime();
 
@@ -534,13 +538,16 @@ const update =
                   {
                     tag: "CompileAllOutputsAsNeeded",
                     mode: "ContinueCompilation",
-                    includeInterrupted: model.nextAction.tag !== "Compile",
+                    includeInterrupted,
                   },
                 ],
               ];
             }
 
-            if (outputActions.numExecuting > 0) {
+            if (
+              outputActions.numExecuting > 0 ||
+              outputActions.numInterrupted > 0
+            ) {
               return [model, [cmd]];
             }
 
@@ -566,20 +573,15 @@ const update =
             ];
           }
 
-          case "Restarting": {
-            const outputActions = getOutputActions({
-              project,
-              runMode: "hot",
-              includeInterrupted: true,
-            });
+          case "Restarting":
             return outputActions.numExecuting === 0
               ? [
                   model,
                   [{ tag: "Restart", restartReasons: model.hotState.events }],
                 ]
               : [model, []];
-          }
         }
+      }
 
       case "InstallDependenciesDone":
         switch (model.hotState.tag) {
@@ -1124,6 +1126,9 @@ const runCmd =
           project: mutable.project,
           runMode: "hot",
           includeInterrupted: cmd.includeInterrupted,
+          prioritizedOutputs: makePrioritizedOutputs(
+            mutable.webSocketConnections
+          ),
         });
 
         switch (cmd.mode) {
@@ -1157,6 +1162,9 @@ const runCmd =
               dispatch({
                 tag: "CompilationPartDone",
                 date: getNow(),
+                prioritizedOutputs: makePrioritizedOutputs(
+                  mutable.webSocketConnections
+                ),
                 // dirty: outputState.dirty,
                 // outputPath,
               });
@@ -1166,6 +1174,9 @@ const runCmd =
           dispatch({
             tag: "CompilationPartDone",
             date: getNow(),
+            prioritizedOutputs: makePrioritizedOutputs(
+              mutable.webSocketConnections
+            ),
             // dirty: outputState.dirty,
             // outputPath,
           });
@@ -1323,6 +1334,19 @@ const runCmd =
         return;
     }
   };
+
+function makePrioritizedOutputs(
+  webSocketConnections: Array<WebSocketConnection>
+): HashMap<OutputPath, number> {
+  const map = new HashMap<OutputPath, number>();
+  for (const { outputPath, priority } of webSocketConnections) {
+    if (outputPath.tag !== "OutputPathError") {
+      const previous = map.get(outputPath) ?? 0;
+      map.set(outputPath, Math.max(priority, previous));
+    }
+  }
+  return map;
+}
 
 function makeWatcherEvent(
   eventName: WatcherEventName,
