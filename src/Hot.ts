@@ -22,7 +22,7 @@ import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import {
   getFlatOutputs,
-  isExecuting,
+  getOutputActions,
   OutputError,
   OutputState,
   Project,
@@ -75,8 +75,8 @@ type Msg =
   | {
       tag: "CompilationPartDone";
       date: Date;
-      dirty: boolean;
-      outputPath: OutputPath;
+      // dirty: boolean;
+      // outputPath: OutputPath;
     }
   | {
       tag: "GotWatcherEvent";
@@ -123,7 +123,6 @@ type HotState =
       tag: "Compiling";
       start: Date;
       events: Array<WatcherEvent | WebSocketConnectedEvent>;
-      keepConsumingDirty: boolean;
     }
   | {
       tag: "Dependencies";
@@ -148,7 +147,9 @@ type Cmd =
       tag: "ClearScreen";
     }
   | {
-      tag: "CompileAllOutputs";
+      tag: "CompileAllOutputsAsNeeded";
+      mode: "AfterIdle" | "AfterInstallDependencies" | "ContinueCompilation";
+      includeInterrupted: boolean;
     }
   | {
       tag: "HandleElmWatchJsonWriteError";
@@ -174,9 +175,6 @@ type Cmd =
   | {
       tag: "PrintCompileErrors";
       errors: NonEmptyArray<ErrorTemplate>;
-    }
-  | {
-      tag: "PrintStatusLinesForElmJsonsErrors";
     }
   | {
       tag: "Restart";
@@ -467,10 +465,6 @@ const update =
         return [
           {
             ...model,
-            hotState:
-              model.hotState.tag === "Compiling"
-                ? { ...model.hotState, keepConsumingDirty: false }
-                : model.hotState,
             nextAction: updatedNextAction,
           },
           [...cmds, { tag: "SleepBeforeNextAction" }],
@@ -505,41 +499,48 @@ const update =
             ];
 
           case "Compiling": {
-            if (msg.dirty) {
-              return model.hotState.keepConsumingDirty
-                ? [model, [{ tag: "CompileAllOutputs" }]]
-                : [model, []];
-            }
-
-            const someOutputIsExecutingOrWasInterrupted = getFlatOutputs(
-              project
-            ).some(
-              ({ outputState }) =>
-                isExecuting(outputState) ||
-                outputState.status.tag === "Interrupted"
-            );
+            const outputActions = getOutputActions({
+              project,
+              runMode: "hot",
+              includeInterrupted: true,
+            });
 
             const duration =
               msg.date.getTime() - model.hotState.start.getTime();
 
             const errors = Compile.extractErrors(project);
 
-            const cmd: Cmd = {
-              tag: "WebSocketSendToOutput",
-              outputPath: msg.outputPath,
-              message: {
-                tag: "StatusChanged",
-                status: isNonEmptyArray(errors)
-                  ? { tag: "CompileError" }
-                  : // TODO: Send along new JS to eval here! Probably good to avoid JSON encoding of it. Maybe separate web socket message?
-                    // Also, if msg.outputPath is /dev/null, don’t send anything.
-                    { tag: "SuccessfullyCompiled" },
-              },
-            };
+            // TODO: Get back to websocket stuff
+            const cmd: Cmd = { tag: "NoCmd" };
+            // const cmd: Cmd = {
+            //   tag: "WebSocketSendToOutput",
+            //   outputPath: msg.outputPath,
+            //   message: {
+            //     tag: "StatusChanged",
+            //     status: isNonEmptyArray(errors)
+            //       ? { tag: "CompileError" }
+            //       : // TODO: Send along new JS to eval here! Probably good to avoid JSON encoding of it. Maybe separate web socket message?
+            //         // Also, if msg.outputPath is /dev/null, don’t send anything.
+            //         // WebSocket client code injection needs to happen in Compile.compileOneOutput
+            //         // before running postprocess.
+            //         { tag: "SuccessfullyCompiled" },
+            //   },
+            // };
 
-            // Output executing -> wait for that.
-            // Output interrupted -> it will be re-executed soon, so wait for that.
-            if (someOutputIsExecutingOrWasInterrupted) {
+            if (outputActions.actions.length > 0) {
+              return [
+                model,
+                [
+                  {
+                    tag: "CompileAllOutputsAsNeeded",
+                    mode: "ContinueCompilation",
+                    includeInterrupted: model.nextAction.tag !== "Compile",
+                  },
+                ],
+              ];
+            }
+
+            if (outputActions.numExecuting > 0) {
               return [model, [cmd]];
             }
 
@@ -566,15 +567,17 @@ const update =
           }
 
           case "Restarting": {
-            const someOutputIsExecuting = getFlatOutputs(project).some(
-              ({ outputState }) => isExecuting(outputState)
-            );
-            return someOutputIsExecuting
-              ? [model, []]
-              : [
+            const outputActions = getOutputActions({
+              project,
+              runMode: "hot",
+              includeInterrupted: true,
+            });
+            return outputActions.numExecuting === 0
+              ? [
                   model,
                   [{ tag: "Restart", restartReasons: model.hotState.events }],
-                ];
+                ]
+              : [model, []];
           }
         }
 
@@ -589,12 +592,23 @@ const update =
                 ];
 
               case "Success": {
-                return runCompile(
-                  { ...model, hotState: { tag: "Idle" } },
-                  model.hotState.events,
-                  model.hotState.start,
-                  { clearScreen: false }
-                );
+                return [
+                  {
+                    ...model,
+                    hotState: {
+                      tag: "Compiling",
+                      start: model.hotState.start,
+                      events: model.hotState.events,
+                    },
+                  },
+                  [
+                    {
+                      tag: "CompileAllOutputsAsNeeded",
+                      mode: "AfterInstallDependencies",
+                      includeInterrupted: true,
+                    },
+                  ],
+                ];
               }
             }
           }
@@ -975,9 +989,7 @@ function runNextAction(
     }
 
     case "Compile":
-      return runCompile(model, model.nextAction.events, start, {
-        clearScreen: true,
-      });
+      return runCompile(model, model.nextAction.events, start);
 
     case "PrintNonInterestingEvents":
       switch (model.hotState.tag) {
@@ -1010,8 +1022,7 @@ function runNextAction(
 function runCompile(
   model: Model,
   events: Array<WatcherEvent | WebSocketConnectedEvent>,
-  start: Date,
-  { clearScreen = false }
+  start: Date
 ): [Model, Array<Cmd>] {
   switch (model.hotState.tag) {
     case "Idle": {
@@ -1022,13 +1033,14 @@ function runCompile(
             tag: "Compiling",
             start,
             events,
-            keepConsumingDirty: false,
           },
         },
         [
-          clearScreen ? { tag: "ClearScreen" } : { tag: "NoCmd" },
-          { tag: "PrintStatusLinesForElmJsonsErrors" },
-          { tag: "CompileAllOutputs" },
+          {
+            tag: "CompileAllOutputsAsNeeded",
+            mode: "AfterIdle",
+            includeInterrupted: true,
+          },
         ],
       ];
     }
@@ -1039,11 +1051,16 @@ function runCompile(
           ...model,
           hotState: {
             ...model.hotState,
-            keepConsumingDirty: true,
             events: [...model.hotState.events, ...events],
           },
         },
-        [{ tag: "CompileAllOutputs" }],
+        [
+          {
+            tag: "CompileAllOutputsAsNeeded",
+            mode: "ContinueCompilation",
+            includeInterrupted: true,
+          },
+        ],
       ];
 
     case "Dependencies":
@@ -1102,79 +1119,56 @@ const runCmd =
         mutable.lastInfoMessage = undefined;
         return;
 
-      case "CompileAllOutputs": {
-        const flatOutputs = getFlatOutputs(mutable.project);
+      case "CompileAllOutputsAsNeeded": {
+        const outputActions = getOutputActions({
+          project: mutable.project,
+          runMode: "hot",
+          includeInterrupted: cmd.includeInterrupted,
+        });
 
-        Compile.printSpaceForOutputs(logger, flatOutputs.length);
+        switch (cmd.mode) {
+          case "AfterInstallDependencies":
+            Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
+            Compile.printSpaceForOutputs(logger, outputActions.total);
+            break;
 
-        let outputIndex = -1;
-        for (const [elmJsonPath, outputs] of mutable.project.elmJsons) {
-          const candidates = Array.from(outputs).flatMap(
-            // eslint-disable-next-line @typescript-eslint/no-loop-func
-            ([outputPath, outputState]) => {
-              outputIndex++;
-              return isExecuting(outputState)
-                ? []
-                : outputState.dirty &&
-                  !mutable.webSocketConnections.some((webSocketConnection) =>
-                    webSocketConnectionIsForOutputPath(
-                      webSocketConnection,
-                      outputPath
-                    )
-                  )
-                ? [{ index: outputIndex, outputPath, outputState }]
-                : [];
-            }
-          );
+          case "AfterIdle":
+            logger.clearScreen();
+            mutable.lastInfoMessage = undefined;
+            Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
+            Compile.printSpaceForOutputs(logger, outputActions.total);
+            break;
 
-          if (isNonEmptyArray(candidates)) {
-            Compile.typecheck({
+          case "ContinueCompilation":
+            break;
+        }
+
+        if (isNonEmptyArray(outputActions.actions)) {
+          for (const action of outputActions.actions) {
+            Compile.handleOutputAction({
               env,
               logger,
-              elmJsonPath,
-              outputs: candidates,
-              total: flatOutputs.length,
+              getNow,
+              runMode: "make",
+              elmToolingJsonPath: mutable.project.elmToolingJsonPath,
+              total: outputActions.total,
+              action,
             }).then(() => {
               dispatch({
                 tag: "CompilationPartDone",
                 date: getNow(),
-                dirty: candidates.some(({ outputState }) => outputState.dirty),
-                outputPath: { tag: "NullOutputPath" },
+                // dirty: outputState.dirty,
+                // outputPath,
               });
             }, rejectPromise);
           }
-        }
-
-        for (const {
-          index,
-          elmJsonPath,
-          outputPath,
-          outputState,
-        } of flatOutputs) {
-          if (isExecuting(outputState)) {
-            // Already executing – when done they will re-execute if dirty
-            // (unless we’re restarting or something like that).
-            continue;
-          }
-
-          Compile.compileOneOutput({
-            env,
-            logger,
-            getNow,
-            runMode: "hot",
-            elmJsonPath,
-            outputPath,
-            outputState,
-            index,
-            total: flatOutputs.length,
-          }).then(() => {
-            dispatch({
-              tag: "CompilationPartDone",
-              date: getNow(),
-              dirty: outputState.dirty,
-              outputPath,
-            });
-          }, rejectPromise);
+        } else if (outputActions.numExecuting === 0) {
+          dispatch({
+            tag: "CompilationPartDone",
+            date: getNow(),
+            // dirty: outputState.dirty,
+            // outputPath,
+          });
         }
         return;
       }
@@ -1240,10 +1234,6 @@ const runCmd =
 
       case "PrintCompileErrors":
         Compile.printErrors(logger, cmd.errors);
-        return;
-
-      case "PrintStatusLinesForElmJsonsErrors":
-        Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
         return;
 
       case "Restart": {

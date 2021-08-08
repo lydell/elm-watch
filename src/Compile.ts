@@ -201,8 +201,7 @@ export async function handleOutputAction({
   }
 }
 
-// TODO: No need to `export` this and some other functions anymore?
-export async function compileOneOutput({
+async function compileOneOutput({
   env,
   logger,
   getNow,
@@ -382,7 +381,7 @@ async function postprocessHelper({
   updateStatusLineHelper();
 }
 
-export async function typecheck({
+async function typecheck({
   env,
   logger,
   elmJsonPath,

@@ -24,7 +24,11 @@ export async function run(
       break;
   }
 
-  const initialOutputActions = getOutputActions(project, "make");
+  const initialOutputActions = getOutputActions({
+    project,
+    runMode: "make",
+    includeInterrupted: true,
+  });
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
 
@@ -74,7 +78,11 @@ export async function run(
 }
 
 function getNextOutputActions(project: Project): OutputActions {
-  const nextOutputActions = getOutputActions(project, "make");
+  const nextOutputActions = getOutputActions({
+    project,
+    runMode: "make",
+    includeInterrupted: true,
+  });
   const errors = Compile.extractErrors(project);
   // Skip postprocess if there are `elm make` errors (fail fast).
   return isNonEmptyArray(errors)

@@ -424,18 +424,6 @@ function resolveElmJson(
   };
 }
 
-export function isExecuting(outputState: OutputState): boolean {
-  switch (outputState.status.tag) {
-    case "ElmMake":
-    case "ElmMakeTypecheckOnly":
-    case "Postprocess":
-      return true;
-
-    default:
-      return false;
-  }
-}
-
 type FlatOutput = {
   index: number;
   elmJsonPath: ElmJsonPath;
@@ -496,11 +484,17 @@ export type OutputActions = {
   outputsWithoutAction: Array<FlatOutput>;
 };
 
-export function getOutputActions(
-  project: Project,
-  runMode: RunMode,
-  prioritizedOutputs?: HashMap<OutputPath, number>
-): OutputActions {
+export function getOutputActions({
+  project,
+  runMode,
+  prioritizedOutputs,
+  includeInterrupted,
+}: {
+  project: Project;
+  runMode: RunMode;
+  includeInterrupted: boolean;
+  prioritizedOutputs?: HashMap<OutputPath, number>;
+}): OutputActions {
   let index = 0;
   let numExecuting = 0;
   const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
@@ -532,44 +526,47 @@ export function getOutputActions(
 
       const typecheckOnly: Array<FlatOutputWithSource> = [];
 
-      if (isExecuting(outputState)) {
-        numExecuting++;
-        outputsWithoutAction.push(flatOutput);
-      } else {
-        const priority =
-          prioritizedOutputs === undefined
-            ? 0
-            : prioritizedOutputs.get(outputPath);
-        switch (outputState.status.tag) {
-          case "QueuedForElmMake":
-            if (elmMakeBusy) {
-              outputsWithoutAction.push(flatOutput);
-            } else if (priority !== undefined) {
-              elmMakeActions.push({
-                tag: "NeedsElmMake",
-                output: flatOutput,
-                source: "Queued",
-                priority,
-              });
-              elmMakeBusy = true;
-            } else {
-              typecheckOnly.push({ output: flatOutput, source: "Queued" });
-            }
-            break;
+      const priority =
+        prioritizedOutputs === undefined
+          ? 0
+          : prioritizedOutputs.get(outputPath);
 
-          case "QueuedForPostprocess":
-            postprocessActions.push({
-              tag: "NeedsPostprocess",
+      switch (outputState.status.tag) {
+        case "ElmMake":
+        case "ElmMakeTypecheckOnly":
+        case "Postprocess":
+          numExecuting++;
+          outputsWithoutAction.push(flatOutput);
+          break;
+
+        case "QueuedForElmMake":
+          if (elmMakeBusy) {
+            outputsWithoutAction.push(flatOutput);
+          } else if (priority !== undefined) {
+            elmMakeActions.push({
+              tag: "NeedsElmMake",
               output: flatOutput,
-              postprocessArray: outputState.status.postprocessArray,
-              priority: priority ?? 0,
+              source: "Queued",
+              priority,
             });
-            break;
+            elmMakeBusy = true;
+          } else {
+            typecheckOnly.push({ output: flatOutput, source: "Queued" });
+          }
+          break;
 
-          default:
-            if (!outputState.dirty) {
-              outputsWithoutAction.push(flatOutput);
-            } else if (elmMakeBusy) {
+        case "QueuedForPostprocess":
+          postprocessActions.push({
+            tag: "NeedsPostprocess",
+            output: flatOutput,
+            postprocessArray: outputState.status.postprocessArray,
+            priority: priority ?? 0,
+          });
+          break;
+
+        case "Interrupted":
+          if (includeInterrupted) {
+            if (elmMakeBusy) {
               queueActions.push({
                 tag: "QueueForElmMake",
                 output: flatOutput,
@@ -585,8 +582,31 @@ export function getOutputActions(
             } else {
               typecheckOnly.push({ output: flatOutput, source: "Dirty" });
             }
-            break;
-        }
+          } else {
+            outputsWithoutAction.push(flatOutput);
+          }
+          break;
+
+        default:
+          if (!outputState.dirty) {
+            outputsWithoutAction.push(flatOutput);
+          } else if (elmMakeBusy) {
+            queueActions.push({
+              tag: "QueueForElmMake",
+              output: flatOutput,
+            });
+          } else if (priority !== undefined) {
+            elmMakeActions.push({
+              tag: "NeedsElmMake",
+              output: flatOutput,
+              source: "Dirty",
+              priority,
+            });
+            elmMakeBusy = true;
+          } else {
+            typecheckOnly.push({ output: flatOutput, source: "Dirty" });
+          }
+          break;
       }
 
       if (isNonEmptyArray(typecheckOnly)) {
