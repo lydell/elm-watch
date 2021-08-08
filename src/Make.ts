@@ -34,9 +34,10 @@ export async function run(
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
 
   // `make` uses “fail fast.” _One_ of these error categories are shown at a time:
-  // 1. elm.json errors
-  // 2. `elm make` errors
-  // 3. Postprocess errors
+  // 1. All elm.json errors.
+  // 2. All `elm make` errors.
+  // 3. First postprocess error (likely the same error for all of them (bad
+  //    command), and they might be slow.)
   if (
     isNonEmptyArray(initialOutputActions.actions) &&
     !isNonEmptyArray(project.elmJsonsErrors)
@@ -85,9 +86,8 @@ function getNextOutputActions(project: Project): Compile.OutputActions {
     includeInterrupted: true,
     prioritizedOutputs: "AllEqualPriority",
   });
-  const errors = Compile.extractErrors(project);
-  // Skip postprocess if there are `elm make` errors (fail fast).
-  return isNonEmptyArray(errors)
+  // Skip postprocess if there are any errors (fail fast).
+  return nextOutputActions.numErrors > 0
     ? {
         ...nextOutputActions,
         actions: nextOutputActions.actions.filter(
