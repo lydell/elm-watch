@@ -109,7 +109,7 @@ describe("successful make", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ build/main.js: elm make --optimize
-      ️🟢 build/main.js: queued
+      ️🟢 build/main.js: elm make done
       ⏳ build/main.js: postprocess
       ✅ build/main.js
     `);

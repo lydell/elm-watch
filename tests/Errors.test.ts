@@ -1900,7 +1900,7 @@ describe("errors", () => {
         ⏳ build/app.js: elm make
         ✅ build/app.js
         ⏳ build/postprocess-error.js: elm make
-        ️🟢 build/postprocess-error.js: queued
+        ️🟢 build/postprocess-error.js: elm make done
 
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
@@ -1940,7 +1940,7 @@ describe("errors", () => {
         ⏳ Dependencies
         ✅ Dependencies
         ⏳ build/postprocess-error.js: elm make
-        ️🟢 build/postprocess-error.js: queued
+        ️🟢 build/postprocess-error.js: elm make done
         ⏳ build/postprocess-error.js: postprocess
         🚨 build/postprocess-error.js
 
@@ -1974,6 +1974,7 @@ describe("errors", () => {
             ...TEST_ENV,
             NO_COLOR: "",
           },
+
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -1986,7 +1987,7 @@ describe("errors", () => {
         build/app.js: elm make
         build/app.js: success
         build/postprocess-error.js: elm make
-        build/postprocess-error.js: queued
+        build/postprocess-error.js: elm make done
 
         -- TYPE MISMATCH ---------------------------------------------------------------
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
@@ -2032,7 +2033,7 @@ describe("errors", () => {
         Dependencies: in progress
         Dependencies: success
         build/postprocess-error.js: elm make
-        build/postprocess-error.js: queued
+        build/postprocess-error.js: elm make done
         build/postprocess-error.js: postprocess
         build/postprocess-error.js: error
 
