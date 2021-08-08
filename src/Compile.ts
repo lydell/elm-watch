@@ -3,6 +3,7 @@ import * as readline from "readline";
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
+import { HashMap } from "./HashMap";
 import { bold, Env, join, silentlyReadIntEnvValue } from "./Helpers";
 import {
   walkImports,
@@ -12,11 +13,12 @@ import {
 import { Logger } from "./Logger";
 import {
   flattenNonEmptyArray,
+  isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { postprocess } from "./Postprocess";
-import { OutputAction, OutputState, OutputStatus, Project } from "./Project";
+import { OutputState, OutputStatus, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
 import {
   ElmJsonPath,
@@ -139,6 +141,291 @@ export async function installDependencies(
   }
 
   return { tag: "Success" };
+}
+
+type IndexedOutput = {
+  index: number;
+  elmJsonPath: ElmJsonPath;
+  outputPath: OutputPath;
+  outputState: OutputState;
+};
+
+type IndexedOutputWithSource = {
+  output: IndexedOutput;
+  source: "Dirty" | "Queued";
+};
+
+export type OutputAction =
+  | NeedsElmMakeOutputAction
+  | NeedsElmMakeTypecheckOnlyOutputAction
+  | NeedsPostprocessOutputAction
+  | QueueForElmMakeOutputAction;
+
+type NeedsElmMakeOutputAction = IndexedOutputWithSource & {
+  tag: "NeedsElmMake";
+  priority: number;
+};
+
+type NeedsElmMakeTypecheckOnlyOutputAction = {
+  tag: "NeedsElmMakeTypecheckOnly";
+  elmJsonPath: ElmJsonPath;
+  outputs: NonEmptyArray<IndexedOutputWithSource>;
+};
+
+type NeedsPostprocessOutputAction = {
+  tag: "NeedsPostprocess";
+  output: IndexedOutput;
+  postprocessArray: NonEmptyArray<string>;
+  priority: number;
+};
+
+type QueueForElmMakeOutputAction = {
+  tag: "QueueForElmMake";
+  output: IndexedOutput;
+};
+
+export type OutputActions = {
+  total: number;
+  numExecuting: number;
+  numInterrupted: number;
+  actions: Array<OutputAction>;
+};
+
+export function getOutputActions({
+  project,
+  runMode,
+  prioritizedOutputs,
+  includeInterrupted,
+}: {
+  project: Project;
+  runMode: RunMode;
+  includeInterrupted: boolean;
+  prioritizedOutputs: HashMap<OutputPath, number> | "AllEqualPriority";
+}): OutputActions {
+  let index = 0;
+  let numExecuting = 0;
+  let numInterrupted = 0;
+  const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
+  const elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction> =
+    [];
+  const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
+  const queueActions: Array<QueueForElmMakeOutputAction> = [];
+
+  const queueTypecheckOnly = (
+    typecheckOnly: NonEmptyArray<IndexedOutputWithSource>
+  ): void => {
+    for (const { output, source } of typecheckOnly) {
+      switch (source) {
+        case "Dirty":
+          queueActions.push({
+            tag: "QueueForElmMake",
+            output,
+          });
+          break;
+
+        case "Queued":
+          break;
+      }
+    }
+  };
+
+  for (const [elmJsonPath, outputs] of project.elmJsons) {
+    let elmMakeBusy = Array.from(outputs.values()).some((outputState) => {
+      switch (outputState.status.tag) {
+        case "ElmMake":
+        case "ElmMakeTypecheckOnly":
+          return true;
+        default:
+          return false;
+      }
+    });
+
+    for (const [outputPath, outputState] of outputs) {
+      const output: IndexedOutput = {
+        index,
+        elmJsonPath,
+        outputPath,
+        outputState,
+      };
+      index++;
+
+      const typecheckOnly: Array<IndexedOutputWithSource> = [];
+
+      const priority =
+        prioritizedOutputs === "AllEqualPriority"
+          ? 0
+          : prioritizedOutputs.get(outputPath);
+
+      switch (outputState.status.tag) {
+        case "ElmMake":
+        case "ElmMakeTypecheckOnly":
+        case "Postprocess":
+          numExecuting++;
+          break;
+
+        case "QueuedForElmMake":
+          if (!elmMakeBusy) {
+            if (priority !== undefined) {
+              elmMakeActions.push({
+                tag: "NeedsElmMake",
+                output,
+                source: "Queued",
+                priority,
+              });
+              elmMakeBusy = true;
+            } else {
+              typecheckOnly.push({ output, source: "Queued" });
+            }
+          }
+          break;
+
+        case "QueuedForPostprocess":
+          postprocessActions.push({
+            tag: "NeedsPostprocess",
+            output,
+            postprocessArray: outputState.status.postprocessArray,
+            priority: priority ?? 0,
+          });
+          break;
+
+        case "Interrupted":
+          numInterrupted++;
+          if (includeInterrupted) {
+            if (elmMakeBusy) {
+              queueActions.push({
+                tag: "QueueForElmMake",
+                output,
+              });
+            } else if (priority !== undefined) {
+              elmMakeActions.push({
+                tag: "NeedsElmMake",
+                output,
+                source: "Dirty",
+                priority,
+              });
+              elmMakeBusy = true;
+            } else {
+              typecheckOnly.push({ output, source: "Dirty" });
+            }
+          }
+          break;
+
+        default:
+          if (outputState.dirty) {
+            if (elmMakeBusy) {
+              queueActions.push({
+                tag: "QueueForElmMake",
+                output,
+              });
+            } else if (priority !== undefined) {
+              elmMakeActions.push({
+                tag: "NeedsElmMake",
+                output,
+                source: "Dirty",
+                priority,
+              });
+              elmMakeBusy = true;
+            } else {
+              typecheckOnly.push({ output, source: "Dirty" });
+            }
+          }
+          break;
+      }
+
+      if (isNonEmptyArray(typecheckOnly)) {
+        if (elmMakeBusy) {
+          queueTypecheckOnly(typecheckOnly);
+        } else {
+          elmMakeTypecheckOnlyActions.push({
+            tag: "NeedsElmMakeTypecheckOnly",
+            elmJsonPath,
+            outputs: typecheckOnly,
+          });
+        }
+      }
+    }
+  }
+
+  const prioritizedActions = prioritizeActions(
+    runMode,
+    elmMakeActions,
+    elmMakeTypecheckOnlyActions,
+    postprocessActions
+  );
+
+  const threadsLeft = Math.max(0, project.maxParallel - numExecuting);
+
+  const actions = prioritizedActions.slice(0, threadsLeft);
+
+  for (const action of prioritizedActions.slice(threadsLeft)) {
+    switch (action.tag) {
+      case "NeedsElmMake":
+        switch (action.source) {
+          case "Dirty":
+            queueActions.push({
+              tag: "QueueForElmMake",
+              output: action.output,
+            });
+            break;
+
+          case "Queued":
+            break;
+        }
+        break;
+
+      case "NeedsElmMakeTypecheckOnly":
+        queueTypecheckOnly(action.outputs);
+        break;
+
+      case "NeedsPostprocess":
+        break;
+    }
+  }
+
+  return {
+    total: index,
+    numExecuting,
+    numInterrupted,
+    actions: [...actions, ...queueActions],
+  };
+}
+
+function prioritizeActions(
+  runMode: RunMode,
+  elmMakeActions: Array<NeedsElmMakeOutputAction>,
+  elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction>,
+  postprocessActions: Array<NeedsPostprocessOutputAction>
+): Array<
+  | NeedsElmMakeOutputAction
+  | NeedsElmMakeTypecheckOnlyOutputAction
+  | NeedsPostprocessOutputAction
+> {
+  switch (runMode) {
+    // In `make` mode, you want to find type errors as quickly as possible (the
+    // most likely CI failure). Don’t let slow postprocessing delay that.
+    // All outputs have the same priority in `make` mode so don’t bother sorting.
+    case "make":
+      return [
+        ...elmMakeActions,
+        ...elmMakeTypecheckOnlyActions,
+        ...postprocessActions,
+      ];
+
+    // In `hot` mode, try to finish each output as fast as possible, rather than
+    // make all of them “evenly slow”.
+    case "hot":
+      return [
+        ...sortByPriority(postprocessActions),
+        ...sortByPriority(elmMakeActions),
+        ...elmMakeTypecheckOnlyActions,
+      ];
+  }
+}
+
+function sortByPriority<T extends { priority: number }>(
+  array: Array<T>
+): Array<T> {
+  return array.slice().sort((a, b) => b.priority - a.priority);
 }
 
 export async function handleOutputAction({

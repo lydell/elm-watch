@@ -2,7 +2,7 @@ import * as Compile from "./Compile";
 import { Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { getOutputActions, OutputActions, Project } from "./Project";
+import { Project } from "./Project";
 import { GetNow } from "./Types";
 
 type MakeResult = { tag: "Error" } | { tag: "Success" };
@@ -24,7 +24,7 @@ export async function run(
       break;
   }
 
-  const initialOutputActions = getOutputActions({
+  const initialOutputActions = Compile.getOutputActions({
     project,
     runMode: "make",
     includeInterrupted: true,
@@ -44,7 +44,7 @@ export async function run(
     Compile.printSpaceForOutputs(logger, initialOutputActions.total);
 
     await new Promise<void>((resolve, reject) => {
-      const cycle = (outputActions: OutputActions): void => {
+      const cycle = (outputActions: Compile.OutputActions): void => {
         for (const action of outputActions.actions) {
           Compile.handleOutputAction({
             env,
@@ -78,8 +78,8 @@ export async function run(
   return { tag: "Success" };
 }
 
-function getNextOutputActions(project: Project): OutputActions {
-  const nextOutputActions = getOutputActions({
+function getNextOutputActions(project: Project): Compile.OutputActions {
+  const nextOutputActions = Compile.getOutputActions({
     project,
     runMode: "make",
     includeInterrupted: true,

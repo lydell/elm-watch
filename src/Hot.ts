@@ -21,13 +21,7 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { PortChoice } from "./Port";
-import {
-  getFlatOutputs,
-  getOutputActions,
-  OutputError,
-  OutputState,
-  Project,
-} from "./Project";
+import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
   CompilationMode,
@@ -486,7 +480,7 @@ const update =
 
       case "CompilationPartDone": {
         const includeInterrupted = model.nextAction.tag !== "Compile";
-        const outputActions = getOutputActions({
+        const outputActions = Compile.getOutputActions({
           project,
           runMode: "hot",
           includeInterrupted,
@@ -1122,7 +1116,7 @@ const runCmd =
         return;
 
       case "CompileAllOutputsAsNeeded": {
-        const outputActions = getOutputActions({
+        const outputActions = Compile.getOutputActions({
           project: mutable.project,
           runMode: "hot",
           includeInterrupted: cmd.includeInterrupted,
