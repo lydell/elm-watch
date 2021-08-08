@@ -28,7 +28,14 @@ export async function run(
 
   Compile.printStatusLinesForElmJsonsErrors(logger, project);
 
-  if (isNonEmptyArray(initialOutputActions.actions)) {
+  // `make` uses “fail fast.” _One_ of these error categories are shown at a time:
+  // 1. elm.json errors
+  // 2. `elm make` errors
+  // 3. Postprocess errors
+  if (
+    isNonEmptyArray(initialOutputActions.actions) &&
+    !isNonEmptyArray(project.elmJsonsErrors)
+  ) {
     Compile.printSpaceForOutputs(logger, initialOutputActions.total);
 
     await new Promise<void>((resolve, reject) => {
@@ -43,7 +50,7 @@ export async function run(
             total: outputActions.total,
             action,
           }).then(() => {
-            const nextOutputActions = getOutputActions(project, "make");
+            const nextOutputActions = getNextOutputActions(project);
             if (isNonEmptyArray(nextOutputActions.actions)) {
               cycle(nextOutputActions);
             } else if (nextOutputActions.numExecuting === 0) {
@@ -64,4 +71,18 @@ export async function run(
   }
 
   return { tag: "Success" };
+}
+
+function getNextOutputActions(project: Project): OutputActions {
+  const nextOutputActions = getOutputActions(project, "make");
+  const errors = Compile.extractErrors(project);
+  // Skip postprocess if there are `elm make` errors (fail fast).
+  return isNonEmptyArray(errors)
+    ? {
+        ...nextOutputActions,
+        actions: nextOutputActions.actions.filter(
+          (action2) => action2.tag !== "NeedsPostprocess"
+        ),
+      }
+    : nextOutputActions;
 }

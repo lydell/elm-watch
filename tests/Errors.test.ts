@@ -1888,6 +1888,7 @@ describe("errors", () => {
         fs.unlinkSync(appPath);
       }
 
+      // Note: Postprocess is skipped when there are `elm make` errors.
       expect(await run("ci", ["make"], { isTTY: false }))
         .toMatchInlineSnapshot(`
         ⏳ Dependencies
@@ -1900,8 +1901,6 @@ describe("errors", () => {
         ✅ build/app.js
         ⏳ build/postprocess-error.js: elm make
         ️🟢 build/postprocess-error.js: queued
-        ⏳ build/postprocess-error.js: postprocess
-        🚨 build/postprocess-error.js
 
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
@@ -1927,6 +1926,24 @@ describe("errors", () => {
                ⧙^^^^^^^^^⧘
         Are there any missing commas? Or missing parentheses?
 
+        🚨 ⧙2⧘ errors found
+      `);
+
+      expect(fs.existsSync(appPath)).toBe(true);
+
+      // Postprocess error.
+      expect(
+        await run("ci", ["make", "build/postprocess-error.js"], {
+          isTTY: false,
+        })
+      ).toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ build/postprocess-error.js: elm make
+        ️🟢 build/postprocess-error.js: queued
+        ⏳ build/postprocess-error.js: postprocess
+        🚨 build/postprocess-error.js
+
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙When compiling: build/postprocess-error.js⧘
 
@@ -1940,10 +1957,8 @@ describe("errors", () => {
         exit 1
         (no output)
 
-        🚨 ⧙3⧘ errors found
+        🚨 ⧙1⧘ error found
       `);
-
-      expect(fs.existsSync(appPath)).toBe(true);
     });
 
     test("CI scenario – no color", async () => {
@@ -1951,6 +1966,7 @@ describe("errors", () => {
         fs.unlinkSync(appPath);
       }
 
+      // Note: Postprocess is skipped when there are `elm make` errors.
       expect(
         await run("ci", ["make"], {
           env: {
@@ -1958,7 +1974,6 @@ describe("errors", () => {
             ...TEST_ENV,
             NO_COLOR: "",
           },
-
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -1972,8 +1987,6 @@ describe("errors", () => {
         build/app.js: success
         build/postprocess-error.js: elm make
         build/postprocess-error.js: queued
-        build/postprocess-error.js: postprocess
-        build/postprocess-error.js: error
 
         -- TYPE MISMATCH ---------------------------------------------------------------
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
@@ -1999,6 +2012,30 @@ describe("errors", () => {
                ^^^^^^^^^
         Are there any missing commas? Or missing parentheses?
 
+        2 errors found
+      `);
+
+      expect(fs.existsSync(appPath)).toBe(true);
+
+      // Postprocess error.
+      expect(
+        await run("ci", ["make", "build/postprocess-error.js"], {
+          env: {
+            ...process.env,
+            ...TEST_ENV,
+            NO_COLOR: "",
+          },
+
+          isTTY: false,
+        })
+      ).toMatchInlineSnapshot(`
+        Dependencies: in progress
+        Dependencies: success
+        build/postprocess-error.js: elm make
+        build/postprocess-error.js: queued
+        build/postprocess-error.js: postprocess
+        build/postprocess-error.js: error
+
         -- POSTPROCESS ERROR -----------------------------------------------------------
         When compiling: build/postprocess-error.js
 
@@ -2012,10 +2049,8 @@ describe("errors", () => {
         exit 1
         (no output)
 
-        3 errors found
+        1 error found
       `);
-
-      expect(fs.existsSync(appPath)).toBe(true);
     });
   });
 

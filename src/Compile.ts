@@ -740,8 +740,11 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           case "Postprocess":
           case "Interrupted":
           case "QueuedForElmMake":
-          case "QueuedForPostprocess":
             return Errors.stuckInProgressState(outputPath, status.tag);
+
+          // If there are `elm make` errors we skip postprocessing (fail fast).
+          case "QueuedForPostprocess":
+            return [];
 
           case "Success":
             return [];
