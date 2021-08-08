@@ -482,7 +482,6 @@ export type OutputActions = {
   numExecuting: number;
   numInterrupted: number;
   actions: Array<OutputAction>;
-  outputsWithoutAction: Array<IndexedOutput>;
 };
 
 export function getOutputActions({
@@ -504,7 +503,6 @@ export function getOutputActions({
     [];
   const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
   const queueActions: Array<QueueForElmMakeOutputAction> = [];
-  const outputsWithoutAction: Array<IndexedOutput> = [];
 
   const queueTypecheckOnly = (
     typecheckOnly: NonEmptyArray<IndexedOutputWithSource>
@@ -519,7 +517,6 @@ export function getOutputActions({
           break;
 
         case "Queued":
-          outputsWithoutAction.push(output);
           break;
       }
     }
@@ -557,22 +554,21 @@ export function getOutputActions({
         case "ElmMakeTypecheckOnly":
         case "Postprocess":
           numExecuting++;
-          outputsWithoutAction.push(output);
           break;
 
         case "QueuedForElmMake":
-          if (elmMakeBusy) {
-            outputsWithoutAction.push(output);
-          } else if (priority !== undefined) {
-            elmMakeActions.push({
-              tag: "NeedsElmMake",
-              output,
-              source: "Queued",
-              priority,
-            });
-            elmMakeBusy = true;
-          } else {
-            typecheckOnly.push({ output, source: "Queued" });
+          if (!elmMakeBusy) {
+            if (priority !== undefined) {
+              elmMakeActions.push({
+                tag: "NeedsElmMake",
+                output,
+                source: "Queued",
+                priority,
+              });
+              elmMakeBusy = true;
+            } else {
+              typecheckOnly.push({ output, source: "Queued" });
+            }
           }
           break;
 
@@ -604,29 +600,27 @@ export function getOutputActions({
             } else {
               typecheckOnly.push({ output, source: "Dirty" });
             }
-          } else {
-            outputsWithoutAction.push(output);
           }
           break;
 
         default:
-          if (!outputState.dirty) {
-            outputsWithoutAction.push(output);
-          } else if (elmMakeBusy) {
-            queueActions.push({
-              tag: "QueueForElmMake",
-              output,
-            });
-          } else if (priority !== undefined) {
-            elmMakeActions.push({
-              tag: "NeedsElmMake",
-              output,
-              source: "Dirty",
-              priority,
-            });
-            elmMakeBusy = true;
-          } else {
-            typecheckOnly.push({ output, source: "Dirty" });
+          if (outputState.dirty) {
+            if (elmMakeBusy) {
+              queueActions.push({
+                tag: "QueueForElmMake",
+                output,
+              });
+            } else if (priority !== undefined) {
+              elmMakeActions.push({
+                tag: "NeedsElmMake",
+                output,
+                source: "Dirty",
+                priority,
+              });
+              elmMakeBusy = true;
+            } else {
+              typecheckOnly.push({ output, source: "Dirty" });
+            }
           }
           break;
       }
@@ -668,7 +662,6 @@ export function getOutputActions({
             break;
 
           case "Queued":
-            outputsWithoutAction.push(action.output);
             break;
         }
         break;
@@ -678,7 +671,6 @@ export function getOutputActions({
         break;
 
       case "NeedsPostprocess":
-        outputsWithoutAction.push(action.output);
         break;
     }
   }
@@ -688,7 +680,6 @@ export function getOutputActions({
     numExecuting,
     numInterrupted,
     actions: [...actions, ...queueActions],
-    outputsWithoutAction,
   };
 }
 
