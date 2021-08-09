@@ -57,13 +57,13 @@ export async function make({
   elmJsonPath,
   compilationMode,
   inputs,
-  output,
+  outputPath,
   env,
 }: {
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   inputs: NonEmptyArray<InputPath>;
-  output: OutputPath;
+  outputPath: OutputPath;
   env: Env;
 }): Promise<RunElmMakeResult> {
   const command: Command = {
@@ -72,7 +72,7 @@ export async function make({
       "make",
       "--report=json",
       ...maybeToArray(compilationModeToArg(compilationMode)),
-      `--output=${outputPathToAbsoluteString(output)}`,
+      `--output=${outputPathToAbsoluteString(outputPath)}`,
       ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
     ],
     options: {
@@ -93,7 +93,10 @@ export async function make({
       return spawnResult;
 
     case "Exit": {
-      const { exitReason, stdout, stderr } = spawnResult;
+      const { exitReason } = spawnResult;
+      const stdout = spawnResult.stdout.toString("utf8");
+      const stderr = spawnResult.stderr.toString("utf8");
+
       return exitReason.tag === "ExitCode" &&
         exitReason.exitCode === 0 &&
         stdout === "" &&
@@ -266,7 +269,9 @@ export async function install({
       return spawnResult;
 
     case "Exit": {
-      const { exitReason, stdout, stderr } = spawnResult;
+      const { exitReason } = spawnResult;
+      const stdout = spawnResult.stdout.toString("utf8");
+      const stderr = spawnResult.stderr.toString("utf8");
 
       if (
         exitReason.tag === "ExitCode" &&

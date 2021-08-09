@@ -71,19 +71,19 @@ export type GetNow = () => Date;
 
 export type OnIdle = () => "KeepGoing" | "Stop";
 
-export function outputPathToAbsoluteString(output: OutputPath): string {
-  switch (output.tag) {
+export function outputPathToAbsoluteString(outputPath: OutputPath): string {
+  switch (outputPath.tag) {
     case "OutputPath":
-      return output.theOutputPath.absolutePath;
+      return outputPath.theOutputPath.absolutePath;
     case "NullOutputPath":
       return "/dev/null";
   }
 }
 
-export function outputPathToOriginalString(output: OutputPath): string {
-  switch (output.tag) {
+export function outputPathToOriginalString(outputPath: OutputPath): string {
+  switch (outputPath.tag) {
     case "OutputPath":
-      return output.originalString;
+      return outputPath.originalString;
     case "NullOutputPath":
       return "/dev/null";
   }

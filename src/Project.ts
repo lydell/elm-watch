@@ -60,23 +60,46 @@ export type OutputState = {
 export type OutputStatus =
   | OutputError
   | {
-      tag: "Success";
-      newOutputPath: OutputPath | undefined;
-      compiledTimestamp: number;
+      tag: "ElmMake";
+      compilationMode: CompilationMode;
     }
-  | { tag: "ElmMake"; compilationMode: CompilationMode }
-  | { tag: "ElmMakeTypecheckOnly" }
-  | { tag: "Interrupted" }
-  | { tag: "NotWrittenToDisk" }
-  | { tag: "Postprocess" }
-  | { tag: "QueuedForElmMake" }
-  | { tag: "QueuedForPostprocess"; postprocessArray: NonEmptyArray<string> };
+  | {
+      tag: "ElmMakeTypecheckOnly";
+    }
+  | {
+      tag: "Interrupted";
+    }
+  | {
+      tag: "NotWrittenToDisk";
+    }
+  | {
+      tag: "Postprocess";
+    }
+  | {
+      tag: "QueuedForElmMake";
+    }
+  | {
+      tag: "QueuedForPostprocess";
+      postprocessArray: NonEmptyArray<string>;
+      code: Buffer | string;
+    }
+  | {
+      tag: "Success";
+      fileSize: number;
+      compiledTimestamp: number;
+    };
 
 export type OutputError =
   | ElmJson.ParseError
   | PostprocessError
+  | ReadOutputError
   | RunElmMakeError
   | WalkImportsError;
+
+export type ReadOutputError = {
+  tag: "ReadOutputError";
+  error: Error;
+};
 
 type ElmJsonError =
   | {

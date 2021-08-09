@@ -11,8 +11,8 @@ export type SpawnResult =
   | {
       tag: "Exit";
       exitReason: ExitReason;
-      stdout: string;
-      stderr: string;
+      stdout: Buffer;
+      stderr: Buffer;
       command: Command;
     }
   | {
@@ -28,6 +28,7 @@ export type Command = {
     cwd: AbsolutePath;
     env: Env;
   };
+  stdin?: Buffer | string;
 };
 
 export async function spawn(command: Command): Promise<SpawnResult> {
@@ -41,8 +42,8 @@ export async function spawn(command: Command): Promise<SpawnResult> {
       cwd: command.options.cwd.absolutePath,
     });
 
-    let stdout = "";
-    let stderr = "";
+    const stdout: Array<Buffer> = [];
+    const stderr: Array<Buffer> = [];
 
     child.on("error", (error: Error & { code?: string }) => {
       resolve(
@@ -54,22 +55,26 @@ export async function spawn(command: Command): Promise<SpawnResult> {
     });
 
     child.stdout.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString();
+      stdout.push(chunk);
     });
 
     child.stderr.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString();
+      stderr.push(chunk);
     });
 
     child.on("close", (exitCode, signal) => {
       resolve({
         tag: "Exit",
         exitReason: exitReason(exitCode, signal),
-        stdout,
-        stderr,
+        stdout: Buffer.concat(stdout),
+        stderr: Buffer.concat(stderr),
         command,
       });
     });
+
+    if (command.stdin !== undefined) {
+      child.stdin.write(command.stdin);
+    }
   });
 }
 

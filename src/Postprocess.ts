@@ -1,5 +1,3 @@
-import * as Decode from "tiny-decoders";
-
 import { Env } from "./Helpers";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import {
@@ -21,13 +19,19 @@ export type PostprocessResult =
   | PostprocessError
   | {
       tag: "Success";
-      newOutputPath: OutputPath;
+      code: Buffer;
     };
 
 export type PostprocessError =
   | {
       tag: "CommandNotFoundError";
       command: Command;
+    }
+  | {
+      tag: "ElmWatchNodeBadReturnValue";
+      scriptPath: ElmWatchNodeScriptPath;
+      args: Array<string>;
+      returnValue: unknown;
     }
   | {
       tag: "ElmWatchNodeDefaultExportNotFunction";
@@ -41,12 +45,6 @@ export type PostprocessError =
     }
   | {
       tag: "ElmWatchNodeMissingScript";
-    }
-  | {
-      tag: "ElmWatchNodeResultDecodeError";
-      scriptPath: ElmWatchNodeScriptPath;
-      args: Array<string>;
-      error: Decode.DecoderError;
     }
   | {
       tag: "ElmWatchNodeRunError";
@@ -65,11 +63,6 @@ export type PostprocessError =
       stdout: string;
       stderr: string;
       executedCommand: ExecutedCommand;
-    }
-  | {
-      tag: "StdoutDecodeError";
-      error: Decode.DecoderError | SyntaxError;
-      executedCommand: ExecutedCommand;
     };
 
 export type ExecutedCommand =
@@ -83,28 +76,22 @@ export type ExecutedCommand =
       args: Array<string>;
     };
 
-type Stdout = ReturnType<typeof Stdout>;
-const Stdout = Decode.fieldsAuto(
-  {
-    newOutputPath: Decode.optional(Decode.string),
-  },
-  { exact: "throw" }
-);
-
 export async function postprocess({
+  env,
   elmToolingJsonPath,
   compilationMode,
   runMode,
-  output,
+  outputPath: output,
   postprocessArray,
-  env,
+  code,
 }: {
+  env: Env;
   elmToolingJsonPath: ElmToolingJsonPath;
   compilationMode: CompilationMode;
   runMode: RunMode;
-  output: OutputPath;
+  outputPath: OutputPath;
   postprocessArray: NonEmptyArray<string>;
-  env: Env;
+  code: Buffer | string;
 }): Promise<PostprocessResult> {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
@@ -116,13 +103,14 @@ export async function postprocess({
   const cwd = absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath);
 
   if (commandName === "elm-watch-node") {
-    return elmWatchNode(cwd, output, userArgs, extraArgs);
+    return elmWatchNode(cwd, userArgs, extraArgs, code);
   }
 
   const command: Command = {
     command: commandName,
     args: [...userArgs, ...extraArgs],
     options: { cwd, env },
+    stdin: code,
   };
 
   const spawnResult = await spawn(command);
@@ -133,10 +121,12 @@ export async function postprocess({
       return spawnResult;
 
     case "Exit": {
-      const { exitReason, stdout, stderr } = spawnResult;
+      const { exitReason } = spawnResult;
       const executedCommand: ExecutedCommand = { tag: "Command", command };
 
       if (!(exitReason.tag === "ExitCode" && exitReason.exitCode === 0)) {
+        const stdout = spawnResult.stdout.toString("utf8");
+        const stderr = spawnResult.stderr.toString("utf8");
         return {
           tag: "PostprocessNonZeroExit",
           exitReason,
@@ -146,25 +136,16 @@ export async function postprocess({
         };
       }
 
-      return parseStdout(cwd, output, executedCommand, stdout);
+      return { tag: "Success", code: spawnResult.stdout };
     }
   }
 }
 
-const ElmWatchNodeResult = Decode.fieldsAuto(
-  {
-    exitCode: Decode.number,
-    stdout: Decode.optional(Decode.string, ""),
-    stderr: Decode.optional(Decode.string, ""),
-  },
-  { exact: "throw" }
-);
-
 async function elmWatchNode(
   cwd: AbsolutePath,
-  output: OutputPath,
   userArgs: Array<string>,
-  extraArgs: Array<string>
+  extraArgs: Array<string>,
+  code: Buffer | string
 ): Promise<PostprocessResult> {
   if (!isNonEmptyArray(userArgs)) {
     return { tag: "ElmWatchNodeMissingScript" };
@@ -197,9 +178,9 @@ async function elmWatchNode(
     };
   }
 
-  const args = [...userArgs.slice(1), ...extraArgs];
+  const args = [code.toString("utf8"), ...userArgs.slice(1), ...extraArgs];
 
-  let returnValue;
+  let returnValue: unknown;
   try {
     returnValue = (await imported.default(args)) as unknown;
   } catch (errorAny) {
@@ -211,66 +192,14 @@ async function elmWatchNode(
     };
   }
 
-  let result;
-  try {
-    result = ElmWatchNodeResult(returnValue);
-  } catch (errorAny) {
-    const error = errorAny as Decode.DecoderError;
+  if (typeof returnValue !== "string") {
     return {
-      tag: "ElmWatchNodeResultDecodeError",
+      tag: "ElmWatchNodeBadReturnValue",
       scriptPath,
       args,
-      error,
+      returnValue,
     };
   }
 
-  const executedCommand: ExecutedCommand = {
-    tag: "ElmWatchNode",
-    scriptPath,
-    args,
-  };
-
-  if (result.exitCode !== 0) {
-    return {
-      tag: "PostprocessNonZeroExit",
-      exitReason: { tag: "ExitCode", exitCode: result.exitCode },
-      stdout: result.stdout,
-      stderr: result.stderr,
-      executedCommand,
-    };
-  }
-
-  return parseStdout(cwd, output, executedCommand, result.stdout);
-}
-
-function parseStdout(
-  cwd: AbsolutePath,
-  output: OutputPath,
-  executedCommand: ExecutedCommand,
-  stdoutString: string
-): PostprocessResult {
-  let stdout: Stdout | undefined = undefined;
-  if (stdoutString.trim() !== "") {
-    try {
-      stdout = Stdout(JSON.parse(stdoutString));
-    } catch (errorAny) {
-      const error = errorAny as Decode.DecoderError | SyntaxError;
-      return {
-        tag: "StdoutDecodeError",
-        error,
-        executedCommand,
-      };
-    }
-  }
-
-  const newOutputPath: OutputPath =
-    stdout?.newOutputPath === undefined
-      ? output
-      : {
-          tag: "OutputPath",
-          theOutputPath: absolutePathFromString(cwd, stdout.newOutputPath),
-          originalString: stdout.newOutputPath,
-        };
-
-  return { tag: "Success", newOutputPath };
+  return { tag: "Success", code: Buffer.from(returnValue) };
 }

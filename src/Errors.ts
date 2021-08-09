@@ -22,6 +22,7 @@ import {
   ElmWatchNodeScriptPath,
   InputPath,
   OutputPath,
+  outputPathToAbsoluteString,
   outputPathToOriginalString,
 } from "./Types";
 
@@ -587,10 +588,10 @@ ${errorString}
 `;
 }
 
-export function elmWatchNodeResultDecodeError(
+export function elmWatchNodeBadReturnValue(
   scriptPath: ElmWatchNodeScriptPath,
   args: Array<string>,
-  error: DecoderError
+  returnValue: unknown
 ): ErrorTemplate {
   return fancyError("INVALID POSTPROCESS RESULT", scriptPath)`
 I ran your postprocess command:
@@ -598,24 +599,9 @@ I ran your postprocess command:
 ${printElmWatchNodeImportCommand(scriptPath)}
 ${printElmWatchNodeRunCommand(args)}
 
-But ${bold("result")} doesn't look like I expected:
+I expected ${bold("result")} to be a string, but it is:
 
-${error.format()}
-`;
-}
-
-export function stdoutDecodeError(
-  error: DecoderError | SyntaxError,
-  executedCommand: ExecutedCommand
-): ErrorTemplate {
-  return fancyError("INVALID POSTPROCESS STDOUT", { tag: "NoLocation" })`
-I ran your postprocess command:
-
-${printExecutedCommand(executedCommand)}
-
-But ${bold("stdout")} doesn't look like I expected:
-
-${error instanceof DecoderError ? error.format() : error.message}
+${repr(returnValue)}
 `;
 }
 
@@ -775,6 +761,21 @@ ${error.message}
 
 (I still managed to compile your code, but the watcher will not work properly
 and "postprocess" was not run.)
+`;
+}
+
+export function readOutputError(
+  outputPath: OutputPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError("TROUBLE READING OUTPUT", outputPath)`
+I managed to compile your code. Then I tried to read the output:
+
+${outputPathToAbsoluteString(outputPath)}
+
+Doing so I encountered this error:
+
+${error.message}
 `;
 }
 
@@ -974,9 +975,10 @@ ${pathEntriesString}
 }
 
 function printCommand(command: Command): string {
+  const stdin = command.stdin === undefined ? "" : "printf '...' | ";
   return `
 ${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
-${commandToPresentationName([command.command, ...command.args])}
+${stdin}${commandToPresentationName([command.command, ...command.args])}
 `;
 }
 

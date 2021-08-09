@@ -71,8 +71,7 @@ type Msg =
       tag: "CompilationPartDone";
       date: Date;
       prioritizedOutputs: HashMap<OutputPath, number>;
-      // dirty: boolean;
-      // outputPath: OutputPath;
+      handleOutputActionResult: Compile.HandleOutputActionResult;
     }
   | {
       tag: "GotWatcherEvent";
@@ -225,8 +224,8 @@ const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
   StatusChanged: Decode.fieldsAuto({
     tag: () => "StatusChanged" as const,
     status: Decode.fieldsUnion("tag", {
-      SuccessfullyCompiled: Decode.fieldsAuto({
-        tag: () => "SuccessfullyCompiled" as const,
+      AlreadyUpToDate: Decode.fieldsAuto({
+        tag: () => "AlreadyUpToDate" as const,
       }),
       Busy: Decode.fieldsAuto({
         tag: () => "Busy" as const,
@@ -239,6 +238,10 @@ const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
         message: Decode.string,
       }),
     }),
+  }),
+  SuccessfullyCompiled: Decode.fieldsAuto({
+    tag: () => "SuccessfullyCompiled" as const,
+    code: Decode.string,
   }),
 });
 
@@ -506,29 +509,15 @@ const update =
             const duration =
               msg.date.getTime() - model.hotState.start.getTime();
 
-            const errors = Compile.extractErrors(project);
-
-            // TODO: Get back to websocket stuff
-            const cmd: Cmd = { tag: "NoCmd" };
-            // const cmd: Cmd = {
-            //   tag: "WebSocketSendToOutput",
-            //   outputPath: msg.outputPath,
-            //   message: {
-            //     tag: "StatusChanged",
-            //     status: isNonEmptyArray(errors)
-            //       ? { tag: "CompileError" }
-            //       : // TODO: Send along new JS to eval here! Probably good to avoid JSON encoding of it. Maybe separate web socket message?
-            //         // Also, if msg.outputPath is /dev/null, don’t send anything.
-            //         // WebSocket client code injection needs to happen in Compile.compileOneOutput
-            //         // before running postprocess.
-            //         { tag: "SuccessfullyCompiled" },
-            //   },
-            // };
+            const cmd = handleOutputActionResultToCmd(
+              msg.handleOutputActionResult
+            );
 
             if (outputActions.actions.length > 0) {
               return [
                 model,
                 [
+                  cmd,
                   {
                     tag: "CompileAllOutputsAsNeeded",
                     mode: "ContinueCompilation",
@@ -544,6 +533,8 @@ const update =
             ) {
               return [model, [cmd]];
             }
+
+            const errors = Compile.extractErrors(project);
 
             return [
               { ...model, hotState: { tag: "Idle" } },
@@ -1152,15 +1143,14 @@ const runCmd =
               elmToolingJsonPath: mutable.project.elmToolingJsonPath,
               total: outputActions.total,
               action,
-            }).then(() => {
+            }).then((handleOutputActionResult) => {
               dispatch({
                 tag: "CompilationPartDone",
                 date: getNow(),
                 prioritizedOutputs: makePrioritizedOutputs(
                   mutable.webSocketConnections
                 ),
-                // dirty: outputState.dirty,
-                // outputPath,
+                handleOutputActionResult,
               });
             }, rejectPromise);
           }
@@ -1171,8 +1161,7 @@ const runCmd =
             prioritizedOutputs: makePrioritizedOutputs(
               mutable.webSocketConnections
             ),
-            // dirty: outputState.dirty,
-            // outputPath,
+            handleOutputActionResult: { tag: "Nothing" },
           });
         }
         return;
@@ -1328,6 +1317,35 @@ const runCmd =
         return;
     }
   };
+
+function handleOutputActionResultToCmd(
+  handleOutputActionResult: Compile.HandleOutputActionResult
+): Cmd {
+  switch (handleOutputActionResult.tag) {
+    case "CompileError":
+      return {
+        tag: "WebSocketSendToOutput",
+        outputPath: handleOutputActionResult.outputPath,
+        message: {
+          tag: "StatusChanged",
+          status: { tag: "CompileError" },
+        },
+      };
+
+    case "FullyCompiledJS":
+      return {
+        tag: "WebSocketSendToOutput",
+        outputPath: handleOutputActionResult.outputPath,
+        message: {
+          tag: "SuccessfullyCompiled",
+          code: handleOutputActionResult.code.toString("utf8"),
+        },
+      };
+
+    case "Nothing":
+      return { tag: "NoCmd" };
+  }
+}
 
 function makePrioritizedOutputs(
   webSocketConnections: Array<WebSocketConnection>
@@ -1677,7 +1695,7 @@ function onWebSocketConnected(
                   outputPath,
                   message: {
                     tag: "StatusChanged",
-                    status: { tag: "SuccessfullyCompiled" },
+                    status: { tag: "AlreadyUpToDate" },
                   },
                 },
               ],
@@ -1840,7 +1858,16 @@ function webSocketSend(
   webSocket: WebSocket,
   message: WebSocketToClientMessage
 ): void {
-  webSocket.send(JSON.stringify(message));
+  switch (message.tag) {
+    // Optimization: Avoid encoding megabytes of JS code as a JSON string.
+    // Just send it bare.
+    case "SuccessfullyCompiled":
+      webSocket.send(message.code);
+      break;
+
+    default:
+      webSocket.send(JSON.stringify(message));
+  }
 }
 
 function webSocketSendToOutput(
