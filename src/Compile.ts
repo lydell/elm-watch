@@ -756,6 +756,10 @@ function injectWebSocketClient(code: string): InjectWebSocketClientResult {
   return { tag: "Success", code };
 }
 
+function proxyFile(): string {
+  return "TODO";
+}
+
 async function postprocessHelper({
   env,
   logger,
@@ -917,7 +921,28 @@ async function typecheck({
       case "elm make success + walker success":
         outputState.allRelatedElmFilePaths =
           combinedResult.allRelatedElmFilePaths;
-        outputState.status = { tag: "NotWrittenToDisk" };
+
+        switch (outputPath.tag) {
+          case "NullOutputPath":
+            outputState.status = { tag: "NotWrittenToDisk" };
+            break;
+
+          case "OutputPath":
+            try {
+              if (!fs.existsSync(outputPath.theOutputPath.absolutePath)) {
+                fs.writeFileSync(
+                  outputPath.theOutputPath.absolutePath,
+                  proxyFile()
+                );
+              }
+              // The proxy file doesn’t count as writing to disk…
+              outputState.status = { tag: "NotWrittenToDisk" };
+            } catch (errorAny) {
+              const error = errorAny as Error;
+              outputState.status = { tag: "WriteOutputError", error };
+            }
+            break;
+        }
         break;
 
       case "elm make success + walker failure":
