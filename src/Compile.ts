@@ -757,6 +757,53 @@ function injectWebSocketClient(code: string): InjectWebSocketClientResult {
 }
 
 function proxyFile(): string {
+  // First char lowercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L296-L300
+  // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
+  // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
+  // https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-Char.html#v:isLetter
+  const lowerName = /^\p{Ll}[_\d\p{L}]*$/u;
+  const upperName = /^\p{Lu}[_\d\p{L}]*$/u;
+
+  const stub = (_: unknown): void => undefined;
+
+  const portsProxy = (): Record<string, never> =>
+    new Proxy(
+      {},
+      {
+        get: (target, property, receiver) =>
+          Reflect.has(target, property) ||
+          typeof property === "symbol" ||
+          !lowerName.test(property)
+            ? (Reflect.get(target, property, receiver) as unknown)
+            : { send: stub, subscribe: stub, unsubscribe: stub },
+        has: (target, property) =>
+          Reflect.has(target, property) ||
+          typeof property === "symbol" ||
+          !lowerName.test(property)
+            ? Reflect.has(target, property)
+            : true,
+      }
+    );
+
+  const moduleProxy = (): unknown =>
+    new Proxy(
+      { init: (_: unknown) => ({ ports: portsProxy() }) },
+      {
+        get: (target, property, receiver) =>
+          Reflect.has(target, property) ||
+          typeof property === "symbol" ||
+          !upperName.test(property)
+            ? (Reflect.get(target, property, receiver) as unknown)
+            : moduleProxy(),
+        has: (target, property) =>
+          Reflect.has(target, property) ||
+          typeof property === "symbol" ||
+          !upperName.test(property)
+            ? Reflect.has(target, property)
+            : true,
+      }
+    );
+
   return "TODO";
 }
 
