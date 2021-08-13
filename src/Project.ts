@@ -91,15 +91,20 @@ export type OutputStatus =
 
 export type OutputError =
   | ElmJson.ParseError
+  | OutputFsError
   | PostprocessError
-  | ReadOutputError
   | RunElmMakeError
   | WalkImportsError;
 
-export type ReadOutputError = {
-  tag: "ReadOutputError";
-  error: Error;
-};
+export type OutputFsError =
+  | {
+      tag: "ReadOutputError";
+      error: Error;
+    }
+  | {
+      tag: "WriteOutputError";
+      error: Error;
+    };
 
 type ElmJsonError =
   | {

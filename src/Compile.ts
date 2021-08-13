@@ -28,6 +28,7 @@ import {
   GetNow,
   InputPath,
   OutputPath,
+  outputPathToAbsoluteString,
   outputPathToOriginalString,
   RunMode,
 } from "./Types";
@@ -445,7 +446,7 @@ export type HandleOutputActionResult =
   | {
       tag: "FullyCompiledJS";
       outputPath: OutputPath;
-      code: Buffer | string;
+      code: Buffer;
     }
   | {
       tag: "Nothing";
@@ -703,16 +704,28 @@ function onCompileSuccess(
 
             case "Success":
               if (outputState.postprocess === undefined) {
+                const newBuffer = Buffer.from(result.code);
+                try {
+                  fs.writeFileSync(
+                    outputPath.theOutputPath.absolutePath,
+                    newBuffer
+                  );
+                } catch (errorAny) {
+                  const error = errorAny as Error;
+                  outputState.status = { tag: "WriteOutputError", error };
+                  updateStatusLineHelper();
+                  return { tag: "CompileError", outputPath };
+                }
                 outputState.status = {
                   tag: "Success",
-                  fileSize: buffer.byteLength,
+                  fileSize: newBuffer.byteLength,
                   compiledTimestamp,
                 };
                 updateStatusLineHelper();
                 return {
                   tag: "FullyCompiledJS",
                   outputPath,
-                  code: result.code,
+                  code: newBuffer,
                 };
               } else {
                 outputState.status = {
@@ -798,6 +811,17 @@ async function postprocessHelper({
   }
 
   if (postprocessResult.tag === "Success") {
+    try {
+      fs.writeFileSync(
+        outputPathToAbsoluteString(outputPath),
+        postprocessResult.code
+      );
+    } catch (errorAny) {
+      const error = errorAny as Error;
+      outputState.status = { tag: "WriteOutputError", error };
+      updateStatusLineHelper();
+      return { tag: "CompileError", outputPath };
+    }
     outputState.status = {
       tag: "Success",
       fileSize: postprocessResult.code.byteLength,
@@ -1126,6 +1150,7 @@ function statusLine(
     case "ElmJsonDecodeError":
     case "ImportWalkerFileSystemError":
     case "ReadOutputError":
+    case "WriteOutputError":
       return truncate(fancy ? `🚨 ${output}` : `${output}: error`);
   }
 }
@@ -1313,6 +1338,9 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
 
           case "ReadOutputError":
             return Errors.readOutputError(outputPath, status.error);
+
+          case "WriteOutputError":
+            return Errors.writeOutputError(outputPath, status.error);
         }
       })
     ),

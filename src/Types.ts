@@ -45,7 +45,7 @@ export type InputPath = {
   realpath: AbsolutePath;
 };
 
-// build/main.js
+// build/main.js and /dev/null
 export type OutputPath =
   | {
       tag: "OutputPath";

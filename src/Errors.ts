@@ -779,6 +779,21 @@ ${error.message}
 `;
 }
 
+export function writeOutputError(
+  outputPath: OutputPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError("TROUBLE WRITING OUTPUT", outputPath)`
+I managed to compile your code and read the generated file:
+
+${outputPathToAbsoluteString(outputPath)}
+
+I made some changes to it and tried to write that back but I encountered this error:
+
+${error.message}
+`;
+}
+
 export function portConflict(port: Port): string {
   return `
 In your elm-tooling.json you have this:
