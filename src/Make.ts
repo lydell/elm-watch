@@ -51,7 +51,7 @@ export async function run(
             env,
             logger,
             getNow,
-            runMode: "make",
+            runMode: { tag: "make" },
             elmToolingJsonPath: project.elmToolingJsonPath,
             total: outputActions.total,
             action,

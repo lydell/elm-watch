@@ -18,6 +18,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
+import { AbsolutePath } from "./PathHelpers";
 import { postprocess } from "./Postprocess";
 import { OutputError, OutputState, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
@@ -452,6 +453,15 @@ export type HandleOutputActionResult =
       tag: "Nothing";
     };
 
+type RunModeWithVersionedIdentifier =
+  | {
+      tag: "hot";
+      versionedIdentifier: Buffer;
+    }
+  | {
+      tag: "make";
+    };
+
 export async function handleOutputAction({
   env,
   logger,
@@ -464,7 +474,7 @@ export async function handleOutputAction({
   env: Env;
   logger: Logger;
   getNow: GetNow;
-  runMode: RunMode;
+  runMode: RunModeWithVersionedIdentifier;
   elmToolingJsonPath: ElmToolingJsonPath;
   total: number;
   action: OutputAction;
@@ -481,14 +491,21 @@ export async function handleOutputAction({
       });
 
     case "NeedsElmMakeTypecheckOnly":
-      await typecheck({
-        env,
-        logger,
-        elmJsonPath: action.elmJsonPath,
-        outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
-        total,
-      });
-      return { tag: "Nothing" };
+      switch (runMode.tag) {
+        case "make":
+          return { tag: "Nothing" };
+
+        case "hot":
+          await typecheck({
+            env,
+            logger,
+            elmJsonPath: action.elmJsonPath,
+            outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
+            total,
+            versionedIdentifier: runMode.versionedIdentifier,
+          });
+          return { tag: "Nothing" };
+      }
 
     case "NeedsPostprocess":
       return postprocessHelper({
@@ -528,7 +545,7 @@ async function compileOneOutput({
   env: Env;
   logger: Logger;
   getNow: GetNow;
-  runMode: RunMode;
+  runMode: RunModeWithVersionedIdentifier;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
@@ -562,7 +579,7 @@ async function compileOneOutput({
       env,
     }),
     Promise.resolve().then((): GetAllRelatedElmFilePathsResult => {
-      switch (runMode) {
+      switch (runMode.tag) {
         case "make":
           return {
             tag: "Success",
@@ -631,7 +648,7 @@ async function compileOneOutput({
 
 function onCompileSuccess(
   updateStatusLineHelper: () => void,
-  runMode: RunMode,
+  runMode: RunModeWithVersionedIdentifier,
   outputPath: OutputPath,
   outputState: OutputState,
   compiledTimestamp: number
@@ -643,7 +660,7 @@ function onCompileSuccess(
       return { tag: "Nothing" };
 
     case "OutputPath":
-      switch (runMode) {
+      switch (runMode.tag) {
         case "make":
           if (outputState.postprocess === undefined) {
             let fileSize;
@@ -708,7 +725,7 @@ function onCompileSuccess(
                 try {
                   fs.writeFileSync(
                     outputPath.theOutputPath.absolutePath,
-                    newBuffer
+                    Buffer.concat([runMode.versionedIdentifier, newBuffer])
                   );
                 } catch (errorAny) {
                   const error = errorAny as Error;
@@ -756,7 +773,7 @@ function injectWebSocketClient(code: string): InjectWebSocketClientResult {
   return { tag: "Success", code };
 }
 
-function proxyFile(): string {
+function proxyFile(): Buffer {
   // First char lowercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L296-L300
   // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
   // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
@@ -804,7 +821,44 @@ function proxyFile(): string {
       }
     );
 
-  return "TODO";
+  return Buffer.from("TODO");
+}
+
+type NeedsToWriteProxyFileResult =
+  | {
+      tag: "Needed";
+    }
+  | {
+      tag: "NotNeeded";
+    }
+  | {
+      tag: "ReadError";
+      error: Error;
+    };
+
+function needsToWriteProxyFile(
+  outputPath: AbsolutePath,
+  versionedIdentifier: Buffer
+): NeedsToWriteProxyFileResult {
+  let handle;
+  try {
+    handle = fs.openSync(outputPath.absolutePath, "r");
+  } catch (errorAny) {
+    const error = errorAny as Error & { code?: string };
+    return error.code === "ENOENT"
+      ? { tag: "Needed" }
+      : { tag: "ReadError", error };
+  }
+  const buffer = Buffer.alloc(versionedIdentifier.byteLength);
+  try {
+    fs.readSync(handle, buffer);
+  } catch (errorAny) {
+    const error = errorAny as Error;
+    return { tag: "ReadError", error };
+  }
+  return buffer.equals(versionedIdentifier)
+    ? { tag: "NotNeeded" }
+    : { tag: "Needed" };
 }
 
 async function postprocessHelper({
@@ -823,7 +877,7 @@ async function postprocessHelper({
   env: Env;
   logger: Logger;
   getNow: GetNow;
-  runMode: RunMode;
+  runMode: RunModeWithVersionedIdentifier;
   elmToolingJsonPath: ElmToolingJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
@@ -849,7 +903,7 @@ async function postprocessHelper({
     env,
     elmToolingJsonPath,
     compilationMode: outputState.compilationMode,
-    runMode,
+    runMode: runMode.tag,
     outputPath,
     postprocessArray,
     code,
@@ -863,10 +917,20 @@ async function postprocessHelper({
 
   if (postprocessResult.tag === "Success") {
     try {
-      fs.writeFileSync(
-        outputPathToAbsoluteString(outputPath),
-        postprocessResult.code
-      );
+      switch (runMode.tag) {
+        case "make":
+          fs.writeFileSync(
+            outputPathToAbsoluteString(outputPath),
+            postprocessResult.code
+          );
+          break;
+        case "hot":
+          fs.writeFileSync(
+            outputPathToAbsoluteString(outputPath),
+            Buffer.concat([runMode.versionedIdentifier, postprocessResult.code])
+          );
+          break;
+      }
     } catch (errorAny) {
       const error = errorAny as Error;
       outputState.status = { tag: "WriteOutputError", error };
@@ -897,6 +961,7 @@ async function typecheck({
   elmJsonPath,
   outputs,
   total,
+  versionedIdentifier,
 }: {
   env: Env;
   logger: Logger;
@@ -907,6 +972,7 @@ async function typecheck({
     outputState: OutputState;
   }>;
   total: number;
+  versionedIdentifier: Buffer;
 }): Promise<void> {
   for (const { index, outputPath, outputState } of outputs) {
     outputState.dirty = false;
@@ -974,21 +1040,38 @@ async function typecheck({
             outputState.status = { tag: "NotWrittenToDisk" };
             break;
 
-          case "OutputPath":
-            try {
-              if (!fs.existsSync(outputPath.theOutputPath.absolutePath)) {
-                fs.writeFileSync(
-                  outputPath.theOutputPath.absolutePath,
-                  proxyFile()
-                );
-              }
-              // The proxy file doesn’t count as writing to disk…
-              outputState.status = { tag: "NotWrittenToDisk" };
-            } catch (errorAny) {
-              const error = errorAny as Error;
-              outputState.status = { tag: "WriteOutputError", error };
+          case "OutputPath": {
+            const result = needsToWriteProxyFile(
+              outputPath.theOutputPath,
+              versionedIdentifier
+            );
+            switch (result.tag) {
+              case "Needed":
+                try {
+                  fs.writeFileSync(
+                    outputPath.theOutputPath.absolutePath,
+                    Buffer.concat([versionedIdentifier, proxyFile()])
+                  );
+                  // The proxy file doesn’t count as writing to disk…
+                  outputState.status = { tag: "NotWrittenToDisk" };
+                } catch (errorAny) {
+                  const error = errorAny as Error;
+                  outputState.status = { tag: "WriteOutputError", error };
+                }
+                break;
+
+              case "NotNeeded":
+                outputState.status = { tag: "NotWrittenToDisk" };
+                break;
+
+              case "ReadError":
+                outputState.status = {
+                  tag: "ReadOutputError",
+                  error: result.error,
+                };
+                break;
             }
-            break;
+          }
         }
         break;
 
