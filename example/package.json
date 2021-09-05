@@ -9,9 +9,9 @@
     "watch": "elm-watch hot"
   },
   "devDependencies": {
-    "elm-tooling": "1.3.0",
+    "elm-tooling": "1.4.1",
     "elm-watch": "file:../build",
-    "esbuild": "0.12.18",
+    "esbuild": "0.12.25",
     "express": "4.17.1",
     "prettier": "2.3.2",
     "uglify-js": "3.14.1"
