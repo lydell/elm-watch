@@ -1131,14 +1131,14 @@ const runCmd =
         switch (cmd.mode) {
           case "AfterInstallDependencies":
             Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
-            Compile.printSpaceForOutputs(logger, outputActions.total);
+            Compile.printSpaceForOutputs(logger, outputActions);
             break;
 
           case "AfterIdle":
             logger.clearScreen();
             mutable.lastInfoMessage = undefined;
             Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
-            Compile.printSpaceForOutputs(logger, outputActions.total);
+            Compile.printSpaceForOutputs(logger, outputActions);
             break;
 
           case "ContinueCompilation":

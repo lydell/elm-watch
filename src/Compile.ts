@@ -195,13 +195,14 @@ export type OutputActions = {
   numInterrupted: number;
   numErrors: number;
   actions: Array<OutputAction>;
+  outputsWithoutAction: Array<IndexedOutput>;
 };
 
 export function getOutputActions({
   project,
   runMode,
-  prioritizedOutputs,
   includeInterrupted,
+  prioritizedOutputs,
 }: {
   project: Project;
   runMode: RunMode;
@@ -217,6 +218,7 @@ export function getOutputActions({
     [];
   const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
   const queueActions: Array<QueueForElmMakeOutputAction> = [];
+  const outputsWithoutAction: Array<IndexedOutput> = [];
 
   const queueTypecheckOnly = (
     typecheckOnly: NonEmptyArray<IndexedOutputWithSource>
@@ -231,6 +233,7 @@ export function getOutputActions({
           break;
 
         case "Queued":
+          outputsWithoutAction.push(output);
           break;
       }
     }
@@ -288,10 +291,13 @@ export function getOutputActions({
         case "ElmMakeTypecheckOnly":
         case "Postprocess":
           numExecuting++;
+          outputsWithoutAction.push(output);
           break;
 
         case "QueuedForElmMake":
-          if (!elmMakeBusy) {
+          if (elmMakeBusy) {
+            outputsWithoutAction.push(output);
+          } else {
             if (priority !== undefined) {
               elmMakeActions.push({
                 tag: "NeedsElmMake",
@@ -320,6 +326,8 @@ export function getOutputActions({
           numInterrupted++;
           if (includeInterrupted) {
             needsElmMakeOrQueue();
+          } else {
+            outputsWithoutAction.push(output);
           }
           break;
 
@@ -327,6 +335,8 @@ export function getOutputActions({
         case "NotWrittenToDisk":
           if (outputState.dirty) {
             needsElmMakeOrQueue();
+          } else {
+            outputsWithoutAction.push(output);
           }
           break;
 
@@ -337,6 +347,8 @@ export function getOutputActions({
           numErrors++;
           if (outputState.dirty) {
             needsElmMakeOrQueue();
+          } else {
+            outputsWithoutAction.push(output);
           }
           break;
         }
@@ -379,6 +391,7 @@ export function getOutputActions({
             break;
 
           case "Queued":
+            outputsWithoutAction.push(action.output);
             break;
         }
         break;
@@ -388,6 +401,7 @@ export function getOutputActions({
         break;
 
       case "NeedsPostprocess":
+        outputsWithoutAction.push(action.output);
         break;
     }
   }
@@ -398,6 +412,7 @@ export function getOutputActions({
     numInterrupted,
     numErrors,
     actions: [...actions, ...queueActions],
+    outputsWithoutAction,
   };
 }
 
@@ -1176,9 +1191,33 @@ function combineResults(
 
 // This allows us to _always_ move the cursor in `updateStatusLine`, even the
 // “first” time which makes everything so much simpler.
-export function printSpaceForOutputs(logger: Logger, total: number): void {
-  if (logger.raw.stderr.isTTY) {
-    logger.raw.stderr.write("\n".repeat(total));
+export function printSpaceForOutputs(
+  logger: Logger,
+  outputActions: OutputActions
+): void {
+  if (!logger.raw.stderr.isTTY) {
+    return;
+  }
+  if (isNonEmptyArray(outputActions.outputsWithoutAction)) {
+    for (let index = 0; index < outputActions.total; index++) {
+      const output = outputActions.outputsWithoutAction.find(
+        (output2) => output2.index === index
+      );
+      if (output === undefined) {
+        logger.raw.stderr.write("\n");
+      } else {
+        logger.error(
+          statusLine(
+            output.outputPath,
+            output.outputState,
+            logger.raw.stderrColumns,
+            logger.fancy
+          )
+        );
+      }
+    }
+  } else {
+    logger.raw.stderr.write("\n".repeat(outputActions.total));
   }
 }
 
