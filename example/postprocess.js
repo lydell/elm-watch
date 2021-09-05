@@ -3,37 +3,21 @@ import * as fs from "fs";
 import * as path from "path";
 import * as UglifyJS from "uglify-js";
 
-export default function postprocess([outputPath, compilationMode]) {
+export default function postprocess([code, outputPath, compilationMode]) {
   switch (compilationMode) {
     case "standard":
     case "debug":
-      return { exitCode: 0 };
+      return code;
 
-    case "optimize": {
-      const code = fs.readFileSync(outputPath, "utf8");
-
-      let newCode;
-
-      try {
-        newCode = minify(code, {
-          minimal: path.basename(outputPath) === "ApplicationMain.js",
-        });
-      } catch (error) {
-        return {
-          exitCode: 1,
-          stderr: error.message,
-        };
-      }
-
-      fs.writeFileSync(outputPath, newCode);
-      return { exitCode: 0 };
-    }
+    case "optimize":
+      return minify(code, {
+        minimal: path.basename(outputPath) === "ApplicationMain.js",
+      });
 
     default:
-      return {
-        exitCode: 1,
-        stderr: `Unknown mode: ${JSON.stringify(compilationMode)}`,
-      };
+      throw new Error(
+        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`
+      );
   }
 }
 

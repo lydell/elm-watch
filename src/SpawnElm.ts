@@ -90,7 +90,12 @@ export async function make({
 
     // istanbul ignore next
     case "OtherSpawnError":
-      return spawnResult;
+    case "StdinWriteError": // We never write to stdin.
+      return {
+        tag: "OtherSpawnError",
+        error: spawnResult.error,
+        command: spawnResult.command,
+      };
 
     case "Exit": {
       const { exitReason } = spawnResult;
@@ -266,7 +271,12 @@ export async function install({
 
     // istanbul ignore next
     case "OtherSpawnError":
-      return spawnResult;
+    case "StdinWriteError": // We never write to stdin.
+      return {
+        tag: "OtherSpawnError",
+        error: spawnResult.error,
+        command: spawnResult.command,
+      };
 
     case "Exit": {
       const { exitReason } = spawnResult;

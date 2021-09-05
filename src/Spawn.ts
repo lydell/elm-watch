@@ -19,6 +19,11 @@ export type SpawnResult =
       tag: "OtherSpawnError";
       error: Error;
       command: Command;
+    }
+  | {
+      tag: "StdinWriteError";
+      error: Error;
+      command: Command;
     };
 
 export type Command = {
@@ -54,6 +59,22 @@ export async function spawn(command: Command): Promise<SpawnResult> {
       );
     });
 
+    child.stdin.on("error", (error: Error & { code?: string }) => {
+      resolve(
+        error.code === "EPIPE"
+          ? { tag: "StdinWriteError", error, command }
+          : { tag: "OtherSpawnError", error, command }
+      );
+    });
+
+    child.stdout.on("error", (error: Error) => {
+      resolve({ tag: "OtherSpawnError", error, command });
+    });
+
+    child.stderr.on("error", (error: Error) => {
+      resolve({ tag: "OtherSpawnError", error, command });
+    });
+
     child.stdout.on("data", (chunk: Buffer) => {
       stdout.push(chunk);
     });
@@ -73,7 +94,7 @@ export async function spawn(command: Command): Promise<SpawnResult> {
     });
 
     if (command.stdin !== undefined) {
-      child.stdin.write(command.stdin);
+      child.stdin.end(command.stdin);
     }
   });
 }

@@ -63,6 +63,11 @@ export type PostprocessError =
       stdout: string;
       stderr: string;
       executedCommand: ExecutedCommand;
+    }
+  | {
+      tag: "PostprocessStdinWriteError";
+      error: Error;
+      command: Command;
     };
 
 export type ExecutedCommand =
@@ -119,6 +124,13 @@ export async function postprocess({
     case "CommandNotFoundError":
     case "OtherSpawnError":
       return spawnResult;
+
+    case "StdinWriteError":
+      return {
+        tag: "PostprocessStdinWriteError",
+        error: spawnResult.error,
+        command: spawnResult.command,
+      };
 
     case "Exit": {
       const { exitReason } = spawnResult;

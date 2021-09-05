@@ -1293,6 +1293,7 @@ function statusLine(
     case "CommandNotFoundError":
     case "OtherSpawnError":
     case "UnexpectedElmMakeOutput":
+    case "PostprocessStdinWriteError":
     case "PostprocessNonZeroExit":
     case "ElmWatchNodeMissingScript":
     case "ElmWatchNodeImportError":
@@ -1416,6 +1417,13 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
               status.exitReason,
               status.stdout,
               status.stderr,
+              status.command
+            );
+
+          case "PostprocessStdinWriteError":
+            return Errors.postprocessStdinWriteError(
+              outputPath,
+              status.error,
               status.command
             );
 

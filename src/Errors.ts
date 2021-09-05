@@ -485,6 +485,27 @@ ${printStdio(stdout, stderr)}
 `;
 }
 
+export function postprocessStdinWriteError(
+  location: ElmJsonPath | OutputPath,
+  error: Error,
+  command: Command
+): ErrorTemplate {
+  return fancyError("POSTPROCESS STDIN TROUBLE", location)`
+I tried to run your postprocess command:
+
+${printCommand(command)}
+
+Trying to write to its ${bold("stdin")}, I got an error!
+${bold("Did you forget to read stdin, maybe?")}
+
+Note: If you don't need stdin in some case, you can pipe it to stdout!
+
+This is the error message I got:
+
+${error.message}
+`;
+}
+
 export function postprocessNonZeroExit(
   outputPath: OutputPath,
   exitReason: ExitReason,
