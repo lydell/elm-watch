@@ -104,6 +104,10 @@ export type OutputFsError =
   | {
       tag: "WriteOutputError";
       error: Error;
+    }
+  | {
+      tag: "WriteProxyOutputError";
+      error: Error;
     };
 
 type ElmJsonError =

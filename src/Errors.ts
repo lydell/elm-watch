@@ -815,6 +815,22 @@ ${error.message}
 `;
 }
 
+export function writeProxyOutputError(
+  outputPath: OutputPath,
+  error: Error
+): ErrorTemplate {
+  return fancyError("TROUBLE WRITING DUMMY OUTPUT", outputPath)`
+There are no websocket connections for this output, so I only typecheck the
+code. That went well. Then I tried to write a dummy output file here:
+
+${outputPathToAbsoluteString(outputPath)}
+
+Doing so I encountered this error:
+
+${error.message}
+`;
+}
+
 export function portConflict(port: Port): string {
   return `
 In your elm-tooling.json you have this:

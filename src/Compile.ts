@@ -18,7 +18,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { AbsolutePath } from "./PathHelpers";
+import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { postprocess } from "./Postprocess";
 import { OutputError, OutputState, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
@@ -1048,6 +1048,10 @@ async function typecheck({
             switch (result.tag) {
               case "Needed":
                 try {
+                  fs.mkdirSync(
+                    absoluteDirname(outputPath.theOutputPath).absolutePath,
+                    { recursive: true }
+                  );
                   fs.writeFileSync(
                     outputPath.theOutputPath.absolutePath,
                     Buffer.concat([versionedIdentifier, proxyFile()])
@@ -1056,7 +1060,7 @@ async function typecheck({
                   outputState.status = { tag: "NotWrittenToDisk" };
                 } catch (errorAny) {
                   const error = errorAny as Error;
-                  outputState.status = { tag: "WriteOutputError", error };
+                  outputState.status = { tag: "WriteProxyOutputError", error };
                 }
                 break;
 
@@ -1307,6 +1311,7 @@ function statusLine(
     case "ImportWalkerFileSystemError":
     case "ReadOutputError":
     case "WriteOutputError":
+    case "WriteProxyOutputError":
       return truncate(fancy ? `🚨 ${output}` : `${output}: error`);
   }
 }
@@ -1504,6 +1509,9 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
 
           case "WriteOutputError":
             return Errors.writeOutputError(outputPath, status.error);
+
+          case "WriteProxyOutputError":
+            return Errors.writeProxyOutputError(outputPath, status.error);
         }
       })
     ),
