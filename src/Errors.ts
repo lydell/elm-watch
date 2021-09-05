@@ -1011,7 +1011,13 @@ ${pathEntriesString}
 }
 
 function printCommand(command: Command): string {
-  const stdin = command.stdin === undefined ? "" : "printf '...' | ";
+  const stdin =
+    command.stdin === undefined
+      ? ""
+      : `${commandToPresentationName([
+          "printf",
+          truncate(command.stdin.toString("utf8")),
+        ])} | `;
   return `
 ${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
 ${stdin}${commandToPresentationName([command.command, ...command.args])}
@@ -1112,7 +1118,18 @@ function printElmWatchNodeImportCommand(
 }
 
 function printElmWatchNodeRunCommand(args: Array<string>): string {
-  return `const result = await imported.default(${JSON.stringify(args)})`;
+  const truncated = args.map((arg, index) =>
+    index === 0 ? truncate(arg) : arg
+  );
+  return `const result = await imported.default(${JSON.stringify(truncated)})`;
+}
+
+function truncate(string: string): string {
+  const roughLimit = 20;
+  const half = Math.floor(roughLimit / 2);
+  return string.length <= roughLimit
+    ? string
+    : `${string.slice(0, half)}...${string.slice(-half)}`;
 }
 
 function unknownErrorToString(error: unknown): string {
