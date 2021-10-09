@@ -81,10 +81,8 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
       return location.theElmWatchJsonPath.absolutePath;
     case "ElmWatchStuffJsonPath":
       return location.theElmWatchStuffJsonPath.absolutePath;
-    // TODO: Think about when it makes sense to print the target.
-    // Probably: Change the type so one has to make a decision for each error.
     case "OutputPath":
-      return dim(`When compiling: ${location.originalString}`);
+      return dim(`Target: ${location.targetName}`);
     case "ElmWatchNodeScriptPath":
       return location.theElmWatchNodeScriptPath.absolutePath;
     case "Custom":
