@@ -193,11 +193,11 @@ export function unknownTargetsSubstrings(
   return fancyError("UNKNOWN TARGETS SUBSTRINGS", elmWatchJsonPath)`
 I read inputs, outputs and options from ${elmWatchJson}.
 
-It contains these targest:
+It contains these targets:
 
 ${join(knownTargets, "\n")}
 
-${bold("But none of those match these targets substrings you gave me:")}
+${bold("But none of those match these substrings you gave me:")}
 
 ${join(theUnknownTargetsSubstrings, "\n")}
 
