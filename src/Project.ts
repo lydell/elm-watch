@@ -2,7 +2,7 @@ import * as os from "os";
 
 import * as ElmJson from "./ElmJson";
 import * as ElmToolingJson from "./ElmToolingJson";
-import { ElmWatchJson } from "./ElmWatchJson";
+import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import {
@@ -31,7 +31,7 @@ import type {
   CompilationMode,
   ElmJsonPath,
   ElmToolingJsonPath,
-  ElmWatchJsonPath,
+  ElmWatchStuffJsonPath,
   InputPath,
   OutputPath,
 } from "./Types";
@@ -43,7 +43,7 @@ export type Project = {
   // Path to the longest ancestor of elm-tooling.json and all elm.json.
   readonly watchRoot: AbsolutePath;
   readonly elmToolingJsonPath: ElmToolingJsonPath;
-  readonly elmWatchJsonPath: ElmWatchJsonPath;
+  readonly elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   readonly disabledOutputs: HashSet<OutputPath>;
   readonly elmJsonsErrors: Array<{
     outputPath: OutputPath;
@@ -179,16 +179,16 @@ export function initProject({
   elmToolingJsonPath,
   config,
   enabledOutputs,
-  elmWatchJsonPath,
-  elmWatchJson,
+  elmWatchStuffJsonPath,
+  elmWatchStuffJson,
 }: {
   env: Env;
   compilationMode: CompilationMode;
   elmToolingJsonPath: ElmToolingJsonPath;
   config: ElmToolingJson.Config;
   enabledOutputs: Set<string>;
-  elmWatchJsonPath: ElmWatchJsonPath;
-  elmWatchJson: ElmWatchJson | undefined;
+  elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
+  elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
   const disabledOutputs = new HashSet<OutputPath>();
   const elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }> =
@@ -242,7 +242,7 @@ export function initProject({
           const previous =
             elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
             new HashMap<OutputPath, OutputState>();
-          const persisted = elmWatchJson?.outputs[outputPathString];
+          const persisted = elmWatchStuffJson?.outputs[outputPathString];
           previous.set(outputPath, {
             inputs: resolveElmJsonResult.inputs,
             compilationMode:
@@ -309,7 +309,7 @@ export function initProject({
     project: {
       watchRoot,
       elmToolingJsonPath,
-      elmWatchJsonPath,
+      elmWatchStuffJsonPath,
       disabledOutputs,
       elmJsonsErrors,
       elmJsons,

@@ -7,7 +7,7 @@ import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
 import * as Compile from "./Compile";
-import { ElmWatchJsonWritable } from "./ElmWatchJson";
+import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
 import { HashMap } from "./HashMap";
@@ -65,7 +65,7 @@ type Mutable = {
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
-  elmWatchJsonWriteError: Error | undefined;
+  elmWatchStuffJsonWriteError: Error | undefined;
   versionedIdentifier: Buffer;
 };
 
@@ -157,7 +157,7 @@ type Cmd =
       includeInterrupted: boolean;
     }
   | {
-      tag: "HandleElmWatchJsonWriteError";
+      tag: "HandleElmWatchStuffJsonWriteError";
     }
   | {
       tag: "InstallDependencies";
@@ -363,7 +363,7 @@ const initMutable =
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
-      elmWatchJsonWriteError: undefined,
+      elmWatchStuffJsonWriteError: undefined,
       // When only typechecking, don’t write a proxy file if:
       // - The output exists.
       // - And it was created by `elm-watch hot`. (`elm-watch make` output does not contain WebSocket stuff).
@@ -377,13 +377,13 @@ const initMutable =
       ),
     };
 
-    writeElmWatchJson(mutable);
+    writeElmWatchStuffJson(mutable);
 
     return mutable;
   };
 
-function writeElmWatchJson(mutable: Mutable): void {
-  const json: ElmWatchJsonWritable = {
+function writeElmWatchStuffJson(mutable: Mutable): void {
+  const json: ElmWatchStuffJsonWritable = {
     port: mutable.webSocketServer.port.thePort,
     outputs: Object.fromEntries(
       getFlatOutputs(mutable.project).flatMap(({ outputPath, outputState }) =>
@@ -401,19 +401,21 @@ function writeElmWatchJson(mutable: Mutable): void {
 
   try {
     fs.mkdirSync(
-      absoluteDirname(mutable.project.elmWatchJsonPath.theElmWatchJsonPath)
-        .absolutePath,
+      absoluteDirname(
+        mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath
+      ).absolutePath,
       { recursive: true }
     );
 
     fs.writeFileSync(
-      mutable.project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
+      mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath
+        .absolutePath,
       `${JSON.stringify(json, null, 4)}\n`
     );
-    mutable.elmWatchJsonWriteError = undefined;
+    mutable.elmWatchStuffJsonWriteError = undefined;
   } catch (unknownError) {
     const error = toError(unknownError);
-    mutable.elmWatchJsonWriteError = error;
+    mutable.elmWatchStuffJsonWriteError = error;
   }
 }
 
@@ -565,7 +567,7 @@ const update =
                   ? { tag: "PrintCompileErrors", errors }
                   : { tag: "NoCmd" },
                 {
-                  tag: "HandleElmWatchJsonWriteError",
+                  tag: "HandleElmWatchStuffJsonWriteError",
                 },
                 {
                   tag: "LogInfoMessageWithTimeline",
@@ -1191,17 +1193,17 @@ const runCmd =
         return;
       }
 
-      case "HandleElmWatchJsonWriteError":
-        if (mutable.elmWatchJsonWriteError !== undefined) {
+      case "HandleElmWatchStuffJsonWriteError":
+        if (mutable.elmWatchStuffJsonWriteError !== undefined) {
           // Retry writing it.
-          writeElmWatchJson(mutable);
+          writeElmWatchStuffJson(mutable);
           // If still an error, print it.
-          if (mutable.elmWatchJsonWriteError !== undefined) {
+          if (mutable.elmWatchStuffJsonWriteError !== undefined) {
             logger.error("");
             logger.errorTemplate(
-              Errors.elmWatchJsonWriteError(
-                mutable.project.elmWatchJsonPath,
-                mutable.elmWatchJsonWriteError
+              Errors.elmWatchStuffJsonWriteError(
+                mutable.project.elmWatchStuffJsonPath,
+                mutable.elmWatchStuffJsonWriteError
               )
             );
           }

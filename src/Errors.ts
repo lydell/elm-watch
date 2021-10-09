@@ -26,8 +26,8 @@ import {
   CliArg,
   ElmJsonPath,
   ElmToolingJsonPath,
-  ElmWatchJsonPath,
   ElmWatchNodeScriptPath,
+  ElmWatchStuffJsonPath,
   InputPath,
   OutputPath,
   outputPathToAbsoluteString,
@@ -36,13 +36,13 @@ import {
 
 const elmJson = bold("elm.json");
 const elmToolingJson = bold("elm-tooling.json");
-const elmWatchJson = bold("elm-stuff/elm-watch.json");
+const elmWatchStuffJson = bold("elm-stuff/elm-watch-stuff.json");
 
 type FancyErrorLocation =
   | ElmJsonPath
   | ElmToolingJsonPath
-  | ElmWatchJsonPath
   | ElmWatchNodeScriptPath
+  | ElmWatchStuffJsonPath
   | OutputPath
   | { tag: "Custom"; location: string }
   | { tag: "NoLocation" };
@@ -81,8 +81,8 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
       return location.theElmJsonPath.absolutePath;
     case "ElmToolingJsonPath":
       return location.theElmToolingJsonPath.absolutePath;
-    case "ElmWatchJsonPath":
-      return location.theElmWatchJsonPath.absolutePath;
+    case "ElmWatchStuffJsonPath":
+      return location.theElmWatchStuffJsonPath.absolutePath;
     case "OutputPath":
       return dim(`When compiling: ${location.originalString}`);
     case "NullOutputPath":
@@ -722,15 +722,15 @@ and "postprocess" was not run.)
 `;
 }
 
-export function readElmWatchJsonAsJson(
-  elmWatchJsonPath: ElmWatchJsonPath,
+export function readElmWatchStuffJsonAsJson(
+  elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   error: Error
 ): ErrorTemplate {
   return fancyError(
-    "TROUBLE READING elm-stuff/elm-watch.json",
-    elmWatchJsonPath
+    "TROUBLE READING elm-stuff/elm-watch-stuff.json",
+    elmWatchStuffJsonPath
   )`
-I read stuff from ${elmWatchJson} to remember some things between runs.
+I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble reading it as JSON:")}
 
@@ -741,15 +741,15 @@ You could try removing that file (it contains nothing essential).
 `;
 }
 
-export function decodeElmWatchJson(
-  elmWatchJsonPath: ElmWatchJsonPath,
+export function decodeElmWatchStuffJson(
+  elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   error: JsonError
 ): ErrorTemplate {
   return fancyError(
-    "INVALID elm-stuff/elm-watch.json FORMAT",
-    elmWatchJsonPath
+    "INVALID elm-stuff/elm-watch-stuff.json FORMAT",
+    elmWatchStuffJsonPath
   )`
-I read stuff from ${elmWatchJson} to remember some things between runs.
+I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble with the JSON inside:")}
 
@@ -760,15 +760,15 @@ You could try removing that file (it contains nothing essential).
 `;
 }
 
-export function elmWatchJsonWriteError(
-  elmWatchJsonPath: ElmWatchJsonPath,
+export function elmWatchStuffJsonWriteError(
+  elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   error: Error
 ): ErrorTemplate {
   return fancyError(
-    "TROUBLE WRITING elm-stuff/elm-watch.json",
-    elmWatchJsonPath
+    "TROUBLE WRITING elm-stuff/elm-watch-stuff.json",
+    elmWatchStuffJsonPath
   )`
-I write stuff to ${elmWatchJson} to remember some things between runs.
+I write stuff to ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble writing that file:")}
 

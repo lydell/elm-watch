@@ -1,6 +1,6 @@
 import * as CliArgs from "./CliArgs";
 import * as ElmToolingJson from "./ElmToolingJson";
-import * as ElmWatchJson from "./ElmWatchJson";
+import * as ElmWatchStuffJson from "./ElmWatchStuffJson";
 import * as Errors from "./Errors";
 import { Env } from "./Helpers";
 import * as Hot from "./Hot";
@@ -111,40 +111,40 @@ export async function run(
             return { tag: "Exit", exitCode: 1 };
           }
 
-          const elmWatchJsonPath = ElmWatchJson.getPath(
+          const elmWatchStuffJsonPath = ElmWatchStuffJson.getPath(
             parseResult.elmToolingJsonPath
           );
 
-          const elmWatchJsonParseResult =
+          const elmWatchStuffJsonParseResult =
             runMode === "hot"
-              ? ElmWatchJson.readAndParse(elmWatchJsonPath)
+              ? ElmWatchStuffJson.readAndParse(elmWatchStuffJsonPath)
               : undefined;
 
-          switch (elmWatchJsonParseResult?.tag) {
-            case "ElmWatchJsonReadAsJsonError":
+          switch (elmWatchStuffJsonParseResult?.tag) {
+            case "ElmWatchStuffJsonReadAsJsonError":
               logger.errorTemplate(
-                Errors.readElmWatchJsonAsJson(
-                  elmWatchJsonPath,
-                  elmWatchJsonParseResult.error
+                Errors.readElmWatchStuffJsonAsJson(
+                  elmWatchStuffJsonPath,
+                  elmWatchStuffJsonParseResult.error
                 )
               );
               return { tag: "Exit", exitCode: 1 };
 
-            case "ElmWatchJsonDecodeError":
+            case "ElmWatchStuffJsonDecodeError":
               logger.errorTemplate(
-                Errors.decodeElmWatchJson(
-                  elmWatchJsonPath,
-                  elmWatchJsonParseResult.error
+                Errors.decodeElmWatchStuffJson(
+                  elmWatchStuffJsonPath,
+                  elmWatchStuffJsonParseResult.error
                 )
               );
               return { tag: "Exit", exitCode: 1 };
 
             case undefined:
             case "Parsed":
-            case "NoElmWatchJson": {
-              const elmWatchJson =
-                elmWatchJsonParseResult?.tag === "Parsed"
-                  ? elmWatchJsonParseResult.elmWatchJson
+            case "NoElmWatchStuffJson": {
+              const elmWatchStuffJson =
+                elmWatchStuffJsonParseResult?.tag === "Parsed"
+                  ? elmWatchStuffJsonParseResult.elmWatchStuffJson
                   : undefined;
 
               const initProjectResult = initProject({
@@ -155,8 +155,8 @@ export async function run(
                 enabledOutputs: isNonEmptyArray(parseArgsResult.outputs)
                   ? new Set(parseArgsResult.outputs)
                   : new Set(Object.keys(config.outputs)),
-                elmWatchJsonPath,
-                elmWatchJson,
+                elmWatchStuffJsonPath,
+                elmWatchStuffJson,
               });
 
               switch (initProjectResult.tag) {
@@ -210,8 +210,11 @@ export async function run(
                         initProjectResult.project,
                         config.port !== undefined
                           ? { tag: "PortFromConfig", port: config.port }
-                          : elmWatchJson !== undefined
-                          ? { tag: "PersistedPort", port: elmWatchJson.port }
+                          : elmWatchStuffJson !== undefined
+                          ? {
+                              tag: "PersistedPort",
+                              port: elmWatchStuffJson.port,
+                            }
                           : { tag: "NoPort" }
                       );
                       switch (result.tag) {
