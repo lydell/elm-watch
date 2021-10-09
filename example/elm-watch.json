@@ -1,67 +1,50 @@
 {
-    "outputs": {
-        "build/ApplicationMain.js": {
+    "postprocess": [
+        "elm-watch-node",
+        "postprocess.js"
+    ],
+    "targets": {
+        "Application": {
             "inputs": [
                 "src/ApplicationMain.elm"
             ],
-            "postprocess": [
-                "elm-watch-node",
-                "postprocess.js"
-            ]
+            "output": "build/ApplicationMain.js"
         },
-        "build/DocumentMain.js": {
+        "Document": {
             "inputs": [
                 "src/DocumentMain.elm"
             ],
-            "postprocess": [
-                "elm-watch-node",
-                "postprocess.js"
-            ]
+            "output": "build/DocumentMain.js"
         },
-        "build/ElementMain.js": {
+        "Element": {
             "inputs": [
                 "src/ElementMain.elm"
             ],
-            "postprocess": [
-                "elm-watch-node",
-                "postprocess.js"
-            ]
+            "output": "build/ElementMain.js"
         },
-        "build/HtmlMain.js": {
+        "Html": {
             "inputs": [
                 "src/HtmlMain.elm"
             ],
-            "postprocess": [
-                "elm-watch-node",
-                "postprocess.js"
-            ]
+            "output": "build/HtmlMain.js"
         },
-        "build/SandboxMain.js": {
+        "Sandbox": {
             "inputs": [
                 "src/SandboxMain.elm"
             ],
-            "postprocess": [
-                "elm-watch-node",
-                "postprocess.js"
-            ]
+            "output": "build/SandboxMain.js"
         },
-        "build/WorkerMain.js": {
+        "Worker": {
             "inputs": [
                 "src/WorkerMain.elm"
             ],
-            "postprocess": [
-                "elm-watch-node",
-                "postprocess.js"
-            ]
+            "output": "build/WorkerMain.js"
         },
-        "build/LegacyMain.js": {
+        "Legacy": {
             "inputs": [
                 "legacy/Main.elm"
             ],
-            "postprocess": [
-                "node",
-                "legacy/postprocess.cjs"
-            ]
+            "output": "build/LegacyMain.js"
         }
     }
 }

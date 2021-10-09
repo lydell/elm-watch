@@ -1,4 +1,4 @@
-const fs = require("fs");
+// TODO: This file is a good test, but it’s currently unused.
 const UglifyJs = require("uglify-js");
 
 const pureFuncs = [
