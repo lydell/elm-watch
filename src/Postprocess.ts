@@ -8,7 +8,7 @@ import {
 import { Command, ExitReason, spawn } from "./Spawn";
 import {
   CompilationMode,
-  ElmToolingJsonPath,
+  ElmWatchJsonPath,
   ElmWatchNodeScriptPath,
   OutputPath,
   outputPathToAbsoluteString,
@@ -83,7 +83,7 @@ export type ExecutedCommand =
 
 export async function postprocess({
   env,
-  elmToolingJsonPath,
+  elmWatchJsonPath,
   compilationMode,
   runMode,
   outputPath: output,
@@ -91,7 +91,7 @@ export async function postprocess({
   code,
 }: {
   env: Env;
-  elmToolingJsonPath: ElmToolingJsonPath;
+  elmWatchJsonPath: ElmWatchJsonPath;
   compilationMode: CompilationMode;
   runMode: RunMode;
   outputPath: OutputPath;
@@ -105,7 +105,7 @@ export async function postprocess({
     compilationMode,
     runMode,
   ];
-  const cwd = absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath);
+  const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
 
   if (commandName === "elm-watch-node") {
     return elmWatchNode(cwd, userArgs, extraArgs, code);

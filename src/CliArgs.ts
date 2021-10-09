@@ -1,4 +1,4 @@
-import * as ElmToolingJson from "./ElmToolingJson";
+import * as ElmWatchJson from "./ElmWatchJson";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import type { CliArg, CompilationMode, RunMode } from "./Types";
 
@@ -35,7 +35,7 @@ export function parseArgs(
         break;
 
       default:
-        if (ElmToolingJson.isValidOutputName(arg.theArg)) {
+        if (ElmWatchJson.isValidOutputName(arg.theArg)) {
           outputs.push(arg.theArg);
         } else {
           badArgs.push(arg);

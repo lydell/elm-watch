@@ -8,5 +8,5 @@
   "type": "commonjs",
   "exports": {},
   "bin": "./index.js",
-  "keywords": ["elm", "watch", "watcher", "elm-tooling.json"]
+  "keywords": ["elm", "watch", "watcher"]
 }

@@ -45,7 +45,7 @@ describe("help", () => {
           Recompile whenever your Elm files change,
           and reload the compiled JS in the browser
 
-      All commands read their inputs and outputs from the closest ⧙elm-tooling.json⧘.
+      All commands read their inputs and outputs from the closest ⧙elm-watch.json⧘.
       By default they build all outputs. Pass output JS file paths to only build some.
 
       ⧙---⧘
@@ -83,7 +83,7 @@ describe("help", () => {
           Recompile whenever your Elm files change,
           and reload the compiled JS in the browser
 
-      All commands read their inputs and outputs from the closest elm-tooling.json.
+      All commands read their inputs and outputs from the closest elm-watch.json.
       By default they build all outputs. Pass output JS file paths to only build some.
 
       ---

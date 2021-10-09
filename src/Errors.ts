@@ -1,7 +1,7 @@
 import * as path from "path";
 import { DecoderError, repr } from "tiny-decoders";
 
-import * as ElmToolingJson from "./ElmToolingJson";
+import * as ElmWatchJson from "./ElmWatchJson";
 import {
   bold,
   dim,
@@ -25,7 +25,7 @@ import { JsonPath } from "./SpawnElm";
 import {
   CliArg,
   ElmJsonPath,
-  ElmToolingJsonPath,
+  ElmWatchJsonPath,
   ElmWatchNodeScriptPath,
   ElmWatchStuffJsonPath,
   InputPath,
@@ -35,12 +35,12 @@ import {
 } from "./Types";
 
 const elmJson = bold("elm.json");
-const elmToolingJson = bold("elm-tooling.json");
+const elmWatchJson = bold("elm-watch.json");
 const elmWatchStuffJson = bold("elm-stuff/elm-watch-stuff.json");
 
 type FancyErrorLocation =
   | ElmJsonPath
-  | ElmToolingJsonPath
+  | ElmWatchJsonPath
   | ElmWatchNodeScriptPath
   | ElmWatchStuffJsonPath
   | OutputPath
@@ -79,8 +79,8 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
   switch (location.tag) {
     case "ElmJsonPath":
       return location.theElmJsonPath.absolutePath;
-    case "ElmToolingJsonPath":
-      return location.theElmToolingJsonPath.absolutePath;
+    case "ElmWatchJsonPath":
+      return location.theElmWatchJsonPath.absolutePath;
     case "ElmWatchStuffJsonPath":
       return location.theElmWatchStuffJsonPath.absolutePath;
     case "OutputPath":
@@ -98,12 +98,12 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
 
 export type ErrorTemplate = (width: number) => string;
 
-export function readElmToolingJsonAsJson(
-  elmToolingJsonPath: ElmToolingJsonPath,
+export function readElmWatchJsonAsJson(
+  elmWatchJsonPath: ElmWatchJsonPath,
   error: Error
 ): ErrorTemplate {
-  return fancyError("TROUBLE READING elm-tooling.json", elmToolingJsonPath)`
-I read inputs, outputs and options from ${elmToolingJson}.
+  return fancyError("TROUBLE READING elm-watch.json", elmWatchJsonPath)`
+I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("I had trouble reading it as JSON:")}
 
@@ -111,12 +111,12 @@ ${error.message}
 `;
 }
 
-export function decodeElmToolingJson(
-  elmToolingJsonPath: ElmToolingJsonPath,
+export function decodeElmWatchJson(
+  elmWatchJsonPath: ElmWatchJsonPath,
   error: JsonError
 ): ErrorTemplate {
-  return fancyError("INVALID elm-tooling.json FORMAT", elmToolingJsonPath)`
-I read inputs, outputs and options from ${elmToolingJson}.
+  return fancyError("INVALID elm-watch.json FORMAT", elmWatchJsonPath)`
+I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("I had trouble with the JSON inside:")}
 
@@ -124,24 +124,21 @@ ${printJsonError(error)}
 `;
 }
 
-export function elmToolingJsonNotFound(
+export function elmWatchJsonNotFound(
   cwd: Cwd,
   args: Array<CliArg>
 ): ErrorTemplate {
-  const example = ElmToolingJson.example(
+  const example = ElmWatchJson.example(
     cwd,
     {
-      tag: "ElmToolingJsonPath",
-      theElmToolingJsonPath: absolutePathFromString(
-        cwd.path,
-        "elm-tooling.json"
-      ),
+      tag: "ElmWatchJsonPath",
+      theElmWatchJsonPath: absolutePathFromString(cwd.path, "elm-watch.json"),
     },
     args
   );
 
-  return fancyError("elm-tooling.json NOT FOUND", { tag: "NoLocation" })`
-I read inputs, outputs and options from ${elmToolingJson}.
+  return fancyError("elm-watch.json NOT FOUND", { tag: "NoLocation" })`
+I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("But I couldn't find one!")}
 
@@ -168,7 +165,7 @@ ${bold("--debug")} and ${bold("--optimize")} cannot be used at the same time.
 
 export function badArgs(
   cwd: Cwd,
-  elmToolingJsonPath: ElmToolingJsonPath,
+  elmWatchJsonPath: ElmWatchJsonPath,
   args: Array<CliArg>,
   theBadArgs: NonEmptyArray<CliArg>
 ): ErrorTemplate {
@@ -182,23 +179,23 @@ ${join(
   "\n"
 )}
 
-You either need to remove those arguments or move them to the ${elmToolingJson} I found here:
+You either need to remove those arguments or move them to the ${elmWatchJson} I found here:
 
-${elmToolingJsonPath.theElmToolingJsonPath.absolutePath}
+${elmWatchJsonPath.theElmWatchJsonPath.absolutePath}
 
 For example, you could add some JSON like this:
 
-${ElmToolingJson.example(cwd, elmToolingJsonPath, args)}
+${ElmWatchJson.example(cwd, elmWatchJsonPath, args)}
 `;
 }
 
 export function unknownOutputs(
-  elmToolingJsonPath: ElmToolingJsonPath,
+  elmWatchJsonPath: ElmWatchJsonPath,
   knownOutputs: NonEmptyArray<string>,
   theUnknownOutputs: NonEmptyArray<string>
 ): ErrorTemplate {
-  return fancyError("UNKNOWN OUTPUTS", elmToolingJsonPath)`
-I read inputs, outputs and options from ${elmToolingJson}.
+  return fancyError("UNKNOWN OUTPUTS", elmWatchJsonPath)`
+I read inputs, outputs and options from ${elmWatchJson}.
 
 It contains these outputs:
 
@@ -380,13 +377,13 @@ ${symlinkText}
 }
 
 export function duplicateOutputs(
-  elmToolingJsonPath: ElmToolingJsonPath,
+  elmWatchJsonPath: ElmWatchJsonPath,
   duplicates: NonEmptyArray<{
     originalOutputPathStrings: NonEmptyArray<string>;
     absolutePath: AbsolutePath;
   }>
 ): ErrorTemplate {
-  return fancyError("DUPLICATE OUTPUTS", elmToolingJsonPath)`
+  return fancyError("DUPLICATE OUTPUTS", elmWatchJsonPath)`
 Some of your outputs seem to be duplicates!
 
 ${join(
@@ -534,10 +531,10 @@ ${printStdio(stdout, stderr)}
 }
 
 export function elmWatchNodeMissingScript(
-  elmToolingJsonPath: ElmToolingJsonPath
+  elmWatchJsonPath: ElmWatchJsonPath
 ): ErrorTemplate {
-  return fancyError("MISSING POSTPROCESS SCRIPT", elmToolingJsonPath)`
-You have specified this in ${elmToolingJson}:
+  return fancyError("MISSING POSTPROCESS SCRIPT", elmWatchJsonPath)`
+You have specified this in ${elmWatchJson}:
 
 "postprocess": ["elm-watch-node"]
 
@@ -841,14 +838,14 @@ ${error.message}
 
 export function portConflict(port: Port): string {
   return `
-In your elm-tooling.json you have this:
+In your elm-watch.json you have this:
 
 "port": ${JSON.stringify(port.thePort)}
 
 But something else seems to already be running on that port!
 
 You need to either find and stop that other thing, switch to another port or
-remove "port" from elm-tooling.json (which will use an arbitrary available port.)
+remove "port" from elm-watch.json (which will use an arbitrary available port.)
   `.trim();
 }
 
@@ -910,7 +907,7 @@ export function webSocketOutputNotFound(
 ): string {
   const extra = isNonEmptyArray(disabledOutputs)
     ? `
-These outputs are also available in elm-tooling.json, but are not enabled (because of the CLI arguments passed):
+These outputs are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
 
 ${join(mapNonEmptyArray(disabledOutputs, outputPathToOriginalString), "\n")}
   `.trim()
@@ -921,15 +918,15 @@ The compiled JavaScript code running in the browser says it is this output:
 
 ${output}
 
-But I can't find that output in elm-tooling.json!
+But I can't find that output in elm-watch.json!
 
-These outputs are available in elm-tooling.json:
+These outputs are available in elm-watch.json:
 
 ${join(enabledOutputs.map(outputPathToOriginalString), "\n")}
 
 ${extra}
 
-Maybe this output used to exist in elm-tooling.json, but you removed or changed it?
+Maybe this output used to exist in elm-watch.json, but you removed or changed it?
   `.trim();
 }
 
@@ -943,13 +940,13 @@ The compiled JavaScript code running in the browser says it is this output:
 
 ${output}
 
-That output does exist in elm-tooling.json, but isn't enabled.
+That output does exist in elm-watch.json, but isn't enabled.
 
 These outputs are enabled via CLI arguments:
 
 ${join(enabledOutputs.map(outputPathToOriginalString), "\n")}
 
-These outputs exist in elm-tooling.json but aren't enabled:
+These outputs exist in elm-watch.json but aren't enabled:
 
 ${join(disabledOutputs.map(outputPathToOriginalString), "\n")}
 

@@ -1,5 +1,5 @@
 import * as CliArgs from "./CliArgs";
-import * as ElmToolingJson from "./ElmToolingJson";
+import * as ElmWatchJson from "./ElmWatchJson";
 import * as ElmWatchStuffJson from "./ElmWatchStuffJson";
 import * as Errors from "./Errors";
 import { Env } from "./Helpers";
@@ -9,7 +9,7 @@ import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { Cwd } from "./PathHelpers";
 import { initProject } from "./Project";
-import { CliArg, ElmToolingJsonPath, GetNow, OnIdle, RunMode } from "./Types";
+import { CliArg, ElmWatchJsonPath, GetNow, OnIdle, RunMode } from "./Types";
 
 type RunResult =
   | {
@@ -35,39 +35,39 @@ export async function run(
   restartReasons: Array<Hot.WatcherEvent | Hot.WebSocketConnectedEvent>,
   webSocketState: Hot.WebSocketState | undefined
 ): Promise<RunResult> {
-  const parseResult = ElmToolingJson.findReadAndParse(cwd);
+  const parseResult = ElmWatchJson.findReadAndParse(cwd);
 
   switch (parseResult.tag) {
     case "ReadAsJsonError":
       logger.errorTemplate(
-        Errors.readElmToolingJsonAsJson(
-          parseResult.elmToolingJsonPath,
+        Errors.readElmWatchJsonAsJson(
+          parseResult.elmWatchJsonPath,
           parseResult.error
         )
       );
-      return handleElmToolingJsonError(
+      return handleElmWatchJsonError(
         logger,
         getNow,
         runMode,
-        parseResult.elmToolingJsonPath
+        parseResult.elmWatchJsonPath
       );
 
     case "DecodeError":
       logger.errorTemplate(
-        Errors.decodeElmToolingJson(
-          parseResult.elmToolingJsonPath,
+        Errors.decodeElmWatchJson(
+          parseResult.elmWatchJsonPath,
           parseResult.error
         )
       );
-      return handleElmToolingJsonError(
+      return handleElmWatchJsonError(
         logger,
         getNow,
         runMode,
-        parseResult.elmToolingJsonPath
+        parseResult.elmWatchJsonPath
       );
 
-    case "ElmToolingJsonNotFound":
-      logger.errorTemplate(Errors.elmToolingJsonNotFound(cwd, args));
+    case "ElmWatchJsonNotFound":
+      logger.errorTemplate(Errors.elmWatchJsonNotFound(cwd, args));
       return { tag: "Exit", exitCode: 1 };
 
     case "Parsed": {
@@ -78,7 +78,7 @@ export async function run(
           logger.errorTemplate(
             Errors.badArgs(
               cwd,
-              parseResult.elmToolingJsonPath,
+              parseResult.elmWatchJsonPath,
               args,
               parseArgsResult.badArgs
             )
@@ -102,7 +102,7 @@ export async function run(
           if (isNonEmptyArray(unknownOutputs)) {
             logger.errorTemplate(
               Errors.unknownOutputs(
-                parseResult.elmToolingJsonPath,
+                parseResult.elmWatchJsonPath,
                 // The decoder validates that there’s at least one output.
                 Object.keys(config.outputs) as NonEmptyArray<string>,
                 unknownOutputs
@@ -112,7 +112,7 @@ export async function run(
           }
 
           const elmWatchStuffJsonPath = ElmWatchStuffJson.getPath(
-            parseResult.elmToolingJsonPath
+            parseResult.elmWatchJsonPath
           );
 
           const elmWatchStuffJsonParseResult =
@@ -150,7 +150,7 @@ export async function run(
               const initProjectResult = initProject({
                 env,
                 compilationMode: parseArgsResult.compilationMode,
-                elmToolingJsonPath: parseResult.elmToolingJsonPath,
+                elmWatchJsonPath: parseResult.elmWatchJsonPath,
                 config: parseResult.config,
                 enabledOutputs: isNonEmptyArray(parseArgsResult.outputs)
                   ? new Set(parseArgsResult.outputs)
@@ -163,15 +163,15 @@ export async function run(
                 case "DuplicateOutputs":
                   logger.errorTemplate(
                     Errors.duplicateOutputs(
-                      parseResult.elmToolingJsonPath,
+                      parseResult.elmWatchJsonPath,
                       initProjectResult.duplicates
                     )
                   );
-                  return handleElmToolingJsonError(
+                  return handleElmWatchJsonError(
                     logger,
                     getNow,
                     runMode,
-                    parseResult.elmToolingJsonPath
+                    parseResult.elmWatchJsonPath
                   );
 
                 // istanbul ignore next
@@ -236,25 +236,25 @@ export async function run(
   }
 }
 
-async function handleElmToolingJsonError(
+async function handleElmWatchJsonError(
   logger: Logger,
   getNow: GetNow,
   runMode: RunMode,
-  elmToolingJsonPath: ElmToolingJsonPath
+  elmWatchJsonPath: ElmWatchJsonPath
 ): Promise<RunResult> {
   switch (runMode) {
     case "make":
       return { tag: "Exit", exitCode: 1 };
 
     case "hot": {
-      const elmToolingJsonEvent = await Hot.watchElmToolingJsonOnce(
+      const elmWatchJsonEvent = await Hot.watchElmWatchJsonOnce(
         getNow,
-        elmToolingJsonPath
+        elmWatchJsonPath
       );
       logger.clearScreen();
       return {
         tag: "Restart",
-        restartReasons: [elmToolingJsonEvent],
+        restartReasons: [elmWatchJsonEvent],
         webSocketState: undefined,
       };
     }

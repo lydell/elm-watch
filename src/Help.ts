@@ -1,7 +1,7 @@
 import { bold, dim } from "./Helpers";
 
 export function render(): string {
-  const elmToolingJson = bold("elm-tooling.json");
+  const elmWatchJson = bold("elm-watch.json");
 
   return `
 ${bold("elm-watch make [--debug|--optimize] [outputs...]")}
@@ -11,7 +11,7 @@ ${bold("elm-watch hot [outputs...]")}
     Recompile whenever your Elm files change,
     and reload the compiled JS in the browser
 
-All commands read their inputs and outputs from the closest ${elmToolingJson}.
+All commands read their inputs and outputs from the closest ${elmWatchJson}.
 By default they build all outputs. Pass output JS file paths to only build some.
 
 ${dim("---")}

@@ -4,11 +4,11 @@ import * as Decode from "tiny-decoders";
 import { JsonError, toError, toJsonError } from "./Helpers";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Port } from "./Port";
-import { ElmToolingJsonPath, ElmWatchStuffJsonPath } from "./Types";
+import { ElmWatchJsonPath, ElmWatchStuffJsonPath } from "./Types";
 
 // elm-stuff/elm-watch-stuff.json stores things between runs.
-// Configuration is stored in elm-tooling.json.
-// There’s likely an elm-stuff/ folder next to elm-tooling.json (but all
+// Configuration is stored in elm-watch.json.
+// There’s likely an elm-stuff/ folder next to elm-watch.json (but all
 // elm.json could be at other levels and as such all elm-stuff folders too).
 // Either way, it’s a good bet and people probably have `elm-stuff` in their
 // .gitignore anyway.
@@ -33,10 +33,10 @@ export type ElmWatchStuffJsonWritable = Omit<ElmWatchStuffJson, "port"> & {
 };
 
 export function getPath(
-  elmToolingJsonPath: ElmToolingJsonPath
+  elmWatchJsonPath: ElmWatchJsonPath
 ): ElmWatchStuffJsonPath {
   const elmStuff = absolutePathFromString(
-    absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
+    absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
     "elm-stuff"
   );
 

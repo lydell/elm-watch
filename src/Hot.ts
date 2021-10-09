@@ -34,7 +34,7 @@ import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
   CompilationMode,
-  ElmToolingJsonPath,
+  ElmWatchJsonPath,
   equalsInputPath,
   GetNow,
   OnIdle,
@@ -283,13 +283,13 @@ export async function run(
   });
 }
 
-export async function watchElmToolingJsonOnce(
+export async function watchElmWatchJsonOnce(
   getNow: GetNow,
-  elmToolingJsonPath: ElmToolingJsonPath
+  elmWatchJsonPath: ElmWatchJsonPath
 ): Promise<WatcherEvent> {
   return new Promise((resolve, reject) => {
     const watcher = chokidar.watch(
-      elmToolingJsonPath.theElmToolingJsonPath.absolutePath,
+      elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
       {
         ignoreInitial: true,
         disableGlobbing: true,
@@ -426,7 +426,7 @@ function watcherOnAll(
 ): void {
   // We generally only care about files – not directories – but adding and
   // removing directories can cause/fix errors, if they are named
-  // `elm-tooling.json`, `elm.json` or `*.elm`.
+  // `elm-watch.json`, `elm.json` or `*.elm`.
   watcher.on("all", (chokidarEventName, absolutePathString) => {
     switch (chokidarEventName) {
       case "add":
@@ -801,7 +801,7 @@ function onWatcherEvent(
   const basename = path.basename(absolutePathString);
 
   switch (basename) {
-    case "elm-tooling.json":
+    case "elm-watch.json":
       switch (eventName) {
         case "added":
           return makeRestartNextAction(
@@ -815,7 +815,7 @@ function onWatcherEvent(
         case "removed":
           if (
             absolutePathString ===
-            project.elmToolingJsonPath.theElmToolingJsonPath.absolutePath
+            project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath
           ) {
             return makeRestartNextAction(
               restartBecauseJsonFileChangedMessage(basename, eventName),
@@ -1166,7 +1166,7 @@ const runCmd =
                 tag: "hot",
                 versionedIdentifier: mutable.versionedIdentifier,
               },
-              elmToolingJsonPath: mutable.project.elmToolingJsonPath,
+              elmWatchJsonPath: mutable.project.elmWatchJsonPath,
               total: outputActions.total,
               action,
             }).then((handleOutputActionResult) => {
@@ -1257,12 +1257,12 @@ const runCmd =
         return;
 
       case "Restart": {
-        // Outputs and port may have changed if elm-tooling.json changes.
-        const elmToolingJsonChanged = cmd.restartReasons.some((event) => {
+        // Outputs and port may have changed if elm-watch.json changes.
+        const elmWatchJsonChanged = cmd.restartReasons.some((event) => {
           switch (event.tag) {
             case "WatcherEvent":
               return (
-                path.basename(event.file.absolutePath) === "elm-tooling.json"
+                path.basename(event.file.absolutePath) === "elm-watch.json"
               );
             case "WebSocketConnectedEvent":
               return false;
@@ -1271,12 +1271,12 @@ const runCmd =
         mutable.webSocketServer.unsetDispatch();
         Promise.all([
           mutable.watcher.close(),
-          elmToolingJsonChanged ? mutable.webSocketServer.close() : undefined,
+          elmWatchJsonChanged ? mutable.webSocketServer.close() : undefined,
         ]).then(() => {
           resolvePromise({
             tag: "Restart",
             restartReasons: cmd.restartReasons,
-            webSocketState: elmToolingJsonChanged
+            webSocketState: elmWatchJsonChanged
               ? undefined
               : {
                   webSocketServer: mutable.webSocketServer,
@@ -1971,7 +1971,7 @@ function printNumMoreEvents(numMoreEvents: number): string | undefined {
 }
 
 function restartBecauseJsonFileChangedMessage(
-  changedFile: "elm-tooling.json" | "elm.json",
+  changedFile: "elm-watch.json" | "elm.json",
   eventName: WatcherEventName
 ): string {
   return `An ${bold(changedFile)} file ${eventName}.`;

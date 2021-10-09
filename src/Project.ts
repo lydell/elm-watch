@@ -1,7 +1,7 @@
 import * as os from "os";
 
 import * as ElmJson from "./ElmJson";
-import * as ElmToolingJson from "./ElmToolingJson";
+import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
@@ -30,7 +30,7 @@ import { RunElmMakeError } from "./SpawnElm";
 import type {
   CompilationMode,
   ElmJsonPath,
-  ElmToolingJsonPath,
+  ElmWatchJsonPath,
   ElmWatchStuffJsonPath,
   InputPath,
   OutputPath,
@@ -40,9 +40,9 @@ import type {
 // to be mutated a lot, so it’s the trickiest part. The properties without
 // `readonly` are the ones that are mutated.
 export type Project = {
-  // Path to the longest ancestor of elm-tooling.json and all elm.json.
+  // Path to the longest ancestor of elm-watch.json and all elm.json.
   readonly watchRoot: AbsolutePath;
-  readonly elmToolingJsonPath: ElmToolingJsonPath;
+  readonly elmWatchJsonPath: ElmWatchJsonPath;
   readonly elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   readonly disabledOutputs: HashSet<OutputPath>;
   readonly elmJsonsErrors: Array<{
@@ -176,7 +176,7 @@ export type InitProjectResult =
 export function initProject({
   env,
   compilationMode,
-  elmToolingJsonPath,
+  elmWatchJsonPath,
   config,
   enabledOutputs,
   elmWatchStuffJsonPath,
@@ -184,8 +184,8 @@ export function initProject({
 }: {
   env: Env;
   compilationMode: CompilationMode;
-  elmToolingJsonPath: ElmToolingJsonPath;
-  config: ElmToolingJson.Config;
+  elmWatchJsonPath: ElmWatchJsonPath;
+  config: ElmWatchJson.Config;
   enabledOutputs: Set<string>;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
@@ -206,7 +206,7 @@ export function initProject({
         : {
             tag: "OutputPath",
             theOutputPath: absolutePathFromString(
-              absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
+              absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
               outputPathString
             ),
             originalString: outputPathString,
@@ -233,7 +233,7 @@ export function initProject({
 
     if (enabledOutputs.has(outputPathString)) {
       const resolveElmJsonResult = resolveElmJson(
-        elmToolingJsonPath,
+        elmWatchJsonPath,
         output.inputs
       );
 
@@ -283,7 +283,7 @@ export function initProject({
 
   const paths = mapNonEmptyArray(
     [
-      elmToolingJsonPath.theElmToolingJsonPath,
+      elmWatchJsonPath.theElmWatchJsonPath,
       ...Array.from(
         elmJsons.keys(),
         (elmJsonPath) => elmJsonPath.theElmJsonPath
@@ -308,7 +308,7 @@ export function initProject({
     tag: "Project",
     project: {
       watchRoot,
-      elmToolingJsonPath,
+      elmWatchJsonPath,
       elmWatchStuffJsonPath,
       disabledOutputs,
       elmJsonsErrors,
@@ -327,7 +327,7 @@ type ResolveElmJsonResult =
     };
 
 function resolveElmJson(
-  elmToolingJsonPath: ElmToolingJsonPath,
+  elmWatchJsonPath: ElmWatchJsonPath,
   inputStrings: NonEmptyArray<string>
 ): ResolveElmJsonResult {
   const inputs: Array<InputPath> = [];
@@ -342,7 +342,7 @@ function resolveElmJson(
     const uncheckedInputPath: UncheckedInputPath = {
       tag: "UncheckedInputPath",
       theUncheckedInputPath: absolutePathFromString(
-        absoluteDirname(elmToolingJsonPath.theElmToolingJsonPath),
+        absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
         inputString
       ),
       originalString: inputString,

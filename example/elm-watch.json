@@ -1,0 +1,69 @@
+{
+    "x-elm-watch": {
+        "outputs": {
+            "build/ApplicationMain.js": {
+                "inputs": [
+                    "src/ApplicationMain.elm"
+                ],
+                "postprocess": [
+                    "elm-watch-node",
+                    "postprocess.js"
+                ]
+            },
+            "build/DocumentMain.js": {
+                "inputs": [
+                    "src/DocumentMain.elm"
+                ],
+                "postprocess": [
+                    "elm-watch-node",
+                    "postprocess.js"
+                ]
+            },
+            "build/ElementMain.js": {
+                "inputs": [
+                    "src/ElementMain.elm"
+                ],
+                "postprocess": [
+                    "elm-watch-node",
+                    "postprocess.js"
+                ]
+            },
+            "build/HtmlMain.js": {
+                "inputs": [
+                    "src/HtmlMain.elm"
+                ],
+                "postprocess": [
+                    "elm-watch-node",
+                    "postprocess.js"
+                ]
+            },
+            "build/SandboxMain.js": {
+                "inputs": [
+                    "src/SandboxMain.elm"
+                ],
+                "postprocess": [
+                    "elm-watch-node",
+                    "postprocess.js"
+                ]
+            },
+            "build/WorkerMain.js": {
+                "inputs": [
+                    "src/WorkerMain.elm"
+                ],
+                "postprocess": [
+                    "elm-watch-node",
+                    "postprocess.js"
+                ]
+            },
+            "build/LegacyMain.js": {
+                "inputs": [
+                    "legacy/Main.elm"
+                ],
+                "postprocess": [
+                    "node",
+                    "legacy/postprocess.cjs"
+                ]
+            }
+        }
+    }
+}

@@ -129,13 +129,13 @@ describe("errors", () => {
     );
   });
 
-  test("elm-tooling.json is a folder", async () => {
-    expect(await run("elm-tooling-json-is-folder", ["make"]))
+  test("elm-watch.json is a folder", async () => {
+    expect(await run("elm-watch-json-is-folder", ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING elm-tooling.json --------------------------------------------⧘
-      /Users/you/project/tests/fixtures/errors/elm-tooling-json-is-folder/elm-tooling.json
+      ⧙-- TROUBLE READING elm-watch.json --------------------------------------------⧘
+      /Users/you/project/tests/fixtures/errors/elm-watch-json-is-folder/elm-watch.json
 
-      I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
       ⧙I had trouble reading it as JSON:⧘
 
@@ -143,13 +143,13 @@ describe("errors", () => {
     `);
   });
 
-  test("elm-tooling.json bad json", async () => {
-    expect(await run("elm-tooling-json-bad-json", ["make"]))
+  test("elm-watch.json bad json", async () => {
+    expect(await run("elm-watch-json-bad-json", ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING elm-tooling.json --------------------------------------------⧘
-      /Users/you/project/tests/fixtures/errors/elm-tooling-json-bad-json/elm-tooling.json
+      ⧙-- TROUBLE READING elm-watch.json --------------------------------------------⧘
+      /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-json/elm-watch.json
 
-      I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
       ⧙I had trouble reading it as JSON:⧘
 
@@ -157,15 +157,15 @@ describe("errors", () => {
     `);
   });
 
-  describe("elm-tooling.json decode errors", () => {
+  describe("elm-watch.json decode errors", () => {
     test("missing x-elm-watch", async () => {
       expect(
-        await run("elm-tooling-json-decode-error/missing-x-elm-watch", ["make"])
+        await run("elm-watch-json-decode-error/missing-x-elm-watch", ["make"])
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/missing-x-elm-watch/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/missing-x-elm-watch/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -176,12 +176,12 @@ describe("errors", () => {
     });
 
     test("empty outputs", async () => {
-      expect(await run("elm-tooling-json-decode-error/empty-outputs", ["make"]))
+      expect(await run("elm-watch-json-decode-error/empty-outputs", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/empty-outputs/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/empty-outputs/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -193,14 +193,12 @@ describe("errors", () => {
 
     test("bad output extension", async () => {
       expect(
-        await run("elm-tooling-json-decode-error/bad-output-extension", [
-          "make",
-        ])
+        await run("elm-watch-json-decode-error/bad-output-extension", ["make"])
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -213,14 +211,14 @@ describe("errors", () => {
       // The error message isn’t the best here but this very much an edge case anyway.
       expect(
         await run(
-          "elm-tooling-json-decode-error/bad-output-extension-just-dot-js",
+          "elm-watch-json-decode-error/bad-output-extension-just-dot-js",
           ["make"]
         )
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-output-extension-just-dot-js/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension-just-dot-js/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -230,12 +228,12 @@ describe("errors", () => {
     });
 
     test("/dev/null must be exactly that", async () => {
-      expect(await run("elm-tooling-json-decode-error/bad-dev-null", ["make"]))
+      expect(await run("elm-watch-json-decode-error/bad-dev-null", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-dev-null/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-dev-null/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -245,12 +243,12 @@ describe("errors", () => {
     });
 
     test("unknown field", async () => {
-      expect(await run("elm-tooling-json-decode-error/unknown-field", ["make"]))
+      expect(await run("elm-watch-json-decode-error/unknown-field", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/unknown-field/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-field/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -261,12 +259,12 @@ describe("errors", () => {
     });
 
     test("empty list of inputs", async () => {
-      expect(await run("elm-tooling-json-decode-error/empty-inputs", ["make"]))
+      expect(await run("elm-watch-json-decode-error/empty-inputs", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/empty-inputs/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/empty-inputs/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -278,12 +276,12 @@ describe("errors", () => {
 
     test("bad input extension", async () => {
       expect(
-        await run("elm-tooling-json-decode-error/bad-input-extension", ["make"])
+        await run("elm-watch-json-decode-error/bad-input-extension", ["make"])
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-input-extension/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-extension/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -295,14 +293,12 @@ describe("errors", () => {
 
     test("bad input module name", async () => {
       expect(
-        await run("elm-tooling-json-decode-error/bad-input-module-name", [
-          "make",
-        ])
+        await run("elm-watch-json-decode-error/bad-input-module-name", ["make"])
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-tooling.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-tooling-json-decode-error/bad-input-module-name/elm-tooling.json
+        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-module-name/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -313,12 +309,12 @@ describe("errors", () => {
     });
   });
 
-  test("elm-tooling.json not found", async () => {
+  test("elm-watch.json not found", async () => {
     expect(await runAbsolute(path.parse(__dirname).root, ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- elm-tooling.json NOT FOUND --------------------------------------------------⧘
+      ⧙-- elm-watch.json NOT FOUND --------------------------------------------------⧘
 
-      I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
       ⧙But I couldn't find one!⧘
 
@@ -358,9 +354,9 @@ describe("errors", () => {
         src/Admin.elm
         --output
 
-        You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
+        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
         For example, you could add some JSON like this:
 
@@ -379,7 +375,7 @@ describe("errors", () => {
       `);
     });
 
-    test("suggested inputs are relative to elm-tooling.json, not cwd", async () => {
+    test("suggested inputs are relative to elm-watch.json, not cwd", async () => {
       expect(
         await run("valid/src", ["make", "src/App.elm", "../lib/Admin.elm"])
       ).toMatchInlineSnapshot(`
@@ -390,9 +386,9 @@ describe("errors", () => {
         src/App.elm
         ../lib/Admin.elm
 
-        You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
+        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
         For example, you could add some JSON like this:
 
@@ -420,9 +416,9 @@ describe("errors", () => {
 
         --output=/dev/null
 
-        You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
+        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
         For example, you could add some JSON like this:
 
@@ -464,9 +460,9 @@ describe("errors", () => {
         --docs
         docs.json
 
-        You either need to remove those arguments or move them to the ⧙elm-tooling.json⧘ I found here:
+        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
         For example, you could add some JSON like this:
 
@@ -514,9 +510,9 @@ describe("errors", () => {
       await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"])
     ).toMatchInlineSnapshot(`
       ⧙-- UNKNOWN OUTPUTS -------------------------------------------------------------⧘
-      /Users/you/project/tests/fixtures/errors/valid/elm-tooling.json
+      /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
-      I read inputs, outputs and options from ⧙elm-tooling.json⧘.
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
       It contains these outputs:
 
@@ -536,7 +532,7 @@ describe("errors", () => {
   test("duplicate outputs", async () => {
     expect(await run("duplicate-outputs", ["make"])).toMatchInlineSnapshot(`
       ⧙-- DUPLICATE OUTPUTS -----------------------------------------------------------⧘
-      /Users/you/project/tests/fixtures/errors/duplicate-outputs/elm-tooling.json
+      /Users/you/project/tests/fixtures/errors/duplicate-outputs/elm-watch.json
 
       Some of your outputs seem to be duplicates!
 
@@ -1547,9 +1543,9 @@ describe("errors", () => {
         🚨 build/missing-script.js
 
         ⧙-- MISSING POSTPROCESS SCRIPT --------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/elm-tooling.json
+        /Users/you/project/tests/fixtures/errors/postprocess/elm-watch.json
 
-        You have specified this in ⧙elm-tooling.json⧘:
+        You have specified this in ⧙elm-watch.json⧘:
 
         "postprocess": ["elm-watch-node"]
 

@@ -32,7 +32,7 @@ import * as SpawnElm from "./SpawnElm";
 import {
   CompilationMode,
   ElmJsonPath,
-  ElmToolingJsonPath,
+  ElmWatchJsonPath,
   GetNow,
   InputPath,
   OutputPath,
@@ -489,7 +489,7 @@ export async function handleOutputAction({
   logger,
   getNow,
   runMode,
-  elmToolingJsonPath,
+  elmWatchJsonPath,
   total,
   action,
 }: {
@@ -497,7 +497,7 @@ export async function handleOutputAction({
   logger: Logger;
   getNow: GetNow;
   runMode: RunModeWithVersionedIdentifier;
-  elmToolingJsonPath: ElmToolingJsonPath;
+  elmWatchJsonPath: ElmWatchJsonPath;
   total: number;
   action: OutputAction;
 }): Promise<HandleOutputActionResult> {
@@ -535,7 +535,7 @@ export async function handleOutputAction({
         logger,
         getNow,
         runMode,
-        elmToolingJsonPath,
+        elmWatchJsonPath,
         total,
         ...action.output,
         postprocessArray: action.postprocessArray,
@@ -888,7 +888,7 @@ async function postprocessHelper({
   logger,
   getNow,
   runMode,
-  elmToolingJsonPath,
+  elmWatchJsonPath,
   outputPath,
   outputState,
   index,
@@ -900,7 +900,7 @@ async function postprocessHelper({
   logger: Logger;
   getNow: GetNow;
   runMode: RunModeWithVersionedIdentifier;
-  elmToolingJsonPath: ElmToolingJsonPath;
+  elmWatchJsonPath: ElmWatchJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
   index: number;
@@ -923,7 +923,7 @@ async function postprocessHelper({
 
   const postprocessResult = await postprocess({
     env,
-    elmToolingJsonPath,
+    elmWatchJsonPath,
     compilationMode: outputState.compilationMode,
     runMode: runMode.tag,
     outputPath,
@@ -1488,7 +1488,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
             );
 
           case "ElmWatchNodeMissingScript":
-            return Errors.elmWatchNodeMissingScript(project.elmToolingJsonPath);
+            return Errors.elmWatchNodeMissingScript(project.elmWatchJsonPath);
 
           case "ElmWatchNodeImportError":
             return Errors.elmWatchNodeImportError(

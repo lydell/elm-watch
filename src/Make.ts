@@ -52,7 +52,7 @@ export async function run(
             logger,
             getNow,
             runMode: { tag: "make" },
-            elmToolingJsonPath: project.elmToolingJsonPath,
+            elmWatchJsonPath: project.elmWatchJsonPath,
             total: outputActions.total,
             action,
           }).then(() => {

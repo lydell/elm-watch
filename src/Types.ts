@@ -11,10 +11,10 @@ export const CompilationMode = Decode.stringUnion({
   optimize: null,
 });
 
-// elm-tooling.json
-export type ElmToolingJsonPath = {
-  tag: "ElmToolingJsonPath";
-  theElmToolingJsonPath: AbsolutePath;
+// elm-watch.json
+export type ElmWatchJsonPath = {
+  tag: "ElmWatchJsonPath";
+  theElmWatchJsonPath: AbsolutePath;
 };
 
 // elm.json

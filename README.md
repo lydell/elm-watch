@@ -14,7 +14,7 @@ npm install --save-dev elm-watch
 
 ## Getting started
 
-Create a file called `elm-tooling.json`:
+Create a file called `elm-watch.json`:
 
 ```json
 {

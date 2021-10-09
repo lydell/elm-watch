@@ -10,7 +10,7 @@ import {
 } from "./NonEmptyArray";
 import { Cwd, findClosest } from "./PathHelpers";
 import { Port } from "./Port";
-import type { CliArg, ElmToolingJsonPath } from "./Types";
+import type { CliArg, ElmWatchJsonPath } from "./Types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
@@ -82,54 +82,54 @@ const Config = Decode.fieldsAuto(
   { exact: "throw" }
 );
 
-export type ElmToolingJson = ReturnType<typeof ElmToolingJson>;
-const ElmToolingJson = Decode.fieldsAuto({
+export type ElmWatchJson = ReturnType<typeof ElmWatchJson>;
+const ElmWatchJson = Decode.fieldsAuto({
   "x-elm-watch": Config,
 });
 
 export type ParseResult =
   | {
       tag: "DecodeError";
-      elmToolingJsonPath: ElmToolingJsonPath;
+      elmWatchJsonPath: ElmWatchJsonPath;
       error: JsonError;
     }
   | {
-      tag: "ElmToolingJsonNotFound";
+      tag: "ElmWatchJsonNotFound";
     }
   | {
       tag: "Parsed";
-      elmToolingJsonPath: ElmToolingJsonPath;
+      elmWatchJsonPath: ElmWatchJsonPath;
       config: Config;
     }
   | {
       tag: "ReadAsJsonError";
-      elmToolingJsonPath: ElmToolingJsonPath;
+      elmWatchJsonPath: ElmWatchJsonPath;
       error: Error;
     };
 
 export function findReadAndParse(cwd: Cwd): ParseResult {
-  const elmToolingJsonPathRaw = findClosest("elm-tooling.json", cwd.path);
-  if (elmToolingJsonPathRaw === undefined) {
+  const elmWatchJsonPathRaw = findClosest("elm-watch.json", cwd.path);
+  if (elmWatchJsonPathRaw === undefined) {
     return {
-      tag: "ElmToolingJsonNotFound",
+      tag: "ElmWatchJsonNotFound",
     };
   }
 
-  const elmToolingJsonPath: ElmToolingJsonPath = {
-    tag: "ElmToolingJsonPath",
-    theElmToolingJsonPath: elmToolingJsonPathRaw,
+  const elmWatchJsonPath: ElmWatchJsonPath = {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: elmWatchJsonPathRaw,
   };
 
   let json: unknown = undefined;
   try {
     json = JSON.parse(
-      fs.readFileSync(elmToolingJsonPathRaw.absolutePath, "utf-8")
+      fs.readFileSync(elmWatchJsonPathRaw.absolutePath, "utf-8")
     );
   } catch (unknownError) {
     const error = toError(unknownError);
     return {
       tag: "ReadAsJsonError",
-      elmToolingJsonPath,
+      elmWatchJsonPath,
       error,
     };
   }
@@ -137,14 +137,14 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
   try {
     return {
       tag: "Parsed",
-      elmToolingJsonPath,
-      config: ElmToolingJson(json)["x-elm-watch"],
+      elmWatchJsonPath,
+      config: ElmWatchJson(json)["x-elm-watch"],
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);
     return {
       tag: "DecodeError",
-      elmToolingJsonPath,
+      elmWatchJsonPath,
       error,
     };
   }
@@ -152,12 +152,12 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
 
 export function example(
   cwd: Cwd,
-  elmToolingJsonPath: ElmToolingJsonPath,
+  elmWatchJsonPath: ElmWatchJsonPath,
   args: Array<CliArg>
 ): string {
   const { elmFiles, output = "build/main.js" } = parseArgsLikeElmMake(args);
 
-  const json: ElmToolingJson = {
+  const json: ElmWatchJson = {
     "x-elm-watch": {
       outputs: {
         [output]: {
@@ -165,7 +165,7 @@ export function example(
             ? mapNonEmptyArray(elmFiles, (file) =>
                 path.relative(
                   path.dirname(
-                    elmToolingJsonPath.theElmToolingJsonPath.absolutePath
+                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath
                   ),
                   path.resolve(cwd.path.absolutePath, file)
                 )
