@@ -10,13 +10,7 @@ import {
   absolutePathFromString,
 } from "./PathHelpers";
 import { Command, ExitReason, spawn } from "./Spawn";
-import {
-  CompilationMode,
-  ElmJsonPath,
-  InputPath,
-  OutputPath,
-  outputPathToAbsoluteString,
-} from "./Types";
+import { CompilationMode, ElmJsonPath, InputPath, OutputPath } from "./Types";
 
 export type RunElmMakeResult = RunElmMakeError | { tag: "Success" };
 
@@ -52,6 +46,8 @@ export type JsonPath =
   | AbsolutePath
   | { tag: "WritingJsonFailed"; error: Error; attemptedPath: AbsolutePath };
 
+export type NullOutputPath = { tag: "NullOutputPath" };
+
 export async function make({
   elmJsonPath,
   compilationMode,
@@ -62,7 +58,7 @@ export async function make({
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   inputs: NonEmptyArray<InputPath>;
-  outputPath: OutputPath;
+  outputPath: NullOutputPath | OutputPath;
   env: Env;
 }): Promise<RunElmMakeResult> {
   const command: Command = {
@@ -135,7 +131,18 @@ export function compilationModeToArg(
   }
 }
 
-export function maybeToArray<T>(arg: T | undefined): Array<T> {
+export function outputPathToAbsoluteString(
+  outputPath: NullOutputPath | OutputPath
+): string {
+  switch (outputPath.tag) {
+    case "OutputPath":
+      return outputPath.theOutputPath.absolutePath;
+    case "NullOutputPath":
+      return "/dev/null";
+  }
+}
+
+function maybeToArray<T>(arg: T | undefined): Array<T> {
   return arg === undefined ? [] : [arg];
 }
 

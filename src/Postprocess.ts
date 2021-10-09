@@ -11,9 +11,17 @@ import {
   ElmWatchJsonPath,
   ElmWatchNodeScriptPath,
   OutputPath,
-  outputPathToAbsoluteString,
   RunMode,
 } from "./Types";
+
+export type Postprocess =
+  | {
+      tag: "NoPostprocess";
+    }
+  | {
+      tag: "Postprocess";
+      postprocessArray: NonEmptyArray<string>;
+    };
 
 export type PostprocessResult =
   | PostprocessError
@@ -81,7 +89,7 @@ export type ExecutedCommand =
       args: Array<string>;
     };
 
-export async function postprocess({
+export async function runPostprocess({
   env,
   elmWatchJsonPath,
   compilationMode,
@@ -101,7 +109,7 @@ export async function postprocess({
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
   const extraArgs = [
-    outputPathToAbsoluteString(output),
+    output.theOutputPath.absolutePath,
     compilationMode,
     runMode,
   ];

@@ -39,7 +39,6 @@ import {
   GetNow,
   OnIdle,
   OutputPath,
-  outputPathToOriginalString,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
@@ -385,13 +384,13 @@ const initMutable =
 function writeElmWatchStuffJson(mutable: Mutable): void {
   const json: ElmWatchStuffJsonWritable = {
     port: mutable.webSocketServer.port.thePort,
-    outputs: Object.fromEntries(
+    targets: Object.fromEntries(
       getFlatOutputs(mutable.project).flatMap(({ outputPath, outputState }) =>
         outputState.compilationMode === "standard"
           ? []
           : [
               [
-                outputPathToOriginalString(outputPath),
+                outputPath.targetName,
                 { compilationMode: outputState.compilationMode },
               ],
             ]
@@ -722,19 +721,19 @@ const update =
               )
             );
 
-          case "OutputNotFound":
+          case "TargetNotFound":
             return onError(
-              Errors.webSocketOutputNotFound(
-                result.output,
+              Errors.webSocketTargetNotFound(
+                result.targetName,
                 result.enabledOutputs,
                 result.disabledOutputs
               )
             );
 
-          case "OutputDisabled":
+          case "TargetDisabled":
             return onError(
-              Errors.webSocketOutputDisabled(
-                result.output,
+              Errors.webSocketTargetDisabled(
+                result.targetName,
                 result.enabledOutputs,
                 result.disabledOutputs
               )
@@ -1169,6 +1168,7 @@ const runCmd =
               elmWatchJsonPath: mutable.project.elmWatchJsonPath,
               total: outputActions.total,
               action,
+              postprocess: mutable.project.postprocess,
             }).then((handleOutputActionResult) => {
               dispatch({
                 tag: "CompilationPartDone",
@@ -1480,32 +1480,17 @@ function webSocketConnectionIsForOutputPath(
       return false;
 
     case "OutputPath":
-      switch (outputPath.tag) {
-        case "OutputPath":
-          return (
-            webSocketConnection.outputPath.theOutputPath.absolutePath ===
-            outputPath.theOutputPath.absolutePath
-          );
-
-        case "NullOutputPath":
-          return false;
-      }
-
-    case "NullOutputPath":
-      switch (outputPath.tag) {
-        case "OutputPath":
-          return false;
-
-        case "NullOutputPath":
-          return true;
-      }
+      return (
+        webSocketConnection.outputPath.theOutputPath.absolutePath ===
+        outputPath.theOutputPath.absolutePath
+      );
   }
 }
 
 const WebSocketConnectedParams = Decode.fieldsAuto(
   {
     elmWatchVersion: Decode.string,
-    output: Decode.string,
+    targetName: Decode.string,
     compiledTimestamp: Decode.number,
   },
   { exact: "throw" }
@@ -1527,21 +1512,21 @@ type ParseWebSocketConnectRequestUrlError =
       actualUrlString: string;
     }
   | {
-      tag: "OutputDisabled";
-      output: string;
-      enabledOutputs: Array<OutputPath>;
-      disabledOutputs: Array<OutputPath>;
-    }
-  | {
-      tag: "OutputNotFound";
-      output: string;
-      enabledOutputs: Array<OutputPath>;
-      disabledOutputs: Array<OutputPath>;
-    }
-  | {
       tag: "ParamsDecodeError";
       error: JsonError;
       actualUrlString: string;
+    }
+  | {
+      tag: "TargetDisabled";
+      targetName: string;
+      enabledOutputs: Array<OutputPath>;
+      disabledOutputs: Array<OutputPath>;
+    }
+  | {
+      tag: "TargetNotFound";
+      targetName: string;
+      enabledOutputs: Array<OutputPath>;
+      disabledOutputs: Array<OutputPath>;
     }
   | {
       tag: "WrongVersion";
@@ -1588,27 +1573,27 @@ function parseWebSocketConnectRequestUrl(
 
   const flatOutputs = getFlatOutputs(project);
 
-  const { output } = webSocketConnectedParams;
+  const { targetName } = webSocketConnectedParams;
   const match = flatOutputs.find(
-    ({ outputPath }) => outputPathToOriginalString(outputPath) === output
+    ({ outputPath }) => outputPath.targetName === targetName
   );
 
   if (match === undefined) {
     const enabledOutputs = flatOutputs.map(({ outputPath }) => outputPath);
     const disabledOutputs = Array.from(project.disabledOutputs);
     const disabledMatch = disabledOutputs.find(
-      (outputPath) => outputPathToOriginalString(outputPath) === output
+      (outputPath) => outputPath.targetName === targetName
     );
     return disabledMatch === undefined
       ? {
-          tag: "OutputNotFound",
-          output,
+          tag: "TargetNotFound",
+          targetName,
           enabledOutputs,
           disabledOutputs,
         }
       : {
-          tag: "OutputDisabled",
-          output,
+          tag: "TargetDisabled",
+          targetName,
           enabledOutputs,
           disabledOutputs,
         };
@@ -1956,9 +1941,9 @@ function printEvent(event: WatcherEvent | WebSocketConnectedEvent): string {
     case "WebSocketConnectedEvent":
       return `${formatTime(
         event.date
-      )} web socket connected needing compilation of ${outputPathToOriginalString(
-        event.outputPath
-      )}`;
+      )} web socket connected needing compilation of: ${
+        event.outputPath.targetName
+      }`;
   }
 }
 

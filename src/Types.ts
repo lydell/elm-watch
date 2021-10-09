@@ -45,14 +45,13 @@ export type InputPath = {
   realpath: AbsolutePath;
 };
 
-// build/main.js and /dev/null
-export type OutputPath =
-  | {
-      tag: "OutputPath";
-      theOutputPath: AbsolutePath;
-      originalString: string;
-    }
-  | { tag: "NullOutputPath" };
+// build/main.js
+export type OutputPath = {
+  tag: "OutputPath";
+  theOutputPath: AbsolutePath;
+  originalString: string;
+  targetName: string;
+};
 
 // "postprocess": ["elm-watch-node", "postprocess.js"]
 //                                    ^^^^^^^^^^^^^^
@@ -70,24 +69,6 @@ export type CliArg = {
 export type GetNow = () => Date;
 
 export type OnIdle = () => "KeepGoing" | "Stop";
-
-export function outputPathToAbsoluteString(outputPath: OutputPath): string {
-  switch (outputPath.tag) {
-    case "OutputPath":
-      return outputPath.theOutputPath.absolutePath;
-    case "NullOutputPath":
-      return "/dev/null";
-  }
-}
-
-export function outputPathToOriginalString(outputPath: OutputPath): string {
-  switch (outputPath.tag) {
-    case "OutputPath":
-      return outputPath.originalString;
-    case "NullOutputPath":
-      return "/dev/null";
-  }
-}
 
 export function equalsInputPath(
   elmFile: AbsolutePath,

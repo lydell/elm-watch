@@ -95,17 +95,17 @@ export async function run(
 
         case "Success": {
           const { config } = parseResult;
-          const unknownOutputs = parseArgsResult.outputs.filter(
-            (arg) => !Object.prototype.hasOwnProperty.call(config.outputs, arg)
+          const unknownTargets = parseArgsResult.targets.filter(
+            (arg) => !Object.prototype.hasOwnProperty.call(config.targets, arg)
           );
 
-          if (isNonEmptyArray(unknownOutputs)) {
+          if (isNonEmptyArray(unknownTargets)) {
             logger.errorTemplate(
-              Errors.unknownOutputs(
+              Errors.unknownTargets(
                 parseResult.elmWatchJsonPath,
                 // The decoder validates that there’s at least one output.
-                Object.keys(config.outputs) as NonEmptyArray<string>,
-                unknownOutputs
+                Object.keys(config.targets) as NonEmptyArray<string>,
+                unknownTargets
               )
             );
             return { tag: "Exit", exitCode: 1 };
@@ -152,9 +152,9 @@ export async function run(
                 compilationMode: parseArgsResult.compilationMode,
                 elmWatchJsonPath: parseResult.elmWatchJsonPath,
                 config: parseResult.config,
-                enabledOutputs: isNonEmptyArray(parseArgsResult.outputs)
-                  ? new Set(parseArgsResult.outputs)
-                  : new Set(Object.keys(config.outputs)),
+                enabledTargets: isNonEmptyArray(parseArgsResult.targets)
+                  ? new Set(parseArgsResult.targets)
+                  : new Set(Object.keys(config.targets)),
                 elmWatchStuffJsonPath,
                 elmWatchStuffJson,
               });

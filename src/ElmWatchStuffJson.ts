@@ -18,14 +18,14 @@ const CompilationMode = Decode.stringUnion({
   optimize: null,
 });
 
-const Output = Decode.fieldsAuto({
+const Target = Decode.fieldsAuto({
   compilationMode: CompilationMode,
 });
 
 export type ElmWatchStuffJson = ReturnType<typeof ElmWatchStuffJson>;
 export const ElmWatchStuffJson = Decode.fieldsAuto({
   port: Port,
-  outputs: Decode.record(Output),
+  targets: Decode.record(Target),
 });
 
 export type ElmWatchStuffJsonWritable = Omit<ElmWatchStuffJson, "port"> & {

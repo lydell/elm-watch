@@ -30,8 +30,6 @@ import {
   ElmWatchStuffJsonPath,
   InputPath,
   OutputPath,
-  outputPathToAbsoluteString,
-  outputPathToOriginalString,
 } from "./Types";
 
 const elmJson = bold("elm.json");
@@ -83,10 +81,10 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
       return location.theElmWatchJsonPath.absolutePath;
     case "ElmWatchStuffJsonPath":
       return location.theElmWatchStuffJsonPath.absolutePath;
+    // TODO: Think about when it makes sense to print the target.
+    // Probably: Change the type so one has to make a decision for each error.
     case "OutputPath":
       return dim(`When compiling: ${location.originalString}`);
-    case "NullOutputPath":
-      return dim("When compiling to /dev/null");
     case "ElmWatchNodeScriptPath":
       return location.theElmWatchNodeScriptPath.absolutePath;
     case "Custom":
@@ -171,7 +169,7 @@ export function badArgs(
 ): ErrorTemplate {
   return fancyError("UNEXPECTED ARGUMENTS", { tag: "NoLocation" })`
 ${bold(
-  "I only accept JS file paths as arguments, but I got some that don't look like that:"
+  "I only accept target names as arguments, but I got some that don't look like that:"
 )}
 
 ${join(
@@ -189,24 +187,24 @@ ${ElmWatchJson.example(cwd, elmWatchJsonPath, args)}
 `;
 }
 
-export function unknownOutputs(
+export function unknownTargets(
   elmWatchJsonPath: ElmWatchJsonPath,
-  knownOutputs: NonEmptyArray<string>,
-  theUnknownOutputs: NonEmptyArray<string>
+  knownTargets: NonEmptyArray<string>,
+  theUnknownTargets: NonEmptyArray<string>
 ): ErrorTemplate {
-  return fancyError("UNKNOWN OUTPUTS", elmWatchJsonPath)`
+  return fancyError("UNKNOWN TARGETS", elmWatchJsonPath)`
 I read inputs, outputs and options from ${elmWatchJson}.
 
-It contains these outputs:
+It contains these targest:
 
-${join(knownOutputs, "\n")}
+${join(knownTargets, "\n")}
 
-${bold("But those don't include these outputs you asked me to build:")}
+${bold("But those don't include these targets you asked me to build:")}
 
-${join(theUnknownOutputs, "\n")}
+${join(theUnknownTargets, "\n")}
 
-Is something misspelled? (You need to type them exactly the same.)
-Or do you need to add some more outputs?
+Is something misspelled?
+Or do you need to add some more targets?
 `;
 }
 
@@ -797,7 +795,7 @@ export function readOutputError(
   return fancyError("TROUBLE READING OUTPUT", outputPath)`
 I managed to compile your code. Then I tried to read the output:
 
-${outputPathToAbsoluteString(outputPath)}
+${outputPath.theOutputPath.absolutePath}
 
 Doing so I encountered this error:
 
@@ -812,7 +810,7 @@ export function writeOutputError(
   return fancyError("TROUBLE WRITING OUTPUT", outputPath)`
 I managed to compile your code and read the generated file:
 
-${outputPathToAbsoluteString(outputPath)}
+${outputPath.theOutputPath.absolutePath}
 
 I made some changes to it and tried to write that back but I encountered this error:
 
@@ -828,7 +826,7 @@ export function writeProxyOutputError(
 There are no websocket connections for this output, so I only typecheck the
 code. That went well. Then I tried to write a dummy output file here:
 
-${outputPathToAbsoluteString(outputPath)}
+${outputPath.theOutputPath.absolutePath}
 
 Doing so I encountered this error:
 
@@ -900,57 +898,69 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
   `.trim();
 }
 
-export function webSocketOutputNotFound(
-  output: string,
+export function webSocketTargetNotFound(
+  targetName: string,
   enabledOutputs: Array<OutputPath>,
   disabledOutputs: Array<OutputPath>
 ): string {
   const extra = isNonEmptyArray(disabledOutputs)
     ? `
-These outputs are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
+These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
 
-${join(mapNonEmptyArray(disabledOutputs, outputPathToOriginalString), "\n")}
+${join(
+  mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName),
+  "\n"
+)}
   `.trim()
     : "";
 
   return `
-The compiled JavaScript code running in the browser says it is this output:
+The compiled JavaScript code running in the browser says it is for this target:
 
-${output}
+${targetName}
 
-But I can't find that output in elm-watch.json!
+But I can't find that target in elm-watch.json!
 
-These outputs are available in elm-watch.json:
+These targets are available in elm-watch.json:
 
-${join(enabledOutputs.map(outputPathToOriginalString), "\n")}
+${join(
+  enabledOutputs.map((outputPath) => outputPath.targetName),
+  "\n"
+)}
 
 ${extra}
 
-Maybe this output used to exist in elm-watch.json, but you removed or changed it?
+Maybe this target used to exist in elm-watch.json, but you removed or changed it?
   `.trim();
 }
 
-export function webSocketOutputDisabled(
-  output: string,
+export function webSocketTargetDisabled(
+  targetName: string,
   enabledOutputs: Array<OutputPath>,
   disabledOutputs: Array<OutputPath>
 ): string {
   return `
-The compiled JavaScript code running in the browser says it is this output:
+The compiled JavaScript code running in the browser says it is for this target:
 
-${output}
+${targetName}
 
-That output does exist in elm-watch.json, but isn't enabled.
+That target does exist in elm-watch.json, but isn't enabled.
 
-These outputs are enabled via CLI arguments:
+These targets are enabled via CLI arguments:
 
-${join(enabledOutputs.map(outputPathToOriginalString), "\n")}
+${join(
+  enabledOutputs.map((outputPath) => outputPath.targetName),
+  "\n"
+)}
 
-These outputs exist in elm-watch.json but aren't enabled:
+These targets exist in elm-watch.json but aren't enabled:
 
-${join(disabledOutputs.map(outputPathToOriginalString), "\n")}
+${join(
+  disabledOutputs.map((outputPath) => outputPath.targetName),
+  "\n"
+)}
 
-If you want to have this output compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
+If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
   `.trim();
 }
 

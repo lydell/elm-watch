@@ -26,7 +26,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
-import { postprocess } from "./Postprocess";
+import { Postprocess, runPostprocess } from "./Postprocess";
 import { OutputError, OutputState, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
 import {
@@ -36,8 +36,6 @@ import {
   GetNow,
   InputPath,
   OutputPath,
-  outputPathToAbsoluteString,
-  outputPathToOriginalString,
   RunMode,
 } from "./Types";
 
@@ -492,6 +490,7 @@ export async function handleOutputAction({
   elmWatchJsonPath,
   total,
   action,
+  postprocess,
 }: {
   env: Env;
   logger: Logger;
@@ -500,6 +499,7 @@ export async function handleOutputAction({
   elmWatchJsonPath: ElmWatchJsonPath;
   total: number;
   action: OutputAction;
+  postprocess: Postprocess;
 }): Promise<HandleOutputActionResult> {
   switch (action.tag) {
     case "NeedsElmMake":
@@ -510,6 +510,7 @@ export async function handleOutputAction({
         runMode,
         total,
         ...action.output,
+        postprocess,
       });
 
     case "NeedsElmMakeTypecheckOnly":
@@ -563,6 +564,7 @@ async function compileOneOutput({
   outputState,
   index,
   total,
+  postprocess,
 }: {
   env: Env;
   logger: Logger;
@@ -573,6 +575,7 @@ async function compileOneOutput({
   outputState: OutputState;
   index: number;
   total: number;
+  postprocess: Postprocess;
 }): Promise<HandleOutputActionResult> {
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
@@ -637,7 +640,8 @@ async function compileOneOutput({
         runMode,
         outputPath,
         outputState,
-        getNow().getTime()
+        getNow().getTime(),
+        postprocess
       );
 
     case "elm make success + walker failure":
@@ -673,56 +677,32 @@ function onCompileSuccess(
   runMode: RunModeWithVersionedIdentifier,
   outputPath: OutputPath,
   outputState: OutputState,
-  compiledTimestamp: number
+  compiledTimestamp: number,
+  postprocess: Postprocess
 ): HandleOutputActionResult {
-  switch (outputPath.tag) {
-    case "NullOutputPath":
-      outputState.status = { tag: "NotWrittenToDisk" };
-      updateStatusLineHelper();
-      return { tag: "Nothing" };
-
-    case "OutputPath":
-      switch (runMode.tag) {
-        case "make":
-          if (outputState.postprocess === undefined) {
-            let fileSize;
-            try {
-              fileSize = fs.statSync(
-                outputPath.theOutputPath.absolutePath
-              ).size;
-            } catch (unknownError) {
-              const error = toError(unknownError);
-              outputState.status = { tag: "ReadOutputError", error };
-              updateStatusLineHelper();
-              return { tag: "CompileError", outputPath };
-            }
-            outputState.status = {
-              tag: "Success",
-              fileSize,
-              compiledTimestamp,
-            };
+  switch (runMode.tag) {
+    case "make":
+      switch (postprocess.tag) {
+        case "NoPostprocess": {
+          let fileSize;
+          try {
+            fileSize = fs.statSync(outputPath.theOutputPath.absolutePath).size;
+          } catch (unknownError) {
+            const error = toError(unknownError);
+            outputState.status = { tag: "ReadOutputError", error };
             updateStatusLineHelper();
-            return { tag: "Nothing" };
-          } else {
-            let buffer;
-            try {
-              buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
-            } catch (unknownError) {
-              const error = toError(unknownError);
-              outputState.status = { tag: "ReadOutputError", error };
-              updateStatusLineHelper();
-              return { tag: "CompileError", outputPath };
-            }
-            outputState.status = {
-              tag: "QueuedForPostprocess",
-              postprocessArray: outputState.postprocess,
-              code: buffer,
-            };
-            updateStatusLineHelper();
-            return { tag: "Nothing" };
+            return { tag: "CompileError", outputPath };
           }
+          outputState.status = {
+            tag: "Success",
+            fileSize,
+            compiledTimestamp,
+          };
+          updateStatusLineHelper();
+          return { tag: "Nothing" };
+        }
 
-        case "hot": {
+        case "Postprocess": {
           let buffer;
           try {
             buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
@@ -732,52 +712,75 @@ function onCompileSuccess(
             updateStatusLineHelper();
             return { tag: "CompileError", outputPath };
           }
-
-          const result = injectWebSocketClient(buffer.toString("utf8"));
-
-          switch (result.tag) {
-            case "Error":
-              // outputState.status = { tag: "TODO" };
-              updateStatusLineHelper();
-              return { tag: "CompileError", outputPath };
-
-            case "Success":
-              if (outputState.postprocess === undefined) {
-                const newBuffer = Buffer.from(result.code);
-                try {
-                  fs.writeFileSync(
-                    outputPath.theOutputPath.absolutePath,
-                    Buffer.concat([runMode.versionedIdentifier, newBuffer])
-                  );
-                } catch (unknownError) {
-                  const error = toError(unknownError);
-                  outputState.status = { tag: "WriteOutputError", error };
-                  updateStatusLineHelper();
-                  return { tag: "CompileError", outputPath };
-                }
-                outputState.status = {
-                  tag: "Success",
-                  fileSize: newBuffer.byteLength,
-                  compiledTimestamp,
-                };
-                updateStatusLineHelper();
-                return {
-                  tag: "FullyCompiledJS",
-                  outputPath,
-                  code: newBuffer,
-                };
-              } else {
-                outputState.status = {
-                  tag: "QueuedForPostprocess",
-                  postprocessArray: outputState.postprocess,
-                  code: result.code,
-                };
-                updateStatusLineHelper();
-                return { tag: "Nothing" };
-              }
-          }
+          outputState.status = {
+            tag: "QueuedForPostprocess",
+            postprocessArray: postprocess.postprocessArray,
+            code: buffer,
+          };
+          updateStatusLineHelper();
+          return { tag: "Nothing" };
         }
       }
+
+    case "hot": {
+      let buffer;
+      try {
+        buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
+      } catch (unknownError) {
+        const error = toError(unknownError);
+        outputState.status = { tag: "ReadOutputError", error };
+        updateStatusLineHelper();
+        return { tag: "CompileError", outputPath };
+      }
+
+      const result = injectWebSocketClient(buffer.toString("utf8"));
+
+      switch (result.tag) {
+        case "Error":
+          // outputState.status = { tag: "TODO" };
+          updateStatusLineHelper();
+          return { tag: "CompileError", outputPath };
+
+        case "Success":
+          switch (postprocess.tag) {
+            case "NoPostprocess": {
+              const newBuffer = Buffer.from(result.code);
+              try {
+                fs.writeFileSync(
+                  outputPath.theOutputPath.absolutePath,
+                  Buffer.concat([runMode.versionedIdentifier, newBuffer])
+                );
+              } catch (unknownError) {
+                const error = toError(unknownError);
+                outputState.status = { tag: "WriteOutputError", error };
+                updateStatusLineHelper();
+                return { tag: "CompileError", outputPath };
+              }
+              outputState.status = {
+                tag: "Success",
+                fileSize: newBuffer.byteLength,
+                compiledTimestamp,
+              };
+              updateStatusLineHelper();
+              return {
+                tag: "FullyCompiledJS",
+                outputPath,
+                code: newBuffer,
+              };
+            }
+
+            case "Postprocess": {
+              outputState.status = {
+                tag: "QueuedForPostprocess",
+                postprocessArray: postprocess.postprocessArray,
+                code: result.code,
+              };
+              updateStatusLineHelper();
+              return { tag: "Nothing" };
+            }
+          }
+      }
+    }
   }
 }
 
@@ -921,7 +924,7 @@ async function postprocessHelper({
   outputState.status = { tag: "Postprocess" };
   updateStatusLineHelper();
 
-  const postprocessResult = await postprocess({
+  const postprocessResult = await runPostprocess({
     env,
     elmWatchJsonPath,
     compilationMode: outputState.compilationMode,
@@ -942,13 +945,13 @@ async function postprocessHelper({
       switch (runMode.tag) {
         case "make":
           fs.writeFileSync(
-            outputPathToAbsoluteString(outputPath),
+            outputPath.theOutputPath.absolutePath,
             postprocessResult.code
           );
           break;
         case "hot":
           fs.writeFileSync(
-            outputPathToAbsoluteString(outputPath),
+            outputPath.theOutputPath.absolutePath,
             Buffer.concat([runMode.versionedIdentifier, postprocessResult.code])
           );
           break;
@@ -1053,53 +1056,48 @@ async function typecheck({
     );
 
     switch (combinedResult.tag) {
-      case "elm make success + walker success":
+      case "elm make success + walker success": {
         outputState.allRelatedElmFilePaths =
           combinedResult.allRelatedElmFilePaths;
 
-        switch (outputPath.tag) {
-          case "NullOutputPath":
+        const result = needsToWriteProxyFile(
+          outputPath.theOutputPath,
+          versionedIdentifier
+        );
+
+        switch (result.tag) {
+          case "Needed":
+            try {
+              fs.mkdirSync(
+                absoluteDirname(outputPath.theOutputPath).absolutePath,
+                { recursive: true }
+              );
+              fs.writeFileSync(
+                outputPath.theOutputPath.absolutePath,
+                Buffer.concat([versionedIdentifier, proxyFile()])
+              );
+              // The proxy file doesn’t count as writing to disk…
+              outputState.status = { tag: "NotWrittenToDisk" };
+            } catch (unknownError) {
+              const error = toError(unknownError);
+              outputState.status = { tag: "WriteProxyOutputError", error };
+            }
+            break;
+
+          case "NotNeeded":
             outputState.status = { tag: "NotWrittenToDisk" };
             break;
 
-          case "OutputPath": {
-            const result = needsToWriteProxyFile(
-              outputPath.theOutputPath,
-              versionedIdentifier
-            );
-            switch (result.tag) {
-              case "Needed":
-                try {
-                  fs.mkdirSync(
-                    absoluteDirname(outputPath.theOutputPath).absolutePath,
-                    { recursive: true }
-                  );
-                  fs.writeFileSync(
-                    outputPath.theOutputPath.absolutePath,
-                    Buffer.concat([versionedIdentifier, proxyFile()])
-                  );
-                  // The proxy file doesn’t count as writing to disk…
-                  outputState.status = { tag: "NotWrittenToDisk" };
-                } catch (unknownError) {
-                  const error = toError(unknownError);
-                  outputState.status = { tag: "WriteProxyOutputError", error };
-                }
-                break;
-
-              case "NotNeeded":
-                outputState.status = { tag: "NotWrittenToDisk" };
-                break;
-
-              case "ReadError":
-                outputState.status = {
-                  tag: "ReadOutputError",
-                  error: result.error,
-                };
-                break;
-            }
-          }
+          case "ReadError":
+            outputState.status = {
+              tag: "ReadOutputError",
+              error: result.error,
+            };
+            break;
         }
+
         break;
+      }
 
       case "elm make success + walker failure":
         outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
@@ -1259,12 +1257,12 @@ export function printStatusLinesForElmJsonsErrors(
   project: Project
 ): void {
   for (const { outputPath } of project.elmJsonsErrors) {
-    const output = outputPathToOriginalString(outputPath);
+    const { targetName } = outputPath;
     logger.error(
       statusLineTruncate(
         logger.raw.stderrColumns,
         logger.fancy,
-        logger.fancy ? `🚨 ${output}` : `${output}: error`
+        logger.fancy ? `🚨 ${targetName}` : `${targetName}: error`
       )
     );
   }
@@ -1294,7 +1292,7 @@ function statusLine(
   maxWidth: number,
   fancy: boolean
 ): string {
-  const output = outputPathToOriginalString(outputPath);
+  const { targetName } = outputPath;
   const { status } = outputState;
 
   const truncate = (string: string): string =>
@@ -1302,7 +1300,7 @@ function statusLine(
 
   switch (status.tag) {
     case "NotWrittenToDisk":
-      return truncate(fancy ? `✅ ${output}` : `${output}: success`);
+      return truncate(fancy ? `✅ ${targetName}` : `${targetName}: success`);
 
     case "Success": {
       const fileSize = printFileSize(
@@ -1312,32 +1310,32 @@ function statusLine(
       const fileSizeString =
         fileSize === undefined ? "" : ` (${dim(fileSize)})`;
       return truncate(
-        fancy ? `✅ ${output}` : `${output}: success${fileSizeString}`
+        fancy ? `✅ ${targetName}` : `${targetName}: success${fileSizeString}`
       );
     }
 
     case "ElmMake": {
       const arg = SpawnElm.compilationModeToArg(status.compilationMode);
       const flags = arg === undefined ? "" : ` ${arg}`;
-      return truncate(`${fancy ? "⏳ " : ""}${output}: elm make${flags}`);
+      return truncate(`${fancy ? "⏳ " : ""}${targetName}: elm make${flags}`);
     }
 
     case "ElmMakeTypecheckOnly":
       return truncate(
-        `${fancy ? "⏳ " : ""}${output}: elm make (typecheck only)`
+        `${fancy ? "⏳ " : ""}${targetName}: elm make (typecheck only)`
       );
 
     case "Postprocess":
-      return truncate(`${fancy ? "⏳ " : ""}${output}: postprocess`);
+      return truncate(`${fancy ? "⏳ " : ""}${targetName}: postprocess`);
 
     case "Interrupted":
-      return truncate(`${fancy ? "⏳ " : ""}${output}: interrupted`);
+      return truncate(`${fancy ? "⏳ " : ""}${targetName}: interrupted`);
 
     case "QueuedForElmMake":
-      return truncate(`${fancy ? "⚪️ " : ""}${output}: queued`);
+      return truncate(`${fancy ? "⚪️ " : ""}${targetName}: queued`);
 
     case "QueuedForPostprocess":
-      return truncate(`${fancy ? "🟢 " : ""}${output}: elm make done`);
+      return truncate(`${fancy ? "🟢 " : ""}${targetName}: elm make done`);
 
     case "ElmNotFoundError":
     case "CommandNotFoundError":
@@ -1358,7 +1356,7 @@ function statusLine(
     case "ReadOutputError":
     case "WriteOutputError":
     case "WriteProxyOutputError":
-      return truncate(fancy ? `🚨 ${output}` : `${output}: error`);
+      return truncate(fancy ? `🚨 ${targetName}` : `${targetName}: error`);
   }
 }
 

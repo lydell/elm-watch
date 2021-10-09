@@ -17,21 +17,24 @@ import type { CliArg, ElmWatchJsonPath } from "./Types";
 // https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-Char.html#v:isLetter
 const INPUT_NAME = /(^|[/\\])\p{Lu}[_\d\p{L}]*\.elm$/u;
 
-export function isValidInputName(name: string): boolean {
+function isValidInputName(name: string): boolean {
   return INPUT_NAME.test(name);
 }
 
-export function isValidOutputName(name: string): boolean {
+function isValidOutputName(name: string): boolean {
   // `elm make` doesn’t accept just `.js` but `a.js` and `a/.js`.
   // Disallow stuff starting with `-` so output CLI args don’t look like flags.
-  return (
-    (!name.startsWith("-") && name.endsWith(".js") && name !== ".js") ||
-    name === "/dev/null"
-  );
+  return !name.startsWith("-") && name.endsWith(".js") && name !== ".js";
 }
 
-type Output = ReturnType<typeof Output>;
-const Output = Decode.fieldsAuto(
+const TARGET_NAME = /^[^\s-](?:.*\S)?$/;
+
+export function isValidTargetName(name: string): boolean {
+  return TARGET_NAME.test(name);
+}
+
+type Target = ReturnType<typeof Target>;
+const Target = Decode.fieldsAuto(
   {
     inputs: NonEmptyArray(
       Decode.chain(Decode.string, (string) => {
@@ -44,14 +47,22 @@ const Output = Decode.fieldsAuto(
         });
       })
     ),
-    postprocess: Decode.optional(NonEmptyArray(Decode.string)),
+    output: Decode.chain(Decode.string, (output) => {
+      if (isValidOutputName(output)) {
+        return output;
+      }
+      throw new Decode.DecoderError({
+        message: "Outputs must end with .js",
+        value: Decode.DecoderError.MISSING_VALUE,
+      });
+    }),
   },
   { exact: "throw" }
 );
 
-function outputRecordHelper(
-  record: Record<string, Output>
-): Record<string, Output> {
+function targetRecordHelper(
+  record: Record<string, Target>
+): Record<string, Target> {
   const entries = Object.entries(record);
   if (!isNonEmptyArray(entries)) {
     throw new Decode.DecoderError({
@@ -61,11 +72,12 @@ function outputRecordHelper(
   }
   return Object.fromEntries(
     entries.map(([key, value]) => {
-      if (isValidOutputName(key)) {
+      if (isValidTargetName(key)) {
         return [key, value];
       }
       throw new Decode.DecoderError({
-        message: "Outputs must end with .js or be /dev/null",
+        message:
+          "Target names must start with a non-whitespace character except `-`,\nnot contain newlines and end with a non-whitespace character",
         value: Decode.DecoderError.MISSING_VALUE,
         key,
       });
@@ -76,7 +88,8 @@ function outputRecordHelper(
 export type Config = ReturnType<typeof Config>;
 const Config = Decode.fieldsAuto(
   {
-    outputs: Decode.chain(Decode.record(Output), outputRecordHelper),
+    targets: Decode.chain(Decode.record(Target), targetRecordHelper),
+    postprocess: Decode.optional(NonEmptyArray(Decode.string)),
     port: Decode.optional(Port),
   },
   { exact: "throw" }
@@ -153,8 +166,8 @@ export function example(
   const { elmFiles, output = "build/main.js" } = parseArgsLikeElmMake(args);
 
   const json: Config = {
-    outputs: {
-      [output]: {
+    targets: {
+      Main: {
         inputs: isNonEmptyArray(elmFiles)
           ? mapNonEmptyArray(elmFiles, (file) =>
               path.relative(
@@ -163,6 +176,7 @@ export function example(
               )
             )
           : ["src/Main.elm"],
+        output,
       },
     },
   };

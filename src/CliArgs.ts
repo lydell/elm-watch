@@ -10,7 +10,7 @@ type ParseArgsResult =
   | {
       tag: "Success";
       compilationMode: CompilationMode;
-      outputs: Array<string>;
+      targets: Array<string>;
     }
   | { tag: "DebugOptimizeClash" }
   | { tag: "DebugOptimizeForHot" };
@@ -22,7 +22,7 @@ export function parseArgs(
   let debug = false;
   let optimize = false;
   const badArgs: Array<CliArg> = [];
-  const outputs: Array<string> = [];
+  const targets: Array<string> = [];
 
   for (const arg of args) {
     switch (arg.theArg) {
@@ -35,8 +35,8 @@ export function parseArgs(
         break;
 
       default:
-        if (ElmWatchJson.isValidOutputName(arg.theArg)) {
-          outputs.push(arg.theArg);
+        if (ElmWatchJson.isValidTargetName(arg.theArg)) {
+          targets.push(arg.theArg);
         } else {
           badArgs.push(arg);
         }
@@ -67,6 +67,6 @@ export function parseArgs(
   return {
     tag: "Success",
     compilationMode: debug ? "debug" : optimize ? "optimize" : "standard",
-    outputs,
+    targets,
   };
 }

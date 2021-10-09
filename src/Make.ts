@@ -55,6 +55,7 @@ export async function run(
             elmWatchJsonPath: project.elmWatchJsonPath,
             total: outputActions.total,
             action,
+            postprocess: project.postprocess,
           }).then(() => {
             const nextOutputActions = getNextOutputActions(project);
             if (isNonEmptyArray(nextOutputActions.actions)) {

@@ -25,7 +25,7 @@ import {
   findClosest,
   longestCommonAncestorPath,
 } from "./PathHelpers";
-import { PostprocessError } from "./Postprocess";
+import { Postprocess, PostprocessError } from "./Postprocess";
 import { RunElmMakeError } from "./SpawnElm";
 import type {
   CompilationMode,
@@ -51,12 +51,12 @@ export type Project = {
   }>;
   readonly elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   readonly maxParallel: number;
+  readonly postprocess: Postprocess;
 };
 
 export type OutputState = {
   readonly inputs: NonEmptyArray<InputPath>;
   compilationMode: CompilationMode;
-  readonly postprocess?: NonEmptyArray<string>;
   status: OutputStatus;
   allRelatedElmFilePaths: Set<string>;
   dirty: boolean;
@@ -178,7 +178,7 @@ export function initProject({
   compilationMode,
   elmWatchJsonPath,
   config,
-  enabledOutputs,
+  enabledTargets,
   elmWatchStuffJsonPath,
   elmWatchStuffJson,
 }: {
@@ -186,7 +186,7 @@ export function initProject({
   compilationMode: CompilationMode;
   elmWatchJsonPath: ElmWatchJsonPath;
   config: ElmWatchJson.Config;
-  enabledOutputs: Set<string>;
+  enabledTargets: Set<string>;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
@@ -199,42 +199,33 @@ export function initProject({
     NonEmptyArray<string>
   >();
 
-  for (const [outputPathString, output] of Object.entries(config.outputs)) {
-    const outputPath: OutputPath =
-      outputPathString === "/dev/null"
-        ? { tag: "NullOutputPath" }
-        : {
-            tag: "OutputPath",
-            theOutputPath: absolutePathFromString(
-              absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-              outputPathString
-            ),
-            originalString: outputPathString,
-          };
+  for (const [targetName, target] of Object.entries(config.targets)) {
+    const outputPath: OutputPath = {
+      tag: "OutputPath",
+      theOutputPath: absolutePathFromString(
+        absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+        target.output
+      ),
+      originalString: target.output,
+      targetName,
+    };
 
-    switch (outputPath.tag) {
-      case "NullOutputPath":
-        break;
-
-      case "OutputPath": {
-        const previous = potentialOutputDuplicates.get(
-          outputPath.theOutputPath
-        );
-        if (previous === undefined) {
-          potentialOutputDuplicates.set(outputPath.theOutputPath, [
-            outputPath.originalString,
-          ]);
-        } else {
-          previous.push(outputPath.originalString);
-        }
-        break;
-      }
+    const previousOutput = potentialOutputDuplicates.get(
+      outputPath.theOutputPath
+    );
+    if (previousOutput === undefined) {
+      potentialOutputDuplicates.set(outputPath.theOutputPath, [
+        outputPath.originalString,
+      ]);
+    } else {
+      previousOutput.push(outputPath.originalString);
     }
 
-    if (enabledOutputs.has(outputPathString)) {
+    // TODO: This shouldn’t be exact lookups, but substring matches.
+    if (enabledTargets.has(targetName)) {
       const resolveElmJsonResult = resolveElmJson(
         elmWatchJsonPath,
-        output.inputs
+        target.inputs
       );
 
       switch (resolveElmJsonResult.tag) {
@@ -242,14 +233,13 @@ export function initProject({
           const previous =
             elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
             new HashMap<OutputPath, OutputState>();
-          const persisted = elmWatchStuffJson?.outputs[outputPathString];
+          const persisted = elmWatchStuffJson?.targets[targetName];
           previous.set(outputPath, {
             inputs: resolveElmJsonResult.inputs,
             compilationMode:
               persisted === undefined
                 ? compilationMode
                 : persisted.compilationMode,
-            postprocess: output.postprocess,
             status: { tag: "NotWrittenToDisk" },
             allRelatedElmFilePaths: new Set(),
             dirty: true,
@@ -304,6 +294,11 @@ export function initProject({
     os.cpus().length
   );
 
+  const postprocess: Postprocess =
+    config.postprocess === undefined
+      ? { tag: "NoPostprocess" }
+      : { tag: "Postprocess", postprocessArray: config.postprocess };
+
   return {
     tag: "Project",
     project: {
@@ -314,6 +309,7 @@ export function initProject({
       elmJsonsErrors,
       elmJsons,
       maxParallel,
+      postprocess,
     },
   };
 }
