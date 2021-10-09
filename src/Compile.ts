@@ -5,7 +5,14 @@ import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
-import { bold, dim, Env, join, silentlyReadIntEnvValue } from "./Helpers";
+import {
+  bold,
+  dim,
+  Env,
+  join,
+  silentlyReadIntEnvValue,
+  toError,
+} from "./Helpers";
 import {
   walkImports,
   WalkImportsError,
@@ -683,8 +690,8 @@ function onCompileSuccess(
               fileSize = fs.statSync(
                 outputPath.theOutputPath.absolutePath
               ).size;
-            } catch (errorAny) {
-              const error = errorAny as Error;
+            } catch (unknownError) {
+              const error = toError(unknownError);
               outputState.status = { tag: "ReadOutputError", error };
               updateStatusLineHelper();
               return { tag: "CompileError", outputPath };
@@ -700,8 +707,8 @@ function onCompileSuccess(
             let buffer;
             try {
               buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
-            } catch (errorAny) {
-              const error = errorAny as Error;
+            } catch (unknownError) {
+              const error = toError(unknownError);
               outputState.status = { tag: "ReadOutputError", error };
               updateStatusLineHelper();
               return { tag: "CompileError", outputPath };
@@ -719,8 +726,8 @@ function onCompileSuccess(
           let buffer;
           try {
             buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
-          } catch (errorAny) {
-            const error = errorAny as Error;
+          } catch (unknownError) {
+            const error = toError(unknownError);
             outputState.status = { tag: "ReadOutputError", error };
             updateStatusLineHelper();
             return { tag: "CompileError", outputPath };
@@ -742,8 +749,8 @@ function onCompileSuccess(
                     outputPath.theOutputPath.absolutePath,
                     Buffer.concat([runMode.versionedIdentifier, newBuffer])
                   );
-                } catch (errorAny) {
-                  const error = errorAny as Error;
+                } catch (unknownError) {
+                  const error = toError(unknownError);
                   outputState.status = { tag: "WriteOutputError", error };
                   updateStatusLineHelper();
                   return { tag: "CompileError", outputPath };
@@ -858,8 +865,8 @@ function needsToWriteProxyFile(
   let handle;
   try {
     handle = fs.openSync(outputPath.absolutePath, "r");
-  } catch (errorAny) {
-    const error = errorAny as Error & { code?: string };
+  } catch (unknownError) {
+    const error = toError(unknownError);
     return error.code === "ENOENT"
       ? { tag: "Needed" }
       : { tag: "ReadError", error };
@@ -867,8 +874,8 @@ function needsToWriteProxyFile(
   const buffer = Buffer.alloc(versionedIdentifier.byteLength);
   try {
     fs.readSync(handle, buffer);
-  } catch (errorAny) {
-    const error = errorAny as Error;
+  } catch (unknownError) {
+    const error = toError(unknownError);
     return { tag: "ReadError", error };
   }
   return buffer.equals(versionedIdentifier)
@@ -946,8 +953,8 @@ async function postprocessHelper({
           );
           break;
       }
-    } catch (errorAny) {
-      const error = errorAny as Error;
+    } catch (unknownError) {
+      const error = toError(unknownError);
       outputState.status = { tag: "WriteOutputError", error };
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
@@ -1073,8 +1080,8 @@ async function typecheck({
                   );
                   // The proxy file doesn’t count as writing to disk…
                   outputState.status = { tag: "NotWrittenToDisk" };
-                } catch (errorAny) {
-                  const error = errorAny as Error;
+                } catch (unknownError) {
+                  const error = toError(unknownError);
                   outputState.status = { tag: "WriteProxyOutputError", error };
                 }
                 break;

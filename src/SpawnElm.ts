@@ -3,7 +3,13 @@ import * as os from "os";
 import { DecoderError } from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { Env, sha256 } from "./Helpers";
+import {
+  Env,
+  sha256,
+  toDecoderError,
+  toDecoderErrorOrSyntaxError,
+  toError,
+} from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,
@@ -148,8 +154,8 @@ function parseElmMakeJson(
 
   try {
     json = JSON.parse(jsonString);
-  } catch (errorAny) {
-    const error = errorAny as SyntaxError;
+  } catch (unknownError) {
+    const error = toDecoderErrorOrSyntaxError(unknownError);
     return {
       tag: "ElmMakeJsonParseError",
       error,
@@ -163,8 +169,8 @@ function parseElmMakeJson(
       tag: "ElmMakeError",
       error: ElmMakeError(json),
     };
-  } catch (errorAny) {
-    const error = errorAny as DecoderError;
+  } catch (unknownError) {
+    const error = toDecoderError(unknownError);
     return {
       tag: "ElmMakeJsonParseError",
       error,
@@ -185,8 +191,8 @@ function tryWriteJson(cwd: AbsolutePath, json: string): JsonPath {
   try {
     fs.writeFileSync(jsonPath.absolutePath, json);
     return jsonPath;
-  } catch (errorAny) {
-    const error = errorAny as Error;
+  } catch (unknownError) {
+    const error = toError(unknownError);
     return {
       tag: "WritingJsonFailed",
       error,
@@ -243,8 +249,8 @@ export async function install({
 
   try {
     fs.writeFileSync(dummy.absolutePath, elmWatchDummy());
-  } catch (errorAny) {
-    const error = errorAny as Error;
+  } catch (unknownError) {
+    const error = toError(unknownError);
     return {
       tag: "CreatingDummyFailed",
       error,

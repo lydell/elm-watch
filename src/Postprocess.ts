@@ -174,11 +174,11 @@ async function elmWatchNode(
     imported = (await import(
       scriptPath.theElmWatchNodeScriptPath.absolutePath
     )) as Record<string, unknown>;
-  } catch (errorAny) {
+  } catch (unknownError) {
     return {
       tag: "ElmWatchNodeImportError",
       scriptPath,
-      error: errorAny,
+      error: unknownError,
     };
   }
 
@@ -195,12 +195,12 @@ async function elmWatchNode(
   let returnValue: unknown;
   try {
     returnValue = (await imported.default(args)) as unknown;
-  } catch (errorAny) {
+  } catch (unknownError) {
     return {
       tag: "ElmWatchNodeRunError",
       scriptPath,
       args,
-      error: errorAny,
+      error: unknownError,
     };
   }
 

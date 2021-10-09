@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as Decode from "tiny-decoders";
 
+import { toDecoderError, toError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { ElmJsonPath, SourceDirectory } from "./Types";
@@ -41,8 +42,8 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
     json = JSON.parse(
       fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf-8")
     );
-  } catch (errorAny) {
-    const error = errorAny as Error;
+  } catch (unknownError) {
+    const error = toError(unknownError);
     return {
       tag: "ElmJsonReadAsJsonError",
       elmJsonPath,
@@ -55,8 +56,8 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
       tag: "Parsed",
       elmJson: ElmJson(json),
     };
-  } catch (errorAny) {
-    const error = errorAny as Decode.DecoderError;
+  } catch (unknownError) {
+    const error = toDecoderError(unknownError);
     return {
       tag: "ElmJsonDecodeError",
       elmJsonPath,

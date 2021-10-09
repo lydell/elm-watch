@@ -4,7 +4,7 @@ import * as path from "path";
 
 import { elmWatchCli } from "../src";
 import * as Errors from "../src/Errors";
-import { Env, sha256 } from "../src/Helpers";
+import { Env, sha256, toError } from "../src/Helpers";
 import {
   assertExitCode,
   clean,
@@ -105,8 +105,8 @@ async function runWithBadElmBinAndExpectedJson(
   let writtenJson;
   try {
     writtenJson = fs.readFileSync(jsonPath, "utf8");
-  } catch (errorAny) {
-    const error = errorAny as Error;
+  } catch (unknownError) {
+    const error = toError(unknownError);
     throw new Error(
       `Expected ${jsonPath} to exist.\n\n${error.message}\n\n${output}`
     );

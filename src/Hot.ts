@@ -12,7 +12,16 @@ import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
-import { bold, dim, Env, formatTime, join } from "./Helpers";
+import {
+  bold,
+  dim,
+  Env,
+  formatTime,
+  join,
+  toDecoderError,
+  toDecoderErrorOrSyntaxError,
+  toError,
+} from "./Helpers";
 import type { Logger } from "./Logger";
 import {
   isNonEmptyArray,
@@ -402,8 +411,8 @@ function writeElmWatchJson(mutable: Mutable): void {
       `${JSON.stringify(json, null, 4)}\n`
     );
     mutable.elmWatchJsonWriteError = undefined;
-  } catch (errorAny) {
-    const error = errorAny as Error;
+  } catch (unknownError) {
+    const error = toError(unknownError);
     mutable.elmWatchJsonWriteError = error;
   }
 }
@@ -1558,8 +1567,8 @@ function parseWebSocketConnectRequestUrl(
     webSocketConnectedParams = WebSocketConnectedParams(
       Object.fromEntries(params)
     );
-  } catch (errorAny) {
-    const error = errorAny as Decode.DecoderError;
+  } catch (unknownError) {
+    const error = toDecoderError(unknownError);
     return {
       tag: "ParamsDecodeError",
       error,
@@ -1641,8 +1650,8 @@ function parseWebSocketToServerMessage(
       tag: "Success",
       message: WebSocketToServerMessage(JSON.parse(data)),
     };
-  } catch (errorAny) {
-    const error = errorAny as Decode.DecoderError | SyntaxError;
+  } catch (unknownError) {
+    const error = toDecoderErrorOrSyntaxError(unknownError);
     return { tag: "DecodeError", error };
   }
 }

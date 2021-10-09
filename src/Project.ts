@@ -5,7 +5,12 @@ import * as ElmToolingJson from "./ElmToolingJson";
 import { ElmWatchJson } from "./ElmWatchJson";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
-import { Env, getSetSingleton, silentlyReadIntEnvValue } from "./Helpers";
+import {
+  Env,
+  getSetSingleton,
+  silentlyReadIntEnvValue,
+  toError,
+} from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
 import {
   isNonEmptyArray,
@@ -346,8 +351,8 @@ function resolveElmJson(
     let realpath;
     try {
       realpath = absoluteRealpath(uncheckedInputPath.theUncheckedInputPath);
-    } catch (errorAny) {
-      const error = errorAny as Error & { code?: string };
+    } catch (unknownError) {
+      const error = toError(unknownError);
       if (error.code === "ENOENT" || error.code === "ENOTDIR") {
         inputsNotFound.push(uncheckedInputPath);
       } else {

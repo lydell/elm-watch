@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 import * as os from "os";
 import type { Readable, Writable } from "stream";
+import { DecoderError, repr } from "tiny-decoders";
 
 import { NonEmptyArray } from "./NonEmptyArray";
 
@@ -65,4 +66,29 @@ export function silentlyReadIntEnvValue(
   defaultValue: number
 ): number {
   return /^\d+$/.test(value ?? "") ? Number(value) : defaultValue;
+}
+
+export function toError(arg: unknown): NodeJS.ErrnoException {
+  return arg instanceof Error
+    ? arg
+    : new Error(`Caught error not instanceof Error: ${repr(arg)}`);
+}
+
+export function toDecoderError(arg: unknown): DecoderError {
+  return arg instanceof DecoderError
+    ? arg
+    : new DecoderError({
+        message: `Caught error not instanceof DecoderError: ${repr(arg)}`,
+        value: DecoderError.MISSING_VALUE,
+      });
+}
+
+export function toDecoderErrorOrSyntaxError(
+  arg: unknown
+): DecoderError | SyntaxError {
+  return arg instanceof DecoderError || arg instanceof SyntaxError
+    ? arg
+    : new SyntaxError(
+        `Caught error not instanceof DecoderError or SyntaxError: ${repr(arg)}`
+      );
 }

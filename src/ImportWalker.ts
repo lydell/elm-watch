@@ -2,6 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import { toError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import * as Parser from "./Parser";
 import { AbsolutePath } from "./PathHelpers";
@@ -49,8 +50,8 @@ export function walkImports(
         visitedModules
       );
     }
-  } catch (errorAny) {
-    const error = errorAny as Error & { code?: string };
+  } catch (unknownError) {
+    const error = toError(unknownError);
     return {
       tag: "ImportWalkerFileSystemError",
       error,
