@@ -1,5 +1,5 @@
 import * as Help from "./Help";
-import type { Env, ReadStream, WriteStream } from "./Helpers";
+import { Env, ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString, Cwd } from "./PathHelpers";
 import { run } from "./Run";
@@ -93,9 +93,9 @@ if (require.main === module) {
       // Let the process exit with this exit code when the event loop is empty.
       process.exitCode = exitCode;
     },
-    (error: Error) => {
+    (error: unknown) => {
       process.stderr.write(
-        `Unexpected error:\n${error.stack ?? error.message}\n`
+        `Unexpected error:\n${unknownErrorToString(error)}\n`
       );
       // Forcefully exit since the watcher might still be running.
       process.exit(1);

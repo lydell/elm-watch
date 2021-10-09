@@ -1,15 +1,8 @@
 import * as fs from "fs";
 import * as os from "os";
-import { DecoderError } from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
-import {
-  Env,
-  sha256,
-  toDecoderError,
-  toDecoderErrorOrSyntaxError,
-  toError,
-} from "./Helpers";
+import { Env, JsonError, sha256, toError, toJsonError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,
@@ -34,7 +27,7 @@ export type RunElmMakeError =
     }
   | {
       tag: "ElmMakeJsonParseError";
-      error: DecoderError | SyntaxError;
+      error: JsonError;
       jsonPath: JsonPath;
       command: Command;
     }
@@ -155,7 +148,7 @@ function parseElmMakeJson(
   try {
     json = JSON.parse(jsonString);
   } catch (unknownError) {
-    const error = toDecoderErrorOrSyntaxError(unknownError);
+    const error = toJsonError(unknownError);
     return {
       tag: "ElmMakeJsonParseError",
       error,
@@ -170,7 +163,7 @@ function parseElmMakeJson(
       error: ElmMakeError(json),
     };
   } catch (unknownError) {
-    const error = toDecoderError(unknownError);
+    const error = toJsonError(unknownError);
     return {
       tag: "ElmMakeJsonParseError",
       error,

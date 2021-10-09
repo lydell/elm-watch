@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
 
-import { toDecoderError, toError } from "./Helpers";
+import { JsonError, toError, toJsonError } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -91,7 +91,7 @@ export type ParseResult =
   | {
       tag: "DecodeError";
       elmToolingJsonPath: ElmToolingJsonPath;
-      error: Decode.DecoderError;
+      error: JsonError;
     }
   | {
       tag: "ElmToolingJsonNotFound";
@@ -141,7 +141,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
       config: ElmToolingJson(json)["x-elm-watch"],
     };
   } catch (unknownError) {
-    const error = toDecoderError(unknownError);
+    const error = toJsonError(unknownError);
     return {
       tag: "DecodeError",
       elmToolingJsonPath,

@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as Decode from "tiny-decoders";
 
-import { toDecoderError, toError } from "./Helpers";
+import { JsonError, toError, toJsonError } from "./Helpers";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Port } from "./Port";
 import { ElmToolingJsonPath, ElmWatchJsonPath } from "./Types";
@@ -61,7 +61,7 @@ export type ParseResult =
 export type ParseError =
   | {
       tag: "ElmWatchJsonDecodeError";
-      error: Decode.DecoderError;
+      error: JsonError;
     }
   | {
       tag: "ElmWatchJsonReadAsJsonError";
@@ -97,7 +97,7 @@ export function readAndParse(elmWatchJsonPath: ElmWatchJsonPath): ParseResult {
       elmWatchJson: ElmWatchJson(json),
     };
   } catch (unknownError) {
-    const error = toDecoderError(unknownError);
+    const error = toJsonError(unknownError);
     return {
       tag: "ElmWatchJsonDecodeError",
       error,

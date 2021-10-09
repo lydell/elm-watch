@@ -18,9 +18,9 @@ import {
   Env,
   formatTime,
   join,
-  toDecoderError,
-  toDecoderErrorOrSyntaxError,
+  JsonError,
   toError,
+  toJsonError,
 } from "./Helpers";
 import type { Logger } from "./Logger";
 import {
@@ -1538,7 +1538,7 @@ type ParseWebSocketConnectRequestUrlError =
     }
   | {
       tag: "ParamsDecodeError";
-      error: Decode.DecoderError;
+      error: JsonError;
       actualUrlString: string;
     }
   | {
@@ -1568,7 +1568,7 @@ function parseWebSocketConnectRequestUrl(
       Object.fromEntries(params)
     );
   } catch (unknownError) {
-    const error = toDecoderError(unknownError);
+    const error = toJsonError(unknownError);
     return {
       tag: "ParamsDecodeError",
       error,
@@ -1630,7 +1630,7 @@ type ParseWebSocketToServerMessageResult =
 type ParseWebSocketToServerMessageError =
   | {
       tag: "DecodeError";
-      error: Decode.DecoderError | SyntaxError;
+      error: JsonError;
     }
   | {
       tag: "UnsupportedDataType";
@@ -1651,7 +1651,7 @@ function parseWebSocketToServerMessage(
       message: WebSocketToServerMessage(JSON.parse(data)),
     };
   } catch (unknownError) {
-    const error = toDecoderErrorOrSyntaxError(unknownError);
+    const error = toJsonError(unknownError);
     return { tag: "DecodeError", error };
   }
 }

@@ -71,24 +71,25 @@ export function silentlyReadIntEnvValue(
 export function toError(arg: unknown): NodeJS.ErrnoException {
   return arg instanceof Error
     ? arg
-    : new Error(`Caught error not instanceof Error: ${repr(arg)}`);
+    : new Error(
+        `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
+      );
 }
 
-export function toDecoderError(arg: unknown): DecoderError {
-  return arg instanceof DecoderError
-    ? arg
-    : new DecoderError({
-        message: `Caught error not instanceof DecoderError: ${repr(arg)}`,
-        value: DecoderError.MISSING_VALUE,
-      });
-}
+export type JsonError = DecoderError | SyntaxError;
 
-export function toDecoderErrorOrSyntaxError(
-  arg: unknown
-): DecoderError | SyntaxError {
+export function toJsonError(arg: unknown): JsonError {
   return arg instanceof DecoderError || arg instanceof SyntaxError
     ? arg
     : new SyntaxError(
-        `Caught error not instanceof DecoderError or SyntaxError: ${repr(arg)}`
+        `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
+          arg
+        )}`
       );
+}
+
+export function unknownErrorToString(error: unknown): string {
+  return typeof (error as { stack?: string } | undefined)?.stack === "string"
+    ? (error as { stack: string }).stack
+    : repr(error);
 }
