@@ -1,13 +1,11 @@
 {
-  "x-elm-watch": {
-    "outputs": {
-      "../build/app.js": {
-        "inputs": ["../app/Main.elm"],
-        "postprocess": ["node", "postprocess.js"]
-      },
-      "../build/admin.js": {
-        "inputs": ["../admin/Main.elm"]
-      }
+  "outputs": {
+    "../build/app.js": {
+      "inputs": ["../app/Main.elm"],
+      "postprocess": ["node", "postprocess.js"]
+    },
+    "../build/admin.js": {
+      "inputs": ["../admin/Main.elm"]
     }
   }
 }

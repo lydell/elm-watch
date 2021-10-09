@@ -158,23 +158,6 @@ describe("errors", () => {
   });
 
   describe("elm-watch.json decode errors", () => {
-    test("missing x-elm-watch", async () => {
-      expect(
-        await run("elm-watch-json-decode-error/missing-x-elm-watch", ["make"])
-      ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/missing-x-elm-watch/elm-watch.json
-
-        I read inputs, outputs and options from ⧙elm-watch.json⧘.
-
-        ⧙I had trouble with the JSON inside:⧘
-
-        At root["x-elm-watch"]:
-        Expected an object
-        Got: undefined
-      `);
-    });
-
     test("empty outputs", async () => {
       expect(await run("elm-watch-json-decode-error/empty-outputs", ["make"]))
         .toMatchInlineSnapshot(`
@@ -185,7 +168,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"]:
+        At root["outputs"]:
         Expected a non-empty object
         Got: {}
       `);
@@ -202,7 +185,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"]["index.html"]:
+        At root["outputs"]["index.html"]:
         Outputs must end with .js or be /dev/null
       `);
     });
@@ -222,7 +205,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"][".js"]:
+        At root["outputs"][".js"]:
         Outputs must end with .js or be /dev/null
       `);
     });
@@ -237,7 +220,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"]["/usr/../dev/null"]:
+        At root["outputs"]["/usr/../dev/null"]:
         Outputs must end with .js or be /dev/null
       `);
     });
@@ -252,7 +235,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"]["main.js"]:
+        At root["outputs"]["main.js"]:
         Expected only these fields: "inputs", "postprocess"
         Found extra fields: "mode"
       `);
@@ -268,7 +251,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"]["main.js"]["inputs"]:
+        At root["outputs"]["main.js"]["inputs"]:
         Expected a non-empty array
         Got: []
       `);
@@ -285,7 +268,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"]["main.js"]["inputs"][0]:
+        At root["outputs"]["main.js"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/Main.js"
       `);
@@ -302,7 +285,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["x-elm-watch"]["outputs"]["main.js"]["inputs"][0]:
+        At root["outputs"]["main.js"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/main.elm"
       `);
@@ -321,13 +304,11 @@ describe("errors", () => {
       You need to create one with JSON like this:
 
       {
-          "x-elm-watch": {
-              "outputs": {
-                  "build/main.js": {
-                      "inputs": [
-                          "src/Main.elm"
-                      ]
-                  }
+          "outputs": {
+              "build/main.js": {
+                  "inputs": [
+                      "src/Main.elm"
+                  ]
               }
           }
       }
@@ -361,14 +342,12 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "x-elm-watch": {
-                "outputs": {
-                    "bundle.js": {
-                        "inputs": [
-                            "src/App.elm",
-                            "src/Admin.elm"
-                        ]
-                    }
+            "outputs": {
+                "bundle.js": {
+                    "inputs": [
+                        "src/App.elm",
+                        "src/Admin.elm"
+                    ]
                 }
             }
         }
@@ -393,14 +372,12 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "x-elm-watch": {
-                "outputs": {
-                    "build/main.js": {
-                        "inputs": [
-                            "src/src/App.elm",
-                            "lib/Admin.elm"
-                        ]
-                    }
+            "outputs": {
+                "build/main.js": {
+                    "inputs": [
+                        "src/src/App.elm",
+                        "lib/Admin.elm"
+                    ]
                 }
             }
         }
@@ -423,13 +400,11 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "x-elm-watch": {
-                "outputs": {
-                    "/dev/null": {
-                        "inputs": [
-                            "src/Main.elm"
-                        ]
-                    }
+            "outputs": {
+                "/dev/null": {
+                    "inputs": [
+                        "src/Main.elm"
+                    ]
                 }
             }
         }
@@ -467,13 +442,11 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "x-elm-watch": {
-                "outputs": {
-                    "build/main.js": {
-                        "inputs": [
-                            "src/Main.elm"
-                        ]
-                    }
+            "outputs": {
+                "build/main.js": {
+                    "inputs": [
+                        "src/Main.elm"
+                    ]
                 }
             }
         }

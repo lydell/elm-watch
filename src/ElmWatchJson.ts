@@ -82,11 +82,6 @@ const Config = Decode.fieldsAuto(
   { exact: "throw" }
 );
 
-export type ElmWatchJson = ReturnType<typeof ElmWatchJson>;
-const ElmWatchJson = Decode.fieldsAuto({
-  "x-elm-watch": Config,
-});
-
 export type ParseResult =
   | {
       tag: "DecodeError";
@@ -138,7 +133,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
     return {
       tag: "Parsed",
       elmWatchJsonPath,
-      config: ElmWatchJson(json)["x-elm-watch"],
+      config: Config(json),
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);
@@ -157,21 +152,17 @@ export function example(
 ): string {
   const { elmFiles, output = "build/main.js" } = parseArgsLikeElmMake(args);
 
-  const json: ElmWatchJson = {
-    "x-elm-watch": {
-      outputs: {
-        [output]: {
-          inputs: isNonEmptyArray(elmFiles)
-            ? mapNonEmptyArray(elmFiles, (file) =>
-                path.relative(
-                  path.dirname(
-                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath
-                  ),
-                  path.resolve(cwd.path.absolutePath, file)
-                )
+  const json: Config = {
+    outputs: {
+      [output]: {
+        inputs: isNonEmptyArray(elmFiles)
+          ? mapNonEmptyArray(elmFiles, (file) =>
+              path.relative(
+                path.dirname(elmWatchJsonPath.theElmWatchJsonPath.absolutePath),
+                path.resolve(cwd.path.absolutePath, file)
               )
-            : ["src/Main.elm"],
-        },
+            )
+          : ["src/Main.elm"],
       },
     },
   };

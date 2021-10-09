@@ -1,9 +1,7 @@
 {
-  "x-elm-watch": {
-    "outputs": {
-      "main.js": {
-        "inputs": ["src/Main.js"]
-      }
+  "outputs": {
+    "main.js": {
+      "inputs": ["src/Main.js"]
     }
   }
 }

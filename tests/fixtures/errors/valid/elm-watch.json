@@ -1,12 +1,10 @@
 {
-  "x-elm-watch": {
-    "outputs": {
-      "build/app.js": {
-        "inputs": ["src/App.elm"]
-      },
-      "build/admin.js": {
-        "inputs": ["src/Admin.elm"]
-      }
+  "outputs": {
+    "build/app.js": {
+      "inputs": ["src/App.elm"]
+    },
+    "build/admin.js": {
+      "inputs": ["src/Admin.elm"]
     }
   }
 }

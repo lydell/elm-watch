@@ -1,21 +1,19 @@
 {
-  "x-elm-watch": {
-    "outputs": {
-      "main.js": {
-        "inputs": ["Main.elm"]
-      },
-      "./main.js": {
-        "inputs": ["Main.elm"]
-      },
-      "../duplicate-outputs/main.js": {
-        "inputs": ["Main.elm"]
-      },
-      "build/app.js": {
-        "inputs": ["Main.elm"]
-      },
-      "build//app.js": {
-        "inputs": ["Main.elm"]
-      }
+  "outputs": {
+    "main.js": {
+      "inputs": ["Main.elm"]
+    },
+    "./main.js": {
+      "inputs": ["Main.elm"]
+    },
+    "../duplicate-outputs/main.js": {
+      "inputs": ["Main.elm"]
+    },
+    "build/app.js": {
+      "inputs": ["Main.elm"]
+    },
+    "build//app.js": {
+      "inputs": ["Main.elm"]
     }
   }
 }
