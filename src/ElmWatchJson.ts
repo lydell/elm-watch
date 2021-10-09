@@ -33,6 +33,12 @@ export function isValidTargetName(name: string): boolean {
   return TARGET_NAME.test(name);
 }
 
+// Target name substrings entered as CLI args currently have the same format as
+// target names themselves.
+export function isValidTargetSubstring(name: string): boolean {
+  return isValidTargetName(name);
+}
+
 type Target = ReturnType<typeof Target>;
 const Target = Decode.fieldsAuto(
   {

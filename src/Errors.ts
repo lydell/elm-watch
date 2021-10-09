@@ -169,7 +169,7 @@ export function badArgs(
 ): ErrorTemplate {
   return fancyError("UNEXPECTED ARGUMENTS", { tag: "NoLocation" })`
 ${bold(
-  "I only accept target names as arguments, but I got some that don't look like that:"
+  "I only accept target names substrings as arguments, but I got some that don't look like that:"
 )}
 
 ${join(
@@ -187,21 +187,21 @@ ${ElmWatchJson.example(cwd, elmWatchJsonPath, args)}
 `;
 }
 
-export function unknownTargets(
+export function unknownTargetsSubstrings(
   elmWatchJsonPath: ElmWatchJsonPath,
   knownTargets: NonEmptyArray<string>,
-  theUnknownTargets: NonEmptyArray<string>
+  theUnknownTargetsSubstrings: NonEmptyArray<string>
 ): ErrorTemplate {
-  return fancyError("UNKNOWN TARGETS", elmWatchJsonPath)`
+  return fancyError("UNKNOWN TARGETS SUBSTRINGS", elmWatchJsonPath)`
 I read inputs, outputs and options from ${elmWatchJson}.
 
 It contains these targest:
 
 ${join(knownTargets, "\n")}
 
-${bold("But those don't include these targets you asked me to build:")}
+${bold("But none of those match these targets substrings you gave me:")}
 
-${join(theUnknownTargets, "\n")}
+${join(theUnknownTargetsSubstrings, "\n")}
 
 Is something misspelled?
 Or do you need to add some more targets?

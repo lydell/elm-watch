@@ -178,7 +178,7 @@ export function initProject({
   compilationMode,
   elmWatchJsonPath,
   config,
-  enabledTargets,
+  enabledTargetsSubstrings,
   elmWatchStuffJsonPath,
   elmWatchStuffJson,
 }: {
@@ -186,7 +186,7 @@ export function initProject({
   compilationMode: CompilationMode;
   elmWatchJsonPath: ElmWatchJsonPath;
   config: ElmWatchJson.Config;
-  enabledTargets: Set<string>;
+  enabledTargetsSubstrings: NonEmptyArray<string>;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
@@ -221,8 +221,11 @@ export function initProject({
       previousOutput.push(outputPath.originalString);
     }
 
-    // TODO: This shouldn’t be exact lookups, but substring matches.
-    if (enabledTargets.has(targetName)) {
+    if (
+      enabledTargetsSubstrings.some((substring) =>
+        targetName.includes(substring)
+      )
+    ) {
       const resolveElmJsonResult = resolveElmJson(
         elmWatchJsonPath,
         target.inputs

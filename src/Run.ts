@@ -95,17 +95,26 @@ export async function run(
 
         case "Success": {
           const { config } = parseResult;
-          const unknownTargets = parseArgsResult.targets.filter(
-            (arg) => !Object.prototype.hasOwnProperty.call(config.targets, arg)
-          );
 
-          if (isNonEmptyArray(unknownTargets)) {
+          // The decoder validates that there’s at least one output.
+          const knownTargets = Object.keys(
+            config.targets
+          ) as NonEmptyArray<string>;
+
+          const unknownTargetsSubstrings =
+            parseArgsResult.targetsSubstrings.filter(
+              (substring) =>
+                !knownTargets.some((targetName) =>
+                  targetName.includes(substring)
+                )
+            );
+
+          if (isNonEmptyArray(unknownTargetsSubstrings)) {
             logger.errorTemplate(
-              Errors.unknownTargets(
+              Errors.unknownTargetsSubstrings(
                 parseResult.elmWatchJsonPath,
-                // The decoder validates that there’s at least one output.
-                Object.keys(config.targets) as NonEmptyArray<string>,
-                unknownTargets
+                knownTargets,
+                unknownTargetsSubstrings
               )
             );
             return { tag: "Exit", exitCode: 1 };
@@ -152,9 +161,11 @@ export async function run(
                 compilationMode: parseArgsResult.compilationMode,
                 elmWatchJsonPath: parseResult.elmWatchJsonPath,
                 config: parseResult.config,
-                enabledTargets: isNonEmptyArray(parseArgsResult.targets)
-                  ? new Set(parseArgsResult.targets)
-                  : new Set(Object.keys(config.targets)),
+                enabledTargetsSubstrings: isNonEmptyArray(
+                  parseArgsResult.targetsSubstrings
+                )
+                  ? parseArgsResult.targetsSubstrings
+                  : knownTargets,
                 elmWatchStuffJsonPath,
                 elmWatchStuffJson,
               });
