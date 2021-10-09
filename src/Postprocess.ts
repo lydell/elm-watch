@@ -174,7 +174,6 @@ async function elmWatchNode(
   const scriptPath: ElmWatchNodeScriptPath = {
     tag: "ElmWatchNodeScriptPath",
     theElmWatchNodeScriptPath: absolutePathFromString(cwd, userArgs[0]),
-    originalString: userArgs[0],
   };
 
   let imported;

@@ -58,7 +58,6 @@ export type OutputPath = {
 export type ElmWatchNodeScriptPath = {
   tag: "ElmWatchNodeScriptPath";
   theElmWatchNodeScriptPath: AbsolutePath;
-  originalString: string;
 };
 
 export type CliArg = {
