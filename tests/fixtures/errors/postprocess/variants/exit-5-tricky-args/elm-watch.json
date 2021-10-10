@@ -1,0 +1,9 @@
+{
+  "postprocess": ["node", "-e", "process.exit(5)", "--", "", "'a'b'", "$x"],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/exit-5-tricky-args.js"
+    }
+  }
+}

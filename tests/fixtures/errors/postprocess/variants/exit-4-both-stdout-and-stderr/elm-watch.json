@@ -1,0 +1,13 @@
+{
+  "postprocess": [
+    "node",
+    "-e",
+    "console.log(\"stdout\"); console.error(\"stderr\"); process.exit(4)"
+  ],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/exit-4-both-stdout-and-stderr.js"
+    }
+  }
+}

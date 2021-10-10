@@ -1,0 +1,9 @@
+{
+  "postprocess": ["elm-watch-node", "postprocess.js"],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/throw-null.js"
+    }
+  }
+}

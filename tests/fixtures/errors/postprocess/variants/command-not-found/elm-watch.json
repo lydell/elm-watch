@@ -1,0 +1,9 @@
+{
+  "postprocess": ["nope"],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/command-not-found.js"
+    }
+  }
+}

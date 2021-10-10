@@ -1352,7 +1352,7 @@ describe("errors", () => {
   describe("postprocess errors", () => {
     test("command not found", async () => {
       expect(
-        await run("postprocess", ["make", "build/command-not-found.js"], {
+        await run("postprocess/variants/command-not-found", ["make"], {
           env: {
             ...process.env,
             ...TEST_ENV,
@@ -1361,10 +1361,10 @@ describe("errors", () => {
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/command-not-found.js
+        🚨 main
 
         ⧙-- COMMAND NOT FOUND -----------------------------------------------------------⧘
-        ⧙When compiling: build/command-not-found.js⧘
+        ⧙Target: main⧘
 
         I tried to execute ⧙nope⧘, but it does not appear to exist!
 
@@ -1379,13 +1379,13 @@ describe("errors", () => {
     });
 
     test("exit 1 + stdout", async () => {
-      expect(await run("postprocess", ["make", "build/exit-1-stdout.js"]))
+      expect(await run("postprocess/variants/exit-1-stdout", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/exit-1-stdout.js
+        🚨 main
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling: build/exit-1-stdout.js⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 
@@ -1403,13 +1403,13 @@ describe("errors", () => {
 
     test("exit 2 + stderr + debug", async () => {
       expect(
-        await run("postprocess", ["make", "build/exit-2-stderr.js", "--debug"])
+        await run("postprocess/variants/exit-2-stderr", ["make", "--debug"])
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/exit-2-stderr.js
+        🚨 main
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling: build/exit-2-stderr.js⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 
@@ -1427,17 +1427,16 @@ describe("errors", () => {
 
     test("exit 3 + no output + optimize", async () => {
       expect(
-        await run("postprocess", [
+        await run("postprocess/variants/exit-3-no-output", [
           "make",
-          "build/exit-3-no-output.js",
           "--optimize",
         ])
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/exit-3-no-output.js
+        🚨 main
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling: build/exit-3-no-output.js⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 
@@ -1455,16 +1454,15 @@ describe("errors", () => {
 
     test("exit 4 + both stdout and stderr", async () => {
       expect(
-        await run("postprocess", [
+        await run("postprocess/variants/exit-4-both-stdout-and-stderr", [
           "make",
-          "build/exit-4-both-stdout-and-stderr.js",
         ])
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/exit-4-both-stdout-and-stderr.js
+        🚨 main
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling: build/exit-4-both-stdout-and-stderr.js⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 
@@ -1485,13 +1483,13 @@ describe("errors", () => {
     });
 
     test("exit 5 + tricky args", async () => {
-      expect(await run("postprocess", ["make", "build/exit-5-tricky-args.js"]))
+      expect(await run("postprocess/variants/exit-5-tricky-args", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/exit-5-tricky-args.js
+        🚨 main
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling: build/exit-5-tricky-args.js⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 
@@ -1510,10 +1508,10 @@ describe("errors", () => {
 
   describe("elm-watch-node errors", () => {
     test("missing script", async () => {
-      expect(await run("postprocess", ["make", "build/missing-script.js"]))
+      expect(await run("postprocess/variants/missing-script", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/missing-script.js
+        🚨 main
 
         ⧙-- MISSING POSTPROCESS SCRIPT --------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/elm-watch.json
@@ -1531,10 +1529,10 @@ describe("errors", () => {
     });
 
     test("script not found", async () => {
-      expect(await run("postprocess", ["make", "build/script-not-found.js"]))
+      expect(await run("postprocess/variants/script-not-found", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/script-not-found.js
+        🚨 main
 
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/not-found.js
@@ -1552,10 +1550,10 @@ describe("errors", () => {
     });
 
     test("throw at import", async () => {
-      expect(await run("postprocess", ["make", "build/throw-at-import.js"]))
+      expect(await run("postprocess/variants/throw-at-import", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/throw-at-import.js
+        🚨 main
 
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-at-import.js
@@ -1575,10 +1573,10 @@ describe("errors", () => {
 
     test("throw non-error at import", async () => {
       expect(
-        await run("postprocess", ["make", "build/throw-non-error-at-import.js"])
+        await run("postprocess/variants/throw-non-error-at-import", ["make"])
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/throw-non-error-at-import.js
+        🚨 main
 
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-non-error-at-import.js
@@ -1596,10 +1594,10 @@ describe("errors", () => {
     });
 
     test("empty file", async () => {
-      expect(await run("postprocess", ["make", "build/empty-file.js"]))
+      expect(await run("postprocess/variants/empty-file", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/empty-file.js
+        🚨 main
 
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/empty-file.js
@@ -1621,11 +1619,10 @@ describe("errors", () => {
     });
 
     test("wrong default export", async () => {
-      expect(
-        await run("postprocess", ["make", "build/wrong-default-export.js"])
-      ).toMatchInlineSnapshot(`
+      expect(await run("postprocess/variants/wrong-default-export", ["make"]))
+        .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/wrong-default-export.js
+        🚨 main
 
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/wrong-default-export.js
@@ -1643,10 +1640,10 @@ describe("errors", () => {
     });
 
     test("throw error", async () => {
-      expect(await run("postprocess", ["make", "build/throw-error.js"]))
+      expect(await run("postprocess/variants/throw-error", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/throw-error.js
+        🚨 main
 
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-error.js
@@ -1666,10 +1663,10 @@ describe("errors", () => {
     });
 
     test("throw null", async () => {
-      expect(await run("postprocess", ["make", "build/throw-null.js"]))
+      expect(await run("postprocess/variants/throw-null", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/throw-null.js
+        🚨 main
 
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-null.js
@@ -1688,10 +1685,10 @@ describe("errors", () => {
     });
 
     test("reject promise", async () => {
-      expect(await run("postprocess", ["make", "build/reject-promise.js"]))
+      expect(await run("postprocess/variants/reject-promise", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/reject-promise.js
+        🚨 main
 
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/reject-promise.js
@@ -1710,10 +1707,10 @@ describe("errors", () => {
     });
 
     test("return undefined", async () => {
-      expect(await run("postprocess", ["make", "build/return-undefined.js"]))
+      expect(await run("postprocess/variants/return-undefined", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/return-undefined.js
+        🚨 main
 
         ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/return-undefined.js
@@ -1734,10 +1731,10 @@ describe("errors", () => {
     });
 
     test("exitCode typo", async () => {
-      expect(await run("postprocess", ["make", "build/exit-code-typo.js"]))
+      expect(await run("postprocess/variants/exit-code-typo", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/exit-code-typo.js
+        🚨 main
 
         ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/exit-code-typo.js
@@ -1758,10 +1755,10 @@ describe("errors", () => {
     });
 
     test("stdout typo", async () => {
-      expect(await run("postprocess", ["make", "build/stdout-typo.js"]))
+      expect(await run("postprocess/variants/stdout-typo", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/stdout-typo.js
+        🚨 main
 
         ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/postprocess/stdout-typo.js
@@ -1782,13 +1779,13 @@ describe("errors", () => {
     });
 
     test("exit 1 + stderr", async () => {
-      expect(await run("postprocess", ["make", "build/exit-1-stderr.js"]))
+      expect(await run("postprocess/variants/exit-1-stderr", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 build/exit-1-stderr.js
+        🚨 main
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling: build/exit-1-stderr.js⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 
@@ -1799,50 +1796,6 @@ describe("errors", () => {
 
         exit 1
         Some text on stderr
-
-        🚨 ⧙1⧘ error found
-      `);
-    });
-
-    test("invalid stdout JSON", async () => {
-      expect(await run("postprocess", ["make", "build/invalid-stdout-json.js"]))
-        .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 build/invalid-stdout-json.js
-
-        ⧙-- INVALID POSTPROCESS STDOUT --------------------------------------------------⧘
-
-        I ran your postprocess command:
-
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/invalid-stdout-json.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-json.js","standard","make"])
-
-        But ⧙stdout⧘ doesn't look like I expected:
-
-        Unexpected token } in JSON at position 17
-
-        🚨 ⧙1⧘ error found
-      `);
-    });
-
-    test("stdout JSON newOutputPath typo", async () => {
-      expect(await run("postprocess", ["make", "build/invalid-stdout-typo.js"]))
-        .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 build/invalid-stdout-typo.js
-
-        ⧙-- INVALID POSTPROCESS STDOUT --------------------------------------------------⧘
-
-        I ran your postprocess command:
-
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/invalid-stdout-typo.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/invalid-stdout-typo.js","standard","make"])
-
-        But ⧙stdout⧘ doesn't look like I expected:
-
-        At root:
-        Expected only these fields: "newOutputPath"
-        Found extra fields: "newOutput"
 
         🚨 ⧙1⧘ error found
       `);
@@ -2130,8 +2083,6 @@ describe("errors", () => {
                 tag: "AbsolutePath",
                 absolutePath: "/Users/you/project/postprocess.cjs",
               },
-
-              originalString: "postprocess.cjs",
             },
             // It’s not possible to test `throw null` at import – Jest crashes then.
             null
@@ -2155,7 +2106,15 @@ describe("errors", () => {
       expect(
         printError(
           Errors.postprocessNonZeroExit(
-            { tag: "NullOutputPath" },
+            {
+              tag: "OutputPath",
+              theOutputPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/build/main.js",
+              },
+              originalString: "main.js",
+              targetName: "main",
+            },
             { tag: "Signal", signal: "SIGABRT" },
             "",
             "",
@@ -2178,7 +2137,7 @@ describe("errors", () => {
         )
       ).toMatchInlineSnapshot(`
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling to /dev/null⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 
@@ -2196,7 +2155,15 @@ describe("errors", () => {
       expect(
         printError(
           Errors.postprocessNonZeroExit(
-            { tag: "NullOutputPath" },
+            {
+              tag: "OutputPath",
+              theOutputPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/build/main.js",
+              },
+              originalString: "main.js",
+              targetName: "main",
+            },
             { tag: "Unknown" },
             "",
             "",
@@ -2219,7 +2186,7 @@ describe("errors", () => {
         )
       ).toMatchInlineSnapshot(`
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling to /dev/null⧘
+        ⧙Target: main⧘
 
         I ran your postprocess command:
 

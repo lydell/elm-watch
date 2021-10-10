@@ -1,0 +1,13 @@
+{
+  "postprocess": [
+    "node",
+    "-e",
+    "console.error('some stderr'); process.exit(2)"
+  ],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/exit-2-stderr.js"
+    }
+  }
+}

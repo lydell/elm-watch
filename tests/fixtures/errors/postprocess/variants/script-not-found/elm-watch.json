@@ -1,0 +1,9 @@
+{
+  "postprocess": ["elm-watch-node", "not-found.js"],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/script-not-found.js"
+    }
+  }
+}

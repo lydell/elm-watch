@@ -1,0 +1,9 @@
+{
+  "postprocess": ["node", "-e", "console.log('some stdout'); process.exit(1)"],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/exit-1-stdout.js"
+    }
+  }
+}
