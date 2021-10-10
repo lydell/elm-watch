@@ -18,9 +18,10 @@ Create a file called `elm-watch.json`:
 
 ```json
 {
-  "outputs": {
-    "build/main.js": {
-      "inputs": ["src/Main.elm"]
+  "targets": {
+    "Main": {
+      "inputs": ["src/Main.elm"],
+      "output": "build/main.js"
     }
   }
 }

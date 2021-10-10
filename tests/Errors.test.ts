@@ -168,7 +168,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"]:
+        At root["targets"]:
         Expected a non-empty object
         Got: {}
       `);
@@ -185,7 +185,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"]["index.html"]:
+        At root["targets"]["index.html"]:
         Outputs must end with .js or be /dev/null
       `);
     });
@@ -205,7 +205,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"][".js"]:
+        At root["targets"][".js"]:
         Outputs must end with .js or be /dev/null
       `);
     });
@@ -235,7 +235,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"]["main.js"]:
+        At root["targets"]["main.js"]:
         Expected only these fields: "inputs", "postprocess"
         Found extra fields: "mode"
       `);
@@ -251,7 +251,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"]["main.js"]["inputs"]:
+        At root["targets"]["main.js"]["inputs"]:
         Expected a non-empty array
         Got: []
       `);
@@ -268,7 +268,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"]["main.js"]["inputs"][0]:
+        At root["targets"]["main.js"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/Main.js"
       `);
@@ -285,7 +285,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"]["main.js"]["inputs"][0]:
+        At root["targets"]["main.js"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/main.elm"
       `);
@@ -304,7 +304,7 @@ describe("errors", () => {
       You need to create one with JSON like this:
 
       {
-          "outputs": {
+          "targets": {
               "build/main.js": {
                   "inputs": [
                       "src/Main.elm"
@@ -342,7 +342,7 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "outputs": {
+            "targets": {
                 "bundle.js": {
                     "inputs": [
                         "src/App.elm",
@@ -372,7 +372,7 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "outputs": {
+            "targets": {
                 "build/main.js": {
                     "inputs": [
                         "src/src/App.elm",
@@ -400,7 +400,7 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "outputs": {
+            "targets": {
                 "/dev/null": {
                     "inputs": [
                         "src/Main.elm"
@@ -442,7 +442,7 @@ describe("errors", () => {
         For example, you could add some JSON like this:
 
         {
-            "outputs": {
+            "targets": {
                 "build/main.js": {
                     "inputs": [
                         "src/Main.elm"
