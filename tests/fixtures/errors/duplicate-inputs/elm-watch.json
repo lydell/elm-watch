@@ -1,7 +1,8 @@
 {
-  "outputs": {
-    "main.js": {
-      "inputs": ["Main.elm", "../duplicate-inputs/./Main.elm"]
+  "targets": {
+    "main": {
+      "inputs": ["Main.elm", "../duplicate-inputs/./Main.elm"],
+      "output": "main.js"
     }
   }
 }

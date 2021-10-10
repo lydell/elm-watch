@@ -210,7 +210,7 @@ describe("errors", () => {
       `);
     });
 
-    test("/dev/null must be exactly that", async () => {
+    test("/dev/null is not a valid output", async () => {
       expect(await run("elm-watch-json-decode-error/bad-dev-null", ["make"]))
         .toMatchInlineSnapshot(`
         ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
@@ -220,8 +220,8 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["outputs"]["/usr/../dev/null"]:
-        Outputs must end with .js or be /dev/null
+        At root["targets"]["main"]:
+        Outputs must end with .js
       `);
     });
 

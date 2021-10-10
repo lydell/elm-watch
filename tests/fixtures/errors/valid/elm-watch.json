@@ -1,10 +1,12 @@
 {
-  "outputs": {
-    "build/app.js": {
-      "inputs": ["src/App.elm"]
+  "targets": {
+    "app": {
+      "inputs": ["src/App.elm"],
+      "output": "build/app.js"
     },
-    "build/admin.js": {
-      "inputs": ["src/Admin.elm"]
+    "admin": {
+      "inputs": ["src/Admin.elm"],
+      "output": "build/admin.js"
     }
   }
 }

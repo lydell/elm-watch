@@ -1,14 +1,17 @@
 {
-  "outputs": {
-    "build/admin.js": {
-      "inputs": ["src/Admin.elm"]
+  "targets": {
+    "admin": {
+      "inputs": ["src/Admin.elm"],
+      "output": "build/admin.js"
     },
-    "build/app.js": {
-      "inputs": ["src/App.elm"]
-    },
-    "build/postprocess-error.js": {
+    "app": {
       "inputs": ["src/App.elm"],
-      "postprocess": ["node", "-e", "process.exit(1)"]
+      "output": "build/app.js"
+    },
+    "postprocess-error": {
+      "inputs": ["src/App.elm"],
+      "postprocess": ["node", "-e", "process.exit(1)"],
+      "output": "build/postprocess-error.js"
     }
   }
 }

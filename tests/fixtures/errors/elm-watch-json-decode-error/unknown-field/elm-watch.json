@@ -1,8 +1,9 @@
 {
-  "outputs": {
-    "main.js": {
+  "targets": {
+    "main": {
       "inputs": ["src/Main.elm"],
-      "mode": "debug"
+      "mode": "debug",
+      "output": "main.js"
     }
   }
 }

@@ -1,8 +1,0 @@
-{
-  "outputs": {
-    "/dev/null": {
-      "inputs": ["src/Main.elm"],
-      "postprocess": ["node", "postprocess.js"]
-    }
-  }
-}

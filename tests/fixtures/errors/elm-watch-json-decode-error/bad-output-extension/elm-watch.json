@@ -1,7 +1,8 @@
 {
-  "outputs": {
+  "targets": {
     "index.html": {
-      "inputs": ["src/Main.elm"]
+      "inputs": ["src/Main.elm"],
+      "output": "index.html"
     }
   }
 }

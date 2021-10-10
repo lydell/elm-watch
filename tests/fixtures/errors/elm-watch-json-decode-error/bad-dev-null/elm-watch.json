@@ -1,7 +1,8 @@
 {
-  "outputs": {
-    "/usr/../dev/null": {
-      "inputs": ["src/Main.elm"]
+  "targets": {
+    "main": {
+      "inputs": ["src/Main.elm"],
+      "output": "/dev/null"
     }
   }
 }

@@ -1,11 +1,13 @@
 {
-  "outputs": {
-    "../build/app.js": {
+  "targets": {
+    "app": {
       "inputs": ["../app/Main.elm"],
-      "postprocess": ["node", "postprocess.js"]
+      "postprocess": ["node", "postprocess.js"],
+      "output": "../build/app.js"
     },
-    "../build/admin.js": {
-      "inputs": ["../admin/Main.elm"]
+    "admin": {
+      "inputs": ["../admin/Main.elm"],
+      "output": "../build/admin.js"
     }
   }
 }

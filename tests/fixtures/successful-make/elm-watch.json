@@ -1,8 +1,9 @@
 {
-  "outputs": {
-    "build/main.js": {
+  "postprocess": ["node", "postprocess.js", "first $(arg)", "second $arg"],
+  "targets": {
+    "main": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["node", "postprocess.js", "first $(arg)", "second $arg"]
+      "output": "build/main.js"
     }
   }
 }

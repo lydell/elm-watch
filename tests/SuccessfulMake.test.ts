@@ -115,13 +115,6 @@ describe("successful make", () => {
     `);
   });
 
-  test("postprocess /dev/null", async () => {
-    expect(await run("postprocess-dev-null", ["make"])).toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ /dev/null
-    `);
-  });
-
   test("postprocess with elm-watch-node", async () => {
     expect(await run("postprocess-elm-watch-node", ["make"]))
       .toMatchInlineSnapshot(`

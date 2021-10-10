@@ -1,7 +1,8 @@
 {
-  "outputs": {
-    "main.js": {
-      "inputs": ["src/Main.js"]
+  "targets": {
+    "main": {
+      "inputs": ["src/Main.js"],
+      "output": "main.js"
     }
   }
 }

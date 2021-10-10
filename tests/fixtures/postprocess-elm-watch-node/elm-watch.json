@@ -1,8 +1,14 @@
 {
-  "outputs": {
-    "build/main.js": {
+  "postprocess": [
+    "elm-watch-node",
+    "postprocess.js",
+    "arg1",
+    "arg number $two"
+  ],
+  "targets": {
+    "main": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess.js", "arg1", "arg number $two"]
+      "output": "build/main.js"
     }
   }
 }

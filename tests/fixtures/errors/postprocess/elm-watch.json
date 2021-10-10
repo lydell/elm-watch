@@ -1,92 +1,132 @@
 {
-  "outputs": {
-    "build/command-not-found.js": {
+  "targets": {
+    "command-not-found": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["nope"]
+      "postprocess": ["nope"],
+      "output": "build/command-not-found.js"
     },
-    "build/exit-1-stdout.js": {
+    "exit-1-stdout": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["node", "-e", "console.log('some stdout'); process.exit(1)"]
+      "postprocess": [
+        "node",
+        "-e",
+        "console.log('some stdout'); process.exit(1)"
+      ],
+      "output": "build/exit-1-stdout.js"
     },
-    "build/exit-2-stderr.js": {
+    "exit-2-stderr": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["node", "-e", "console.error('some stderr'); process.exit(2)"]
+      "postprocess": [
+        "node",
+        "-e",
+        "console.error('some stderr'); process.exit(2)"
+      ],
+      "output": "build/exit-2-stderr.js"
     },
-    "build/exit-3-no-output.js": {
+    "exit-3-no-output": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["node", "-e", "process.exit(3)"]
+      "postprocess": ["node", "-e", "process.exit(3)"],
+      "output": "build/exit-3-no-output.js"
     },
-    "build/exit-4-both-stdout-and-stderr.js": {
+    "exit-4-both-stdout-and-stderr": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["node", "-e", "console.log(\"stdout\"); console.error(\"stderr\"); process.exit(4)"]
+      "postprocess": [
+        "node",
+        "-e",
+        "console.log(\"stdout\"); console.error(\"stderr\"); process.exit(4)"
+      ],
+      "output": "build/exit-4-both-stdout-and-stderr.js"
     },
-    "build/exit-5-tricky-args.js": {
+    "exit-5-tricky-args": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["node", "-e", "process.exit(5)", "--", "", "'a'b'", "$x"]
+      "postprocess": ["node", "-e", "process.exit(5)", "--", "", "'a'b'", "$x"],
+      "output": "build/exit-5-tricky-args.js"
     },
-    "build/missing-script.js": {
+    "missing-script": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node"]
+      "postprocess": ["elm-watch-node"],
+      "output": "build/missing-script.js"
     },
-    "build/script-not-found.js": {
+    "script-not-found": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "not-found.js"]
+      "postprocess": ["elm-watch-node", "not-found.js"],
+      "output": "build/script-not-found.js"
     },
-    "build/throw-at-import.js": {
+    "throw-at-import": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/throw-at-import.js"]
+      "postprocess": ["elm-watch-node", "postprocess/throw-at-import.js"],
+      "output": "build/throw-at-import.js"
     },
-    "build/throw-non-error-at-import.js": {
+    "throw-non-error-at-import": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/throw-non-error-at-import.js"]
+      "postprocess": [
+        "elm-watch-node",
+        "postprocess/throw-non-error-at-import.js"
+      ],
+      "output": "build/throw-non-error-at-import.js"
     },
-    "build/empty-file.js": {
+    "empty-file": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/empty-file.js"]
+      "postprocess": ["elm-watch-node", "postprocess/empty-file.js"],
+      "output": "build/empty-file.js"
     },
-    "build/wrong-default-export.js": {
+    "wrong-default-export": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/wrong-default-export.js"]
+      "postprocess": ["elm-watch-node", "postprocess/wrong-default-export.js"],
+      "output": "build/wrong-default-export.js"
     },
-    "build/missing-default-export.js": {
+    "missing-default-export": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/missing-default-export.js"]
+      "postprocess": [
+        "elm-watch-node",
+        "postprocess/missing-default-export.js"
+      ],
+      "output": "build/missing-default-export.js"
     },
-    "build/throw-error.js": {
+    "throw-error": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/throw-error.js"]
+      "postprocess": ["elm-watch-node", "postprocess/throw-error.js"],
+      "output": "build/throw-error.js"
     },
-    "build/throw-null.js": {
+    "throw-null": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/throw-null.js"]
+      "postprocess": ["elm-watch-node", "postprocess/throw-null.js"],
+      "output": "build/throw-null.js"
     },
-    "build/reject-promise.js": {
+    "reject-promise": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/reject-promise.js"]
+      "postprocess": ["elm-watch-node", "postprocess/reject-promise.js"],
+      "output": "build/reject-promise.js"
     },
-    "build/return-undefined.js": {
+    "return-undefined": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/return-undefined.js"]
+      "postprocess": ["elm-watch-node", "postprocess/return-undefined.js"],
+      "output": "build/return-undefined.js"
     },
-    "build/exit-code-typo.js": {
+    "exit-code-typo": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/exit-code-typo.js"]
+      "postprocess": ["elm-watch-node", "postprocess/exit-code-typo.js"],
+      "output": "build/exit-code-typo.js"
     },
-    "build/stdout-typo.js": {
+    "stdout-typo": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/stdout-typo.js"]
+      "postprocess": ["elm-watch-node", "postprocess/stdout-typo.js"],
+      "output": "build/stdout-typo.js"
     },
-    "build/exit-1-stderr.js": {
+    "exit-1-stderr": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/exit-1-stderr.js"]
+      "postprocess": ["elm-watch-node", "postprocess/exit-1-stderr.js"],
+      "output": "build/exit-1-stderr.js"
     },
-    "build/invalid-stdout-json.js": {
+    "invalid-stdout-json": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/invalid-stdout-json.js"]
+      "postprocess": ["elm-watch-node", "postprocess/invalid-stdout-json.js"],
+      "output": "build/invalid-stdout-json.js"
     },
-    "build/invalid-stdout-typo.js": {
+    "invalid-stdout-typo": {
       "inputs": ["src/Main.elm"],
-      "postprocess": ["elm-watch-node", "postprocess/invalid-stdout-typo.js"]
+      "postprocess": ["elm-watch-node", "postprocess/invalid-stdout-typo.js"],
+      "output": "build/invalid-stdout-typo.js"
     }
   }
 }

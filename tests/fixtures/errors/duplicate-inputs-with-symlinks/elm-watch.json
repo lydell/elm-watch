@@ -1,7 +1,15 @@
 {
-  "outputs": {
-    "main.js": {
-      "inputs": ["Main.elm", "../duplicate-inputs/./Main.elm", "Symlink1.elm", "Symlink2.elm", "Other.elm", "Other.elm"]
+  "targets": {
+    "main": {
+      "inputs": [
+        "Main.elm",
+        "../duplicate-inputs/./Main.elm",
+        "Symlink1.elm",
+        "Symlink2.elm",
+        "Other.elm",
+        "Other.elm"
+      ],
+      "output": "main.js"
     }
   }
 }

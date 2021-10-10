@@ -1,19 +1,24 @@
 {
-  "outputs": {
+  "targets": {
     "main.js": {
-      "inputs": ["Main.elm"]
+      "inputs": ["Main.elm"],
+      "output": "main.js"
     },
-    "./main.js": {
-      "inputs": ["Main.elm"]
+    "./main": {
+      "inputs": ["Main.elm"],
+      "output": "./main.js"
     },
-    "../duplicate-outputs/main.js": {
-      "inputs": ["Main.elm"]
+    "../duplicate-outputs/main": {
+      "inputs": ["Main.elm"],
+      "output": "../duplicate-outputs/main.js"
     },
     "build/app.js": {
-      "inputs": ["Main.elm"]
+      "inputs": ["Main.elm"],
+      "output": "build/app.js"
     },
     "build//app.js": {
-      "inputs": ["Main.elm"]
+      "inputs": ["Main.elm"],
+      "output": "build//app.js"
     }
   }
 }

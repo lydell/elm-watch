@@ -1,22 +1,28 @@
 {
-  "outputs": {
-    "Dir.js": {
-      "inputs": ["src/Dir.elm"]
+  "targets": {
+    "Dir": {
+      "inputs": ["src/Dir.elm"],
+      "output": "Dir.js"
     },
-    "SyntaxError.js": {
-      "inputs": ["src/SyntaxError.elm"]
+    "SyntaxError": {
+      "inputs": ["src/SyntaxError.elm"],
+      "output": "SyntaxError.js"
     },
-    "ModuleNameMismatch.js": {
-      "inputs": ["src/ModuleNameMismatch.elm"]
+    "ModuleNameMismatch": {
+      "inputs": ["src/ModuleNameMismatch.elm"],
+      "output": "ModuleNameMismatch.js"
     },
-    "TypeError.js": {
-      "inputs": ["src/TypeError.elm"]
+    "TypeError": {
+      "inputs": ["src/TypeError.elm"],
+      "output": "TypeError.js"
     },
-    "MissingMain.js": {
-      "inputs": ["src/MissingMain.elm"]
+    "MissingMain": {
+      "inputs": ["src/MissingMain.elm"],
+      "output": "MissingMain.js"
     },
-    "DebugLog.js": {
-      "inputs": ["src/DebugLog.elm"]
+    "DebugLog": {
+      "inputs": ["src/DebugLog.elm"],
+      "output": "DebugLog.js"
     }
   }
 }

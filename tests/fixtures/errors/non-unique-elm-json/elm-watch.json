@@ -1,7 +1,8 @@
 {
-  "outputs": {
-    "main.js": {
-      "inputs": ["Main.elm", "pages/About.elm"]
+  "targets": {
+    "main": {
+      "inputs": ["Main.elm", "pages/About.elm"],
+      "output": "main.js"
     }
   }
 }
