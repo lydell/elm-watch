@@ -315,6 +315,30 @@ describe("errors", () => {
     `);
   });
 
+  test("elm-watch.json not found and suggest JSON from args", async () => {
+    expect(
+      await runAbsolute(path.parse(__dirname).root, ["make", "src/Game.elm"])
+    ).toMatchInlineSnapshot(`
+      ⧙-- elm-watch.json NOT FOUND --------------------------------------------------⧘
+
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+      ⧙But I couldn't find one!⧘
+
+      You need to create one with JSON like this:
+
+      {
+          "targets": {
+              "build/main.js": {
+                  "inputs": [
+                      "src/Game.elm"
+                  ]
+              }
+          }
+      }
+    `);
+  });
+
   describe("suggest JSON from args", () => {
     test("with typical `elm make`-like args", async () => {
       expect(
@@ -356,7 +380,12 @@ describe("errors", () => {
 
     test("suggested inputs are relative to elm-watch.json, not cwd", async () => {
       expect(
-        await run("valid/src", ["make", "src/App.elm", "../lib/Admin.elm"])
+        await run("valid/src", [
+          "make",
+          "src/App.elm",
+          "../lib/Admin.elm",
+          "--output=dist/main.js",
+        ])
       ).toMatchInlineSnapshot(`
         ⧙-- UNEXPECTED ARGUMENTS --------------------------------------------------------⧘
 
