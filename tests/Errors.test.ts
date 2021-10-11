@@ -79,7 +79,7 @@ function badElmBinEnv(dir: string, fixture: string): Env {
 
 async function runWithBadElmBin(fixture: string): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
-  return runAbsolute(dir, ["make", "build/app.js"], {
+  return runAbsolute(dir, ["make", "app"], {
     env: badElmBinEnv(dir, fixture),
   });
 }
@@ -98,7 +98,7 @@ async function runWithBadElmBinAndExpectedJson(
     fs.unlinkSync(jsonPath);
   }
 
-  const output = await runAbsolute(dir, ["make", "build/app.js"], {
+  const output = await runAbsolute(dir, ["make", "app"], {
     env: badElmBinEnv(dir, fixture),
   });
 
@@ -480,7 +480,7 @@ describe("errors", () => {
 
   test("unknown targets", async () => {
     expect(
-      await run("valid", ["make", "build/app.js", "build/adnim.js", "./app.js"])
+      await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"])
     ).toMatchInlineSnapshot(`
       ⧙-- UNKNOWN OUTPUTS -------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
