@@ -1,8 +1,8 @@
 {
+  "postprocess": ["node", "postprocess.js"],
   "targets": {
     "app": {
       "inputs": ["../app/Main.elm"],
-      "postprocess": ["node", "postprocess.js"],
       "output": "../build/app.js"
     },
     "admin": {

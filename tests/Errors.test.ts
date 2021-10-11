@@ -1855,7 +1855,7 @@ describe("errors", () => {
 
       // Postprocess error.
       expect(
-        await run("ci", ["make", "build/postprocess-error.js"], {
+        await run("ci", ["make", "postprocess-error"], {
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -1942,7 +1942,7 @@ describe("errors", () => {
 
       // Postprocess error.
       expect(
-        await run("ci", ["make", "build/postprocess-error.js"], {
+        await run("ci", ["make", "postprocess-error"], {
           env: {
             ...process.env,
             ...TEST_ENV,
