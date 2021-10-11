@@ -1,5 +1,5 @@
 {
-  "postprocess": ["node", "-e", "process.exit(3)"],
+  "postprocess": ["node", "-e", "process.stdin.resume(); process.exit(3)"],
   "targets": {
     "main": {
       "inputs": ["../../src/Main.elm"],

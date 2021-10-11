@@ -1,4 +1,4 @@
-module.exports = require("./hack")(() => {
+module.exports = require("../../hack")(() => {
   const error = new Error("Failed to run postprocess!");
 
   // Make a stable stack trace for snapshot tests.
