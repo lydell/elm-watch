@@ -2,7 +2,7 @@
   "postprocess": [
     "node",
     "-e",
-    "console.error('some stderr'); process.exit(2)"
+    "process.stdin.resume(); process.stdin.on('end', () => { console.error('some stderr'); process.exit(2) })"
   ],
   "targets": {
     "main": {

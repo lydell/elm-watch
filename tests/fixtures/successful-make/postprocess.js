@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-process.stdin.resume();
+process.stdin.pipe(process.stdout);
 
 const args = process.argv.slice(2);
 
@@ -88,5 +88,3 @@ switch (runMode) {
     console.error(`Unknown run mode: ${JSON.stringify(compilationMode)}`);
     process.exit(1);
 }
-
-process.exit(0);
