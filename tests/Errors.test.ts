@@ -478,9 +478,9 @@ describe("errors", () => {
     `);
   });
 
-  test("unknown outputs", async () => {
+  test("unknown targets", async () => {
     expect(
-      await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"])
+      await run("valid", ["make", "build/app.js", "build/adnim.js", "./app.js"])
     ).toMatchInlineSnapshot(`
       ⧙-- UNKNOWN OUTPUTS -------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
@@ -711,7 +711,7 @@ describe("errors", () => {
       });
 
       test("undefined PATH", async () => {
-        expect(await run("valid", ["make", "build/app.js"], { env: {} }))
+        expect(await run("valid", ["make", "app"], { env: {} }))
           .toMatchInlineSnapshot(`
             🚨 Dependencies
 
@@ -797,8 +797,7 @@ describe("errors", () => {
       });
 
       test("is directory", async () => {
-        expect(await run("valid", ["make", "build/app.js"]))
-          .toMatchInlineSnapshot(`
+        expect(await run("valid", ["make", "app"])).toMatchInlineSnapshot(`
           🚨 Dependencies
 
           ⧙-- FILE SYSTEM TROUBLE ---------------------------------------------------------⧘
@@ -1188,7 +1187,7 @@ describe("errors", () => {
 
     test("Elm file is actually a directory", async () => {
       // Elm’s message is a bit odd.
-      expect(await run("compilation-errors", ["make", "Dir.js"]))
+      expect(await run("compilation-errors", ["make", "Dir"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 Dir.js
@@ -1211,7 +1210,7 @@ describe("errors", () => {
     });
 
     test("Elm syntax error", async () => {
-      expect(await run("compilation-errors", ["make", "SyntaxError.js"]))
+      expect(await run("compilation-errors", ["make", "SyntaxError"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 SyntaxError.js
@@ -1237,7 +1236,7 @@ describe("errors", () => {
     });
 
     test("module name and file name mismatch", async () => {
-      expect(await run("compilation-errors", ["make", "ModuleNameMismatch.js"]))
+      expect(await run("compilation-errors", ["make", "ModuleNameMismatch"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 ModuleNameMismatch.js
@@ -1263,7 +1262,7 @@ describe("errors", () => {
     });
 
     test("type error", async () => {
-      expect(await run("compilation-errors", ["make", "TypeError.js"]))
+      expect(await run("compilation-errors", ["make", "TypeError"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 TypeError.js
@@ -1284,7 +1283,7 @@ describe("errors", () => {
     });
 
     test("missing main", async () => {
-      expect(await run("compilation-errors", ["make", "MissingMain.js"]))
+      expect(await run("compilation-errors", ["make", "MissingMain"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 MissingMain.js
@@ -1315,7 +1314,7 @@ describe("errors", () => {
 
     test("--optimize with Debug.log", async () => {
       expect(
-        await run("compilation-errors", ["make", "DebugLog.js", "--optimize"])
+        await run("compilation-errors", ["make", "DebugLog", "--optimize"])
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 DebugLog.js
