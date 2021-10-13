@@ -1,16 +1,15 @@
-import * as ElmWatchJson from "./ElmWatchJson";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import type { CliArg, CompilationMode, RunMode } from "./Types";
 
 type ParseArgsResult =
   | {
-      tag: "BadArgs";
-      badArgs: NonEmptyArray<CliArg>;
-    }
-  | {
       tag: "Success";
       compilationMode: CompilationMode;
       targetsSubstrings: Array<string>;
+    }
+  | {
+      tag: "UnknownFlags";
+      unknownFlags: NonEmptyArray<CliArg>;
     }
   | { tag: "DebugOptimizeClash" }
   | { tag: "DebugOptimizeForHot" };
@@ -21,7 +20,7 @@ export function parseArgs(
 ): ParseArgsResult {
   let debug = false;
   let optimize = false;
-  const badArgs: Array<CliArg> = [];
+  const unknownFlags: Array<CliArg> = [];
   const targetsSubstrings: Array<string> = [];
 
   for (const arg of args) {
@@ -35,10 +34,10 @@ export function parseArgs(
         break;
 
       default:
-        if (ElmWatchJson.isValidTargetSubstring(arg.theArg)) {
-          targetsSubstrings.push(arg.theArg);
+        if (arg.theArg.startsWith("-")) {
+          unknownFlags.push(arg);
         } else {
-          badArgs.push(arg);
+          targetsSubstrings.push(arg.theArg);
         }
     }
   }
@@ -57,10 +56,10 @@ export function parseArgs(
       break;
   }
 
-  if (isNonEmptyArray(badArgs)) {
+  if (isNonEmptyArray(unknownFlags)) {
     return {
-      tag: "BadArgs",
-      badArgs,
+      tag: "UnknownFlags",
+      unknownFlags,
     };
   }
 

@@ -33,12 +33,6 @@ export function isValidTargetName(name: string): boolean {
   return TARGET_NAME.test(name);
 }
 
-// Target name substrings entered as CLI args currently have the same format as
-// target names themselves.
-export function isValidTargetSubstring(name: string): boolean {
-  return isValidTargetName(name);
-}
-
 type Target = ReturnType<typeof Target>;
 const Target = Decode.fieldsAuto(
   {
@@ -167,13 +161,13 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
 export function example(
   cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
-  args: Array<CliArg>
+  elmMakeParsed: ElmMakeParsed
 ): string {
-  const { elmFiles, output = "build/main.js" } = parseArgsLikeElmMake(args);
+  const { elmFiles, output = "build/main.js" } = elmMakeParsed;
 
   const json: Config = {
     targets: {
-      Main: {
+      MyTargetName: {
         inputs: isNonEmptyArray(elmFiles)
           ? mapNonEmptyArray(elmFiles, (file) =>
               path.relative(
@@ -197,7 +191,7 @@ type ElmMakeParsed = {
 
 type IntermediaElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
 
-function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
+export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
   return args.reduce<IntermediaElmMakeParsed>(
     (passedParsed, { theArg: arg }): IntermediaElmMakeParsed => {
       const parsed = { ...passedParsed, justSawOutputFlag: false };

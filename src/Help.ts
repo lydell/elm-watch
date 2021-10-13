@@ -13,7 +13,7 @@ ${bold("elm-watch hot [targets...]")}
 
 All commands read their inputs and outputs from the closest ${elmWatchJson}.
 By default they build all targets. Pass target names to only build some.
-All targets whose names include the names you pass are enabled.
+Targets are matched by substring!
 
 ${dim("---")}
 

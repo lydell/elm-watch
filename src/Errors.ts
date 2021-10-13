@@ -30,6 +30,7 @@ import {
   ElmWatchStuffJsonPath,
   InputPath,
   OutputPath,
+  RunMode,
 } from "./Types";
 
 const elmJson = bold("elm.json");
@@ -130,7 +131,7 @@ export function elmWatchJsonNotFound(
       tag: "ElmWatchJsonPath",
       theElmWatchJsonPath: absolutePathFromString(cwd.path, "elm-watch.json"),
     },
-    args
+    ElmWatchJson.parseArgsLikeElmMake(args)
   );
 
   return fancyError("elm-watch.json NOT FOUND", { tag: "NoLocation" })`
@@ -159,30 +160,55 @@ ${bold("--debug")} and ${bold("--optimize")} cannot be used at the same time.
 `;
 }
 
-export function badArgs(
+export function unknownFlags(
   cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
+  runMode: RunMode,
   args: Array<CliArg>,
-  theBadArgs: NonEmptyArray<CliArg>
+  theUnknownFlags: NonEmptyArray<CliArg>
 ): ErrorTemplate {
-  return fancyError("UNEXPECTED ARGUMENTS", { tag: "NoLocation" })`
-${bold(
-  "I only accept target names substrings as arguments, but I got some that don't look like that:"
-)}
+  const elmMakeParsed = ElmWatchJson.parseArgsLikeElmMake(args);
 
-${join(
-  theBadArgs.map((arg) => arg.theArg),
-  "\n"
-)}
-
-You either need to remove those arguments or move them to the ${elmWatchJson} I found here:
+  const extra =
+    elmMakeParsed.output !== undefined
+      ? `
+It looks like your arguments might fit in an ${bold("elm make")} command.
+If so, you could try moving them to the ${elmWatchJson} I found here:
 
 ${elmWatchJsonPath.theElmWatchJsonPath.absolutePath}
 
 For example, you could add some JSON like this:
 
-${ElmWatchJson.example(cwd, elmWatchJsonPath, args)}
+${ElmWatchJson.example(cwd, elmWatchJsonPath, elmMakeParsed)}
+  `
+      : "";
+
+  return fancyError("UNEXPECTED FLAGS", { tag: "NoLocation" })`
+${printRunModeArgsHelp(runMode)}
+
+But you provided these flag-looking args:
+
+${join(
+  theUnknownFlags.map((arg) => arg.theArg),
+  "\n"
+)}
+
+Try removing those extra flags!
+
+${extra}
 `;
+}
+
+function printRunModeArgsHelp(runMode: RunMode): string {
+  switch (runMode) {
+    case "make":
+      return `The ${bold(runMode)} command only accepts the flags ${bold(
+        "--debug"
+      )} and ${bold("--optimize")}.`;
+
+    case "hot":
+      return `The ${bold(runMode)} command only accepts no flags at all.`;
+  }
 }
 
 export function unknownTargetsSubstrings(

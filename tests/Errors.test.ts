@@ -317,7 +317,12 @@ describe("errors", () => {
 
   test("elm-watch.json not found and suggest JSON from args", async () => {
     expect(
-      await runAbsolute(path.parse(__dirname).root, ["make", "src/Game.elm"])
+      await runAbsolute(path.parse(__dirname).root, [
+        "make",
+        "src/Game.elm",
+        "--output",
+        "dist/game.js",
+      ])
     ).toMatchInlineSnapshot(`
       ⧙-- elm-watch.json NOT FOUND --------------------------------------------------⧘
 
@@ -329,10 +334,11 @@ describe("errors", () => {
 
       {
           "targets": {
-              "build/main.js": {
+              "MyTargetName": {
                   "inputs": [
                       "src/Game.elm"
-                  ]
+                  ],
+                  "output": "dist/game.js"
               }
           }
       }
@@ -378,6 +384,12 @@ describe("errors", () => {
       `);
     });
 
+    test("no suggesting for unknown flags", async () => {
+      expect(
+        await run("valid", ["make", "src/App.elm", "--loglevel=silent", "-f"])
+      ).toMatchInlineSnapshot();
+    });
+
     test("suggested inputs are relative to elm-watch.json, not cwd", async () => {
       expect(
         await run("valid/src", [
@@ -413,8 +425,8 @@ describe("errors", () => {
       `);
     });
 
-    test("support --output=/dev/null", async () => {
-      expect(await run("valid", ["make", "--output=/dev/null"]))
+    test("--output=/dev/null should not be suggested as an output", async () => {
+      expect(await run("valid", ["make", "MyMain.elm", "--output=/dev/null"]))
         .toMatchInlineSnapshot(`
         ⧙-- UNEXPECTED ARGUMENTS --------------------------------------------------------⧘
 

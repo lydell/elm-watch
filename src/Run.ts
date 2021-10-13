@@ -74,13 +74,14 @@ export async function run(
       const parseArgsResult = CliArgs.parseArgs(runMode, args);
 
       switch (parseArgsResult.tag) {
-        case "BadArgs":
+        case "UnknownFlags":
           logger.errorTemplate(
-            Errors.badArgs(
+            Errors.unknownFlags(
               cwd,
               parseResult.elmWatchJsonPath,
+              runMode,
               args,
-              parseArgsResult.badArgs
+              parseArgsResult.unknownFlags
             )
           );
           return { tag: "Exit", exitCode: 1 };
