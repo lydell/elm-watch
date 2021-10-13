@@ -1,6 +1,6 @@
 {
   "targets": {
-    "": {
+    "main": {
       "inputs": ["src/Main.elm"],
       "output": ".js"
     }

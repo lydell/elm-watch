@@ -387,7 +387,18 @@ describe("errors", () => {
     test("no suggesting for unknown flags", async () => {
       expect(
         await run("valid", ["make", "src/App.elm", "--loglevel=silent", "-f"])
-      ).toMatchInlineSnapshot();
+      ).toMatchInlineSnapshot(`
+        ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
+
+        The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
+
+        But you provided these flag-looking args:
+
+        --loglevel=silent
+        -f
+
+        Try removing those extra flags!
+      `);
     });
 
     test("suggested inputs are relative to elm-watch.json, not cwd", async () => {
