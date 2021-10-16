@@ -59,7 +59,9 @@ export async function spawn(command: Command): Promise<SpawnResult> {
       );
     });
 
-    let stdinWriteError: SpawnResult | undefined = undefined;
+    let stdinWriteError:
+      | { result: SpawnResult; timeoutId: NodeJS.Timeout }
+      | undefined = undefined;
 
     child.stdin.on("error", (error: Error & { code?: string }) => {
       // istanbul ignore else
@@ -70,10 +72,12 @@ export async function spawn(command: Command): Promise<SpawnResult> {
         // than this stdin error. So give the "exit" event a chance to happen
         // before reporting this one.
         const result: SpawnResult = { tag: "StdinWriteError", error, command };
-        stdinWriteError = result;
-        setTimeout(() => {
-          resolve(result);
-        }, 1000);
+        stdinWriteError = {
+          result,
+          timeoutId: setTimeout(() => {
+            resolve(result);
+          }, 500),
+        };
       } else {
         resolve({ tag: "OtherSpawnError", error, command });
       }
@@ -98,17 +102,18 @@ export async function spawn(command: Command): Promise<SpawnResult> {
     });
 
     child.on("exit", (exitCode, signal) => {
-      resolve(
-        exitCode === 0 && stdinWriteError !== undefined
-          ? stdinWriteError
-          : {
-              tag: "Exit",
-              exitReason: exitReason(exitCode, signal),
-              stdout: Buffer.concat(stdout),
-              stderr: Buffer.concat(stderr),
-              command,
-            }
-      );
+      if (exitCode === 0 && stdinWriteError !== undefined) {
+        clearTimeout(stdinWriteError.timeoutId);
+        resolve(stdinWriteError.result);
+      } else {
+        resolve({
+          tag: "Exit",
+          exitReason: exitReason(exitCode, signal),
+          stdout: Buffer.concat(stdout),
+          stderr: Buffer.concat(stderr),
+          command,
+        });
+      }
     });
 
     if (command.stdin !== undefined) {
