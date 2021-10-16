@@ -1,0 +1,13 @@
+{
+  "postprocess": ["node", "-e", "process.stdin.pipe(process.stdout)"],
+  "targets": {
+    "app": {
+      "inputs": ["../src/App.elm"],
+      "output": "../build/app.js"
+    },
+    "admin": {
+      "inputs": ["../src/Admin.elm"],
+      "output": "../build/admin.js"
+    }
+  }
+}

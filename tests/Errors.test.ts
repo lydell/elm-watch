@@ -77,7 +77,10 @@ function badElmBinEnv(dir: string, fixture: string): Env {
   };
 }
 
-async function runWithBadElmBin(fixture: string): Promise<string> {
+async function runWithBadElmBin(
+  fixture: string,
+  { postprocess = false } = {}
+): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
   const BUILD = path.join(dir, "build");
   if (fs.rmSync !== undefined) {
@@ -85,9 +88,13 @@ async function runWithBadElmBin(fixture: string): Promise<string> {
   } else if (fs.existsSync(BUILD)) {
     fs.rmdirSync(BUILD, { recursive: true });
   }
-  return runAbsolute(dir, ["make", "app"], {
-    env: badElmBinEnv(dir, fixture),
-  });
+  return runAbsolute(
+    postprocess ? path.join(dir, "postprocess") : dir,
+    ["make", "app"],
+    {
+      env: badElmBinEnv(dir, fixture),
+    }
+  );
 }
 
 async function runWithBadElmBinAndExpectedJson(
@@ -1464,7 +1471,7 @@ describe("errors", () => {
     });
   });
 
-  test("fail to read Elm’s output", async () => {
+  test("fail to read the size of Elm’s output", async () => {
     expect(await runWithBadElmBin("exit-0-no-write")).toMatchInlineSnapshot(`
       🚨 app
 
@@ -1484,6 +1491,47 @@ describe("errors", () => {
   });
 
   describe("postprocess errors", () => {
+    test("fail to read Elm’s output", async () => {
+      expect(await runWithBadElmBin("exit-0-no-write", { postprocess: true }))
+        .toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        I managed to compile your code. Then I tried to read the output:
+
+        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+
+        Doing so I encountered this error:
+
+        ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("fail to overwrite Elm’s output", async () => {
+      expect(
+        await runWithBadElmBin("exit-0-write-readonly", { postprocess: true })
+      ).toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        I managed to compile your code and read the generated file:
+
+        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+
+        I made some changes to it and tried to write that back but I encountered this error:
+
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
     test("command not found", async () => {
       expect(
         await run("postprocess/variants/command-not-found", ["make"], {
