@@ -18,7 +18,6 @@ import {
 } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
 import { Port } from "./Port";
-import { ExecutedCommand } from "./Postprocess";
 import {
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
@@ -541,12 +540,12 @@ export function postprocessNonZeroExit(
   exitReason: ExitReason,
   stdout: string,
   stderr: string,
-  executedCommand: ExecutedCommand
+  command: Command
 ): ErrorTemplate {
   return fancyError("POSTPROCESS ERROR", outputPath)`
 I ran your postprocess command:
 
-${printExecutedCommand(executedCommand)}
+${printCommand(command)}
 
 ${bold("It exited with an error:")}
 
@@ -1097,19 +1096,6 @@ function printCommand(command: Command): string {
 ${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
 ${stdin}${commandToPresentationName([command.command, ...command.args])}
 `;
-}
-
-function printExecutedCommand(executedCommand: ExecutedCommand): string {
-  switch (executedCommand.tag) {
-    case "Command":
-      return printCommand(executedCommand.command);
-
-    case "ElmWatchNode":
-      return `
-${printElmWatchNodeImportCommand(executedCommand.scriptPath)}
-${printElmWatchNodeRunCommand(executedCommand.args)}
-      `;
-  }
 }
 
 function commandToPresentationName(command: NonEmptyArray<string>): string {

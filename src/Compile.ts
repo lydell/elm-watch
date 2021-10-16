@@ -1490,7 +1490,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
               status.exitReason,
               status.stdout,
               status.stderr,
-              status.executedCommand
+              status.command
             );
 
           case "ElmWatchNodeMissingScript":

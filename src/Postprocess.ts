@@ -70,23 +70,12 @@ export type PostprocessError =
       exitReason: ExitReason;
       stdout: string;
       stderr: string;
-      executedCommand: ExecutedCommand;
+      command: Command;
     }
   | {
       tag: "PostprocessStdinWriteError";
       error: Error;
       command: Command;
-    };
-
-export type ExecutedCommand =
-  | {
-      tag: "Command";
-      command: Command;
-    }
-  | {
-      tag: "ElmWatchNode";
-      scriptPath: ElmWatchNodeScriptPath;
-      args: Array<string>;
     };
 
 export async function runPostprocess({
@@ -138,7 +127,6 @@ export async function runPostprocess({
 
     case "Exit": {
       const { exitReason } = spawnResult;
-      const executedCommand: ExecutedCommand = { tag: "Command", command };
 
       if (!(exitReason.tag === "ExitCode" && exitReason.exitCode === 0)) {
         const stdout = spawnResult.stdout.toString("utf8");
@@ -148,7 +136,7 @@ export async function runPostprocess({
           exitReason,
           stdout,
           stderr,
-          executedCommand,
+          command,
         };
       }
 

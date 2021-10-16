@@ -2256,18 +2256,15 @@ describe("errors", () => {
             "",
             "",
             {
-              tag: "Command",
-              command: {
-                command: "node",
-                args: ["postprocess.js"],
-                options: {
-                  cwd: {
-                    tag: "AbsolutePath",
-                    absolutePath: "/Users/you/project",
-                  },
-
-                  env: {},
+              command: "node",
+              args: ["postprocess.js"],
+              options: {
+                cwd: {
+                  tag: "AbsolutePath",
+                  absolutePath: "/Users/you/project",
                 },
+
+                env: {},
               },
             }
           )
@@ -2305,18 +2302,15 @@ describe("errors", () => {
             "",
             "",
             {
-              tag: "Command",
-              command: {
-                command: "node",
-                args: ["postprocess.js"],
-                options: {
-                  cwd: {
-                    tag: "AbsolutePath",
-                    absolutePath: "/Users/you/project",
-                  },
-
-                  env: {},
+              command: "node",
+              args: ["postprocess.js"],
+              options: {
+                cwd: {
+                  tag: "AbsolutePath",
+                  absolutePath: "/Users/you/project",
                 },
+
+                env: {},
               },
             }
           )
