@@ -12,14 +12,9 @@ export const ElmJson = Decode.fieldsUnion("type", {
     tag: () => "Application" as const,
     "source-directories": NonEmptyArray(Decode.string),
   }),
-  package: () => {
-    throw new Decode.DecoderError({
-      message:
-        "elm-watch only supports Elm applications, not packages.\nTry running just `elm make` or `elm-test --watch` to typecheck your package.",
-      value: Decode.DecoderError.MISSING_VALUE,
-      key: "type",
-    });
-  },
+  package: () => ({
+    tag: "Package" as const,
+  }),
 });
 
 export type ParseResult =
@@ -83,5 +78,13 @@ export function getSourceDirectories(
         tag: "SourceDirectory",
         theSourceDirectory: absolutePathFromString(base, dir),
       }));
+
+    case "Package":
+      return [
+        {
+          tag: "SourceDirectory",
+          theSourceDirectory: absolutePathFromString(base, "src"),
+        },
+      ];
   }
 }
