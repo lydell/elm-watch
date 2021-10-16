@@ -1354,9 +1354,11 @@ function statusLine(
         status.fileSize
       );
       const fileSizeString =
-        fileSize === undefined ? "" : ` (${dim(fileSize)})`;
+        fileSize === undefined ? "" : dim(` (${fileSize})`);
       return truncate(
-        fancy ? `✅ ${targetName}` : `${targetName}: success${fileSizeString}`
+        fancy
+          ? `✅ ${targetName}${fileSizeString}`
+          : `${targetName}: success${fileSizeString}`
       );
     }
 
