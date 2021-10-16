@@ -79,6 +79,12 @@ function badElmBinEnv(dir: string, fixture: string): Env {
 
 async function runWithBadElmBin(fixture: string): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
+  const BUILD = path.join(dir, "build");
+  if (fs.rmSync !== undefined) {
+    fs.rmSync(BUILD, { recursive: true, force: true });
+  } else if (fs.existsSync(BUILD)) {
+    fs.rmdirSync(BUILD, { recursive: true });
+  }
   return runAbsolute(dir, ["make", "app"], {
     env: badElmBinEnv(dir, fixture),
   });
@@ -1456,6 +1462,25 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
       `);
     });
+  });
+
+  test("fail to read Elm’s output", async () => {
+    expect(await runWithBadElmBin("exit-0-no-write")).toMatchInlineSnapshot(`
+      🚨 app
+
+      ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+      ⧙Target: app⧘
+
+      I managed to compile your code. Then I tried to read the output:
+
+      /Users/you/project/tests/fixtures/errors/valid/build/app.js
+
+      Doing so I encountered this error:
+
+      ENOENT: no such file or directory, stat '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+
+      🚨 ⧙1⧘ error found
+    `);
   });
 
   describe("postprocess errors", () => {
