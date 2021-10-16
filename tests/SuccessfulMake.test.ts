@@ -64,7 +64,7 @@ describe("successful make", () => {
   test("standard mode", async () => {
     expect(await run("successful-make", ["make"])).toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ build/main.js
+      ✅ main
     `);
   });
 
@@ -72,7 +72,7 @@ describe("successful make", () => {
     expect(await run("successful-make", ["make", "--debug"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ build/main.js
+      ✅ main
     `);
   });
 
@@ -80,7 +80,7 @@ describe("successful make", () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ build/main.js
+      ✅ main
     `);
   });
 
@@ -98,7 +98,7 @@ describe("successful make", () => {
          ● elm/json 1.1.3
          ● elm/url 1.0.0
          ● elm/core 1.0.5
-      ✅ build/main.js
+      ✅ main
     `);
   });
 
@@ -108,10 +108,10 @@ describe("successful make", () => {
     ).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies
-      ⏳ build/main.js: elm make --optimize
-      ️🟢 build/main.js: elm make done
-      ⏳ build/main.js: postprocess
-      ✅ build/main.js
+      ⏳ main: elm make --optimize
+      🟢 main: elm make done
+      ⏳ main: postprocess
+      ✅ main
     `);
   });
 
@@ -119,7 +119,7 @@ describe("successful make", () => {
     expect(await run("postprocess-elm-watch-node", ["make"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ build/main.js
+      ✅ main
     `);
   });
 
@@ -128,8 +128,8 @@ describe("successful make", () => {
       .toMatchInlineSnapshot(`
       ✅ Dependencies
       ✅ Dependencies (2/2)
-      ✅ ../build/app.js
-      ✅ ../build/admin.js
+      ✅ app
+      ✅ admin
     `);
   });
 });

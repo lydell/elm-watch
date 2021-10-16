@@ -132,7 +132,7 @@ describe("errors", () => {
   test("elm-watch.json is a folder", async () => {
     expect(await run("elm-watch-json-is-folder", ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING elm-watch.json --------------------------------------------⧘
+      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/elm-watch-json-is-folder/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -146,7 +146,7 @@ describe("errors", () => {
   test("elm-watch.json bad json", async () => {
     expect(await run("elm-watch-json-bad-json", ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING elm-watch.json --------------------------------------------⧘
+      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-json/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -161,7 +161,7 @@ describe("errors", () => {
     test("empty outputs", async () => {
       expect(await run("elm-watch-json-decode-error/empty-outputs", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/empty-outputs/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -178,15 +178,15 @@ describe("errors", () => {
       expect(
         await run("elm-watch-json-decode-error/bad-output-extension", ["make"])
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["index.html"]:
-        Outputs must end with .js or be /dev/null
+        At root["targets"]["index"]["output"]:
+        Outputs must end with .js
       `);
     });
 
@@ -198,29 +198,29 @@ describe("errors", () => {
           ["make"]
         )
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension-just-dot-js/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"][".js"]:
-        Outputs must end with .js or be /dev/null
+        At root["targets"]["main"]["output"]:
+        Outputs must end with .js
       `);
     });
 
     test("/dev/null is not a valid output", async () => {
       expect(await run("elm-watch-json-decode-error/bad-dev-null", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-dev-null/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["main"]:
+        At root["targets"]["main"]["output"]:
         Outputs must end with .js
       `);
     });
@@ -228,15 +228,15 @@ describe("errors", () => {
     test("unknown field", async () => {
       expect(await run("elm-watch-json-decode-error/unknown-field", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-field/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["main.js"]:
-        Expected only these fields: "inputs", "postprocess"
+        At root["targets"]["main"]:
+        Expected only these fields: "inputs", "output"
         Found extra fields: "mode"
       `);
     });
@@ -244,14 +244,14 @@ describe("errors", () => {
     test("empty list of inputs", async () => {
       expect(await run("elm-watch-json-decode-error/empty-inputs", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/empty-inputs/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["main.js"]["inputs"]:
+        At root["targets"]["main"]["inputs"]:
         Expected a non-empty array
         Got: []
       `);
@@ -261,14 +261,14 @@ describe("errors", () => {
       expect(
         await run("elm-watch-json-decode-error/bad-input-extension", ["make"])
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-extension/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["main.js"]["inputs"][0]:
+        At root["targets"]["main"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/Main.js"
       `);
@@ -278,14 +278,14 @@ describe("errors", () => {
       expect(
         await run("elm-watch-json-decode-error/bad-input-module-name", ["make"])
       ).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT ---------------------------------------------⧘
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-module-name/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["main.js"]["inputs"][0]:
+        At root["targets"]["main"]["inputs"][0]:
         Inputs must have a valid module name and end with .elm
         Got: "src/main.elm"
       `);
@@ -295,7 +295,7 @@ describe("errors", () => {
   test("elm-watch.json not found", async () => {
     expect(await runAbsolute(path.parse(__dirname).root, ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- elm-watch.json NOT FOUND --------------------------------------------------⧘
+      ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -305,10 +305,11 @@ describe("errors", () => {
 
       {
           "targets": {
-              "build/main.js": {
+              "MyTargetName": {
                   "inputs": [
                       "src/Main.elm"
-                  ]
+                  ],
+                  "output": "build/main.js"
               }
           }
       }
@@ -324,7 +325,7 @@ describe("errors", () => {
         "dist/game.js",
       ])
     ).toMatchInlineSnapshot(`
-      ⧙-- elm-watch.json NOT FOUND --------------------------------------------------⧘
+      ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -357,15 +358,18 @@ describe("errors", () => {
           "--debug",
         ])
       ).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ARGUMENTS --------------------------------------------------------⧘
+        ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
-        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
+        The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
 
-        src/App.elm
-        src/Admin.elm
+        But you provided these flag-looking args:
+
         --output
 
-        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
+        Try removing those extra flags!
+
+        It looks like your arguments might fit in an ⧙elm make⧘ command.
+        If so, you could try moving them to the ⧙elm-watch.json⧘ I found here:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
@@ -373,11 +377,12 @@ describe("errors", () => {
 
         {
             "targets": {
-                "bundle.js": {
+                "MyTargetName": {
                     "inputs": [
                         "src/App.elm",
                         "src/Admin.elm"
-                    ]
+                    ],
+                    "output": "bundle.js"
                 }
             }
         }
@@ -410,14 +415,18 @@ describe("errors", () => {
           "--output=dist/main.js",
         ])
       ).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ARGUMENTS --------------------------------------------------------⧘
+        ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
-        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
+        The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
 
-        src/App.elm
-        ../lib/Admin.elm
+        But you provided these flag-looking args:
 
-        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
+        --output=dist/main.js
+
+        Try removing those extra flags!
+
+        It looks like your arguments might fit in an ⧙elm make⧘ command.
+        If so, you could try moving them to the ⧙elm-watch.json⧘ I found here:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
@@ -425,11 +434,12 @@ describe("errors", () => {
 
         {
             "targets": {
-                "build/main.js": {
+                "MyTargetName": {
                     "inputs": [
                         "src/src/App.elm",
                         "lib/Admin.elm"
-                    ]
+                    ],
+                    "output": "dist/main.js"
                 }
             }
         }
@@ -439,27 +449,15 @@ describe("errors", () => {
     test("--output=/dev/null should not be suggested as an output", async () => {
       expect(await run("valid", ["make", "MyMain.elm", "--output=/dev/null"]))
         .toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ARGUMENTS --------------------------------------------------------⧘
+        ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
-        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
+        The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
+
+        But you provided these flag-looking args:
 
         --output=/dev/null
 
-        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
-
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
-
-        For example, you could add some JSON like this:
-
-        {
-            "targets": {
-                "/dev/null": {
-                    "inputs": [
-                        "src/Main.elm"
-                    ]
-                }
-            }
-        }
+        Try removing those extra flags!
       `);
     });
 
@@ -476,32 +474,17 @@ describe("errors", () => {
           "docs.json",
         ])
       ).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ARGUMENTS --------------------------------------------------------⧘
+        ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
-        ⧙I only accept JS file paths as arguments, but I got some that don't look like that:⧘
+        The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
 
-        src/app.elm
+        But you provided these flag-looking args:
+
         --output
-        .js
         --output=.js
         --docs
-        docs.json
 
-        You either need to remove those arguments or move them to the ⧙elm-watch.json⧘ I found here:
-
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
-
-        For example, you could add some JSON like this:
-
-        {
-            "targets": {
-                "build/main.js": {
-                    "inputs": [
-                        "src/Main.elm"
-                    ]
-                }
-            }
-        }
+        Try removing those extra flags!
       `);
     });
   });
@@ -534,23 +517,24 @@ describe("errors", () => {
     expect(
       await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"])
     ).toMatchInlineSnapshot(`
-      ⧙-- UNKNOWN OUTPUTS -------------------------------------------------------------⧘
+      ⧙-- UNKNOWN TARGETS SUBSTRINGS --------------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      It contains these outputs:
+      It contains these targets:
+
+      app
+      admin
+
+      ⧙But none of those match these substrings you gave me:⧘
 
       build/app.js
-      build/admin.js
-
-      ⧙But those don't include these outputs you asked me to build:⧘
-
       build/adnim.js
       app.js
 
-      Is something misspelled? (You need to type them exactly the same.)
-      Or do you need to add some more outputs?
+      Is something misspelled?
+      Or do you need to add some more targets?
     `);
   });
 
@@ -577,10 +561,10 @@ describe("errors", () => {
   describe("inputs errors", () => {
     test("inputs not found", async () => {
       expect(await run("inputs-not-found", ["make"])).toMatchInlineSnapshot(`
-        🚨 /dev/null
+        🚨 main
 
         ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
-        ⧙When compiling to /dev/null⧘
+        ⧙Target: main⧘
 
         You asked me to compile these inputs:
 
@@ -597,10 +581,10 @@ describe("errors", () => {
 
     test("symlink loop", async () => {
       expect(await run("symlink-loop", ["make"])).toMatchInlineSnapshot(`
-        🚨 main.js
+        🚨 main
 
         ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
-        ⧙When compiling: main.js⧘
+        ⧙Target: main⧘
 
         I start by checking if the inputs you give me exist,
         but doing so resulted in errors!
@@ -616,10 +600,10 @@ describe("errors", () => {
 
     test("duplicate inputs", async () => {
       expect(await run("duplicate-inputs", ["make"])).toMatchInlineSnapshot(`
-        🚨 main.js
+        🚨 main
 
         ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
-        ⧙When compiling: main.js⧘
+        ⧙Target: main⧘
 
         Some of your inputs seem to be duplicates!
 
@@ -636,10 +620,10 @@ describe("errors", () => {
     test("duplicate inputs with symlinks", async () => {
       expect(await run("duplicate-inputs-with-symlinks", ["make"]))
         .toMatchInlineSnapshot(`
-        🚨 main.js
+        🚨 main
 
         ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
-        ⧙When compiling: main.js⧘
+        ⧙Target: main⧘
 
         Some of your inputs seem to be duplicates!
 
@@ -664,10 +648,10 @@ describe("errors", () => {
   describe("elm.json errors", () => {
     test("elm.json not found", async () => {
       expect(await run("elm-json-not-found", ["make"])).toMatchInlineSnapshot(`
-        🚨 main.js
+        🚨 main
 
         ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
-        ⧙When compiling: main.js⧘
+        ⧙Target: main⧘
 
         I could not find an ⧙elm.json⧘ for these inputs:
 
@@ -683,10 +667,10 @@ describe("errors", () => {
     test("elm.json not found for all inputs", async () => {
       expect(await run("elm-json-not-found-for-all", ["make"]))
         .toMatchInlineSnapshot(`
-        🚨 main.js
+        🚨 main
 
         ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
-        ⧙When compiling: main.js⧘
+        ⧙Target: main⧘
 
         I could not find an ⧙elm.json⧘ for these inputs:
 
@@ -707,10 +691,10 @@ describe("errors", () => {
 
     test("non unique elm.json", async () => {
       expect(await run("non-unique-elm-json", ["make"])).toMatchInlineSnapshot(`
-        🚨 main.js
+        🚨 main
 
         ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
-        ⧙When compiling: main.js⧘
+        ⧙Target: main⧘
 
         I went looking for an ⧙elm.json⧘ for your inputs, but I found more than one!
 
@@ -965,10 +949,10 @@ describe("errors", () => {
     test("elm make json syntax error", async () => {
       expect(await runWithBadElmBinAndExpectedJson("json-syntax-error", "{"))
         .toMatchInlineSnapshot(`
-        🚨 build/app.js
+        🚨 app
 
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
-        ⧙When compiling: build/app.js⧘
+        ⧙Target: app⧘
 
         I ran the following commands:
 
@@ -995,10 +979,10 @@ describe("errors", () => {
           JSON.stringify({ type: "laser-error" }, null, 2)
         )
       ).toMatchInlineSnapshot(`
-        🚨 build/app.js
+        🚨 app
 
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
-        ⧙When compiling: build/app.js⧘
+        ⧙Target: app⧘
 
         I ran the following commands:
 
@@ -1023,10 +1007,10 @@ describe("errors", () => {
     test("elm make json error failed to write", async () => {
       expect(await runWithBadElmBin("json-error-failed-write"))
         .toMatchInlineSnapshot(`
-        🚨 build/app.js
+        🚨 app
 
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
-        ⧙When compiling: build/app.js⧘
+        ⧙Target: app⧘
 
         I ran the following commands:
 
@@ -1053,10 +1037,10 @@ describe("errors", () => {
     describe("unexpected `elm make` output", () => {
       test("exit 0 + stdout", async () => {
         expect(await runWithBadElmBin("exit-0-stdout")).toMatchInlineSnapshot(`
-          🚨 build/app.js
+          🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙When compiling: build/app.js⧘
+          ⧙Target: app⧘
 
           I ran the following commands:
 
@@ -1078,10 +1062,10 @@ describe("errors", () => {
 
       test("exit 0 + stderr", async () => {
         expect(await runWithBadElmBin("exit-0-stderr")).toMatchInlineSnapshot(`
-          🚨 build/app.js
+          🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙When compiling: build/app.js⧘
+          ⧙Target: app⧘
 
           I ran the following commands:
 
@@ -1103,10 +1087,10 @@ describe("errors", () => {
 
       test("exit 1 + stdout", async () => {
         expect(await runWithBadElmBin("exit-1-stdout")).toMatchInlineSnapshot(`
-          🚨 build/app.js
+          🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙When compiling: build/app.js⧘
+          ⧙Target: app⧘
 
           I ran the following commands:
 
@@ -1129,10 +1113,10 @@ describe("errors", () => {
       test("exit 1 + stderr that isn’t json", async () => {
         expect(await runWithBadElmBin("exit-1-stderr-not-{"))
           .toMatchInlineSnapshot(`
-          🚨 build/app.js
+          🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙When compiling: build/app.js⧘
+          ⧙Target: app⧘
 
           I ran the following commands:
 
@@ -1162,10 +1146,10 @@ describe("errors", () => {
       test("exit 2 + no output", async () => {
         expect(await runWithBadElmBin("exit-2-no-output"))
           .toMatchInlineSnapshot(`
-          🚨 build/app.js
+          🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙When compiling: build/app.js⧘
+          ⧙Target: app⧘
 
           I ran the following commands:
 
@@ -1187,10 +1171,10 @@ describe("errors", () => {
       test("exit 2 + both stdout and stderr", async () => {
         expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
           .toMatchInlineSnapshot(`
-          🚨 build/app.js
+          🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙When compiling: build/app.js⧘
+          ⧙Target: app⧘
 
           I ran the following commands:
 
@@ -1219,7 +1203,7 @@ describe("errors", () => {
     test('wrong "type" in elm.json', async () => {
       expect(await run("wrong-elm-json-type", ["make"])).toMatchInlineSnapshot(`
         ⛔️ Dependencies
-        🚨 main.js
+        🚨 main
 
         ⧙-- UNEXPECTED TYPE -------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/wrong-elm-json-type/elm.json
@@ -1242,10 +1226,10 @@ describe("errors", () => {
       expect(await run("compilation-errors", ["make", "Dir"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 Dir.js
+        🚨 Dir
 
         ⧙-- FILE NOT FOUND --------------------------------------------------------------⧘
-        ⧙When compiling: Dir.js⧘
+        ⧙Target: Dir⧘
 
         I cannot find this file:
 
@@ -1265,7 +1249,7 @@ describe("errors", () => {
       expect(await run("compilation-errors", ["make", "SyntaxError"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 SyntaxError.js
+        🚨 SyntaxError
 
         ⧙-- UNFINISHED MODULE DECLARATION -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/compilation-errors/src/SyntaxError.elm:1:28
@@ -1291,7 +1275,7 @@ describe("errors", () => {
       expect(await run("compilation-errors", ["make", "ModuleNameMismatch"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 ModuleNameMismatch.js
+        🚨 ModuleNameMismatch
 
         ⧙-- MODULE NAME MISMATCH --------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/compilation-errors/src/ModuleNameMismatch.elm:1:8
@@ -1317,7 +1301,7 @@ describe("errors", () => {
       expect(await run("compilation-errors", ["make", "TypeError"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 TypeError.js
+        🚨 TypeError
 
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
@@ -1338,10 +1322,10 @@ describe("errors", () => {
       expect(await run("compilation-errors", ["make", "MissingMain"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 MissingMain.js
+        🚨 MissingMain
 
         ⧙-- NO MAIN ---------------------------------------------------------------------⧘
-        ⧙When compiling: MissingMain.js⧘
+        ⧙Target: MissingMain⧘
 
         When producing a JS file, I require that the given file has a \`main\` value. That
         way Elm.MissingMain.init() is definitely defined in the resulting file!
@@ -1369,10 +1353,10 @@ describe("errors", () => {
         await run("compilation-errors", ["make", "DebugLog", "--optimize"])
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
-        🚨 DebugLog.js
+        🚨 DebugLog
 
         ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
-        ⧙When compiling: DebugLog.js⧘
+        ⧙Target: DebugLog⧘
 
         There are uses of the \`Debug\` module in the following modules:
 
@@ -1440,8 +1424,8 @@ describe("errors", () => {
 
         I ran your postprocess command:
 
-        cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'console.log('\\''some stdout'\\''); process.exit(1)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stdout.js standard make
+        cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-1-stdout
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log('\\''some stdout'\\''); process.exit(1) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stdout.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1464,8 +1448,8 @@ describe("errors", () => {
 
         I ran your postprocess command:
 
-        cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'console.error('\\''some stderr'\\''); process.exit(2)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-2-stderr.js debug make
+        cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-2-stderr
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.error('\\''some stderr'\\''); process.exit(2) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-2-stderr.js debug make
 
         ⧙It exited with an error:⧘
 
@@ -1491,8 +1475,8 @@ describe("errors", () => {
 
         I ran your postprocess command:
 
-        cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'process.exit(3)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-3-no-output.js optimize make
+        cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-3-no-output
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(3) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-3-no-output.js optimize make
 
         ⧙It exited with an error:⧘
 
@@ -1517,8 +1501,8 @@ describe("errors", () => {
 
         I ran your postprocess command:
 
-        cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'console.log("stdout"); console.error("stderr"); process.exit(4)' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-4-both-stdout-and-stderr.js standard make
+        cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-4-both-stdout-and-stderr
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log("stdout"); console.error("stderr"); process.exit(4) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-4-both-stdout-and-stderr.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1544,8 +1528,8 @@ describe("errors", () => {
 
         I ran your postprocess command:
 
-        cd /Users/you/project/tests/fixtures/errors/postprocess
-        node -e 'process.exit(5)' -- '' \\'a\\'b\\' '$x' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-5-tricky-args.js standard make
+        cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-5-tricky-args
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(5) })' -- '' \\'a\\'b\\' '$x' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-5-tricky-args.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1565,7 +1549,7 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- MISSING POSTPROCESS SCRIPT --------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/elm-watch.json
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/missing-script/elm-watch.json
 
         You have specified this in ⧙elm-watch.json⧘:
 
@@ -1586,15 +1570,15 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/not-found.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js
 
         I tried to import your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/not-found.js")
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js")
 
         But that resulted in this error:
 
-        Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/not-found.js' from 'src/Postprocess.ts'
+        Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js' from 'src/Postprocess.ts'
 
         🚨 ⧙1⧘ error found
       `);
@@ -1607,11 +1591,11 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-at-import.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-at-import/postprocess.js
 
         I tried to import your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-at-import.js")
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-at-import/postprocess.js")
 
         But that resulted in this error:
 
@@ -1630,11 +1614,11 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-non-error-at-import.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-non-error-at-import/postprocess.js
 
         I tried to import your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-non-error-at-import.js")
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-non-error-at-import/postprocess.js")
 
         But that resulted in this error:
 
@@ -1651,11 +1635,11 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/empty-file.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js
 
         I imported your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/empty-file.js")
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js")
 
         I expected ⧙imported.default⧘ to be a function, but it isn't!
 
@@ -1676,11 +1660,11 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/wrong-default-export.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.js
 
         I imported your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/wrong-default-export.js")
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.js")
 
         I expected ⧙imported.default⧘ to be a function, but it isn't!
 
@@ -1697,12 +1681,12 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-error.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js
 
         I tried to run your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-error.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-error.js","standard","make"])
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js")
+        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/throw-error.js","standard","make"])
 
         But that resulted in this error:
 
@@ -1720,12 +1704,12 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-null.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js
 
         I tried to run your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/throw-null.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/throw-null.js","standard","make"])
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js")
+        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/throw-null.js","standard","make"])
 
         But that resulted in this error:
 
@@ -1742,12 +1726,12 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/reject-promise.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js
 
         I tried to run your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/reject-promise.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/reject-promise.js","standard","make"])
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js")
+        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/reject-promise.js","standard","make"])
 
         But that resulted in this error:
 
@@ -1764,18 +1748,16 @@ describe("errors", () => {
         🚨 main
 
         ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/postprocess/return-undefined.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js
 
         I ran your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/postprocess/return-undefined.js")
-        const result = await imported.default(["/Users/you/project/tests/fixtures/errors/postprocess/build/return-undefined.js","standard","make"])
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js")
+        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/return-undefined.js","standard","make"])
 
-        But ⧙result⧘ doesn't look like I expected:
+        I expected ⧙result⧘ to be a string, but it is:
 
-        At root:
-        Expected an object
-        Got: undefined
+        undefined
 
         🚨 ⧙1⧘ error found
       `);
@@ -1795,14 +1777,14 @@ describe("errors", () => {
         .toMatchInlineSnapshot(`
         ⏳ Dependencies
         ✅ Dependencies
-        ⏳ build/admin.js: elm make
-        ⚪️ build/app.js: queued
-        ⚪️ build/postprocess-error.js: queued
-        🚨 build/admin.js
-        ⏳ build/app.js: elm make
-        ✅ build/app.js
-        ⏳ build/postprocess-error.js: elm make
-        ️🟢 build/postprocess-error.js: elm make done
+        ⏳ admin: elm make
+        ⚪️ app: queued
+        ⚪️ postprocess-error: queued
+        🚨 admin
+        ⏳ app: elm make
+        🟢 app: elm make done
+        ⏳ postprocess-error: elm make
+        🟢 postprocess-error: elm make done
 
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
@@ -1841,18 +1823,18 @@ describe("errors", () => {
       ).toMatchInlineSnapshot(`
         ⏳ Dependencies
         ✅ Dependencies
-        ⏳ build/postprocess-error.js: elm make
-        ️🟢 build/postprocess-error.js: elm make done
-        ⏳ build/postprocess-error.js: postprocess
-        🚨 build/postprocess-error.js
+        ⏳ postprocess-error: elm make
+        🟢 postprocess-error: elm make done
+        ⏳ postprocess-error: postprocess
+        🚨 postprocess-error
 
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
-        ⧙When compiling: build/postprocess-error.js⧘
+        ⧙Target: postprocess-error⧘
 
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
 
         ⧙It exited with an error:⧘
 
@@ -1882,14 +1864,14 @@ describe("errors", () => {
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
         Dependencies: success
-        build/admin.js: elm make
-        build/app.js: queued
-        build/postprocess-error.js: queued
-        build/admin.js: error
-        build/app.js: elm make
-        build/app.js: success
-        build/postprocess-error.js: elm make
-        build/postprocess-error.js: elm make done
+        admin: elm make
+        app: queued
+        postprocess-error: queued
+        admin: error
+        app: elm make
+        app: elm make done
+        postprocess-error: elm make
+        postprocess-error: elm make done
 
         -- TYPE MISMATCH ---------------------------------------------------------------
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
@@ -1934,18 +1916,18 @@ describe("errors", () => {
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
         Dependencies: success
-        build/postprocess-error.js: elm make
-        build/postprocess-error.js: elm make done
-        build/postprocess-error.js: postprocess
-        build/postprocess-error.js: error
+        postprocess-error: elm make
+        postprocess-error: elm make done
+        postprocess-error: postprocess
+        postprocess-error: error
 
         -- POSTPROCESS ERROR -----------------------------------------------------------
-        When compiling: build/postprocess-error.js
+        Target: postprocess-error
 
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        node -e 'process.exit(1)' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
 
         It exited with an error:
 
@@ -1968,11 +1950,11 @@ describe("errors", () => {
       })
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
-      ⚪️ build/app.js: queued
-      ⚪️ build/admin.js: queued
+      ⚪️ app: queued
+      ⚪️ admin: queued
 
       ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
-      ⧙When compiling: build/app.js⧘
+      ⧙Target: app⧘
 
       I thought that all outputs had finished compiling, but my inner state says
       this output is still in the ⧙QueuedForElmMake⧘ phase.
@@ -1980,7 +1962,7 @@ describe("errors", () => {
       ⧙This is not supposed to ever happen.⧘
 
       ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
-      ⧙When compiling: build/admin.js⧘
+      ⧙Target: admin⧘
 
       I thought that all outputs had finished compiling, but my inner state says
       this output is still in the ⧙QueuedForElmMake⧘ phase.

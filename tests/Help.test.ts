@@ -38,15 +38,16 @@ describe("help", () => {
     const output = await helpHelper(["help"]);
 
     expect(output).toMatchInlineSnapshot(`
-      ⧙elm-watch make [--debug|--optimize] [outputs...]⧘
+      ⧙elm-watch make [--debug|--optimize] [targets...]⧘
           Compile Elm code into JS
 
-      ⧙elm-watch hot [outputs...]⧘
+      ⧙elm-watch hot [targets...]⧘
           Recompile whenever your Elm files change,
           and reload the compiled JS in the browser
 
       All commands read their inputs and outputs from the closest ⧙elm-watch.json⧘.
-      By default they build all outputs. Pass output JS file paths to only build some.
+      By default they build all targets. Pass target names to only build some.
+      Targets are matched by substring!
 
       ⧙---⧘
 
@@ -76,15 +77,16 @@ describe("help", () => {
 
   test("NO_COLOR", async () => {
     expect(await helpHelper(["help"], { NO_COLOR: "" })).toMatchInlineSnapshot(`
-      elm-watch make [--debug|--optimize] [outputs...]
+      elm-watch make [--debug|--optimize] [targets...]
           Compile Elm code into JS
 
-      elm-watch hot [outputs...]
+      elm-watch hot [targets...]
           Recompile whenever your Elm files change,
           and reload the compiled JS in the browser
 
       All commands read their inputs and outputs from the closest elm-watch.json.
-      By default they build all outputs. Pass output JS file paths to only build some.
+      By default they build all targets. Pass target names to only build some.
+      Targets are matched by substring!
 
       ---
 
