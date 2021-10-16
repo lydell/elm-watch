@@ -108,11 +108,7 @@ export async function runPostprocess({
 }): Promise<PostprocessResult> {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
-  const extraArgs = [
-    output.theOutputPath.absolutePath,
-    compilationMode,
-    runMode,
-  ];
+  const extraArgs = [output.targetName, compilationMode, runMode];
   const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
 
   if (commandName === "elm-watch-node") {

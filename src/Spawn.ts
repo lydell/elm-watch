@@ -59,12 +59,23 @@ export async function spawn(command: Command): Promise<SpawnResult> {
       );
     });
 
+    let stdinWriteError: SpawnResult | undefined = undefined;
+
     child.stdin.on("error", (error: Error & { code?: string }) => {
-      resolve(
-        error.code === "EPIPE"
-          ? { tag: "StdinWriteError", error, command }
-          : { tag: "OtherSpawnError", error, command }
-      );
+      if (error.code === "EPIPE") {
+        // The postprocess program can exit before we have managed to write all
+        // the stdin. The stdin write error happens before the "exit" event.
+        // It’s more important to get to know the exit code and stdout/stderr
+        // than this stdin error. So give the "exit" event a chance to happen
+        // before reporting this one.
+        const result: SpawnResult = { tag: "StdinWriteError", error, command };
+        stdinWriteError = result;
+        setImmediate(() => {
+          resolve(result);
+        });
+      } else {
+        resolve({ tag: "OtherSpawnError", error, command });
+      }
     });
 
     child.stdout.on("error", (error: Error) => {
@@ -83,14 +94,18 @@ export async function spawn(command: Command): Promise<SpawnResult> {
       stderr.push(chunk);
     });
 
-    child.on("close", (exitCode, signal) => {
-      resolve({
-        tag: "Exit",
-        exitReason: exitReason(exitCode, signal),
-        stdout: Buffer.concat(stdout),
-        stderr: Buffer.concat(stderr),
-        command,
-      });
+    child.on("exit", (exitCode, signal) => {
+      resolve(
+        exitCode === 0 && stdinWriteError !== undefined
+          ? stdinWriteError
+          : {
+              tag: "Exit",
+              exitReason: exitReason(exitCode, signal),
+              stdout: Buffer.concat(stdout),
+              stderr: Buffer.concat(stderr),
+              command,
+            }
+      );
     });
 
     if (command.stdin !== undefined) {

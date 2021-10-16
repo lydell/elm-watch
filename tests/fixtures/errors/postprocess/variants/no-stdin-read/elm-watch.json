@@ -1,0 +1,9 @@
+{
+  "postprocess": ["node", "-e", "process.exit(0)"],
+  "targets": {
+    "main": {
+      "inputs": ["../../src/Main.elm"],
+      "output": "../../build/no-stdin-read.js"
+    }
+  }
+}

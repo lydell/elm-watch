@@ -1,8 +1,7 @@
 import * as esbuild from "esbuild";
-import * as path from "path";
 import * as UglifyJS from "uglify-js";
 
-export default function postprocess([code, outputPath, compilationMode]) {
+export default function postprocess([code, targetName, compilationMode]) {
   switch (compilationMode) {
     case "standard":
     case "debug":
@@ -10,7 +9,7 @@ export default function postprocess([code, outputPath, compilationMode]) {
 
     case "optimize":
       return minify(code, {
-        minimal: path.basename(outputPath) === "ApplicationMain.js",
+        minimal: targetName === "ApplicationMain",
       });
 
     default:

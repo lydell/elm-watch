@@ -1,5 +1,4 @@
 const crossSpawn = require("cross-spawn");
-const fs = require("fs");
 const path = require("path");
 
 const mainDir = path.join(__dirname, "..", "..");

@@ -1,6 +1,3 @@
-const fs = require("fs");
-const path = require("path");
-
 const postprocess = (args) => {
   if (args.length !== 6) {
     return new Error(
@@ -8,7 +5,7 @@ const postprocess = (args) => {
     );
   }
 
-  const [code, arg1, arg2, outputPath, compilationMode, runMode] = args;
+  const [code, arg1, arg2, targetName, compilationMode, runMode] = args;
 
   const expectedArg1 = "arg1";
   if (arg1 !== expectedArg1) {
@@ -28,14 +25,21 @@ const postprocess = (args) => {
     );
   }
 
-  const output = fs.readFileSync(outputPath, "utf8");
+  const expectedTargetName = "main";
+  if (targetName !== expectedTargetName) {
+    return new Error(
+      `Expected targetName to be ${JSON.stringify(
+        expectedTargetName
+      )} but got: ${JSON.stringify(targetName)}`
+    );
+  }
 
   switch (compilationMode) {
     case "standard": {
       const probe = "Compiled in DEV mode";
-      if (!output.includes(probe)) {
+      if (!code.includes(probe)) {
         return new Error(
-          `Expected ${outputPath} to contain: ${JSON.stringify(probe)}`
+          `Expected the passed code to contain: ${JSON.stringify(probe)}`
         );
       }
       break;

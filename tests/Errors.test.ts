@@ -1425,7 +1425,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-1-stdout
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log('\\''some stdout'\\''); process.exit(1) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-1-stdout.js standard make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log('\\''some stdout'\\''); process.exit(1) })' main standard make
 
         ⧙It exited with an error:⧘
 
@@ -1449,7 +1449,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-2-stderr
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.error('\\''some stderr'\\''); process.exit(2) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-2-stderr.js debug make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.error('\\''some stderr'\\''); process.exit(2) })' main debug make
 
         ⧙It exited with an error:⧘
 
@@ -1476,7 +1476,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-3-no-output
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(3) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-3-no-output.js optimize make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(3) })' main optimize make
 
         ⧙It exited with an error:⧘
 
@@ -1502,7 +1502,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-4-both-stdout-and-stderr
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log("stdout"); console.error("stderr"); process.exit(4) })' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-4-both-stdout-and-stderr.js standard make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log("stdout"); console.error("stderr"); process.exit(4) })' main standard make
 
         ⧙It exited with an error:⧘
 
@@ -1529,12 +1529,39 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-5-tricky-args
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(5) })' -- '' \\'a\\'b\\' '$x' /Users/you/project/tests/fixtures/errors/postprocess/build/exit-5-tricky-args.js standard make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(5) })' -- '' \\'a\\'b\\' '$x' main standard make
 
         ⧙It exited with an error:⧘
 
         exit 5
         (no output)
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
+    test("forgot to read stdin", async () => {
+      expect(await run("postprocess/variants/no-stdin-read", ["make"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 main
+
+        ⧙-- POSTPROCESS STDIN TROUBLE ---------------------------------------------------⧘
+        ⧙Target: main⧘
+
+        I tried to run your postprocess command:
+
+        cd /Users/you/project/tests/fixtures/errors/postprocess/variants/no-stdin-read
+        printf '(function(...;}(this));' | node -e 'process.exit(0)' main standard make
+
+        Trying to write to its ⧙stdin⧘, I got an error!
+        ⧙Did you forget to read stdin, maybe?⧘
+
+        Note: If you don't need stdin in some case, you can pipe it to stdout!
+
+        This is the error message I got:
+
+        write EPIPE
 
         🚨 ⧙1⧘ error found
       `);
@@ -1686,7 +1713,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/throw-error.js","standard","make"])
+        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
 
         But that resulted in this error:
 
@@ -1709,7 +1736,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/throw-null.js","standard","make"])
+        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
 
         But that resulted in this error:
 
@@ -1731,7 +1758,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/reject-promise.js","standard","make"])
+        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
 
         But that resulted in this error:
 
@@ -1753,7 +1780,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","/Users/you/project/tests/fixtures/errors/postprocess/build/return-undefined.js","standard","make"])
+        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
 
         I expected ⧙result⧘ to be a string, but it is:
 
@@ -1834,7 +1861,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' postprocess-error standard make
 
         ⧙It exited with an error:⧘
 
@@ -1927,7 +1954,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' /Users/you/project/tests/fixtures/errors/ci/build/postprocess-error.js standard make
+        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' postprocess-error standard make
 
         It exited with an error:
 
