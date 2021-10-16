@@ -1614,7 +1614,7 @@ function fallbackAllRelatedElmFilePaths(
       return new Set(
         mapNonEmptyArray(
           outputState.inputs,
-          (inputPath) => inputPath.theInputPath.absolutePath
+          (inputPath) => inputPath.realpath.absolutePath
         )
       );
   }
