@@ -1419,22 +1419,18 @@ describe("errors", () => {
         ✅ Dependencies
         🚨 main
 
-        ⧙-- POSTPROCESS STDIN TROUBLE ---------------------------------------------------⧘
+        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
 
-        I tried to run your postprocess command:
+        I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-1-stdout
         printf '(function(...;}(this));' | node -e 'console.log('\\''some stdout'\\''); process.exit(1)' main standard make
 
-        Trying to write to its ⧙stdin⧘, I got an error!
-        ⧙Did you forget to read stdin, maybe?⧘
+        ⧙It exited with an error:⧘
 
-        Note: If you don't need stdin in some case, you can pipe it to stdout!
-
-        This is the error message I got:
-
-        write EPIPE
+        exit 1
+        some stdout
 
         🚨 ⧙1⧘ error found
       `);

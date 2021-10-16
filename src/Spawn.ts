@@ -71,9 +71,9 @@ export async function spawn(command: Command): Promise<SpawnResult> {
         // before reporting this one.
         const result: SpawnResult = { tag: "StdinWriteError", error, command };
         stdinWriteError = result;
-        setImmediate(() => {
+        setTimeout(() => {
           resolve(result);
-        });
+        }, 1000);
       } else {
         resolve({ tag: "OtherSpawnError", error, command });
       }
