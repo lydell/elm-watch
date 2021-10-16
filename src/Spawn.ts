@@ -62,6 +62,7 @@ export async function spawn(command: Command): Promise<SpawnResult> {
     let stdinWriteError: SpawnResult | undefined = undefined;
 
     child.stdin.on("error", (error: Error & { code?: string }) => {
+      // istanbul ignore else
       if (error.code === "EPIPE") {
         // The postprocess program can exit before we have managed to write all
         // the stdin. The stdin write error happens before the "exit" event.
@@ -79,10 +80,12 @@ export async function spawn(command: Command): Promise<SpawnResult> {
     });
 
     child.stdout.on("error", (error: Error) => {
+      // istanbul ignore next
       resolve({ tag: "OtherSpawnError", error, command });
     });
 
     child.stderr.on("error", (error: Error) => {
+      // istanbul ignore next
       resolve({ tag: "OtherSpawnError", error, command });
     });
 

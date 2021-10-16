@@ -85,6 +85,7 @@ export async function make({
 
     // istanbul ignore next
     case "OtherSpawnError":
+    // istanbul ignore next
     case "StdinWriteError": // We never write to stdin.
       return {
         tag: "OtherSpawnError",
@@ -277,6 +278,7 @@ export async function install({
 
     // istanbul ignore next
     case "OtherSpawnError":
+    // istanbul ignore next
     case "StdinWriteError": // We never write to stdin.
       return {
         tag: "OtherSpawnError",
