@@ -2,7 +2,11 @@ import * as path from "path";
 
 import { walkImports } from "../src/ImportWalker";
 import { mapNonEmptyArray, NonEmptyArray } from "../src/NonEmptyArray";
-import { AbsolutePath, absolutePathFromString } from "../src/PathHelpers";
+import {
+  AbsolutePath,
+  absolutePathFromString,
+  absoluteRealpath,
+} from "../src/PathHelpers";
 import { InputPath, SourceDirectory } from "../src/Types";
 import { clean, stringSnapshotSerializer } from "./Helpers";
 
@@ -14,18 +18,24 @@ const FIXTURES_DIR: AbsolutePath = {
 function walkImportsHelper(
   fixture: string,
   inputFiles: NonEmptyArray<string>,
-  sourceDirectories: NonEmptyArray<string>
+  sourceDirectories: NonEmptyArray<string>,
+  { resolveSymlinks = false } = {}
 ): string {
   const dir = absolutePathFromString(FIXTURES_DIR, fixture);
 
   const inputPaths: NonEmptyArray<InputPath> = mapNonEmptyArray(
     inputFiles,
-    (inputFile) => ({
-      tag: "InputPath",
-      theInputPath: absolutePathFromString(dir, inputFile),
-      originalString: inputFile,
-      realpath: absolutePathFromString(dir, inputFile),
-    })
+    (inputFile) => {
+      const theInputPath = absolutePathFromString(dir, inputFile);
+      return {
+        tag: "InputPath",
+        theInputPath,
+        originalString: inputFile,
+        realpath: resolveSymlinks
+          ? absoluteRealpath(theInputPath)
+          : theInputPath,
+      };
+    }
   );
 
   const result = walkImports(
@@ -183,6 +193,21 @@ describe("WalkImports", () => {
       /anywhere/src/App/App/Other.elm
       /anywhere/lib/Other.elm
       /anywhere/src/Other.elm
+    `);
+  });
+
+  test("symlinks", () => {
+    // To match `elm make`:
+    // - For inputs, store the _realpath._
+    // - For imported files, store the original (symlink) path.
+    expect(
+      walkImportsHelper("symlinks", ["MainSymlink.elm"], ["."], {
+        resolveSymlinks: true,
+      })
+    ).toMatchInlineSnapshot(`
+      /symlinks/RealMain.elm
+      /symlinks/DepSymlink.elm
+      /symlinks/FinalDep.elm
     `);
   });
 

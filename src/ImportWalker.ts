@@ -45,7 +45,7 @@ export function walkImports(
           sourceDirectory,
           children: new Set(readdirSync(sourceDirectory.theSourceDirectory)),
         })),
-        inputPath.theInputPath.absolutePath,
+        inputPath.realpath.absolutePath,
         allRelatedElmFilePaths,
         visitedModules
       );
@@ -146,10 +146,13 @@ function initialRelatedElmFilePaths(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
   inputPath: InputPath
 ): NonEmptyArray<string> {
-  const inputPathString = inputPath.theInputPath.absolutePath;
+  // Inputs are allowed to be symlinks. If there’s an error in the input, Elm
+  // shows the resolved path in the error message rather than the original path
+  // (the path where the symlink is located).
+  const inputPathString = inputPath.realpath.absolutePath;
 
   return [
-    inputPath.theInputPath.absolutePath,
+    inputPathString,
     ...sourceDirectories.flatMap((sourceDirectory) => {
       const prefix = sourceDirectory.theSourceDirectory.absolutePath + path.sep;
       return inputPathString.startsWith(prefix)
