@@ -255,6 +255,8 @@ export function getOutputActions({
       }
     });
 
+    const typecheckOnly: Array<IndexedOutputWithSource> = [];
+
     for (const [outputPath, outputState] of outputs) {
       const output: IndexedOutput = {
         index,
@@ -263,8 +265,6 @@ export function getOutputActions({
         outputState,
       };
       index++;
-
-      const typecheckOnly: Array<IndexedOutputWithSource> = [];
 
       const priority =
         prioritizedOutputs === "AllEqualPriority"
@@ -358,17 +358,17 @@ export function getOutputActions({
           break;
         }
       }
+    }
 
-      if (isNonEmptyArray(typecheckOnly)) {
-        if (elmMakeBusy) {
-          queueTypecheckOnly(typecheckOnly);
-        } else {
-          elmMakeTypecheckOnlyActions.push({
-            tag: "NeedsElmMakeTypecheckOnly",
-            elmJsonPath,
-            outputs: typecheckOnly,
-          });
-        }
+    if (isNonEmptyArray(typecheckOnly)) {
+      if (elmMakeBusy) {
+        queueTypecheckOnly(typecheckOnly);
+      } else {
+        elmMakeTypecheckOnlyActions.push({
+          tag: "NeedsElmMakeTypecheckOnly",
+          elmJsonPath,
+          outputs: typecheckOnly,
+        });
       }
     }
   }
