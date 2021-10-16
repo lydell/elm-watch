@@ -1,0 +1,8 @@
+{
+  "targets": {
+    "\tmain": {
+      "inputs": ["Main.elm"],
+      "output": "main.js"
+    }
+  }
+}

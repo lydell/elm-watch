@@ -77,7 +77,7 @@ function targetRecordHelper(
       }
       throw new Decode.DecoderError({
         message:
-          "Target names must start with a non-whitespace character except `-`,\nnot contain newlines and end with a non-whitespace character",
+          "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
         value: Decode.DecoderError.MISSING_VALUE,
         key,
       });

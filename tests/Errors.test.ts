@@ -174,6 +174,80 @@ describe("errors", () => {
       `);
     });
 
+    describe("bad target name", () => {
+      test("starts with dash", async () => {
+        expect(
+          await run("elm-watch-json-bad-target-name/starts-with-dash", ["make"])
+        ).toMatchInlineSnapshot(`
+          ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/starts-with-dash/elm-watch.json
+
+          I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+          ⧙I had trouble with the JSON inside:⧘
+
+          At root["targets"]["-main"]:
+          Target names must start with a non-whitespace character except \`-\`,
+          cannot contain newlines and must end with a non-whitespace character
+        `);
+      });
+
+      test("starts with whitespace", async () => {
+        expect(
+          await run("elm-watch-json-bad-target-name/starts-with-whitespace", [
+            "make",
+          ])
+        ).toMatchInlineSnapshot(`
+          ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/starts-with-whitespace/elm-watch.json
+
+          I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+          ⧙I had trouble with the JSON inside:⧘
+
+          At root["targets"]["\\tmain"]:
+          Target names must start with a non-whitespace character except \`-\`,
+          cannot contain newlines and must end with a non-whitespace character
+        `);
+      });
+
+      test("contains newline", async () => {
+        expect(
+          await run("elm-watch-json-bad-target-name/contains-newline", ["make"])
+        ).toMatchInlineSnapshot(`
+          ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/contains-newline/elm-watch.json
+
+          I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+          ⧙I had trouble with the JSON inside:⧘
+
+          At root["targets"]["main\\ntarget"]:
+          Target names must start with a non-whitespace character except \`-\`,
+          cannot contain newlines and must end with a non-whitespace character
+        `);
+      });
+
+      test("ends with whitespace", async () => {
+        expect(
+          await run("elm-watch-json-bad-target-name/ends-with-whitespace", [
+            "make",
+          ])
+        ).toMatchInlineSnapshot(`
+          ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/ends-with-whitespace/elm-watch.json
+
+          I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+          ⧙I had trouble with the JSON inside:⧘
+
+          At root["targets"]["main "]:
+          Target names must start with a non-whitespace character except \`-\`,
+          cannot contain newlines and must end with a non-whitespace character
+        `);
+      });
+    });
+
     test("bad output extension", async () => {
       expect(
         await run("elm-watch-json-decode-error/bad-output-extension", ["make"])
