@@ -19,7 +19,10 @@ import {
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
 import { Port } from "./Port";
 import { ExecutedCommand } from "./Postprocess";
-import { UncheckedInputPath } from "./Project";
+import {
+  UncheckedInputPath,
+  WriteOutputErrorReasonForWriting,
+} from "./Project";
 import { Command, ExitReason } from "./Spawn";
 import { JsonPath } from "./SpawnElm";
 import {
@@ -829,17 +832,36 @@ ${error.message}
 
 export function writeOutputError(
   outputPath: OutputPath,
-  error: Error
+  error: Error,
+  reasonForWriting: WriteOutputErrorReasonForWriting
 ): ErrorTemplate {
   return fancyError("TROUBLE WRITING OUTPUT", outputPath)`
 I managed to compile your code and read the generated file:
 
 ${outputPath.theOutputPath.absolutePath}
 
-I made some changes to it and tried to write that back but I encountered this error:
+${printWriteOutputErrorReasonForWriting(reasonForWriting)}
 
 ${error.message}
 `;
+}
+
+function printWriteOutputErrorReasonForWriting(
+  reasonForWriting: WriteOutputErrorReasonForWriting
+): string {
+  switch (reasonForWriting) {
+    case "InjectWebSocketClient":
+      return `
+I injected code for hot reloading, and then tried to write that back to the file
+but I encountered this error:
+      `;
+
+    case "Postprocess":
+      return `
+After running your postprocess command, I tried to write the result of that
+back to the file but I encountered this error:
+      `;
+  }
 }
 
 export function writeProxyOutputError(

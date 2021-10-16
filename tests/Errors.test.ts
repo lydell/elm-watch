@@ -1524,7 +1524,8 @@ describe("errors", () => {
 
         /Users/you/project/tests/fixtures/errors/valid/build/app.js
 
-        I made some changes to it and tried to write that back but I encountered this error:
+        After running your postprocess command, I tried to write the result of that
+        back to the file but I encountered this error:
 
         EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
 

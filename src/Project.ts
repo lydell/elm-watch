@@ -109,11 +109,16 @@ export type OutputFsError =
   | {
       tag: "WriteOutputError";
       error: Error;
+      reasonForWriting: WriteOutputErrorReasonForWriting;
     }
   | {
       tag: "WriteProxyOutputError";
       error: Error;
     };
+
+export type WriteOutputErrorReasonForWriting =
+  | "InjectWebSocketClient"
+  | "Postprocess";
 
 type ElmJsonError =
   | {

@@ -752,7 +752,11 @@ function onCompileSuccess(
                 );
               } catch (unknownError) {
                 const error = toError(unknownError);
-                outputState.status = { tag: "WriteOutputError", error };
+                outputState.status = {
+                  tag: "WriteOutputError",
+                  error,
+                  reasonForWriting: "InjectWebSocketClient",
+                };
                 updateStatusLineHelper();
                 return { tag: "CompileError", outputPath };
               }
@@ -958,7 +962,11 @@ async function postprocessHelper({
       }
     } catch (unknownError) {
       const error = toError(unknownError);
-      outputState.status = { tag: "WriteOutputError", error };
+      outputState.status = {
+        tag: "WriteOutputError",
+        error,
+        reasonForWriting: "Postprocess",
+      };
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
     }
@@ -1552,7 +1560,11 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
             return Errors.readOutputError(outputPath, status.error);
 
           case "WriteOutputError":
-            return Errors.writeOutputError(outputPath, status.error);
+            return Errors.writeOutputError(
+              outputPath,
+              status.error,
+              status.reasonForWriting
+            );
 
           case "WriteProxyOutputError":
             return Errors.writeProxyOutputError(outputPath, status.error);
