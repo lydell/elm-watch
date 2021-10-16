@@ -627,6 +627,11 @@ async function compileOneOutput({
     return { tag: "Nothing" };
   }
 
+  outputState.allRelatedElmFilePaths = allRelatedElmFilePathsWithFallback(
+    allRelatedElmFilePathsResult,
+    outputState
+  );
+
   const combinedResult = combineResults(
     elmMakeResult,
     allRelatedElmFilePathsResult
@@ -634,8 +639,6 @@ async function compileOneOutput({
 
   switch (combinedResult.tag) {
     case "elm make success + walker success":
-      outputState.allRelatedElmFilePaths =
-        combinedResult.allRelatedElmFilePaths;
       return onCompileSuccess(
         updateStatusLineHelper,
         runMode,
@@ -646,26 +649,16 @@ async function compileOneOutput({
       );
 
     case "elm make success + walker failure":
-      outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
-        combinedResult.walkerError,
-        outputState
-      );
       outputState.status = combinedResult.walkerError;
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
 
     case "elm make failure + walker success":
-      outputState.allRelatedElmFilePaths =
-        combinedResult.allRelatedElmFilePaths;
       outputState.status = combinedResult.elmMakeError;
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
 
     case "elm make failure + walker failure":
-      outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
-        combinedResult.walkerError,
-        outputState
-      );
       // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
       outputState.status = combinedResult.elmMakeError;
       updateStatusLineHelper();
@@ -1046,6 +1039,13 @@ async function typecheck({
     ),
   ]);
 
+  const isAmbiguousError =
+    elmMakeResult.tag === "ElmMakeError" &&
+    elmMakeResult.error.tag === "GeneralError" &&
+    elmMakeResult.error.path.tag === "NoPath";
+
+  const promises: Array<Promise<void>> = [];
+
   for (const {
     index,
     outputPath,
@@ -1064,16 +1064,34 @@ async function typecheck({
       continue;
     }
 
+    // If we don’t know which targets the error is for, we need to re-run the
+    // typechecking individually. This is rare.
+    if (isAmbiguousError) {
+      promises.push(
+        typecheck({
+          env,
+          logger,
+          elmJsonPath,
+          outputs: [{ index, outputPath, outputState }],
+          total,
+          versionedIdentifier,
+        })
+      );
+      continue;
+    }
+
+    outputState.allRelatedElmFilePaths = allRelatedElmFilePathsWithFallback(
+      allRelatedElmFilePathsResult,
+      outputState
+    );
+
     const combinedResult = combineResults(
-      elmMakeResult,
+      onlyElmMakeErrorsRelatedToOutput(outputState, elmMakeResult),
       allRelatedElmFilePathsResult
     );
 
     switch (combinedResult.tag) {
       case "elm make success + walker success": {
-        outputState.allRelatedElmFilePaths =
-          combinedResult.allRelatedElmFilePaths;
-
         const result = needsToWriteProxyFile(
           outputPath.theOutputPath,
           versionedIdentifier
@@ -1114,24 +1132,14 @@ async function typecheck({
       }
 
       case "elm make success + walker failure":
-        outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
-          combinedResult.walkerError,
-          outputState
-        );
         outputState.status = combinedResult.walkerError;
         break;
 
       case "elm make failure + walker success":
-        outputState.allRelatedElmFilePaths =
-          combinedResult.allRelatedElmFilePaths;
         outputState.status = combinedResult.elmMakeError;
         break;
 
       case "elm make failure + walker failure":
-        outputState.allRelatedElmFilePaths = fallbackAllRelatedElmFilePaths(
-          combinedResult.walkerError,
-          outputState
-        );
         // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
         outputState.status = combinedResult.elmMakeError;
         break;
@@ -1145,6 +1153,30 @@ async function typecheck({
       total,
     });
   }
+
+  await Promise.all(promises);
+}
+
+function onlyElmMakeErrorsRelatedToOutput(
+  outputState: OutputState,
+  elmMakeResult: SpawnElm.RunElmMakeResult
+): SpawnElm.RunElmMakeResult {
+  if (
+    !(
+      elmMakeResult.tag === "ElmMakeError" &&
+      elmMakeResult.error.tag === "CompileErrors"
+    )
+  ) {
+    return elmMakeResult;
+  }
+
+  const errors = elmMakeResult.error.errors.filter((error) =>
+    outputState.allRelatedElmFilePaths.has(error.path.absolutePath)
+  );
+
+  return isNonEmptyArray(errors)
+    ? { tag: "ElmMakeError", error: { tag: "CompileErrors", errors } }
+    : { tag: "Success" };
 }
 
 type CombinedResult =
@@ -1601,13 +1633,16 @@ function getAllRelatedElmFilePaths(
   }
 }
 
-function fallbackAllRelatedElmFilePaths(
-  walkerError: GetAllRelatedElmFilePathsError,
+function allRelatedElmFilePathsWithFallback(
+  walkerResult: GetAllRelatedElmFilePathsResult,
   outputState: OutputState
 ): Set<string> {
-  switch (walkerError.tag) {
+  switch (walkerResult.tag) {
+    case "Success":
+      return walkerResult.allRelatedElmFilePaths;
+
     case "ImportWalkerFileSystemError":
-      return walkerError.relatedElmFilePathsUntilError;
+      return walkerResult.relatedElmFilePathsUntilError;
 
     case "ElmJsonReadAsJsonError":
     case "ElmJsonDecodeError":
