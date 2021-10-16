@@ -24,6 +24,7 @@ import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
+  nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { Postprocess, runPostprocess } from "./Postprocess";
@@ -1023,8 +1024,13 @@ async function typecheck({
     SpawnElm.make({
       elmJsonPath,
       compilationMode: "standard",
-      inputs: flattenNonEmptyArray(
-        mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs)
+      // Mentioning the same input twice is an error according to `elm make`.
+      // It even resolves symlinks when checking if two inputs are the same!
+      inputs: nonEmptyArrayUniqueBy(
+        (inputPath) => inputPath.realpath.absolutePath,
+        flattenNonEmptyArray(
+          mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs)
+        )
       ),
       outputPath: { tag: "NullOutputPath" },
       env,

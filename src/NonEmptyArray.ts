@@ -32,3 +32,16 @@ export function flattenNonEmptyArray<T>(
 ): NonEmptyArray<T> {
   return array.flat() as NonEmptyArray<T>;
 }
+
+export function nonEmptyArrayUniqueBy<T>(
+  f: (item: T) => string,
+  items: NonEmptyArray<T>
+): NonEmptyArray<T> {
+  const result: NonEmptyArray<T> = [items[0]];
+  for (const item of items) {
+    if (result.every((otherItem) => f(otherItem) !== f(item))) {
+      result.push(item);
+    }
+  }
+  return result;
+}
