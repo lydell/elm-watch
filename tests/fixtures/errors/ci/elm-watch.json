@@ -1,5 +1,5 @@
 {
-  "postprocess": ["node", "-e", "process.stdin.resume(); process.stdin.on('end', () => { process.exit(1) })"],
+  "postprocess": ["node", "-e", "process.exit(1)"],
   "targets": {
     "admin": {
       "inputs": ["src/Admin.elm"],

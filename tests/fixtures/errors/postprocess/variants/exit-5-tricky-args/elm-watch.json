@@ -1,5 +1,5 @@
 {
-  "postprocess": ["node", "-e", "process.stdin.resume(); process.stdin.on('end', () => { process.exit(5) })", "--", "", "'a'b'", "$x"],
+  "postprocess": ["node", "-e", "process.exit(5)", "--", "", "'a'b'", "$x"],
   "targets": {
     "main": {
       "inputs": ["../../src/Main.elm"],

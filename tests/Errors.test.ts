@@ -1419,18 +1419,22 @@ describe("errors", () => {
         ✅ Dependencies
         🚨 main
 
-        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙-- POSTPROCESS STDIN TROUBLE ---------------------------------------------------⧘
         ⧙Target: main⧘
 
-        I ran your postprocess command:
+        I tried to run your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-1-stdout
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log('\\''some stdout'\\''); process.exit(1) })' main standard make
+        printf '(function(...;}(this));' | node -e 'console.log('\\''some stdout'\\''); process.exit(1)' main standard make
 
-        ⧙It exited with an error:⧘
+        Trying to write to its ⧙stdin⧘, I got an error!
+        ⧙Did you forget to read stdin, maybe?⧘
 
-        exit 1
-        some stdout
+        Note: If you don't need stdin in some case, you can pipe it to stdout!
+
+        This is the error message I got:
+
+        write EPIPE
 
         🚨 ⧙1⧘ error found
       `);
@@ -1449,7 +1453,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-2-stderr
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.error('\\''some stderr'\\''); process.exit(2) })' main debug make
+        printf '(function(...;}(this));' | node -e 'console.error('\\''some stderr'\\''); process.exit(2)' main debug make
 
         ⧙It exited with an error:⧘
 
@@ -1476,7 +1480,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-3-no-output
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(3) })' main optimize make
+        printf '(function(...;}(this));' | node -e 'process.exit(3)' main optimize make
 
         ⧙It exited with an error:⧘
 
@@ -1502,7 +1506,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-4-both-stdout-and-stderr
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { console.log("stdout"); console.error("stderr"); process.exit(4) })' main standard make
+        printf '(function(...;}(this));' | node -e 'console.log("stdout"); console.error("stderr"); process.exit(4)' main standard make
 
         ⧙It exited with an error:⧘
 
@@ -1529,7 +1533,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/exit-5-tricky-args
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(5) })' -- '' \\'a\\'b\\' '$x' main standard make
+        printf '(function(...;}(this));' | node -e 'process.exit(5)' -- '' \\'a\\'b\\' '$x' main standard make
 
         ⧙It exited with an error:⧘
 
@@ -1861,7 +1865,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' postprocess-error standard make
+        printf '(function(...;}(this));' | node -e 'process.exit(1)' postprocess-error standard make
 
         ⧙It exited with an error:⧘
 
@@ -1954,7 +1958,7 @@ describe("errors", () => {
         I ran your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/ci
-        printf '(function(...;}(this));' | node -e 'process.stdin.resume(); process.stdin.on('\\'end\\'', () => { process.exit(1) })' postprocess-error standard make
+        printf '(function(...;}(this));' | node -e 'process.exit(1)' postprocess-error standard make
 
         It exited with an error:
 
