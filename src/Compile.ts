@@ -1549,27 +1549,35 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           case "ElmWatchNodeImportError":
             return Errors.elmWatchNodeImportError(
               status.scriptPath,
-              status.error
+              status.error,
+              status.stdout,
+              status.stderr
             );
 
           case "ElmWatchNodeDefaultExportNotFunction":
             return Errors.elmWatchNodeDefaultExportNotFunction(
               status.scriptPath,
-              status.imported
+              status.imported,
+              status.stdout,
+              status.stderr
             );
 
           case "ElmWatchNodeRunError":
             return Errors.elmWatchNodeRunError(
               status.scriptPath,
               status.args,
-              status.error
+              status.error,
+              status.stdout,
+              status.stderr
             );
 
           case "ElmWatchNodeBadReturnValue":
             return Errors.elmWatchNodeBadReturnValue(
               status.scriptPath,
               status.args,
-              status.returnValue
+              status.returnValue,
+              status.stdout,
+              status.stderr
             );
 
           case "ElmMakeJsonParseError":

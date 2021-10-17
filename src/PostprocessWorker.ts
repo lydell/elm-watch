@@ -10,6 +10,14 @@ import type {
 } from "./Postprocess";
 import type { ElmWatchNodeScriptPath } from "./Types";
 
+// Many errors are typed to always have `stdout` and `stderr`. They are captured
+// from the worker in `Postprocess.ts`, not here, though. By including this
+// empty stdio we can still use the same type. A bit weird, but it works.
+const emptyStdio = {
+  stdout: "",
+  stderr: "",
+};
+
 type PortWrapper = {
   postMessage: (message: MessageFromWorker) => void;
   on: MessagePort["on"];
@@ -67,6 +75,7 @@ async function elmWatchNode({
       tag: "ElmWatchNodeImportError",
       scriptPath,
       error: unknownError,
+      ...emptyStdio,
     };
   }
 
@@ -75,6 +84,7 @@ async function elmWatchNode({
       tag: "ElmWatchNodeDefaultExportNotFunction",
       scriptPath,
       imported,
+      ...emptyStdio,
     };
   }
 
@@ -89,6 +99,7 @@ async function elmWatchNode({
       scriptPath,
       args,
       error: unknownError,
+      ...emptyStdio,
     };
   }
 
@@ -98,6 +109,7 @@ async function elmWatchNode({
       scriptPath,
       args,
       returnValue,
+      ...emptyStdio,
     };
   }
 

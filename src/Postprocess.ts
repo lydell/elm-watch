@@ -41,16 +41,22 @@ export type PostprocessError =
       scriptPath: ElmWatchNodeScriptPath;
       args: Array<string>;
       returnValue: unknown;
+      stdout: string;
+      stderr: string;
     }
   | {
       tag: "ElmWatchNodeDefaultExportNotFunction";
       scriptPath: ElmWatchNodeScriptPath;
       imported: Record<string, unknown>;
+      stdout: string;
+      stderr: string;
     }
   | {
       tag: "ElmWatchNodeImportError";
       scriptPath: ElmWatchNodeScriptPath;
       error: unknown;
+      stdout: string;
+      stderr: string;
     }
   | {
       tag: "ElmWatchNodeMissingScript";
@@ -60,6 +66,8 @@ export type PostprocessError =
       scriptPath: ElmWatchNodeScriptPath;
       args: Array<string>;
       error: unknown;
+      stdout: string;
+      stderr: string;
     }
   | {
       tag: "OtherSpawnError";
@@ -206,11 +214,25 @@ export type MessageFromWorker = {
 };
 
 class PostprocessWorker {
-  private worker = new Worker(path.join(__dirname, "PostprocessWorker"));
+  private worker = new Worker(path.join(__dirname, "PostprocessWorker"), {
+    stdout: true,
+    stderr: true,
+  });
 
   private status: PostprocessWorkerStatus = { tag: "Idle" };
 
   constructor(private onUnexpectedError: (error: Error) => void) {
+    const stdout: Array<Buffer> = [];
+    const stderr: Array<Buffer> = [];
+
+    this.worker.stdout.on("data", (chunk: Buffer) => {
+      stdout.push(chunk);
+    });
+
+    this.worker.stderr.on("data", (chunk: Buffer) => {
+      stderr.push(chunk);
+    });
+
     this.worker.on("error", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
@@ -253,9 +275,19 @@ class PostprocessWorker {
 
             case "Busy":
               switch (message.result.tag) {
-                case "Resolve":
-                  this.status.resolve(message.result.value);
+                case "Resolve": {
+                  const result = message.result.value;
+                  this.status.resolve(
+                    "stdout" in result
+                      ? {
+                          ...result,
+                          stdout: Buffer.concat(stdout).toString("utf8"),
+                          stderr: Buffer.concat(stderr).toString("utf8"),
+                        }
+                      : result
+                  );
                   break;
+                }
                 case "Reject":
                   this.status.reject(toError(message.result.error));
                   break;
@@ -266,6 +298,9 @@ class PostprocessWorker {
             case "Terminated":
               break;
           }
+
+          stdout.length = 0;
+          stderr.length = 0;
       }
     });
   }

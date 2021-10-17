@@ -571,7 +571,9 @@ You need to specify a JavaScript file to run as well, like so:
 
 export function elmWatchNodeImportError(
   scriptPath: ElmWatchNodeScriptPath,
-  error: unknown
+  error: unknown,
+  stdout: string,
+  stderr: string
 ): ErrorTemplate {
   const code: unknown = (error as { code: unknown } | undefined)?.code;
   const errorString: string =
@@ -591,12 +593,16 @@ ${printElmWatchNodeImportCommand(scriptPath)}
 But that resulted in this error:
 
 ${errorString}
+
+${printElmWatchNodeStdio(stdout, stderr)}
 `;
 }
 
 export function elmWatchNodeDefaultExportNotFunction(
   scriptPath: ElmWatchNodeScriptPath,
-  imported: Record<string, unknown>
+  imported: Record<string, unknown>,
+  stdout: string,
+  stderr: string
 ): ErrorTemplate {
   const keysMessage =
     "default" in imported
@@ -617,13 +623,17 @@ I expected ${bold("imported.default")} to be a function, but it isn't!
 typeof imported.default === ${JSON.stringify(typeof imported.default)}
 
 ${keysMessage}
+
+${printElmWatchNodeStdio(stdout, stderr)}
 `;
 }
 
 export function elmWatchNodeRunError(
   scriptPath: ElmWatchNodeScriptPath,
   args: Array<string>,
-  error: unknown
+  error: unknown,
+  stdout: string,
+  stderr: string
 ): ErrorTemplate {
   const errorString = unknownErrorToString(error);
 
@@ -636,13 +646,17 @@ ${printElmWatchNodeRunCommand(args)}
 But that resulted in this error:
 
 ${errorString}
+
+${printElmWatchNodeStdio(stdout, stderr)}
 `;
 }
 
 export function elmWatchNodeBadReturnValue(
   scriptPath: ElmWatchNodeScriptPath,
   args: Array<string>,
-  returnValue: unknown
+  returnValue: unknown,
+  stdout: string,
+  stderr: string
 ): ErrorTemplate {
   return fancyError("INVALID POSTPROCESS RESULT", scriptPath)`
 I ran your postprocess command:
@@ -653,6 +667,8 @@ ${printElmWatchNodeRunCommand(args)}
 I expected ${bold("result")} to be a string, but it is:
 
 ${repr(returnValue)}
+
+${printElmWatchNodeStdio(stdout, stderr)}
 `;
 }
 
@@ -1141,6 +1157,17 @@ export function printStdio(stdout: string, stderr: string): string {
     ? stderr
     : stdout === "" && stderr === ""
     ? "(no output)"
+    : `
+STDOUT:
+${stdout}
+STDERR:
+${stderr}
+`.trim();
+}
+
+function printElmWatchNodeStdio(stdout: string, stderr: string): string {
+  return stdout === "" && stderr === ""
+    ? ""
     : `
 STDOUT:
 ${stdout}
