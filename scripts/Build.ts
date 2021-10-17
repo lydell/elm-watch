@@ -80,10 +80,6 @@ async function run(): Promise<void> {
       transform: (code) => {
         const replaced = code
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
-          .replace(
-            /function \(\) \{ return require\(/g,
-            "() => { return import("
-          )
           .replace(/^exports.elmWatchCli = elmWatchCli;/m, "")
           .trim();
         return `#!/usr/bin/env node\n${replaced}`;
@@ -92,7 +88,13 @@ async function run(): Promise<void> {
     },
     {
       input: path.join(DIR, "src", "PostprocessWorker.ts"),
-      transform: (code) => code,
+      transform: (code) =>
+        // TypeScript turns our native `import()` into `require()`.
+        // Turn it back into a native `import()`.
+        code.replace(
+          /function \(\) \{ return require\(/g,
+          "() => { return import("
+        ),
       writeFileOptions: {},
     },
   ];

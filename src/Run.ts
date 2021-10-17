@@ -225,6 +225,7 @@ export async function run(
                         project,
                         postprocessWorkerPool
                       );
+                      await postprocessWorkerPool.terminate();
                       switch (result.tag) {
                         case "Error":
                           return { tag: "Exit", exitCode: 1 };
@@ -255,6 +256,7 @@ export async function run(
                       );
                       switch (result.tag) {
                         case "ExitOnIdle":
+                          await postprocessWorkerPool.terminate();
                           return { tag: "Exit", exitCode: 0 };
 
                         case "Restart":

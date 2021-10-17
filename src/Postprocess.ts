@@ -158,10 +158,18 @@ export class PostprocessWorkerPool {
   constructor(private onUnexpectedError: (error: Error) => void) {}
 
   getOrCreateAvailableWorker(): PostprocessWorker {
-    return (
-      this.workers.find((worker) => worker.isIdle()) ??
-      new PostprocessWorker(this.onUnexpectedError)
-    );
+    const existingWorker = this.workers.find((worker) => worker.isIdle());
+    if (existingWorker === undefined) {
+      const newWorker = new PostprocessWorker(this.onUnexpectedError);
+      this.workers.push(newWorker);
+      return newWorker;
+    } else {
+      return existingWorker;
+    }
+  }
+
+  async terminate(): Promise<void> {
+    await Promise.all(this.workers.map((worker) => worker.terminate()));
   }
 }
 
