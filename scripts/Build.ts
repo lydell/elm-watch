@@ -64,34 +64,21 @@ async function run(): Promise<void> {
     )
   );
 
-  const bundle = await rollup({
-    input: [
-      path.join(DIR, "src", "index.ts"),
-      path.join(DIR, "src", "PostprocessWorker.ts"),
-    ],
-    external: (source) => /^[a-z@]/.test(source),
-    plugins: [typescript({ module: "ESNext" })],
-    onwarn: (warning) => {
-      // Rollup warnings _do_ have a real `.toString()` method.
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string
-      throw new Error(warning.toString());
-    },
-  });
+  type RollupInput = {
+    input: string;
+    transform: (code: string) => string;
+    writeFileOptions: fs.WriteFileOptions;
+  };
 
-  const { output } = await bundle.generate({
-    format: "cjs",
-    interop: "esModule",
-    hoistTransitiveImports: false,
-  });
-
-  for (const item of output) {
-    switch (item.type) {
-      case "asset":
-        throw new Error(`Unexpectedly got an "asset".`);
-
-      case "chunk": {
-        const isIndex = item.name === "index";
-        const code = item.code
+  // Rollup creates a shared file with way more than `PostprocessWorker` needs
+  // if we run `rollup` just once with both inputs, for some reason.
+  // `PostprocessWorker` depends on so little from the rest of the code base so
+  // a little bit of duplication in it doesn’t matter.
+  const inputs: Array<RollupInput> = [
+    {
+      input: path.join(DIR, "src", "index.ts"),
+      transform: (code) => {
+        const replaced = code
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
           .replace(
             /function \(\) \{ return require\(/g,
@@ -99,12 +86,49 @@ async function run(): Promise<void> {
           )
           .replace(/^exports.elmWatchCli = elmWatchCli;/m, "")
           .trim();
-        const fullCode = isIndex ? `#!/usr/bin/env node\n${code}` : code;
-        fs.writeFileSync(
-          path.join(BUILD, item.fileName),
-          fullCode,
-          isIndex ? { mode: "755" } : {}
-        );
+        return `#!/usr/bin/env node\n${replaced}`;
+      },
+      writeFileOptions: { mode: "755" },
+    },
+    {
+      input: path.join(DIR, "src", "PostprocessWorker.ts"),
+      transform: (code) => code,
+      writeFileOptions: {},
+    },
+  ];
+
+  for (const rollupInput of inputs) {
+    const bundle = await rollup({
+      input: rollupInput.input,
+      external: (source) => /^[a-z@]/.test(source),
+      plugins: [typescript({ module: "ESNext" })],
+      onwarn: (warning) => {
+        // Rollup warnings _do_ have a real `.toString()` method.
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        throw new Error(warning.toString());
+      },
+      treeshake: {
+        moduleSideEffects: false,
+      },
+    });
+
+    const { output } = await bundle.generate({
+      format: "cjs",
+      interop: "esModule",
+    });
+
+    for (const item of output) {
+      switch (item.type) {
+        case "asset":
+          throw new Error(`Unexpectedly got an "asset".`);
+
+        case "chunk": {
+          fs.writeFileSync(
+            path.join(BUILD, item.fileName),
+            rollupInput.transform(item.code),
+            rollupInput.writeFileOptions
+          );
+        }
       }
     }
   }
