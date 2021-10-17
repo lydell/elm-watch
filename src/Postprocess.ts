@@ -13,6 +13,8 @@ import {
   RunMode,
 } from "./Types";
 
+export const ELM_WATCH_NODE = "elm-watch-node";
+
 export type Postprocess =
   | {
       tag: "NoPostprocess";
@@ -85,7 +87,7 @@ export async function runPostprocess({
   outputPath: output,
   postprocessArray,
   code,
-  elmWatchNode,
+  postprocessWorkerPool,
 }: {
   env: Env;
   elmWatchJsonPath: ElmWatchJsonPath;
@@ -93,16 +95,18 @@ export async function runPostprocess({
   runMode: RunMode;
   outputPath: OutputPath;
   postprocessArray: NonEmptyArray<string>;
+  postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
-  elmWatchNode: (args: ElmWatchNodeArgs) => Promise<PostprocessResult>;
 }): Promise<PostprocessResult> {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
   const extraArgs = [output.targetName, compilationMode, runMode];
   const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
 
-  if (commandName === "elm-watch-node") {
-    return elmWatchNode({ cwd, userArgs, extraArgs, code });
+  if (commandName === ELM_WATCH_NODE) {
+    return postprocessWorkerPool
+      .getOrCreateAvailableWorker()
+      .postprocess({ cwd, userArgs, extraArgs, code });
   }
 
   const command: Command = {

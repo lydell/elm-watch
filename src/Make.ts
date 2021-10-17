@@ -2,6 +2,7 @@ import * as Compile from "./Compile";
 import { Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
+import { PostprocessWorkerPool } from "./Postprocess";
 import { Project } from "./Project";
 import { GetNow } from "./Types";
 
@@ -11,7 +12,8 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
-  project: Project
+  project: Project,
+  postprocessWorkerPool: PostprocessWorkerPool
 ): Promise<MakeResult> {
   const installResult = await Compile.installDependencies(env, logger, project);
 
@@ -56,6 +58,7 @@ export async function run(
             total: outputActions.total,
             action,
             postprocess: project.postprocess,
+            postprocessWorkerPool,
           }).then(() => {
             const nextOutputActions = getNextOutputActions(project);
             if (isNonEmptyArray(nextOutputActions.actions)) {

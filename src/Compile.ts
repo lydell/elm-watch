@@ -27,7 +27,11 @@ import {
   nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
-import { Postprocess, runPostprocess } from "./Postprocess";
+import {
+  Postprocess,
+  PostprocessWorkerPool,
+  runPostprocess,
+} from "./Postprocess";
 import { OutputError, OutputState, Project } from "./Project";
 import * as SpawnElm from "./SpawnElm";
 import {
@@ -492,6 +496,7 @@ export async function handleOutputAction({
   total,
   action,
   postprocess,
+  postprocessWorkerPool,
 }: {
   env: Env;
   logger: Logger;
@@ -501,6 +506,7 @@ export async function handleOutputAction({
   total: number;
   action: OutputAction;
   postprocess: Postprocess;
+  postprocessWorkerPool: PostprocessWorkerPool;
 }): Promise<HandleOutputActionResult> {
   switch (action.tag) {
     case "NeedsElmMake":
@@ -541,6 +547,7 @@ export async function handleOutputAction({
         total,
         ...action.output,
         postprocessArray: action.postprocessArray,
+        postprocessWorkerPool,
         code: action.code,
       });
 
@@ -895,6 +902,7 @@ async function postprocessHelper({
   index,
   total,
   postprocessArray,
+  postprocessWorkerPool,
   code,
 }: {
   env: Env;
@@ -907,6 +915,7 @@ async function postprocessHelper({
   index: number;
   total: number;
   postprocessArray: NonEmptyArray<string>;
+  postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
 }): Promise<HandleOutputActionResult> {
   const updateStatusLineHelper = (): void => {
@@ -929,10 +938,8 @@ async function postprocessHelper({
     runMode: runMode.tag,
     outputPath,
     postprocessArray,
+    postprocessWorkerPool,
     code,
-    elmWatchNode: () => {
-      throw new Error("TODO");
-    },
   });
 
   if (outputState.dirty) {

@@ -8,6 +8,7 @@ import type { Logger } from "./Logger";
 import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { Cwd } from "./PathHelpers";
+import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
 import { initProject } from "./Project";
 import { CliArg, ElmWatchJsonPath, GetNow, OnIdle, RunMode } from "./Types";
 
@@ -21,6 +22,7 @@ type RunResult =
       restartReasons: NonEmptyArray<
         Hot.WatcherEvent | Hot.WebSocketConnectedEvent
       >;
+      postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: Hot.WebSocketState | undefined;
     };
 
@@ -33,6 +35,7 @@ export async function run(
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.WatcherEvent | Hot.WebSocketConnectedEvent>,
+  postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: Hot.WebSocketState | undefined
 ): Promise<RunResult> {
   const parseResult = ElmWatchJson.findReadAndParse(cwd);
@@ -49,7 +52,8 @@ export async function run(
         logger,
         getNow,
         runMode,
-        parseResult.elmWatchJsonPath
+        parseResult.elmWatchJsonPath,
+        postprocessWorkerPool
       );
 
     case "DecodeError":
@@ -63,7 +67,8 @@ export async function run(
         logger,
         getNow,
         runMode,
-        parseResult.elmWatchJsonPath
+        parseResult.elmWatchJsonPath,
+        postprocessWorkerPool
       );
 
     case "ElmWatchJsonNotFound":
@@ -183,7 +188,8 @@ export async function run(
                     logger,
                     getNow,
                     runMode,
-                    parseResult.elmWatchJsonPath
+                    parseResult.elmWatchJsonPath,
+                    postprocessWorkerPool
                   );
 
                 // istanbul ignore next
@@ -194,13 +200,30 @@ export async function run(
                   return { tag: "Exit", exitCode: 1 };
 
                 case "Project": {
+                  const { project } = initProjectResult;
+
+                  switch (project.postprocess.tag) {
+                    case "NoPostprocess":
+                      break;
+                    case "Postprocess":
+                      if (
+                        project.postprocess.postprocessArray[0] ===
+                        ELM_WATCH_NODE
+                      ) {
+                        // Warm up one worker, since we’re going to need it.
+                        postprocessWorkerPool.getOrCreateAvailableWorker();
+                      }
+                      break;
+                  }
+
                   switch (runMode) {
                     case "make": {
                       const result = await Make.run(
                         env,
                         logger,
                         getNow,
-                        initProjectResult.project
+                        project,
+                        postprocessWorkerPool
                       );
                       switch (result.tag) {
                         case "Error":
@@ -218,8 +241,9 @@ export async function run(
                         getNow,
                         onIdle,
                         restartReasons,
+                        postprocessWorkerPool,
                         webSocketState,
-                        initProjectResult.project,
+                        project,
                         config.port !== undefined
                           ? { tag: "PortFromConfig", port: config.port }
                           : elmWatchStuffJson !== undefined
@@ -252,7 +276,8 @@ async function handleElmWatchJsonError(
   logger: Logger,
   getNow: GetNow,
   runMode: RunMode,
-  elmWatchJsonPath: ElmWatchJsonPath
+  elmWatchJsonPath: ElmWatchJsonPath,
+  postprocessWorkerPool: PostprocessWorkerPool
 ): Promise<RunResult> {
   switch (runMode) {
     case "make":
@@ -267,6 +292,7 @@ async function handleElmWatchJsonError(
       return {
         tag: "Restart",
         restartReasons: [elmWatchJsonEvent],
+        postprocessWorkerPool,
         webSocketState: undefined,
       };
     }

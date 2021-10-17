@@ -2,6 +2,7 @@ import * as Help from "./Help";
 import { Env, ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString, Cwd } from "./PathHelpers";
+import { PostprocessWorkerPool } from "./Postprocess";
 import { run } from "./Run";
 import { GetNow, OnIdle } from "./Types";
 
@@ -52,24 +53,33 @@ export async function elmWatchCli(
 
     case "make":
     case "hot": {
-      let result;
-      do {
-        result = await run(
-          cwd,
-          env,
-          logger,
-          getNow,
-          onIdle,
-          args[0],
-          args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg })),
-          result === undefined ? [] : result.restartReasons,
-          result === undefined ? undefined : result.webSocketState
-        );
-      } while (result.tag === "Restart");
-      switch (result.tag) {
-        case "Exit":
-          return result.exitCode;
-      }
+      const runMode = args[0];
+      return new Promise((resolve, reject) => {
+        const doIt = async (): Promise<number> => {
+          let result;
+          do {
+            result = await run(
+              cwd,
+              env,
+              logger,
+              getNow,
+              onIdle,
+              runMode,
+              args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg })),
+              result === undefined ? [] : result.restartReasons,
+              result === undefined
+                ? new PostprocessWorkerPool(reject)
+                : result.postprocessWorkerPool,
+              result === undefined ? undefined : result.webSocketState
+            );
+          } while (result.tag === "Restart");
+          switch (result.tag) {
+            case "Exit":
+              return result.exitCode;
+          }
+        };
+        doIt().then(resolve, reject);
+      });
     }
 
     default:

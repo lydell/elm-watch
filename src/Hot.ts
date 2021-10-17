@@ -30,6 +30,7 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { PortChoice } from "./Port";
+import { PostprocessWorkerPool } from "./Postprocess";
 import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
@@ -59,6 +60,7 @@ export type WebSocketConnectedEvent = {
 
 type Mutable = {
   watcher: chokidar.FSWatcher;
+  postprocessWorkerPool: PostprocessWorkerPool;
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
   project: Project;
@@ -220,6 +222,7 @@ export type HotRunResult =
   | {
       tag: "Restart";
       restartReasons: NonEmptyArray<WatcherEvent | WebSocketConnectedEvent>;
+      postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: WebSocketState | undefined;
     };
 
@@ -270,12 +273,19 @@ export async function run(
   getNow: GetNow,
   onIdle: OnIdle | undefined,
   restartReasons: Array<WatcherEvent | WebSocketConnectedEvent>,
+  postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
   project: Project,
   portChoice: PortChoice
 ): Promise<HotRunResult> {
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
-    initMutable: initMutable(getNow, webSocketState, project, portChoice),
+    initMutable: initMutable(
+      getNow,
+      postprocessWorkerPool,
+      webSocketState,
+      project,
+      portChoice
+    ),
     init: init(getNow(), restartReasons),
     update: update(project),
     runCmd: runCmd(env, logger, getNow, onIdle),
@@ -315,6 +325,7 @@ export async function watchElmWatchJsonOnce(
 const initMutable =
   (
     getNow: GetNow,
+    postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
     project: Project,
     portChoice: PortChoice
@@ -357,6 +368,7 @@ const initMutable =
 
     const mutable: Mutable = {
       watcher,
+      postprocessWorkerPool,
       webSocketServer,
       webSocketConnections,
       project,
@@ -1169,6 +1181,7 @@ const runCmd =
               total: outputActions.total,
               action,
               postprocess: mutable.project.postprocess,
+              postprocessWorkerPool: mutable.postprocessWorkerPool,
             }).then((handleOutputActionResult) => {
               dispatch({
                 tag: "CompilationPartDone",
@@ -1276,6 +1289,7 @@ const runCmd =
           resolvePromise({
             tag: "Restart",
             restartReasons: cmd.restartReasons,
+            postprocessWorkerPool: mutable.postprocessWorkerPool,
             webSocketState: elmWatchJsonChanged
               ? undefined
               : {

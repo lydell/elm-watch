@@ -18,6 +18,7 @@ import {
 } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
 import { Port } from "./Port";
+import { ELM_WATCH_NODE } from "./Postprocess";
 import {
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
@@ -560,11 +561,11 @@ export function elmWatchNodeMissingScript(
   return fancyError("MISSING POSTPROCESS SCRIPT", elmWatchJsonPath)`
 You have specified this in ${elmWatchJson}:
 
-"postprocess": ["elm-watch-node"]
+"postprocess": [${JSON.stringify(ELM_WATCH_NODE)}]
 
 You need to specify a JavaScript file to run as well, like so:
 
-"postprocess": ["elm-watch-node", "postprocess.js"]
+"postprocess": [${JSON.stringify(ELM_WATCH_NODE)}, "postprocess.js"]
 `;
 }
 
