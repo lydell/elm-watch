@@ -80,7 +80,7 @@ describe("successful make", () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main
+      ✅ main⧙ (0 KiB)⧘
     `);
   });
 
@@ -111,7 +111,7 @@ describe("successful make", () => {
       ⏳ main: elm make --optimize
       🟢 main: elm make done
       ⏳ main: postprocess
-      ✅ main
+      ✅ main⧙ (0 KiB)⧘
     `);
   });
 
