@@ -88,7 +88,7 @@ async function elmWatchNode({
     };
   }
 
-  const args = [code.toString("utf8"), ...userArgs.slice(1), ...extraArgs];
+  const args = [code, ...userArgs.slice(1), ...extraArgs];
 
   let returnValue: unknown;
   try {

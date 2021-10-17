@@ -114,7 +114,7 @@ export async function runPostprocess({
   if (commandName === ELM_WATCH_NODE) {
     return postprocessWorkerPool
       .getOrCreateAvailableWorker()
-      .postprocess({ cwd, userArgs, extraArgs, code });
+      .postprocess({ cwd, userArgs, extraArgs, code: code.toString("utf8") });
   }
 
   const command: Command = {
@@ -185,7 +185,7 @@ export type ElmWatchNodeArgs = {
   cwd: AbsolutePath;
   userArgs: Array<string>;
   extraArgs: Array<string>;
-  code: Buffer | string;
+  code: string;
 };
 
 type PostprocessWorkerStatus =
