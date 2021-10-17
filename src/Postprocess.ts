@@ -1,10 +1,9 @@
-import { Env } from "./Helpers";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import {
-  absoluteDirname,
-  AbsolutePath,
-  absolutePathFromString,
-} from "./PathHelpers";
+import * as path from "path";
+import { Worker } from "worker_threads";
+
+import { Env, toError } from "./Helpers";
+import { NonEmptyArray } from "./NonEmptyArray";
+import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { Command, ExitReason, spawn } from "./Spawn";
 import {
   CompilationMode,
@@ -86,6 +85,7 @@ export async function runPostprocess({
   outputPath: output,
   postprocessArray,
   code,
+  elmWatchNode,
 }: {
   env: Env;
   elmWatchJsonPath: ElmWatchJsonPath;
@@ -94,6 +94,7 @@ export async function runPostprocess({
   outputPath: OutputPath;
   postprocessArray: NonEmptyArray<string>;
   code: Buffer | string;
+  elmWatchNode: (args: ElmWatchNodeArgs) => Promise<PostprocessResult>;
 }): Promise<PostprocessResult> {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
@@ -101,7 +102,7 @@ export async function runPostprocess({
   const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
 
   if (commandName === "elm-watch-node") {
-    return elmWatchNode(cwd, userArgs, extraArgs, code);
+    return elmWatchNode({ cwd, userArgs, extraArgs, code });
   }
 
   const command: Command = {
@@ -145,64 +146,148 @@ export async function runPostprocess({
   }
 }
 
-async function elmWatchNode(
-  cwd: AbsolutePath,
-  userArgs: Array<string>,
-  extraArgs: Array<string>,
-  code: Buffer | string
-): Promise<PostprocessResult> {
-  if (!isNonEmptyArray(userArgs)) {
-    return { tag: "ElmWatchNodeMissingScript" };
+// Keeps track of several `PostprocessWorker`s. We don’t need to think about
+// limiting here – that is done in `Compile.getOutputActions`.
+export class PostprocessWorkerPool {
+  private workers: Array<PostprocessWorker> = [];
+
+  constructor(private onUnexpectedError: (error: Error) => void) {}
+
+  getOrCreateAvailableWorker(): PostprocessWorker {
+    return (
+      this.workers.find((worker) => worker.isIdle()) ??
+      new PostprocessWorker(this.onUnexpectedError)
+    );
   }
+}
 
-  const scriptPath: ElmWatchNodeScriptPath = {
-    tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptPath: absolutePathFromString(cwd, userArgs[0]),
-  };
+export type ElmWatchNodeArgs = {
+  cwd: AbsolutePath;
+  userArgs: Array<string>;
+  extraArgs: Array<string>;
+  code: Buffer | string;
+};
 
-  let imported;
-  try {
-    imported = (await import(
-      scriptPath.theElmWatchNodeScriptPath.absolutePath
-    )) as Record<string, unknown>;
-  } catch (unknownError) {
-    return {
-      tag: "ElmWatchNodeImportError",
-      scriptPath,
-      error: unknownError,
+type PostprocessWorkerStatus =
+  | {
+      tag: "Busy";
+      resolve: (result: PostprocessResult) => void;
+      reject: (error: Error) => void;
+    }
+  | {
+      tag: "Idle";
+    }
+  | {
+      tag: "Terminated";
     };
+
+export type MessageToWorker = {
+  tag: "StartPostprocess";
+  args: ElmWatchNodeArgs;
+};
+
+export type MessageFromWorker = {
+  tag: "PostprocessDone";
+  result:
+    | { tag: "Reject"; error: unknown }
+    | { tag: "Resolve"; value: PostprocessResult };
+};
+
+class PostprocessWorker {
+  private worker = new Worker(path.join(__dirname, "PostprocessWorker"));
+
+  private status: PostprocessWorkerStatus = { tag: "Idle" };
+
+  constructor(private onUnexpectedError: (error: Error) => void) {
+    this.worker.on("error", (error) => {
+      if (this.status.tag !== "Terminated") {
+        this.status = { tag: "Terminated" };
+        this.onUnexpectedError(error);
+      }
+    });
+
+    this.worker.on("messageerror", (error) => {
+      if (this.status.tag !== "Terminated") {
+        this.status = { tag: "Terminated" };
+        this.onUnexpectedError(error);
+      }
+    });
+
+    this.worker.on("exit", (exitCode) => {
+      if (this.status.tag !== "Terminated") {
+        this.status = { tag: "Terminated" };
+        this.onUnexpectedError(
+          new Error(
+            `PostprocessWorker unexpectedly exited, with exit code ${exitCode}.`
+          )
+        );
+      }
+    });
+
+    this.worker.on("message", (message: MessageFromWorker) => {
+      switch (message.tag) {
+        case "PostprocessDone":
+          switch (this.status.tag) {
+            case "Idle":
+              this.status = { tag: "Terminated" };
+              this.onUnexpectedError(
+                new Error(
+                  `PostprocessWorker unexpectedly received a ${JSON.stringify(
+                    message.tag
+                  )} message from the worker while being "Idle" instead of the expected "Busy".`
+                )
+              );
+              break;
+
+            case "Busy":
+              switch (message.result.tag) {
+                case "Resolve":
+                  this.status.resolve(message.result.value);
+                  break;
+                case "Reject":
+                  this.status.reject(toError(message.result.error));
+                  break;
+              }
+              this.status = { tag: "Idle" };
+              break;
+
+            case "Terminated":
+              break;
+          }
+      }
+    });
   }
 
-  if (typeof imported.default !== "function") {
-    return {
-      tag: "ElmWatchNodeDefaultExportNotFunction",
-      scriptPath,
-      imported,
-    };
+  private postMessage(message: MessageToWorker): void {
+    this.worker.postMessage(message);
   }
 
-  const args = [code.toString("utf8"), ...userArgs.slice(1), ...extraArgs];
-
-  let returnValue: unknown;
-  try {
-    returnValue = (await imported.default(args)) as unknown;
-  } catch (unknownError) {
-    return {
-      tag: "ElmWatchNodeRunError",
-      scriptPath,
-      args,
-      error: unknownError,
-    };
+  isIdle(): boolean {
+    return this.status.tag === "Idle";
   }
 
-  if (typeof returnValue !== "string") {
-    return {
-      tag: "ElmWatchNodeBadReturnValue",
-      scriptPath,
-      args,
-      returnValue,
-    };
+  async postprocess(args: ElmWatchNodeArgs): Promise<PostprocessResult> {
+    switch (this.status.tag) {
+      case "Idle":
+        return new Promise((resolve, reject) => {
+          this.status = { tag: "Busy", resolve, reject };
+          this.postMessage({ tag: "StartPostprocess", args });
+        });
+
+      case "Busy":
+      case "Terminated":
+        throw new Error(
+          `Cannot call PostprocessWorker#postprocess because \`this.status === ${JSON.stringify(
+            this.status
+          )}\` instead of the expected ${JSON.stringify(this.status)}.`
+        );
+    }
   }
 
-  return { tag: "Success", code: Buffer.from(returnValue) };
+  async terminate(): Promise<void> {
+    if (this.status.tag !== "Terminated") {
+      this.status = { tag: "Terminated" };
+      await this.worker.terminate();
+    }
+  }
 }

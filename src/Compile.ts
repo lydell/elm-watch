@@ -930,6 +930,9 @@ async function postprocessHelper({
     outputPath,
     postprocessArray,
     code,
+    elmWatchNode: () => {
+      throw new Error("TODO");
+    },
   });
 
   if (outputState.dirty) {

@@ -54,7 +54,6 @@ module.exports = {
     "no-useless-catch": error,
     "no-useless-computed-key": warn,
     "no-useless-concat": warn,
-    "no-useless-constructor": warn,
     "no-useless-escape": error,
     "no-useless-rename": warn,
     "no-var": error,

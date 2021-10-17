@@ -65,7 +65,10 @@ async function run(): Promise<void> {
   );
 
   const bundle = await rollup({
-    input: path.join(DIR, "src", "index.ts"),
+    input: [
+      path.join(DIR, "src", "index.ts"),
+      path.join(DIR, "src", "PostprocessWorker.ts"),
+    ],
     external: (source) => /^[a-z@]/.test(source),
     plugins: [typescript({ module: "ESNext" })],
     onwarn: (warning) => {
@@ -78,6 +81,7 @@ async function run(): Promise<void> {
   const { output } = await bundle.generate({
     format: "cjs",
     interop: "esModule",
+    hoistTransitiveImports: false,
   });
 
   for (const item of output) {
@@ -86,6 +90,7 @@ async function run(): Promise<void> {
         throw new Error(`Unexpectedly got an "asset".`);
 
       case "chunk": {
+        const isIndex = item.name === "index";
         const code = item.code
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
           .replace(
@@ -94,10 +99,12 @@ async function run(): Promise<void> {
           )
           .replace(/^exports.elmWatchCli = elmWatchCli;/m, "")
           .trim();
-        const fullCode = `#!/usr/bin/env node\n${code}`;
-        fs.writeFileSync(path.join(BUILD, item.fileName), fullCode, {
-          mode: "755",
-        });
+        const fullCode = isIndex ? `#!/usr/bin/env node\n${code}` : code;
+        fs.writeFileSync(
+          path.join(BUILD, item.fileName),
+          fullCode,
+          isIndex ? { mode: "755" } : {}
+        );
       }
     }
   }
