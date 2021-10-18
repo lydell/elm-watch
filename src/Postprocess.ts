@@ -178,6 +178,7 @@ export class PostprocessWorkerPool {
 
   async terminate(): Promise<void> {
     await Promise.all(this.workers.map((worker) => worker.terminate()));
+    this.workers.length = 0;
   }
 }
 
