@@ -1,7 +1,7 @@
 import * as esbuild from "esbuild";
 import * as UglifyJS from "uglify-js";
 
-export default function postprocess([code, targetName, compilationMode]) {
+export default async function postprocess([code, targetName, compilationMode]) {
   switch (compilationMode) {
     case "standard":
     case "debug":
@@ -39,11 +39,11 @@ const pureFuncs = [
 ];
 
 // Source: https://discourse.elm-lang.org/t/what-i-ve-learned-about-minifying-elm-code/7632
-function minify(code, { minimal }) {
+async function minify(code, { minimal }) {
   return minimal ? runUglifyJSAndEsbuild(code) : runEsbuild(code);
 }
 
-function runUglifyJSAndEsbuild(code) {
+async function runUglifyJSAndEsbuild(code) {
   const result = UglifyJS.minify(code, {
     compress: {
       ...Object.fromEntries(
@@ -73,19 +73,23 @@ function runUglifyJSAndEsbuild(code) {
     throw result.error;
   }
 
-  return esbuild.transformSync(result.code, {
-    minify: true,
-    target: "es5",
-  }).code;
+  return (
+    await esbuild.transform(result.code, {
+      minify: true,
+      target: "es5",
+    })
+  ).code;
 }
 
-function runEsbuild(code) {
-  return esbuild.transformSync(removeIIFE(code), {
-    minify: true,
-    pure: pureFuncs,
-    target: "es5",
-    format: "iife",
-  }).code;
+async function runEsbuild(code) {
+  return (
+    await esbuild.transform(removeIIFE(code), {
+      minify: true,
+      pure: pureFuncs,
+      target: "es5",
+      format: "iife",
+    })
+  ).code;
 }
 
 function removeIIFE(code) {
