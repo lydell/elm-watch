@@ -1,4 +1,4 @@
-import WebSocket from "ws";
+import WebSocket, { Server as WsServer } from "ws";
 
 import * as Errors from "./Errors";
 import { Port, PortChoice } from "./Port";
@@ -28,7 +28,7 @@ type Options = {
 };
 
 export class WebSocketServer {
-  webSocketServer: WebSocket.Server;
+  webSocketServer: WsServer;
 
   port: Port;
 
@@ -44,10 +44,10 @@ export class WebSocketServer {
   }
 
   init({ getNow, portChoice, rejectPromise }: Options): {
-    webSocketServer: WebSocket.Server;
+    webSocketServer: WsServer;
     port: Port;
   } {
-    const webSocketServer = new WebSocket.Server({
+    const webSocketServer = new WsServer({
       // If `port` is 0, the operating system will assign an arbitrary unused port.
       port: portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
     });

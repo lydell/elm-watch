@@ -950,6 +950,9 @@ async function postprocessHelper({
     postprocessResult = await promise;
   } catch (unknownError) {
     if (unknownError === SPAWN_KILLED || unknownError === WORKER_TERMINATED) {
+      outputState.dirty = true;
+      outputState.status = { tag: "Interrupted" };
+      updateStatusLineHelper();
       return { tag: "Nothing" };
     }
     throw unknownError;
