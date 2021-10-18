@@ -188,15 +188,22 @@ export function runPostprocess({
 // Keeps track of several `PostprocessWorker`s. We don’t need to think about
 // limiting here – that is done in `Compile.getOutputActions`.
 export class PostprocessWorkerPool {
-  private workers: Array<PostprocessWorker> = [];
+  private workers = new Set<PostprocessWorker>();
 
   constructor(private onUnexpectedError: (error: Error) => void) {}
 
   getOrCreateAvailableWorker(): PostprocessWorker {
-    const existingWorker = this.workers.find((worker) => worker.isIdle());
+    const existingWorker = Array.from(this.workers).find((worker) =>
+      worker.isIdle()
+    );
     if (existingWorker === undefined) {
-      const newWorker = new PostprocessWorker(this.onUnexpectedError);
-      this.workers.push(newWorker);
+      const newWorker = new PostprocessWorker(
+        this.onUnexpectedError,
+        (worker) => {
+          this.workers.delete(worker);
+        }
+      );
+      this.workers.add(newWorker);
       return newWorker;
     } else {
       return existingWorker;
@@ -204,8 +211,9 @@ export class PostprocessWorkerPool {
   }
 
   async terminate(): Promise<void> {
-    await Promise.all(this.workers.map((worker) => worker.terminate()));
-    this.workers.length = 0;
+    await Promise.all(
+      Array.from(this.workers).map((worker) => worker.terminate())
+    );
   }
 }
 
@@ -253,7 +261,10 @@ class PostprocessWorker {
 
   private status: PostprocessWorkerStatus = { tag: "Idle" };
 
-  constructor(private onUnexpectedError: (error: Error) => void) {
+  constructor(
+    private onUnexpectedError: (error: Error) => void,
+    private onTerminated: (worker: PostprocessWorker) => void
+  ) {
     const stdout: Array<Buffer> = [];
     const stderr: Array<Buffer> = [];
 
@@ -269,6 +280,7 @@ class PostprocessWorker {
     this.worker.on("error", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
+        this.onTerminated(this);
         this.onUnexpectedError(error);
       }
     });
@@ -277,6 +289,7 @@ class PostprocessWorker {
     this.worker.on("messageerror", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
+        this.onTerminated(this);
         this.onUnexpectedError(error);
       }
     });
@@ -285,6 +298,7 @@ class PostprocessWorker {
       // istanbul ignore if
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
+        this.onTerminated(this);
         this.onUnexpectedError(
           new Error(
             `PostprocessWorker unexpectedly exited, with exit code ${exitCode}.`
@@ -299,7 +313,7 @@ class PostprocessWorker {
           switch (this.status.tag) {
             // istanbul ignore next
             case "Idle":
-              this.status = { tag: "Terminated" };
+              this.terminate().catch(this.onUnexpectedError);
               this.onUnexpectedError(
                 new Error(
                   `PostprocessWorker received a ${JSON.stringify(
@@ -376,12 +390,14 @@ class PostprocessWorker {
     switch (this.status.tag) {
       case "Idle":
         this.status = { tag: "Terminated" };
+        this.onTerminated(this);
         await this.worker.terminate();
         break;
 
       case "Busy": {
         const { reject } = this.status;
         this.status = { tag: "Terminated" };
+        this.onTerminated(this);
         await this.worker.terminate();
         reject(WORKER_TERMINATED);
         break;
