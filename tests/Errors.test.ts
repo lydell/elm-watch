@@ -2222,7 +2222,9 @@ describe("errors", () => {
               },
             },
             // It’s not possible to test `throw null` at import – Jest crashes then.
-            null
+            null,
+            "",
+            ""
           )
         )
       ).toMatchInlineSnapshot(`

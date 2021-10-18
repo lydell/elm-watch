@@ -177,19 +177,8 @@ module.exports = {
       },
     },
     {
-      files: "scripts/**/*.ts",
-      parserOptions: {
-        tsconfigRootDir: __dirname,
-        project: ["./scripts/tsconfig.json"],
-      },
-    },
-    {
       files: "tests/**/*.ts",
       extends: ["plugin:jest/recommended", "plugin:jest/style"],
-      parserOptions: {
-        tsconfigRootDir: __dirname,
-        project: ["./tests/tsconfig.json"],
-      },
     },
     {
       files: "example/**/*.js",

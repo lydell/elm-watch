@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "module": "CommonJS",
@@ -19,9 +20,5 @@
     "lib": [
       "ES2019",
     ],
-  },
-  "exclude": [
-    "scripts",
-    "tests"
-  ]
+  }
 }
