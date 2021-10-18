@@ -244,6 +244,7 @@ class PostprocessWorker {
       stderr.push(chunk);
     });
 
+    // istanbul ignore next
     this.worker.on("error", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
@@ -251,6 +252,7 @@ class PostprocessWorker {
       }
     });
 
+    // istanbul ignore next
     this.worker.on("messageerror", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
@@ -259,6 +261,7 @@ class PostprocessWorker {
     });
 
     this.worker.on("exit", (exitCode) => {
+      // istanbul ignore if
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
         this.onUnexpectedError(
@@ -273,13 +276,14 @@ class PostprocessWorker {
       switch (message.tag) {
         case "PostprocessDone":
           switch (this.status.tag) {
+            // istanbul ignore next
             case "Idle":
               this.status = { tag: "Terminated" };
               this.onUnexpectedError(
                 new Error(
-                  `PostprocessWorker unexpectedly received a ${JSON.stringify(
+                  `PostprocessWorker received a ${JSON.stringify(
                     message.tag
-                  )} message from the worker while being "Idle" instead of the expected "Busy".`
+                  )} message from the worker. This should only happen when "Busy" but the status is "Idle".`
                 )
               );
               break;
@@ -299,6 +303,8 @@ class PostprocessWorker {
                   );
                   break;
                 }
+
+                // istanbul ignore next
                 case "Reject":
                   this.status.reject(toError(message.result.error));
                   break;
@@ -306,6 +312,7 @@ class PostprocessWorker {
               this.status = { tag: "Idle" };
               break;
 
+            // istanbul ignore next
             case "Terminated":
               break;
           }
@@ -332,7 +339,9 @@ class PostprocessWorker {
           this.postMessage({ tag: "StartPostprocess", args });
         });
 
+      // istanbul ignore next
       case "Busy":
+      // istanbul ignore next
       case "Terminated":
         throw new Error(
           `Cannot call PostprocessWorker#postprocess because \`this.status === ${JSON.stringify(
@@ -343,6 +352,7 @@ class PostprocessWorker {
   }
 
   async terminate(): Promise<void> {
+    // istanbul ignore else
     if (this.status.tag !== "Terminated") {
       this.status = { tag: "Terminated" };
       await this.worker.terminate();

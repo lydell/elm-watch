@@ -1784,7 +1784,7 @@ describe("errors", () => {
       `);
     });
 
-    test("throw non-error at import", async () => {
+    test("throw non-error at import, with console.log", async () => {
       expect(
         await run("postprocess/variants/throw-non-error-at-import", ["make"])
       ).toMatchInlineSnapshot(`
@@ -1802,11 +1802,16 @@ describe("errors", () => {
 
         [null, "error"]
 
+        STDOUT:
+        My debug message 1337
+
+        STDERR:
+
         🚨 ⧙1⧘ error found
       `);
     });
 
-    test("throw null at import", async () => {
+    test("throw null at import, with console.error", async () => {
       expect(await run("postprocess/variants/throw-null-at-import", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -1822,6 +1827,11 @@ describe("errors", () => {
         But that resulted in this error:
 
         null
+
+        STDOUT:
+
+        STDERR:
+        { test: 1, items: [ 'one', 'two' ] }
 
         🚨 ⧙1⧘ error found
       `);
@@ -1852,7 +1862,7 @@ describe("errors", () => {
       `);
     });
 
-    test("wrong default export", async () => {
+    test("wrong default export, with console.log and console.error", async () => {
       expect(await run("postprocess/variants/wrong-default-export", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -1873,11 +1883,18 @@ describe("errors", () => {
 
         {"postproceess": function "postproceess", "default": Object(1)}
 
+        STDOUT:
+        This is stdout
+        on two lines
+
+        STDERR:
+        This is stderr
+
         🚨 ⧙1⧘ error found
       `);
     });
 
-    test("throw error", async () => {
+    test("throw error, with process.stdout.write", async () => {
       expect(await run("postprocess/variants/throw-error", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -1895,6 +1912,10 @@ describe("errors", () => {
 
         Error: Failed to run postprocess!
             at fake/stacktrace.js
+
+        STDOUT:
+        Some debug message
+        STDERR:
 
         🚨 ⧙1⧘ error found
       `);
@@ -1944,7 +1965,7 @@ describe("errors", () => {
       `);
     });
 
-    test("return undefined", async () => {
+    test("return undefined, with process.stderr.write", async () => {
       expect(await run("postprocess/variants/return-undefined", ["make"]))
         .toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -1961,6 +1982,11 @@ describe("errors", () => {
         I expected ⧙result⧘ to be a string, but it is:
 
         undefined
+
+        STDOUT:
+
+        STDERR:
+        Stderr!
 
         🚨 ⧙1⧘ error found
       `);

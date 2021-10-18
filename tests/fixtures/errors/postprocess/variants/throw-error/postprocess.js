@@ -1,4 +1,6 @@
 module.exports = () => {
+  process.stdout.write("Some debug message");
+
   const error = new Error("Failed to run postprocess!");
 
   // Make a stable stack trace for snapshot tests.
