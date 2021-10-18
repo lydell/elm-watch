@@ -3,7 +3,7 @@
   "targets": {
     "main": {
       "inputs": ["../../src/Main.elm"],
-      "output": "../../build/missing-default-export.js"
+      "output": "../../build/throw-null-at-import.js"
     }
   }
 }

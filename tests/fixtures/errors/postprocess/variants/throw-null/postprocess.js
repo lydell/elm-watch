@@ -1,3 +1,3 @@
-module.exports = require("../../hack")(() => {
+module.exports = () => {
   throw null;
-});
+};

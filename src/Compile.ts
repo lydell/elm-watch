@@ -1558,6 +1558,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
             return Errors.elmWatchNodeDefaultExportNotFunction(
               status.scriptPath,
               status.imported,
+              status.typeofDefault,
               status.stdout,
               status.stderr
             );

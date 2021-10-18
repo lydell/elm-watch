@@ -90,7 +90,7 @@ async function run(): Promise<void> {
       input: path.join(DIR, "src", "PostprocessWorker.ts"),
       transform: (code) =>
         // TypeScript turns our native `import()` into `require()`.
-        // Turn it back into a native `import()`.
+        // Turn it back into a native `import()`, since it supports both CJS and MJS.
         code.replace(
           /function \(\) \{ return require\(/g,
           "() => { return import("

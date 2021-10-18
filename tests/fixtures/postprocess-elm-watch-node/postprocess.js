@@ -1,4 +1,4 @@
-const postprocess = (args) => {
+module.exports = (args) => {
   if (args.length !== 6) {
     return new Error(
       `Expected 6 args but got ${args.length}: ${JSON.stringify(args)}`
@@ -61,7 +61,3 @@ const postprocess = (args) => {
 
   return code;
 };
-
-// This is supposed to be just `module.exports = postprocess`, but as a
-// workaround for Jest we set `default`.
-module.exports = { default: postprocess };

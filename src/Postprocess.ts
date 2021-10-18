@@ -40,21 +40,22 @@ export type PostprocessError =
       tag: "ElmWatchNodeBadReturnValue";
       scriptPath: ElmWatchNodeScriptPath;
       args: Array<string>;
-      returnValue: unknown;
+      returnValue: UnknownValueAsString;
       stdout: string;
       stderr: string;
     }
   | {
       tag: "ElmWatchNodeDefaultExportNotFunction";
       scriptPath: ElmWatchNodeScriptPath;
-      imported: Record<string, unknown>;
+      imported: UnknownValueAsString;
+      typeofDefault: string;
       stdout: string;
       stderr: string;
     }
   | {
       tag: "ElmWatchNodeImportError";
       scriptPath: ElmWatchNodeScriptPath;
-      error: unknown;
+      error: UnknownValueAsString;
       stdout: string;
       stderr: string;
     }
@@ -65,7 +66,7 @@ export type PostprocessError =
       tag: "ElmWatchNodeRunError";
       scriptPath: ElmWatchNodeScriptPath;
       args: Array<string>;
-      error: unknown;
+      error: UnknownValueAsString;
       stdout: string;
       stderr: string;
     }
@@ -86,6 +87,15 @@ export type PostprocessError =
       error: Error;
       command: Command;
     };
+
+// It’s not possible to send any value between workers and the main thread. We
+// just show unknown values (such as caught errors and return values) in error
+// messages, so we can seralize them in the worker instead. This type helps
+// making sure we remember to do that correctly.
+export type UnknownValueAsString = {
+  tag: "UnknownValueAsString";
+  value: string;
+};
 
 export async function runPostprocess({
   env,

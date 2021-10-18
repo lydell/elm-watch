@@ -1753,7 +1753,10 @@ describe("errors", () => {
 
         But that resulted in this error:
 
-        Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js' from 'src/Postprocess.ts'
+        Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js'
+        Require stack:
+        - /Users/you/project/src/PostprocessWorker.ts
+        - /Users/you/project/src/PostprocessWorker.js
 
         🚨 ⧙1⧘ error found
       `);
@@ -1803,6 +1806,27 @@ describe("errors", () => {
       `);
     });
 
+    test("throw null at import", async () => {
+      expect(await run("postprocess/variants/throw-null-at-import", ["make"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 main
+
+        ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null-at-import/postprocess.js
+
+        I tried to import your postprocess file:
+
+        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null-at-import/postprocess.js")
+
+        But that resulted in this error:
+
+        null
+
+        🚨 ⧙1⧘ error found
+      `);
+    });
+
     test("empty file", async () => {
       expect(await run("postprocess/variants/empty-file", ["make"]))
         .toMatchInlineSnapshot(`
@@ -1818,11 +1842,11 @@ describe("errors", () => {
 
         I expected ⧙imported.default⧘ to be a function, but it isn't!
 
-        typeof imported.default === "undefined"
+        typeof imported.default === "object"
 
-        These are the keys of ⧙imported⧘:
+        ⧙imported⧘ is:
 
-        []
+        {"default": {}}
 
         🚨 ⧙1⧘ error found
       `);
@@ -1844,6 +1868,10 @@ describe("errors", () => {
         I expected ⧙imported.default⧘ to be a function, but it isn't!
 
         typeof imported.default === "object"
+
+        ⧙imported⧘ is:
+
+        {"postproceess": function "postproceess", "default": Object(1)}
 
         🚨 ⧙1⧘ error found
       `);
@@ -2207,37 +2235,6 @@ describe("errors", () => {
 
         cd /Users/you/project
         elm make src/Main.elm
-      `);
-    });
-
-    test("elmWatchNodeImportError with null error", () => {
-      expect(
-        printError(
-          Errors.elmWatchNodeImportError(
-            {
-              tag: "ElmWatchNodeScriptPath",
-              theElmWatchNodeScriptPath: {
-                tag: "AbsolutePath",
-                absolutePath: "/Users/you/project/postprocess.cjs",
-              },
-            },
-            // It’s not possible to test `throw null` at import – Jest crashes then.
-            null,
-            "",
-            ""
-          )
-        )
-      ).toMatchInlineSnapshot(`
-        ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
-        /Users/you/project/postprocess.cjs
-
-        I tried to import your postprocess file:
-
-        const imported = await import("/Users/you/project/postprocess.cjs")
-
-        But that resulted in this error:
-
-        null
       `);
     });
 

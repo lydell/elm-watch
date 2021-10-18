@@ -1,3 +1,3 @@
-module.exports = require("../../hack")(async () => {
+module.exports = async () => {
   throw "rejected!";
-});
+};

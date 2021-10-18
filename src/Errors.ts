@@ -1,16 +1,8 @@
 import * as path from "path";
-import { DecoderError, repr } from "tiny-decoders";
+import { DecoderError } from "tiny-decoders";
 
 import * as ElmWatchJson from "./ElmWatchJson";
-import {
-  bold,
-  dim,
-  Env,
-  IS_WINDOWS,
-  join,
-  JsonError,
-  unknownErrorToString,
-} from "./Helpers";
+import { bold, dim, Env, IS_WINDOWS, join, JsonError } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -18,7 +10,7 @@ import {
 } from "./NonEmptyArray";
 import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
 import { Port } from "./Port";
-import { ELM_WATCH_NODE } from "./Postprocess";
+import { ELM_WATCH_NODE, UnknownValueAsString } from "./Postprocess";
 import {
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
@@ -571,20 +563,10 @@ You need to specify a JavaScript file to run as well, like so:
 
 export function elmWatchNodeImportError(
   scriptPath: ElmWatchNodeScriptPath,
-  error: unknown,
+  error: UnknownValueAsString,
   stdout: string,
   stderr: string
 ): ErrorTemplate {
-  const code: unknown = (error as { code: unknown } | undefined)?.code;
-  const errorString: string =
-    // `import()` is used for real (since it supports both CJS and MJS).
-    // In Jest tests its seems to be impossible to use `import()` so we have to
-    // support `require()` too.
-    code === "ERR_MODULE_NOT_FOUND" || // `import()`
-    code === "MODULE_NOT_FOUND" // `require()`
-      ? (error as { message: string }).message
-      : unknownErrorToString(error);
-
   return fancyError("POSTPROCESS IMPORT ERROR", scriptPath)`
 I tried to import your postprocess file:
 
@@ -592,7 +574,7 @@ ${printElmWatchNodeImportCommand(scriptPath)}
 
 But that resulted in this error:
 
-${errorString}
+${printUnknownValueAsString(error)}
 
 ${printElmWatchNodeStdio(stdout, stderr)}
 `;
@@ -600,19 +582,11 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 
 export function elmWatchNodeDefaultExportNotFunction(
   scriptPath: ElmWatchNodeScriptPath,
-  imported: Record<string, unknown>,
+  imported: UnknownValueAsString,
+  typeofDefault: string,
   stdout: string,
   stderr: string
 ): ErrorTemplate {
-  const keysMessage =
-    "default" in imported
-      ? ""
-      : `
-These are the keys of ${bold("imported")}:
-
-${JSON.stringify(Object.keys(imported), null, 2)}
-      `;
-
   return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", scriptPath)`
 I imported your postprocess file:
 
@@ -620,9 +594,11 @@ ${printElmWatchNodeImportCommand(scriptPath)}
 
 I expected ${bold("imported.default")} to be a function, but it isn't!
 
-typeof imported.default === ${JSON.stringify(typeof imported.default)}
+typeof imported.default === ${JSON.stringify(typeofDefault)}
 
-${keysMessage}
+${bold("imported")} is:
+
+${printUnknownValueAsString(imported)}
 
 ${printElmWatchNodeStdio(stdout, stderr)}
 `;
@@ -631,12 +607,10 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 export function elmWatchNodeRunError(
   scriptPath: ElmWatchNodeScriptPath,
   args: Array<string>,
-  error: unknown,
+  error: UnknownValueAsString,
   stdout: string,
   stderr: string
 ): ErrorTemplate {
-  const errorString = unknownErrorToString(error);
-
   return fancyError("POSTPROCESS RUN ERROR", scriptPath)`
 I tried to run your postprocess command:
 
@@ -645,7 +619,7 @@ ${printElmWatchNodeRunCommand(args)}
 
 But that resulted in this error:
 
-${errorString}
+${printUnknownValueAsString(error)}
 
 ${printElmWatchNodeStdio(stdout, stderr)}
 `;
@@ -654,7 +628,7 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 export function elmWatchNodeBadReturnValue(
   scriptPath: ElmWatchNodeScriptPath,
   args: Array<string>,
-  returnValue: unknown,
+  returnValue: UnknownValueAsString,
   stdout: string,
   stderr: string
 ): ErrorTemplate {
@@ -666,7 +640,7 @@ ${printElmWatchNodeRunCommand(args)}
 
 I expected ${bold("result")} to be a string, but it is:
 
-${repr(returnValue)}
+${printUnknownValueAsString(returnValue)}
 
 ${printElmWatchNodeStdio(stdout, stderr)}
 `;
@@ -1195,6 +1169,13 @@ ${bold("But that failed too:")}
 
 ${jsonPath.error.message}
       `.trim();
+  }
+}
+
+function printUnknownValueAsString(value: UnknownValueAsString): string {
+  switch (value.tag) {
+    case "UnknownValueAsString":
+      return value.value;
   }
 }
 
