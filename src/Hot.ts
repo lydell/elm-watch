@@ -1254,6 +1254,9 @@ const runCmd =
       case "MarkAsDirty":
         for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;
+          if (outputState.status.tag === "Postprocess") {
+            outputState.status.kill().catch(rejectPromise);
+          }
           webSocketSendToOutput(
             outputPath,
             { tag: "StatusChanged", status: { tag: "Busy" } },

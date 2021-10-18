@@ -79,6 +79,7 @@ export type OutputStatus =
     }
   | {
       tag: "Postprocess";
+      kill: () => Promise<void>;
     }
   | {
       tag: "QueuedForElmMake";

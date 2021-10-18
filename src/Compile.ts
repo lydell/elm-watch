@@ -31,8 +31,10 @@ import {
   Postprocess,
   PostprocessWorkerPool,
   runPostprocess,
+  WORKER_TERMINATED,
 } from "./Postprocess";
 import { OutputError, OutputState, Project } from "./Project";
+import { SPAWN_KILLED } from "./Spawn";
 import * as SpawnElm from "./SpawnElm";
 import {
   CompilationMode,
@@ -928,10 +930,7 @@ async function postprocessHelper({
     });
   };
 
-  outputState.status = { tag: "Postprocess" };
-  updateStatusLineHelper();
-
-  const postprocessResult = await runPostprocess({
+  const { promise, kill } = runPostprocess({
     env,
     elmWatchJsonPath,
     compilationMode: outputState.compilationMode,
@@ -941,6 +940,20 @@ async function postprocessHelper({
     postprocessWorkerPool,
     code,
   });
+
+  outputState.status = { tag: "Postprocess", kill };
+  updateStatusLineHelper();
+
+  let postprocessResult;
+
+  try {
+    postprocessResult = await promise;
+  } catch (unknownError) {
+    if (unknownError === SPAWN_KILLED || unknownError === WORKER_TERMINATED) {
+      return { tag: "Nothing" };
+    }
+    throw unknownError;
+  }
 
   if (outputState.dirty) {
     outputState.status = { tag: "Interrupted" };

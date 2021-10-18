@@ -4,7 +4,7 @@ import { Worker } from "worker_threads";
 import { Env, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
-import { Command, ExitReason, spawn } from "./Spawn";
+import { Command, ExitReason, spawnKillable, SpawnResult } from "./Spawn";
 import {
   CompilationMode,
   ElmWatchJsonPath,
@@ -97,7 +97,7 @@ export type UnknownValueAsString = {
   value: string;
 };
 
-export async function runPostprocess({
+export function runPostprocess({
   env,
   elmWatchJsonPath,
   compilationMode,
@@ -115,16 +115,23 @@ export async function runPostprocess({
   postprocessArray: NonEmptyArray<string>;
   postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
-}): Promise<PostprocessResult> {
+}): { promise: Promise<PostprocessResult>; kill: () => Promise<void> } {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
   const extraArgs = [output.targetName, compilationMode, runMode];
   const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
 
   if (commandName === ELM_WATCH_NODE) {
-    return postprocessWorkerPool
-      .getOrCreateAvailableWorker()
-      .postprocess({ cwd, userArgs, extraArgs, code: code.toString("utf8") });
+    const worker = postprocessWorkerPool.getOrCreateAvailableWorker();
+    return {
+      promise: worker.postprocess({
+        cwd,
+        userArgs,
+        extraArgs,
+        code: code.toString("utf8"),
+      }),
+      kill: () => worker.terminate(),
+    };
   }
 
   const command: Command = {
@@ -134,38 +141,48 @@ export async function runPostprocess({
     stdin: code,
   };
 
-  const spawnResult = await spawn(command);
+  const { promise, kill } = spawnKillable(command);
 
-  switch (spawnResult.tag) {
-    case "CommandNotFoundError":
-    case "OtherSpawnError":
-      return spawnResult;
+  const handleSpawnResult = (spawnResult: SpawnResult): PostprocessResult => {
+    switch (spawnResult.tag) {
+      case "CommandNotFoundError":
+      case "OtherSpawnError":
+        return spawnResult;
 
-    case "StdinWriteError":
-      return {
-        tag: "PostprocessStdinWriteError",
-        error: spawnResult.error,
-        command: spawnResult.command,
-      };
-
-    case "Exit": {
-      const { exitReason } = spawnResult;
-
-      if (!(exitReason.tag === "ExitCode" && exitReason.exitCode === 0)) {
-        const stdout = spawnResult.stdout.toString("utf8");
-        const stderr = spawnResult.stderr.toString("utf8");
+      case "StdinWriteError":
         return {
-          tag: "PostprocessNonZeroExit",
-          exitReason,
-          stdout,
-          stderr,
-          command,
+          tag: "PostprocessStdinWriteError",
+          error: spawnResult.error,
+          command: spawnResult.command,
         };
-      }
 
-      return { tag: "Success", code: spawnResult.stdout };
+      case "Exit": {
+        const { exitReason } = spawnResult;
+
+        if (!(exitReason.tag === "ExitCode" && exitReason.exitCode === 0)) {
+          const stdout = spawnResult.stdout.toString("utf8");
+          const stderr = spawnResult.stderr.toString("utf8");
+          return {
+            tag: "PostprocessNonZeroExit",
+            exitReason,
+            stdout,
+            stderr,
+            command,
+          };
+        }
+
+        return { tag: "Success", code: spawnResult.stdout };
+      }
     }
-  }
+  };
+
+  return {
+    promise: promise.then(handleSpawnResult),
+    kill: () => {
+      kill();
+      return Promise.resolve();
+    },
+  };
 }
 
 // Keeps track of several `PostprocessWorker`s. We don’t need to think about
@@ -223,6 +240,10 @@ export type MessageFromWorker = {
     | { tag: "Reject"; error: unknown }
     | { tag: "Resolve"; value: PostprocessResult };
 };
+
+export const WORKER_TERMINATED = new Error(
+  "`PostprocessWorker` has a `terminate` method. That was called! This error is supposed to be caught."
+);
 
 class PostprocessWorker {
   private worker = new Worker(path.join(__dirname, "PostprocessWorker"), {
@@ -352,10 +373,23 @@ class PostprocessWorker {
   }
 
   async terminate(): Promise<void> {
-    // istanbul ignore else
-    if (this.status.tag !== "Terminated") {
-      this.status = { tag: "Terminated" };
-      await this.worker.terminate();
+    switch (this.status.tag) {
+      case "Idle":
+        this.status = { tag: "Terminated" };
+        await this.worker.terminate();
+        break;
+
+      case "Busy": {
+        const { reject } = this.status;
+        this.status = { tag: "Terminated" };
+        await this.worker.terminate();
+        reject(WORKER_TERMINATED);
+        break;
+      }
+
+      case "Terminated":
+        // Do nothing.
+        break;
     }
   }
 }

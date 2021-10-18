@@ -36,90 +36,127 @@ export type Command = {
   stdin?: Buffer | string;
 };
 
+export const SPAWN_KILLED = new Error(
+  "`spawnKillable` returns a `kill` function. That was called! This error is supposed to be caught."
+);
+
 export async function spawn(command: Command): Promise<SpawnResult> {
-  // istanbul ignore next
-  const actualSpawn = IS_WINDOWS
-    ? (await import("cross-spawn")).spawn
-    : childProcess.spawn;
-  return new Promise((resolve) => {
-    const child = actualSpawn(command.command, command.args, {
-      ...command.options,
-      cwd: command.options.cwd.absolutePath,
-    });
+  return spawnKillable(command).promise;
+}
 
-    const stdout: Array<Buffer> = [];
-    const stderr: Array<Buffer> = [];
+export function spawnKillable(command: Command): {
+  promise: Promise<SpawnResult>;
+  kill: () => void;
+} {
+  let kill = (): void => {
+    // Reassigned below.
+  };
 
-    child.on("error", (error: Error & { code?: string }) => {
-      resolve(
+  const promise = (
+    actualSpawn: typeof childProcess.spawn
+  ): Promise<SpawnResult> =>
+    new Promise((resolve, reject) => {
+      const child = actualSpawn(command.command, command.args, {
+        ...command.options,
+        cwd: command.options.cwd.absolutePath,
+      });
+
+      const stdout: Array<Buffer> = [];
+      const stderr: Array<Buffer> = [];
+      let killed = false;
+
+      child.on("error", (error: Error & { code?: string }) => {
+        resolve(
+          // istanbul ignore next
+          error.code === "ENOENT"
+            ? { tag: "CommandNotFoundError", command }
+            : { tag: "OtherSpawnError", error, command }
+        );
+      });
+
+      let stdinWriteError:
+        | { result: SpawnResult; timeoutId: NodeJS.Timeout }
+        | undefined = undefined;
+
+      child.stdin.on("error", (error: Error & { code?: string }) => {
+        // istanbul ignore else
+        if (error.code === "EPIPE") {
+          // The postprocess program can exit before we have managed to write all
+          // the stdin. The stdin write error happens before the "exit" event.
+          // It’s more important to get to know the exit code and stdout/stderr
+          // than this stdin error. So give the "exit" event a chance to happen
+          // before reporting this one.
+          const result: SpawnResult = {
+            tag: "StdinWriteError",
+            error,
+            command,
+          };
+          stdinWriteError = {
+            result,
+            timeoutId: setTimeout(() => {
+              resolve(result);
+            }, 500),
+          };
+        } else {
+          resolve({ tag: "OtherSpawnError", error, command });
+        }
+      });
+
+      child.stdout.on("error", (error: Error) => {
         // istanbul ignore next
-        error.code === "ENOENT"
-          ? { tag: "CommandNotFoundError", command }
-          : { tag: "OtherSpawnError", error, command }
-      );
-    });
-
-    let stdinWriteError:
-      | { result: SpawnResult; timeoutId: NodeJS.Timeout }
-      | undefined = undefined;
-
-    child.stdin.on("error", (error: Error & { code?: string }) => {
-      // istanbul ignore else
-      if (error.code === "EPIPE") {
-        // The postprocess program can exit before we have managed to write all
-        // the stdin. The stdin write error happens before the "exit" event.
-        // It’s more important to get to know the exit code and stdout/stderr
-        // than this stdin error. So give the "exit" event a chance to happen
-        // before reporting this one.
-        const result: SpawnResult = { tag: "StdinWriteError", error, command };
-        stdinWriteError = {
-          result,
-          timeoutId: setTimeout(() => {
-            resolve(result);
-          }, 500),
-        };
-      } else {
         resolve({ tag: "OtherSpawnError", error, command });
+      });
+
+      child.stderr.on("error", (error: Error) => {
+        // istanbul ignore next
+        resolve({ tag: "OtherSpawnError", error, command });
+      });
+
+      child.stdout.on("data", (chunk: Buffer) => {
+        stdout.push(chunk);
+      });
+
+      child.stderr.on("data", (chunk: Buffer) => {
+        stderr.push(chunk);
+      });
+
+      child.on("exit", (exitCode, signal) => {
+        if (killed) {
+          // Ignore after killed.
+        } else if (exitCode === 0 && stdinWriteError !== undefined) {
+          clearTimeout(stdinWriteError.timeoutId);
+          resolve(stdinWriteError.result);
+        } else {
+          resolve({
+            tag: "Exit",
+            exitReason: exitReason(exitCode, signal),
+            stdout: Buffer.concat(stdout),
+            stderr: Buffer.concat(stderr),
+            command,
+          });
+        }
+      });
+
+      kill = () => {
+        if (!killed) {
+          child.kill();
+          reject(SPAWN_KILLED);
+          killed = true;
+        }
+      };
+
+      if (command.stdin !== undefined) {
+        child.stdin.end(command.stdin);
       }
     });
 
-    child.stdout.on("error", (error: Error) => {
-      // istanbul ignore next
-      resolve({ tag: "OtherSpawnError", error, command });
-    });
-
-    child.stderr.on("error", (error: Error) => {
-      // istanbul ignore next
-      resolve({ tag: "OtherSpawnError", error, command });
-    });
-
-    child.stdout.on("data", (chunk: Buffer) => {
-      stdout.push(chunk);
-    });
-
-    child.stderr.on("data", (chunk: Buffer) => {
-      stderr.push(chunk);
-    });
-
-    child.on("exit", (exitCode, signal) => {
-      if (exitCode === 0 && stdinWriteError !== undefined) {
-        clearTimeout(stdinWriteError.timeoutId);
-        resolve(stdinWriteError.result);
-      } else {
-        resolve({
-          tag: "Exit",
-          exitReason: exitReason(exitCode, signal),
-          stdout: Buffer.concat(stdout),
-          stderr: Buffer.concat(stderr),
-          command,
-        });
-      }
-    });
-
-    if (command.stdin !== undefined) {
-      child.stdin.end(command.stdin);
-    }
-  });
+  return {
+    // istanbul ignore next
+    promise: IS_WINDOWS
+      ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
+      : promise(childProcess.spawn),
+    kill,
+  };
 }
 
 export type ExitReason =
