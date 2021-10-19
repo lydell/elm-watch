@@ -1351,8 +1351,13 @@ const runCmd =
           switch (response) {
             case "KeepGoing":
               return;
+
             case "Stop":
-              mutable.watcher.close().then(() => {
+              Promise.all([
+                mutable.watcher.close(),
+                mutable.webSocketServer.close(),
+                mutable.postprocessWorkerPool.terminate(),
+              ]).then(() => {
                 resolvePromise({ tag: "ExitOnIdle" });
               }, rejectPromise);
               return;
