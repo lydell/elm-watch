@@ -185,12 +185,19 @@ export function runPostprocess({
   };
 }
 
-// Keeps track of several `PostprocessWorker`s. We don’t need to think about
-// limiting here – that is done in `Compile.getOutputActions`.
+// Keeps track of several `PostprocessWorker`s. Note: `Compile.getOutputActions`
+// makes sure that at the most N things (not just workers) are running at the
+// same time.
 export class PostprocessWorkerPool {
   private workers = new Set<PostprocessWorker>();
 
+  private calculateMax: () => number = () => Infinity;
+
   constructor(private onUnexpectedError: (error: Error) => void) {}
+
+  setCalculateMax(calculateMax: () => number): void {
+    this.calculateMax = calculateMax;
+  }
 
   getOrCreateAvailableWorker(): PostprocessWorker {
     const existingWorker = Array.from(this.workers).find((worker) =>
@@ -199,6 +206,9 @@ export class PostprocessWorkerPool {
     if (existingWorker === undefined) {
       const newWorker = new PostprocessWorker(
         this.onUnexpectedError,
+        () => {
+          this.limit().catch(this.onUnexpectedError);
+        },
         (worker) => {
           this.workers.delete(worker);
         }
@@ -207,6 +217,16 @@ export class PostprocessWorkerPool {
       return newWorker;
     } else {
       return existingWorker;
+    }
+  }
+
+  async limit(): Promise<void> {
+    const idle = Array.from(this.workers).filter((worker) => worker.isIdle());
+    const toKill = this.workers.size - this.calculateMax();
+    if (toKill > 0) {
+      await Promise.all(
+        idle.slice(-toKill).map((worker) => worker.terminate())
+      );
     }
   }
 
@@ -263,6 +283,7 @@ class PostprocessWorker {
 
   constructor(
     private onUnexpectedError: (error: Error) => void,
+    private onIdle: (worker: PostprocessWorker) => void,
     private onTerminated: (worker: PostprocessWorker) => void
   ) {
     const stdout: Array<Buffer> = [];
@@ -345,6 +366,7 @@ class PostprocessWorker {
                   break;
               }
               this.status = { tag: "Idle" };
+              this.onIdle(this);
               break;
 
             // istanbul ignore next

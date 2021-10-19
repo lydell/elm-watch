@@ -19,6 +19,7 @@ import {
   formatTime,
   join,
   JsonError,
+  silentlyReadIntEnvValue,
   toError,
   toJsonError,
 } from "./Helpers";
@@ -63,6 +64,8 @@ type Mutable = {
   postprocessWorkerPool: PostprocessWorkerPool;
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
+  lastWebSocketCloseTimestamp: number | undefined;
+  workerLimitTimeoutMs: number;
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
@@ -97,6 +100,9 @@ type Msg =
   | {
       tag: "SleepBeforeNextActionDone";
       date: Date;
+    }
+  | {
+      tag: "WorkerLimitTimeoutPassed";
     };
 
 type Model = {
@@ -162,6 +168,9 @@ type Cmd =
     }
   | {
       tag: "InstallDependencies";
+    }
+  | {
+      tag: "LimitWorkers";
     }
   | {
       tag: "LogInfoMessageWithTimeline";
@@ -280,6 +289,7 @@ export async function run(
 ): Promise<HotRunResult> {
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
+      env,
       getNow,
       postprocessWorkerPool,
       webSocketState,
@@ -324,6 +334,7 @@ export async function watchElmWatchJsonOnce(
 
 const initMutable =
   (
+    env: Env,
     getNow: GetNow,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
@@ -334,6 +345,16 @@ const initMutable =
     dispatch: (msg: Msg) => void,
     rejectPromise: (error: Error) => void
   ): Mutable => {
+    // The more targets that are enabled by connecting websockets, the more
+    // workers we might have. Terminate unnecessary idle workers as websockets
+    // close. But wait a while first: We don’t want to terminate workers just
+    // because the user refreshed the page (which results in a disconnect +
+    // connect).
+    const workerLimitTimeoutMs = silentlyReadIntEnvValue(
+      env.__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+      10000
+    );
+
     const watcher = chokidar.watch(project.watchRoot.absolutePath, {
       ignoreInitial: true,
       ignored: ["**/elm-stuff/**", "**/node_modules/**"],
@@ -371,6 +392,8 @@ const initMutable =
       postprocessWorkerPool,
       webSocketServer,
       webSocketConnections,
+      lastWebSocketCloseTimestamp: undefined,
+      workerLimitTimeoutMs,
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
@@ -387,6 +410,14 @@ const initMutable =
         })}\n`
       ),
     };
+
+    postprocessWorkerPool.setCalculateMax(() =>
+      mutable.lastWebSocketCloseTimestamp !== undefined &&
+      getNow().getTime() >=
+        mutable.lastWebSocketCloseTimestamp + workerLimitTimeoutMs
+        ? makePrioritizedOutputs(mutable.webSocketConnections).size
+        : Infinity
+    );
 
     writeElmWatchStuffJson(mutable);
 
@@ -791,6 +822,9 @@ const update =
 
       case "WebSocketClosed":
         return [model, [{ tag: "WebSocketRemove", webSocket: msg.webSocket }]];
+
+      case "WorkerLimitTimeoutPassed":
+        return [model, [{ tag: "LimitWorkers" }]];
     }
   };
 
@@ -1232,6 +1266,10 @@ const runCmd =
         );
         return;
 
+      case "LimitWorkers":
+        mutable.postprocessWorkerPool.limit().catch(rejectPromise);
+        return;
+
       case "LogInfoMessageWithTimeline": {
         if (mutable.lastInfoMessage !== undefined && logger.raw.stderr.isTTY) {
           readline.moveCursor(
@@ -1345,6 +1383,10 @@ const runCmd =
         mutable.webSocketConnections = mutable.webSocketConnections.filter(
           ({ webSocket }) => webSocket !== cmd.webSocket
         );
+        mutable.lastWebSocketCloseTimestamp = getNow().getTime();
+        setTimeout(() => {
+          dispatch({ tag: "WorkerLimitTimeoutPassed" });
+        }, mutable.workerLimitTimeoutMs);
         return;
 
       case "WebSocketSend":
