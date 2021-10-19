@@ -1326,6 +1326,9 @@ const runCmd =
         Promise.all([
           mutable.watcher.close(),
           elmWatchJsonChanged ? mutable.webSocketServer.close() : undefined,
+          elmWatchJsonChanged
+            ? mutable.postprocessWorkerPool.terminate()
+            : undefined,
         ]).then(() => {
           resolvePromise({
             tag: "Restart",

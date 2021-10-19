@@ -73,6 +73,8 @@ export async function run(
     });
   }
 
+  await postprocessWorkerPool.terminate();
+
   const errors = Compile.extractErrors(project);
 
   if (isNonEmptyArray(errors)) {
