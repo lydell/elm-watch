@@ -252,7 +252,7 @@ export function assertExitCode(
       `
 exit ${actualExitCode} (expected ${expectedExitCode})
 
-${printStdio(stdout, stderr)}
+${printStdio(stdout, stderr)(process.stdout.columns)}
       `.trim()
     );
   }

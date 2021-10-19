@@ -2,7 +2,7 @@
   "postprocess": [
     "node",
     "-e",
-    "console.log(\"stdout\"); console.error(\"stderr\"); process.exit(4)"
+    "console.log(\"1234567890\".repeat(800)+'1'); console.error(\"1234567890\".repeat(400)); console.error(\"1234567890\".repeat(400)+'12'); console.error('last line'); process.exit(4)"
   ],
   "targets": {
     "main": {

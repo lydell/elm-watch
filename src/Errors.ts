@@ -43,13 +43,19 @@ type FancyErrorLocation =
 
 export const fancyError =
   (title: string, location: FancyErrorLocation) =>
-  (strings: TemplateStringsArray, ...values: Array<string>) =>
+  (
+    strings: TemplateStringsArray,
+    ...values: Array<string | ((width: number) => string)>
+  ) =>
   (width: number): string => {
     const content = join(
-      strings.flatMap((string, index) => [
-        string,
-        (values[index] ?? "").trim(),
-      ]),
+      strings.flatMap((string, index) => {
+        const value = values[index] ?? "";
+        return [
+          string,
+          typeof value === "function" ? value(width) : value.trim(),
+        ];
+      }),
       ""
     ).trim();
 
@@ -1124,30 +1130,72 @@ function printExitReason(exitReason: ExitReason): string {
   }
 }
 
-export function printStdio(stdout: string, stderr: string): string {
-  return stdout !== "" && stderr === ""
-    ? stdout
-    : stdout === "" && stderr !== ""
-    ? stderr
-    : stdout === "" && stderr === ""
-    ? "(no output)"
-    : `
+export const printStdio =
+  (stdout: string, stderr: string) =>
+  (width: number): string =>
+    stdout !== "" && stderr === ""
+      ? limitStdio(stdout, width)
+      : stdout === "" && stderr !== ""
+      ? limitStdio(stderr, width)
+      : stdout === "" && stderr === ""
+      ? dim("(no output)")
+      : `
 STDOUT:
-${stdout}
-STDERR:
-${stderr}
-`.trim();
-}
+${limitStdio(stdout, width)}
 
-function printElmWatchNodeStdio(stdout: string, stderr: string): string {
-  return stdout === "" && stderr === ""
-    ? ""
-    : `
-STDOUT:
-${stdout}
 STDERR:
-${stderr}
+${limitStdio(stderr, width)}
 `.trim();
+
+const printElmWatchNodeStdio =
+  (stdout: string, stderr: string) =>
+  (width: number): string =>
+    stdout === "" && stderr === ""
+      ? ""
+      : `
+STDOUT:
+${limitStdio(stdout, width)}
+
+STDERR:
+${limitStdio(stderr, width)}
+`.trim();
+
+// Limit `string` to take at most 100 lines of terminal (roughly).
+// It doesn’t need to be precise. As long as we don’t print megabytes of
+// JavaScript that completely destroys the error message we’re good.
+function limitStdio(string: string, width: number): string {
+  const max = 100;
+  const lines = string.trimEnd().split("\n");
+  const result: Array<string> = [];
+  let usedLines = 0;
+
+  for (const line of lines) {
+    const count = Math.ceil(line.length / width);
+    const available = max - usedLines;
+    if (available <= 0) {
+      break;
+    } else if (count > available) {
+      const take = available * width;
+      const left = line.length - take;
+      result.push(
+        `${line.slice(0, take)} ${dim(
+          left === 1 ? "1 more character" : `${left} more characters`
+        )}`
+      );
+      usedLines += available;
+      break;
+    } else {
+      result.push(line);
+      usedLines += count;
+    }
+  }
+
+  const joined = join(result, "\n");
+  const left = lines.length - result.length;
+
+  return left > 0
+    ? `${joined}\n${dim(left === 1 ? "1 more line" : `${left} more lines`)}`
+    : joined;
 }
 
 function printJsonPath(jsonPath: JsonPath): string {

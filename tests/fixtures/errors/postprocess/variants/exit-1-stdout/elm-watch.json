@@ -1,5 +1,5 @@
 {
-  "postprocess": ["node", "-e", "console.log('some stdout'); process.exit(1)"],
+  "postprocess": ["node", "-e", "console.log(Array.from({length:101}, (_, i) => `${i + 1} | stdout line`).join('\\n')); process.exit(1)"],
   "targets": {
     "main": {
       "inputs": ["../../src/Main.elm"],

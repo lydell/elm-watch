@@ -2,7 +2,7 @@
   "postprocess": [
     "node",
     "-e",
-    "console.error('some stderr'); process.exit(2)"
+    "console.error(Array.from({length:102}, (_, i) => `${i + 1} | stderr line`).join('\\n')); process.exit(2)"
   ],
   "targets": {
     "main": {
