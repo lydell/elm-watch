@@ -415,7 +415,9 @@ const initMutable =
       mutable.lastWebSocketCloseTimestamp !== undefined &&
       getNow().getTime() >=
         mutable.lastWebSocketCloseTimestamp + workerLimitTimeoutMs
-        ? makePrioritizedOutputs(mutable.webSocketConnections).size
+        ? // Save one worker, so we always have one “warmed up” worker ready to go
+          // when needed.
+          Math.max(1, makePrioritizedOutputs(mutable.webSocketConnections).size)
         : Infinity
     );
 
