@@ -1956,10 +1956,7 @@ describe("errors", () => {
 
         But that resulted in this error:
 
-        Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js'
-        Require stack:
-        - /Users/you/project/src/PostprocessWorker.ts
-        - /Users/you/project/src/PostprocessWorker.js
+        Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js' imported from /Users/you/project/src/PostprocessWorker.ts
 
         🚨 ⧙1⧘ error found
       `);
@@ -2085,7 +2082,7 @@ describe("errors", () => {
 
         ⧙imported⧘ is:
 
-        {"postproceess": function "postproceess", "default": Object(1)}
+        {"default": Object(1), "postprocess": function "postprocess"}
 
         STDOUT:
         This is stdout
