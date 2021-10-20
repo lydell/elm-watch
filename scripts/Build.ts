@@ -1,7 +1,6 @@
-import typescript from "@rollup/plugin-typescript";
+import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
-import { rollup } from "rollup";
 
 const DIR = path.dirname(__dirname);
 const BUILD = path.join(DIR, "build");
@@ -11,7 +10,7 @@ const READ_MORE =
 
 type Package = {
   version: string;
-  dependencies: unknown;
+  dependencies: Record<string, string>;
 };
 
 function readPackage(name: string): Package {
@@ -64,76 +63,56 @@ async function run(): Promise<void> {
     )
   );
 
-  type RollupInput = {
-    input: string;
-    transform: (code: string) => string;
-    writeFileOptions: fs.WriteFileOptions;
-  };
+  const result = await esbuild.build({
+    bundle: true,
+    entryPoints: [
+      path.join(DIR, "src", "index.ts"),
+      path.join(DIR, "src", "PostprocessWorker.ts"),
+    ],
+    external: Object.keys(PACKAGE.dependencies),
+    outdir: BUILD,
+    platform: "node",
+    write: false,
+  });
 
-  // Rollup creates a shared file with way more than `PostprocessWorker` needs
-  // if we run `rollup` just once with both inputs, for some reason.
-  // `PostprocessWorker` depends on so little from the rest of the code base so
-  // a little bit of duplication in it doesn’t matter.
-  const inputs: Array<RollupInput> = [
-    {
-      input: path.join(DIR, "src", "index.ts"),
-      transform: (code) => {
-        const replaced = code
+  const toModuleRegex = /__toModule\((require\("[^"]+"\))\)/g;
+
+  for (const output of result.outputFiles) {
+    switch (path.basename(output.path)) {
+      case "index.js": {
+        const replaced = output.text
+          .slice(
+            secondIndexOf(output.text, "//"),
+            output.text.lastIndexOf("//")
+          )
+          .replace(toModuleRegex, "$1")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
-          .replace(/^exports.elmWatchCli = elmWatchCli;/m, "")
           .trim();
-        return `#!/usr/bin/env node\n${replaced}`;
-      },
-      writeFileOptions: { mode: "755" },
-    },
-    {
-      input: path.join(DIR, "src", "PostprocessWorker.ts"),
-      transform: (code) =>
-        // TypeScript turns our native `import()` into `require()`.
-        // Turn it back into a native `import()`, since it supports both CJS and MJS.
-        code.replace(
-          /function \(\) \{ return require\(/g,
-          "() => { return import("
-        ),
-      writeFileOptions: {},
-    },
-  ];
-
-  for (const rollupInput of inputs) {
-    const bundle = await rollup({
-      input: rollupInput.input,
-      external: (source) => /^[a-z@]/.test(source),
-      plugins: [typescript({ module: "ESNext" })],
-      onwarn: (warning) => {
-        // Rollup warnings _do_ have a real `.toString()` method.
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
-        throw new Error(warning.toString());
-      },
-      treeshake: {
-        moduleSideEffects: false,
-      },
-    });
-
-    const { output } = await bundle.generate({
-      format: "cjs",
-      interop: "esModule",
-    });
-
-    for (const item of output) {
-      switch (item.type) {
-        case "asset":
-          throw new Error(`Unexpectedly got an "asset".`);
-
-        case "chunk": {
-          fs.writeFileSync(
-            path.join(BUILD, item.fileName),
-            rollupInput.transform(item.code),
-            rollupInput.writeFileOptions
-          );
-        }
+        const code = `#!/usr/bin/env node\n${replaced}`;
+        fs.writeFileSync(output.path, code, { mode: "755" });
+        break;
       }
+
+      case "PostprocessWorker.js":
+        fs.writeFileSync(
+          output.path,
+          output.text
+            .slice(output.text.indexOf("//"))
+            .replace(toModuleRegex, "$1")
+        );
+        break;
+
+      default:
+        throw new Error(`Unexpected output: ${output.path}`);
     }
   }
+}
+
+function secondIndexOf(string: string, substring: string): number {
+  const first = string.indexOf(substring);
+  return first === -1
+    ? -1
+    : string.indexOf(substring, first + substring.length);
 }
 
 run().catch((error: Error) => {

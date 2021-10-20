@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
           node-version: "${{ matrix.node-version }}"
 
@@ -31,9 +31,12 @@ jobs:
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --no-audit
         env:
           NO_ELM_TOOLING_INSTALL: 1
+
+      - name: TypeScript
+        run: npx --no-install tsc
 
       - name: ESLint
         run: npx --no-install eslint --report-unused-disable-directives .
