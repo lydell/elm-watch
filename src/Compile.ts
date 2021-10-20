@@ -815,7 +815,8 @@ because until just now, there was no need to spend time on generating JS!
 
 This stub file is now connecting to \`elm-watch\` via WebSocket, letting it know
 that it's time to start generating real JS. Once that's done the page should be
-automatically reloaded.
+automatically reloaded. But if you get compilation errors you'll need to fix
+them first.
   `.trim()
   );
 
