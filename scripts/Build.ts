@@ -63,6 +63,24 @@ async function run(): Promise<void> {
     )
   );
 
+  fs.writeFileSync(
+    path.join(BUILD, "ClientCode.js"),
+    `exports.code = require("fs").readFileSync(require("path").join(__dirname, "client.js"), "utf8");`
+  );
+
+  const clientResult = await esbuild.build(clientEsbuildOptions);
+
+  for (const output of clientResult.outputFiles) {
+    switch (path.basename(output.path)) {
+      case "client.js":
+        fs.writeFileSync(output.path, output.text);
+        break;
+
+      default:
+        throw new Error(`Unexpected output: ${output.path}`);
+    }
+  }
+
   const result = await esbuild.build({
     bundle: true,
     entryPoints: [
@@ -73,6 +91,20 @@ async function run(): Promise<void> {
     outdir: BUILD,
     platform: "node",
     write: false,
+    plugins: [
+      {
+        // I didn’t manage to do this with the `external` option, so using a plugin instead.
+        name: "Ignore ClientCode.ts",
+        setup(build) {
+          build.onResolve(
+            {
+              filter: /^\.\/ClientCode$/,
+            },
+            (args) => ({ path: args.path, external: true })
+          );
+        },
+      },
+    ],
   });
 
   const toModuleRegex = /__toModule\((require\("[^"]+"\))\)/g;
@@ -115,7 +147,17 @@ function secondIndexOf(string: string, substring: string): number {
     : string.indexOf(substring, first + substring.length);
 }
 
-run().catch((error: Error) => {
-  process.stderr.write(`${error.message}\n`);
-  process.exit(1);
-});
+export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
+  bundle: true,
+  entryPoints: [path.join(__dirname, "..", "client", "index.ts")],
+  outfile: path.join(BUILD, "client.js"),
+  platform: "browser",
+  write: false,
+};
+
+if (require.main === module) {
+  run().catch((error: Error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(1);
+  });
+}

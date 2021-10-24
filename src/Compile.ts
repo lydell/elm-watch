@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as readline from "readline";
 
+import * as ClientCode from "./ClientCode";
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
@@ -801,8 +802,7 @@ type InjectWebSocketClientResult =
     };
 
 function injectWebSocketClient(code: string): InjectWebSocketClientResult {
-  // TODO: Implement!
-  return { tag: "Success", code };
+  return { tag: "Success", code: `${code}\n${ClientCode.code}` };
 }
 
 const proxyFileIIFE = (scope: Record<string, unknown>): void => {
