@@ -21,6 +21,7 @@
     "eslint": "7.32.0",
     "eslint-plugin-jest": "24.4.2",
     "eslint-plugin-simple-import-sort": "7.0.0",
+    "globals": "13.10.0",
     "jest": "27.2.5",
     "jest-environment-node-single-context": "27.2.0",
     "prettier": "2.4.1",

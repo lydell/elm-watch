@@ -1,3 +1,6 @@
+const globals = require("globals");
+const { builtinModules } = require("module");
+
 const error = "error";
 const warn = process.argv.includes("--report-unused-disable-directives")
   ? "error"
@@ -174,6 +177,38 @@ module.exports = {
         "@typescript-eslint/triple-slash-reference": warn,
         "@typescript-eslint/unbound-method": error,
         "@typescript-eslint/unified-signatures": warn,
+      },
+    },
+    {
+      files: ["src/**/*.ts", "scripts/**/*.ts"],
+      rules: {
+        "no-restricted-globals": [
+          error,
+          ...new Set(
+            [
+              ...Object.keys(globals.browser),
+              ...Object.keys(globals.jest),
+            ].filter(
+              (name) =>
+                !Object.prototype.hasOwnProperty.call(globals.node, name)
+            )
+          ),
+        ],
+      },
+    },
+    {
+      files: "client/**/*.ts",
+      rules: {
+        "no-restricted-imports": [error, ...builtinModules],
+        "no-restricted-globals": [
+          error,
+          ...new Set(
+            [...Object.keys(globals.node), ...Object.keys(globals.jest)].filter(
+              (name) =>
+                !Object.prototype.hasOwnProperty.call(globals.browser, name)
+            )
+          ),
+        ],
       },
     },
     {
