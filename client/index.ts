@@ -1,4 +1,3 @@
-import * as Decode from "tiny-decoders";
+import { WebSocketToClientMessage } from "./WebSocketMessages";
 
-// eslint-disable-next-line no-console
-console.log("Client!", Decode.repr);
+WebSocketToClientMessage(undefined);

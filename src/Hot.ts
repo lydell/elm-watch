@@ -6,6 +6,10 @@ import * as Decode from "tiny-decoders";
 import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
+import {
+  WebSocketToClientMessage,
+  WebSocketToServerMessage,
+} from "../client/WebSocketMessages";
 import * as Compile from "./Compile";
 import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import * as Errors from "./Errors";
@@ -239,40 +243,6 @@ export type WebSocketState = {
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
 };
-
-type WebSocketToClientMessage = ReturnType<typeof WebSocketToClientMessage>;
-const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
-  StatusChanged: Decode.fieldsAuto({
-    tag: () => "StatusChanged" as const,
-    status: Decode.fieldsUnion("tag", {
-      AlreadyUpToDate: Decode.fieldsAuto({
-        tag: () => "AlreadyUpToDate" as const,
-      }),
-      Busy: Decode.fieldsAuto({
-        tag: () => "Busy" as const,
-      }),
-      CompileError: Decode.fieldsAuto({
-        tag: () => "CompileError" as const,
-      }),
-      ClientError: Decode.fieldsAuto({
-        tag: () => "ClientError" as const,
-        message: Decode.string,
-      }),
-    }),
-  }),
-  SuccessfullyCompiled: Decode.fieldsAuto({
-    tag: () => "SuccessfullyCompiled" as const,
-    code: Decode.string,
-  }),
-});
-
-type WebSocketToServerMessage = ReturnType<typeof WebSocketToServerMessage>;
-const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
-  ChangeCompilationMode: Decode.fieldsAuto({
-    tag: () => "ChangeCompilationMode" as const,
-    compilationMode: CompilationMode,
-  }),
-});
 
 // This uses something inspired by The Elm Architecture, since it’s all about
 // keeping state (model) and reacting to events (messages).
