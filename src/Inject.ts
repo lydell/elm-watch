@@ -20,9 +20,146 @@ export type InjectError = {
   errorFilePath: Errors.ErrorFilePath;
 };
 
-const mainReplacements: Array<Replacement> = [];
+// TODO: Can make these safe? Don’t replace inside strings.
+const mainReplacements: Array<Replacement> = [
+  [
+    /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}/m,
+    `
+function _Platform_initialize(flagDecoder, args, init, impl, stepperBuilder)
+{
+  if (args === "__elmWatchReturnImpl") {
+    return impl;
+  }
 
-const debuggerReplacements: Array<Replacement> = [];
+  var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
+  $elm$core$Result$isOk(result) || _Debug_crash(2 /**/, _Json_errorToString(result.a) /**/);
+  var managers = {};
+  var initPair = init(result.a);
+  var model = initPair.a;
+  var stepper = stepperBuilder(sendToApp, model);
+  var ports = _Platform_setupEffects(managers, sendToApp);
+  var update;
+  var subscriptions;
+
+  function setUpdateAndSubscriptions() {
+    if (typeof $elm$browser$Debugger$Main$wrapUpdate !== "undefined") {
+      update = $elm$browser$Debugger$Main$wrapUpdate(impl.update);
+      subscriptions = $elm$browser$Debugger$Main$wrapSubs(impl.subscriptions);
+    } else {
+      update = impl.update;
+      subscriptions = impl.subscriptions;
+    }
+  }
+
+  setUpdateAndSubscriptions();
+
+  function sendToApp(msg, viewMetadata) {
+    var pair = A2(update, msg, model);
+    stepper(model = pair.a, viewMetadata);
+    _Platform_enqueueEffects(managers, pair.b, subscriptions(model));
+  }
+
+  _Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
+
+  function __elmWatchHotReload(newImpl) {
+    for (var key in newImpl) {
+      impl[key] = newImpl[key];
+    }
+    setUpdateAndSubscriptions();
+    stepper(model);
+    _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
+  }
+
+  return ports ? { ports: ports, __elmWatchHotReload } : { __elmWatchHotReload };
+}
+    `.trim(),
+  ],
+  [
+    /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}\);/m,
+    `
+var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args) {
+  if (args === "__elmWatchReturnImpl") {
+    return virtualNode;
+  }
+
+  var node = args && args['node'] ? args['node'] : _Debug_crash(0);
+
+  function render() {
+    node.parentNode.replaceChild(
+      _VirtualDom_render(virtualNode, function() {}),
+      node
+    );
+  }
+
+  render();
+
+  function __elmWatchHotReload(newVirtualNode) {
+    virtualNode = newVirtualNode;
+    render();
+  }
+
+  return { __elmWatchHotReload };
+});
+    `.trim(),
+  ],
+  [`var onUrlChange = impl.onUrlChange;`, ``],
+  [`var onUrlRequest = impl.onUrlRequest;`, ``],
+  [
+    `var key = function() { key.a(onUrlChange(_Browser_getUrl())); };`,
+    `var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
+  ],
+  [`sendToApp(onUrlRequest(`, `sendToApp(impl.onUrlRequest(`],
+  [
+    /view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions/g,
+    `impl`,
+  ],
+  [
+    /impl\.init,\s*impl\.update,\s*impl\.subscriptions,/g,
+    `impl.init, impl.impl || impl,`,
+  ],
+  [`var view = impl.view;`, ``],
+  [/\bview(/g, `impl.view(`],
+  [
+    /^function _Platform_export\(exports\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}/m,
+    `
+function _Platform_export(exports) {
+  _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
+}
+function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
+  for (var name in exports) {
+    if (name === "init") {
+      if ("init" in obj) {
+        if ("__elmWatchApps" in obj) {
+          var newImpl = exports.init("__elmWatchReturnImpl");
+          for (var app of obj.__elmWatchApps) {
+            app.__elmWatchHotReload(newImpl);
+          }
+        } else {
+          _Debug_crash(6, moduleName);
+        }
+      } else {
+        obj.__elmWatchApps = [];
+        obj.init = (...args) => {
+          var app = exports.init(...args);
+          obj.__elmWatchApps.push(app);
+          return app;
+        };
+      }
+    } else {
+      _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
+    }
+  }
+}
+    `,
+  ],
+];
+
+const debuggerReplacements: Array<Replacement> = [
+  [
+    /\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/g,
+    `impl,`,
+  ],
+];
 
 const debuggerRegex = /^console.warn\(['"]Compiled in DEBUG mode/m;
 
