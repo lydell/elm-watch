@@ -2,13 +2,10 @@ import * as fs from "fs";
 import * as os from "os";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { Env, JsonError, sha256, toError, toJsonError } from "./Helpers";
+import * as Errors from "./Errors";
+import { Env, JsonError, toError, toJsonError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
-import {
-  absoluteDirname,
-  AbsolutePath,
-  absolutePathFromString,
-} from "./PathHelpers";
+import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn } from "./Spawn";
 import { CompilationMode, ElmJsonPath, InputPath, OutputPath } from "./Types";
 
@@ -22,7 +19,7 @@ export type RunElmMakeError =
   | {
       tag: "ElmMakeJsonParseError";
       error: JsonError;
-      jsonPath: JsonPath;
+      errorFilePath: Errors.ErrorFilePath;
       command: Command;
     }
   | {
@@ -41,10 +38,6 @@ export type RunElmMakeError =
       stderr: string;
       command: Command;
     };
-
-export type JsonPath =
-  | AbsolutePath
-  | { tag: "WritingJsonFailed"; error: Error; attemptedPath: AbsolutePath };
 
 export type NullOutputPath = { tag: "NullOutputPath" };
 
@@ -160,7 +153,12 @@ function parseElmMakeJson(
     return {
       tag: "ElmMakeJsonParseError",
       error,
-      jsonPath: tryWriteJson(command.options.cwd, jsonString),
+      errorFilePath: Errors.tryWriteErrorFile(
+        command.options.cwd,
+        "ElmMakeJsonParseError",
+        "json",
+        jsonString
+      ),
       command,
     };
   }
@@ -175,29 +173,13 @@ function parseElmMakeJson(
     return {
       tag: "ElmMakeJsonParseError",
       error,
-      jsonPath: tryWriteJson(
+      errorFilePath: Errors.tryWriteErrorFile(
         command.options.cwd,
+        "ElmMakeJsonParseError",
+        "json",
         JSON.stringify(json, null, 2)
       ),
       command,
-    };
-  }
-}
-
-function tryWriteJson(cwd: AbsolutePath, json: string): JsonPath {
-  const jsonPath = absolutePathFromString(
-    cwd,
-    `elm-watch-ElmMakeJsonParseError-${sha256(json)}.json`
-  );
-  try {
-    fs.writeFileSync(jsonPath.absolutePath, json);
-    return jsonPath;
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    return {
-      tag: "WritingJsonFailed",
-      error,
-      attemptedPath: jsonPath,
     };
   }
 }

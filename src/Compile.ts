@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as readline from "readline";
 
-import * as ClientCode from "./ClientCode";
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
 import * as Errors from "./Errors";
@@ -19,6 +18,7 @@ import {
   WalkImportsError,
   WalkImportsResult,
 } from "./ImportWalker";
+import * as Inject from "./Inject";
 import { Logger } from "./Logger";
 import {
   flattenNonEmptyArray,
@@ -650,6 +650,7 @@ async function compileOneOutput({
   switch (combinedResult.tag) {
     case "elm make success + walker success":
       return onCompileSuccess(
+        elmJsonPath,
         updateStatusLineHelper,
         runMode,
         outputPath,
@@ -677,6 +678,7 @@ async function compileOneOutput({
 }
 
 function onCompileSuccess(
+  elmJsonPath: ElmJsonPath,
   updateStatusLineHelper: () => void,
   runMode: RunModeWithVersionedIdentifier,
   outputPath: OutputPath,
@@ -737,11 +739,14 @@ function onCompileSuccess(
         return { tag: "CompileError", outputPath };
       }
 
-      const result = injectWebSocketClient(buffer.toString("utf8"));
+      const result = Inject.inject(
+        elmJsonPath.theElmJsonPath,
+        buffer.toString("utf8")
+      );
 
       switch (result.tag) {
-        case "Error":
-          // outputState.status = { tag: "TODO" };
+        case "InjectSearchAndReplaceNotFound":
+          outputState.status = result;
           updateStatusLineHelper();
           return { tag: "CompileError", outputPath };
 
@@ -790,73 +795,6 @@ function onCompileSuccess(
       }
     }
   }
-}
-
-type InjectWebSocketClientResult =
-  | {
-      tag: "Error";
-    }
-  | {
-      tag: "Success";
-      code: string;
-    };
-
-function injectWebSocketClient(code: string): InjectWebSocketClientResult {
-  return { tag: "Success", code: `${code}\n${ClientCode.code}` };
-}
-
-const proxyFileIIFE = (scope: Record<string, unknown>): void => {
-  const error = new Error(
-    `
-Certain parts of \`window.Elm\` aren't available yet! That's fine though!
-
-\`elm-watch\` has generated a stub file in place of Elm's compiled JS. This is
-because until just now, there was no need to spend time on generating JS!
-
-This stub file is now connecting to \`elm-watch\` via WebSocket, letting it know
-that it's time to start generating real JS. Once that's done the page should be
-automatically reloaded. But if you get compilation errors you'll need to fix
-them first.
-  `.trim()
-  );
-
-  const existing = scope.Elm;
-  const existingObject =
-    typeof existing === "object" && existing !== null ? existing : undefined;
-
-  const elmProxy = new Proxy(existingObject ?? {}, {
-    get(target, property, receiver) {
-      const value = Reflect.get(target, property, receiver) as unknown;
-      if (value !== undefined) {
-        return value;
-      }
-      throw error;
-    },
-    getOwnPropertyDescriptor(target, property) {
-      const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
-      if (descriptor !== undefined) {
-        return descriptor;
-      }
-      throw error;
-    },
-    has(target, property) {
-      const has = Reflect.has(target, property);
-      if (has) {
-        return true;
-      }
-      throw error;
-    },
-    ownKeys() {
-      throw error;
-    },
-  });
-
-  scope.Elm = elmProxy;
-};
-
-function proxyFile(): Buffer {
-  // TODO: Also inject websocket stuff.
-  return Buffer.from(`(${proxyFileIIFE.toString()})(this);`);
 }
 
 type NeedsToWriteProxyFileResult =
@@ -1135,7 +1073,7 @@ async function typecheck({
               );
               fs.writeFileSync(
                 outputPath.theOutputPath.absolutePath,
-                Buffer.concat([versionedIdentifier, proxyFile()])
+                Buffer.concat([versionedIdentifier, Inject.proxyFile()])
               );
               // The proxy file doesn’t count as writing to disk…
               outputState.status = { tag: "NotWrittenToDisk" };
@@ -1433,6 +1371,7 @@ function statusLine(
     case "ReadOutputError":
     case "WriteOutputError":
     case "WriteProxyOutputError":
+    case "InjectSearchAndReplaceNotFound":
       return truncate(fancy ? `🚨 ${targetName}` : `${targetName}: error`);
   }
 }
@@ -1604,7 +1543,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
             return Errors.elmMakeJsonParseError(
               outputPath,
               status.error,
-              status.jsonPath,
+              status.errorFilePath,
               status.command
             );
 
@@ -1646,6 +1585,12 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
 
           case "WriteProxyOutputError":
             return Errors.writeProxyOutputError(outputPath, status.error);
+
+          case "InjectSearchAndReplaceNotFound":
+            return Errors.injectSearchAndReplaceNotFound(
+              outputPath,
+              status.errorFilePath
+            );
         }
       })
     ),

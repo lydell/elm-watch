@@ -1,8 +1,18 @@
+import * as fs from "fs";
 import * as path from "path";
 import { DecoderError } from "tiny-decoders";
 
 import * as ElmWatchJson from "./ElmWatchJson";
-import { bold, dim, Env, IS_WINDOWS, join, JsonError } from "./Helpers";
+import {
+  bold,
+  dim,
+  Env,
+  IS_WINDOWS,
+  join,
+  JsonError,
+  sha256,
+  toError,
+} from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -16,7 +26,6 @@ import {
   WriteOutputErrorReasonForWriting,
 } from "./Project";
 import { Command, ExitReason } from "./Spawn";
-import { JsonPath } from "./SpawnElm";
 import {
   CliArg,
   ElmJsonPath,
@@ -655,7 +664,7 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 export function elmMakeJsonParseError(
   outputPath: OutputPath,
   error: JsonError,
-  jsonPath: JsonPath,
+  errorFilePath: ErrorFilePath,
   command: Command
 ): ErrorTemplate {
   return fancyError("TROUBLE WITH JSON REPORT", outputPath)`
@@ -668,7 +677,7 @@ but I ran into an error when decoding it:
 
 ${printJsonError(error)}
 
-${printJsonPath(jsonPath)}
+${printErrorFilePath(errorFilePath)}
 `;
 }
 
@@ -873,6 +882,20 @@ ${outputPath.theOutputPath.absolutePath}
 Doing so I encountered this error:
 
 ${error.message}
+`;
+}
+
+export function injectSearchAndReplaceNotFound(
+  outputPath: OutputPath,
+  errorFilePath: ErrorFilePath
+): ErrorTemplate {
+  return fancyError("TROUBLE INJECTING HOT RELOAD", outputPath)`
+I tried to do some search and replace on Elm's JS output to inject
+code for hot reloading, but that didn't work out as expected!
+
+I tried to replace some specific code, but couldn't find it!
+
+${printErrorFilePath(errorFilePath)}
 `;
 }
 
@@ -1198,24 +1221,24 @@ function limitStdio(string: string, width: number): string {
     : joined;
 }
 
-function printJsonPath(jsonPath: JsonPath): string {
-  switch (jsonPath.tag) {
+function printErrorFilePath(errorFilePath: ErrorFilePath): string {
+  switch (errorFilePath.tag) {
     case "AbsolutePath":
       return `
-I wrote the JSON to this file so you can inspect it:
+I wrote that to this file so you can inspect it:
 
-${jsonPath.absolutePath}
+${errorFilePath.absolutePath}
       `.trim();
 
-    case "WritingJsonFailed":
+    case "WritingErrorFileFailed":
       return `
-I tried to write the JSON to this file:
+I tried to write that to this file:
 
-${jsonPath.attemptedPath.absolutePath}
+${errorFilePath.attemptedPath.absolutePath}
 
 ${bold("But that failed too:")}
 
-${jsonPath.error.message}
+${errorFilePath.error.message}
       `.trim();
   }
 }
@@ -1252,4 +1275,35 @@ function truncate(string: string): string {
 
 function printJsonError(error: JsonError): string {
   return error instanceof DecoderError ? error.format() : error.message;
+}
+
+export type ErrorFilePath =
+  | AbsolutePath
+  | {
+      tag: "WritingErrorFileFailed";
+      error: Error;
+      attemptedPath: AbsolutePath;
+    };
+
+export function tryWriteErrorFile(
+  cwd: AbsolutePath,
+  name: string,
+  fileExtension: "json" | "txt",
+  content: string
+): ErrorFilePath {
+  const jsonPath = absolutePathFromString(
+    cwd,
+    `elm-watch-${name}-${sha256(content)}.${fileExtension}`
+  );
+  try {
+    fs.writeFileSync(jsonPath.absolutePath, content);
+    return jsonPath;
+  } catch (unknownError) {
+    const error = toError(unknownError);
+    return {
+      tag: "WritingErrorFileFailed",
+      error,
+      attemptedPath: jsonPath,
+    };
+  }
 }

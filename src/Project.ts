@@ -12,6 +12,7 @@ import {
   toError,
 } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
+import { InjectError } from "./Inject";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -97,6 +98,7 @@ export type OutputStatus =
 
 export type OutputError =
   | ElmJson.ParseError
+  | InjectError
   | OutputFsError
   | PostprocessError
   | RunElmMakeError
