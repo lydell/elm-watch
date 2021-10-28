@@ -151,8 +151,19 @@ viewNav maybePage =
         ]
 
 
-main : Program () Model Msg
-main =
+application =
+    -- This is extracted since it’s possible to do so. The hot reload needs to handle that.
+    { init = init
+    , view = view
+    , update = update
+    , subscriptions = subscriptions
+    , onUrlRequest = UrlRequested
+    , onUrlChange = UrlChanged
+    }
+
+
+decoy =
+    -- There can be unused programs in a file.
     Browser.application
         { init = init
         , view = view
@@ -161,3 +172,8 @@ main =
         , onUrlRequest = UrlRequested
         , onUrlChange = UrlChanged
         }
+
+
+main : Program () Model Msg
+main =
+    Browser.application application

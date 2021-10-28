@@ -45,6 +45,17 @@
                 "legacy/Main.elm"
             ],
             "output": "build/LegacyMain.js"
+        },
+        "Frankenstein": {
+            "inputs": [
+                "src/ApplicationMain.elm",
+                "src/DocumentMain.elm",
+                "src/ElementMain.elm",
+                "src/HtmlMain.elm",
+                "src/SandboxMain.elm",
+                "src/WorkerMain.elm"
+            ],
+            "output": "build/Frankenstein.js"
         }
     }
 }
