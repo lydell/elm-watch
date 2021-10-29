@@ -2,11 +2,15 @@ import * as ClientCode from "./ClientCode";
 import * as Errors from "./Errors";
 import { AbsolutePath } from "./PathHelpers";
 
-type Replacement = [
-  search: RegExp,
-  replacement: string,
-  mode?: "AllowNoMatches" | "RequireMatch"
-];
+type Replacement = {
+  // The `probe` is a simpler regex that determines if `replacements` should be
+  // run. All the `replacements` are required to make a change.
+  probe: RegExp;
+  replacements: Array<{
+    search: RegExp;
+    replace: string;
+  }>;
+};
 
 type InjectResult =
   | InjectError
@@ -25,9 +29,13 @@ export type InjectError = {
 const mainReplacements: Array<Replacement> = [
   // ### _Platform_initialize (main : Program flags model msg)
   // New implementation (copy-paste with some changes and additions).
-  [
-    /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
-    `
+  {
+    probe: /^function _Platform_initialize\(/m,
+    replacements: [
+      {
+        search:
+          /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
+        replace: `
 function _Platform_initialize(programType, flagDecoder, args, init, impl, stepperBuilder)
 {
   if (args === "__elmWatchReturnImpl") {
@@ -80,14 +88,20 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
     }
   );
 }
-    `.trim(),
-  ],
+        `.trim(),
+      },
+    ],
+  },
 
   // ### _VirtualDom_init (main : Html msg)
   // New implementation (copy-paste with some changes and additions).
-  [
-    /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}\);/m,
-    `
+  {
+    probe: /^var _VirtualDom_init =/m,
+    replacements: [
+      {
+        search:
+          /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}\);/m,
+        replace: `
 var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args) {
   var programType = "Html";
 
@@ -119,14 +133,20 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
     }
   );
 });
-    `.trim(),
-  ],
+        `.trim(),
+      },
+    ],
+  },
 
   // ### _Platform_export
   // New implementation (inspired by the original).
-  [
-    /^function _Platform_export\(exports\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
-    `
+  {
+    probe: /^function _Platform_export\(/m,
+    replacements: [
+      {
+        search:
+          /^function _Platform_export\(exports\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
+        replace: `
 function _Platform_export(exports) {
   _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
 }
@@ -162,142 +182,171 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     }
   }
 }
-    `,
-  ],
+        `.trim(),
+      },
+    ],
+  },
 
   // ### _Browser_application
   // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`.
-  [/^\s*var onUrlChange = impl\.onUrlChange;/m, ``, "AllowNoMatches"],
-  [/^\s*var onUrlRequest = impl\.onUrlRequest;/m, ``, "AllowNoMatches"],
-  [
-    /^\s*var key = function\(\) \{ key\.a\(onUrlChange\(_Browser_getUrl\(\)\)\); \};/m,
-    `var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
-    "AllowNoMatches",
-  ],
-  [
-    /^\s*sendToApp\(onUrlRequest\(/m,
-    `sendToApp(impl.onUrlRequest(`,
-    "AllowNoMatches",
-  ],
-  [
-    /^\s*view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions$/m,
-    `impl`,
-    "AllowNoMatches",
-  ],
+  {
+    probe: /^function _Browser_application\(/m,
+    replacements: [
+      {
+        search: /^\s*var onUrlChange = impl\.onUrlChange;/m,
+        replace: ``,
+      },
+      {
+        search: /^\s*var onUrlRequest = impl\.onUrlRequest;/m,
+        replace: ``,
+      },
+      {
+        search:
+          /^\s*var key = function\(\) \{ key\.a\(onUrlChange\(_Browser_getUrl\(\)\)\); \};/m,
+        replace: `var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
+      },
+      {
+        search: /^\s*sendToApp\(onUrlRequest\(/m,
+        replace: `sendToApp(impl.onUrlRequest(`,
+      },
+      {
+        search:
+          /^\s*view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions$/m,
+        replace: `impl`,
+      },
+    ],
+  },
 
   // ### $elm$browser$Browser$sandbox
   // Don’t pluck `view` from `impl`. Pass `impl` to `_Browser_element`.
-  [
-    /^\s*view: impl\.view$/m,
-    "view: (model) => impl.view(model), impl",
-    "AllowNoMatches",
-  ],
+  {
+    probe: /^var \$elm\$browser\$Browser\$sandbox =/m,
+    replacements: [
+      {
+        search: /^\s*view: impl\.view$/m,
+        replace: "view: (model) => impl.view(model), impl",
+      },
+    ],
+  },
 
   // ### _Platform_worker, _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
   // Update call to `_Platform_initialize` to match our implementation.
   // `_Browser_application` calls `_Browser_document`/`_Debugger_document`.
   // `$elm$browser$Browser$sandbox` calls `_Browser_element`/`_Debugger_element`.
   // In those cases we need `impl.impl`.
-  [
-    /^\s*impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/gm,
-    `impl.impl || impl,`,
-  ],
+  // Also pass the type of program to `_Platform_initialize`.
+  {
+    probe:
+      /^var (?:_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =/m,
+    replacements: [
+      {
+        search:
+          /^\s*impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/gm,
+        replace: `impl.impl || impl,`,
+      },
+      {
+        search:
+          /^var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/gm,
+        replace: `$&"Platform.worker",`,
+      },
+      {
+        search:
+          /^var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/gm,
+        replace: `$&impl.impl ? "Browser.sandbox" : "Browser.element",`,
+      },
+      {
+        search:
+          /^var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/gm,
+        replace: `$&impl.impl ? "Browser.application" : "Browser.document",`,
+      },
+    ],
+  },
 
   // ### _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
   // Don’t pluck `view` from `impl`.
-  [/^\s*var view = impl\.view;/gm, ``, "AllowNoMatches"],
-  [/^[^'"\n]*\bview\(/gm, `impl.view(`, "AllowNoMatches"],
-
-  // ### _Platform_worker, _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
-  // Pass the type of program to `_Platform_initialize`.
-  [
-    /^var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/gm,
-    `$&"Platform.worker",`,
-    "AllowNoMatches",
-  ],
-  [
-    /^var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/gm,
-    `$&impl.impl ? "Browser.sandbox" : "Browser.element",`,
-    "AllowNoMatches",
-  ],
-  [
-    /^var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/gm,
-    `$&impl.impl ? "Browser.application" : "Browser.document",`,
-    "AllowNoMatches",
-  ],
+  {
+    probe:
+      /^var (?:_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =/m,
+    replacements: [
+      {
+        search: /^\s*var view = impl\.view;/gm,
+        replace: ``,
+      },
+      {
+        search: /^[^'"\n]*\bview\(/gm,
+        replace: `impl.view(`,
+      },
+    ],
+  },
 ];
 
 export function inject(cwd: AbsolutePath, code: string): InjectResult {
-  const result = runReplacements(cwd, code, mainReplacements);
-
-  switch (result.tag) {
-    case "InjectSearchAndReplaceNotFound":
-      return result;
-
-    case "Success": {
-      return {
-        tag: "Success",
-        code: `${result.code}\n${ClientCode.code}`,
-      };
+  try {
+    const newCode = mainReplacements.reduce(
+      (accCode, replacement) => strictReplace(cwd, accCode, replacement),
+      code
+    );
+    return {
+      tag: "Success",
+      code: `${newCode}\n${ClientCode.code}`,
+    };
+  } catch (unknownError) {
+    if (unknownError instanceof StrictReplaceError) {
+      return unknownError.error;
     }
+    throw unknownError;
   }
 }
 
-function runReplacements(
-  cwd: AbsolutePath,
-  code: string,
-  replacements: Array<Replacement>
-): InjectResult {
-  return replacements.reduce<InjectResult>(
-    (result, replacement) => {
-      switch (result.tag) {
-        case "Success":
-          return strictReplace(cwd, result.code, replacement);
-        case "InjectSearchAndReplaceNotFound":
-          return result;
-      }
-    },
-    { tag: "Success", code }
-  );
+class StrictReplaceError extends Error {
+  constructor(public error: InjectError) {
+    super();
+  }
 }
 
 function strictReplace(
   cwd: AbsolutePath,
   code: string,
-  [search, replacement, mode = "RequireMatch"]: Replacement
-): InjectResult {
-  const newCode = code.replace(search, replacement);
-  return mode === "RequireMatch" && newCode === code
-    ? {
-        tag: "InjectSearchAndReplaceNotFound",
-        errorFilePath: Errors.tryWriteErrorFile(
-          cwd,
-          "InjectSearchAndReplaceNotFound",
-          "txt",
-          replaceErrorContent(search, replacement, code)
-        ),
-      }
-    : {
-        tag: "Success",
-        code: code.replace(search, replacement),
-      };
+  { probe, replacements }: Replacement
+): string {
+  return probe.test(code)
+    ? replacements.reduce((accCode, { search, replace }) => {
+        const newCode = accCode.replace(search, replace);
+        if (newCode === accCode) {
+          throw new StrictReplaceError({
+            tag: "InjectSearchAndReplaceNotFound",
+            errorFilePath: Errors.tryWriteErrorFile(
+              cwd,
+              "InjectSearchAndReplaceNotFound",
+              "txt",
+              replaceErrorContent(probe, search, replace, accCode)
+            ),
+          });
+        }
+        return newCode;
+      }, code)
+    : code;
 }
 
 function replaceErrorContent(
+  probe: RegExp,
   search: RegExp,
-  replacement: string,
+  replace: string,
   code: string
 ): string {
   return `
 Modifying Elm's JS output for hot reloading failed!
 
-### Code to replace (not found!):
+### Probe (found):
+${probe.toString()}
+
+### Regex to replace (not found!):
 ${search.toString()}
 
 ### Replacement:
-${replacement}
+${replace}
 
-### Input code:
+### Code running replacements on:
 ${code}
 `.trimStart();
 }
