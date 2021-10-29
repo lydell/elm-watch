@@ -83,7 +83,7 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
   return Object.defineProperties(
     ports ? { ports: ports } : {},
     {
-      __elmWatchHotReload": { value: __elmWatchHotReload },
+      __elmWatchHotReload: { value: __elmWatchHotReload },
       __elmWatchProgramType: programType,
     }
   );
@@ -128,7 +128,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
   return Object.defineProperties(
     ports ? { ports: ports } : {},
     {
-      __elmWatchHotReload": { value: __elmWatchHotReload },
+      __elmWatchHotReload: { value: __elmWatchHotReload },
       __elmWatchProgramType: programType,
     }
   );
@@ -150,6 +150,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 function _Platform_export(exports) {
   _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
 }
+
 function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   for (var name in exports) {
     if (name === "init") {
@@ -202,17 +203,17 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       },
       {
         search:
-          /^\s*var key = function\(\) \{ key\.a\(onUrlChange\(_Browser_getUrl\(\)\)\); \};/m,
-        replace: `var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
+          /^(\s*)var key = function\(\) \{ key\.a\(onUrlChange\(_Browser_getUrl\(\)\)\); \};/m,
+        replace: `$1var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
       },
       {
-        search: /^\s*sendToApp\(onUrlRequest\(/m,
-        replace: `sendToApp(impl.onUrlRequest(`,
+        search: /^(\s*)sendToApp\(onUrlRequest\(/m,
+        replace: `$1sendToApp(impl.onUrlRequest(`,
       },
       {
         search:
-          /^\s*view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions$/m,
-        replace: `impl`,
+          /^(\s*)view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions$/m,
+        replace: `$1impl`,
       },
     ],
   },
@@ -223,8 +224,8 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     probe: /^var \$elm\$browser\$Browser\$sandbox =/m,
     replacements: [
       {
-        search: /^\s*view: impl\.view$/m,
-        replace: "view: (model) => impl.view(model), impl",
+        search: /^(\s*)view: impl\.view$/m,
+        replace: "$1view: (model) => impl.view(model),\n$1impl",
       },
     ],
   },
@@ -241,19 +242,34 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     replacements: [
       {
         search:
-          /^\s*impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/gm,
-        replace: `impl.impl || impl,`,
+          /^(\s*)impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/gm,
+        replace: `$1impl.impl || impl,`,
       },
+    ],
+  },
+  {
+    probe: /^var _Platform_worker =/m,
+    replacements: [
       {
         search:
           /^var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/gm,
         replace: `$&"Platform.worker",`,
       },
+    ],
+  },
+  {
+    probe: /^var (?:_Browser_element|_Debugger_element) =/m,
+    replacements: [
       {
         search:
           /^var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/gm,
         replace: `$&impl.impl ? "Browser.sandbox" : "Browser.element",`,
       },
+    ],
+  },
+  {
+    probe: /^var (?:_Browser_document|_Debugger_document) =/m,
+    replacements: [
       {
         search:
           /^var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/gm,
@@ -273,8 +289,8 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         replace: ``,
       },
       {
-        search: /^[^'"\n]*\bview\(/gm,
-        replace: `impl.view(`,
+        search: /^([^'"\n]* )view\(/gm,
+        replace: `$1impl.view(`,
       },
     ],
   },

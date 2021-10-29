@@ -740,7 +740,7 @@ function onCompileSuccess(
       }
 
       const result = Inject.inject(
-        elmJsonPath.theElmJsonPath,
+        absoluteDirname(elmJsonPath.theElmJsonPath),
         buffer.toString("utf8")
       );
 
