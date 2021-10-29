@@ -27,10 +27,10 @@ const mainReplacements: Array<Replacement> = [
   [
     /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}/m,
     `
-function _Platform_initialize(flagDecoder, args, init, impl, stepperBuilder)
+function _Platform_initialize(programType, flagDecoder, args, init, impl, stepperBuilder)
 {
   if (args === "__elmWatchReturnImpl") {
-    return impl;
+    return [impl, programType];
   }
 
   var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
@@ -67,11 +67,17 @@ function _Platform_initialize(flagDecoder, args, init, impl, stepperBuilder)
       impl[key] = newImpl[key];
     }
     setUpdateAndSubscriptions();
-    stepper(model);
+    stepper(model, true /* isSync */);
     _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
   }
 
-  return Object.defineProperty(ports ? { ports: ports } : {}, "__elmWatchHotReload", { value: __elmWatchHotReload });
+  return Object.defineProperties(
+    ports ? { ports: ports } : {},
+    {
+      __elmWatchHotReload": { value: __elmWatchHotReload },
+      __elmWatchProgramType: programType,
+    }
+  );
 }
     `.trim(),
   ],
@@ -82,8 +88,10 @@ function _Platform_initialize(flagDecoder, args, init, impl, stepperBuilder)
     /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}\);/m,
     `
 var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args) {
+  var programType = "Html";
+
   if (args === "__elmWatchReturnImpl") {
-    return virtualNode;
+    return [virtualNode, programType];
   }
 
   var node = args && args['node'] ? args['node'] : _Debug_crash(0);
@@ -102,7 +110,13 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
     render();
   }
 
-  return Object.defineProperty({}, "__elmWatchHotReload", { value: __elmWatchHotReload });
+  return Object.defineProperties(
+    ports ? { ports: ports } : {},
+    {
+      __elmWatchHotReload": { value: __elmWatchHotReload },
+      __elmWatchProgramType: programType,
+    }
+  );
 });
     `.trim(),
   ],
@@ -120,9 +134,16 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     if (name === "init") {
       if ("init" in obj) {
         if ("__elmWatchApps" in obj) {
-          var newImpl = exports.init("__elmWatchReturnImpl");
+          var [newImpl, programType] = exports.init("__elmWatchReturnImpl");
           for (var app of obj.__elmWatchApps) {
-            app.__elmWatchHotReload(newImpl);
+            if (app.__elmWatchProgramType !== programType) {
+              Promise.reject(new Error(\`elm-watch: Cannot hot reload because \\\`\${moduleName}.main\\\` changed from \\\`\${app.__elmWatchProgramType}\\\` to \\\`\${programType}\\\`. You need to reload the page!\`));
+            }
+            try {
+              app.__elmWatchHotReload(newImpl);
+            } catch (error) {
+              Promise.reject(new Error(\`elm-watch: Error during hot reload for \\\`\${moduleName}\\\`: \${error}\`));
+            }
           }
         } else {
           _Debug_crash(6, moduleName);
@@ -175,6 +196,21 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   // Don’t pluck `view` from `impl`.
   [`var view = impl.view;`, ``],
   [/\bview\(/g, `impl.view(`],
+
+  // ### _Platform_worker, _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
+  // Pass the type of program to `_Platform_initialize`.
+  [
+    /var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/g,
+    `$&"Platform.worker",`,
+  ],
+  [
+    /var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/g,
+    `$&impl.impl ? "Browser.sandbox" : "Browser.element",`,
+  ],
+  [
+    /var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/g,
+    `$&impl.impl ? "Browser.application" : "Browser.document",`,
+  ],
 ];
 
 const debuggerReplacements: Array<Replacement> = [
