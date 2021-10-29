@@ -3,7 +3,7 @@ import * as Errors from "./Errors";
 import { AbsolutePath } from "./PathHelpers";
 
 type Replacement = [
-  search: RegExp | string,
+  search: RegExp,
   replacement: string,
   mode?: "AllowNoMatches" | "RequireMatch"
 ];
@@ -20,12 +20,13 @@ export type InjectError = {
   errorFilePath: Errors.ErrorFilePath;
 };
 
-// TODO: Can make these safe? Don’t replace inside strings.
+// All regexes are anchored to the beginning of lines, which should make it
+// impossible to match within strings in the user’s program.
 const mainReplacements: Array<Replacement> = [
   // ### _Platform_initialize (main : Program flags model msg)
-  // New implementation.
+  // New implementation (copy-paste with some changes and additions).
   [
-    /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}/m,
+    /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
     `
 function _Platform_initialize(programType, flagDecoder, args, init, impl, stepperBuilder)
 {
@@ -83,9 +84,9 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
   ],
 
   // ### _VirtualDom_init (main : Html msg)
-  // New implementation.
+  // New implementation (copy-paste with some changes and additions).
   [
-    /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}\);/m,
+    /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}\);/m,
     `
 var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args) {
   var programType = "Html";
@@ -122,9 +123,9 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
   ],
 
   // ### _Platform_export
-  // New implementation.
+  // New implementation (inspired by the original).
   [
-    /^function _Platform_export\(exports\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}/m,
+    /^function _Platform_export\(exports\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
     `
 function _Platform_export(exports) {
   _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
@@ -166,21 +167,31 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
 
   // ### _Browser_application
   // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`.
-  [`var onUrlChange = impl.onUrlChange;`, ``],
-  [`var onUrlRequest = impl.onUrlRequest;`, ``],
+  [/^\s*var onUrlChange = impl\.onUrlChange;/m, ``, "AllowNoMatches"],
+  [/^\s*var onUrlRequest = impl\.onUrlRequest;/m, ``, "AllowNoMatches"],
   [
-    `var key = function() { key.a(onUrlChange(_Browser_getUrl())); };`,
+    /^\s*var key = function\(\) \{ key\.a\(onUrlChange\(_Browser_getUrl\(\)\)\); \};/m,
     `var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
+    "AllowNoMatches",
   ],
-  [`sendToApp(onUrlRequest(`, `sendToApp(impl.onUrlRequest(`],
   [
-    /view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions/g,
+    /^\s*sendToApp\(onUrlRequest\(/m,
+    `sendToApp(impl.onUrlRequest(`,
+    "AllowNoMatches",
+  ],
+  [
+    /^\s*view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions$/m,
     `impl`,
+    "AllowNoMatches",
   ],
 
   // ### $elm$browser$Browser$sandbox
   // Don’t pluck `view` from `impl`. Pass `impl` to `_Browser_element`.
-  [/view: impl\.view/g, "view: (model) => impl.view(model), impl"],
+  [
+    /^\s*view: impl\.view$/m,
+    "view: (model) => impl.view(model), impl",
+    "AllowNoMatches",
+  ],
 
   // ### _Platform_worker, _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
   // Update call to `_Platform_initialize` to match our implementation.
@@ -188,62 +199,46 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   // `$elm$browser$Browser$sandbox` calls `_Browser_element`/`_Debugger_element`.
   // In those cases we need `impl.impl`.
   [
-    /impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/g,
+    /^\s*impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/gm,
     `impl.impl || impl,`,
   ],
 
   // ### _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
   // Don’t pluck `view` from `impl`.
-  [`var view = impl.view;`, ``],
-  [/\bview\(/g, `impl.view(`],
+  [/^\s*var view = impl\.view;/gm, ``, "AllowNoMatches"],
+  [/^[^'"\n]*\bview\(/gm, `impl.view(`, "AllowNoMatches"],
 
   // ### _Platform_worker, _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
   // Pass the type of program to `_Platform_initialize`.
   [
-    /var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/g,
+    /^var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/gm,
     `$&"Platform.worker",`,
+    "AllowNoMatches",
   ],
   [
-    /var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/g,
+    /^var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/gm,
     `$&impl.impl ? "Browser.sandbox" : "Browser.element",`,
+    "AllowNoMatches",
   ],
   [
-    /var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/g,
+    /^var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/gm,
     `$&impl.impl ? "Browser.application" : "Browser.document",`,
+    "AllowNoMatches",
   ],
 ];
-
-const debuggerReplacements: Array<Replacement> = [
-  [
-    /\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/g,
-    `impl,`,
-  ],
-];
-
-const debuggerRegex = /^console.warn\(['"]Compiled in DEBUG mode/m;
 
 export function inject(cwd: AbsolutePath, code: string): InjectResult {
-  const result1 = runReplacements(cwd, code, mainReplacements);
+  const result = runReplacements(cwd, code, mainReplacements);
 
-  switch (result1.tag) {
+  switch (result.tag) {
     case "InjectSearchAndReplaceNotFound":
-      return result1;
+      return result;
 
     case "Success": {
-      const result2 = debuggerRegex.test(code)
-        ? runReplacements(cwd, result1.code, debuggerReplacements)
-        : result1;
-
-      switch (result2.tag) {
-        case "InjectSearchAndReplaceNotFound":
-          return result2;
-
-        case "Success":
-          return {
-            tag: "Success",
-            code: `${result2.code}\n${ClientCode.code}`,
-          };
-      }
+      return {
+        tag: "Success",
+        code: `${result.code}\n${ClientCode.code}`,
+      };
     }
   }
 }
@@ -271,8 +266,8 @@ function strictReplace(
   code: string,
   [search, replacement, mode = "RequireMatch"]: Replacement
 ): InjectResult {
-  const parts = code.split(search);
-  return mode === "RequireMatch" && parts.length <= 1
+  const newCode = code.replace(search, replacement);
+  return mode === "RequireMatch" && newCode === code
     ? {
         tag: "InjectSearchAndReplaceNotFound",
         errorFilePath: Errors.tryWriteErrorFile(
@@ -284,15 +279,12 @@ function strictReplace(
       }
     : {
         tag: "Success",
-        code:
-          typeof search === "string"
-            ? parts.join(replacement)
-            : code.replace(search, replacement),
+        code: code.replace(search, replacement),
       };
 }
 
 function replaceErrorContent(
-  search: RegExp | string,
+  search: RegExp,
   replacement: string,
   code: string
 ): string {
