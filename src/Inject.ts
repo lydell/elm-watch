@@ -70,7 +70,7 @@ function _Platform_initialize(flagDecoder, args, init, impl, stepperBuilder)
     _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
   }
 
-  return ports ? { ports: ports, __elmWatchHotReload } : { __elmWatchHotReload };
+  return Object.defineProperty(ports ? { ports: ports } : {}, "__elmWatchHotReload", { value: __elmWatchHotReload });
 }
     `.trim(),
   ],
@@ -98,7 +98,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
     render();
   }
 
-  return { __elmWatchHotReload };
+  return Object.defineProperty({}, "__elmWatchHotReload", { value: __elmWatchHotReload });
 });
     `.trim(),
   ],
