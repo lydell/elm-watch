@@ -1051,7 +1051,7 @@ describe("errors", () => {
 
         Unexpected end of JSON input
 
-        I wrote the JSON to this file so you can inspect it:
+        I wrote that to this file so you can inspect it:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.json
 
@@ -1083,7 +1083,7 @@ describe("errors", () => {
         Expected one of these tags: "error", "compile-errors"
         Got: "laser-error"
 
-        I wrote the JSON to this file so you can inspect it:
+        I wrote that to this file so you can inspect it:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fe311e7464d5d116f8fa1ddccbc22767d9b6c74bfdd28d0719fb55ef7c1037a6.json
 
@@ -1109,7 +1109,7 @@ describe("errors", () => {
 
         Unexpected token { in JSON at position 1
 
-        I tried to write the JSON to this file:
+        I tried to write that to this file:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json
 
