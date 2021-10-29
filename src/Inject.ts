@@ -22,6 +22,8 @@ export type InjectError = {
 
 // TODO: Can make these safe? Don’t replace inside strings.
 const mainReplacements: Array<Replacement> = [
+  // ### _Platform_initialize (main : Program flags model msg)
+  // New implementation.
   [
     /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}/m,
     `
@@ -51,14 +53,13 @@ function _Platform_initialize(flagDecoder, args, init, impl, stepperBuilder)
     }
   }
 
-  setUpdateAndSubscriptions();
-
   function sendToApp(msg, viewMetadata) {
     var pair = A2(update, msg, model);
     stepper(model = pair.a, viewMetadata);
     _Platform_enqueueEffects(managers, pair.b, subscriptions(model));
   }
 
+  setUpdateAndSubscriptions();
   _Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
   function __elmWatchHotReload(newImpl) {
@@ -74,6 +75,9 @@ function _Platform_initialize(flagDecoder, args, init, impl, stepperBuilder)
 }
     `.trim(),
   ],
+
+  // ### _VirtualDom_init (main : Html msg)
+  // New implementation.
   [
     /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}\);/m,
     `
@@ -102,23 +106,9 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 });
     `.trim(),
   ],
-  [`var onUrlChange = impl.onUrlChange;`, ``],
-  [`var onUrlRequest = impl.onUrlRequest;`, ``],
-  [
-    `var key = function() { key.a(onUrlChange(_Browser_getUrl())); };`,
-    `var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
-  ],
-  [`sendToApp(onUrlRequest(`, `sendToApp(impl.onUrlRequest(`],
-  [
-    /view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions/g,
-    `impl`,
-  ],
-  [
-    /impl\.init,\s*impl\.update,\s*impl\.subscriptions,/g,
-    `impl.init, impl.impl || impl,`,
-  ],
-  [`var view = impl.view;`, ``],
-  [/\bview(/g, `impl.view(`],
+
+  // ### _Platform_export
+  // New implementation.
   [
     /^function _Platform_export\(exports\)\r?\n\{(\r?\n([\t ][^\n]+)?)+\r?\n\}/m,
     `
@@ -152,6 +142,39 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
 }
     `,
   ],
+
+  // ### _Browser_application
+  // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`.
+  [`var onUrlChange = impl.onUrlChange;`, ``],
+  [`var onUrlRequest = impl.onUrlRequest;`, ``],
+  [
+    `var key = function() { key.a(onUrlChange(_Browser_getUrl())); };`,
+    `var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
+  ],
+  [`sendToApp(onUrlRequest(`, `sendToApp(impl.onUrlRequest(`],
+  [
+    /view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions/g,
+    `impl`,
+  ],
+
+  // ### $elm$browser$Browser$sandbox
+  // Don’t pluck `view` from `impl`. Pass `impl` to `_Browser_element`.
+  [/view: impl\.view/g, "view: (model) => impl.view(model), impl"],
+
+  // ### _Platform_worker, _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
+  // Update call to `_Platform_initialize` to match our implementation.
+  // `_Browser_application` calls `_Browser_document`/`_Debugger_document`.
+  // `$elm$browser$Browser$sandbox` calls `_Browser_element`/`_Debugger_element`.
+  // In those cases we need `impl.impl`.
+  [
+    /impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/g,
+    `impl.impl || impl,`,
+  ],
+
+  // ### _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
+  // Don’t pluck `view` from `impl`.
+  [`var view = impl.view;`, ``],
+  [/\bview\(/g, `impl.view(`],
 ];
 
 const debuggerReplacements: Array<Replacement> = [
