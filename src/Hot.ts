@@ -7,6 +7,7 @@ import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
 import {
+  encodeWebSocketToClientMessage,
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages";
@@ -1405,6 +1406,8 @@ function handleOutputActionResultToCmd(
         message: {
           tag: "SuccessfullyCompiled",
           code: handleOutputActionResult.code.toString("utf8"),
+          compiledTimestamp: handleOutputActionResult.compiledTimestamp,
+          compilationMode: handleOutputActionResult.compilationMode,
         },
       };
 
@@ -1909,16 +1912,7 @@ function webSocketSend(
   webSocket: WebSocket,
   message: WebSocketToClientMessage
 ): void {
-  switch (message.tag) {
-    // Optimization: Avoid encoding megabytes of JS code as a JSON string.
-    // Just send it bare.
-    case "SuccessfullyCompiled":
-      webSocket.send(message.code);
-      break;
-
-    default:
-      webSocket.send(JSON.stringify(message));
-  }
+  webSocket.send(encodeWebSocketToClientMessage(message));
 }
 
 function webSocketSendToOutput(

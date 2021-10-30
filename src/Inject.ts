@@ -1,8 +1,9 @@
+import { CompilationModeWithProxy } from "../client/WebSocketMessages";
 import * as ClientCode from "./ClientCode";
 import * as Errors from "./Errors";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
 import { Port } from "./Port";
-import { OutputPath } from "./Types";
+import { CompilationMode, OutputPath } from "./Types";
 
 type Replacement = {
   // The `probe` is a simpler regex that determines if `replacements` should be
@@ -150,10 +151,14 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
           /^function _Platform_export\(exports\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
         replace: `
 function _Platform_export(exports) {
-  _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
+  var errored = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
+  if (errored) {
+    throw new Error("elm-watch: Encountered errors on load or hot reload. See earlier errors in the console.");
+  }
 }
 
 function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
+  var errored = false;
   for (var name in exports) {
     if (name === "init") {
       if ("init" in obj) {
@@ -161,16 +166,19 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
           var [newImpl, programType] = exports.init("__elmWatchReturnImpl");
           for (var app of obj.__elmWatchApps) {
             if (app.__elmWatchProgramType !== programType) {
+              errored = true;
               Promise.reject(new Error(\`elm-watch: Cannot hot reload because \\\`\${moduleName}.main\\\` changed from \\\`\${app.__elmWatchProgramType}\\\` to \\\`\${programType}\\\`. You need to reload the page!\`));
             }
             try {
               app.__elmWatchHotReload(newImpl);
             } catch (error) {
+              errored = true;
               Promise.reject(new Error(\`elm-watch: Error during hot reload for \\\`\${moduleName}\\\`: \${error}\`));
             }
           }
         } else {
-          _Debug_crash(6, moduleName);
+          errored = true;
+          Promise.reject(new Error(\`elm-watch: \\\`\${moduleName}.init\\\` exists but wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally? If not, rename one of them so I know which is which!\`));
         }
       } else {
         obj.__elmWatchApps = [];
@@ -181,9 +189,13 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         };
       }
     } else {
-      _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
+      var innerErrored = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
+      if (innerErrored) {
+        errored = true;
+      }
     }
   }
+  return errored;
 }
         `.trim(),
       },
@@ -301,6 +313,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
 export function inject(
   outputPath: OutputPath,
   compiledTimestamp: number,
+  compilationMode: CompilationMode,
   webSocketPort: Port,
   code: string
 ): InjectResult {
@@ -319,6 +332,7 @@ export function inject(
       code: `${getClientCode(
         outputPath,
         compiledTimestamp,
+        compilationMode,
         webSocketPort
       )}\n${newCode}`,
     };
@@ -432,19 +446,31 @@ them first.
   scope.Elm = elmProxy;
 };
 
-export function proxyFile(): Buffer {
-  // TODO: Also inject websocket stuff.
-  return Buffer.from(`(${proxyFileIIFE.toString()})(this);`);
+export function proxyFile(
+  outputPath: OutputPath,
+  compiledTimestamp: number,
+  webSocketPort: Port
+): Buffer {
+  return Buffer.from(
+    `${getClientCode(
+      outputPath,
+      compiledTimestamp,
+      "proxy",
+      webSocketPort
+    )}\n(${proxyFileIIFE.toString()})(this);`
+  );
 }
 
 function getClientCode(
   outputPath: OutputPath,
   compiledTimestamp: number,
+  compilationMode: CompilationModeWithProxy,
   webSocketPort: Port
 ): string {
   return ClientCode.code
     .replace(/%VERSION%/g, "%VERSION%")
     .replace(/%TARGET_NAME%/g, outputPath.targetName)
-    .replace(/%COMPILED_TIMESTAMP%/g, compiledTimestamp.toString())
+    .replace(/%INITIAL_COMPILED_TIMESTAMP%/g, compiledTimestamp.toString())
+    .replace(/%COMPILATION_MODE%/g, compilationMode)
     .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString());
 }

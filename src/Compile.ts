@@ -477,6 +477,8 @@ export type HandleOutputActionResult =
       tag: "FullyCompiledJS";
       outputPath: OutputPath;
       code: Buffer;
+      compiledTimestamp: number;
+      compilationMode: CompilationMode;
     }
   | {
       tag: "Nothing";
@@ -534,10 +536,12 @@ export async function handleOutputAction({
           await typecheck({
             env,
             logger,
+            getNow,
             elmJsonPath: action.elmJsonPath,
             outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
             total,
             versionedIdentifier: runMode.versionedIdentifier,
+            webSocketPort: runMode.webSocketPort,
           });
           return { tag: "Nothing" };
       }
@@ -742,6 +746,7 @@ function onCompileSuccess(
       const result = Inject.inject(
         outputPath,
         compiledTimestamp,
+        outputState.compilationMode,
         runMode.webSocketPort,
         buffer.toString("utf8")
       );
@@ -781,6 +786,8 @@ function onCompileSuccess(
                 tag: "FullyCompiledJS",
                 outputPath,
                 code: newBuffer,
+                compiledTimestamp,
+                compilationMode: outputState.compilationMode,
               };
             }
 
@@ -933,16 +940,19 @@ async function postprocessHelper({
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
     }
+    const compiledTimestamp = getNow().getTime();
     outputState.status = {
       tag: "Success",
       fileSize: postprocessResult.code.byteLength,
-      compiledTimestamp: getNow().getTime(),
+      compiledTimestamp,
     };
     updateStatusLineHelper();
     return {
       tag: "FullyCompiledJS",
       outputPath,
       code: postprocessResult.code,
+      compiledTimestamp,
+      compilationMode: outputState.compilationMode,
     };
   }
 
@@ -954,13 +964,16 @@ async function postprocessHelper({
 async function typecheck({
   env,
   logger,
+  getNow,
   elmJsonPath,
   outputs,
   total,
   versionedIdentifier,
+  webSocketPort,
 }: {
   env: Env;
   logger: Logger;
+  getNow: GetNow;
   elmJsonPath: ElmJsonPath;
   outputs: NonEmptyArray<{
     index: number;
@@ -969,6 +982,7 @@ async function typecheck({
   }>;
   total: number;
   versionedIdentifier: Buffer;
+  webSocketPort: Port;
 }): Promise<void> {
   for (const { index, outputPath, outputState } of outputs) {
     outputState.dirty = false;
@@ -1040,10 +1054,12 @@ async function typecheck({
         typecheck({
           env,
           logger,
+          getNow,
           elmJsonPath,
           outputs: [{ index, outputPath, outputState }],
           total,
           versionedIdentifier,
+          webSocketPort,
         })
       );
       continue;
@@ -1075,7 +1091,14 @@ async function typecheck({
               );
               fs.writeFileSync(
                 outputPath.theOutputPath.absolutePath,
-                Buffer.concat([versionedIdentifier, Inject.proxyFile()])
+                Buffer.concat([
+                  versionedIdentifier,
+                  Inject.proxyFile(
+                    outputPath,
+                    getNow().getTime(),
+                    webSocketPort
+                  ),
+                ])
               );
               // The proxy file doesn’t count as writing to disk…
               outputState.status = { tag: "NotWrittenToDisk" };
