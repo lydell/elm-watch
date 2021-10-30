@@ -1,6 +1,8 @@
 import * as ClientCode from "./ClientCode";
 import * as Errors from "./Errors";
-import { AbsolutePath } from "./PathHelpers";
+import { absoluteDirname, AbsolutePath } from "./PathHelpers";
+import { Port } from "./Port";
+import { OutputPath } from "./Types";
 
 type Replacement = {
   // The `probe` is a simpler regex that determines if `replacements` should be
@@ -296,15 +298,29 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   },
 ];
 
-export function inject(cwd: AbsolutePath, code: string): InjectResult {
+export function inject(
+  outputPath: OutputPath,
+  compiledTimestamp: number,
+  webSocketPort: Port,
+  code: string
+): InjectResult {
   try {
     const newCode = mainReplacements.reduce(
-      (accCode, replacement) => strictReplace(cwd, accCode, replacement),
+      (accCode, replacement) =>
+        strictReplace(
+          absoluteDirname(outputPath.theOutputPath),
+          accCode,
+          replacement
+        ),
       code
     );
     return {
       tag: "Success",
-      code: `${newCode}\n${ClientCode.code}`,
+      code: `${getClientCode(
+        outputPath,
+        compiledTimestamp,
+        webSocketPort
+      )}\n${newCode}`,
     };
   } catch (unknownError) {
     if (unknownError instanceof StrictReplaceError) {
@@ -419,4 +435,16 @@ them first.
 export function proxyFile(): Buffer {
   // TODO: Also inject websocket stuff.
   return Buffer.from(`(${proxyFileIIFE.toString()})(this);`);
+}
+
+function getClientCode(
+  outputPath: OutputPath,
+  compiledTimestamp: number,
+  webSocketPort: Port
+): string {
+  return ClientCode.code
+    .replace(/%VERSION%/g, "%VERSION%")
+    .replace(/%TARGET_NAME%/g, outputPath.targetName)
+    .replace(/%COMPILED_TIMESTAMP%/g, compiledTimestamp.toString())
+    .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString());
 }

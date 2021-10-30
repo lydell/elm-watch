@@ -28,6 +28,7 @@ import {
   nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray";
 import { absoluteDirname, AbsolutePath } from "./PathHelpers";
+import { Port } from "./Port";
 import {
   Postprocess,
   PostprocessWorkerPool,
@@ -485,6 +486,7 @@ type RunModeWithVersionedIdentifier =
   | {
       tag: "hot";
       versionedIdentifier: Buffer;
+      webSocketPort: Port;
     }
   | {
       tag: "make";
@@ -650,7 +652,6 @@ async function compileOneOutput({
   switch (combinedResult.tag) {
     case "elm make success + walker success":
       return onCompileSuccess(
-        elmJsonPath,
         updateStatusLineHelper,
         runMode,
         outputPath,
@@ -678,7 +679,6 @@ async function compileOneOutput({
 }
 
 function onCompileSuccess(
-  elmJsonPath: ElmJsonPath,
   updateStatusLineHelper: () => void,
   runMode: RunModeWithVersionedIdentifier,
   outputPath: OutputPath,
@@ -740,7 +740,9 @@ function onCompileSuccess(
       }
 
       const result = Inject.inject(
-        absoluteDirname(elmJsonPath.theElmJsonPath),
+        outputPath,
+        compiledTimestamp,
+        runMode.webSocketPort,
         buffer.toString("utf8")
       );
 

@@ -1182,6 +1182,7 @@ const runCmd =
               runMode: {
                 tag: "hot",
                 versionedIdentifier: mutable.versionedIdentifier,
+                webSocketPort: mutable.webSocketServer.port,
               },
               elmWatchJsonPath: mutable.project.elmWatchJsonPath,
               total: outputActions.total,
