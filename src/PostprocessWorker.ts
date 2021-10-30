@@ -58,7 +58,7 @@ async function elmWatchNode({
   userArgs,
   extraArgs,
   code,
-}: ElmWatchNodeArgs): Promise<PostprocessResult> {
+}: ElmWatchNodeArgs): Promise<PostprocessResult<string>> {
   if (!isNonEmptyArray(userArgs)) {
     return { tag: "ElmWatchNodeMissingScript" };
   }
@@ -121,7 +121,7 @@ async function elmWatchNode({
     };
   }
 
-  return { tag: "Success", code: Buffer.from(returnValue) };
+  return { tag: "Success", code: returnValue };
 }
 
 function unknownValueAsString(

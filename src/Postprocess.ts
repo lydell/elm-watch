@@ -24,11 +24,11 @@ export type Postprocess =
       postprocessArray: NonEmptyArray<string>;
     };
 
-export type PostprocessResult =
+export type PostprocessResult<Code = Buffer> =
   | PostprocessError
   | {
       tag: "Success";
-      code: Buffer;
+      code: Code;
     };
 
 export type PostprocessError =
@@ -266,7 +266,7 @@ export type MessageFromWorker = {
   tag: "PostprocessDone";
   result:
     | { tag: "Reject"; error: unknown }
-    | { tag: "Resolve"; value: PostprocessResult };
+    | { tag: "Resolve"; value: PostprocessResult<string> };
 };
 
 export const WORKER_TERMINATED = new Error(
@@ -349,7 +349,9 @@ class PostprocessWorker {
                 case "Resolve": {
                   const result = message.result.value;
                   this.status.resolve(
-                    "stdout" in result
+                    result.tag === "Success"
+                      ? { ...result, code: Buffer.from(result.code) }
+                      : "stdout" in result
                       ? {
                           ...result,
                           stdout: Buffer.concat(stdout).toString("utf8"),
