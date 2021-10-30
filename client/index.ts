@@ -27,6 +27,11 @@ type Msg =
       date: Date;
     }
   | {
+      tag: "SleepBeforeReconnectDone";
+      date: Date;
+      attemptNumber: number;
+    }
+  | {
       tag: "WebSocketClosed";
       date: Date;
       reason: string;
@@ -52,6 +57,10 @@ type Cmd =
       code: string;
     }
   | {
+      tag: "Reconnect";
+      compiledTimestamp: number;
+    }
+  | {
       tag: "ReloadPage";
     }
   | {
@@ -60,6 +69,10 @@ type Cmd =
       // This requires the “send key”. The idea is that this forces you to check
       // `Status` before sending.
       sendKey: SendKey;
+    }
+  | {
+      tag: "SleepBeforeReconnect";
+      attemptNumber: number;
     };
 
 type Status =
@@ -79,6 +92,7 @@ type Status =
   | {
       tag: "Connecting";
       date: Date;
+      attemptNumber: number;
     }
   | {
       tag: "EvalError";
@@ -90,14 +104,15 @@ type Status =
       sendKey: SendKey;
     }
   | {
-      tag: "Reconnecting";
-      date: Date;
-      reason: string;
-    }
-  | {
       tag: "ServerError";
       date: Date;
       message: string;
+    }
+  | {
+      tag: "SleepingBeforeReconnect";
+      date: Date;
+      reason: string;
+      attemptNumber: number;
     };
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
@@ -111,7 +126,9 @@ function run(): void {
   const { shadowRoot } = container;
 
   if (shadowRoot === null) {
-    throw new Error("TODO: No shadowRoot");
+    throw new Error(
+      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`
+    );
   }
 
   const existingTargetRoot = Array.from(shadowRoot.children).find(
@@ -203,7 +220,7 @@ function initWebSocket(
 
 const init = (date: Date): [Model, Array<Cmd>] => [
   {
-    status: { tag: "Connecting", date },
+    status: { tag: "Connecting", date, attemptNumber: 1 },
     compiledTimestamp: INITIAL_COMPILED_TIMESTAMP,
   },
   [],
@@ -214,14 +231,35 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     case "EvalErrored":
       return [{ ...model, status: { tag: "EvalError", date: msg.date } }, []];
 
-    case "WebSocketClosed":
+    case "SleepBeforeReconnectDone":
       return [
         {
           ...model,
-          status: { tag: "Reconnecting", date: msg.date, reason: msg.reason },
+          status: {
+            tag: "Connecting",
+            date: msg.date,
+            attemptNumber: msg.attemptNumber,
+          },
         },
-        [],
+        [{ tag: "Reconnect", compiledTimestamp: model.compiledTimestamp }],
       ];
+
+    case "WebSocketClosed": {
+      const attemptNumber =
+        "attemptNumber" in model.status ? model.status.attemptNumber + 1 : 1;
+      return [
+        {
+          ...model,
+          status: {
+            tag: "SleepingBeforeReconnect",
+            date: msg.date,
+            reason: msg.reason,
+            attemptNumber,
+          },
+        },
+        [{ tag: "SleepBeforeReconnect", attemptNumber }],
+      ];
+    }
 
     case "WebSocketConnected":
       return [{ ...model, status: { tag: "Busy", date: msg.date } }, []];
@@ -292,6 +330,11 @@ function statusChanged(date: Date, { status }: StatusChanged): Status {
   }
 }
 
+function retryWaitMs(attemptNumber: number): number {
+  // At least 10 ms, at most 1 minute.
+  return Math.min(attemptNumber ** 2 * 10, 1000 * 60);
+}
+
 const runCmd =
   (getNow: GetNow) =>
   (cmd: Cmd, mutable: Mutable, dispatch: (msg: Msg) => void): void => {
@@ -308,12 +351,33 @@ const runCmd =
         return;
       }
 
+      case "Reconnect":
+        mutable.webSocket = initWebSocket(
+          getNow,
+          cmd.compiledTimestamp,
+          dispatch
+        );
+        return;
+
       case "ReloadPage":
         window.location.reload();
         return;
 
       case "SendMessage":
         mutable.webSocket.send(JSON.stringify(cmd.message));
+        return;
+
+      case "SleepBeforeReconnect":
+        // There should be no need to keep track of timeouts and clear them and
+        // stuff, because we only have one web socket, a web socket can only be
+        // closed once, and this only happens in reaction to "close" events.
+        setTimeout(() => {
+          dispatch({
+            tag: "SleepBeforeReconnectDone",
+            date: getNow(),
+            attemptNumber: cmd.attemptNumber,
+          });
+        }, retryWaitMs(cmd.attemptNumber));
         return;
     }
   };
