@@ -77,7 +77,7 @@ export function decodeWebSocketToClientMessage(
     const newlineIndexRaw = message.indexOf("\n");
     const newlineIndex =
       newlineIndexRaw === -1 ? message.length : newlineIndexRaw;
-    const jsonString = message.slice(1, newlineIndex - 1);
+    const jsonString = message.slice(1, newlineIndex);
     const code = message.slice(newlineIndex + 1);
     const parsed = SuccessfullyCompiled(JSON.parse(jsonString));
     return { ...parsed, code };

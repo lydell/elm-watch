@@ -785,9 +785,6 @@ const update =
               result.message
             );
 
-          case "UnsupportedDataType":
-            return onError(Errors.webSocketUnsupportedDataType());
-
           case "DecodeError":
             return onError(Errors.webSocketDecodeError(result.error));
         }
@@ -1534,7 +1531,7 @@ const WebSocketConnectedParams = Decode.fieldsAuto(
   {
     elmWatchVersion: Decode.string,
     targetName: Decode.string,
-    compiledTimestamp: Decode.number,
+    compiledTimestamp: Decode.chain(Decode.string, Number),
   },
   { exact: "throw" }
 );
@@ -1651,34 +1648,31 @@ function parseWebSocketConnectRequestUrl(
 }
 
 type ParseWebSocketToServerMessageResult =
-  | ParseWebSocketToServerMessageError
-  | {
-      tag: "Success";
-      message: WebSocketToServerMessage;
-    };
-
-type ParseWebSocketToServerMessageError =
   | {
       tag: "DecodeError";
       error: JsonError;
     }
   | {
-      tag: "UnsupportedDataType";
+      tag: "Success";
+      message: WebSocketToServerMessage;
     };
 
 function parseWebSocketToServerMessage(
   data: WebSocket.Data
 ): ParseWebSocketToServerMessageResult {
-  if (typeof data !== "string") {
-    return {
-      tag: "UnsupportedDataType",
-    };
-  }
+  const stringData =
+    typeof data === "string"
+      ? data
+      : Array.isArray(data)
+      ? Buffer.concat(data).toString("utf8")
+      : data instanceof ArrayBuffer
+      ? new TextDecoder("utf8").decode(data)
+      : data.toString("utf8");
 
   try {
     return {
       tag: "Success",
-      message: WebSocketToServerMessage(JSON.parse(data)),
+      message: WebSocketToServerMessage(JSON.parse(stringData)),
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);

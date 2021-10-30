@@ -188,11 +188,13 @@ function getOrCreateContainer(): HTMLElement {
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
   container.style.left = "0";
   container.style.bottom = "0";
-  const shadowRoot = container.attachShadow({ mode: "open" });
 
+  const shadowRoot = container.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.append(document.createTextNode(CSS));
   shadowRoot.append(style);
+
+  document.documentElement.append(container);
 
   return container;
 }
@@ -208,7 +210,9 @@ function initWebSocket(
   compiledTimestamp: number,
   dispatch: (msg: Msg) => void
 ): WebSocket {
-  const url = new URL(`ws://${window.location.hostname}:${WEBSOCKET_PORT}/`);
+  const hostname =
+    window.location.hostname === "" ? "localhost" : window.location.hostname;
+  const url = new URL(`ws://${hostname}:${WEBSOCKET_PORT}/`);
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("compiledTimestamp", compiledTimestamp.toString());
@@ -255,7 +259,14 @@ const init = (date: Date): [Model, Array<Cmd>] => {
 function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "EvalErrored":
-      return [{ ...model, status: { tag: "EvalError", date: msg.date } }, []];
+      return [
+        {
+          ...model,
+          status: { tag: "EvalError", date: msg.date },
+          uiExpanded: true,
+        },
+        [],
+      ];
 
     case "SleepBeforeReconnectDone":
       return [
@@ -308,6 +319,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
                 date: msg.date,
                 message: result.message,
               },
+              uiExpanded: true,
             },
             [],
           ];
@@ -347,8 +359,17 @@ function onWebSocketToClientMessage(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
-    case "StatusChanged":
-      return [{ ...model, status: statusChanged(date, msg) }, []];
+    case "StatusChanged": {
+      const [status, uiChange] = statusChanged(date, msg);
+      return [
+        {
+          ...model,
+          status,
+          uiExpanded: uiChange === "ExpandUI" ? true : model.uiExpanded,
+        },
+        [],
+      ];
+    }
 
     case "SuccessfullyCompiled":
       return msg.compilationMode !== COMPILATION_MODE
@@ -368,19 +389,28 @@ function onWebSocketToClientMessage(
   }
 }
 
-function statusChanged(date: Date, { status }: StatusChanged): Status {
+function statusChanged(
+  date: Date,
+  { status }: StatusChanged
+): [Status, "ExpandUI" | "KeepUI"] {
   switch (status.tag) {
     case "AlreadyUpToDate":
-      return { tag: "Idle", date, sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME };
+      return [
+        { tag: "Idle", date, sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME },
+        "KeepUI",
+      ];
 
     case "Busy":
-      return { tag: "Busy", date };
+      return [{ tag: "Busy", date }, "KeepUI"];
 
     case "ClientError":
-      return { tag: "UnexpectedError", date, message: status.message };
+      return [
+        { tag: "UnexpectedError", date, message: status.message },
+        "ExpandUI",
+      ];
 
     case "CompileError":
-      return { tag: "CompileError", date };
+      return [{ tag: "CompileError", date }, "KeepUI"];
   }
 }
 
@@ -613,6 +643,10 @@ const CSS = `
 [data-target]:only-of-type .${CLASS.targetName} {
   display: none;
 }
+
+pre {
+  white-space: pre-wrap;
+}
 `;
 
 function view(
@@ -773,7 +807,7 @@ function viewLongStatusLine(description: string, date: Date): HTMLElement {
   return h(
     HTMLSpanElement,
     {},
-    `Status: ${description}} since ${formatDate(date)} ${formatTime(date)}`
+    `Status: ${description} since ${formatDate(date)} ${formatTime(date)}`
   );
 }
 

@@ -1022,16 +1022,6 @@ If you want to have this target compiled, restart elm-watch either with more CLI
   `.trim();
 }
 
-export function webSocketUnsupportedDataType(): string {
-  return `
-The compiled JavaScript code running in the browser seems to have sent a message that isn't a string!
-
-The elm-watch web socket server can only handle string messages.
-
-The web socket code I generate is supposed to always send messages with the correct JSON format, so something is up here.
-  `.trim();
-}
-
 export function webSocketDecodeError(error: JsonError): string {
   return `
 The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!

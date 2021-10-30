@@ -73,7 +73,10 @@ async function run(): Promise<void> {
   for (const output of clientResult.outputFiles) {
     switch (path.basename(output.path)) {
       case "client.js":
-        fs.writeFileSync(output.path, output.text);
+        fs.writeFileSync(
+          output.path,
+          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version)
+        );
         break;
 
       default:

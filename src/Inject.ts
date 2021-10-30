@@ -87,7 +87,7 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
     ports ? { ports: ports } : {},
     {
       __elmWatchHotReload: { value: __elmWatchHotReload },
-      __elmWatchProgramType: programType,
+      __elmWatchProgramType: { value: programType },
     }
   );
 }
@@ -132,7 +132,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
     ports ? { ports: ports } : {},
     {
       __elmWatchHotReload: { value: __elmWatchHotReload },
-      __elmWatchProgramType: programType,
+      __elmWatchProgramType: { value: programType },
     }
   );
 });
@@ -468,7 +468,6 @@ function getClientCode(
   webSocketPort: Port
 ): string {
   return ClientCode.code
-    .replace(/%VERSION%/g, "%VERSION%")
     .replace(/%TARGET_NAME%/g, outputPath.targetName)
     .replace(/%INITIAL_COMPILED_TIMESTAMP%/g, compiledTimestamp.toString())
     .replace(/%COMPILATION_MODE%/g, compilationMode)
