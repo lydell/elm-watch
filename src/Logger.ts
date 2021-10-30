@@ -1,5 +1,6 @@
 import { ErrorTemplate } from "./Errors";
-import { CLEAR, Env, IS_WINDOWS, removeColor, WriteStream } from "./Helpers";
+import { CLEAR, Env, removeColor, WriteStream } from "./Helpers";
+import { IS_WINDOWS } from "./IsWindows";
 
 export type Logger = {
   handleColor: (string: string) => string;

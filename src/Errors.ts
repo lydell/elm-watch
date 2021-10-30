@@ -1,18 +1,11 @@
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { DecoderError } from "tiny-decoders";
 
 import * as ElmWatchJson from "./ElmWatchJson";
-import {
-  bold,
-  dim,
-  Env,
-  IS_WINDOWS,
-  join,
-  JsonError,
-  sha256,
-  toError,
-} from "./Helpers";
+import { bold, dim, Env, join, JsonError, toError } from "./Helpers";
+import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -1306,4 +1299,8 @@ export function tryWriteErrorFile(
       attemptedPath: jsonPath,
     };
   }
+}
+
+export function sha256(string: string): string {
+  return crypto.createHash("sha256").update(string).digest("hex");
 }

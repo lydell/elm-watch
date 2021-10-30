@@ -1,8 +1,10 @@
 import * as Decode from "tiny-decoders";
 
+import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import type { GetNow } from "../src/Types";
 import {
+  CompilationMode,
   CompilationModeWithProxy,
   decodeWebSocketToClientMessage,
   StatusChanged,
@@ -32,6 +34,11 @@ type Msg =
       attemptNumber: number;
     }
   | {
+      tag: "UiMsg";
+      date: Date;
+      msg: UiMsg;
+    }
+  | {
       tag: "WebSocketClosed";
       date: Date;
       reason: string;
@@ -46,9 +53,20 @@ type Msg =
       data: unknown;
     };
 
+type UiMsg =
+  | {
+      tag: "ChangedCompilationMode";
+      compilationMode: CompilationMode;
+      sendKey: SendKey;
+    }
+  | {
+      tag: "PressedChevron";
+    };
+
 type Model = {
   status: Status;
   compiledTimestamp: number;
+  uiExpanded: boolean;
 };
 
 type Cmd =
@@ -62,6 +80,10 @@ type Cmd =
     }
   | {
       tag: "ReloadPage";
+    }
+  | {
+      tag: "Render";
+      model: Model;
     }
   | {
       tag: "SendMessage";
@@ -79,11 +101,7 @@ type Status =
   | {
       tag: "Busy";
       date: Date;
-    }
-  | {
-      tag: "ClientError";
-      message: string;
-      date: Date;
+      compilationMode?: CompilationMode;
     }
   | {
       tag: "CompileError";
@@ -104,15 +122,15 @@ type Status =
       sendKey: SendKey;
     }
   | {
-      tag: "ServerError";
-      date: Date;
-      message: string;
-    }
-  | {
       tag: "SleepingBeforeReconnect";
       date: Date;
       reason: string;
       attemptNumber: number;
+    }
+  | {
+      tag: "UnexpectedError";
+      message: string;
+      date: Date;
     };
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
@@ -148,8 +166,11 @@ function run(): void {
   void runTeaProgram<Mutable, Msg, Model, Cmd, never>({
     initMutable: initMutable(getNow),
     init: init(getNow()),
-    update,
-    runCmd: runCmd(getNow),
+    update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
+      const [newModel, cmds] = update(msg, model);
+      return [newModel, [...cmds, { tag: "Render", model: newModel }]];
+    },
+    runCmd: runCmd(getNow, targetRoot),
   });
 }
 
@@ -167,8 +188,12 @@ function getOrCreateContainer(): HTMLElement {
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
   container.style.left = "0";
   container.style.bottom = "0";
-  container.attachShadow({ mode: "open" });
-  document.documentElement.append(container);
+  const shadowRoot = container.attachShadow({ mode: "open" });
+
+  const style = document.createElement("style");
+  style.append(document.createTextNode(CSS));
+  shadowRoot.append(style);
+
   return container;
 }
 
@@ -218,13 +243,14 @@ function initWebSocket(
   return webSocket;
 }
 
-const init = (date: Date): [Model, Array<Cmd>] => [
-  {
+const init = (date: Date): [Model, Array<Cmd>] => {
+  const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
     compiledTimestamp: INITIAL_COMPILED_TIMESTAMP,
-  },
-  [],
-];
+    uiExpanded: false,
+  };
+  return [model, [{ tag: "Render", model }]];
+};
 
 function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
@@ -243,6 +269,9 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
         },
         [{ tag: "Reconnect", compiledTimestamp: model.compiledTimestamp }],
       ];
+
+    case "UiMsg":
+      return onUiMsg(msg.date, msg.msg, model);
 
     case "WebSocketClosed": {
       const attemptNumber =
@@ -275,7 +304,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
             {
               ...model,
               status: {
-                tag: "ServerError",
+                tag: "UnexpectedError",
                 date: msg.date,
                 message: result.message,
               },
@@ -284,6 +313,31 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
           ];
       }
     }
+  }
+}
+
+function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
+  switch (msg.tag) {
+    case "ChangedCompilationMode":
+      return [
+        {
+          ...model,
+          status: { tag: "Busy", date, compilationMode: msg.compilationMode },
+        },
+        [
+          {
+            tag: "SendMessage",
+            message: {
+              tag: "ChangeCompilationMode",
+              compilationMode: msg.compilationMode,
+            },
+            sendKey: msg.sendKey,
+          },
+        ],
+      ];
+
+    case "PressedChevron":
+      return [{ ...model, uiExpanded: !model.uiExpanded }, []];
   }
 }
 
@@ -323,7 +377,7 @@ function statusChanged(date: Date, { status }: StatusChanged): Status {
       return { tag: "Busy", date };
 
     case "ClientError":
-      return { tag: "ClientError", date, message: status.message };
+      return { tag: "UnexpectedError", date, message: status.message };
 
     case "CompileError":
       return { tag: "CompileError", date };
@@ -336,7 +390,7 @@ function retryWaitMs(attemptNumber: number): number {
 }
 
 const runCmd =
-  (getNow: GetNow) =>
+  (getNow: GetNow, targetRoot: HTMLElement) =>
   (cmd: Cmd, mutable: Mutable, dispatch: (msg: Msg) => void): void => {
     switch (cmd.tag) {
       case "Eval": {
@@ -361,6 +415,16 @@ const runCmd =
 
       case "ReloadPage":
         window.location.reload();
+        return;
+
+      case "Render":
+        render(getNow, targetRoot, dispatch, cmd.model, {
+          version: VERSION,
+          webSocketUrl: mutable.webSocket.url,
+          targetName: TARGET_NAME,
+          compilationMode: COMPILATION_MODE,
+          debuggerModeStatus: checkCanEnableDebugger(),
+        });
         return;
 
       case "SendMessage":
@@ -411,6 +475,421 @@ function parseWebSocketMessageData(
           : Decode.repr(unknownError),
     };
   }
+}
+
+function functionToNull(value: unknown): unknown {
+  return typeof value === "function" ? null : value;
+}
+
+type ProgramType = ReturnType<typeof ProgramType>;
+const ProgramType = Decode.stringUnion({
+  "Platform.worker": null,
+  "Browser.sandbox": null,
+  "Browser.element": null,
+  "Browser.document": null,
+  "Browser.application": null,
+  Html: null,
+});
+
+const ElmModule: Decode.Decoder<Array<ProgramType>> = Decode.chain(
+  Decode.record(
+    Decode.chain(
+      functionToNull,
+      Decode.multi({
+        null: () => [],
+        array: Decode.array(
+          Decode.fields((field) => field("__elmWatchProgramType", ProgramType))
+        ),
+        object: (value) => ElmModule(value),
+      })
+    )
+  ),
+  (record) => Object.values(record).flat()
+);
+
+const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
+
+function checkCanEnableDebugger(): Toggled {
+  let programTypes;
+  try {
+    programTypes = ProgramTypes(window);
+  } catch {
+    return { tag: "Enabled" };
+  }
+
+  const noDebugger = programTypes.filter((programType) => {
+    switch (programType) {
+      case "Platform.worker":
+      case "Html":
+        return true;
+      case "Browser.sandbox":
+      case "Browser.element":
+      case "Browser.document":
+      case "Browser.application":
+        return false;
+    }
+  });
+
+  // If we have _only_ programs that don’t support the debugger we know for sure
+  // that we cannot enable it. Most likely there’s just one single program on
+  // the page, and that’s where this is the most helpful anyway.
+  return noDebugger.length === programTypes.length
+    ? { tag: "Disabled", reason: noDebuggerReason(new Set(noDebugger)) }
+    : { tag: "Enabled" };
+}
+
+function emptyNode(node: Node): void {
+  while (node.firstChild !== null) {
+    node.removeChild(node.firstChild);
+  }
+}
+
+function h<T extends HTMLElement>(
+  t: new () => T,
+  { attrs, ...props }: Partial<T & { attrs: Record<string, string> }>,
+  ...children: Array<HTMLElement | string | undefined>
+): T {
+  const element = document.createElement(
+    props.localName ??
+      t.name
+        .replace(/^HTML(\w+)Element$/, "$1")
+        .replace("Anchor", "a")
+        .replace("Paragraph", "p")
+        .replace(/^([DOU])List$/, "$1l")
+        .toLowerCase()
+  ) as T;
+
+  Object.assign(element, props);
+
+  if (attrs !== undefined) {
+    for (const [key, value] of Object.entries(attrs)) {
+      element.setAttribute(key, value);
+    }
+  }
+
+  for (const child of children) {
+    if (child !== undefined) {
+      element.append(
+        typeof child === "string" ? document.createTextNode(child) : child
+      );
+    }
+  }
+
+  return element;
+}
+
+type Info = {
+  version: string;
+  webSocketUrl: string;
+  targetName: string;
+  compilationMode: CompilationModeWithProxy;
+  debuggerModeStatus: Toggled;
+};
+
+function render(
+  getNow: GetNow,
+  targetRoot: HTMLElement,
+  dispatch: (msg: Msg) => void,
+  model: Model,
+  info: Info
+): void {
+  emptyNode(targetRoot);
+  targetRoot.append(
+    view(
+      (msg) => {
+        dispatch({ tag: "UiMsg", date: getNow(), msg });
+      },
+      model,
+      info
+    )
+  );
+}
+
+const CLASS = {
+  targetName: "targetName",
+};
+
+const CSS = `
+[data-target]:only-of-type .${CLASS.targetName} {
+  display: none;
+}
+`;
+
+function view(
+  dispatch: (msg: UiMsg) => void,
+  model: Model,
+  info: Info
+): HTMLElement {
+  return h(
+    HTMLDivElement,
+    {},
+    model.uiExpanded ? viewExpandedUi(dispatch, model.status, info) : undefined,
+    h(
+      HTMLSpanElement,
+      {},
+      h(
+        HTMLButtonElement,
+        {
+          onclick: () => {
+            dispatch({ tag: "PressedChevron" });
+          },
+          attrs: {
+            "aria-label": model.uiExpanded ? "Collapse" : "Expand",
+            "aria-expanded": model.uiExpanded.toString(),
+          },
+        },
+        h(
+          HTMLSpanElement,
+          { attrs: { "aria-hidden": "true" } },
+          model.uiExpanded ? "▲" : "▼"
+        )
+      ),
+      viewShortStatus(model.status)
+    )
+  );
+}
+
+function viewExpandedUi(
+  dispatch: (msg: UiMsg) => void,
+  status: Status,
+  info: Info
+): HTMLElement {
+  return h(
+    HTMLDivElement,
+    {},
+    viewInfo(info),
+    viewLongStatus(dispatch, status, info)
+  );
+}
+
+function viewInfo(info: Info): HTMLElement {
+  return h(
+    HTMLDivElement,
+    {},
+    h(HTMLDivElement, {}, info.targetName),
+    h(HTMLDivElement, {}, `elm-watch ${info.version}`),
+    h(HTMLDivElement, {}, info.webSocketUrl)
+  );
+}
+
+function viewLongStatus(
+  dispatch: (msg: UiMsg) => void,
+  status: Status,
+  info: Info
+): HTMLElement {
+  switch (status.tag) {
+    case "Busy":
+      return h(
+        HTMLDivElement,
+        {},
+        viewLongStatusLine("Waiting for compilation", status.date),
+        viewCompilationModeChooser({
+          dispatch,
+          sendKey: undefined,
+          compilationMode: status.compilationMode ?? info.compilationMode,
+          debuggerModeStatus: info.debuggerModeStatus,
+        })
+      );
+
+    case "CompileError":
+      return h(
+        HTMLDivElement,
+        {},
+        viewLongStatusLine("Compilation error", status.date),
+        h(HTMLParagraphElement, {}, "Check the terminal to see the errors!")
+      );
+
+    case "Connecting":
+      return h(
+        HTMLDivElement,
+        {},
+        viewLongStatusLine("Web socket connecting", status.date),
+        status.attemptNumber > 1
+          ? h(HTMLParagraphElement, {}, `Attempt: ${status.attemptNumber}`)
+          : undefined
+      );
+
+    case "EvalError":
+      return h(
+        HTMLDivElement,
+        {},
+        viewLongStatusLine("Eval error", status.date),
+        h(
+          HTMLParagraphElement,
+          {},
+          "Check the console in the browser developer tools to see the errors!"
+        )
+      );
+
+    case "Idle":
+      return h(
+        HTMLDivElement,
+        {},
+        viewLongStatusLine("Successfully compiled", status.date),
+        viewCompilationModeChooser({
+          dispatch,
+          sendKey: status.sendKey,
+          compilationMode: info.compilationMode,
+          debuggerModeStatus: info.debuggerModeStatus,
+        })
+      );
+
+    case "SleepingBeforeReconnect":
+      return h(
+        HTMLDivElement,
+        {},
+        viewLongStatusLine(
+          "Sleeping before reconnecting web socket",
+          status.date
+        ),
+        status.attemptNumber > 1
+          ? h(HTMLParagraphElement, {}, `Attempt: ${status.attemptNumber}`)
+          : undefined,
+        status.reason !== ""
+          ? h(
+              HTMLParagraphElement,
+              {},
+              `The browser says the reason for disconnecting was: ${status.reason}`
+            )
+          : undefined
+      );
+
+    case "UnexpectedError":
+      return h(
+        HTMLDivElement,
+        {},
+        viewLongStatusLine("Unexpected error", status.date),
+        h(
+          HTMLParagraphElement,
+          {},
+          "I ran into an unexpected error! This is the error message:"
+        ),
+        h(HTMLPreElement, {}, status.message)
+      );
+  }
+}
+
+function viewLongStatusLine(description: string, date: Date): HTMLElement {
+  return h(
+    HTMLSpanElement,
+    {},
+    `Status: ${description}} since ${formatDate(date)} ${formatTime(date)}`
+  );
+}
+
+function viewShortStatus(status: Status): HTMLElement {
+  switch (status.tag) {
+    case "Busy":
+      return viewShortStatusLine("⏳", status.date);
+
+    case "CompileError":
+      return viewShortStatusLine("🚨", status.date);
+
+    case "Connecting":
+      return viewShortStatusLine("🔌", status.date);
+
+    case "EvalError":
+      return viewShortStatusLine("⛔️", status.date);
+
+    case "Idle":
+      return viewShortStatusLine("✅", status.date);
+
+    case "SleepingBeforeReconnect":
+      return viewShortStatusLine("🔌", status.date);
+
+    case "UnexpectedError":
+      return viewShortStatusLine("⚠️", status.date);
+  }
+}
+
+function viewShortStatusLine(icon: string, date: Date): HTMLElement {
+  return h(
+    HTMLSpanElement,
+    {},
+    icon,
+    formatTime(date),
+    h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
+  );
+}
+
+type CompilationModeOption = {
+  mode: CompilationMode;
+  name: string;
+  status: Toggled;
+};
+
+type Toggled =
+  | {
+      tag: "Disabled";
+      reason: string;
+    }
+  | {
+      tag: "Enabled";
+    };
+
+function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
+  return `The Elm debugger isn't supported by ${humanList(
+    Array.from(noDebuggerProgramTypes, (programType) => `\`${programType}\``)
+  )} programs.`;
+}
+
+function humanList(list: Array<string>): string {
+  return list.length <= 1
+    ? list.join("")
+    : `${list.slice(0, list.length - 2).join(",")}, ${list
+        .slice(-2)
+        .join(" and ")}`;
+}
+
+function viewCompilationModeChooser({
+  dispatch,
+  sendKey,
+  compilationMode: selectedMode,
+  debuggerModeStatus,
+}: {
+  dispatch: (msg: UiMsg) => void;
+  sendKey: SendKey | undefined;
+  compilationMode: CompilationModeWithProxy;
+  debuggerModeStatus: Toggled;
+}): HTMLElement {
+  const compilationModes: Array<CompilationModeOption> = [
+    {
+      mode: "debug",
+      name: "Debug",
+      status: debuggerModeStatus,
+    },
+    { mode: "standard", name: "Standard", status: { tag: "Enabled" } },
+    { mode: "optimize", name: "Optimize", status: { tag: "Enabled" } },
+  ];
+
+  return h(
+    HTMLFieldSetElement,
+    { disabled: sendKey === undefined },
+    h(HTMLLegendElement, {}, "Compilation mode"),
+    ...compilationModes.map(({ mode, name, status }) =>
+      h(
+        HTMLLabelElement,
+        {},
+        h(HTMLInputElement, {
+          type: "radio",
+          name: "CompilationMode",
+          checked: mode === selectedMode,
+          disabled: sendKey === undefined || status.tag === "Disabled",
+          onchange:
+            sendKey === undefined
+              ? undefined
+              : () => {
+                  dispatch({
+                    tag: "ChangedCompilationMode",
+                    compilationMode: mode,
+                    sendKey,
+                  });
+                },
+        }),
+        status.tag === "Enabled" ? name : `${name} – ${status.reason}`
+      )
+    )
+  );
 }
 
 run();

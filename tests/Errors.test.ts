@@ -4,7 +4,7 @@ import * as path from "path";
 
 import { elmWatchCli } from "../src";
 import * as Errors from "../src/Errors";
-import { Env, sha256, toError } from "../src/Helpers";
+import { Env, toError } from "../src/Helpers";
 import {
   assertExitCode,
   clean,
@@ -104,7 +104,7 @@ async function runWithBadElmBinAndExpectedJson(
   const dir = path.join(FIXTURES_DIR, "valid");
   const jsonPath = path.join(
     dir,
-    `elm-watch-ElmMakeJsonParseError-${sha256(expectedWrittenJson)}.json`
+    `elm-watch-ElmMakeJsonParseError-${Errors.sha256(expectedWrittenJson)}.json`
   );
 
   if (fs.existsSync(jsonPath)) {

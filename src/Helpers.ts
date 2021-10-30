@@ -1,5 +1,3 @@
-import * as crypto from "crypto";
-import * as os from "os";
 import type { Readable, Writable } from "stream";
 import { DecoderError, repr } from "tiny-decoders";
 
@@ -17,8 +15,6 @@ export type WriteStream = Writable & {
   columns?: number;
 };
 
-export const IS_WINDOWS = os.platform() === "win32";
-
 /**
  * More type safe version of `Array#join`.
  */
@@ -32,10 +28,6 @@ export function split(string: string, splitter: string): NonEmptyArray<string> {
 
 export function getSetSingleton<T>(set: Set<T>): T | undefined {
   return set.size === 1 ? Array.from(set)[0] : undefined;
-}
-
-export function sha256(string: string): string {
-  return crypto.createHash("sha256").update(string).digest("hex");
 }
 
 export const CLEAR = "\x1B[2J\x1B[3J\x1B[H";
@@ -53,8 +45,18 @@ export function removeColor(string: string): string {
   return string.replace(/\x1B\[\d+m/g, "");
 }
 
+function pad(number: number): string {
+  return number.toString().padStart(2, "0");
+}
+
+export function formatDate(date: Date): string {
+  return join(
+    [pad(date.getFullYear()), pad(date.getMonth() + 1), pad(date.getDate())],
+    "-"
+  );
+}
+
 export function formatTime(date: Date): string {
-  const pad = (number: number): string => number.toString().padStart(2, "0");
   return join(
     [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())],
     ":"
