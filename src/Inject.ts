@@ -317,24 +317,37 @@ export function inject(
   webSocketPort: Port,
   code: string
 ): InjectResult {
+  // Put our code inside Elm’s IIFE so that minification relying on removing
+  // Elm’s IIFE still works.
+  const clientCodeReplacement: Replacement = {
+    probe: /^\s*'use strict';/m,
+    replacements: [
+      {
+        search: /^\s*'use strict';/m,
+        replace: `$&\n${getClientCode(
+          outputPath,
+          compiledTimestamp,
+          compilationMode,
+          webSocketPort
+        )}`,
+      },
+    ],
+  };
   try {
-    const newCode = mainReplacements.reduce(
-      (accCode, replacement) =>
-        strictReplace(
-          absoluteDirname(outputPath.theOutputPath),
-          accCode,
-          replacement
-        ),
-      code
-    );
+    const newCode = mainReplacements
+      .concat(clientCodeReplacement)
+      .reduce(
+        (accCode, replacement) =>
+          strictReplace(
+            absoluteDirname(outputPath.theOutputPath),
+            accCode,
+            replacement
+          ),
+        code
+      );
     return {
       tag: "Success",
-      code: `${getClientCode(
-        outputPath,
-        compiledTimestamp,
-        compilationMode,
-        webSocketPort
-      )}\n${newCode}`,
+      code: newCode,
     };
   } catch (unknownError) {
     if (unknownError instanceof StrictReplaceError) {
