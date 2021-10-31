@@ -168,6 +168,7 @@ function run(): void {
 
   const targetRoot = document.createElement("div");
   targetRoot.setAttribute("data-target", TARGET_NAME);
+  targetRoot.className = CLASS.targetRoot;
   shadowRoot.append(targetRoot);
 
   const getNow: GetNow = () => new Date();
@@ -688,16 +689,82 @@ function render(
 }
 
 const CLASS = {
+  chevronButton: "chevronButton",
+  compilationModeOption: "compilationModeOption",
+  container: "container",
+  expandedUiContainer: "expandedUiContainer",
+  shortStatusContainer: "shortStatusContainer",
+  shortStatusLine: "shortStatusLine",
   targetName: "targetName",
+  targetRoot: "targetRoot",
 };
 
 const CSS = `
-[data-target]:only-of-type .${CLASS.targetName} {
+pre {
+  white-space: pre-wrap;
+}
+
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
+p,
+fieldset {
+  margin: 0;
+}
+
+.${CLASS.targetRoot}:only-of-type .${CLASS.shortStatusContainer}:only-child .${CLASS.targetName} {
   display: none;
 }
 
-pre {
-  white-space: pre-wrap;
+.${CLASS.targetRoot} + .${CLASS.targetRoot} {
+  margin-top: 0.125em;
+}
+
+.${CLASS.container} {
+  background-color: white;
+  color: black;
+  font-family: system-ui;
+}
+
+.${CLASS.expandedUiContainer} {
+  padding: 0.75em 1em;
+}
+
+.${CLASS.compilationModeOption} {
+  display: block;
+}
+
+.${CLASS.shortStatusContainer} {
+  line-height: 1;
+  padding: 0.25em;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
+.${CLASS.shortStatusLine} {
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
+.${CLASS.chevronButton} {
+  appearance: none;
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
 }
 `;
 
@@ -708,17 +775,21 @@ function view(
 ): HTMLElement {
   return h(
     HTMLDivElement,
-    {},
+    { className: CLASS.container },
     model.uiExpanded ? viewExpandedUi(dispatch, model.status, info) : undefined,
     h(
       HTMLSpanElement,
-      {},
+      {
+        className: CLASS.shortStatusContainer,
+        // Placed on the span to increase clickable area.
+        onclick: () => {
+          dispatch({ tag: "PressedChevron" });
+        },
+      },
       h(
         HTMLButtonElement,
         {
-          onclick: () => {
-            dispatch({ tag: "PressedChevron" });
-          },
+          className: CLASS.chevronButton,
           attrs: {
             "aria-label": model.uiExpanded ? "Collapse" : "Expand",
             "aria-expanded": model.uiExpanded.toString(),
@@ -730,6 +801,9 @@ function view(
           model.uiExpanded ? "▲" : "▼"
         )
       ),
+      info.compilationMode === "optimize"
+        ? h(HTMLSpanElement, {}, "⚡️")
+        : undefined,
       viewShortStatus(model.status)
     )
   );
@@ -742,7 +816,7 @@ function viewExpandedUi(
 ): HTMLElement {
   return h(
     HTMLDivElement,
-    {},
+    { className: CLASS.expandedUiContainer },
     viewInfo(info),
     viewLongStatus(dispatch, status, info)
   );
@@ -752,9 +826,8 @@ function viewInfo(info: Info): HTMLElement {
   return h(
     HTMLDivElement,
     {},
-    h(HTMLDivElement, {}, info.targetName),
     h(HTMLDivElement, {}, `elm-watch ${info.version}`),
-    h(HTMLDivElement, {}, info.webSocketUrl)
+    h(HTMLDivElement, {}, new URL(info.webSocketUrl).origin)
   );
 }
 
@@ -872,9 +945,19 @@ function viewLongStatus(
 
 function viewLongStatusLine(description: string, date: Date): HTMLElement {
   return h(
-    HTMLSpanElement,
+    HTMLDivElement,
     {},
-    `Status: ${description} since ${formatDate(date)} ${formatTime(date)}`
+    h(HTMLDivElement, {}, `Status: ${description}`),
+    h(
+      HTMLDivElement,
+      {},
+      `Updated: `,
+      h(
+        HTMLTimeElement,
+        { dateTime: date.toISOString() },
+        `${formatDate(date)} ${formatTime(date)}`
+      )
+    )
   );
 }
 
@@ -906,9 +989,9 @@ function viewShortStatus(status: Status): HTMLElement {
 function viewShortStatusLine(icon: string, date: Date): HTMLElement {
   return h(
     HTMLSpanElement,
-    {},
-    icon,
-    formatTime(date),
+    { className: CLASS.shortStatusLine },
+    h(HTMLSpanElement, {}, icon),
+    h(HTMLTimeElement, { dateTime: date.toISOString() }, formatTime(date)),
     h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
   );
 }
@@ -970,7 +1053,7 @@ function viewCompilationModeChooser({
     ...compilationModes.map(({ mode, name, status }) =>
       h(
         HTMLLabelElement,
-        {},
+        { className: CLASS.compilationModeOption },
         h(HTMLInputElement, {
           type: "radio",
           name: "CompilationMode",
