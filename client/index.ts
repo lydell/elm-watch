@@ -436,8 +436,8 @@ function reconnect(
 }
 
 function retryWaitMs(attemptNumber: number): number {
-  // At least 10 ms, at most 1 minute.
-  return Math.min(attemptNumber ** 2 * 10, 1000 * 60);
+  // At least 1010 ms, at most 1 minute.
+  return Math.min(1000 + 10 * attemptNumber ** 2, 1000 * 60);
 }
 
 const runCmd =
@@ -794,9 +794,9 @@ function viewLongStatus(
           ? h(
               HTMLParagraphElement,
               {},
-              `Attempt: ${status.attemptNumber}. Sleep: ${retryWaitMs(
-                status.attemptNumber
-              )} ms.`,
+              `Attempt: ${status.attemptNumber}. Sleep: ${
+                retryWaitMs(status.attemptNumber) / 1000
+              } seconds.`,
               h(
                 HTMLButtonElement,
                 {
