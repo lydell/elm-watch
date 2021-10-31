@@ -31,7 +31,6 @@ type Msg =
   | {
       tag: "SleepBeforeReconnectDone";
       date: Date;
-      attemptNumber: number;
     }
   | {
       tag: "UiMsg";
@@ -61,6 +60,9 @@ type UiMsg =
     }
   | {
       tag: "PressedChevron";
+    }
+  | {
+      tag: "PressedReconnectNow";
     };
 
 type Model = {
@@ -269,17 +271,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
       ];
 
     case "SleepBeforeReconnectDone":
-      return [
-        {
-          ...model,
-          status: {
-            tag: "Connecting",
-            date: msg.date,
-            attemptNumber: msg.attemptNumber,
-          },
-        },
-        [{ tag: "Reconnect", compiledTimestamp: model.compiledTimestamp }],
-      ];
+      return reconnect(model, msg.date, { force: false });
 
     case "UiMsg":
       return onUiMsg(msg.date, msg.msg, model);
@@ -350,6 +342,9 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
 
     case "PressedChevron":
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
+
+    case "PressedReconnectNow":
+      return reconnect(model, date, { force: true });
   }
 }
 
@@ -414,6 +409,32 @@ function statusChanged(
   }
 }
 
+function reconnect(
+  model: Model,
+  date: Date,
+  { force }: { force: boolean }
+): [Model, Array<Cmd>] {
+  // We never clear reconnect `setTimeout`s. Instead, check that the required
+  // amount of time has passed. This is needed since we have the “Reconnect now”
+  // button.
+  return model.status.tag === "SleepingBeforeReconnect" &&
+    (date.getTime() - model.status.date.getTime() >=
+      retryWaitMs(model.status.attemptNumber) ||
+      force)
+    ? [
+        {
+          ...model,
+          status: {
+            tag: "Connecting",
+            date,
+            attemptNumber: model.status.attemptNumber,
+          },
+        },
+        [{ tag: "Reconnect", compiledTimestamp: model.compiledTimestamp }],
+      ]
+    : [model, []];
+}
+
 function retryWaitMs(attemptNumber: number): number {
   // At least 10 ms, at most 1 minute.
   return Math.min(attemptNumber ** 2 * 10, 1000 * 60);
@@ -462,15 +483,8 @@ const runCmd =
         return;
 
       case "SleepBeforeReconnect":
-        // There should be no need to keep track of timeouts and clear them and
-        // stuff, because we only have one web socket, a web socket can only be
-        // closed once, and this only happens in reaction to "close" events.
         setTimeout(() => {
-          dispatch({
-            tag: "SleepBeforeReconnectDone",
-            date: getNow(),
-            attemptNumber: cmd.attemptNumber,
-          });
+          dispatch({ tag: "SleepBeforeReconnectDone", date: getNow() });
         }, retryWaitMs(cmd.attemptNumber));
         return;
     }
@@ -777,7 +791,22 @@ function viewLongStatus(
           status.date
         ),
         status.attemptNumber > 1
-          ? h(HTMLParagraphElement, {}, `Attempt: ${status.attemptNumber}`)
+          ? h(
+              HTMLParagraphElement,
+              {},
+              `Attempt: ${status.attemptNumber}. Sleep: ${retryWaitMs(
+                status.attemptNumber
+              )} ms.`,
+              h(
+                HTMLButtonElement,
+                {
+                  onclick: () => {
+                    dispatch({ tag: "PressedReconnectNow" });
+                  },
+                },
+                "Reconnect now"
+              )
+            )
           : undefined,
         status.reason !== ""
           ? h(
