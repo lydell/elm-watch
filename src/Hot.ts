@@ -227,6 +227,10 @@ type Cmd =
       tag: "WebSocketSendToOutput";
       outputPath: OutputPath;
       message: WebSocketToClientMessage;
+    }
+  | {
+      tag: "WebSocketUpdatePriority";
+      webSocket: WebSocket;
     };
 
 export type HotRunResult =
@@ -1379,6 +1383,14 @@ const runCmd =
           mutable.webSocketConnections
         );
         return;
+
+      case "WebSocketUpdatePriority":
+        for (const webSocketConnection of mutable.webSocketConnections) {
+          if (webSocketConnection.webSocket === cmd.webSocket) {
+            webSocketConnection.priority = getNow().getTime();
+          }
+        }
+        return;
     }
   };
 
@@ -1888,7 +1900,7 @@ function onWebSocketToServerMessage(
   message: WebSocketToServerMessage
 ): [Model, Array<Cmd>] {
   switch (message.tag) {
-    case "ChangeCompilationMode":
+    case "ChangedCompilationMode":
       return [
         model,
         [
@@ -1899,6 +1911,9 @@ function onWebSocketToServerMessage(
           },
         ],
       ];
+
+    case "FocusedTab":
+      return [model, [{ tag: "WebSocketUpdatePriority", webSocket }]];
   }
 }
 

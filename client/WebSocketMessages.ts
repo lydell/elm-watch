@@ -48,9 +48,12 @@ export type WebSocketToServerMessage = ReturnType<
   typeof WebSocketToServerMessage
 >;
 export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
-  ChangeCompilationMode: Decode.fieldsAuto({
-    tag: () => "ChangeCompilationMode" as const,
+  ChangedCompilationMode: Decode.fieldsAuto({
+    tag: () => "ChangedCompilationMode" as const,
     compilationMode: CompilationMode,
+  }),
+  FocusedTab: Decode.fieldsAuto({
+    tag: () => "FocusedTab" as const,
   }),
 });
 

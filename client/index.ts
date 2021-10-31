@@ -29,6 +29,13 @@ type Msg =
       date: Date;
     }
   | {
+      tag: "FocusedTab";
+    }
+  | {
+      tag: "PageVisibilityChangedToVisible";
+      date: Date;
+    }
+  | {
       tag: "SleepBeforeReconnectDone";
       date: Date;
     }
@@ -203,9 +210,21 @@ function getOrCreateContainer(): HTMLElement {
 
 const initMutable =
   (getNow: GetNow) =>
-  (dispatch: (msg: Msg) => void): Mutable => ({
-    webSocket: initWebSocket(getNow, INITIAL_COMPILED_TIMESTAMP, dispatch),
-  });
+  (dispatch: (msg: Msg) => void): Mutable => {
+    window.addEventListener("focus", () => {
+      dispatch({ tag: "FocusedTab" });
+    });
+
+    window.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        dispatch({ tag: "PageVisibilityChangedToVisible", date: getNow() });
+      }
+    });
+
+    return {
+      webSocket: initWebSocket(getNow, INITIAL_COMPILED_TIMESTAMP, dispatch),
+    };
+  };
 
 function initWebSocket(
   getNow: GetNow,
@@ -270,6 +289,23 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
         [],
       ];
 
+    case "FocusedTab":
+      return [
+        model,
+        model.status.tag === "Idle"
+          ? [
+              {
+                tag: "SendMessage",
+                message: { tag: "FocusedTab" },
+                sendKey: model.status.sendKey,
+              },
+            ]
+          : [],
+      ];
+
+    case "PageVisibilityChangedToVisible":
+      return reconnect(model, msg.date, { force: true });
+
     case "SleepBeforeReconnectDone":
       return reconnect(model, msg.date, { force: false });
 
@@ -332,7 +368,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
           {
             tag: "SendMessage",
             message: {
-              tag: "ChangeCompilationMode",
+              tag: "ChangedCompilationMode",
               compilationMode: msg.compilationMode,
             },
             sendKey: msg.sendKey,
@@ -484,7 +520,9 @@ const runCmd =
 
       case "SleepBeforeReconnect":
         setTimeout(() => {
-          dispatch({ tag: "SleepBeforeReconnectDone", date: getNow() });
+          if (document.visibilityState === "visible") {
+            dispatch({ tag: "SleepBeforeReconnectDone", date: getNow() });
+          }
         }, retryWaitMs(cmd.attemptNumber));
         return;
     }
