@@ -548,14 +548,15 @@ function parseWebSocketMessageData(
       message: decodeWebSocketToClientMessage(Decode.string(data)),
     };
   } catch (unknownError) {
+    const errorMessage =
+      unknownError instanceof Decode.DecoderError
+        ? unknownError.format()
+        : unknownError instanceof Error
+        ? unknownError.message
+        : Decode.repr(unknownError);
     return {
       tag: "Error",
-      message:
-        unknownError instanceof Decode.DecoderError
-          ? unknownError.format()
-          : unknownError instanceof Error
-          ? unknownError.message
-          : Decode.repr(unknownError),
+      message: `Failed to decode web socket message sent from the server:\n${errorMessage}`,
     };
   }
 }
