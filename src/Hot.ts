@@ -19,6 +19,7 @@ import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import {
   bold,
+  capitalize,
   dim,
   Env,
   formatTime,
@@ -2113,21 +2114,21 @@ function printTimeline(
 function printEvent(event: WatcherEvent | WebSocketRelatedEvent): string {
   switch (event.tag) {
     case "WatcherEvent":
-      return `${formatTime(event.date)} ${event.eventName} ${
+      return `${formatTime(event.date)} ${capitalize(event.eventName)} ${
         event.file.absolutePath
       }`;
 
     case "WebSocketConnectedEvent":
       return `${formatTime(
         event.date
-      )} web socket connected needing compilation of: ${
+      )} Web socket connected needing compilation of: ${
         event.outputPath.targetName
       }`;
 
     case "WebSocketChangedCompilationModeEvent":
       return `${formatTime(
         event.date
-      )} changed compilation mode to ${JSON.stringify(
+      )} Changed compilation mode to ${JSON.stringify(
         event.compilationMode
       )} of: ${event.outputPath.targetName}`;
   }
