@@ -18,6 +18,7 @@ const StatusChanged = Decode.fieldsAuto({
     }),
     Busy: Decode.fieldsAuto({
       tag: () => "Busy" as const,
+      compilationMode: CompilationMode,
     }),
     CompileError: Decode.fieldsAuto({
       tag: () => "CompileError" as const,

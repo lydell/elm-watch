@@ -433,7 +433,10 @@ function statusChanged(
       ];
 
     case "Busy":
-      return [{ tag: "Busy", date }, "KeepUI"];
+      return [
+        { tag: "Busy", date, compilationMode: status.compilationMode },
+        "KeepUI",
+      ];
 
     case "ClientError":
       return [

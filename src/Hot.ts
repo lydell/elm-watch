@@ -1134,7 +1134,10 @@ const runCmd =
                 outputState.dirty = true;
                 webSocketSend(webSocketConnection.webSocket, {
                   tag: "StatusChanged",
-                  status: { tag: "Busy" },
+                  status: {
+                    tag: "Busy",
+                    compilationMode: outputState.compilationMode,
+                  },
                 });
               }
             }
@@ -1272,7 +1275,13 @@ const runCmd =
           }
           webSocketSendToOutput(
             outputPath,
-            { tag: "StatusChanged", status: { tag: "Busy" } },
+            {
+              tag: "StatusChanged",
+              status: {
+                tag: "Busy",
+                compilationMode: outputState.compilationMode,
+              },
+            },
             mutable.webSocketConnections
           );
         }
@@ -1715,7 +1724,10 @@ function onWebSocketConnected(
             outputPath,
             message: {
               tag: "StatusChanged",
-              status: { tag: "Busy" },
+              status: {
+                tag: "Busy",
+                compilationMode: outputState.compilationMode,
+              },
             },
           },
         ],
@@ -1736,7 +1748,10 @@ function onWebSocketConnected(
             outputPath,
             message: {
               tag: "StatusChanged",
-              status: { tag: "Busy" },
+              status: {
+                tag: "Busy",
+                compilationMode: outputState.compilationMode,
+              },
             },
           },
         ],
@@ -1806,7 +1821,10 @@ function onWebSocketConnected(
                     outputPath,
                     message: {
                       tag: "StatusChanged",
-                      status: { tag: "Busy" },
+                      status: {
+                        tag: "Busy",
+                        compilationMode: outputState.compilationMode,
+                      },
                     },
                   },
                 ],
@@ -1851,7 +1869,10 @@ function onWebSocketConnectedRecompileNeeded(
             outputPath,
             message: {
               tag: "StatusChanged",
-              status: { tag: "Busy" },
+              status: {
+                tag: "Busy",
+                compilationMode: outputState.compilationMode,
+              },
             },
           },
         ],
