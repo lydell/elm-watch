@@ -20,7 +20,6 @@ import {
 } from "./NonEmptyArray";
 import {
   absoluteDirname,
-  AbsolutePath,
   absolutePathFromString,
   absoluteRealpath,
   findClosest,
@@ -29,6 +28,7 @@ import {
 import { Postprocess, PostprocessError } from "./Postprocess";
 import { RunElmMakeError } from "./SpawnElm";
 import type {
+  AbsolutePath,
   CompilationMode,
   ElmJsonPath,
   ElmWatchJsonPath,

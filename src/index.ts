@@ -1,10 +1,10 @@
 import * as Help from "./Help";
 import { Env, ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
 import { makeLogger } from "./Logger";
-import { absolutePathFromString, Cwd } from "./PathHelpers";
+import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { run } from "./Run";
-import { GetNow, OnIdle } from "./Types";
+import { Cwd, GetNow, OnIdle } from "./Types";
 
 type Options = {
   cwd: string;

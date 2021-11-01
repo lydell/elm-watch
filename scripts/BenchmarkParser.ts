@@ -7,7 +7,8 @@ import * as Decode from "tiny-decoders";
 
 import { isNonEmptyArray } from "../src/NonEmptyArray";
 import * as Parser from "../src/Parser";
-import { AbsolutePath, absolutePathFromString, Cwd } from "../src/PathHelpers";
+import { absolutePathFromString } from "../src/PathHelpers";
+import { AbsolutePath, Cwd } from "../src/Types";
 
 class KnownError extends Error {}
 

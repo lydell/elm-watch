@@ -1,6 +1,8 @@
 import * as Decode from "tiny-decoders";
 
-import type { AbsolutePath } from "./PathHelpers";
+export type AbsolutePath = { tag: "AbsolutePath"; absolutePath: string };
+
+export type Cwd = { tag: "Cwd"; path: AbsolutePath };
 
 export type RunMode = "hot" | "make";
 

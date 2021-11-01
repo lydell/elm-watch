@@ -2,7 +2,7 @@ import * as childProcess from "child_process";
 
 import { Env } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
-import { AbsolutePath } from "./PathHelpers";
+import { AbsolutePath } from "./Types";
 
 export type SpawnResult =
   | {

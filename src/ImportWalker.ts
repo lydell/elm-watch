@@ -5,8 +5,7 @@ import * as path from "path";
 import { toError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import * as Parser from "./Parser";
-import { AbsolutePath } from "./PathHelpers";
-import { InputPath, SourceDirectory } from "./Types";
+import { AbsolutePath, InputPath, SourceDirectory } from "./Types";
 
 // NOTE: This module uses just `string` instead of `AbsolutePath` for performance!
 

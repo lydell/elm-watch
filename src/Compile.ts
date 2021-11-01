@@ -27,7 +27,7 @@ import {
   NonEmptyArray,
   nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray";
-import { absoluteDirname, AbsolutePath } from "./PathHelpers";
+import { absoluteDirname } from "./PathHelpers";
 import { Port } from "./Port";
 import {
   Postprocess,
@@ -39,6 +39,7 @@ import { OutputError, OutputState, Project } from "./Project";
 import { SPAWN_KILLED } from "./Spawn";
 import * as SpawnElm from "./SpawnElm";
 import {
+  AbsolutePath,
   CompilationMode,
   ElmJsonPath,
   ElmWatchJsonPath,

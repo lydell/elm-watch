@@ -34,12 +34,13 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { absoluteDirname, AbsolutePath } from "./PathHelpers";
+import { absoluteDirname } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
+  AbsolutePath,
   CompilationMode,
   ElmWatchJsonPath,
   equalsInputPath,

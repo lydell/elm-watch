@@ -8,9 +8,9 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { Cwd, findClosest } from "./PathHelpers";
+import { findClosest } from "./PathHelpers";
 import { Port } from "./Port";
-import type { CliArg, ElmWatchJsonPath } from "./Types";
+import type { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335

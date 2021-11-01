@@ -7,10 +7,16 @@ import * as Hot from "./Hot";
 import type { Logger } from "./Logger";
 import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import { Cwd } from "./PathHelpers";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
 import { initProject } from "./Project";
-import { CliArg, ElmWatchJsonPath, GetNow, OnIdle, RunMode } from "./Types";
+import {
+  CliArg,
+  Cwd,
+  ElmWatchJsonPath,
+  GetNow,
+  OnIdle,
+  RunMode,
+} from "./Types";
 
 type RunResult =
   | {

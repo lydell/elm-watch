@@ -7,10 +7,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-
-export type AbsolutePath = { tag: "AbsolutePath"; absolutePath: string };
-
-export type Cwd = { tag: "Cwd"; path: AbsolutePath };
+import { AbsolutePath } from "./Types";
 
 export function absolutePathFromString(
   from: AbsolutePath,

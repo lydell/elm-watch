@@ -15,10 +15,9 @@ import {
 import {
   absoluteDirname,
   absolutePathFromString,
-  Cwd,
   findClosest,
 } from "../src/PathHelpers";
-import { InputPath } from "../src/Types";
+import { Cwd, InputPath } from "../src/Types";
 
 function run(args: Array<string>): void {
   if (!isNonEmptyArray(args)) {

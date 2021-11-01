@@ -1,9 +1,9 @@
 import { CompilationModeWithProxy } from "../client/WebSocketMessages";
 import * as ClientCode from "./ClientCode";
 import * as Errors from "./Errors";
-import { absoluteDirname, AbsolutePath } from "./PathHelpers";
+import { absoluteDirname } from "./PathHelpers";
 import { Port } from "./Port";
-import { CompilationMode, OutputPath } from "./Types";
+import { AbsolutePath, CompilationMode, OutputPath } from "./Types";
 
 type Replacement = {
   // The `probe` is a simpler regex that determines if `replacements` should be

@@ -3,9 +3,10 @@ import { Worker } from "worker_threads";
 
 import { Env, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname, AbsolutePath } from "./PathHelpers";
+import { absoluteDirname } from "./PathHelpers";
 import { Command, ExitReason, spawnKillable, SpawnResult } from "./Spawn";
 import {
+  AbsolutePath,
   CompilationMode,
   ElmWatchJsonPath,
   ElmWatchNodeScriptPath,

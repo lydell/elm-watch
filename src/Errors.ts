@@ -11,7 +11,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { AbsolutePath, absolutePathFromString, Cwd } from "./PathHelpers";
+import { absolutePathFromString } from "./PathHelpers";
 import { Port } from "./Port";
 import { ELM_WATCH_NODE, UnknownValueAsString } from "./Postprocess";
 import {
@@ -20,7 +20,9 @@ import {
 } from "./Project";
 import { Command, ExitReason } from "./Spawn";
 import {
+  AbsolutePath,
   CliArg,
+  Cwd,
   ElmJsonPath,
   ElmWatchJsonPath,
   ElmWatchNodeScriptPath,

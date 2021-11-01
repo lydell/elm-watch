@@ -2,12 +2,8 @@ import * as path from "path";
 
 import { walkImports } from "../src/ImportWalker";
 import { mapNonEmptyArray, NonEmptyArray } from "../src/NonEmptyArray";
-import {
-  AbsolutePath,
-  absolutePathFromString,
-  absoluteRealpath,
-} from "../src/PathHelpers";
-import { InputPath, SourceDirectory } from "../src/Types";
+import { absolutePathFromString, absoluteRealpath } from "../src/PathHelpers";
+import { AbsolutePath, InputPath, SourceDirectory } from "../src/Types";
 import { clean, stringSnapshotSerializer } from "./Helpers";
 
 const FIXTURES_DIR: AbsolutePath = {
