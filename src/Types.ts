@@ -13,6 +13,8 @@ export const CompilationMode = Decode.stringUnion({
   optimize: null,
 });
 
+export type CompilationModeWithProxy = CompilationMode | "proxy";
+
 // elm-watch.json
 export type ElmWatchJsonPath = {
   tag: "ElmWatchJsonPath";

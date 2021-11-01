@@ -1,13 +1,6 @@
 import * as Decode from "tiny-decoders";
 
-export type CompilationModeWithProxy = CompilationMode | "proxy";
-
-export type CompilationMode = ReturnType<typeof CompilationMode>;
-const CompilationMode = Decode.stringUnion({
-  debug: null,
-  standard: null,
-  optimize: null,
-});
+import { CompilationMode } from "../src/Types";
 
 export type StatusChanged = ReturnType<typeof StatusChanged>;
 const StatusChanged = Decode.fieldsAuto({

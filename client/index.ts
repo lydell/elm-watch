@@ -2,10 +2,12 @@ import * as Decode from "tiny-decoders";
 
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
-import type { GetNow } from "../src/Types";
-import {
+import type {
   CompilationMode,
   CompilationModeWithProxy,
+  GetNow,
+} from "../src/Types";
+import {
   decodeWebSocketToClientMessage,
   StatusChanged,
   WebSocketToClientMessage,
