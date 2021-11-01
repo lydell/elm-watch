@@ -26,7 +26,7 @@ const StatusChanged = Decode.fieldsAuto({
 const SuccessfullyCompiled = Decode.fieldsAuto({
   tag: () => "SuccessfullyCompiled" as const,
   code: Decode.string,
-  compiledTimestamp: Decode.number,
+  elmCompiledTimestamp: Decode.number,
   compilationMode: CompilationMode,
 });
 

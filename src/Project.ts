@@ -89,11 +89,12 @@ export type OutputStatus =
       tag: "QueuedForPostprocess";
       postprocessArray: NonEmptyArray<string>;
       code: Buffer | string;
+      elmCompiledTimestamp: number;
     }
   | {
       tag: "Success";
       fileSize: number;
-      compiledTimestamp: number;
+      elmCompiledTimestamp: number;
     };
 
 export type OutputError =

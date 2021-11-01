@@ -197,6 +197,7 @@ type NeedsPostprocessOutputAction = {
   postprocessArray: NonEmptyArray<string>;
   priority: number;
   code: Buffer | string;
+  elmCompiledTimestamp: number;
 };
 
 type QueueForElmMakeOutputAction = {
@@ -334,6 +335,7 @@ export function getOutputActions({
             postprocessArray: outputState.status.postprocessArray,
             priority: priority ?? 0,
             code: outputState.status.code,
+            elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
           });
           break;
 
@@ -478,7 +480,7 @@ export type HandleOutputActionResult =
       tag: "FullyCompiledJS";
       outputPath: OutputPath;
       code: Buffer;
-      compiledTimestamp: number;
+      elmCompiledTimestamp: number;
       compilationMode: CompilationMode;
     }
   | {
@@ -551,7 +553,6 @@ export async function handleOutputAction({
       return postprocessHelper({
         env,
         logger,
-        getNow,
         runMode,
         elmWatchJsonPath,
         total,
@@ -559,6 +560,7 @@ export async function handleOutputAction({
         postprocessArray: action.postprocessArray,
         postprocessWorkerPool,
         code: action.code,
+        elmCompiledTimestamp: action.elmCompiledTimestamp,
       });
 
     case "QueueForElmMake":
@@ -688,7 +690,7 @@ function onCompileSuccess(
   runMode: RunModeWithVersionedIdentifier,
   outputPath: OutputPath,
   outputState: OutputState,
-  compiledTimestamp: number,
+  elmCompiledTimestamp: number,
   postprocess: Postprocess
 ): HandleOutputActionResult {
   switch (runMode.tag) {
@@ -707,7 +709,7 @@ function onCompileSuccess(
           outputState.status = {
             tag: "Success",
             fileSize,
-            compiledTimestamp,
+            elmCompiledTimestamp,
           };
           updateStatusLineHelper();
           return { tag: "Nothing" };
@@ -727,6 +729,7 @@ function onCompileSuccess(
             tag: "QueuedForPostprocess",
             postprocessArray: postprocess.postprocessArray,
             code: buffer,
+            elmCompiledTimestamp,
           };
           updateStatusLineHelper();
           return { tag: "Nothing" };
@@ -744,9 +747,16 @@ function onCompileSuccess(
         return { tag: "CompileError", outputPath };
       }
 
+      // This will inject `elmCompiledTimestamp` into the built code, which is
+      // later used to detect if recompiles are needed or not. Note: This needs
+      // to be the timestamp of when Elm finished compiling, not when
+      // postprocessing finished. That’s because we haven’t done the
+      // postprocessing yet, but have to inject before that. So we’re storing
+      // the timestamp when Elm finished rather than when the entire process was
+      // finished.
       const result = Inject.inject(
         outputPath,
-        compiledTimestamp,
+        elmCompiledTimestamp,
         outputState.compilationMode,
         runMode.webSocketPort,
         buffer.toString("utf8")
@@ -780,14 +790,14 @@ function onCompileSuccess(
               outputState.status = {
                 tag: "Success",
                 fileSize: newBuffer.byteLength,
-                compiledTimestamp,
+                elmCompiledTimestamp,
               };
               updateStatusLineHelper();
               return {
                 tag: "FullyCompiledJS",
                 outputPath,
                 code: newBuffer,
-                compiledTimestamp,
+                elmCompiledTimestamp,
                 compilationMode: outputState.compilationMode,
               };
             }
@@ -797,6 +807,7 @@ function onCompileSuccess(
                 tag: "QueuedForPostprocess",
                 postprocessArray: postprocess.postprocessArray,
                 code: result.code,
+                elmCompiledTimestamp,
               };
               updateStatusLineHelper();
               return { tag: "Nothing" };
@@ -847,7 +858,6 @@ function needsToWriteProxyFile(
 async function postprocessHelper({
   env,
   logger,
-  getNow,
   runMode,
   elmWatchJsonPath,
   outputPath,
@@ -857,10 +867,10 @@ async function postprocessHelper({
   postprocessArray,
   postprocessWorkerPool,
   code,
+  elmCompiledTimestamp,
 }: {
   env: Env;
   logger: Logger;
-  getNow: GetNow;
   runMode: RunModeWithVersionedIdentifier;
   elmWatchJsonPath: ElmWatchJsonPath;
   outputPath: OutputPath;
@@ -870,6 +880,7 @@ async function postprocessHelper({
   postprocessArray: NonEmptyArray<string>;
   postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
+  elmCompiledTimestamp: number;
 }): Promise<HandleOutputActionResult> {
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
@@ -941,18 +952,17 @@ async function postprocessHelper({
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
     }
-    const compiledTimestamp = getNow().getTime();
     outputState.status = {
       tag: "Success",
       fileSize: postprocessResult.code.byteLength,
-      compiledTimestamp,
+      elmCompiledTimestamp,
     };
     updateStatusLineHelper();
     return {
       tag: "FullyCompiledJS",
       outputPath,
       code: postprocessResult.code,
-      compiledTimestamp,
+      elmCompiledTimestamp,
       compilationMode: outputState.compilationMode,
     };
   }

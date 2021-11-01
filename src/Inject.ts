@@ -316,7 +316,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
 
 export function inject(
   outputPath: OutputPath,
-  compiledTimestamp: number,
+  elmCompiledTimestamp: number,
   compilationMode: CompilationMode,
   webSocketPort: Port,
   code: string
@@ -330,7 +330,7 @@ export function inject(
         search: /^\s*'use strict';/m,
         replace: `$&\n${getClientCode(
           outputPath,
-          compiledTimestamp,
+          elmCompiledTimestamp,
           compilationMode,
           webSocketPort
         )}`,
@@ -465,13 +465,13 @@ them first.
 
 export function proxyFile(
   outputPath: OutputPath,
-  compiledTimestamp: number,
+  elmCompiledTimestamp: number,
   webSocketPort: Port
 ): Buffer {
   return Buffer.from(
     `${getClientCode(
       outputPath,
-      compiledTimestamp,
+      elmCompiledTimestamp,
       "proxy",
       webSocketPort
     )}\n(${proxyFileIIFE.toString()})(this);`
@@ -480,13 +480,13 @@ export function proxyFile(
 
 function getClientCode(
   outputPath: OutputPath,
-  compiledTimestamp: number,
+  elmCompiledTimestamp: number,
   compilationMode: CompilationModeWithProxy,
   webSocketPort: Port
 ): string {
   return ClientCode.code
     .replace(/%TARGET_NAME%/g, outputPath.targetName)
-    .replace(/%INITIAL_COMPILED_TIMESTAMP%/g, compiledTimestamp.toString())
+    .replace(/%INITIAL_ELM_COMPILED_TIMESTAMP%/g, elmCompiledTimestamp.toString())
     .replace(/%COMPILATION_MODE%/g, compilationMode)
     .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString());
 }

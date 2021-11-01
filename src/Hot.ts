@@ -702,7 +702,7 @@ const update =
               model,
               result.outputPath,
               result.outputState,
-              result.compiledTimestamp
+              result.elmCompiledTimestamp
             );
 
             return [nextModel, [...cmds, { tag: "SleepBeforeNextAction" }]];
@@ -1469,7 +1469,7 @@ function handleOutputActionResultToCmd(
         message: {
           tag: "SuccessfullyCompiled",
           code: handleOutputActionResult.code.toString("utf8"),
-          compiledTimestamp: handleOutputActionResult.compiledTimestamp,
+          elmCompiledTimestamp: handleOutputActionResult.elmCompiledTimestamp,
           compilationMode: handleOutputActionResult.compilationMode,
         },
       };
@@ -1597,7 +1597,7 @@ const WebSocketConnectedParams = Decode.fieldsAuto(
   {
     elmWatchVersion: Decode.string,
     targetName: Decode.string,
-    compiledTimestamp: Decode.chain(Decode.string, Number),
+    elmCompiledTimestamp: Decode.chain(Decode.string, Number),
   },
   { exact: "throw" }
 );
@@ -1608,7 +1608,7 @@ type ParseWebSocketConnectRequestUrlResult =
       tag: "Success";
       outputPath: OutputPath;
       outputState: OutputState;
-      compiledTimestamp: number;
+      elmCompiledTimestamp: number;
     };
 
 type ParseWebSocketConnectRequestUrlError =
@@ -1709,7 +1709,7 @@ function parseWebSocketConnectRequestUrl(
     tag: "Success",
     outputPath: match.outputPath,
     outputState: match.outputState,
-    compiledTimestamp: webSocketConnectedParams.compiledTimestamp,
+    elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
   };
 }
 
@@ -1751,7 +1751,7 @@ function onWebSocketConnected(
   model: Model,
   outputPath: OutputPath,
   outputState: OutputState,
-  compiledTimestamp: number
+  elmCompiledTimestamp: number
 ): [Model, Array<Cmd>] {
   const event: WebSocketRelatedEvent = {
     tag: "WebSocketConnectedEvent",
@@ -1806,7 +1806,8 @@ function onWebSocketConnected(
     case "Compiling":
       switch (outputState.status.tag) {
         case "Success":
-          return outputState.status.compiledTimestamp === compiledTimestamp
+          return outputState.status.elmCompiledTimestamp ===
+            elmCompiledTimestamp
             ? [
                 model,
                 [

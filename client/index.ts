@@ -16,7 +16,7 @@ import {
 
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
-const INITIAL_COMPILED_TIMESTAMP = Number("%INITIAL_COMPILED_TIMESTAMP%");
+const INITIAL_ELM_COMPILED_TIMESTAMP = Number("%INITIAL_ELM_COMPILED_TIMESTAMP%");
 const COMPILATION_MODE = "%COMPILATION_MODE%" as CompilationModeWithProxy;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elmWatch";
@@ -76,7 +76,7 @@ type UiMsg =
 
 type Model = {
   status: Status;
-  compiledTimestamp: number;
+  elmCompiledTimestamp: number;
   uiExpanded: boolean;
 };
 
@@ -87,7 +87,7 @@ type Cmd =
     }
   | {
       tag: "Reconnect";
-      compiledTimestamp: number;
+      elmCompiledTimestamp: number;
     }
   | {
       tag: "ReloadPage";
@@ -225,13 +225,13 @@ const initMutable =
     });
 
     return {
-      webSocket: initWebSocket(getNow, INITIAL_COMPILED_TIMESTAMP, dispatch),
+      webSocket: initWebSocket(getNow, INITIAL_ELM_COMPILED_TIMESTAMP, dispatch),
     };
   };
 
 function initWebSocket(
   getNow: GetNow,
-  compiledTimestamp: number,
+  elmCompiledTimestamp: number,
   dispatch: (msg: Msg) => void
 ): WebSocket {
   const hostname =
@@ -239,7 +239,7 @@ function initWebSocket(
   const url = new URL(`ws://${hostname}:${WEBSOCKET_PORT}/`);
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
-  url.searchParams.set("compiledTimestamp", compiledTimestamp.toString());
+  url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
 
   const webSocket = new WebSocket(url);
 
@@ -274,7 +274,7 @@ function initWebSocket(
 const init = (date: Date): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
-    compiledTimestamp: INITIAL_COMPILED_TIMESTAMP,
+    elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
   };
   return [model, [{ tag: "Render", model }]];
@@ -416,7 +416,7 @@ function onWebSocketToClientMessage(
                 date,
                 sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
               },
-              compiledTimestamp: msg.compiledTimestamp,
+              elmCompiledTimestamp: msg.elmCompiledTimestamp,
             },
             [{ tag: "Eval", code: msg.code }],
           ];
@@ -472,7 +472,7 @@ function reconnect(
             attemptNumber: model.status.attemptNumber,
           },
         },
-        [{ tag: "Reconnect", compiledTimestamp: model.compiledTimestamp }],
+        [{ tag: "Reconnect", elmCompiledTimestamp: model.elmCompiledTimestamp }],
       ]
     : [model, []];
 }
@@ -501,7 +501,7 @@ const runCmd =
       case "Reconnect":
         mutable.webSocket = initWebSocket(
           getNow,
-          cmd.compiledTimestamp,
+          cmd.elmCompiledTimestamp,
           dispatch
         );
         return;
