@@ -1131,18 +1131,12 @@ const runCmd =
                 )
               ) {
                 outputState.compilationMode = cmd.compilationMode;
-                outputState.dirty = true;
-                webSocketSend(webSocketConnection.webSocket, {
-                  tag: "StatusChanged",
-                  status: {
-                    tag: "Busy",
-                    compilationMode: outputState.compilationMode,
-                  },
-                });
+                markAsDirty(mutable, outputPath, outputState, rejectPromise);
               }
             }
           }
         }
+        writeElmWatchStuffJson(mutable);
         return;
       }
 
@@ -1269,21 +1263,7 @@ const runCmd =
 
       case "MarkAsDirty":
         for (const { outputPath, outputState } of cmd.outputs) {
-          outputState.dirty = true;
-          if (outputState.status.tag === "Postprocess") {
-            outputState.status.kill().catch(rejectPromise);
-          }
-          webSocketSendToOutput(
-            outputPath,
-            {
-              tag: "StatusChanged",
-              status: {
-                tag: "Busy",
-                compilationMode: outputState.compilationMode,
-              },
-            },
-            mutable.webSocketConnections
-          );
+          markAsDirty(mutable, outputPath, outputState, rejectPromise);
         }
         return;
 
@@ -1955,6 +1935,29 @@ function webSocketSendToOutput(
       webSocketSend(webSocketConnection.webSocket, message);
     }
   }
+}
+
+function markAsDirty(
+  mutable: Mutable,
+  outputPath: OutputPath,
+  outputState: OutputState,
+  rejectPromise: (error: Error) => void
+): void {
+  outputState.dirty = true;
+  if (outputState.status.tag === "Postprocess") {
+    outputState.status.kill().catch(rejectPromise);
+  }
+  webSocketSendToOutput(
+    outputPath,
+    {
+      tag: "StatusChanged",
+      status: {
+        tag: "Busy",
+        compilationMode: outputState.compilationMode,
+      },
+    },
+    mutable.webSocketConnections
+  );
 }
 
 function infoMessageWithTimeline(
