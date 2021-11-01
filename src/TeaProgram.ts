@@ -20,7 +20,13 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
 
     const dispatch = (msg: Msg): void => {
       if (runningCmds) {
-        reject(new Error("`dispatch` must not be called synchronously."));
+        reject(
+          new Error(
+            `\`dispatch\` must not be called synchronously. Dispatched msg: ${JSON.stringify(
+              msg
+            )}`
+          )
+        );
         return;
       }
       const [newModel, cmds] = options.update(msg, model);

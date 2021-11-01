@@ -20,7 +20,7 @@ type RunResult =
   | {
       tag: "Restart";
       restartReasons: NonEmptyArray<
-        Hot.WatcherEvent | Hot.WebSocketConnectedEvent
+        Hot.WatcherEvent | Hot.WebSocketRelatedEvent
       >;
       postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: Hot.WebSocketState | undefined;
@@ -34,7 +34,7 @@ export async function run(
   onIdle: OnIdle | undefined,
   runMode: RunMode,
   args: Array<CliArg>,
-  restartReasons: Array<Hot.WatcherEvent | Hot.WebSocketConnectedEvent>,
+  restartReasons: Array<Hot.WatcherEvent | Hot.WebSocketRelatedEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: Hot.WebSocketState | undefined
 ): Promise<RunResult> {
