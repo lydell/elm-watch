@@ -163,7 +163,13 @@ function run(): void {
     );
   }
 
-  const existingTargetRoot = Array.from(shadowRoot.children).find(
+  let root = shadowRoot.querySelector(`.${CLASS.root}`);
+  if (root === null) {
+    root = h(HTMLDivElement, { className: CLASS.root });
+    shadowRoot.append(root);
+  }
+
+  const existingTargetRoot = Array.from(root.children).find(
     (element) => element.getAttribute("data-target") === TARGET_NAME
   );
 
@@ -171,10 +177,7 @@ function run(): void {
     return;
   }
 
-  const targetRoot = document.createElement("div");
-  targetRoot.setAttribute("data-target", TARGET_NAME);
-  targetRoot.className = CLASS.targetRoot;
-  shadowRoot.append(targetRoot);
+  const targetRoot = createTargetRoot(TARGET_NAME);
 
   const getNow: GetNow = () => new Date();
 
@@ -193,6 +196,11 @@ function run(): void {
     },
     runCmd: runCmd(getNow, targetRoot),
   });
+
+  // This is great when working on the styling of all statuses.
+  // When this call is commented out, esbuild won’t include the
+  // `renderMockStatuses` function in the output.
+  renderMockStatuses(root);
 }
 
 function getOrCreateContainer(): HTMLElement {
@@ -202,8 +210,7 @@ function getOrCreateContainer(): HTMLElement {
     return existing;
   }
 
-  const container = document.createElement("div");
-  container.id = CONTAINER_ID;
+  const container = h(HTMLDivElement, { id: CONTAINER_ID });
   container.style.all = "unset";
   container.style.position = "fixed";
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
@@ -211,13 +218,17 @@ function getOrCreateContainer(): HTMLElement {
   container.style.bottom = "0";
 
   const shadowRoot = container.attachShadow({ mode: "open" });
-  const style = document.createElement("style");
-  style.append(document.createTextNode(CSS));
-  shadowRoot.append(style);
-
+  shadowRoot.append(h(HTMLStyleElement, {}, CSS));
   document.documentElement.append(container);
 
   return container;
+}
+
+function createTargetRoot(targetName: string): HTMLElement {
+  return h(HTMLDivElement, {
+    className: CLASS.targetRoot,
+    attrs: { "data-target": targetName },
+  });
 }
 
 const initMutable =
@@ -734,6 +745,7 @@ const CLASS = {
   chevronButton: "chevronButton",
   compilationModeOption: "compilationModeOption",
   container: "container",
+  disabledRadioLabel: "disabledRadioLabel",
   expandedUiContainer: "expandedUiContainer",
   longStatusContainer: "longStatusContainer",
   longStatusLine: "longStatusLine",
@@ -741,6 +753,7 @@ const CLASS = {
   shortStatusLine: "shortStatusLine",
   targetName: "targetName",
   targetRoot: "targetRoot",
+  root: "root",
 };
 
 const CSS = `
@@ -775,6 +788,14 @@ dl {
 dt {
   text-align: right;
   opacity: 0.5;
+}
+
+.${CLASS.root} {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  overflow-y: auto;
+  max-height: 100vh;
 }
 
 .${CLASS.targetRoot}:only-of-type .${CLASS.targetName} {
@@ -812,6 +833,10 @@ dt {
 
 .${CLASS.compilationModeOption} {
   display: block;
+}
+
+.${CLASS.disabledRadioLabel} {
+  opacity: 0.5;
 }
 
 .${CLASS.shortStatusContainer} {
@@ -935,6 +960,7 @@ function viewLongStatus(
           sendKey: undefined,
           compilationMode: status.compilationMode ?? info.compilationMode,
           debuggerModeStatus: info.debuggerModeStatus,
+          targetName: info.targetName,
         })
       );
 
@@ -978,6 +1004,7 @@ function viewLongStatus(
           sendKey: status.sendKey,
           compilationMode: info.compilationMode,
           debuggerModeStatus: info.debuggerModeStatus,
+          targetName: info.targetName,
         })
       );
 
@@ -1101,16 +1128,20 @@ type Toggled =
 
 function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
   return `The Elm debugger isn't supported by ${humanList(
-    Array.from(noDebuggerProgramTypes, (programType) => `\`${programType}\``)
+    Array.from(noDebuggerProgramTypes, (programType) => `\`${programType}\``),
+    "and"
   )} programs.`;
 }
 
-function humanList(list: Array<string>): string {
-  return list.length <= 1
+function humanList(list: Array<string>, joinWord: string): string {
+  const { length } = list;
+  return length <= 1
     ? list.join("")
-    : `${list.slice(0, list.length - 2).join(",")}, ${list
+    : length === 2
+    ? list.join(` ${joinWord} `)
+    : `${list.slice(0, length - 2).join(",")}, ${list
         .slice(-2)
-        .join(" and ")}`;
+        .join(` ${joinWord} `)}`;
 }
 
 function viewCompilationModeChooser({
@@ -1118,11 +1149,13 @@ function viewCompilationModeChooser({
   sendKey,
   compilationMode: selectedMode,
   debuggerModeStatus,
+  targetName,
 }: {
   dispatch: (msg: UiMsg) => void;
   sendKey: SendKey | undefined;
   compilationMode: CompilationModeWithProxy;
   debuggerModeStatus: Toggled;
+  targetName: string;
 }): HTMLElement {
   const compilationModes: Array<CompilationModeOption> = [
     {
@@ -1144,7 +1177,7 @@ function viewCompilationModeChooser({
         { className: CLASS.compilationModeOption },
         h(HTMLInputElement, {
           type: "radio",
-          name: "CompilationMode",
+          name: `CompilationMode-${targetName}`,
           checked: mode === selectedMode,
           disabled: sendKey === undefined || status.tag === "Disabled",
           onchange:
@@ -1158,10 +1191,135 @@ function viewCompilationModeChooser({
                   });
                 },
         }),
-        status.tag === "Enabled" ? name : `${name} – ${status.reason}`
+        status.tag === "Enabled"
+          ? name
+          : h(
+              HTMLSpanElement,
+              { className: CLASS.disabledRadioLabel },
+              name,
+              h(HTMLElement, { localName: "small" }, ` – ${status.reason}`)
+            )
       )
     )
   );
+}
+
+function renderMockStatuses(root: Element): void {
+  const info: Omit<Info, "targetName"> = {
+    version: VERSION,
+    webSocketUrl: "ws://localhost:53167",
+    compilationMode: "standard",
+    debuggerModeStatus: { tag: "Enabled" },
+  };
+
+  const mockStatuses: Record<
+    string,
+    Status & { info?: Omit<Info, "targetName"> }
+  > = {
+    Busy: {
+      tag: "Busy",
+      date: new Date(),
+    },
+    Idle: {
+      tag: "Idle",
+      date: new Date(),
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+    },
+    DisabledDebugger1: {
+      tag: "Idle",
+      date: new Date(),
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      info: {
+        ...info,
+        debuggerModeStatus: {
+          tag: "Disabled",
+          reason: noDebuggerReason(new Set(["Html"])),
+        },
+      },
+    },
+    DisabledDebugger2: {
+      tag: "Idle",
+      date: new Date(),
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      info: {
+        ...info,
+        debuggerModeStatus: {
+          tag: "Disabled",
+          reason: noDebuggerReason(new Set(["Html", "Platform.worker"])),
+        },
+      },
+    },
+    CompileError: {
+      tag: "CompileError",
+      date: new Date(),
+    },
+    Connecting: {
+      tag: "Connecting",
+      date: new Date(),
+      attemptNumber: 1,
+    },
+    Connecting2: {
+      tag: "Connecting",
+      date: new Date(),
+      attemptNumber: 2,
+    },
+    Connecting100: {
+      tag: "Connecting",
+      date: new Date(),
+      attemptNumber: 100,
+    },
+    EvalError: {
+      tag: "EvalError",
+      date: new Date(),
+    },
+    SleepingBeforeReconnect: {
+      tag: "SleepingBeforeReconnect",
+      date: new Date(),
+      reason: "",
+      attemptNumber: 1,
+    },
+    SleepingBeforeReconnect2: {
+      tag: "SleepingBeforeReconnect",
+      date: new Date(),
+      reason: "Some reason",
+      attemptNumber: 1,
+    },
+    UnexpectedError: {
+      tag: "UnexpectedError",
+      message: `
+The compiled JavaScript code running in the browser says it was compiled with:
+
+elm-watch 1.0.0
+
+But the server is:
+
+elm-watch 1.0.1
+
+Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+      `.trim(),
+      date: new Date(),
+    },
+  };
+
+  for (const [targetName, status] of Object.entries(mockStatuses)) {
+    const targetRoot = createTargetRoot(targetName);
+    const model: Model = {
+      status,
+      elmCompiledTimestamp: 0,
+      uiExpanded: true,
+    };
+    render(
+      () => new Date(),
+      targetRoot,
+      () => {
+        // Ignore messages.
+      },
+      model,
+      { ...(status.info ?? info), targetName },
+      false
+    );
+    root.append(targetRoot);
+  }
 }
 
 run();
