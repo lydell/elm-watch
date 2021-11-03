@@ -16,7 +16,9 @@ import {
 
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
-const INITIAL_ELM_COMPILED_TIMESTAMP = Number("%INITIAL_ELM_COMPILED_TIMESTAMP%");
+const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
+  "%INITIAL_ELM_COMPILED_TIMESTAMP%"
+);
 const COMPILATION_MODE = "%COMPILATION_MODE%" as CompilationModeWithProxy;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elmWatch";
@@ -95,6 +97,7 @@ type Cmd =
   | {
       tag: "Render";
       model: Model;
+      manageFocus: boolean;
     }
   | {
       tag: "SendMessage";
@@ -180,7 +183,13 @@ function run(): void {
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(msg, model);
-      return [newModel, [...cmds, { tag: "Render", model: newModel }]];
+      return [
+        newModel,
+        [
+          ...cmds,
+          { tag: "Render", model: newModel, manageFocus: msg.tag === "UiMsg" },
+        ],
+      ];
     },
     runCmd: runCmd(getNow, targetRoot),
   });
@@ -225,7 +234,11 @@ const initMutable =
     });
 
     return {
-      webSocket: initWebSocket(getNow, INITIAL_ELM_COMPILED_TIMESTAMP, dispatch),
+      webSocket: initWebSocket(
+        getNow,
+        INITIAL_ELM_COMPILED_TIMESTAMP,
+        dispatch
+      ),
     };
   };
 
@@ -277,7 +290,7 @@ const init = (date: Date): [Model, Array<Cmd>] => {
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
   };
-  return [model, [{ tag: "Render", model }]];
+  return [model, [{ tag: "Render", model, manageFocus: false }]];
 };
 
 function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
@@ -472,7 +485,12 @@ function reconnect(
             attemptNumber: model.status.attemptNumber,
           },
         },
-        [{ tag: "Reconnect", elmCompiledTimestamp: model.elmCompiledTimestamp }],
+        [
+          {
+            tag: "Reconnect",
+            elmCompiledTimestamp: model.elmCompiledTimestamp,
+          },
+        ],
       ]
     : [model, []];
 }
@@ -511,13 +529,20 @@ const runCmd =
         return;
 
       case "Render":
-        render(getNow, targetRoot, dispatch, cmd.model, {
-          version: VERSION,
-          webSocketUrl: mutable.webSocket.url,
-          targetName: TARGET_NAME,
-          compilationMode: COMPILATION_MODE,
-          debuggerModeStatus: checkCanEnableDebugger(),
-        });
+        render(
+          getNow,
+          targetRoot,
+          dispatch,
+          cmd.model,
+          {
+            version: VERSION,
+            webSocketUrl: mutable.webSocket.url,
+            targetName: TARGET_NAME,
+            compilationMode: COMPILATION_MODE,
+            debuggerModeStatus: checkCanEnableDebugger(),
+          },
+          cmd.manageFocus
+        );
         return;
 
       case "SendMessage":
@@ -680,9 +705,11 @@ function render(
   targetRoot: HTMLElement,
   dispatch: (msg: Msg) => void,
   model: Model,
-  info: Info
+  info: Info,
+  manageFocus: boolean
 ): void {
   emptyNode(targetRoot);
+
   targetRoot.append(
     view(
       (msg) => {
@@ -692,6 +719,11 @@ function render(
       info
     )
   );
+
+  const firstFocusableElement = targetRoot.querySelector(`button, [tabindex]`);
+  if (manageFocus && firstFocusableElement instanceof HTMLElement) {
+    firstFocusableElement.focus();
+  }
 }
 
 const CLASS = {
@@ -797,7 +829,9 @@ function view(
         {
           className: CLASS.chevronButton,
           attrs: {
-            "aria-label": model.uiExpanded ? "Collapse" : "Expand",
+            "aria-label": model.uiExpanded
+              ? "Collapse elm-watch"
+              : "Expand elm-watch",
             "aria-expanded": model.uiExpanded.toString(),
           },
         },
@@ -822,7 +856,13 @@ function viewExpandedUi(
 ): HTMLElement {
   return h(
     HTMLDivElement,
-    { className: CLASS.expandedUiContainer },
+    {
+      attrs: {
+        // Using the attribute instead of the property so that it can be
+        // selected with `querySelector`.
+        tabindex: "-1",
+      },
+    },
     viewInfo(info),
     viewLongStatus(dispatch, status, info)
   );
