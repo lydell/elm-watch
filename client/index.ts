@@ -660,11 +660,15 @@ function emptyNode(node: Node): void {
 
 function h<T extends HTMLElement>(
   t: new () => T,
-  { attrs, ...props }: Partial<T & { attrs: Record<string, string> }>,
+  {
+    attrs,
+    localName,
+    ...props
+  }: Partial<T & { attrs: Record<string, string> }>,
   ...children: Array<HTMLElement | string | undefined>
 ): T {
   const element = document.createElement(
-    props.localName ??
+    localName ??
       t.name
         .replace(/^HTML(\w+)Element$/, "$1")
         .replace("Anchor", "a")
@@ -731,6 +735,8 @@ const CLASS = {
   compilationModeOption: "compilationModeOption",
   container: "container",
   expandedUiContainer: "expandedUiContainer",
+  longStatusContainer: "longStatusContainer",
+  longStatusLine: "longStatusLine",
   shortStatusContainer: "shortStatusContainer",
   shortStatusLine: "shortStatusLine",
   targetName: "targetName",
@@ -754,11 +760,24 @@ textarea {
 }
 
 p,
-fieldset {
+fieldset,
+dd {
   margin: 0;
 }
 
-.${CLASS.targetRoot}:only-of-type .${CLASS.shortStatusContainer}:only-child .${CLASS.targetName} {
+dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.25em 1em;
+  margin: 0;
+}
+
+dt {
+  text-align: right;
+  opacity: 0.5;
+}
+
+.${CLASS.targetRoot}:only-of-type .${CLASS.targetName} {
   display: none;
 }
 
@@ -774,6 +793,21 @@ fieldset {
 
 .${CLASS.expandedUiContainer} {
   padding: 0.75em 1em;
+  display: flex;
+  align-items: start;
+  gap: 1em;
+}
+
+.${CLASS.longStatusContainer} {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+}
+
+.${CLASS.longStatusLine} {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
 }
 
 .${CLASS.compilationModeOption} {
@@ -857,23 +891,31 @@ function viewExpandedUi(
   return h(
     HTMLDivElement,
     {
+      className: CLASS.expandedUiContainer,
       attrs: {
         // Using the attribute instead of the property so that it can be
         // selected with `querySelector`.
         tabindex: "-1",
       },
     },
-    viewInfo(info),
-    viewLongStatus(dispatch, status, info)
+    viewLongStatus(dispatch, status, info),
+    viewInfo(info)
   );
 }
 
 function viewInfo(info: Info): HTMLElement {
+  const items: Array<[string, string]> = [
+    ["target", info.targetName],
+    ["elm-watch", info.version],
+    ["web socket", new URL(info.webSocketUrl).origin],
+  ];
   return h(
-    HTMLDivElement,
+    HTMLDListElement,
     {},
-    h(HTMLDivElement, {}, `elm-watch ${info.version}`),
-    h(HTMLDivElement, {}, new URL(info.webSocketUrl).origin)
+    ...items.flatMap(([key, value]) => [
+      h(HTMLElement, { localName: "dt" }, key),
+      h(HTMLElement, { localName: "dd" }, value),
+    ])
   );
 }
 
@@ -886,7 +928,7 @@ function viewLongStatus(
     case "Busy":
       return h(
         HTMLDivElement,
-        {},
+        { className: CLASS.longStatusContainer },
         viewLongStatusLine("Waiting for compilation", status.date),
         viewCompilationModeChooser({
           dispatch,
@@ -899,7 +941,7 @@ function viewLongStatus(
     case "CompileError":
       return h(
         HTMLDivElement,
-        {},
+        { className: CLASS.longStatusContainer },
         viewLongStatusLine("Compilation error", status.date),
         h(HTMLParagraphElement, {}, "Check the terminal to see the errors!")
       );
@@ -907,7 +949,7 @@ function viewLongStatus(
     case "Connecting":
       return h(
         HTMLDivElement,
-        {},
+        { className: CLASS.longStatusContainer },
         viewLongStatusLine("Web socket connecting", status.date),
         status.attemptNumber > 1
           ? h(HTMLParagraphElement, {}, `Attempt: ${status.attemptNumber}`)
@@ -917,7 +959,7 @@ function viewLongStatus(
     case "EvalError":
       return h(
         HTMLDivElement,
-        {},
+        { className: CLASS.longStatusContainer },
         viewLongStatusLine("Eval error", status.date),
         h(
           HTMLParagraphElement,
@@ -929,7 +971,7 @@ function viewLongStatus(
     case "Idle":
       return h(
         HTMLDivElement,
-        {},
+        { className: CLASS.longStatusContainer },
         viewLongStatusLine("Successfully compiled", status.date),
         viewCompilationModeChooser({
           dispatch,
@@ -942,7 +984,7 @@ function viewLongStatus(
     case "SleepingBeforeReconnect":
       return h(
         HTMLDivElement,
-        {},
+        { className: CLASS.longStatusContainer },
         viewLongStatusLine(
           "Sleeping before reconnecting web socket",
           status.date
@@ -977,7 +1019,7 @@ function viewLongStatus(
     case "UnexpectedError":
       return h(
         HTMLDivElement,
-        {},
+        { className: CLASS.longStatusContainer },
         viewLongStatusLine("Unexpected error", status.date),
         h(
           HTMLParagraphElement,
@@ -992,7 +1034,7 @@ function viewLongStatus(
 function viewLongStatusLine(description: string, date: Date): HTMLElement {
   return h(
     HTMLDivElement,
-    {},
+    { className: CLASS.longStatusLine },
     h(HTMLDivElement, {}, `Status: ${description}`),
     h(
       HTMLDivElement,
