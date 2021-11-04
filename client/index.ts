@@ -176,6 +176,7 @@ function run(): void {
   }
 
   const targetRoot = createTargetRoot(TARGET_NAME);
+  root.append(targetRoot);
 
   const getNow: GetNow = () => new Date();
 
