@@ -198,7 +198,7 @@ function run(): void {
   // This is great when working on the styling of all statuses.
   // When this call is commented out, esbuild won’t include the
   // `renderMockStatuses` function in the output.
-  renderMockStatuses(root);
+  // renderMockStatuses(root);
 }
 
 function getOrCreateContainer(): HTMLElement {
@@ -1281,5 +1281,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     root.append(targetRoot);
   }
 }
+
+void renderMockStatuses;
 
 run();
