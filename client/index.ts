@@ -270,11 +270,6 @@ function initWebSocket(
     dispatch({ tag: "WebSocketConnected", date: getNow() });
   });
 
-  webSocket.addEventListener("error", (event) => {
-    // eslint-disable-next-line no-console
-    console.warn("elm-watch: Got a WebSocket error event:", event);
-  });
-
   webSocket.addEventListener("close", () => {
     dispatch({
       tag: "WebSocketClosed",
