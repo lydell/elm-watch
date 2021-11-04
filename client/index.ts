@@ -51,7 +51,6 @@ type Msg =
   | {
       tag: "WebSocketClosed";
       date: Date;
-      reason: string;
     }
   | {
       tag: "WebSocketConnected";
@@ -138,13 +137,12 @@ type Status =
   | {
       tag: "SleepingBeforeReconnect";
       date: Date;
-      reason: string;
       attemptNumber: number;
     }
   | {
       tag: "UnexpectedError";
-      message: string;
       date: Date;
+      message: string;
     };
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
@@ -276,11 +274,10 @@ function initWebSocket(
     console.warn("elm-watch: Got a WebSocket error event:", event);
   });
 
-  webSocket.addEventListener("close", (event) => {
+  webSocket.addEventListener("close", () => {
     dispatch({
       tag: "WebSocketClosed",
       date: getNow(),
-      reason: event.reason,
     });
   });
 
@@ -348,7 +345,6 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
           status: {
             tag: "SleepingBeforeReconnect",
             date: msg.date,
-            reason: msg.reason,
             attemptNumber,
           },
         },
@@ -743,14 +739,9 @@ function render(
 
 const CLASS = {
   chevronButton: "chevronButton",
-  compilationModeOption: "compilationModeOption",
   container: "container",
-  disabledRadioLabel: "disabledRadioLabel",
   expandedUiContainer: "expandedUiContainer",
-  longStatusContainer: "longStatusContainer",
-  longStatusLine: "longStatusLine",
   shortStatusContainer: "shortStatusContainer",
-  shortStatusLine: "shortStatusLine",
   targetName: "targetName",
   targetRoot: "targetRoot",
   root: "root",
@@ -758,7 +749,10 @@ const CLASS = {
 
 const CSS = `
 pre {
+  margin: 0;
   white-space: pre-wrap;
+  border-left: 0.25em solid var(--grey);
+  padding-left: 0.5em;
 }
 
 input,
@@ -770,10 +764,18 @@ textarea {
   font-weight: inherit;
   letter-spacing: inherit;
   line-height: inherit;
+  margin: 0;
+}
+
+fieldset {
+  display: grid;
+  gap: 0.25em;
+  margin: 0;
+  border: 1px solid var(--grey);
+  padding: 0.25em 0.75em 0.5em;
 }
 
 p,
-fieldset,
 dd {
   margin: 0;
 }
@@ -783,60 +785,61 @@ dl {
   grid-template-columns: auto auto;
   gap: 0.25em 1em;
   margin: 0;
+  white-space: nowrap;
 }
 
 dt {
   text-align: right;
-  opacity: 0.5;
+  color: var(--grey);
 }
 
 .${CLASS.root} {
+  --grey: #767676;
   display: flex;
   flex-direction: column;
   align-items: start;
+  gap: 0.125em;
   overflow-y: auto;
   max-height: 100vh;
+  color: black;
+  font-family: system-ui;
 }
 
 .${CLASS.targetRoot}:only-of-type .${CLASS.targetName} {
   display: none;
 }
 
-.${CLASS.targetRoot} + .${CLASS.targetRoot} {
-  margin-top: 0.125em;
-}
-
 .${CLASS.container} {
   background-color: white;
-  color: black;
-  font-family: system-ui;
 }
 
 .${CLASS.expandedUiContainer} {
   padding: 0.75em 1em;
-  display: flex;
-  align-items: start;
-  gap: 1em;
+  display: grid;
+  gap: 0.75em;
 }
 
-.${CLASS.longStatusContainer} {
-  display: flex;
-  flex-direction: column;
+.${CLASS.expandedUiContainer}:is(.length0, .length1) {
+  grid-template-columns: min-content;
+}
+
+.${CLASS.expandedUiContainer} > dl {
+  justify-self: start;
+}
+
+.${CLASS.expandedUiContainer} label {
+  display: grid;
+  grid-template-columns: min-content auto;
+  align-items: center;
   gap: 0.25em;
 }
 
-.${CLASS.longStatusLine} {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25em;
+.${CLASS.expandedUiContainer} label.Disabled {
+  color: var(--grey);
 }
 
-.${CLASS.compilationModeOption} {
-  display: block;
-}
-
-.${CLASS.disabledRadioLabel} {
-  opacity: 0.5;
+.${CLASS.expandedUiContainer} label > small {
+  grid-column: 2;
 }
 
 .${CLASS.shortStatusContainer} {
@@ -844,12 +847,6 @@ dt {
   padding: 0.25em;
   cursor: pointer;
   user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 0.25em;
-}
-
-.${CLASS.shortStatusLine} {
   display: flex;
   align-items: center;
   gap: 0.25em;
@@ -870,10 +867,14 @@ function view(
   model: Model,
   info: Info
 ): HTMLElement {
+  const statusData = viewStatus(dispatch, model.status, info);
+
   return h(
     HTMLDivElement,
     { className: CLASS.container },
-    model.uiExpanded ? viewExpandedUi(dispatch, model.status, info) : undefined,
+    model.uiExpanded
+      ? viewExpandedUi(model.status, statusData, info)
+      : undefined,
     h(
       HTMLSpanElement,
       {
@@ -887,228 +888,194 @@ function view(
         HTMLButtonElement,
         {
           className: CLASS.chevronButton,
-          attrs: {
-            "aria-label": model.uiExpanded
-              ? "Collapse elm-watch"
-              : "Expand elm-watch",
-            "aria-expanded": model.uiExpanded.toString(),
-          },
+          attrs: { "aria-expanded": model.uiExpanded.toString() },
         },
-        h(
-          HTMLSpanElement,
-          { attrs: { "aria-hidden": "true" } },
-          model.uiExpanded ? "▲" : "▼"
+        icon(
+          model.uiExpanded ? "▲" : "▼",
+          model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch"
         )
       ),
       info.compilationMode === "optimize"
-        ? h(HTMLSpanElement, {}, "⚡️")
+        ? icon("⚡️", "Optimize mode")
         : undefined,
-      viewShortStatus(model.status)
+      icon(statusData.icon, statusData.status),
+      h(
+        HTMLTimeElement,
+        { dateTime: model.status.date.toISOString() },
+        formatTime(model.status.date)
+      ),
+      h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
     )
   );
 }
 
+function icon(emoji: string, alt: string): HTMLElement {
+  return h(
+    HTMLSpanElement,
+    { attrs: { "aria-label": alt } },
+    h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, emoji)
+  );
+}
+
 function viewExpandedUi(
-  dispatch: (msg: UiMsg) => void,
   status: Status,
+  statusData: StatusData,
   info: Info
 ): HTMLElement {
+  const items: Array<[string, HTMLElement | string]> = [
+    ["target", info.targetName],
+    ["elm-watch", info.version],
+    ["web socket", new URL(info.webSocketUrl).origin],
+    [
+      "updated",
+      h(
+        HTMLTimeElement,
+        { dateTime: status.date.toISOString() },
+        `${formatDate(status.date)} ${formatTime(status.date)}`
+      ),
+    ],
+    ["status", statusData.status],
+    ...statusData.dl,
+  ];
+
   return h(
     HTMLDivElement,
     {
-      className: CLASS.expandedUiContainer,
+      className: `${CLASS.expandedUiContainer} length${statusData.content.length}`,
       attrs: {
         // Using the attribute instead of the property so that it can be
         // selected with `querySelector`.
         tabindex: "-1",
       },
     },
-    viewLongStatus(dispatch, status, info),
-    viewInfo(info)
+    h(
+      HTMLDListElement,
+      {},
+      ...items.flatMap(([key, value]) => [
+        h(HTMLElement, { localName: "dt" }, key),
+        h(HTMLElement, { localName: "dd" }, value),
+      ])
+    ),
+    ...statusData.content
   );
 }
 
-function viewInfo(info: Info): HTMLElement {
-  const items: Array<[string, string]> = [
-    ["target", info.targetName],
-    ["elm-watch", info.version],
-    ["web socket", new URL(info.webSocketUrl).origin],
-  ];
-  return h(
-    HTMLDListElement,
-    {},
-    ...items.flatMap(([key, value]) => [
-      h(HTMLElement, { localName: "dt" }, key),
-      h(HTMLElement, { localName: "dd" }, value),
-    ])
-  );
-}
+type StatusData = {
+  icon: string;
+  status: string;
+  dl: Array<[string, string]>;
+  content: Array<HTMLElement>;
+};
 
-function viewLongStatus(
+function viewStatus(
   dispatch: (msg: UiMsg) => void,
   status: Status,
   info: Info
-): HTMLElement {
+): StatusData {
   switch (status.tag) {
     case "Busy":
-      return h(
-        HTMLDivElement,
-        { className: CLASS.longStatusContainer },
-        viewLongStatusLine("Waiting for compilation", status.date),
-        viewCompilationModeChooser({
-          dispatch,
-          sendKey: undefined,
-          compilationMode: status.compilationMode ?? info.compilationMode,
-          debuggerModeStatus: info.debuggerModeStatus,
-          targetName: info.targetName,
-        })
-      );
+      return {
+        icon: "⏳",
+        status: "Waiting for compilation",
+        dl: [],
+        content: [
+          viewCompilationModeChooser({
+            dispatch,
+            sendKey: undefined,
+            compilationMode: status.compilationMode ?? info.compilationMode,
+            debuggerModeStatus: info.debuggerModeStatus,
+            targetName: info.targetName,
+          }),
+        ],
+      };
 
     case "CompileError":
-      return h(
-        HTMLDivElement,
-        { className: CLASS.longStatusContainer },
-        viewLongStatusLine("Compilation error", status.date),
-        h(HTMLParagraphElement, {}, "Check the terminal to see the errors!")
-      );
+      return {
+        icon: "🚨",
+        status: "Compilation error",
+        dl: [],
+        content: [
+          h(HTMLParagraphElement, {}, "Check the terminal to see errors!"),
+        ],
+      };
 
     case "Connecting":
-      return h(
-        HTMLDivElement,
-        { className: CLASS.longStatusContainer },
-        viewLongStatusLine("Web socket connecting", status.date),
-        status.attemptNumber > 1
-          ? h(HTMLParagraphElement, {}, `Attempt: ${status.attemptNumber}`)
-          : undefined
-      );
+      return {
+        icon: "🔌",
+        status: "Web socket connecting",
+        dl:
+          status.attemptNumber > 1
+            ? [["attempt", status.attemptNumber.toString()]]
+            : [],
+        content: [],
+      };
 
     case "EvalError":
-      return h(
-        HTMLDivElement,
-        { className: CLASS.longStatusContainer },
-        viewLongStatusLine("Eval error", status.date),
-        h(
-          HTMLParagraphElement,
-          {},
-          "Check the console in the browser developer tools to see the errors!"
-        )
-      );
+      return {
+        icon: "⛔️",
+        status: "Eval error",
+        dl: [],
+        content: [
+          h(
+            HTMLParagraphElement,
+            {},
+            "Check the console in the browser developer tools to see errors!"
+          ),
+        ],
+      };
 
     case "Idle":
-      return h(
-        HTMLDivElement,
-        { className: CLASS.longStatusContainer },
-        viewLongStatusLine("Successfully compiled", status.date),
-        viewCompilationModeChooser({
-          dispatch,
-          sendKey: status.sendKey,
-          compilationMode: info.compilationMode,
-          debuggerModeStatus: info.debuggerModeStatus,
-          targetName: info.targetName,
-        })
-      );
+      return {
+        icon: "✅",
+        status: "Successfully compiled",
+        dl: [],
+        content: [
+          viewCompilationModeChooser({
+            dispatch,
+            sendKey: status.sendKey,
+            compilationMode: info.compilationMode,
+            debuggerModeStatus: info.debuggerModeStatus,
+            targetName: info.targetName,
+          }),
+        ],
+      };
 
     case "SleepingBeforeReconnect":
-      return h(
-        HTMLDivElement,
-        { className: CLASS.longStatusContainer },
-        viewLongStatusLine(
-          "Sleeping before reconnecting web socket",
-          status.date
-        ),
-        status.attemptNumber > 1
-          ? h(
-              HTMLParagraphElement,
-              {},
-              `Attempt: ${status.attemptNumber}. Sleep: ${
-                retryWaitMs(status.attemptNumber) / 1000
-              } seconds.`,
-              h(
-                HTMLButtonElement,
-                {
-                  onclick: () => {
-                    dispatch({ tag: "PressedReconnectNow" });
-                  },
-                },
-                "Reconnect now"
-              )
-            )
-          : undefined,
-        status.reason !== ""
-          ? h(
-              HTMLParagraphElement,
-              {},
-              `The browser says the reason for disconnecting was: ${status.reason}`
-            )
-          : undefined
-      );
+      return {
+        icon: "🔌",
+        status: "Sleeping before reconnecting",
+        dl: [
+          ["attempt", status.attemptNumber.toString()],
+          ["sleep", `${retryWaitMs(status.attemptNumber) / 1000} seconds`],
+        ],
+        content: [
+          h(
+            HTMLButtonElement,
+            {
+              onclick: () => {
+                dispatch({ tag: "PressedReconnectNow" });
+              },
+            },
+            "Reconnect web socket now"
+          ),
+        ],
+      };
 
     case "UnexpectedError":
-      return h(
-        HTMLDivElement,
-        { className: CLASS.longStatusContainer },
-        viewLongStatusLine("Unexpected error", status.date),
-        h(
-          HTMLParagraphElement,
-          {},
-          "I ran into an unexpected error! This is the error message:"
-        ),
-        h(HTMLPreElement, {}, status.message)
-      );
+      return {
+        icon: "❌",
+        status: "Unexpected error",
+        dl: [],
+        content: [
+          h(
+            HTMLParagraphElement,
+            {},
+            "I ran into an unexpected error! This is the error message:"
+          ),
+          h(HTMLPreElement, {}, status.message),
+        ],
+      };
   }
-}
-
-function viewLongStatusLine(description: string, date: Date): HTMLElement {
-  return h(
-    HTMLDivElement,
-    { className: CLASS.longStatusLine },
-    h(HTMLDivElement, {}, `Status: ${description}`),
-    h(
-      HTMLDivElement,
-      {},
-      `Updated: `,
-      h(
-        HTMLTimeElement,
-        { dateTime: date.toISOString() },
-        `${formatDate(date)} ${formatTime(date)}`
-      )
-    )
-  );
-}
-
-function viewShortStatus(status: Status): HTMLElement {
-  switch (status.tag) {
-    case "Busy":
-      return viewShortStatusLine("⏳", status.date);
-
-    case "CompileError":
-      return viewShortStatusLine("🚨", status.date);
-
-    case "Connecting":
-      return viewShortStatusLine("🔌", status.date);
-
-    case "EvalError":
-      return viewShortStatusLine("⛔️", status.date);
-
-    case "Idle":
-      return viewShortStatusLine("✅", status.date);
-
-    case "SleepingBeforeReconnect":
-      return viewShortStatusLine("🔌", status.date);
-
-    case "UnexpectedError":
-      return viewShortStatusLine("⚠️", status.date);
-  }
-}
-
-function viewShortStatusLine(icon: string, date: Date): HTMLElement {
-  return h(
-    HTMLSpanElement,
-    { className: CLASS.shortStatusLine },
-    h(HTMLSpanElement, {}, icon),
-    h(HTMLTimeElement, { dateTime: date.toISOString() }, formatTime(date)),
-    h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
-  );
 }
 
 type CompilationModeOption = {
@@ -1174,7 +1141,7 @@ function viewCompilationModeChooser({
     ...compilationModes.map(({ mode, name, status }) =>
       h(
         HTMLLabelElement,
-        { className: CLASS.compilationModeOption },
+        { className: status.tag },
         h(HTMLInputElement, {
           type: "radio",
           name: `CompilationMode-${targetName}`,
@@ -1191,14 +1158,9 @@ function viewCompilationModeChooser({
                   });
                 },
         }),
-        status.tag === "Enabled"
-          ? name
-          : h(
-              HTMLSpanElement,
-              { className: CLASS.disabledRadioLabel },
-              name,
-              h(HTMLElement, { localName: "small" }, ` – ${status.reason}`)
-            )
+        ...(status.tag === "Enabled"
+          ? [name]
+          : [name, h(HTMLElement, { localName: "small" }, status.reason)])
       )
     )
   );
@@ -1221,6 +1183,11 @@ function renderMockStatuses(root: Element): void {
       date: new Date(),
     },
     Idle: {
+      tag: "Idle",
+      date: new Date(),
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+    },
+    "Really long target name that is annoying to work display correctly": {
       tag: "Idle",
       date: new Date(),
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
@@ -1275,13 +1242,6 @@ function renderMockStatuses(root: Element): void {
     SleepingBeforeReconnect: {
       tag: "SleepingBeforeReconnect",
       date: new Date(),
-      reason: "",
-      attemptNumber: 1,
-    },
-    SleepingBeforeReconnect2: {
-      tag: "SleepingBeforeReconnect",
-      date: new Date(),
-      reason: "Some reason",
       attemptNumber: 1,
     },
     UnexpectedError: {
