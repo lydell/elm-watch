@@ -508,6 +508,10 @@ function retryWaitMs(attemptNumber: number): number {
   return Math.min(1000 + 10 * attemptNumber ** 2, 1000 * 60);
 }
 
+function printRetryWaitMs(attemptNumber: number): string {
+  return `${retryWaitMs(attemptNumber) / 1000} seconds`;
+}
+
 const runCmd =
   (getNow: GetNow, targetRoot: HTMLElement) =>
   (cmd: Cmd, mutable: Mutable, dispatch: (msg: Msg) => void): void => {
@@ -794,6 +798,10 @@ dt {
   color: var(--grey);
 }
 
+time {
+  font-variant-numeric: tabular-nums;
+}
+
 .${CLASS.root} {
   --grey: #767676;
   display: flex;
@@ -1003,12 +1011,17 @@ function viewStatus(
     case "Connecting":
       return {
         icon: "🔌",
-        status: "Web socket connecting",
+        status: "Connecting",
         dl:
           status.attemptNumber > 1
-            ? [["attempt", status.attemptNumber.toString()]]
+            ? [
+                ["attempt", status.attemptNumber.toString()],
+                ["slept", printRetryWaitMs(status.attemptNumber)],
+              ]
             : [],
-        content: [],
+        content: [
+          h(HTMLButtonElement, { disabled: true }, "Connecting web socket…"),
+        ],
       };
 
     case "EvalError":
@@ -1044,10 +1057,10 @@ function viewStatus(
     case "SleepingBeforeReconnect":
       return {
         icon: "🔌",
-        status: "Sleeping before reconnecting",
+        status: "Sleeping",
         dl: [
           ["attempt", status.attemptNumber.toString()],
-          ["sleep", `${retryWaitMs(status.attemptNumber) / 1000} seconds`],
+          ["sleep", printRetryWaitMs(status.attemptNumber)],
         ],
         content: [
           h(
