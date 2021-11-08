@@ -794,7 +794,14 @@ dt {
 }
 
 time {
-  font-variant-numeric: tabular-nums;
+  display: inline-grid;
+  overflow: hidden;
+}
+
+time::after {
+  content: attr(data-format);
+  visibility: hidden;
+  height: 0;
 }
 
 .${CLASS.root} {
@@ -905,7 +912,10 @@ function view(
       icon(statusData.icon, statusData.status),
       h(
         HTMLTimeElement,
-        { dateTime: model.status.date.toISOString() },
+        {
+          dateTime: model.status.date.toISOString(),
+          attrs: { "data-format": "04:44:44" },
+        },
         formatTime(model.status.date)
       ),
       h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
@@ -934,7 +944,10 @@ function viewExpandedUi(
       "updated",
       h(
         HTMLTimeElement,
-        { dateTime: status.date.toISOString() },
+        {
+          dateTime: status.date.toISOString(),
+          attrs: { "data-format": "2044-04-30 04:44:44" },
+        },
         `${formatDate(status.date)} ${formatTime(status.date)}`
       ),
     ],
@@ -1007,13 +1020,10 @@ function viewStatus(
       return {
         icon: "🔌",
         status: "Connecting",
-        dl:
-          status.attemptNumber > 1
-            ? [
-                ["attempt", status.attemptNumber.toString()],
-                ["slept", printRetryWaitMs(status.attemptNumber)],
-              ]
-            : [],
+        dl: [
+          ["attempt", status.attemptNumber.toString()],
+          ["sleep", printRetryWaitMs(status.attemptNumber)],
+        ],
         content: [
           h(HTMLButtonElement, { disabled: true }, "Connecting web socket…"),
         ],
