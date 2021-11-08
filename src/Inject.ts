@@ -321,6 +321,10 @@ export function inject(
   webSocketPort: Port,
   code: string
 ): InjectResult {
+  const recordNames = code.startsWith("console.warn(")
+    ? undefined
+    : getRecordNames(code);
+
   // Put our code inside Elm’s IIFE so that minification relying on removing
   // Elm’s IIFE still works.
   const clientCodeReplacement: Replacement = {
@@ -337,8 +341,15 @@ export function inject(
       },
     ],
   };
+
   try {
-    const newCode = mainReplacements
+    const newCode = (
+      recordNames === undefined
+        ? mainReplacements
+        : mainReplacements.map((replacement) =>
+            updateRecordNames(recordNames, replacement)
+          )
+    )
       .concat(clientCodeReplacement)
       .reduce(
         (accCode, replacement) =>
@@ -359,6 +370,68 @@ export function inject(
     }
     throw unknownError;
   }
+}
+
+function getRecordNames(code: string): Record<string, string> {
+  const match = /^\s*impl\.(\w+),\s*impl\.(\w+),\s*impl\.(\w+),/m.exec(code);
+
+  if (match === null) {
+    return {};
+  }
+
+  const [
+    ,
+    init = "init_missing",
+    update = "update_missing",
+    subscriptions = "subscriptions_missing",
+  ] = match;
+
+  const extra = Object.fromEntries(
+    Array.from(
+      code.matchAll(/^\s*var (\w+) = impl\.(\w+);/gm),
+      ([, from = "from_missing", to = "to_missing"]) => [from, to]
+    )
+  );
+
+  return {
+    ...extra,
+    init,
+    update,
+    subscriptions,
+  };
+}
+
+function updateRecordNames(
+  recordNames: Record<string, string>,
+  replacement: Replacement
+): Replacement {
+  return {
+    probe: updateRegex(recordNames, replacement.probe),
+    replacements: replacement.replacements.map(({ search, replace }) => ({
+      search: updateRegex(recordNames, search),
+      replace: updateString(recordNames, replace),
+    })),
+  };
+}
+
+function updateRegex(
+  recordNames: Record<string, string>,
+  regex: RegExp
+): RegExp {
+  return RegExp(updateString(recordNames, regex.source), regex.flags);
+}
+
+function updateString(
+  recordNames: Record<string, string>,
+  string: string
+): string {
+  return Object.entries(recordNames).reduce(
+    (acc, [from, to]) =>
+      (from === "view" ? acc.replace(/\bview\(/g, `${to}(`) : acc)
+        .replace(RegExp(`\\b${from}:`, "g"), `${to}:`)
+        .replace(RegExp(`impl(\\\\*).${from}\\b`, "g"), `impl$1.${to}`),
+    string
+  );
 }
 
 class StrictReplaceError extends Error {
@@ -486,7 +559,10 @@ function getClientCode(
 ): string {
   return ClientCode.code
     .replace(/%TARGET_NAME%/g, outputPath.targetName)
-    .replace(/%INITIAL_ELM_COMPILED_TIMESTAMP%/g, elmCompiledTimestamp.toString())
+    .replace(
+      /%INITIAL_ELM_COMPILED_TIMESTAMP%/g,
+      elmCompiledTimestamp.toString()
+    )
     .replace(/%COMPILATION_MODE%/g, compilationMode)
     .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString());
 }
