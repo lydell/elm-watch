@@ -61,11 +61,11 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
 
   function setUpdateAndSubscriptions() {
     if (typeof $elm$browser$Debugger$Main$wrapUpdate !== "undefined") {
-      update = $elm$browser$Debugger$Main$wrapUpdate(impl.update);
-      subscriptions = $elm$browser$Debugger$Main$wrapSubs(impl.subscriptions);
+      update = $elm$browser$Debugger$Main$wrapUpdate(impl.%update%);
+      subscriptions = $elm$browser$Debugger$Main$wrapSubs(impl.%subscriptions%);
     } else {
-      update = impl.update;
-      subscriptions = impl.subscriptions;
+      update = impl.%update%;
+      subscriptions = impl.%subscriptions%;
     }
   }
 
@@ -212,25 +212,25 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     probe: /^function _Browser_application\(/m,
     replacements: [
       {
-        search: /^\s*var onUrlChange = impl\.onUrlChange;/m,
+        search: /^\s*var onUrlChange = impl\.%onUrlChange%;/m,
         replace: ``,
       },
       {
-        search: /^\s*var onUrlRequest = impl\.onUrlRequest;/m,
+        search: /^\s*var onUrlRequest = impl\.%onUrlRequest%;/m,
         replace: ``,
       },
       {
         search:
           /^(\s*)var key = function\(\) \{ key\.a\(onUrlChange\(_Browser_getUrl\(\)\)\); \};/m,
-        replace: `$1var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); };`,
+        replace: `$1var key = function() { key.a(impl.%onUrlChange%(_Browser_getUrl())); };`,
       },
       {
         search: /^(\s*)sendToApp\(onUrlRequest\(/m,
-        replace: `$1sendToApp(impl.onUrlRequest(`,
+        replace: `$1sendToApp(impl.%onUrlRequest%(`,
       },
       {
         search:
-          /^(\s*)view: impl\.view,\s*update: impl\.update,\s*subscriptions: impl.subscriptions$/m,
+          /^(\s*)%view%: impl\.%view%,\s*%update%: impl\.%update%,\s*%subscriptions%: impl.%subscriptions%$/m,
         replace: `$1impl`,
       },
     ],
@@ -242,8 +242,8 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     probe: /^var \$elm\$browser\$Browser\$sandbox =/m,
     replacements: [
       {
-        search: /^(\s*)view: impl\.view$/m,
-        replace: "$1view: (model) => impl.view(model),\n$1impl",
+        search: /^(\s*)%view%: impl\.%view%$/m,
+        replace: "$1%view%: (model) => impl.%view%(model),\n$1impl",
       },
     ],
   },
@@ -260,7 +260,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     replacements: [
       {
         search:
-          /^(\s*)impl\.update,\s*impl\.subscriptions,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.update\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.subscriptions\),/gm,
+          /^(\s*)impl\.%update%,\s*impl\.%subscriptions%,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.%update%\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.%subscriptions%\),/gm,
         replace: `$1impl.impl || impl,`,
       },
     ],
@@ -303,12 +303,12 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       /^var (?:_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =/m,
     replacements: [
       {
-        search: /^\s*var view = impl\.view;/gm,
+        search: /^\s*var view = impl\.%view%;/gm,
         replace: ``,
       },
       {
         search: /^([^'"\n]* )view\(/gm,
-        replace: `$1impl.view(`,
+        replace: `$1impl.%view%(`,
       },
     ],
   },
@@ -321,9 +321,7 @@ export function inject(
   webSocketPort: Port,
   code: string
 ): InjectResult {
-  const recordNames = code.startsWith("console.warn(")
-    ? undefined
-    : getRecordNames(code);
+  const recordNames = getRecordNames(code);
 
   // Put our code inside Elm’s IIFE so that minification relying on removing
   // Elm’s IIFE still works.
@@ -343,13 +341,8 @@ export function inject(
   };
 
   try {
-    const newCode = (
-      recordNames === undefined
-        ? mainReplacements
-        : mainReplacements.map((replacement) =>
-            updateRecordNames(recordNames, replacement)
-          )
-    )
+    const newCode = mainReplacements
+      .map((replacement) => updateRecordNames(recordNames, replacement))
       .concat(clientCodeReplacement)
       .reduce(
         (accCode, replacement) =>
@@ -426,10 +419,7 @@ function updateString(
   string: string
 ): string {
   return Object.entries(recordNames).reduce(
-    (acc, [from, to]) =>
-      (from === "view" ? acc.replace(/\bview\(/g, `${to}(`) : acc)
-        .replace(RegExp(`\\b${from}:`, "g"), `${to}:`)
-        .replace(RegExp(`impl(\\\\*).${from}\\b`, "g"), `impl$1.${to}`),
+    (acc, [from, to]) => acc.split(`%${from}%`).join(to),
     string
   );
 }
