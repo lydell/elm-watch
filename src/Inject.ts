@@ -77,7 +77,13 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
 
   function __elmWatchHotReload(newImpl) {
     for (var key in newImpl) {
-      impl[key] = newImpl[key];
+      if (key === "_impl" && impl._impl) {
+        for (var subKey in newImpl[key]) {
+          impl._impl[subKey] = newImpl[key][subKey];
+        }
+      } else {
+        impl[key] = newImpl[key];
+      }
     }
     setUpdateAndSubscriptions();
     stepper(model, true /* isSync */);
@@ -185,7 +191,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         }
       } else {
         obj.__elmWatchApps = [];
-        obj.init = function init() {
+        obj.init = function() {
           var app = exports.init.apply(exports, arguments);
           obj.__elmWatchApps.push(app);
           return app;
@@ -243,7 +249,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search: /^(\s*)%view%: impl\.%view%$/m,
         replace:
-          "$1%view%: function view(model) { return impl.%view%(model); },\n$1_impl: impl",
+          "$1%view%: function(model) { return impl.%view%(model); },\n$1_impl: impl",
       },
     ],
   },
@@ -261,7 +267,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^(\s*)impl\.%update%,\s*impl\.%subscriptions%,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.%update%\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.%subscriptions%\),/gm,
-        replace: `$1impl._impl || impl,`,
+        replace: `$1impl,`,
       },
     ],
   },
