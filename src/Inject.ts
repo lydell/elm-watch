@@ -2,12 +2,7 @@ import * as ClientCode from "./ClientCode";
 import * as Errors from "./Errors";
 import { absoluteDirname } from "./PathHelpers";
 import { Port } from "./Port";
-import {
-  AbsolutePath,
-  CompilationMode,
-  CompilationModeWithProxy,
-  OutputPath,
-} from "./Types";
+import { AbsolutePath, CompilationModeWithProxy, OutputPath } from "./Types";
 
 type Replacement = {
   // The `probe` is a simpler regex that determines if `replacements` should be
@@ -33,6 +28,8 @@ export type InjectError = {
 
 // All regexes are anchored to the beginning of lines, which should make it
 // impossible to match within strings in the user’s program.
+// The replacements should make the Elm JS stay strictly ES5 so that minifying
+// with esbuild in ES5 works.
 const mainReplacements: Array<Replacement> = [
   // ### _Platform_initialize (main : Program flags model msg)
   // New implementation (copy-paste with some changes and additions).
@@ -167,8 +164,11 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     if (name === "init") {
       if ("init" in obj) {
         if ("__elmWatchApps" in obj) {
-          var [newImpl, programType] = exports.init("__elmWatchReturnImpl");
-          for (var app of obj.__elmWatchApps) {
+          var result = exports.init("__elmWatchReturnImpl");
+          var newImpl = result[0];
+          var programType = result[1];
+          for (var index = 0; index < obj.__elmWatchApps.length; index++) {
+            var app = obj.__elmWatchApps[index];
             if (app.__elmWatchProgramType !== programType) {
               errored = true;
               Promise.reject(new Error(\`elm-watch: Cannot hot reload because \\\`\${moduleName}.main\\\` changed from \\\`\${app.__elmWatchProgramType}\\\` to \\\`\${programType}\\\`. You need to reload the page!\`));
@@ -186,8 +186,8 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         }
       } else {
         obj.__elmWatchApps = [];
-        obj.init = (...args) => {
-          var app = exports.init(...args);
+        obj.init = function init() {
+          var app = exports.init.apply(exports, arguments);
           obj.__elmWatchApps.push(app);
           return app;
         };
@@ -231,7 +231,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^(\s*)%view%: impl\.%view%,\s*%update%: impl\.%update%,\s*%subscriptions%: impl.%subscriptions%$/m,
-        replace: `$1impl`,
+        replace: `$1impl: impl`,
       },
     ],
   },
@@ -243,7 +243,8 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     replacements: [
       {
         search: /^(\s*)%view%: impl\.%view%$/m,
-        replace: "$1%view%: (model) => impl.%view%(model),\n$1impl",
+        replace:
+          "$1%view%: function view(model) { return impl.%view%(model); },\n$1impl: impl",
       },
     ],
   },
@@ -314,36 +315,12 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   },
 ];
 
-export function inject(
-  outputPath: OutputPath,
-  elmCompiledTimestamp: number,
-  compilationMode: CompilationMode,
-  webSocketPort: Port,
-  code: string
-): InjectResult {
+export function inject(outputPath: OutputPath, code: string): InjectResult {
   const recordNames = getRecordNames(code);
-
-  // Put our code inside Elm’s IIFE so that minification relying on removing
-  // Elm’s IIFE still works.
-  const clientCodeReplacement: Replacement = {
-    probe: /^\s*'use strict';/m,
-    replacements: [
-      {
-        search: /^\s*'use strict';/m,
-        replace: `$&\n${getClientCode(
-          outputPath,
-          elmCompiledTimestamp,
-          compilationMode,
-          webSocketPort
-        )}`,
-      },
-    ],
-  };
 
   try {
     const newCode = mainReplacements
       .map((replacement) => updateRecordNames(recordNames, replacement))
-      .concat(clientCodeReplacement)
       .reduce(
         (accCode, replacement) =>
           strictReplace(
@@ -532,7 +509,7 @@ export function proxyFile(
   webSocketPort: Port
 ): Buffer {
   return Buffer.from(
-    `${getClientCode(
+    `${clientCode(
       outputPath,
       elmCompiledTimestamp,
       "proxy",
@@ -541,7 +518,7 @@ export function proxyFile(
   );
 }
 
-function getClientCode(
+export function clientCode(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
   compilationMode: CompilationModeWithProxy,

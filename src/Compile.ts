@@ -754,13 +754,7 @@ function onCompileSuccess(
       // postprocessing yet, but have to inject before that. So we’re storing
       // the timestamp when Elm finished rather than when the entire process was
       // finished.
-      const result = Inject.inject(
-        outputPath,
-        elmCompiledTimestamp,
-        outputState.compilationMode,
-        runMode.webSocketPort,
-        buffer.toString("utf8")
-      );
+      const result = Inject.inject(outputPath, buffer.toString("utf8"));
 
       switch (result.tag) {
         case "InjectSearchAndReplaceNotFound":
@@ -775,7 +769,18 @@ function onCompileSuccess(
               try {
                 fs.writeFileSync(
                   outputPath.theOutputPath.absolutePath,
-                  Buffer.concat([runMode.versionedIdentifier, newBuffer])
+                  Buffer.concat([
+                    runMode.versionedIdentifier,
+                    Buffer.from(
+                      Inject.clientCode(
+                        outputPath,
+                        elmCompiledTimestamp,
+                        outputState.compilationMode,
+                        runMode.webSocketPort
+                      )
+                    ),
+                    newBuffer,
+                  ])
                 );
               } catch (unknownError) {
                 const error = toError(unknownError);
@@ -938,7 +943,18 @@ async function postprocessHelper({
         case "hot":
           fs.writeFileSync(
             outputPath.theOutputPath.absolutePath,
-            Buffer.concat([runMode.versionedIdentifier, postprocessResult.code])
+            Buffer.concat([
+              runMode.versionedIdentifier,
+              Buffer.from(
+                Inject.clientCode(
+                  outputPath,
+                  elmCompiledTimestamp,
+                  outputState.compilationMode,
+                  runMode.webSocketPort
+                )
+              ),
+              postprocessResult.code,
+            ])
           );
           break;
       }
