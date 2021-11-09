@@ -638,6 +638,10 @@ function checkCanEnableDebugger(): Toggled {
     return { tag: "Enabled" };
   }
 
+  if (programTypes.length === 0) {
+    return { tag: "NoProgramsAtAll" };
+  }
+
   const noDebugger = programTypes.filter((programType) => {
     switch (programType) {
       case "Platform.worker":
@@ -909,7 +913,12 @@ function view(
       info.compilationMode === "optimize"
         ? icon("⚡️", "Optimize mode")
         : undefined,
-      icon(statusData.icon, statusData.status),
+      icon(
+        info.debuggerModeStatus.tag === "NoProgramsAtAll"
+          ? "❓"
+          : statusData.icon,
+        statusData.status
+      ),
       h(
         HTMLTimeElement,
         {
@@ -1100,10 +1109,11 @@ function viewStatus(
 type CompilationModeOption = {
   mode: CompilationMode;
   name: string;
-  status: Toggled;
+  status: Exclude<Toggled, NoProgramsAtAll>;
 };
 
 type Toggled =
+  | NoProgramsAtAll
   | {
       tag: "Disabled";
       reason: string;
@@ -1111,6 +1121,10 @@ type Toggled =
   | {
       tag: "Enabled";
     };
+
+type NoProgramsAtAll = {
+  tag: "NoProgramsAtAll";
+};
 
 function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
   return `The Elm debugger isn't supported by ${humanList(
@@ -1143,6 +1157,14 @@ function viewCompilationModeChooser({
   debuggerModeStatus: Toggled;
   targetName: string;
 }): HTMLElement {
+  if (debuggerModeStatus.tag === "NoProgramsAtAll") {
+    return h(
+      HTMLParagraphElement,
+      {},
+      "It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!"
+    );
+  }
+
   const compilationModes: Array<CompilationModeOption> = [
     {
       mode: "debug",
