@@ -546,7 +546,7 @@ const runCmd =
             webSocketUrl: mutable.webSocket.url,
             targetName: TARGET_NAME,
             compilationMode: COMPILATION_MODE,
-            debuggerModeStatus: checkCanEnableDebugger(),
+            initializedElmAppsStatus: checkInitializedElmAppsStatus(),
           },
           cmd.manageFocus
         );
@@ -585,17 +585,21 @@ function parseWebSocketMessageData(
       message: decodeWebSocketToClientMessage(Decode.string(data)),
     };
   } catch (unknownError) {
-    const errorMessage =
-      unknownError instanceof Decode.DecoderError
-        ? unknownError.format()
-        : unknownError instanceof Error
-        ? unknownError.message
-        : Decode.repr(unknownError);
     return {
       tag: "Error",
-      message: `Failed to decode web socket message sent from the server:\n${errorMessage}`,
+      message: `Failed to decode web socket message sent from the server:\n${possiblyDecodeErrorToString(
+        unknownError
+      )}`,
     };
   }
+}
+
+function possiblyDecodeErrorToString(unknownError: unknown): string {
+  return unknownError instanceof Decode.DecoderError
+    ? unknownError.format()
+    : unknownError instanceof Error
+    ? unknownError.message
+    : Decode.repr(unknownError);
 }
 
 function functionToNull(value: unknown): unknown {
@@ -630,12 +634,15 @@ const ElmModule: Decode.Decoder<Array<ProgramType>> = Decode.chain(
 
 const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
 
-function checkCanEnableDebugger(): Toggled {
+function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   let programTypes;
   try {
     programTypes = ProgramTypes(window);
-  } catch {
-    return { tag: "Enabled" };
+  } catch (unknownError) {
+    return {
+      tag: "DecodeError",
+      message: possiblyDecodeErrorToString(unknownError),
+    };
   }
 
   if (programTypes.length === 0) {
@@ -658,9 +665,16 @@ function checkCanEnableDebugger(): Toggled {
   // If we have _only_ programs that don’t support the debugger we know for sure
   // that we cannot enable it. Most likely there’s just one single program on
   // the page, and that’s where this is the most helpful anyway.
-  return noDebugger.length === programTypes.length
-    ? { tag: "Disabled", reason: noDebuggerReason(new Set(noDebugger)) }
-    : { tag: "Enabled" };
+  return {
+    tag: "DebuggerModeStatus",
+    status:
+      noDebugger.length === programTypes.length
+        ? {
+            tag: "Disabled",
+            reason: noDebuggerReason(new Set(noDebugger)),
+          }
+        : { tag: "Enabled" },
+  };
 }
 
 function emptyNode(node: Node): void {
@@ -712,7 +726,7 @@ type Info = {
   webSocketUrl: string;
   targetName: string;
   compilationMode: CompilationModeWithProxy;
-  debuggerModeStatus: Toggled;
+  initializedElmAppsStatus: InitializedElmAppsStatus;
 };
 
 function render(
@@ -914,9 +928,8 @@ function view(
         ? icon("⚡️", "Optimize mode")
         : undefined,
       icon(
-        info.debuggerModeStatus.tag === "NoProgramsAtAll"
-          ? "❓"
-          : statusData.icon,
+        initializedElmAppsStatusIcon(info.initializedElmAppsStatus) ??
+          statusData.icon,
         statusData.status
       ),
       h(
@@ -1004,15 +1017,13 @@ function viewStatus(
         icon: "⏳",
         status: "Waiting for compilation",
         dl: [],
-        content: [
-          viewCompilationModeChooser({
-            dispatch,
-            sendKey: undefined,
-            compilationMode: status.compilationMode ?? info.compilationMode,
-            debuggerModeStatus: info.debuggerModeStatus,
-            targetName: info.targetName,
-          }),
-        ],
+        content: viewCompilationModeChooser({
+          dispatch,
+          sendKey: undefined,
+          compilationMode: status.compilationMode ?? info.compilationMode,
+          initializedElmAppsStatus: info.initializedElmAppsStatus,
+          targetName: info.targetName,
+        }),
       };
 
     case "CompileError":
@@ -1057,15 +1068,13 @@ function viewStatus(
         icon: "✅",
         status: "Successfully compiled",
         dl: [],
-        content: [
-          viewCompilationModeChooser({
-            dispatch,
-            sendKey: status.sendKey,
-            compilationMode: info.compilationMode,
-            debuggerModeStatus: info.debuggerModeStatus,
-            targetName: info.targetName,
-          }),
-        ],
+        content: viewCompilationModeChooser({
+          dispatch,
+          sendKey: status.sendKey,
+          compilationMode: info.compilationMode,
+          initializedElmAppsStatus: info.initializedElmAppsStatus,
+          targetName: info.targetName,
+        }),
       };
 
     case "SleepingBeforeReconnect":
@@ -1106,14 +1115,41 @@ function viewStatus(
   }
 }
 
+function initializedElmAppsStatusIcon(
+  status: InitializedElmAppsStatus
+): string | undefined {
+  switch (status.tag) {
+    case "DecodeError":
+      return "❌";
+
+    case "NoProgramsAtAll":
+      return "❓";
+
+    case "DebuggerModeStatus":
+      return undefined;
+  }
+}
+
 type CompilationModeOption = {
   mode: CompilationMode;
   name: string;
-  status: Exclude<Toggled, NoProgramsAtAll>;
+  status: Toggled;
 };
 
+type InitializedElmAppsStatus =
+  | {
+      tag: "DebuggerModeStatus";
+      status: Toggled;
+    }
+  | {
+      tag: "DecodeError";
+      message: string;
+    }
+  | {
+      tag: "NoProgramsAtAll";
+    };
+
 type Toggled =
-  | NoProgramsAtAll
   | {
       tag: "Disabled";
       reason: string;
@@ -1121,10 +1157,6 @@ type Toggled =
   | {
       tag: "Enabled";
     };
-
-type NoProgramsAtAll = {
-  tag: "NoProgramsAtAll";
-};
 
 function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
   return `The Elm debugger isn't supported by ${humanList(
@@ -1148,63 +1180,80 @@ function viewCompilationModeChooser({
   dispatch,
   sendKey,
   compilationMode: selectedMode,
-  debuggerModeStatus,
+  initializedElmAppsStatus,
   targetName,
 }: {
   dispatch: (msg: UiMsg) => void;
   sendKey: SendKey | undefined;
   compilationMode: CompilationModeWithProxy;
-  debuggerModeStatus: Toggled;
+  initializedElmAppsStatus: InitializedElmAppsStatus;
   targetName: string;
-}): HTMLElement {
-  if (debuggerModeStatus.tag === "NoProgramsAtAll") {
-    return h(
-      HTMLParagraphElement,
-      {},
-      "It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!"
-    );
+}): Array<HTMLElement> {
+  switch (initializedElmAppsStatus.tag) {
+    case "DecodeError":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "window.Elm does not look like expected! This is the error message:"
+        ),
+        h(HTMLPreElement, {}, initializedElmAppsStatus.message),
+      ];
+
+    case "NoProgramsAtAll":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!"
+        ),
+      ];
+
+    case "DebuggerModeStatus": {
+      const compilationModes: Array<CompilationModeOption> = [
+        {
+          mode: "debug",
+          name: "Debug",
+          status: initializedElmAppsStatus.status,
+        },
+        { mode: "standard", name: "Standard", status: { tag: "Enabled" } },
+        { mode: "optimize", name: "Optimize", status: { tag: "Enabled" } },
+      ];
+
+      return [
+        h(
+          HTMLFieldSetElement,
+          { disabled: sendKey === undefined },
+          h(HTMLLegendElement, {}, "Compilation mode"),
+          ...compilationModes.map(({ mode, name, status }) =>
+            h(
+              HTMLLabelElement,
+              { className: status.tag },
+              h(HTMLInputElement, {
+                type: "radio",
+                name: `CompilationMode-${targetName}`,
+                checked: mode === selectedMode,
+                disabled: sendKey === undefined || status.tag === "Disabled",
+                onchange:
+                  sendKey === undefined
+                    ? undefined
+                    : () => {
+                        dispatch({
+                          tag: "ChangedCompilationMode",
+                          compilationMode: mode,
+                          sendKey,
+                        });
+                      },
+              }),
+              ...(status.tag === "Enabled"
+                ? [name]
+                : [name, h(HTMLElement, { localName: "small" }, status.reason)])
+            )
+          )
+        ),
+      ];
+    }
   }
-
-  const compilationModes: Array<CompilationModeOption> = [
-    {
-      mode: "debug",
-      name: "Debug",
-      status: debuggerModeStatus,
-    },
-    { mode: "standard", name: "Standard", status: { tag: "Enabled" } },
-    { mode: "optimize", name: "Optimize", status: { tag: "Enabled" } },
-  ];
-
-  return h(
-    HTMLFieldSetElement,
-    { disabled: sendKey === undefined },
-    h(HTMLLegendElement, {}, "Compilation mode"),
-    ...compilationModes.map(({ mode, name, status }) =>
-      h(
-        HTMLLabelElement,
-        { className: status.tag },
-        h(HTMLInputElement, {
-          type: "radio",
-          name: `CompilationMode-${targetName}`,
-          checked: mode === selectedMode,
-          disabled: sendKey === undefined || status.tag === "Disabled",
-          onchange:
-            sendKey === undefined
-              ? undefined
-              : () => {
-                  dispatch({
-                    tag: "ChangedCompilationMode",
-                    compilationMode: mode,
-                    sendKey,
-                  });
-                },
-        }),
-        ...(status.tag === "Enabled"
-          ? [name]
-          : [name, h(HTMLElement, { localName: "small" }, status.reason)])
-      )
-    )
-  );
 }
 
 function renderMockStatuses(root: Element): void {
@@ -1212,7 +1261,10 @@ function renderMockStatuses(root: Element): void {
     version: VERSION,
     webSocketUrl: "ws://localhost:53167",
     compilationMode: "standard",
-    debuggerModeStatus: { tag: "Enabled" },
+    initializedElmAppsStatus: {
+      tag: "DebuggerModeStatus",
+      status: { tag: "Enabled" },
+    },
   };
 
   const mockStatuses: Record<
@@ -1239,9 +1291,12 @@ function renderMockStatuses(root: Element): void {
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        debuggerModeStatus: {
-          tag: "Disabled",
-          reason: noDebuggerReason(new Set(["Html"])),
+        initializedElmAppsStatus: {
+          tag: "DebuggerModeStatus",
+          status: {
+            tag: "Disabled",
+            reason: noDebuggerReason(new Set(["Html"])),
+          },
         },
       },
     },
@@ -1251,9 +1306,39 @@ function renderMockStatuses(root: Element): void {
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        debuggerModeStatus: {
-          tag: "Disabled",
-          reason: noDebuggerReason(new Set(["Html", "Platform.worker"])),
+        initializedElmAppsStatus: {
+          tag: "DebuggerModeStatus",
+          status: {
+            tag: "Disabled",
+            reason: noDebuggerReason(new Set(["Html", "Platform.worker"])),
+          },
+        },
+      },
+    },
+    NoElmApps: {
+      tag: "Idle",
+      date: new Date(),
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      info: {
+        ...info,
+        initializedElmAppsStatus: {
+          tag: "NoProgramsAtAll",
+        },
+      },
+    },
+    WindowElmDecodeError: {
+      tag: "Idle",
+      date: new Date(),
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      info: {
+        ...info,
+        initializedElmAppsStatus: {
+          tag: "DecodeError",
+          message: new Decode.DecoderError({
+            tag: "object",
+            got: 5,
+            key: "Main",
+          }).format(),
         },
       },
     },
