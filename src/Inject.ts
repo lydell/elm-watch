@@ -231,7 +231,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^(\s*)%view%: impl\.%view%,\s*%update%: impl\.%update%,\s*%subscriptions%: impl.%subscriptions%$/m,
-        replace: `$1impl: impl`,
+        replace: `$1_impl: impl`,
       },
     ],
   },
@@ -244,7 +244,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search: /^(\s*)%view%: impl\.%view%$/m,
         replace:
-          "$1%view%: function view(model) { return impl.%view%(model); },\n$1impl: impl",
+          "$1%view%: function view(model) { return impl.%view%(model); },\n$1_impl: impl",
       },
     ],
   },
@@ -253,7 +253,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   // Update call to `_Platform_initialize` to match our implementation.
   // `_Browser_application` calls `_Browser_document`/`_Debugger_document`.
   // `$elm$browser$Browser$sandbox` calls `_Browser_element`/`_Debugger_element`.
-  // In those cases we need `impl.impl`.
+  // In those cases we need `impl._impl`.
   // Also pass the type of program to `_Platform_initialize`.
   {
     probe:
@@ -262,7 +262,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^(\s*)impl\.%update%,\s*impl\.%subscriptions%,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.%update%\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.%subscriptions%\),/gm,
-        replace: `$1impl.impl || impl,`,
+        replace: `$1impl._impl || impl,`,
       },
     ],
   },
@@ -282,7 +282,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&impl.impl ? "Browser.sandbox" : "Browser.element",`,
+        replace: `$&impl._impl ? "Browser.sandbox" : "Browser.element",`,
       },
     ],
   },
@@ -292,7 +292,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&impl.impl ? "Browser.application" : "Browser.document",`,
+        replace: `$&impl._impl ? "Browser.application" : "Browser.document",`,
       },
     ],
   },
