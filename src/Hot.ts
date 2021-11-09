@@ -392,11 +392,9 @@ const initMutable =
       ),
     };
 
-    Promise.resolve().then(() => {
-      webSocketServer.setDispatch((msg) => {
-        onWebSocketServerMsg(getNow(), mutable, dispatch, rejectPromise, msg);
-      });
-    }, rejectPromise);
+    webSocketServer.setDispatch((msg) => {
+      onWebSocketServerMsg(getNow(), mutable, dispatch, rejectPromise, msg);
+    });
 
     postprocessWorkerPool.setCalculateMax(() =>
       mutable.lastWebSocketCloseTimestamp !== undefined &&
@@ -1175,16 +1173,14 @@ const runCmd =
             }, rejectPromise);
           }
         } else if (outputActions.numExecuting === 0) {
-          Promise.resolve().then(() => {
-            dispatch({
-              tag: "CompilationPartDone",
-              date: getNow(),
-              prioritizedOutputs: makePrioritizedOutputs(
-                mutable.webSocketConnections
-              ),
-              handleOutputActionResult: { tag: "Nothing" },
-            });
-          }, rejectPromise);
+          dispatch({
+            tag: "CompilationPartDone",
+            date: getNow(),
+            prioritizedOutputs: makePrioritizedOutputs(
+              mutable.webSocketConnections
+            ),
+            handleOutputActionResult: { tag: "Nothing" },
+          });
         }
         return;
       }

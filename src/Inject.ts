@@ -116,10 +116,9 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
   var node = args && args['node'] ? args['node'] : _Debug_crash(0);
 
   function render() {
-    node.parentNode.replaceChild(
-      _VirtualDom_render(virtualNode, function() {}),
-      node
-    );
+    var nextNode = _VirtualDom_render(virtualNode, function() {});
+    node.parentNode.replaceChild(nextNode, node);
+    node = nextNode;
   }
 
   render();
@@ -130,7 +129,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
   }
 
   return Object.defineProperties(
-    ports ? { ports: ports } : {},
+    {},
     {
       __elmWatchHotReload: { value: __elmWatchHotReload },
       __elmWatchProgramType: { value: programType },

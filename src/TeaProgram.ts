@@ -16,30 +16,26 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
   return new Promise((resolve, reject) => {
     const [initialModel, initialCmds] = options.init;
     let model: Model = initialModel;
-    let runningCmds = true;
+    const msgQueue: Array<Msg> = [];
 
-    const dispatch = (msg: Msg): void => {
-      if (runningCmds) {
-        reject(
-          new Error(
-            `\`dispatch\` must not be called synchronously. Dispatched msg: ${JSON.stringify(
-              msg
-            )}`
-          )
-        );
+    const dispatch = (dispatchedMsg: Msg): void => {
+      const alreadyRunning = msgQueue.length > 0;
+      msgQueue.push(dispatchedMsg);
+      if (alreadyRunning) {
         return;
       }
-      const [newModel, cmds] = options.update(msg, model);
-      model = newModel;
-      runCmds(cmds);
+      for (const msg of msgQueue) {
+        const [newModel, cmds] = options.update(msg, model);
+        model = newModel;
+        runCmds(cmds);
+      }
+      msgQueue.length = 0;
     };
 
     const runCmds = (cmds: Array<Cmd>): void => {
-      runningCmds = true;
       for (const cmd of cmds) {
         options.runCmd(cmd, mutable, dispatch, resolve, reject);
       }
-      runningCmds = false;
     };
 
     const mutable = options.initMutable(dispatch, reject);
