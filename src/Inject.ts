@@ -512,15 +512,13 @@ export function proxyFile(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
   webSocketPort: Port
-): Buffer {
-  return Buffer.from(
-    `${clientCode(
-      outputPath,
-      elmCompiledTimestamp,
-      "proxy",
-      webSocketPort
-    )}\n(${proxyFileIIFE.toString()})(this);`
-  );
+): string {
+  return `${clientCode(
+    outputPath,
+    elmCompiledTimestamp,
+    "proxy",
+    webSocketPort
+  )}\n(${proxyFileIIFE.toString()})(this);`;
 }
 
 export function clientCode(
@@ -529,12 +527,27 @@ export function clientCode(
   compilationMode: CompilationModeWithProxy,
   webSocketPort: Port
 ): string {
-  return ClientCode.code
-    .replace(/%TARGET_NAME%/g, outputPath.targetName)
-    .replace(
-      /%INITIAL_ELM_COMPILED_TIMESTAMP%/g,
-      elmCompiledTimestamp.toString()
-    )
-    .replace(/%COMPILATION_MODE%/g, compilationMode)
-    .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString());
+  return (
+    versionedIdentifier(webSocketPort) +
+    ClientCode.code
+      .replace(/%TARGET_NAME%/g, outputPath.targetName)
+      .replace(
+        /%INITIAL_ELM_COMPILED_TIMESTAMP%/g,
+        elmCompiledTimestamp.toString()
+      )
+      .replace(/%COMPILATION_MODE%/g, compilationMode)
+      .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString())
+  );
+}
+
+// When only typechecking, don’t write a proxy file if:
+// - The output exists.
+// - And it was created by `elm-watch hot`. (`elm-watch make` output does not contain WebSocket stuff).
+// - And it was created by the same version of `elm-watch`. (Older versions could have bugs.)
+// - And it used the same WebSocket port. (Otherwise it will never connect to us.)
+export function versionedIdentifier(webSocketPort: Port): string {
+  return `// elm-watch hot ${JSON.stringify({
+    version: "%VERSION%",
+    webSocketPort: webSocketPort.thePort,
+  })}\n`;
 }

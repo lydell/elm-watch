@@ -487,10 +487,9 @@ export type HandleOutputActionResult =
       tag: "Nothing";
     };
 
-type RunModeWithVersionedIdentifier =
+type RunModeWithExtraData =
   | {
       tag: "hot";
-      versionedIdentifier: Buffer;
       webSocketPort: Port;
     }
   | {
@@ -511,7 +510,7 @@ export async function handleOutputAction({
   env: Env;
   logger: Logger;
   getNow: GetNow;
-  runMode: RunModeWithVersionedIdentifier;
+  runMode: RunModeWithExtraData;
   elmWatchJsonPath: ElmWatchJsonPath;
   total: number;
   action: OutputAction;
@@ -543,7 +542,6 @@ export async function handleOutputAction({
             elmJsonPath: action.elmJsonPath,
             outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
             total,
-            versionedIdentifier: runMode.versionedIdentifier,
             webSocketPort: runMode.webSocketPort,
           });
           return { tag: "Nothing" };
@@ -589,7 +587,7 @@ async function compileOneOutput({
   env: Env;
   logger: Logger;
   getNow: GetNow;
-  runMode: RunModeWithVersionedIdentifier;
+  runMode: RunModeWithExtraData;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
@@ -687,7 +685,7 @@ async function compileOneOutput({
 
 function onCompileSuccess(
   updateStatusLineHelper: () => void,
-  runMode: RunModeWithVersionedIdentifier,
+  runMode: RunModeWithExtraData,
   outputPath: OutputPath,
   outputState: OutputState,
   elmCompiledTimestamp: number,
@@ -770,7 +768,6 @@ function onCompileSuccess(
                 fs.writeFileSync(
                   outputPath.theOutputPath.absolutePath,
                   Buffer.concat([
-                    runMode.versionedIdentifier,
                     Buffer.from(
                       Inject.clientCode(
                         outputPath,
@@ -876,7 +873,7 @@ async function postprocessHelper({
 }: {
   env: Env;
   logger: Logger;
-  runMode: RunModeWithVersionedIdentifier;
+  runMode: RunModeWithExtraData;
   elmWatchJsonPath: ElmWatchJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
@@ -944,7 +941,6 @@ async function postprocessHelper({
           fs.writeFileSync(
             outputPath.theOutputPath.absolutePath,
             Buffer.concat([
-              runMode.versionedIdentifier,
               Buffer.from(
                 Inject.clientCode(
                   outputPath,
@@ -995,7 +991,6 @@ async function typecheck({
   elmJsonPath,
   outputs,
   total,
-  versionedIdentifier,
   webSocketPort,
 }: {
   env: Env;
@@ -1008,7 +1003,6 @@ async function typecheck({
     outputState: OutputState;
   }>;
   total: number;
-  versionedIdentifier: Buffer;
   webSocketPort: Port;
 }): Promise<void> {
   for (const { index, outputPath, outputState } of outputs) {
@@ -1085,7 +1079,6 @@ async function typecheck({
           elmJsonPath,
           outputs: [{ index, outputPath, outputState }],
           total,
-          versionedIdentifier,
           webSocketPort,
         })
       );
@@ -1106,7 +1099,7 @@ async function typecheck({
       case "elm make success + walker success": {
         const result = needsToWriteProxyFile(
           outputPath.theOutputPath,
-          versionedIdentifier
+          Buffer.from(Inject.versionedIdentifier(webSocketPort))
         );
 
         switch (result.tag) {
@@ -1118,14 +1111,7 @@ async function typecheck({
               );
               fs.writeFileSync(
                 outputPath.theOutputPath.absolutePath,
-                Buffer.concat([
-                  versionedIdentifier,
-                  Inject.proxyFile(
-                    outputPath,
-                    getNow().getTime(),
-                    webSocketPort
-                  ),
-                ])
+                Inject.proxyFile(outputPath, getNow().getTime(), webSocketPort)
               );
               // The proxy file doesn’t count as writing to disk…
               outputState.status = { tag: "NotWrittenToDisk" };

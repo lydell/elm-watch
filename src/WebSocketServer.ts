@@ -25,30 +25,40 @@ type Options = {
 };
 
 export class WebSocketServer {
-  webSocketServer: WsServer;
+  private webSocketServer: WsServer;
 
   port: Port;
 
-  dispatch: (msg: WebSocketServerMsg) => void;
+  private dispatch: (msg: WebSocketServerMsg) => void;
 
-  msgQueue: Array<WebSocketServerMsg> = [];
+  private msgQueue: Array<WebSocketServerMsg> = [];
+
+  listening: Promise<void>;
+
+  private resolveListening: () => void = () => {
+    throw new Error("WebSocketServer#resolveListening was never reassigned!");
+  };
 
   constructor(options: Options) {
-    const { webSocketServer, port } = this.init(options);
-    this.webSocketServer = webSocketServer;
-    this.port = port;
+    this.webSocketServer = this.init(options);
+    this.port = { tag: "Port", thePort: 0 };
     this.dispatch = this.dispatchToQueue;
+    this.listening = new Promise((resolve) => {
+      this.resolveListening = resolve;
+    });
   }
 
-  init({ portChoice, rejectPromise }: Options): {
-    webSocketServer: WsServer;
-    port: Port;
-  } {
+  init({ portChoice, rejectPromise }: Options): WsServer {
     const webSocketServer = new WsServer({
       // If `port` is 0, the operating system will assign an arbitrary unused port.
       port: portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
     });
-    const { port } = webSocketServer.address() as WebSocket.AddressInfo;
+
+    webSocketServer.once("listening", () => {
+      const { port } = webSocketServer.address() as WebSocket.AddressInfo;
+      this.port.thePort = port;
+      this.resolveListening();
+    });
 
     webSocketServer.on("connection", (webSocket, request) => {
       this.dispatch({
@@ -80,12 +90,10 @@ export class WebSocketServer {
           case "PersistedPort": {
             // The port we used last time is not available. Get a new one.
             webSocketServer.close();
-            const next = this.init({
+            this.webSocketServer = this.init({
               portChoice: { tag: "NoPort" },
               rejectPromise,
             });
-            this.webSocketServer = next.webSocketServer;
-            this.port = next.port;
             return;
           }
 
@@ -107,7 +115,7 @@ export class WebSocketServer {
       }
     });
 
-    return { webSocketServer, port: { tag: "Port", thePort: port } };
+    return webSocketServer;
   }
 
   dispatchToQueue = (msg: WebSocketServerMsg): void => {

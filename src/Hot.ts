@@ -84,7 +84,6 @@ type Mutable = {
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
-  versionedIdentifier: Buffer;
 };
 
 type WebSocketConnection = {
@@ -379,17 +378,6 @@ const initMutable =
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
       elmWatchStuffJsonWriteError: undefined,
-      // When only typechecking, don’t write a proxy file if:
-      // - The output exists.
-      // - And it was created by `elm-watch hot`. (`elm-watch make` output does not contain WebSocket stuff).
-      // - And it was created by the same version of `elm-watch`. (Older versions could have bugs.)
-      // - And it used the same WebSocket port. (Otherwise it will never connect to us.)
-      versionedIdentifier: Buffer.from(
-        `// elm-watch hot ${JSON.stringify({
-          version: "%VERSION%",
-          webSocketPort: webSocketServer.port.thePort,
-        })}\n`
-      ),
     };
 
     webSocketServer.setDispatch((msg) => {
@@ -406,7 +394,11 @@ const initMutable =
         : Infinity
     );
 
-    writeElmWatchStuffJson(mutable);
+    // The port isn’t finalized until a few moments later (when the persisted
+    // port is not available).
+    webSocketServer.listening.then(() => {
+      writeElmWatchStuffJson(mutable);
+    }, rejectPromise);
 
     return mutable;
   };
@@ -1153,7 +1145,6 @@ const runCmd =
               getNow,
               runMode: {
                 tag: "hot",
-                versionedIdentifier: mutable.versionedIdentifier,
                 webSocketPort: mutable.webSocketServer.port,
               },
               elmWatchJsonPath: mutable.project.elmWatchJsonPath,
