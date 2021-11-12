@@ -33,6 +33,6 @@
     "chokidar": "^3.5.2",
     "cross-spawn": "^7.0.3",
     "tiny-decoders": "^6.0.0",
-    "ws": "^8.2.2"
+    "ws": "^8.2.3"
   }
 }
