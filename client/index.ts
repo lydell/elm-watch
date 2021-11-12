@@ -793,6 +793,10 @@ fieldset {
   padding: 0.25em 0.75em 0.5em;
 }
 
+fieldset:disabled {
+  color: var(--grey);
+}
+
 p,
 dd {
   margin: 0;
