@@ -135,6 +135,9 @@ export class WebSocketServer {
           reject(error);
         }
       });
+      for (const webSocket of this.webSocketServer.clients) {
+        webSocket.close();
+      }
     });
   }
 }
