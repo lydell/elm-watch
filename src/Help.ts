@@ -1,5 +1,7 @@
 import { bold, dim } from "./Helpers";
 
+const elmWatchJson = bold("elm-watch.json");
+
 export function render(fancy: boolean): string {
   // Not trimming on purpose.
   const symbolLegend = fancy
@@ -14,9 +16,11 @@ ${bold("Symbol legend:")}
     ✅ success
 `
     : "";
-  const elmWatchJson = bold("elm-watch.json");
 
   return `
+${bold("elm-watch init")}
+    Create a minimal ${elmWatchJson} in the current directory
+
 ${bold("elm-watch make [--debug|--optimize] [targets...]")}
     Compile Elm code into JS
 

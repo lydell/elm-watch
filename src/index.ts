@@ -1,10 +1,11 @@
 import * as Help from "./Help";
 import { Env, ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
+import { init } from "./Init";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { run } from "./Run";
-import { Cwd, GetNow, OnIdle } from "./Types";
+import { CliArg, Cwd, GetNow, OnIdle } from "./Types";
 
 type Options = {
   cwd: string;
@@ -45,11 +46,18 @@ export async function elmWatchCli(
     return 0;
   }
 
+  const restArgs: Array<CliArg> = args
+    .slice(1)
+    .map((arg) => ({ tag: "CliArg", theArg: arg }));
+
   switch (args[0]) {
     case undefined:
     case "help":
       logger.log(Help.render(logger.fancy));
       return 0;
+
+    case "init":
+      return init(cwd, logger, restArgs);
 
     case "make":
     case "hot": {
@@ -65,7 +73,7 @@ export async function elmWatchCli(
               getNow,
               onIdle,
               runMode,
-              args.slice(1).map((arg) => ({ tag: "CliArg", theArg: arg })),
+              restArgs,
               result === undefined ? [] : result.restartReasons,
               result === undefined
                 ? new PostprocessWorkerPool(reject)
