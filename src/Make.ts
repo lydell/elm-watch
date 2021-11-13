@@ -46,7 +46,7 @@ export async function run(
     isNonEmptyArray(initialOutputActions.actions) &&
     !isNonEmptyArray(project.elmJsonsErrors)
   ) {
-    Compile.printSpaceForOutputs(logger, initialOutputActions);
+    Compile.printSpaceForOutputs(logger, "make", initialOutputActions);
 
     await new Promise<void>((resolve, reject) => {
       const cycle = (outputActions: Compile.OutputActions): void => {

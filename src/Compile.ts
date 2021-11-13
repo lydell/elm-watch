@@ -541,6 +541,7 @@ export async function handleOutputAction({
             env,
             logger,
             getNow,
+            runMode: runMode.tag,
             elmJsonPath: action.elmJsonPath,
             outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
             total,
@@ -571,6 +572,7 @@ export async function handleOutputAction({
       };
       updateStatusLine({
         logger,
+        runMode: runMode.tag,
         total,
         ...action.output,
       });
@@ -606,6 +608,7 @@ async function compileOneOutput({
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
       logger,
+      runMode: runMode.tag,
       outputPath,
       outputState,
       index,
@@ -944,6 +947,7 @@ async function postprocessHelper({
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
       logger,
+      runMode: runMode.tag,
       outputPath,
       outputState,
       index,
@@ -1067,6 +1071,7 @@ async function typecheck({
   env,
   logger,
   getNow,
+  runMode,
   elmJsonPath,
   outputs,
   total,
@@ -1075,6 +1080,7 @@ async function typecheck({
   env: Env;
   logger: Logger;
   getNow: GetNow;
+  runMode: RunMode;
   elmJsonPath: ElmJsonPath;
   outputs: NonEmptyArray<{
     index: number;
@@ -1102,6 +1108,7 @@ async function typecheck({
     };
     updateStatusLine({
       logger,
+      runMode,
       outputPath,
       outputState,
       index,
@@ -1170,6 +1177,7 @@ async function typecheck({
       outputState.status = { tag: "Interrupted" };
       updateStatusLine({
         logger,
+        runMode,
         outputPath,
         outputState,
         index,
@@ -1186,6 +1194,7 @@ async function typecheck({
           env,
           logger,
           getNow,
+          runMode,
           elmJsonPath,
           outputs: [{ index, outputPath, outputState }],
           total,
@@ -1277,6 +1286,7 @@ async function typecheck({
 
     updateStatusLine({
       logger,
+      runMode,
       outputPath,
       outputState,
       index,
@@ -1378,6 +1388,7 @@ function combineResults(
 // “first” time which makes everything so much simpler.
 export function printSpaceForOutputs(
   logger: Logger,
+  runMode: RunMode,
   outputActions: OutputActions
 ): void {
   if (!logger.raw.stderr.isTTY) {
@@ -1393,6 +1404,7 @@ export function printSpaceForOutputs(
       } else {
         logger.error(
           statusLine(
+            runMode,
             output.outputPath,
             output.outputState,
             logger.raw.stderrColumns,
@@ -1408,12 +1420,14 @@ export function printSpaceForOutputs(
 
 function updateStatusLine({
   logger,
+  runMode,
   outputPath,
   outputState,
   index,
   total,
 }: {
   logger: Logger;
+  runMode: RunMode;
   outputPath: OutputPath;
   outputState: OutputState;
   index: number;
@@ -1425,7 +1439,13 @@ function updateStatusLine({
     readline.clearLine(logger.raw.stderr, 0);
   }
   logger.error(
-    statusLine(outputPath, outputState, logger.raw.stderrColumns, logger.fancy)
+    statusLine(
+      runMode,
+      outputPath,
+      outputState,
+      logger.raw.stderrColumns,
+      logger.fancy
+    )
   );
   if (shouldMoveCursor) {
     readline.moveCursor(logger.raw.stderr, 0, total - index - 1);
@@ -1467,6 +1487,7 @@ export function printErrors(
 }
 
 function statusLine(
+  runMode: RunMode,
   outputPath: OutputPath,
   outputState: OutputState,
   maxWidth: number,
@@ -1478,45 +1499,50 @@ function statusLine(
   const truncate = (string: string): string =>
     statusLineTruncate(maxWidth, fancy, string);
 
-  const maybeDimmed = (
-    prefix: string,
-    maybeString: string | undefined
-  ): string =>
-    maybeString === undefined ? "" : `${prefix}${dim(maybeString)}`;
+  const withExtraDetailsAtEnd = (
+    extra: Array<string | undefined>,
+    start: string
+  ): string => {
+    const strings = extra.flatMap((item) => (item === undefined ? [] : item));
+    if (!isNonEmptyArray(strings)) {
+      return "";
+    }
 
-  const durationsSeparator = " | ";
+    // Emojis take two terminal columns.
+    const startLength = fancy ? start.length + 1 : start.length;
+    const end = join(strings, "   ");
+    const max = Math.min(maxWidth, 100);
+    const padding = Math.max(3, max - end.length - startLength);
+
+    // The `\0` business is a clever way of truncating without messing up the
+    // `dim` color.
+    return truncate(`${start}\0${" ".repeat(padding - 1)}${end}`).replace(
+      /\0(.*)$/,
+      dim(" $1")
+    );
+  };
 
   switch (status.tag) {
     case "NotWrittenToDisk": {
-      const durationsString = maybeDimmed(
-        durationsSeparator,
-        printDurations(status.durations)
-      );
-      return truncate(
-        fancy
-          ? `✅ ${targetName}${durationsString}`
-          : `${targetName}: success${durationsString}`
+      return withExtraDetailsAtEnd(
+        [printDurations(status.durations, fancy)],
+        fancy ? `✅ ${targetName}` : `${targetName}: success`
       );
     }
 
     case "Success": {
-      const fileSizeString = maybeDimmed(
-        " ",
-        maybePrintFileSize(
-          outputState.compilationMode,
-          status.elmFileSize,
-          status.postprocessFileSize,
-          fancy
-        )
-      );
-      const durationsString = maybeDimmed(
-        durationsSeparator,
-        printDurations(status.durations)
-      );
-      return truncate(
-        fancy
-          ? `✅ ${targetName}${fileSizeString}${durationsString}`
-          : `${targetName}: success${fileSizeString}${durationsString}`
+      return withExtraDetailsAtEnd(
+        [
+          maybePrintFileSize(
+            runMode,
+            outputState.compilationMode,
+            status.elmFileSize,
+            status.postprocessFileSize,
+            fancy
+          ),
+          printDurations(status.durations, fancy),
+        ],
+        fancy ? `✅ ${targetName}` : `${targetName}: success`
       );
     }
 
@@ -1583,22 +1609,32 @@ function statusLineTruncate(
 }
 
 function maybePrintFileSize(
+  runMode: RunMode,
   compilationMode: CompilationMode,
   elmFileSize: number,
   postprocessFileSize: number,
   fancy: boolean
 ): string | undefined {
-  switch (compilationMode) {
-    case "debug":
-    case "standard":
-      return undefined;
+  switch (runMode) {
+    case "make":
+      switch (compilationMode) {
+        case "debug":
+        case "standard":
+          return undefined;
 
-    case "optimize":
-      return postprocessFileSize === elmFileSize
-        ? printFileSize(elmFileSize)
-        : `${printFileSize(elmFileSize)} ${fancy ? "→" : "->"} ${printFileSize(
-            postprocessFileSize
-          )} (${((postprocessFileSize / elmFileSize) * 100).toFixed(1)}%)`;
+        case "optimize":
+          return postprocessFileSize === elmFileSize
+            ? printFileSize(elmFileSize)
+            : `${printFileSize(elmFileSize)} ${
+                fancy ? "→" : "->"
+              } ${printFileSize(postprocessFileSize)} (${(
+                (postprocessFileSize / elmFileSize) *
+                100
+              ).toFixed(1)}%)`;
+      }
+
+    case "hot":
+      return undefined;
   }
 }
 
@@ -1606,42 +1642,72 @@ const KiB = 1024;
 const MiB = KiB ** 2;
 
 function printFileSize(fileSize: number): string {
-  return fileSize >= MiB
-    ? `${(fileSize / MiB).toFixed(2)} MiB`
-    : `${(fileSize / KiB).toFixed(0)} KiB`;
+  const [divided, unit] =
+    fileSize >= MiB ? [fileSize / MiB, "MiB"] : [fileSize / KiB, "KiB"];
+  const string = divided
+    .toFixed(divided < 10 ? 2 : divided < 100 ? 1 : 0)
+    .padStart(4, " ");
+  return `${string} ${unit}`;
 }
 
-function printDurations(durations: Array<Duration>): string | undefined {
+const SECOND = 1000;
+
+function printDurationMs(durationMs: number): string {
+  const divided = durationMs / SECOND;
+  const [string, unit] =
+    durationMs < SECOND
+      ? [durationMs.toString(), "ms"]
+      : [divided.toFixed(divided < 10 ? 1 : 0), "s"];
+  return `${string.padStart(3, " ")} ${unit}`;
+}
+
+function printDurations(
+  durations: Array<Duration>,
+  fancy: boolean
+): string | undefined {
   if (!isNonEmptyArray(durations)) {
     return undefined;
   }
 
-  return join(mapNonEmptyArray(durations, printDuration), " | ");
+  const newDurations: NonEmptyArray<Duration> = durations.some(
+    (duration) => duration.tag === "QueuedForElmMake"
+  )
+    ? durations
+    : [{ tag: "QueuedForElmMake", durationMs: 0 }, ...durations];
+
+  return join(
+    mapNonEmptyArray(newDurations, (duration) =>
+      printDuration(duration, fancy)
+    ),
+    " | "
+  );
 }
 
-function printDuration(duration: Duration): string {
+function printDuration(duration: Duration, fancy: boolean): string {
   switch (duration.tag) {
     case "QueuedForElmMake":
-      return `Q ${duration.durationMs}ms`;
+      return `${printDurationMs(duration.durationMs)} Q`;
 
     case "ElmMake":
     case "ElmMakeTypecheckOnly":
-      return `${duration.tag === "ElmMake" ? "E" : "T"} ${
-        duration.elmDurationMs
-      }ms${
+      return `${printDurationMs(duration.elmDurationMs)} ${
+        duration.tag === "ElmMake" ? "E" : "T"
+      }${
         duration.walkerDurationMs === -1
           ? ""
-          : ` + W ${duration.walkerDurationMs}ms`
+          : ` ${fancy ? "¦" : "/"} ${printDurationMs(
+              duration.walkerDurationMs
+            )} W`
       }`;
 
     case "Inject":
-      return `I ${duration.durationMs}ms`;
+      return `${printDurationMs(duration.durationMs)} I`;
 
     case "QueuedForPostprocess":
-      return `R ${duration.durationMs}ms`;
+      return `${printDurationMs(duration.durationMs)} R`;
 
     case "Postprocess":
-      return `P ${duration.durationMs}ms`;
+      return `${printDurationMs(duration.durationMs)} P`;
   }
 }
 
