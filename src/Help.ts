@@ -1,6 +1,19 @@
 import { bold, dim } from "./Helpers";
 
-export function render(): string {
+export function render(fancy: boolean): string {
+  // Not trimming on purpose.
+  const symbolLegend = fancy
+    ? `
+${bold("Symbol legend:")}
+
+    ⚪️ queued for elm make
+    🟢 elm make done – queued for postprocess
+    ⏳ elm make or postprocess
+    🚨 error
+    ⛔️ skipped
+    ✅ success
+`
+    : "";
   const elmWatchJson = bold("elm-watch.json");
 
   return `
@@ -14,6 +27,18 @@ ${bold("elm-watch hot [targets...]")}
 All commands read their inputs and outputs from the closest ${elmWatchJson}.
 By default they build all targets. Pass target names to only build some.
 Targets are matched by substring!
+
+${dim("---")}
+${symbolLegend}
+${bold("Durations legend:")}
+
+    ${bold("Q")} queued for elm make
+    ${bold("E")} elm make
+    ${bold("T")} elm make (typecheck only)
+    ${bold("W")} find all related Elm file paths
+    ${bold("I")} inject hot reloading code
+    ${bold("R")} queued for postprocess
+    ${bold("P")} postprocess
 
 ${dim("---")}
 

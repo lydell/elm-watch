@@ -1525,7 +1525,7 @@ function statusLine(
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
-        [printDurations(status.durations, fancy)],
+        [maybePrintDurations(status.durations, fancy)],
         fancy ? `✅ ${targetName}` : `${targetName}: success`
       );
     }
@@ -1540,7 +1540,7 @@ function statusLine(
             status.postprocessFileSize,
             fancy
           ),
-          printDurations(status.durations, fancy),
+          maybePrintDurations(status.durations, fancy),
         ],
         fancy ? `✅ ${targetName}` : `${targetName}: success`
       );
@@ -1661,7 +1661,7 @@ function printDurationMs(durationMs: number): string {
   return `${string.padStart(3, " ")} ${unit}`;
 }
 
-function printDurations(
+function maybePrintDurations(
   durations: Array<Duration>,
   fancy: boolean
 ): string | undefined {

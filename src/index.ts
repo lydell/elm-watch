@@ -41,14 +41,14 @@ export async function elmWatchCli(
     (arg) => arg === "-h" || arg === "-help" || arg === "--help"
   );
   if (isHelp) {
-    logger.log(Help.render());
+    logger.log(Help.render(logger.fancy));
     return 0;
   }
 
   switch (args[0]) {
     case undefined:
     case "help":
-      logger.log(Help.render());
+      logger.log(Help.render(logger.fancy));
       return 0;
 
     case "make":
