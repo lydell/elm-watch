@@ -68,34 +68,41 @@ export type OutputStatus =
   | {
       tag: "ElmMake";
       compilationMode: CompilationMode;
+      durations: Array<Duration>;
     }
   | {
       tag: "ElmMakeTypecheckOnly";
+      durations: Array<Duration>;
     }
   | {
       tag: "Interrupted";
     }
   | {
       tag: "NotWrittenToDisk";
+      durations: Array<Duration>;
     }
   | {
       tag: "Postprocess";
       kill: () => Promise<void>;
+      durations: Array<Duration>;
     }
   | {
       tag: "QueuedForElmMake";
+      startTimestamp: number;
     }
   | {
       tag: "QueuedForPostprocess";
       postprocessArray: NonEmptyArray<string>;
       code: Buffer | string;
       elmCompiledTimestamp: number;
+      durations: Array<Duration>;
     }
   | {
       tag: "Success";
       elmFileSize: number;
       postprocessFileSize: number;
       elmCompiledTimestamp: number;
+      durations: Array<Duration>;
     };
 
 export type OutputError =
@@ -165,6 +172,34 @@ export type UncheckedInputPath = {
   theUncheckedInputPath: AbsolutePath;
   originalString: string;
 };
+
+export type Duration =
+  | {
+      tag: "ElmMake";
+      elmDurationMs: number;
+      walkerDurationMs: number;
+    }
+  | {
+      tag: "ElmMakeTypecheckOnly";
+      elmDurationMs: number;
+      walkerDurationMs: number;
+    }
+  | {
+      tag: "Inject";
+      durationMs: number;
+    }
+  | {
+      tag: "Postprocess";
+      durationMs: number;
+    }
+  | {
+      tag: "QueuedForElmMake";
+      durationMs: number;
+    }
+  | {
+      tag: "QueuedForPostprocess";
+      durationMs: number;
+    };
 
 export type InitProjectResult =
   | {
@@ -253,7 +288,7 @@ export function initProject({
               persisted === undefined
                 ? compilationMode
                 : persisted.compilationMode,
-            status: { tag: "NotWrittenToDisk" },
+            status: { tag: "NotWrittenToDisk", durations: [] },
             allRelatedElmFilePaths: new Set(),
             dirty: true,
           });

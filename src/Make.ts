@@ -1,8 +1,8 @@
 import * as Compile from "./Compile";
-import { Env } from "./Helpers";
+import { bold, dim, Env } from "./Helpers";
 import type { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { PostprocessWorkerPool } from "./Postprocess";
+import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
 import { Project } from "./Project";
 import { GetNow } from "./Types";
 
@@ -15,6 +15,8 @@ export async function run(
   project: Project,
   postprocessWorkerPool: PostprocessWorkerPool
 ): Promise<MakeResult> {
+  const startTimestamp = getNow().getTime();
+
   const installResult = await Compile.installDependencies(env, logger, project);
 
   switch (installResult.tag) {
@@ -73,16 +75,22 @@ export async function run(
     });
   }
 
+  const numWorkers = postprocessWorkerPool.getSize();
+
   await postprocessWorkerPool.terminate();
 
   const errors = Compile.extractErrors(project);
+  const failed = isNonEmptyArray(errors);
 
-  if (isNonEmptyArray(errors)) {
+  if (failed) {
     Compile.printErrors(logger, errors);
-    return { tag: "Error" };
   }
 
-  return { tag: "Success" };
+  const duration = getNow().getTime() - startTimestamp;
+  logger.error("");
+  logger.error(compileFinishedMessage(duration, numWorkers));
+
+  return failed ? { tag: "Error" } : { tag: "Success" };
 }
 
 function getNextOutputActions(project: Project): Compile.OutputActions {
@@ -101,4 +109,18 @@ function getNextOutputActions(project: Project): Compile.OutputActions {
         ),
       }
     : nextOutputActions;
+}
+
+function compileFinishedMessage(duration: number, numWorkers: number): string {
+  const workersString =
+    numWorkers > 0
+      ? dim(
+          ` (using ${numWorkers} ${ELM_WATCH_NODE} ${
+            numWorkers === 1 ? "worker" : "workers"
+          }).`
+        )
+      : ".";
+  return `Compilation finished in ${bold(
+    duration.toString()
+  )} ms${workersString}`;
 }
