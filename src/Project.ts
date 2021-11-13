@@ -306,7 +306,7 @@ export function initProject({
   }
 
   const duplicateOutputs = Array.from(potentialOutputDuplicates)
-    .filter(([_, outputPaths]) => outputPaths.length >= 2)
+    .filter(([, outputPaths]) => outputPaths.length >= 2)
     .map(([absolutePath, originalOutputPathStrings]) => ({
       originalOutputPathStrings,
       absolutePath,
@@ -437,7 +437,7 @@ function resolveElmJson(
   }
 
   const duplicateInputs = Array.from(resolved)
-    .filter(([_, inputPaths]) => inputPaths.length >= 2)
+    .filter(([, inputPaths]) => inputPaths.length >= 2)
     .map(([resolvedPath, inputPaths]) => ({
       resolved: resolvedPath,
       inputs: inputPaths,
