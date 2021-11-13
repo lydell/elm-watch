@@ -43,6 +43,7 @@ ${bold("Durations legend:")}
     ${bold("I")} inject hot reloading code
     ${bold("R")} queued for postprocess
     ${bold("P")} postprocess
+    ${bold(fancy ? "¦" : "/")} next is run in parallel
 
 ${dim("---")}
 
