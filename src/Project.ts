@@ -93,7 +93,8 @@ export type OutputStatus =
     }
   | {
       tag: "Success";
-      fileSize: number;
+      elmFileSize: number;
+      postprocessFileSize: number;
       elmCompiledTimestamp: number;
     };
 

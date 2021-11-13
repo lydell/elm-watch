@@ -706,7 +706,8 @@ function onCompileSuccess(
           }
           outputState.status = {
             tag: "Success",
-            fileSize,
+            elmFileSize: fileSize,
+            postprocessFileSize: fileSize,
             elmCompiledTimestamp,
           };
           updateStatusLineHelper();
@@ -791,7 +792,8 @@ function onCompileSuccess(
               }
               outputState.status = {
                 tag: "Success",
-                fileSize: newBuffer.byteLength,
+                elmFileSize: newBuffer.byteLength,
+                postprocessFileSize: newBuffer.byteLength,
                 elmCompiledTimestamp,
               };
               updateStatusLineHelper();
@@ -966,7 +968,8 @@ async function postprocessHelper({
     }
     outputState.status = {
       tag: "Success",
-      fileSize: postprocessResult.code.byteLength,
+      elmFileSize: Buffer.byteLength(code),
+      postprocessFileSize: postprocessResult.code.byteLength,
       elmCompiledTimestamp,
     };
     updateStatusLineHelper();
@@ -1354,12 +1357,13 @@ function statusLine(
       return truncate(fancy ? `✅ ${targetName}` : `${targetName}: success`);
 
     case "Success": {
-      const fileSize = printFileSize(
+      const fileSize = maybePrintFileSize(
         outputState.compilationMode,
-        status.fileSize
+        status.elmFileSize,
+        status.postprocessFileSize,
+        fancy
       );
-      const fileSizeString =
-        fileSize === undefined ? "" : dim(` (${fileSize})`);
+      const fileSizeString = fileSize === undefined ? "" : ` ${dim(fileSize)}`;
       return truncate(
         fancy
           ? `✅ ${targetName}${fileSizeString}`
@@ -1429,12 +1433,11 @@ function statusLineTruncate(
     : `${string.slice(0, maxWidth - 3)}...`;
 }
 
-const KiB = 1024;
-const MiB = KiB ** 2;
-
-function printFileSize(
+function maybePrintFileSize(
   compilationMode: CompilationMode,
-  fileSize: number
+  elmFileSize: number,
+  postprocessFileSize: number,
+  fancy: boolean
 ): string | undefined {
   switch (compilationMode) {
     case "debug":
@@ -1442,10 +1445,21 @@ function printFileSize(
       return undefined;
 
     case "optimize":
-      return fileSize >= MiB
-        ? `${(fileSize / MiB).toFixed(2)} MiB`
-        : `${(fileSize / KiB).toFixed(0)} KiB`;
+      return postprocessFileSize === elmFileSize
+        ? printFileSize(elmFileSize)
+        : `${printFileSize(elmFileSize)} ${fancy ? "→" : "->"} ${printFileSize(
+            postprocessFileSize
+          )} (${((postprocessFileSize / elmFileSize) * 100).toFixed(1)}%)`;
   }
+}
+
+const KiB = 1024;
+const MiB = KiB ** 2;
+
+function printFileSize(fileSize: number): string {
+  return fileSize >= MiB
+    ? `${(fileSize / MiB).toFixed(2)} MiB`
+    : `${(fileSize / KiB).toFixed(0)} KiB`;
 }
 
 export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
