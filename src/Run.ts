@@ -260,6 +260,10 @@ export async function run(
                           : { tag: "NoPort" }
                       );
                       switch (result.tag) {
+                        case "ExitOnHandledFatalError":
+                          logger.errorTemplate(result.errorTemplate);
+                          return { tag: "Exit", exitCode: 1 };
+
                         case "ExitOnIdle":
                           return { tag: "Exit", exitCode: 0 };
 

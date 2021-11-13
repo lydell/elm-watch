@@ -248,6 +248,10 @@ type Cmd =
 
 export type HotRunResult =
   | {
+      tag: "ExitOnHandledFatalError";
+      errorTemplate: Errors.ErrorTemplate;
+    }
+  | {
       tag: "ExitOnIdle";
     }
   | {
@@ -331,6 +335,7 @@ const initMutable =
   ) =>
   (
     dispatch: (msg: Msg) => void,
+    resolvePromise: (result: HotRunResult) => void,
     rejectPromise: (error: Error) => void
   ): Mutable => {
     // The more targets that are enabled by connecting websockets, the more
@@ -363,7 +368,7 @@ const initMutable =
     );
 
     const {
-      webSocketServer = new WebSocketServer({ portChoice, rejectPromise }),
+      webSocketServer = new WebSocketServer(portChoice),
       webSocketConnections = [],
     } = webSocketState ?? {};
 
@@ -381,7 +386,14 @@ const initMutable =
     };
 
     webSocketServer.setDispatch((msg) => {
-      onWebSocketServerMsg(getNow(), mutable, dispatch, rejectPromise, msg);
+      onWebSocketServerMsg(
+        getNow(),
+        mutable,
+        dispatch,
+        resolvePromise,
+        rejectPromise,
+        msg
+      );
     });
 
     postprocessWorkerPool.setCalculateMax(() =>
@@ -1194,12 +1206,12 @@ const runCmd =
         return;
 
       case "InstallDependencies":
-        Compile.installDependencies(env, logger, mutable.project).then(
-          (installResult) => {
+        // If the web socket server fails to boot, don’t even bother with anything else.
+        mutable.webSocketServer.listening
+          .then(() => Compile.installDependencies(env, logger, mutable.project))
+          .then((installResult) => {
             dispatch({ tag: "InstallDependenciesDone", installResult });
-          },
-          rejectPromise
-        );
+          }, rejectPromise);
         return;
 
       case "LimitWorkers":
@@ -1296,11 +1308,7 @@ const runCmd =
               return;
 
             case "Stop":
-              Promise.all([
-                mutable.watcher.close(),
-                mutable.webSocketServer.close(),
-                mutable.postprocessWorkerPool.terminate(),
-              ]).then(() => {
+              closeAll(mutable).then(() => {
                 resolvePromise({ tag: "ExitOnIdle" });
               }, rejectPromise);
               return;
@@ -1352,6 +1360,7 @@ function onWebSocketServerMsg(
   now: Date,
   mutable: Mutable,
   dispatch: (msg: Msg) => void,
+  resolvePromise: (result: HotRunResult) => void,
   rejectPromise: (error: Error) => void,
   msg: WebSocketServerMsg
 ): void {
@@ -1387,7 +1396,7 @@ function onWebSocketServerMsg(
       setTimeout(() => {
         dispatch({ tag: "WorkerLimitTimeoutPassed" });
       }, mutable.workerLimitTimeoutMs);
-      break;
+      return;
 
     case "WebSocketMessageReceived": {
       const webSocketConnection = mutable.webSocketConnections.find(
@@ -1431,7 +1440,53 @@ function onWebSocketServerMsg(
         webSocket: msg.webSocket,
         data: msg.data,
       });
+      return;
     }
+
+    case "WebSocketServerError":
+      switch (msg.error.tag) {
+        case "PortConflict": {
+          const { portChoice } = msg.error;
+          closeAll(mutable).then(() => {
+            resolvePromise({
+              tag: "ExitOnHandledFatalError",
+              errorTemplate: portChoiceError(
+                mutable.project,
+                portChoice,
+                msg.error.error
+              ),
+            });
+          }, rejectPromise);
+          return;
+        }
+
+        case "OtherError":
+          rejectPromise(msg.error.error);
+          return;
+      }
+  }
+}
+
+function portChoiceError(
+  project: Project,
+  portChoice: PortChoice,
+  error: Error
+): Errors.ErrorTemplate {
+  switch (portChoice.tag) {
+    case "NoPort":
+      return Errors.portConflictForNoPort(error);
+
+    case "PersistedPort":
+      return Errors.portConflictForPersistedPort(
+        project.elmWatchStuffJsonPath,
+        portChoice.port
+      );
+
+    case "PortFromConfig":
+      return Errors.portConflictForPortFromConfig(
+        project.elmWatchJsonPath,
+        portChoice.port
+      );
   }
 }
 
@@ -1464,6 +1519,14 @@ function handleOutputActionResultToCmd(
     case "Nothing":
       return { tag: "NoCmd" };
   }
+}
+
+async function closeAll(mutable: Mutable): Promise<void> {
+  await Promise.all([
+    mutable.watcher.close(),
+    mutable.webSocketServer.close(),
+    mutable.postprocessWorkerPool.terminate(),
+  ]);
 }
 
 function makePrioritizedOutputs(

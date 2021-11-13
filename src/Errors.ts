@@ -894,17 +894,64 @@ ${printErrorFilePath(errorFilePath)}
 `;
 }
 
-export function portConflict(port: Port): string {
-  return `
-In your elm-watch.json you have this:
+export function portConflictForNoPort(error: Error): ErrorTemplate {
+  return fancyError("PORT CONFLICT", { tag: "NoLocation" })`
+I ask the operating system for an arbitrary available port for the
+web socket server.
+
+The operating system is supposed to always be able to find an available port,
+but it looks like that wasn't the case this time!
+
+This is the error message I got:
+
+${error.message}
+  `;
+}
+
+export function portConflictForPersistedPort(
+  elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
+  port: Port
+): ErrorTemplate {
+  return fancyError("PORT CONFLICT", elmWatchStuffJsonPath)`
+I ask the operating system for an arbitrary available port for the
+web socket server.
+
+I then save the port I got to ${elmWatchStuffJson}. Otherwise I would
+get a new port number on each restart, which means that if you had tabs
+open in the browser they would try to connect to the old port number.
+
+I tried to use such a saved port number from a previous run (or from previous
+configuration). But now that port (${port.thePort.toString()}) wasn't available!
+
+Most likely you already have elm-watch running somewhere else! If so,
+find it and use that, or kill it.
+
+If not, something else could have started using port ${port.thePort.toString()}
+(though it's not very likely.) Then you can either try to find what that is,
+or remove ${elmWatchStuffJson} here:
+
+${elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath}
+
+Then I will ask the operating system for a new arbitrary available port.
+  `;
+}
+
+export function portConflictForPortFromConfig(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  port: Port
+): ErrorTemplate {
+  return fancyError("PORT CONFLICT", elmWatchJsonPath)`
+In your ${elmWatchJson} you have this:
 
 "port": ${JSON.stringify(port.thePort)}
 
 But something else seems to already be running on that port!
+You might already have elm-watch running somewhere, or it could be a completely
+different program.
 
 You need to either find and stop that other thing, switch to another port or
-remove "port" from elm-watch.json (which will use an arbitrary available port.)
-  `.trim();
+remove "port" from ${elmWatchJson} (which will use an arbitrary available port.)
+  `;
 }
 
 export function webSocketBadUrl(

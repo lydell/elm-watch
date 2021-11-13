@@ -1,6 +1,5 @@
 import WebSocket, { Server as WsServer } from "ws";
 
-import * as Errors from "./Errors";
 import { Port, PortChoice } from "./Port";
 
 export type WebSocketServerMsg =
@@ -17,12 +16,22 @@ export type WebSocketServerMsg =
       tag: "WebSocketMessageReceived";
       webSocket: WebSocket;
       data: WebSocket.Data;
+    }
+  | {
+      tag: "WebSocketServerError";
+      error: WebSocketServerError;
     };
 
-type Options = {
-  portChoice: PortChoice;
-  rejectPromise: (error: Error) => void;
-};
+export type WebSocketServerError =
+  | {
+      tag: "OtherError";
+      error: Error;
+    }
+  | {
+      tag: "PortConflict";
+      portChoice: PortChoice;
+      error: Error;
+    };
 
 export class WebSocketServer {
   private webSocketServer: WsServer;
@@ -35,32 +44,25 @@ export class WebSocketServer {
 
   listening: Promise<void>;
 
-  private resolveListening: () => void = () => {
-    throw new Error("WebSocketServer#resolveListening was never reassigned!");
-  };
-
-  constructor(options: Options) {
-    this.webSocketServer = this.init(options);
-    this.port = { tag: "Port", thePort: 0 };
+  constructor(portChoice: PortChoice) {
     this.dispatch = this.dispatchToQueue;
-    this.listening = new Promise((resolve) => {
-      this.resolveListening = resolve;
-    });
-  }
 
-  init({ portChoice, rejectPromise }: Options): WsServer {
-    const webSocketServer = new WsServer({
+    this.webSocketServer = new WsServer({
       // If `port` is 0, the operating system will assign an arbitrary unused port.
       port: portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
     });
 
-    webSocketServer.once("listening", () => {
-      const { port } = webSocketServer.address() as WebSocket.AddressInfo;
-      this.port.thePort = port;
-      this.resolveListening();
+    this.port = { tag: "Port", thePort: 0 };
+    this.listening = new Promise((resolve) => {
+      this.webSocketServer.once("listening", () => {
+        const { port } =
+          this.webSocketServer.address() as WebSocket.AddressInfo;
+        this.port.thePort = port;
+        resolve();
+      });
     });
 
-    webSocketServer.on("connection", (webSocket, request) => {
+    this.webSocketServer.on("connection", (webSocket, request) => {
       this.dispatch({
         tag: "WebSocketConnected",
         webSocket,
@@ -81,41 +83,23 @@ export class WebSocketServer {
         this.dispatch({ tag: "WebSocketClosed", webSocket });
       });
 
-      webSocket.on("error", rejectPromise);
+      webSocket.on("error", (error) => {
+        this.dispatch({
+          tag: "WebSocketServerError",
+          error: { tag: "OtherError", error },
+        });
+      });
     });
 
-    webSocketServer.on("error", (error: Error & { code?: string }) => {
-      if (error.code === "EADDRINUSE") {
-        switch (portChoice.tag) {
-          case "PersistedPort": {
-            // The port we used last time is not available. Get a new one.
-            webSocketServer.close();
-            this.webSocketServer = this.init({
-              portChoice: { tag: "NoPort" },
-              rejectPromise,
-            });
-            return;
-          }
-
-          case "PortFromConfig":
-            // “Abusing” fatal errors for a nice error is non-ideal, but people
-            // generally won’t have a need to configure a certain port anyway.
-            rejectPromise({
-              name: "Error",
-              message: Errors.portConflict(portChoice.port),
-            });
-            return;
-
-          case "NoPort":
-            rejectPromise(error);
-            return;
-        }
-      } else {
-        rejectPromise(error);
-      }
+    this.webSocketServer.on("error", (error: Error & { code?: string }) => {
+      this.dispatch({
+        tag: "WebSocketServerError",
+        error:
+          error.code === "EADDRINUSE"
+            ? { tag: "PortConflict", portChoice, error }
+            : { tag: "OtherError", error },
+      });
     });
-
-    return webSocketServer;
   }
 
   dispatchToQueue = (msg: WebSocketServerMsg): void => {

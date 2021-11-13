@@ -1,6 +1,7 @@
 export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
   initMutable: (
     dispatch: (msg: Msg) => void,
+    resolvePromise: (result: Result) => void,
     rejectPromise: (error: Error) => void
   ) => Mutable;
   init: [Model, Array<Cmd>];
@@ -38,7 +39,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
       }
     };
 
-    const mutable = options.initMutable(dispatch, reject);
+    const mutable = options.initMutable(dispatch, resolve, reject);
 
     runCmds(initialCmds);
   });
