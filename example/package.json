@@ -11,8 +11,8 @@
   "devDependencies": {
     "elm-tooling": "1.6.0",
     "elm-watch": "file:../build",
-    "esbuild": "0.13.8",
+    "esbuild": "0.13.13",
     "express": "4.17.1",
-    "uglify-js": "3.14.2"
+    "uglify-js": "3.14.3"
   }
 }
