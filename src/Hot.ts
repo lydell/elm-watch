@@ -35,7 +35,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { absoluteDirname } from "./PathHelpers";
+import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
 import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
@@ -251,6 +251,9 @@ type Cmd =
   | {
       tag: "Restart";
       restartReasons: NonEmptyArray<WatcherEvent | WebSocketRelatedEvent>;
+    }
+  | {
+      tag: "RestartWorkers";
     }
   | {
       tag: "RunOnIdle";
@@ -929,8 +932,33 @@ function onWatcherEvent(
       }
 
     default:
-      // Ignore other types of files.
-      return undefined;
+      switch (project.postprocess.tag) {
+        case "Postprocess": {
+          const [commandName, scriptPathString] =
+            project.postprocess.postprocessArray;
+          if (
+            commandName === ELM_WATCH_NODE &&
+            scriptPathString !== undefined
+          ) {
+            const scriptPath = absolutePathFromString(
+              absoluteDirname(project.elmWatchJsonPath.theElmWatchJsonPath),
+              scriptPathString
+            );
+            if (absolutePathString === scriptPath.absolutePath) {
+              return onElmWatchNodeScriptWatcherEvent(
+                project,
+                makeWatcherEvent(eventName, absolutePathString, now),
+                nextAction
+              );
+            }
+          }
+          return undefined;
+        }
+
+        case "NoPostprocess":
+          // Ignore other types of files.
+          return undefined;
+      }
   }
 }
 
@@ -1024,6 +1052,46 @@ function onElmFileWatcherEvent(
           [],
         ];
     }
+  }
+}
+
+function onElmWatchNodeScriptWatcherEvent(
+  project: Project,
+  event: WatcherEvent,
+  nextAction: NextAction
+): [NextAction, Array<Cmd>] | undefined {
+  const cmds: Array<Cmd> = [
+    {
+      tag: "MarkAsDirty",
+      outputs: getFlatOutputs(project),
+    },
+    {
+      tag: "RestartWorkers",
+    },
+  ];
+
+  switch (nextAction.tag) {
+    case "Restart":
+      return [nextAction, cmds];
+
+    case "Compile":
+      return [
+        {
+          tag: "Compile",
+          events: [...nextAction.events, event],
+        },
+        cmds,
+      ];
+
+    case "NoAction":
+    case "PrintNonInterestingEvents":
+      return [
+        {
+          tag: "Compile",
+          events: [event],
+        },
+        cmds,
+      ];
   }
 }
 
@@ -1370,6 +1438,12 @@ const runCmd =
         }, rejectPromise);
         return;
       }
+
+      case "RestartWorkers":
+        mutable.postprocessWorkerPool.terminate().then(() => {
+          mutable.postprocessWorkerPool.getOrCreateAvailableWorker();
+        }, rejectPromise);
+        return;
 
       case "RunOnIdle":
         if (onIdle !== undefined) {
