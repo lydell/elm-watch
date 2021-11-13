@@ -4,7 +4,7 @@
   "name": "example",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "start": "node server.js",
+    "start": "esbuild app.ts --bundle --servedir=public --outdir=public/build",
     "build": "elm-watch make",
     "watch": "elm-watch hot"
   },

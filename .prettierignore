@@ -1,7 +1,6 @@
 .cache
 build
 coverage
-example
 dist
 elm-stuff
 *.json

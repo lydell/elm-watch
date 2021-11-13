@@ -8,43 +8,43 @@
             "inputs": [
                 "src/ApplicationMain.elm"
             ],
-            "output": "build/ApplicationMain.js"
+            "output": "public/build/ApplicationMain.js"
         },
         "Document": {
             "inputs": [
                 "src/DocumentMain.elm"
             ],
-            "output": "build/DocumentMain.js"
+            "output": "public/build/DocumentMain.js"
         },
         "Element": {
             "inputs": [
                 "src/ElementMain.elm"
             ],
-            "output": "build/ElementMain.js"
+            "output": "public/build/ElementMain.js"
         },
         "Html": {
             "inputs": [
                 "src/HtmlMain.elm"
             ],
-            "output": "build/HtmlMain.js"
+            "output": "public/build/HtmlMain.js"
         },
         "Sandbox": {
             "inputs": [
                 "src/SandboxMain.elm"
             ],
-            "output": "build/SandboxMain.js"
+            "output": "public/build/SandboxMain.js"
         },
         "Worker": {
             "inputs": [
                 "src/WorkerMain.elm"
             ],
-            "output": "build/WorkerMain.js"
+            "output": "public/build/WorkerMain.js"
         },
         "Legacy": {
             "inputs": [
                 "legacy/Main.elm"
             ],
-            "output": "build/LegacyMain.js"
+            "output": "public/build/LegacyMain.js"
         },
         "Frankenstein": {
             "inputs": [
@@ -55,7 +55,7 @@
                 "src/SandboxMain.elm",
                 "src/WorkerMain.elm"
             ],
-            "output": "build/Frankenstein.js"
+            "output": "public/build/Frankenstein.js"
         }
     }
 }

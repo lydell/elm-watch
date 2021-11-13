@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Many</title>
+    <style>
+      .container {
+        border: 1px solid;
+        margin: 1em;
+        padding: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="build/WorkerMain.js"></script>
+    <script src="build/HtmlMain.js"></script>
+    <script src="build/SandboxMain.js"></script>
+    <script src="build/ElementMain.js"></script>
+    <script src="build/DocumentMain.js"></script>
+    <script>
+      function createContainer(name) {
+        const div = document.createElement("div");
+        div.className = "container";
+        const p = document.createElement("p");
+        p.textContent = name;
+        div.append(p);
+        const inner = document.createElement("div");
+        div.append(inner);
+        document.documentElement.append(div);
+        return inner;
+      }
+      Elm.WorkerMain.init();
+      Elm.HtmlMain.init({ node: createContainer("HtmlMain") });
+      Elm.SandboxMain.init({ node: createContainer("SandboxMain") });
+      Elm.ElementMain.init({ node: createContainer("ElementMain") });
+      Elm.DocumentMain.init();
+    </script>
+  </body>
+</html>
