@@ -196,6 +196,10 @@ export class PostprocessWorkerPool {
 
   constructor(private onUnexpectedError: (error: Error) => void) {}
 
+  getSize(): number {
+    return this.workers.size;
+  }
+
   setCalculateMax(calculateMax: () => number): void {
     this.calculateMax = calculateMax;
   }
@@ -221,7 +225,7 @@ export class PostprocessWorkerPool {
     }
   }
 
-  async limit(): Promise<void> {
+  async limit(): Promise<number> {
     const idle = Array.from(this.workers).filter((worker) => worker.isIdle());
     const toKill = this.workers.size - this.calculateMax();
     if (toKill > 0) {
@@ -229,6 +233,7 @@ export class PostprocessWorkerPool {
         idle.slice(-toKill).map((worker) => worker.terminate())
       );
     }
+    return toKill;
   }
 
   async terminate(): Promise<void> {
