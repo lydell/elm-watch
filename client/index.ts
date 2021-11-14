@@ -829,11 +829,10 @@ time::after {
 .${CLASS.root} {
   --grey: #767676;
   display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: 0.125em;
-  overflow-y: auto;
+  align-items: end;
+  overflow: auto;
   max-height: 100vh;
+  max-width: 100vw;
   color: black;
   font-family: system-ui;
 }
@@ -844,6 +843,9 @@ time::after {
 
 .${CLASS.container} {
   background-color: white;
+  border: 1px solid var(--grey);
+  border-bottom: none;
+  margin-left: -1px;
 }
 
 .${CLASS.expandedUiContainer} {
