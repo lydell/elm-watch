@@ -1,4 +1,5 @@
 import * as CliArgs from "./CliArgs";
+import * as Compile from "./Compile";
 import * as ElmWatchJson from "./ElmWatchJson";
 import * as ElmWatchStuffJson from "./ElmWatchStuffJson";
 import * as Errors from "./Errors";
@@ -294,6 +295,8 @@ async function handleElmWatchJsonError(
       return { tag: "Exit", exitCode: 1 };
 
     case "hot": {
+      logger.error("");
+      Compile.printNumErrors(logger, 1);
       const elmWatchJsonEvent = await Hot.watchElmWatchJsonOnce(
         getNow,
         elmWatchJsonPath

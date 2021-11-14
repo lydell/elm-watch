@@ -5,6 +5,7 @@
   "scripts": {
     "postinstall": "elm-tooling install",
     "start": "run-pty % elm-watch hot % npm run esbuild -- --servedir=public",
+    "start-advanced": "run-pty run-pty.json",
     "build": "elm-watch make --optimize && npm run esbuild -- --minify",
     "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/ucm.js public/submodules/codebase-ui/src/unisonShare.js --bundle --outdir=public/build --loader:.svg=file --loader:.woff2=file"
   },

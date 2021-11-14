@@ -1499,6 +1499,23 @@ export const EMOJI = {
   },
 };
 
+export function emojiWidthFix({
+  emoji,
+  column,
+  isTTY,
+}: {
+  emoji: string;
+  column: number;
+  isTTY: boolean;
+}): string {
+  // Emojis take two terminal columns. At least iTerm sometimes messes up and
+  // renders the emoji in full width, but overlaps the next character instead of
+  // using two columns of space. We can help it by manually moving the cursor to
+  // the intended position. Note: This assumes that we render the emoji at the
+  // beginning of a line.
+  return `${emoji}${isTTY ? cursorHorizontalAbsolute(column) : ""}`;
+}
+
 export function printStatusLinesForElmJsonsErrors(
   logger: Logger,
   project: Project
@@ -1529,14 +1546,18 @@ export function printErrors(
   logger.error("");
   logger.error(join(errorStrings, "\n\n"));
   logger.error("");
+  printNumErrors(logger, errorStrings.length);
+}
+
+export function printNumErrors(logger: Logger, numErrors: number): void {
   logger.error(
     printStatusLine({
       maxWidth: logger.raw.stderrColumns,
       fancy: logger.fancy,
       isTTY: logger.raw.stderr.isTTY,
       emojiName: "Error",
-      string: `${bold(errorStrings.length.toString())} error${
-        errorStrings.length === 1 ? "" : "s"
+      string: `${bold(numErrors.toString())} error${
+        numErrors === 1 ? "" : "s"
       } found`,
     })
   );
@@ -1682,9 +1703,11 @@ function printStatusLine({
   // using two columns of space. We can help it by manually moving the cursor to
   // the intended position. Note: This assumes that we render the emoji at the
   // beginning of a line.
-  const emojiString = `${EMOJI[emojiName].emoji}${
-    isTTY ? cursorHorizontalAbsolute(3) : ""
-  }`;
+  const emojiString = emojiWidthFix({
+    emoji: EMOJI[emojiName].emoji,
+    column: 3,
+    isTTY,
+  });
 
   const stringWithEmoji = fancy ? `${emojiString} ${string}` : string;
 

@@ -1,0 +1,20 @@
+[
+  {
+    "command": ["elm-watch", "hot"],
+    "title": "elm-watch",
+    "status": {
+      "⏳": ["⏳", "W"],
+      "🚨": ["🚨", "E"],
+      "✅": ["✅", "+"]
+    },
+    "defaultStatus": ["⏳", "W"]
+  },
+  {
+    "command": ["npm", "run", "esbuild", "--", "--servedir=public"],
+    "title": "esbuild",
+    "status": {
+      "503": ["🚨", "E"],
+      "200": null
+    }
+  }
+]

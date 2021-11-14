@@ -1366,12 +1366,15 @@ const runCmd =
           );
           readline.clearScreenDown(logger.raw.stderr);
         }
-        const fullMessage = infoMessageWithTimeline(
-          getNow(),
+        const fullMessage = infoMessageWithTimeline({
+          date: getNow(),
           mutable,
-          cmd.message,
-          cmd.events
-        );
+          message: cmd.message,
+          events: cmd.events,
+          fancy: logger.fancy,
+          isTTY: logger.raw.stderr.isTTY,
+          hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
+        });
         logger.error(fullMessage);
         mutable.lastInfoMessage = fullMessage;
         return;
@@ -2382,19 +2385,42 @@ function webSocketSendToOutput(
   }
 }
 
-function infoMessageWithTimeline(
-  date: Date,
-  mutable: Mutable,
-  message: string,
-  events: Array<WatcherEvent | WebSocketRelatedEvent>
-): string {
+function infoMessageWithTimeline({
+  date,
+  mutable,
+  message,
+  events,
+  fancy,
+  isTTY,
+  hasErrors,
+}: {
+  date: Date;
+  mutable: Mutable;
+  message: string;
+  events: Array<WatcherEvent | WebSocketRelatedEvent>;
+  fancy: boolean;
+  isTTY: boolean;
+  hasErrors: boolean;
+}): string {
+  const timeString = formatTime(date);
+
+  const emoji = fancy
+    ? ` ${Compile.emojiWidthFix({
+        emoji: hasErrors
+          ? Compile.EMOJI.Error.emoji
+          : Compile.EMOJI.Success.emoji,
+        column: timeString.length + 4,
+        isTTY,
+      })} `
+    : " ";
+
   return join(
     [
       "", // Empty line separator.
       printStats(mutable),
       "",
       printTimeline(events),
-      `${bold(formatTime(date))} ${message}`,
+      `${bold(timeString)}${emoji}${message}`,
     ].flatMap((part) => (part === undefined ? [] : part)),
     "\n"
   );

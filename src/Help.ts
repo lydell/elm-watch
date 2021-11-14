@@ -1,9 +1,15 @@
-import { EMOJI } from "./Compile";
-import { bold, cursorHorizontalAbsolute, dim, join } from "./Helpers";
+import { EMOJI, emojiWidthFix } from "./Compile";
+import { bold, dim, join } from "./Helpers";
 
 const elmWatchJson = bold("elm-watch.json");
 
-export function render(fancy: boolean): string {
+export function render({
+  fancy,
+  isTTY,
+}: {
+  fancy: boolean;
+  isTTY: boolean;
+}): string {
   // Not trimming on purpose.
   const symbolLegend = fancy
     ? `
@@ -11,11 +17,12 @@ ${bold("Symbol legend:")}
 
 ${join(
   Object.values(EMOJI).map(({ emoji, description }) => {
-    // See the `printStatusLine` function in Compile.ts for why we move the cursor.
     const indent = "    ";
-    return `${indent}${emoji}${cursorHorizontalAbsolute(
-      indent.length + 3
-    )} ${description}`;
+    return `${indent}${emojiWidthFix({
+      emoji,
+      column: indent.length + 3,
+      isTTY,
+    })} ${description}`;
   }),
   "\n"
 )}
