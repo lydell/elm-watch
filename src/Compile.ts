@@ -1693,7 +1693,7 @@ function statusLine({
   }
 }
 
-function printStatusLine({
+export function printStatusLine({
   maxWidth,
   fancy,
   isTTY,

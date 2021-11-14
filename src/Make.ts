@@ -88,7 +88,16 @@ export async function run(
 
   const duration = getNow().getTime() - startTimestamp;
   logger.error("");
-  logger.error(compileFinishedMessage(duration, numWorkers));
+  logger.error(
+    compileFinishedMessage({
+      duration,
+      numWorkers,
+      fancy: logger.fancy,
+      isTTY: logger.raw.stderr.isTTY,
+      maxWidth: logger.raw.stderrColumns,
+      hasErrors: failed,
+    })
+  );
 
   return failed ? { tag: "Error" } : { tag: "Success" };
 }
@@ -111,7 +120,21 @@ function getNextOutputActions(project: Project): Compile.OutputActions {
     : nextOutputActions;
 }
 
-function compileFinishedMessage(duration: number, numWorkers: number): string {
+function compileFinishedMessage({
+  duration,
+  numWorkers,
+  fancy,
+  isTTY,
+  maxWidth,
+  hasErrors,
+}: {
+  duration: number;
+  numWorkers: number;
+  fancy: boolean;
+  isTTY: boolean;
+  maxWidth: number;
+  hasErrors: boolean;
+}): string {
   const workersString =
     numWorkers > 0
       ? dim(
@@ -120,7 +143,14 @@ function compileFinishedMessage(duration: number, numWorkers: number): string {
           }).`
         )
       : ".";
-  return `Compilation finished in ${bold(
-    duration.toString()
-  )} ms${workersString}`;
+
+  return Compile.printStatusLine({
+    maxWidth,
+    fancy,
+    isTTY,
+    emojiName: hasErrors ? "Error" : "Success",
+    string: `Compilation finished in ${bold(
+      duration.toString()
+    )} ms${workersString}`,
+  });
 }
