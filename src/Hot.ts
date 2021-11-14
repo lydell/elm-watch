@@ -2436,17 +2436,15 @@ function printMessageWithTimeAndEmoji({
   fancy: boolean;
   isTTY: boolean;
 }): string {
-  const timeString = formatTime(date);
-
   const emoji = fancy
-    ? ` ${Compile.emojiWidthFix({
+    ? `${Compile.emojiWidthFix({
         emoji: Compile.EMOJI[emojiName].emoji,
-        column: timeString.length + 4,
+        column: 3,
         isTTY,
       })} `
-    : " ";
+    : "";
 
-  return `${highlightTime(timeString)}${emoji}${message}`;
+  return `${emoji}${highlightTime(formatTime(date))} ${message}`;
 }
 
 function printStats(mutable: Mutable): string {
@@ -2485,7 +2483,7 @@ function printTimeline({
     join(
       [
         printEvent({ event: first, fancy, isTTY }),
-        printNumMoreEvents(numMoreEvents),
+        printNumMoreEvents({ numMoreEvents, fancy }),
         last === undefined
           ? undefined
           : printEvent({ event: last, fancy, isTTY }),
@@ -2549,12 +2547,19 @@ function printEventMessage(
   }
 }
 
-function printNumMoreEvents(numMoreEvents: number): string | undefined {
+function printNumMoreEvents({
+  numMoreEvents,
+  fancy,
+}: {
+  numMoreEvents: number;
+  fancy: boolean;
+}): string | undefined {
+  const indent = fancy ? "   " : "";
   return numMoreEvents <= 0
     ? undefined
     : numMoreEvents === 1
-    ? "(1 more event)"
-    : `(${numMoreEvents} more events)`;
+    ? `${indent}(1 more event)`
+    : `${indent}(${numMoreEvents} more events)`;
 }
 
 function restartBecauseJsonFileChangedMessage(
