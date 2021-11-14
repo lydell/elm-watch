@@ -1470,7 +1470,7 @@ function updateStatusLine({
   }
 }
 
-type EmojiName = keyof typeof EMOJI;
+export type EmojiName = keyof typeof EMOJI;
 
 export const EMOJI = {
   QueuedForElmMake: {
@@ -1496,6 +1496,10 @@ export const EMOJI = {
   Success: {
     emoji: "✅",
     description: "success",
+  },
+  Information: {
+    emoji: "ℹ️",
+    description: "information",
   },
 };
 

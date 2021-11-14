@@ -2402,28 +2402,51 @@ function infoMessageWithTimeline({
   isTTY: boolean;
   hasErrors: boolean;
 }): string {
-  const timeString = formatTime(date);
-
-  const emoji = fancy
-    ? ` ${Compile.emojiWidthFix({
-        emoji: hasErrors
-          ? Compile.EMOJI.Error.emoji
-          : Compile.EMOJI.Success.emoji,
-        column: timeString.length + 4,
-        isTTY,
-      })} `
-    : " ";
-
   return join(
     [
       "", // Empty line separator.
       printStats(mutable),
       "",
-      printTimeline(events),
-      `${bold(timeString)}${emoji}${message}`,
+      printTimeline({ events, fancy, isTTY }),
+      printMessageWithTimeAndEmoji({
+        emojiName: hasErrors ? "Error" : "Success",
+        date,
+        dateHighlight: bold,
+        message,
+        fancy,
+        isTTY,
+      }),
     ].flatMap((part) => (part === undefined ? [] : part)),
     "\n"
   );
+}
+
+function printMessageWithTimeAndEmoji({
+  emojiName,
+  date,
+  dateHighlight: highlightTime,
+  message,
+  fancy,
+  isTTY,
+}: {
+  emojiName: Compile.EmojiName;
+  date: Date;
+  dateHighlight: (string: string) => string;
+  message: string;
+  fancy: boolean;
+  isTTY: boolean;
+}): string {
+  const timeString = formatTime(date);
+
+  const emoji = fancy
+    ? ` ${Compile.emojiWidthFix({
+        emoji: Compile.EMOJI[emojiName].emoji,
+        column: timeString.length + 4,
+        isTTY,
+      })} `
+    : " ";
+
+  return `${highlightTime(timeString)}${emoji}${message}`;
 }
 
 function printStats(mutable: Mutable): string {
@@ -2441,9 +2464,15 @@ function printStats(mutable: Mutable): string {
   );
 }
 
-function printTimeline(
-  events: Array<WatcherEvent | WebSocketRelatedEvent>
-): string | undefined {
+function printTimeline({
+  events,
+  fancy,
+  isTTY,
+}: {
+  events: Array<WatcherEvent | WebSocketRelatedEvent>;
+  fancy: boolean;
+  isTTY: boolean;
+}): string | undefined {
   if (!isNonEmptyArray(events)) {
     return undefined;
   }
@@ -2455,57 +2484,68 @@ function printTimeline(
   return dim(
     join(
       [
-        printEvent(first),
+        printEvent({ event: first, fancy, isTTY }),
         printNumMoreEvents(numMoreEvents),
-        last === undefined ? undefined : printEvent(last),
+        last === undefined
+          ? undefined
+          : printEvent({ event: last, fancy, isTTY }),
       ].flatMap((part) => (part === undefined ? [] : part)),
       "\n"
     )
   );
 }
 
-function printEvent(event: WatcherEvent | WebSocketRelatedEvent): string {
+function printEvent({
+  event,
+  fancy,
+  isTTY,
+}: {
+  event: WatcherEvent | WebSocketRelatedEvent;
+  fancy: boolean;
+  isTTY: boolean;
+}): string {
+  return printMessageWithTimeAndEmoji({
+    emojiName: "Information",
+    date: event.date,
+    dateHighlight: (string) => string,
+    message: printEventMessage(event),
+    fancy,
+    isTTY,
+  });
+}
+
+function printEventMessage(
+  event: WatcherEvent | WebSocketRelatedEvent
+): string {
   switch (event.tag) {
     case "WatcherEvent":
-      return `${formatTime(event.date)} ${capitalize(event.eventName)} ${
-        event.file.absolutePath
-      }`;
+      return `${capitalize(event.eventName)} ${event.file.absolutePath}`;
 
     case "WebSocketClosed":
-      return `${formatTime(event.date)} Web socket disconnected for: ${
+      return `Web socket disconnected for: ${
         event.outputPath.tag === "OutputPath"
           ? event.outputPath.targetName
           : "(no matching target)"
       }`;
 
     case "WebSocketConnectedNeedingCompilation":
-      return `${formatTime(
-        event.date
-      )} Web socket connected needing compilation of: ${
-        event.outputPath.targetName
-      }`;
+      return `Web socket connected needing compilation of: ${event.outputPath.targetName}`;
 
     case "WebSocketConnectedNeedingNoAction":
-      return `${formatTime(event.date)} Web socket connected for: ${
-        event.outputPath.targetName
-      }`;
+      return `Web socket connected for: ${event.outputPath.targetName}`;
 
     case "WebSocketConnectedWithErrors":
-      return `${formatTime(
-        event.date
-      )} Web socket connected with errors (see the browser for details)`;
+      return `Web socket connected with errors (see the browser for details)`;
 
     case "WebSocketChangedCompilationMode":
-      return `${formatTime(
-        event.date
-      )} Changed compilation mode to ${JSON.stringify(
+      return `Changed compilation mode to ${JSON.stringify(
         event.compilationMode
       )} of: ${event.outputPath.targetName}`;
 
     case "WorkersLimitedAfterWebSocketClosed":
-      return `${formatTime(event.date)} Terminated ${
-        event.numTerminatedWorkers
-      } superfluous ${event.numTerminatedWorkers === 1 ? "worker" : "workers"}`;
+      return `Terminated ${event.numTerminatedWorkers} superfluous ${
+        event.numTerminatedWorkers === 1 ? "worker" : "workers"
+      }`;
   }
 }
 
