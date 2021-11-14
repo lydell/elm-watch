@@ -3,4 +3,4 @@
 	url = git@github.com:lydell/elm-spa-example.git
 [submodule "example/public/submodules/codebase-ui"]
 	path = example/public/submodules/codebase-ui
-	url = git@github.com:unisonweb/codebase-ui.git
+	url = git@github.com:lydell/codebase-ui.git

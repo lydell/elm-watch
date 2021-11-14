@@ -4,7 +4,7 @@
   "name": "example",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "start": "esbuild app.ts --bundle --servedir=public --outdir=public/build",
+    "start": "esbuild app.ts public/submodules/codebase-ui/src/ucm.js public/submodules/codebase-ui/src/unisonShare.js --bundle --servedir=public --outdir=public/build --loader:.svg=file --loader:.woff2=file",
     "build": "elm-watch make",
     "watch": "elm-watch hot"
   },
