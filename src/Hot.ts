@@ -1377,6 +1377,11 @@ const runCmd =
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
         });
         logger.error(fullMessage);
+        if (logger.raw.stderr.isTTY) {
+          // For the `run-pty` tool: Let it know that it’s safe to render the
+          // keyboard shortcuts below the cursor text again.
+          readline.clearScreenDown(logger.raw.stderr);
+        }
         mutable.lastInfoMessage = fullMessage;
         return;
       }
