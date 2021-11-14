@@ -1499,7 +1499,11 @@ export const EMOJI = {
   },
   Information: {
     emoji: "ℹ️",
-    description: "information",
+    description: "info",
+  },
+  Stats: {
+    emoji: "📊",
+    description: "stats",
   },
 };
 

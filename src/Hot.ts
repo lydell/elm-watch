@@ -2405,7 +2405,7 @@ function infoMessageWithTimeline({
   return join(
     [
       "", // Empty line separator.
-      printStats(mutable),
+      printStats({ mutable, fancy, isTTY }),
       "",
       printTimeline({ events, fancy, isTTY }),
       printMessageWithTimeAndEmoji({
@@ -2447,7 +2447,15 @@ function printMessageWithTimeAndEmoji({
   return `${emoji}${highlightTime(formatTime(date))} ${message}`;
 }
 
-function printStats(mutable: Mutable): string {
+function printStats({
+  mutable,
+  fancy,
+  isTTY,
+}: {
+  mutable: Mutable;
+  fancy: boolean;
+  isTTY: boolean;
+}): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
   return join(
     [
@@ -2457,7 +2465,19 @@ function printStats(mutable: Mutable): string {
       `${dim("web socket connections:")} ${
         mutable.webSocketConnections.length
       } ${dim(`(ws://0.0.0.0:${mutable.webSocketServer.port.thePort})`)}`,
-    ].flatMap((part) => (part === undefined ? [] : part)),
+    ].flatMap((part) =>
+      part === undefined
+        ? []
+        : `${
+            fancy
+              ? `${Compile.emojiWidthFix({
+                  emoji: Compile.EMOJI.Stats.emoji,
+                  column: 3,
+                  isTTY,
+                })} `
+              : ""
+          }${part}`
+    ),
     "\n"
   );
 }
