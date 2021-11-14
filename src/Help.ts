@@ -1,4 +1,5 @@
-import { bold, dim } from "./Helpers";
+import { EMOJI } from "./Compile";
+import { bold, cursorHorizontalAbsolute, dim, join } from "./Helpers";
 
 const elmWatchJson = bold("elm-watch.json");
 
@@ -8,12 +9,16 @@ export function render(fancy: boolean): string {
     ? `
 ${bold("Symbol legend:")}
 
-    ⚪️ queued for elm make
-    🟢 elm make done – queued for postprocess
-    ⏳ elm make or postprocess
-    🚨 error
-    ⛔️ skipped
-    ✅ success
+${join(
+  Object.values(EMOJI).map(({ emoji, description }) => {
+    // See the `printStatusLine` function in Compile.ts for why we move the cursor.
+    const indent = "    ";
+    return `${indent}${emoji}${cursorHorizontalAbsolute(
+      indent.length + 3
+    )} ${description}`;
+  }),
+  "\n"
+)}
 `
     : "";
 

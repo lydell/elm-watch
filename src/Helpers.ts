@@ -45,6 +45,10 @@ export function removeColor(string: string): string {
   return string.replace(/\x1B\[\d+m/g, "");
 }
 
+export function cursorHorizontalAbsolute(n: number): string {
+  return `\x1B[${n}G`;
+}
+
 function pad(number: number): string {
   return number.toString().padStart(2, "0");
 }

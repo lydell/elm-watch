@@ -7,6 +7,7 @@ import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
 import {
   bold,
+  cursorHorizontalAbsolute,
   dim,
   Env,
   join,
@@ -69,6 +70,19 @@ export async function installDependencies(
     100
   );
 
+  const printStatusLineHelper = (
+    emojiName: EmojiName,
+    message: string,
+    nonFancy: string
+  ): string =>
+    printStatusLine({
+      maxWidth: logger.raw.stderrColumns,
+      fancy: logger.fancy,
+      isTTY: logger.raw.stderr.isTTY,
+      emojiName,
+      string: logger.fancy ? message : `${message}: ${nonFancy}`,
+    });
+
   const elmJsonsArray = Array.from(project.elmJsons);
 
   for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
@@ -78,9 +92,11 @@ export async function installDependencies(
       index === 0 ? "" : ` (${index + 1}/${elmJsonsArray.length})`
     }`;
 
-    const loadingMessage = logger.fancy
-      ? `⏳ ${message}`
-      : `${message}: in progress`;
+    const loadingMessage = printStatusLineHelper(
+      "Busy",
+      message,
+      "in progress"
+    );
 
     // Avoid printing `loadingMessage` if there’s nothing to download.
     let didWriteLoadingMessage = false;
@@ -100,7 +116,7 @@ export async function installDependencies(
       error: Errors.ErrorTemplate
     ): InstallDependenciesResult => {
       clearLoadingMessage();
-      logger.error(logger.fancy ? `🚨 ${message}` : `${message}: error`);
+      logger.error(printStatusLineHelper("Error", message, "error"));
       logger.error("");
       logger.errorTemplate(error);
       return { tag: "Error" };
@@ -115,7 +131,7 @@ export async function installDependencies(
       case "ElmJsonError":
         if (didWriteLoadingMessage) {
           clearLoadingMessage();
-          logger.error(logger.fancy ? `⛔️ ${message}` : `${message}: skipped`);
+          logger.error(printStatusLineHelper("Skipped", message, "skipped"));
         }
         break;
 
@@ -123,7 +139,7 @@ export async function installDependencies(
         const gotOutput = result.elmInstallOutput !== "";
         if (didWriteLoadingMessage || gotOutput) {
           clearLoadingMessage();
-          logger.error(logger.fancy ? `✅ ${message}` : `${message}: success`);
+          logger.error(printStatusLineHelper("Success", message, "success"));
         }
         if (gotOutput) {
           logger.error(result.elmInstallOutput);
@@ -1403,13 +1419,14 @@ export function printSpaceForOutputs(
         logger.raw.stderr.write("\n");
       } else {
         logger.error(
-          statusLine(
+          statusLine({
             runMode,
-            output.outputPath,
-            output.outputState,
-            logger.raw.stderrColumns,
-            logger.fancy
-          )
+            outputPath: output.outputPath,
+            outputState: output.outputState,
+            maxWidth: logger.raw.stderrColumns,
+            fancy: logger.fancy,
+            isTTY: logger.raw.stderr.isTTY,
+          })
         );
       }
     }
@@ -1439,31 +1456,64 @@ function updateStatusLine({
     readline.clearLine(logger.raw.stderr, 0);
   }
   logger.error(
-    statusLine(
+    statusLine({
       runMode,
       outputPath,
       outputState,
-      logger.raw.stderrColumns,
-      logger.fancy
-    )
+      maxWidth: logger.raw.stderrColumns,
+      fancy: logger.fancy,
+      isTTY: logger.raw.stderr.isTTY,
+    })
   );
   if (shouldMoveCursor) {
     readline.moveCursor(logger.raw.stderr, 0, total - index - 1);
   }
 }
 
+type EmojiName = keyof typeof EMOJI;
+
+export const EMOJI = {
+  QueuedForElmMake: {
+    emoji: "⚪️",
+    description: "queued for elm make",
+  },
+  QueuedForPostprocess: {
+    emoji: "🟢",
+    description: "elm make done – queued for postprocess",
+  },
+  Busy: {
+    emoji: "⏳",
+    description: "elm make or postprocess",
+  },
+  Error: {
+    emoji: "🚨",
+    description: "error",
+  },
+  Skipped: {
+    emoji: "⛔️",
+    description: "skipped",
+  },
+  Success: {
+    emoji: "✅",
+    description: "success",
+  },
+};
+
 export function printStatusLinesForElmJsonsErrors(
   logger: Logger,
   project: Project
 ): void {
+  const { isTTY } = logger.raw.stderr;
   for (const { outputPath } of project.elmJsonsErrors) {
     const { targetName } = outputPath;
     logger.error(
-      statusLineTruncate(
-        logger.raw.stderrColumns,
-        logger.fancy,
-        logger.fancy ? `🚨 ${targetName}` : `${targetName}: error`
-      )
+      printStatusLine({
+        maxWidth: logger.raw.stderrColumns,
+        fancy: logger.fancy,
+        isTTY,
+        emojiName: "Error",
+        string: logger.fancy ? targetName : `${targetName}: error`,
+      })
     );
   }
 }
@@ -1480,27 +1530,48 @@ export function printErrors(
   logger.error(join(errorStrings, "\n\n"));
   logger.error("");
   logger.error(
-    `${logger.fancy ? "🚨 " : ""}${bold(errorStrings.length.toString())} error${
-      errorStrings.length === 1 ? "" : "s"
-    } found`
+    printStatusLine({
+      maxWidth: logger.raw.stderrColumns,
+      fancy: logger.fancy,
+      isTTY: logger.raw.stderr.isTTY,
+      emojiName: "Error",
+      string: `${bold(errorStrings.length.toString())} error${
+        errorStrings.length === 1 ? "" : "s"
+      } found`,
+    })
   );
 }
 
-function statusLine(
-  runMode: RunMode,
-  outputPath: OutputPath,
-  outputState: OutputState,
-  maxWidth: number,
-  fancy: boolean
-): string {
+function statusLine({
+  runMode,
+  outputPath,
+  outputState,
+  maxWidth,
+  fancy,
+  isTTY,
+}: {
+  runMode: RunMode;
+  outputPath: OutputPath;
+  outputState: OutputState;
+  maxWidth: number;
+  fancy: boolean;
+  isTTY: boolean;
+}): string {
   const { targetName } = outputPath;
   const { status } = outputState;
 
-  const truncate = (string: string): string =>
-    statusLineTruncate(maxWidth, fancy, string);
+  const helper = (emojiName: EmojiName, string: string): string =>
+    printStatusLine({
+      maxWidth,
+      fancy,
+      isTTY,
+      emojiName,
+      string,
+    });
 
   const withExtraDetailsAtEnd = (
     extra: Array<string | undefined>,
+    emojiName: EmojiName,
     start: string
   ): string => {
     const strings = extra.flatMap((item) => (item === undefined ? [] : item));
@@ -1508,25 +1579,26 @@ function statusLine(
       return "";
     }
 
-    // Emojis take two terminal columns.
-    const startLength = fancy ? start.length + 1 : start.length;
+    // Emojis take two terminal columns, plus a space that we add after.
+    const startLength = fancy ? start.length + 3 : start.length;
     const end = join(strings, "   ");
     const max = Math.min(maxWidth, 100);
-    const padding = Math.max(3, max - end.length - startLength);
+    const padding = isTTY ? Math.max(3, max - end.length - startLength) : 3;
 
     // The `\0` business is a clever way of truncating without messing up the
     // `dim` color.
-    return truncate(`${start}\0${" ".repeat(padding - 1)}${end}`).replace(
-      /\0(.*)$/,
-      dim(" $1")
-    );
+    return helper(
+      emojiName,
+      `${start}\0${" ".repeat(padding - 1)}${end}`
+    ).replace(/\0(.*)$/, dim(" $1"));
   };
 
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
         [maybePrintDurations(status.durations, fancy)],
-        fancy ? `✅ ${targetName}` : `${targetName}: success`
+        "Success",
+        fancy ? targetName : `${targetName}: success`
       );
     }
 
@@ -1542,32 +1614,31 @@ function statusLine(
           ),
           maybePrintDurations(status.durations, fancy),
         ],
-        fancy ? `✅ ${targetName}` : `${targetName}: success`
+        "Success",
+        fancy ? targetName : `${targetName}: success`
       );
     }
 
     case "ElmMake": {
       const arg = SpawnElm.compilationModeToArg(status.compilationMode);
       const flags = arg === undefined ? "" : ` ${arg}`;
-      return truncate(`${fancy ? "⏳ " : ""}${targetName}: elm make${flags}`);
+      return helper("Busy", `${targetName}: elm make${flags}`);
     }
 
     case "ElmMakeTypecheckOnly":
-      return truncate(
-        `${fancy ? "⏳ " : ""}${targetName}: elm make (typecheck only)`
-      );
+      return helper("Busy", `${targetName}: elm make (typecheck only)`);
 
     case "Postprocess":
-      return truncate(`${fancy ? "⏳ " : ""}${targetName}: postprocess`);
+      return helper("Busy", `${targetName}: postprocess`);
 
     case "Interrupted":
-      return truncate(`${fancy ? "⏳ " : ""}${targetName}: interrupted`);
+      return helper("Busy", `${targetName}: interrupted`);
 
     case "QueuedForElmMake":
-      return truncate(`${fancy ? "⚪️ " : ""}${targetName}: queued`);
+      return helper("QueuedForElmMake", `${targetName}: queued`);
 
     case "QueuedForPostprocess":
-      return truncate(`${fancy ? "🟢 " : ""}${targetName}: elm make done`);
+      return helper("QueuedForPostprocess", `${targetName}: elm make done`);
 
     case "ElmNotFoundError":
     case "CommandNotFoundError":
@@ -1589,22 +1660,45 @@ function statusLine(
     case "WriteOutputError":
     case "WriteProxyOutputError":
     case "InjectSearchAndReplaceNotFound":
-      return truncate(fancy ? `🚨 ${targetName}` : `${targetName}: error`);
+      return helper("Error", fancy ? targetName : `${targetName}: error`);
   }
 }
 
-function statusLineTruncate(
-  maxWidth: number,
-  fancy: boolean,
-  string: string
-): string {
-  // Emojis take two terminal columns.
-  const length = fancy ? string.length + 1 : string.length;
+function printStatusLine({
+  maxWidth,
+  fancy,
+  isTTY,
+  emojiName,
+  string,
+}: {
+  maxWidth: number;
+  fancy: boolean;
+  isTTY: boolean;
+  emojiName: EmojiName;
+  string: string;
+}): string {
+  // Emojis take two terminal columns. At least iTerm sometimes messes up and
+  // renders the emoji in full width, but overlaps the next character instead of
+  // using two columns of space. We can help it by manually moving the cursor to
+  // the intended position. Note: This assumes that we render the emoji at the
+  // beginning of a line.
+  const emojiString = `${EMOJI[emojiName].emoji}${
+    isTTY ? cursorHorizontalAbsolute(3) : ""
+  }`;
+
+  const stringWithEmoji = fancy ? `${emojiString} ${string}` : string;
+
+  if (!isTTY) {
+    return stringWithEmoji;
+  }
+
+  // Emojis take two terminal columns, plus a space that we add after.
+  const length = fancy ? string.length + 3 : string.length;
   return length <= maxWidth
-    ? string
+    ? stringWithEmoji
     : fancy
     ? // Again, account for the emoji.
-      `${string.slice(0, maxWidth - 2)}…`
+      `${emojiString} ${string.slice(0, maxWidth - 4)}…`
     : `${string.slice(0, maxWidth - 3)}...`;
 }
 
