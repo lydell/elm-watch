@@ -57,12 +57,11 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
   var subscriptions;
 
   function setUpdateAndSubscriptions() {
+    update = impl.%update% || impl._impl.%update%;
+    subscriptions = impl.%subscriptions% || impl._impl.%subscriptions%;
     if (typeof $elm$browser$Debugger$Main$wrapUpdate !== "undefined") {
-      update = $elm$browser$Debugger$Main$wrapUpdate(impl.%update%);
-      subscriptions = $elm$browser$Debugger$Main$wrapSubs(impl.%subscriptions%);
-    } else {
-      update = impl.%update%;
-      subscriptions = impl.%subscriptions%;
+      update = $elm$browser$Debugger$Main$wrapUpdate(update);
+      subscriptions = $elm$browser$Debugger$Main$wrapSubs(subscriptions);
     }
   }
 
@@ -236,7 +235,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^(\s*)%view%: impl\.%view%,\s*%update%: impl\.%update%,\s*%subscriptions%: impl.%subscriptions%$/m,
-        replace: `$1_impl: impl`,
+        replace: `$1%view%: function(model) { return impl.%view%(model); },\n$1_impl: impl`,
       },
     ],
   },
@@ -248,8 +247,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     replacements: [
       {
         search: /^(\s*)%view%: impl\.%view%$/m,
-        replace:
-          "$1%view%: function(model) { return impl.%view%(model); },\n$1_impl: impl",
+        replace: `$1%view%: function(model) { return impl.%view%(model); },\n$1_impl: impl`,
       },
     ],
   },
