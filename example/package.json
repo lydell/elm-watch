@@ -4,15 +4,16 @@
   "name": "example",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "start": "esbuild app.ts public/submodules/codebase-ui/src/ucm.js public/submodules/codebase-ui/src/unisonShare.js --bundle --servedir=public --outdir=public/build --loader:.svg=file --loader:.woff2=file",
-    "build": "elm-watch make",
-    "watch": "elm-watch hot"
+    "start": "run-pty % elm-watch hot % npm run esbuild -- --servedir=public",
+    "build": "elm-watch make --optimize && npm run esbuild -- --minify",
+    "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/ucm.js public/submodules/codebase-ui/src/unisonShare.js --bundle --outdir=public/build --loader:.svg=file --loader:.woff2=file"
   },
   "devDependencies": {
     "elm-tooling": "1.6.0",
     "elm-watch": "file:../build",
     "esbuild": "0.13.13",
     "express": "4.17.1",
+    "run-pty": "2.3.2",
     "uglify-js": "3.14.3"
   }
 }
