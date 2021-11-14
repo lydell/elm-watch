@@ -56,6 +56,24 @@
                 "src/WorkerMain.elm"
             ],
             "output": "public/build/Frankenstein.js"
+        },
+        "ElmSpaExample": {
+            "inputs": [
+                "public/submodules/elm-spa-example/src/Main.elm"
+            ],
+            "output": "public/submodules/elm-spa-example/elm.js"
+        },
+        "Ucm": {
+            "inputs": [
+                "public/submodules/codebase-ui/src/Ucm.elm"
+            ],
+            "output": "public/build/Ucm.js"
+        },
+        "UnisonShare": {
+            "inputs": [
+                "public/submodules/codebase-ui/src/UnisonShare.elm"
+            ],
+            "output": "public/build/UnisonShare.js"
         }
     }
 }
