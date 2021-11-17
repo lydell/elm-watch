@@ -61,5 +61,8 @@ jobs:
       - name: elm-watch make
         run: npx --no-install elm-watch make --optimize
 
+      - name: esbuild
+        run: npm run esbuild -- --minify
+
       - name: elm-format
         run: npx --no-install elm-format --validate src legacy
