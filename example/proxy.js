@@ -1,4 +1,5 @@
 import * as http from "http";
+import * as https from "https";
 
 if (process.argv.length !== 3) {
   console.error(
@@ -15,35 +16,49 @@ const servers = [
     port: 8001,
     subdomain: "application",
     handler: (req, res, log) => {
-      req.url = "/ApplicationMain.html";
-      proxyToEsbuild(req, res, (...args) => log(`-> ${req.url}`, ...args));
+      serveWithEsbuild(req, res, log, "/ApplicationMain.html");
     },
   },
   {
     port: 8002,
     subdomain: "elm-spa-example",
     handler: (req, res, log) => {
-      req.url = "/submodules/elm-spa-example/";
-      proxyToEsbuild(req, res, (...args) => log(`-> ${req.url}`, ...args));
+      serveWithEsbuild(req, res, log, "/submodules/elm-spa-example/index.html");
     },
   },
   {
     port: 8003,
     subdomain: "ucm",
     handler: (req, res, log) => {
-      req.url = "/submodules/codebase-ui/src/ucm.html";
-      proxyToEsbuild(req, res, (...args) => log(`-> ${req.url}`, ...args));
+      serveUnison(req, res, log, "/submodules/codebase-ui/src/ucm.html");
     },
   },
   {
     port: 8004,
     subdomain: "unison.share",
     handler: (req, res, log) => {
-      req.url = "/submodules/codebase-ui/src/unisonShare.html";
-      proxyToEsbuild(req, res, (...args) => log(`-> ${req.url}`, ...args));
+      serveUnison(
+        req,
+        res,
+        log,
+        "/submodules/codebase-ui/src/unisonShare.html"
+      );
     },
   },
 ];
+
+function serveWithEsbuild(req, res, log, newUrl) {
+  req.url = newUrl;
+  proxyToEsbuild(req, res, (...args) => log(`-> ${newUrl}`, ...args));
+}
+
+function serveUnison(req, res, log, newUrl) {
+  if (req.url.startsWith("/api/")) {
+    proxyToWeb(req, res, log, "share.unison-lang.org");
+  } else {
+    serveWithEsbuild(req, res, log, newUrl);
+  }
+}
 
 function shouldProxyToEsbuild(req) {
   return /\.\w+$/.test(req.url);
@@ -61,6 +76,24 @@ function proxyToEsbuild(req, res, log) {
   const proxyReq = http.request(options, (proxyRes) => {
     const { statusCode } = proxyRes;
     log(`-> esbuild`, statusCode === 503 ? "ERROR" : statusCode);
+    res.writeHead(statusCode, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+
+  req.pipe(proxyReq, { end: true });
+}
+
+function proxyToWeb(req, res, log, hostname) {
+  const options = {
+    hostname,
+    path: req.url,
+    method: req.method,
+    headers: { ...req.headers, host: hostname },
+  };
+
+  const proxyReq = https.request(options, (proxyRes) => {
+    const { statusCode } = proxyRes;
+    log(`-> ${hostname}`, statusCode);
     res.writeHead(statusCode, proxyRes.headers);
     proxyRes.pipe(res, { end: true });
   });
