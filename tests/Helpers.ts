@@ -3,6 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
 
+import { EMOJI } from "../src/Compile";
 import { printStdio } from "../src/Errors";
 import type { ReadStream, WriteStream } from "../src/Helpers";
 
@@ -380,7 +381,17 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
   }
 
   getOutput(): string {
-    return this.lines.join("\n");
+    // Emoji take two columns, but the above code doesn’t understand that.
+    // This is a hack to remove the extra space caused by that in snapshots.
+    return this.lines.join("\n").replace(
+      RegExp(
+        `(${Object.values(EMOJI)
+          .map(({ emoji }) => emoji)
+          .join("|")})  `,
+        "g"
+      ),
+      "$1 "
+    );
   }
 }
 

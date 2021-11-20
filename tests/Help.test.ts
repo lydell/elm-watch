@@ -61,14 +61,14 @@ describe("help", () => {
 
       ⧙Symbol legend:⧘
 
-          ⚪️  queued for elm make
-          🟢  elm make done – queued for postprocess
-          ⏳  elm make or postprocess
-          🚨  error
-          ⛔️  skipped
-          ✅  success
-          ℹ️  info
-          📊  stats
+          ⚪️ queued for elm make
+          🟢 elm make done – queued for postprocess
+          ⏳ elm make or postprocess
+          🚨 error
+          ⛔️ skipped
+          ✅ success
+          ℹ️ info
+          📊 stats
 
       ⧙Durations legend:⧘
 
