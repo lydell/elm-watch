@@ -43,6 +43,9 @@ describe("help", () => {
     const output = await helpHelper(["help"]);
 
     expect(output).toMatchInlineSnapshot(`
+      ⧙elm-watch init⧘
+          Create a minimal ⧙elm-watch.json⧘ in the current directory
+
       ⧙elm-watch make [--debug|--optimize] [targets...]⧘
           Compile Elm code into JS
 
@@ -56,6 +59,30 @@ describe("help", () => {
 
       ⧙---⧘
 
+      ⧙Symbol legend:⧘
+
+          ⚪️  queued for elm make
+          🟢  elm make done – queued for postprocess
+          ⏳  elm make or postprocess
+          🚨  error
+          ⛔️  skipped
+          ✅  success
+          ℹ️  info
+          📊  stats
+
+      ⧙Durations legend:⧘
+
+          ⧙Q⧘ queued for elm make
+          ⧙E⧘ elm make
+          ⧙T⧘ elm make (typecheck only)
+          ⧙W⧘ find all related Elm file paths
+          ⧙I⧘ inject hot reloading code
+          ⧙R⧘ queued for postprocess
+          ⧙P⧘ postprocess
+          ⧙¦⧘ next is run in parallel
+
+      ⧙---⧘
+
       ⧙Environment variables:⧘
           ⧙NO_COLOR⧘
               Disable colored output
@@ -65,7 +92,6 @@ describe("help", () => {
 
       ⧙Version:⧘
           %VERSION%
-
     `);
 
     expect(await helpHelper([])).toBe(output);
@@ -82,6 +108,9 @@ describe("help", () => {
 
   test("NO_COLOR", async () => {
     expect(await helpHelper(["help"], { NO_COLOR: "" })).toMatchInlineSnapshot(`
+      elm-watch init
+          Create a minimal elm-watch.json in the current directory
+
       elm-watch make [--debug|--optimize] [targets...]
           Compile Elm code into JS
 
@@ -95,6 +124,19 @@ describe("help", () => {
 
       ---
 
+      Durations legend:
+
+          Q queued for elm make
+          E elm make
+          T elm make (typecheck only)
+          W find all related Elm file paths
+          I inject hot reloading code
+          R queued for postprocess
+          P postprocess
+          / next is run in parallel
+
+      ---
+
       Environment variables:
           NO_COLOR
               Disable colored output
@@ -104,7 +146,6 @@ describe("help", () => {
 
       Version:
           %VERSION%
-
     `);
   });
 });
