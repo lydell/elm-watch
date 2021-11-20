@@ -2384,7 +2384,6 @@ describe("errors", () => {
             ...TEST_ENV,
             NO_COLOR: "",
           },
-
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -2438,7 +2437,6 @@ describe("errors", () => {
             ...TEST_ENV,
             NO_COLOR: "",
           },
-
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -2546,7 +2544,6 @@ describe("errors", () => {
                   tag: "AbsolutePath",
                   absolutePath: "/Users/you/project",
                 },
-
                 env: {},
               },
             }
@@ -2581,7 +2578,6 @@ describe("errors", () => {
               originalString: "main.js",
               targetName: "main",
             },
-
             { tag: "Signal", signal: "SIGABRT" },
             "",
             "",
@@ -2593,7 +2589,6 @@ describe("errors", () => {
                   tag: "AbsolutePath",
                   absolutePath: "/Users/you/project",
                 },
-
                 env: {},
               },
             }
@@ -2629,7 +2624,6 @@ describe("errors", () => {
               originalString: "main.js",
               targetName: "main",
             },
-
             { tag: "Unknown" },
             "",
             "",
@@ -2641,7 +2635,6 @@ describe("errors", () => {
                   tag: "AbsolutePath",
                   absolutePath: "/Users/you/project",
                 },
-
                 env: {},
               },
             }
