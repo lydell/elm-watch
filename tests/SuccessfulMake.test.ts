@@ -127,8 +127,38 @@ describe("successful make", () => {
     `);
   });
 
-  test("postprocess with elm-watch-node", async () => {
+  test("postprocess with elm-watch-node (cjs default)", async () => {
     expect(await run("postprocess-elm-watch-node", ["make"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+
+      ✅ Compilation finished in ⧙6⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+    `);
+  });
+
+  test("postprocess with elm-watch-node (cjs)", async () => {
+    expect(await run("postprocess-elm-watch-node/cjs", ["make"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+
+      ✅ Compilation finished in ⧙6⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+    `);
+  });
+
+  test("postprocess with elm-watch-node (mjs)", async () => {
+    expect(await run("postprocess-elm-watch-node/mjs", ["make"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+
+      ✅ Compilation finished in ⧙6⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+    `);
+  });
+
+  test("postprocess with elm-watch-node (mjs default)", async () => {
+    expect(await run("postprocess-elm-watch-node/mjs-default", ["make"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
       ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
