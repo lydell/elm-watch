@@ -3,6 +3,7 @@ import type { Env } from "../src/Helpers";
 import {
   assertExitCode,
   clean,
+  CursorWriteStream,
   FailReadStream,
   MemoryWriteStream,
   stringSnapshotSerializer,
@@ -12,7 +13,7 @@ async function helpHelper(
   args: Array<string>,
   env: Env = process.env
 ): Promise<string> {
-  const stdout = new MemoryWriteStream();
+  const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();
 
   let i = 0;
@@ -27,10 +28,12 @@ async function helpHelper(
     onIdle: undefined,
   });
 
-  assertExitCode(0, exitCode, stdout.content, stderr.content);
+  const stdoutString = clean(stdout.getOutput());
+
+  assertExitCode(0, exitCode, stdoutString, stderr.content);
   expect(stderr.content).toBe("");
 
-  return clean(stdout.content);
+  return stdoutString;
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);

@@ -100,27 +100,118 @@ export function duoStream(): {
   };
 }
 
-const cursorMove = /^\x1B\[(\d*)([ABCD])$/;
-const clearLine = /^\x1B\[2K$/;
-const split = /(\n|\x1B\[\d+[ABCD]|\x1B\[2K])/;
-const color = /(\x1B\[\d*m)/g;
+const SPLIT_REGEX = /(\n|\x1B\[\d*(?:;\d*)?[A-Z])/;
+const ESCAPE_REGEX = /\x1B\[(\d*)(?:;(\d*))?([A-Z])/;
+const COLOR_REGEX = /(\x1B\[\d*m)/g;
 
-function parseCursorMove(
-  num: number,
-  char: string
-): { dx: number; dy: number } {
+type Escape =
+  | {
+      tag: "ClearLineFull";
+    }
+  | {
+      tag: "ClearLineToEnd";
+    }
+  | {
+      tag: "ClearLineToStart";
+    }
+  | {
+      tag: "ClearScreenFull";
+    }
+  | {
+      tag: "ClearScreenFullAndScrollback";
+    }
+  | {
+      tag: "ClearScreenToEnd";
+    }
+  | {
+      tag: "ClearScreenToStart";
+    }
+  | {
+      tag: "CursorMove";
+      dx: number;
+      dy: number;
+    }
+  | {
+      tag: "CursorTo";
+      x: number;
+      y: number;
+    }
+  | {
+      tag: "CursorToHorizontal";
+      x: number;
+    };
+
+function parseEscape(
+  char: string,
+  num1: number | undefined,
+  num2: number | undefined
+): Escape {
   switch (char) {
     case "A":
-      return { dx: 0, dy: -num };
+      return { tag: "CursorMove", dx: 0, dy: -(num1 ?? 1) };
+
     case "B":
-      return { dx: 0, dy: num };
+      return { tag: "CursorMove", dx: 0, dy: num1 ?? 1 };
+
     case "C":
-      return { dx: num, dy: 0 };
+      return { tag: "CursorMove", dx: num1 ?? 1, dy: 0 };
+
     case "D":
-      return { dx: -num, dy: 0 };
+      return { tag: "CursorMove", dx: -(num1 ?? 1), dy: 0 };
+
+    case "G":
+      return { tag: "CursorToHorizontal", x: (num1 ?? 1) - 1 };
+
+    case "H":
+      return { tag: "CursorTo", x: (num1 ?? 1) - 1, y: (num2 ?? 1) - 1 };
+
+    case "J":
+      switch (num1 ?? 0) {
+        case 0:
+          return { tag: "ClearScreenToEnd" };
+
+        case 1:
+          return { tag: "ClearScreenToStart" };
+
+        case 2:
+          return { tag: "ClearScreenFull" };
+
+        case 3:
+          return { tag: "ClearScreenFullAndScrollback" };
+
+        default:
+          throw new Error(`Unknown clear screen: ${num1 ?? 0}J`);
+      }
+
+    case "K":
+      switch (num1 ?? 0) {
+        case 0:
+          return { tag: "ClearLineToEnd" };
+
+        case 1:
+          return { tag: "ClearLineToStart" };
+
+        case 2:
+          return { tag: "ClearLineFull" };
+
+        default:
+          throw new Error(`Unknown clear line: ${num1 ?? 0}K`);
+      }
+
     default:
-      throw new Error(`Unknown cursor move char: ${char}`);
+      throw new Error(`Unknown escape move char: ${char}`);
   }
+}
+
+function toNumber(subMatch: string | undefined): number | undefined {
+  return subMatch === undefined || subMatch === ""
+    ? undefined
+    : Number(subMatch);
+}
+
+function stringLength(string: string): number {
+  // https://unicode.org/emoji/charts/emoji-variants.html
+  return Array.from(string.replace(/\ufe0f/g, "")).length;
 }
 
 function colorAwareSlice(
@@ -130,13 +221,15 @@ function colorAwareSlice(
 ): string {
   let result = "";
   let index = 0;
-  for (const [i, part] of string.split(color).entries()) {
+  for (const [i, part] of string.split(COLOR_REGEX).entries()) {
     if (i % 2 === 0) {
-      for (const char of part.split("")) {
+      for (const char of Array.from(part)) {
         if (index >= start && index < end) {
           result += char;
         }
-        index++;
+        if (char !== "\ufe0f") {
+          index++;
+        }
       }
     } else if (
       start === 0 && end === 0
@@ -165,7 +258,7 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void
   ): void {
-    const parts = chunk.toString().split(split);
+    const parts = chunk.toString().split(SPLIT_REGEX);
     for (const part of parts) {
       switch (part) {
         case "":
@@ -177,38 +270,102 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
           break;
 
         default: {
-          const cursorMoveMatch = cursorMove.exec(part);
-          if (cursorMoveMatch !== null) {
-            const { dx, dy } = parseCursorMove(
-              Number(cursorMoveMatch[1] ?? "1"),
-              cursorMoveMatch[2] as string
+          const match = ESCAPE_REGEX.exec(part);
+
+          if (match !== null) {
+            const escape = parseEscape(
+              match[3] as string,
+              toNumber(match[1]),
+              toNumber(match[2])
             );
-            const cursor = { x: this.cursor.x + dx, y: this.cursor.y + dy };
-            if (cursor.x < 0 || cursor.y < 0) {
-              callback(
-                new Error(
-                  `Cursor out of bounds: ${JSON.stringify(
-                    this.cursor
-                  )} + ${JSON.stringify({ dx, dy })} = ${JSON.stringify(
-                    cursor
-                  )}`
-                )
-              );
-              return;
-            } else {
-              this.cursor = cursor;
+
+            switch (escape.tag) {
+              case "ClearLineFull":
+                this.lines[this.cursor.y] = "";
+                break;
+
+              case "ClearLineToEnd":
+                this.lines[this.cursor.y] = colorAwareSlice(
+                  this.lines[this.cursor.y] ?? "",
+                  0,
+                  this.cursor.x
+                );
+                break;
+
+              case "ClearLineToStart":
+                this.lines[this.cursor.y] = colorAwareSlice(
+                  this.lines[this.cursor.y] ?? "",
+                  this.cursor.x
+                );
+                break;
+
+              case "ClearScreenFull":
+                this.lines = this.lines.map(() => "");
+                break;
+
+              case "ClearScreenFullAndScrollback":
+                this.lines = [];
+                break;
+
+              case "ClearScreenToEnd":
+                this.lines = this.lines.map((line, index) =>
+                  index < this.cursor.y
+                    ? line
+                    : index === this.cursor.y
+                    ? colorAwareSlice(line, 0, this.cursor.x)
+                    : ""
+                );
+                break;
+
+              case "ClearScreenToStart":
+                this.lines = this.lines.map((line, index) =>
+                  index < this.cursor.y
+                    ? ""
+                    : index === this.cursor.y
+                    ? " ".repeat(this.cursor.x + 1) +
+                      colorAwareSlice(line, this.cursor.x + 1)
+                    : line
+                );
+                break;
+
+              case "CursorMove": {
+                const { dx, dy } = escape;
+                const cursor = { x: this.cursor.x + dx, y: this.cursor.y + dy };
+                if (cursor.x < 0 || cursor.y < 0) {
+                  callback(
+                    new Error(
+                      `Cursor out of bounds: ${JSON.stringify(
+                        this.cursor
+                      )} + ${JSON.stringify({ dx, dy })} = ${JSON.stringify(
+                        cursor
+                      )}`
+                    )
+                  );
+                  return;
+                } else {
+                  this.cursor = cursor;
+                }
+                break;
+              }
+
+              case "CursorTo":
+                this.cursor = { x: escape.x, y: escape.y };
+                break;
+
+              case "CursorToHorizontal":
+                this.cursor.x = escape.x;
+                break;
             }
-          } else if (clearLine.test(part)) {
-            this.lines[this.cursor.y] = "";
           } else {
             const yDiff = this.cursor.y - this.lines.length + 1;
             if (yDiff > 0) {
               this.lines.push(...Array.from({ length: yDiff }, () => ""));
             }
             const line = this.lines[this.cursor.y] ?? "";
-            const xDiff = this.cursor.x - line.replace(color, "").length;
+            const xDiff =
+              this.cursor.x - stringLength(line.replace(COLOR_REGEX, ""));
             const paddedLine = xDiff > 0 ? line + " ".repeat(xDiff) : line;
-            const partLength = part.replace(color, "").length;
+            const partLength = stringLength(part.replace(COLOR_REGEX, ""));
             const nextLine =
               colorAwareSlice(paddedLine, 0, this.cursor.x) +
               part +
