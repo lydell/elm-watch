@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "example",
+  "scripts": {
+    "postinstall": "elm-tooling install",
+    "start": "elm-watch hot",
+    "build": "elm-watch make --optimize"
+  },
+  "devDependencies": {
+    "elm-tooling": "1.6.0",
+    "elm-watch": "file:../build"
+  }
+}

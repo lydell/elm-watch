@@ -3,6 +3,7 @@ build
 coverage
 dist
 example
+example-minimal
 *.d.ts
 tests/fixtures
 submodules
