@@ -2286,6 +2286,61 @@ describe("errors", () => {
     });
   });
 
+  describe("elm-watch-stuff.json errors", () => {
+    test("is a folder", async () => {
+      expect(await run("elm-watch-stuff-json-is-folder", ["hot"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- TROUBLE READING elm-stuff/elm-watch-stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-is-folder/elm-stuff/elm-watch-stuff.json
+
+        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+
+        ⧙I had trouble reading it as JSON:⧘
+
+        EISDIR: illegal operation on a directory, read
+
+        This file is created by elm-watch, so reading it should never fail really.
+        You could try removing that file (it contains nothing essential).
+      `);
+    });
+
+    test("bad json", async () => {
+      expect(await run("elm-watch-stuff-json-bad-json", ["hot"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- TROUBLE READING elm-stuff/elm-watch-stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch-stuff.json
+
+        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+
+        ⧙I had trouble reading it as JSON:⧘
+
+        Unexpected end of JSON input
+
+        This file is created by elm-watch, so reading it should never fail really.
+        You could try removing that file (it contains nothing essential).
+      `);
+    });
+
+    test("bad compilation mode", async () => {
+      expect(await run("elm-watch-stuff-json-bad-compilation-mode", ["hot"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-stuff/elm-watch-stuff.json FORMAT -------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-compilation-mode/elm-stuff/elm-watch-stuff.json
+
+        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+
+        ⧙I had trouble with the JSON inside:⧘
+
+        At root["targets"]["Main"]["compilationMode"]:
+        Expected one of these variants: "debug", "optimize"
+        Got: "standard"
+
+        This file is created by elm-watch, so reading it should never fail really.
+        You could try removing that file (it contains nothing essential).
+      `);
+    });
+  });
+
   describe("CI", () => {
     const appPath = path.join(FIXTURES_DIR, "ci", "build", "app.js");
 
