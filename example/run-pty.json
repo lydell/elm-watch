@@ -10,11 +10,15 @@
     "defaultStatus": ["⏳", "W"]
   },
   {
-    "command": ["npm", "run", "esbuild", "--", "--servedir=public"],
+    "command": ["npm", "run", "esbuild", "--", "--serve=7000", "--servedir=public"],
     "title": "esbuild",
     "status": {
       "503": ["🚨", "E"],
       "200": null
     }
+  },
+  {
+    "command": ["node", "proxy.js", "7000"],
+    "title": "proxy"
   }
 ]
