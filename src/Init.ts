@@ -21,8 +21,8 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   };
 
   if (fs.existsSync(elmWatchJsonPath.theElmWatchJsonPath.absolutePath)) {
-    logger.log(`${elmWatchJson} already exists in the current directory!`);
-    return 0;
+    logger.error(`${elmWatchJson} already exists in the current directory!`);
+    return 1;
   }
 
   const example = ElmWatchJson.example(cwd, elmWatchJsonPath, {

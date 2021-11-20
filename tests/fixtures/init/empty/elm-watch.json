@@ -1,0 +1,10 @@
+{
+    "targets": {
+        "MyTargetName": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/main.js"
+        }
+    }
+}
