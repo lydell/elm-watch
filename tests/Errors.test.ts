@@ -665,6 +665,8 @@ describe("errors", () => {
         Is something misspelled? Or do you need to create them?
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
 
@@ -684,6 +686,8 @@ describe("errors", () => {
         ⧙That's all I know, unfortunately!⧘
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
 
@@ -703,6 +707,8 @@ describe("errors", () => {
         Make sure every input is listed just once!
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
 
@@ -730,6 +736,8 @@ describe("errors", () => {
         Note that at least one of the inputs seems to be a symlink. They can be tricky!
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
   });
@@ -750,6 +758,8 @@ describe("errors", () => {
         Has it gone missing? Maybe run ⧙elm init⧘ to create one?
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
 
@@ -775,6 +785,8 @@ describe("errors", () => {
         Make sure that one single ⧙elm.json⧘ covers all the inputs together!
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
 
@@ -799,6 +811,8 @@ describe("errors", () => {
         ⧙elm.json⧘.
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
 
@@ -1058,6 +1072,8 @@ describe("errors", () => {
         /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.json
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1090,6 +1106,8 @@ describe("errors", () => {
         /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fe311e7464d5d116f8fa1ddccbc22767d9b6c74bfdd28d0719fb55ef7c1037a6.json
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1120,6 +1138,8 @@ describe("errors", () => {
         EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json'
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1146,6 +1166,8 @@ describe("errors", () => {
           on stdout
 
           🚨 ⧙1⧘ error found
+
+          🚨 Compilation finished in ⧙3⧘ ms.
         `);
       });
 
@@ -1171,6 +1193,8 @@ describe("errors", () => {
           on stderr
 
           🚨 ⧙1⧘ error found
+
+          🚨 Compilation finished in ⧙3⧘ ms.
         `);
       });
 
@@ -1196,6 +1220,8 @@ describe("errors", () => {
           on stdout
 
           🚨 ⧙1⧘ error found
+
+          🚨 Compilation finished in ⧙3⧘ ms.
         `);
       });
 
@@ -1229,6 +1255,8 @@ describe("errors", () => {
               --output=/dev/null
 
           🚨 ⧙1⧘ error found
+
+          🚨 Compilation finished in ⧙3⧘ ms.
         `);
       });
 
@@ -1254,6 +1282,8 @@ describe("errors", () => {
           ⧙(no output)⧘
 
           🚨 ⧙1⧘ error found
+
+          🚨 Compilation finished in ⧙3⧘ ms.
         `);
       });
 
@@ -1284,6 +1314,8 @@ describe("errors", () => {
           stuff on stderr
 
           🚨 ⧙1⧘ error found
+
+          🚨 Compilation finished in ⧙3⧘ ms.
         `);
       });
     });
@@ -1308,6 +1340,8 @@ describe("errors", () => {
         Try changing the "type" to ⧙"application"⧘ or ⧙"package"⧘ instead.
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1332,6 +1366,8 @@ describe("errors", () => {
         that typically go in a src/Main.elm file.
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1358,6 +1394,8 @@ describe("errors", () => {
         fewer values can help improve compile times!
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1384,6 +1422,8 @@ describe("errors", () => {
         module name, try renaming the file instead.
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1405,6 +1445,8 @@ describe("errors", () => {
         ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1435,6 +1477,8 @@ describe("errors", () => {
         make a \`main\` with no user interface.
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
 
@@ -1470,6 +1514,8 @@ describe("errors", () => {
         exists!
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
   });
@@ -1490,6 +1536,8 @@ describe("errors", () => {
       ENOENT: no such file or directory, stat '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
 
       🚨 ⧙1⧘ error found
+
+      🚨 Compilation finished in ⧙4⧘ ms.
     `);
   });
 
@@ -1511,6 +1559,8 @@ describe("errors", () => {
         ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙4⧘ ms.
       `);
     });
 
@@ -1533,6 +1583,8 @@ describe("errors", () => {
         EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -1561,6 +1613,8 @@ describe("errors", () => {
         Is ⧙nope⧘ installed?
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -1684,6 +1738,8 @@ describe("errors", () => {
         ⧙1 more line⧘
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -1808,6 +1864,8 @@ describe("errors", () => {
         ⧙2 more lines⧘
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -1835,6 +1893,8 @@ describe("errors", () => {
         ⧙(no output)⧘
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -1867,6 +1927,8 @@ describe("errors", () => {
         ⧙1 more line⧘
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -1890,6 +1952,8 @@ describe("errors", () => {
         ⧙(no output)⧘
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -1917,6 +1981,8 @@ describe("errors", () => {
         write EPIPE
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
   });
@@ -1940,6 +2006,8 @@ describe("errors", () => {
         "postprocess": ["elm-watch-node", "postprocess.js"]
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -1961,6 +2029,8 @@ describe("errors", () => {
         Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js' imported from /Users/you/project/src/PostprocessWorker.ts
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -1983,6 +2053,8 @@ describe("errors", () => {
             at fake/stacktrace.js
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2010,6 +2082,8 @@ describe("errors", () => {
         STDERR:
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2037,6 +2111,8 @@ describe("errors", () => {
         { test: 1, items: [ 'one', 'two' ] }
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2062,6 +2138,8 @@ describe("errors", () => {
         {"default": {}}
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2094,6 +2172,8 @@ describe("errors", () => {
         This is stderr
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2122,6 +2202,8 @@ describe("errors", () => {
         STDERR:
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2144,6 +2226,8 @@ describe("errors", () => {
         null
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2166,6 +2250,8 @@ describe("errors", () => {
         "rejected!"
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2194,6 +2280,8 @@ describe("errors", () => {
         Stderr!
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
   });
@@ -2245,6 +2333,8 @@ describe("errors", () => {
         Are there any missing commas? Or missing parentheses?
 
         🚨 ⧙2⧘ errors found
+
+        🚨 Compilation finished in ⧙11⧘ ms.
       `);
 
       expect(fs.existsSync(appPath)).toBe(true);
@@ -2276,6 +2366,8 @@ describe("errors", () => {
         ⧙(no output)⧘
 
         🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙5⧘ ms.
       `);
     });
 
@@ -2332,6 +2424,8 @@ describe("errors", () => {
         Are there any missing commas? Or missing parentheses?
 
         2 errors found
+
+        Compilation finished in 11 ms.
       `);
 
       expect(fs.existsSync(appPath)).toBe(true);
@@ -2369,6 +2463,8 @@ describe("errors", () => {
         (no output)
 
         1 error found
+
+        Compilation finished in 5 ms.
       `);
     });
   });
@@ -2404,6 +2500,8 @@ describe("errors", () => {
       ⧙This is not supposed to ever happen.⧘
 
       🚨 ⧙2⧘ errors found
+
+      🚨 Compilation finished in ⧙3⧘ ms.
     `);
   });
 
