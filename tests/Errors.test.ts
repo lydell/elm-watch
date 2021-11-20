@@ -379,6 +379,38 @@ describe("errors", () => {
         Got: "src/main.elm"
       `);
     });
+
+    test("too low port", async () => {
+      expect(await run("elm-watch-json-decode-error/too-low-port", ["make"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/too-low-port/elm-watch.json
+
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+        ⧙I had trouble with the JSON inside:⧘
+
+        At root["port"] (optional):
+        Expected an integer where 1 <= port <= 65535
+        Got: 0
+      `);
+    });
+
+    test("too high port", async () => {
+      expect(await run("elm-watch-json-decode-error/too-high-port", ["make"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/too-high-port/elm-watch.json
+
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+        ⧙I had trouble with the JSON inside:⧘
+
+        At root["port"] (optional):
+        Expected an integer where 1 <= port <= 65535
+        Got: 65536
+      `);
+    });
   });
 
   test("elm-watch.json not found", async () => {

@@ -8,6 +8,7 @@ import { isNonEmptyArray } from "./NonEmptyArray";
 
 const result = esbuild.buildSync(clientEsbuildOptions);
 
+// istanbul ignore if
 if (!isNonEmptyArray(result.outputFiles) || result.outputFiles.length > 1) {
   throw new Error(
     `ClientCode: Expected 1 output from esbuild, but got: ${result.outputFiles.length}`
