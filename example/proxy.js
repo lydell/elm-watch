@@ -103,8 +103,7 @@ function proxyToWeb(req, res, log, hostname) {
 
 const LOOKS_LIKE_IP_ADDRESS = /^(\d+\.\d+\.\d+\.\d+):\d+$/;
 
-function indexPage(host) {
-  const hostHtmlString = /^[^<>&]+$/.test(host) ? host : "(weird host header)";
+function indexPage(host = "", url = "/") {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -119,7 +118,7 @@ function indexPage(host) {
     </style>
   </head>
   <body>
-    <p>ℹ️ Nothing is served directly on: <code>${hostHtmlString}</code></p>
+    <p>ℹ️ Nothing is served directly on: <code>${escapeHtml(host)}</code></p>
     <p>💡 Try one of these:</p>
     <ul>
       ${servers
@@ -128,11 +127,13 @@ function indexPage(host) {
           const [href, title] =
             match === null
               ? [
-                  `http://${serverConfig.subdomain}.localhost:${PROXY_PORT}`,
+                  `http://${
+                    serverConfig.subdomain
+                  }.localhost:${PROXY_PORT}${escapeHtml(url)}`,
                   `${serverConfig.subdomain}.localhost:${PROXY_PORT}`,
                 ]
               : [
-                  `http://${match[1]}:${serverConfig.port}`,
+                  `http://${match[1]}:${serverConfig.port}${escapeHtml(url)}`,
                   `${serverConfig.subdomain}: ${match[1]}:${serverConfig.port}`,
                 ];
           return `
@@ -146,6 +147,25 @@ function indexPage(host) {
   </body>
 </html>
   `.trim();
+}
+
+function escapeHtml(string) {
+  return string.replace(/[&<>"']/g, (match) => {
+    switch (match) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&apos;";
+      default:
+        throw new Error(`Unexpected escapeHtml character: ${match}`);
+    }
+  });
 }
 
 function makeLog(req) {
@@ -195,7 +215,7 @@ const proxyServer = http.createServer((req, res) => {
     if (serverConfig === undefined) {
       log(404);
       res.writeHead(404);
-      res.end(indexPage(host));
+      res.end(indexPage(host, req.url));
     } else {
       serverConfig.handler(req, res, log);
     }
