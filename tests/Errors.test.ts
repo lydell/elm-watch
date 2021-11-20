@@ -530,7 +530,7 @@ describe("errors", () => {
     test("suggested inputs are relative to elm-watch.json, not cwd", async () => {
       expect(
         await run("valid/src", [
-          "make",
+          "hot",
           "src/App.elm",
           "../lib/Admin.elm",
           "--output=dist/main.js",
@@ -538,7 +538,7 @@ describe("errors", () => {
       ).toMatchInlineSnapshot(`
         ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
-        The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
+        The ⧙hot⧘ command only accepts no flags at all.
 
         But you provided these flag-looking args:
 
