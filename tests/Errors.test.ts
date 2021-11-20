@@ -41,6 +41,8 @@ async function runAbsolute(
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
+  let i = 0;
+
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
     env:
@@ -53,7 +55,7 @@ async function runAbsolute(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(),
+    getNow: () => new Date(i++),
     onIdle: undefined,
   });
 

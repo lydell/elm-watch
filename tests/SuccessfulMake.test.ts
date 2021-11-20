@@ -34,6 +34,8 @@ async function run(
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
+  let i = 0;
+
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
     env: {
@@ -46,7 +48,7 @@ async function run(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(),
+    getNow: () => new Date(i++),
     onIdle: undefined,
   });
 
