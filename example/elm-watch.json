@@ -40,12 +40,6 @@
             ],
             "output": "public/build/WorkerMain.js"
         },
-        "Legacy": {
-            "inputs": [
-                "legacy/Main.elm"
-            ],
-            "output": "public/build/LegacyMain.js"
-        },
         "Frankenstein": {
             "inputs": [
                 "src/ApplicationMain.elm",
