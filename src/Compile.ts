@@ -1700,6 +1700,7 @@ export function printStatusLine({
   emojiName,
   string,
 }: {
+  // Note: `maxWidth` only works with uncolored text.
   maxWidth: number;
   fancy: boolean;
   isTTY: boolean;

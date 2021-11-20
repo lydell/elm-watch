@@ -1373,7 +1373,6 @@ const runCmd =
           events: cmd.events,
           fancy: logger.fancy,
           isTTY: logger.raw.stderr.isTTY,
-          maxWidth: logger.raw.stderrColumns,
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
         });
         logger.error(fullMessage);
@@ -2398,7 +2397,6 @@ function infoMessageWithTimeline({
   events,
   fancy,
   isTTY,
-  maxWidth,
   hasErrors,
 }: {
   date: Date;
@@ -2407,15 +2405,14 @@ function infoMessageWithTimeline({
   events: Array<WatcherEvent | WebSocketRelatedEvent>;
   fancy: boolean;
   isTTY: boolean;
-  maxWidth: number;
   hasErrors: boolean;
 }): string {
   return join(
     [
       "", // Empty line separator.
-      printStats({ mutable, fancy, isTTY, maxWidth }),
+      printStats({ mutable, fancy, isTTY }),
       "",
-      printTimeline({ events, fancy, isTTY, maxWidth }),
+      printTimeline({ events, fancy, isTTY }),
       printMessageWithTimeAndEmoji({
         emojiName: hasErrors ? "Error" : "Success",
         date,
@@ -2423,7 +2420,6 @@ function infoMessageWithTimeline({
         message,
         fancy,
         isTTY,
-        maxWidth,
       }),
     ].flatMap((part) => (part === undefined ? [] : part)),
     "\n"
@@ -2437,7 +2433,6 @@ function printMessageWithTimeAndEmoji({
   message,
   fancy,
   isTTY,
-  maxWidth,
 }: {
   emojiName: Compile.EmojiName;
   date: Date;
@@ -2445,10 +2440,9 @@ function printMessageWithTimeAndEmoji({
   message: string;
   fancy: boolean;
   isTTY: boolean;
-  maxWidth: number;
 }): string {
   return Compile.printStatusLine({
-    maxWidth,
+    maxWidth: Infinity,
     fancy,
     isTTY,
     emojiName,
@@ -2460,12 +2454,10 @@ function printStats({
   mutable,
   fancy,
   isTTY,
-  maxWidth,
 }: {
   mutable: Mutable;
   fancy: boolean;
   isTTY: boolean;
-  maxWidth: number;
 }): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
   return join(
@@ -2480,7 +2472,7 @@ function printStats({
       part === undefined
         ? []
         : Compile.printStatusLine({
-            maxWidth,
+            maxWidth: Infinity,
             fancy,
             isTTY,
             emojiName: "Stats",
@@ -2495,12 +2487,10 @@ function printTimeline({
   events,
   fancy,
   isTTY,
-  maxWidth,
 }: {
   events: Array<WatcherEvent | WebSocketRelatedEvent>;
   fancy: boolean;
   isTTY: boolean;
-  maxWidth: number;
 }): string | undefined {
   if (!isNonEmptyArray(events)) {
     return undefined;
@@ -2513,11 +2503,11 @@ function printTimeline({
   return dim(
     join(
       [
-        printEvent({ event: first, fancy, isTTY, maxWidth }),
+        printEvent({ event: first, fancy, isTTY }),
         printNumMoreEvents({ numMoreEvents, fancy }),
         last === undefined
           ? undefined
-          : printEvent({ event: last, fancy, isTTY, maxWidth }),
+          : printEvent({ event: last, fancy, isTTY }),
       ].flatMap((part) => (part === undefined ? [] : part)),
       "\n"
     )
@@ -2528,12 +2518,10 @@ function printEvent({
   event,
   fancy,
   isTTY,
-  maxWidth,
 }: {
   event: WatcherEvent | WebSocketRelatedEvent;
   fancy: boolean;
   isTTY: boolean;
-  maxWidth: number;
 }): string {
   return printMessageWithTimeAndEmoji({
     emojiName: "Information",
@@ -2542,7 +2530,6 @@ function printEvent({
     message: printEventMessage(event),
     fancy,
     isTTY,
-    maxWidth,
   });
 }
 

@@ -94,7 +94,6 @@ export async function run(
       numWorkers,
       fancy: logger.fancy,
       isTTY: logger.raw.stderr.isTTY,
-      maxWidth: logger.raw.stderrColumns,
       hasErrors: failed,
     })
   );
@@ -125,14 +124,12 @@ function compileFinishedMessage({
   numWorkers,
   fancy,
   isTTY,
-  maxWidth,
   hasErrors,
 }: {
   duration: number;
   numWorkers: number;
   fancy: boolean;
   isTTY: boolean;
-  maxWidth: number;
   hasErrors: boolean;
 }): string {
   const workersString =
@@ -145,7 +142,7 @@ function compileFinishedMessage({
       : ".";
 
   return Compile.printStatusLine({
-    maxWidth,
+    maxWidth: Infinity,
     fancy,
     isTTY,
     emojiName: hasErrors ? "Error" : "Success",
