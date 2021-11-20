@@ -78,6 +78,17 @@ type UiMsg =
 type Model = {
   status: Status;
   elmCompiledTimestamp: number;
+  // Scenario:
+  // 1. An output is fully compiled (not proxy).
+  // 2. All websockets for that output are disconnected.
+  // 3. You edit `init`.
+  // 4. You open the page again.
+  // The output is then recompiled, since the old compiled output is not
+  // up-to-date. If we hot reload at this time, you won’t see the `init`
+  // changes, which makes it feel something is wrong with the watcher. So it’s
+  // better to reload the page in that case. Which means that only if we get an
+  // "AlreadyUpToDate" we should hot reload.
+  canHotReload: boolean;
   uiExpanded: boolean;
 };
 
@@ -292,6 +303,7 @@ const init = (date: Date): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
+    canHotReload: false,
     uiExpanded: false,
   };
   return [model, [{ tag: "Render", model, manageFocus: false }]];
@@ -410,19 +422,11 @@ function onWebSocketToClientMessage(
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "StatusChanged": {
-      const [status, uiChange] = statusChanged(date, msg);
-      return [
-        {
-          ...model,
-          status,
-          uiExpanded: uiChange === "ExpandUI" ? true : model.uiExpanded,
-        },
-        [],
-      ];
+      return [statusChanged(date, msg, model), []];
     }
 
     case "SuccessfullyCompiled":
-      return msg.compilationMode !== COMPILATION_MODE
+      return !model.canHotReload || msg.compilationMode !== COMPILATION_MODE
         ? [model, [{ tag: "ReloadPage" }]]
         : [
             {
@@ -441,29 +445,39 @@ function onWebSocketToClientMessage(
 
 function statusChanged(
   date: Date,
-  { status }: StatusChanged
-): [Status, "ExpandUI" | "KeepUI"] {
+  { status }: StatusChanged,
+  model: Model
+): Model {
   switch (status.tag) {
     case "AlreadyUpToDate":
-      return [
-        { tag: "Idle", date, sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME },
-        "KeepUI",
-      ];
+      return {
+        ...model,
+        status: {
+          tag: "Idle",
+          date,
+          sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+        },
+        canHotReload: true,
+      };
 
     case "Busy":
-      return [
-        { tag: "Busy", date, compilationMode: status.compilationMode },
-        "KeepUI",
-      ];
+      return {
+        ...model,
+        status: { tag: "Busy", date, compilationMode: status.compilationMode },
+      };
 
     case "ClientError":
-      return [
-        { tag: "UnexpectedError", date, message: status.message },
-        "ExpandUI",
-      ];
+      return {
+        ...model,
+        status: { tag: "UnexpectedError", date, message: status.message },
+        uiExpanded: true,
+      };
 
     case "CompileError":
-      return [{ tag: "CompileError", date }, "KeepUI"];
+      return {
+        ...model,
+        status: { tag: "CompileError", date },
+      };
   }
 }
 
@@ -1398,6 +1412,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     const model: Model = {
       status,
       elmCompiledTimestamp: 0,
+      canHotReload: false,
       uiExpanded: true,
     };
     render(
