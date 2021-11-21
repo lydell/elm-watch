@@ -847,20 +847,44 @@ describe("errors", () => {
         🚨 Compilation finished in ⧙1⧘ ms.
       `);
     });
+  });
 
-    describe("elm not found", () => {
-      test("basic", async () => {
-        expect(
-          await run("valid", ["make"], {
-            env: {
-              ...process.env,
-              ...TEST_ENV,
-              PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
-                path.delimiter
-              ),
-            },
-          })
-        ).toMatchInlineSnapshot(`
+  describe("elm not found", () => {
+    test("basic", async () => {
+      expect(
+        await run("valid", ["make"], {
+          env: {
+            ...process.env,
+            ...TEST_ENV,
+            PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
+              path.delimiter
+            ),
+          },
+        })
+      ).toMatchInlineSnapshot(`
+        🚨 Dependencies
+
+        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/valid/elm.json
+
+        I tried to execute ⧙elm⧘, but it does not appear to exist!
+
+        This is what the PATH environment variable looks like:
+
+        /Users/you/project/tests
+        /Users/you/project/tests/some/bin
+
+        Is Elm installed?
+
+        Note: If you have installed Elm locally (for example using npm or elm-tooling),
+        execute elm-watch using npx to make elm-watch automatically pick up that local
+        installation: ⧙npx elm-watch⧘
+      `);
+    });
+
+    test("undefined PATH", async () => {
+      expect(await run("valid", ["make", "app"], { env: {} }))
+        .toMatchInlineSnapshot(`
           🚨 Dependencies
 
           ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
@@ -868,10 +892,7 @@ describe("errors", () => {
 
           I tried to execute ⧙elm⧘, but it does not appear to exist!
 
-          This is what the PATH environment variable looks like:
-
-          /Users/you/project/tests
-          /Users/you/project/tests/some/bin
+          I can't find any program, because process.env.PATH is undefined!
 
           Is Elm installed?
 
@@ -879,79 +900,60 @@ describe("errors", () => {
           execute elm-watch using npx to make elm-watch automatically pick up that local
           installation: ⧙npx elm-watch⧘
         `);
-      });
+    });
 
-      test("undefined PATH", async () => {
-        expect(await run("valid", ["make", "app"], { env: {} }))
-          .toMatchInlineSnapshot(`
-            🚨 Dependencies
+    const printPATHWindows = (env: Env): string =>
+      clean(Errors.printPATH(env, true));
 
-            ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
-            /Users/you/project/tests/fixtures/errors/valid/elm.json
-
-            I tried to execute ⧙elm⧘, but it does not appear to exist!
-
-            I can't find any program, because process.env.PATH is undefined!
-
-            Is Elm installed?
-
-            Note: If you have installed Elm locally (for example using npm or elm-tooling),
-            execute elm-watch using npx to make elm-watch automatically pick up that local
-            installation: ⧙npx elm-watch⧘
-          `);
-      });
-
-      const printPATHWindows = (env: Env): string =>
-        clean(Errors.printPATH(env, true));
-
-      test("Windows basic", () => {
-        expect(
-          printPATHWindows({
-            Path: [__dirname, path.join(__dirname, "some", "bin")].join(
-              path.delimiter
-            ),
-          })
-        ).toMatchInlineSnapshot(`
+    test("Windows basic", () => {
+      expect(
+        printPATHWindows({
+          Path: [__dirname, path.join(__dirname, "some", "bin")].join(
+            path.delimiter
+          ),
+        })
+      ).toMatchInlineSnapshot(`
           This is what the Path environment variable looks like:
 
           /Users/you/project/tests
           /Users/you/project/tests/some/bin
         `);
-      });
-
-      test("Windows no PATH-like", () => {
-        expect(printPATHWindows({})).toMatchInlineSnapshot(
-          `I can't find any program, because I can't find any PATH-like environment variables!`
-        );
-      });
-
-      test("Windows multiple PATH-like", () => {
-        expect(
-          printPATHWindows({
-            Path: [__dirname, path.join(__dirname, "some", "bin")].join(
-              path.delimiter
-            ),
-            PATH: [
-              path.join(__dirname, "that", "bin"),
-              path.join(__dirname, "final", "bin"),
-            ].join(path.delimiter),
-          })
-        ).toMatchInlineSnapshot(`
-          You seem to have several PATH-like environment variables set. The last one
-          should be the one that is actually used, but it's better to have a single one!
-
-          Path:
-          /Users/you/project/tests
-          /Users/you/project/tests/some/bin
-
-          PATH:
-          /Users/you/project/tests/that/bin
-          /Users/you/project/tests/final/bin
-        `);
-      });
     });
 
-    describe("elm install dummy file creation error", () => {
+    test("Windows no PATH-like", () => {
+      expect(printPATHWindows({})).toMatchInlineSnapshot(
+        `I can't find any program, because I can't find any PATH-like environment variables!`
+      );
+    });
+
+    test("Windows multiple PATH-like", () => {
+      expect(
+        printPATHWindows({
+          Path: [__dirname, path.join(__dirname, "some", "bin")].join(
+            path.delimiter
+          ),
+          PATH: [
+            path.join(__dirname, "that", "bin"),
+            path.join(__dirname, "final", "bin"),
+          ].join(path.delimiter),
+        })
+      ).toMatchInlineSnapshot(`
+        You seem to have several PATH-like environment variables set. The last one
+        should be the one that is actually used, but it's better to have a single one!
+
+        Path:
+        /Users/you/project/tests
+        /Users/you/project/tests/some/bin
+
+        PATH:
+        /Users/you/project/tests/that/bin
+        /Users/you/project/tests/final/bin
+      `);
+    });
+  });
+
+  describe("elm install errors", () => {
+    describe("dummy file creation error", () => {
       const dummy = path.join(os.tmpdir(), "ElmWatchDummy.elm");
 
       beforeEach(() => {
@@ -1080,8 +1082,10 @@ describe("errors", () => {
         `);
       });
     });
+  });
 
-    test("elm make json syntax error", async () => {
+  describe("elm make json errors", () => {
+    test("syntax error", async () => {
       expect(await runWithBadElmBinAndExpectedJson("json-syntax-error", "{"))
         .toMatchInlineSnapshot(`
         🚨 app
@@ -1109,7 +1113,7 @@ describe("errors", () => {
       `);
     });
 
-    test("elm make json decode error", async () => {
+    test("decode error", async () => {
       expect(
         await runWithBadElmBinAndExpectedJson(
           "json-decode-error",
@@ -1143,7 +1147,7 @@ describe("errors", () => {
       `);
     });
 
-    test("elm make json error failed to write", async () => {
+    test("error failed to write", async () => {
       expect(await runWithBadElmBin("json-error-failed-write"))
         .toMatchInlineSnapshot(`
         🚨 app
@@ -1174,92 +1178,93 @@ describe("errors", () => {
         🚨 Compilation finished in ⧙3⧘ ms.
       `);
     });
+  });
 
-    describe("unexpected `elm make` output", () => {
-      test("exit 0 + stdout", async () => {
-        expect(await runWithBadElmBin("exit-0-stdout")).toMatchInlineSnapshot(`
-          🚨 app
+  describe("unexpected `elm make` output", () => {
+    test("exit 0 + stdout", async () => {
+      expect(await runWithBadElmBin("exit-0-stdout")).toMatchInlineSnapshot(`
+        🚨 app
 
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙Target: app⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙Target: app⧘
 
-          I ran the following commands:
+        I ran the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with JSON on stderr (compile errors).
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
 
-          ⧙But it exited like this:⧘
+        ⧙But it exited like this:⧘
 
-          exit 0
-          some output
-          on stdout
+        exit 0
+        some output
+        on stdout
 
-          🚨 ⧙1⧘ error found
+        🚨 ⧙1⧘ error found
 
-          🚨 Compilation finished in ⧙3⧘ ms.
-        `);
-      });
+        🚨 Compilation finished in ⧙3⧘ ms.
+      `);
+    });
 
-      test("exit 0 + stderr", async () => {
-        expect(await runWithBadElmBin("exit-0-stderr")).toMatchInlineSnapshot(`
-          🚨 app
+    test("exit 0 + stderr", async () => {
+      expect(await runWithBadElmBin("exit-0-stderr")).toMatchInlineSnapshot(`
+        🚨 app
 
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙Target: app⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙Target: app⧘
 
-          I ran the following commands:
+        I ran the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with JSON on stderr (compile errors).
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
 
-          ⧙But it exited like this:⧘
+        ⧙But it exited like this:⧘
 
-          exit 0
-          some output
-          on stderr
+        exit 0
+        some output
+        on stderr
 
-          🚨 ⧙1⧘ error found
+        🚨 ⧙1⧘ error found
 
-          🚨 Compilation finished in ⧙3⧘ ms.
-        `);
-      });
+        🚨 Compilation finished in ⧙3⧘ ms.
+      `);
+    });
 
-      test("exit 1 + stdout", async () => {
-        expect(await runWithBadElmBin("exit-1-stdout")).toMatchInlineSnapshot(`
-          🚨 app
+    test("exit 1 + stdout", async () => {
+      expect(await runWithBadElmBin("exit-1-stdout")).toMatchInlineSnapshot(`
+        🚨 app
 
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙Target: app⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙Target: app⧘
 
-          I ran the following commands:
+        I ran the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with JSON on stderr (compile errors).
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
 
-          ⧙But it exited like this:⧘
+        ⧙But it exited like this:⧘
 
-          exit 1
-          some output
-          on stdout
+        exit 1
+        some output
+        on stdout
 
-          🚨 ⧙1⧘ error found
+        🚨 ⧙1⧘ error found
 
-          🚨 Compilation finished in ⧙3⧘ ms.
-        `);
-      });
+        🚨 Compilation finished in ⧙3⧘ ms.
+      `);
+    });
 
-      test("exit 1 + stderr that isn’t json", async () => {
-        expect(await runWithBadElmBin("exit-1-stderr-not-{"))
-          .toMatchInlineSnapshot(`
+    test("exit 1 + stderr that isn’t json", async () => {
+      expect(await runWithBadElmBin("exit-1-stderr-not-{"))
+        .toMatchInlineSnapshot(`
           🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
@@ -1290,38 +1295,37 @@ describe("errors", () => {
 
           🚨 Compilation finished in ⧙3⧘ ms.
         `);
-      });
+    });
 
-      test("exit 2 + no output", async () => {
-        expect(await runWithBadElmBin("exit-2-no-output"))
-          .toMatchInlineSnapshot(`
-          🚨 app
+    test("exit 2 + no output", async () => {
+      expect(await runWithBadElmBin("exit-2-no-output")).toMatchInlineSnapshot(`
+        🚨 app
 
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙Target: app⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙Target: app⧘
 
-          I ran the following commands:
+        I ran the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with JSON on stderr (compile errors).
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
 
-          ⧙But it exited like this:⧘
+        ⧙But it exited like this:⧘
 
-          exit 2
-          ⧙(no output)⧘
+        exit 2
+        ⧙(no output)⧘
 
-          🚨 ⧙1⧘ error found
+        🚨 ⧙1⧘ error found
 
-          🚨 Compilation finished in ⧙3⧘ ms.
-        `);
-      });
+        🚨 Compilation finished in ⧙3⧘ ms.
+      `);
+    });
 
-      test("exit 2 + both stdout and stderr", async () => {
-        expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
-          .toMatchInlineSnapshot(`
+    test("exit 2 + both stdout and stderr", async () => {
+      expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
+        .toMatchInlineSnapshot(`
           🚨 app
 
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
@@ -1349,7 +1353,6 @@ describe("errors", () => {
 
           🚨 Compilation finished in ⧙3⧘ ms.
         `);
-      });
     });
   });
 
