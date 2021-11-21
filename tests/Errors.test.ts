@@ -892,7 +892,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
       `);
     });
 
@@ -923,7 +923,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
       `);
     });
 
@@ -956,7 +956,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
       `);
     });
   });
@@ -2525,7 +2525,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
       `);
     });
   });
