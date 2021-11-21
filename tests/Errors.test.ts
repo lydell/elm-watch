@@ -2530,6 +2530,35 @@ describe("errors", () => {
     });
   });
 
+  test("import walker file system error", async () => {
+    expect(
+      await run("import-walker-file-system-error", ["hot"], {
+        env: elmBinAlwaysSucceedEnv,
+        onIdle: () => "Stop",
+      })
+    ).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      🚨 Main
+
+      ⧙-- TROUBLE READING ELM FILES ---------------------------------------------------⧘
+      ⧙Target: Main⧘
+
+      When figuring out all Elm files that your inputs depend on I read a lot of Elm files.
+      Doing so I encountered this error:
+
+      EISDIR: illegal operation on a directory, read
+
+      (I still managed to compile your code, but the watcher will not work properly
+      and "postprocess" was not run.)
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
+    `);
+  });
+
   describe("CI", () => {
     const appPath = path.join(FIXTURES_DIR, "ci", "build", "app.js");
 
