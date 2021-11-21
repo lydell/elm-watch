@@ -399,12 +399,14 @@ export function clean(string: string): string {
   const { root } = path.parse(__dirname);
 
   // Replace start of absolute paths with hardcoded stuff so the tests pass on
-  // more than one computer. Replace colors for snapshots.
+  // more than one computer. Replace automatic port numbers with a fixed one.
+  // Replace colors for snapshots.
   return string
     .split(path.dirname(__dirname))
     .join(path.join(root, "Users", "you", "project"))
     .split(os.tmpdir())
     .join(path.join(root, "tmp", "fake"))
+    .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘");
 }

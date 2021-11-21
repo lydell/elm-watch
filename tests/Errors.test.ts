@@ -5,6 +5,7 @@ import * as path from "path";
 import { elmWatchCli } from "../src";
 import * as Errors from "../src/Errors";
 import { Env, toError } from "../src/Helpers";
+import { OnIdle } from "../src/Types";
 import {
   assertExitCode,
   clean,
@@ -25,7 +26,7 @@ const TEST_ENV = {
 async function run(
   fixture: string,
   args: Array<string>,
-  options?: { env?: Env; isTTY?: boolean }
+  options?: { env?: Env; isTTY?: boolean; onIdle?: OnIdle }
 ): Promise<string> {
   return runAbsolute(path.join(FIXTURES_DIR, fixture), args, options);
 }
@@ -33,7 +34,11 @@ async function run(
 async function runAbsolute(
   dir: string,
   args: Array<string>,
-  { env, isTTY = true }: { env?: Env; isTTY?: boolean } = {}
+  {
+    env,
+    isTTY = true,
+    onIdle,
+  }: { env?: Env; isTTY?: boolean; onIdle?: OnIdle } = {}
 ): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new CursorWriteStream();
@@ -56,16 +61,27 @@ async function runAbsolute(
     stdout,
     stderr,
     getNow: () => new Date(i++),
-    onIdle: undefined,
+    onIdle,
   });
 
   const stderrString = clean(stderr.getOutput());
 
-  assertExitCode(1, exitCode, stdout.content, stderrString);
+  assertExitCode(
+    onIdle === undefined ? 1 : 0,
+    exitCode,
+    stdout.content,
+    stderrString
+  );
   expect(stdout.content).toBe("");
 
   return stderrString;
 }
+
+const elmBinAlwaysSucceedEnv = {
+  ...process.env,
+  ...TEST_ENV,
+  PATH: prependPATH(path.join(__dirname, "fixtures", "elm-bin-always-succeed")),
+};
 
 function badElmBinEnv(dir: string, fixture: string): Env {
   return {
@@ -845,6 +861,101 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
 
         🚨 Compilation finished in ⧙1⧘ ms.
+      `);
+    });
+
+    test("is a folder", async () => {
+      expect(
+        await run("elm-json-is-folder", ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          onIdle: () => "Stop",
+        })
+      ).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 Main
+
+        ⧙-- TROUBLE READING elm.json ----------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-json-is-folder/elm.json
+
+        I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
+        your inputs depend on.
+
+        ⧙I had trouble reading it as JSON:⧘
+
+        EISDIR: illegal operation on a directory, read
+
+        (I still managed to compile your code, but the watcher will not work properly
+        and "postprocess" was not run.)
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        🚨 ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
+      `);
+    });
+
+    test("bad json", async () => {
+      expect(
+        await run("elm-json-bad-json", ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          onIdle: () => "Stop",
+        })
+      ).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 Main
+
+        ⧙-- TROUBLE READING elm.json ----------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-json-bad-json/elm.json
+
+        I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
+        your inputs depend on.
+
+        ⧙I had trouble reading it as JSON:⧘
+
+        Unexpected end of JSON input
+
+        (I still managed to compile your code, but the watcher will not work properly
+        and "postprocess" was not run.)
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        🚨 ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
+      `);
+    });
+
+    test("decode error", async () => {
+      expect(
+        await run("elm-json-decode-error", ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          onIdle: () => "Stop",
+        })
+      ).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 Main
+
+        ⧙-- INVALID elm.json FORMAT -----------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-json-decode-error/elm.json
+
+        I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
+        your inputs depend on.
+
+        ⧙I had trouble with the JSON inside:⧘
+
+        At root["type"]:
+        Expected one of these tags: "application", "package"
+        Got: "hackage"
+
+        (I still managed to compile your code, but the watcher will not work properly
+        and "postprocess" was not run.)
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        🚨 ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
       `);
     });
   });
