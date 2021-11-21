@@ -3,6 +3,7 @@ import * as os from "os";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
+import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import * as Errors from "../src/Errors";
 import { Env, toError } from "../src/Helpers";
 import { OnIdle } from "../src/Types";
@@ -2483,6 +2484,48 @@ describe("errors", () => {
 
         This file is created by elm-watch, so reading it should never fail really.
         You could try removing that file (it contains nothing essential).
+      `);
+    });
+
+    test("write error", async () => {
+      const dir = path.join(FIXTURES_DIR, "elm-watch-stuff-json-write-error");
+      const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
+        port: 59999,
+        targets: {},
+      };
+      fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
+      try {
+        fs.writeFileSync(
+          path.join(dir, "elm-stuff", "elm-watch-stuff.json"),
+          JSON.stringify(elmWatchStuffJson),
+          { mode: "0444" } // readonly
+        );
+      } catch {
+        // Ignore write errors (readonly).
+      }
+      expect(
+        await runAbsolute(dir, ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          onIdle: () => "Stop",
+        })
+      ).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        ✅ Main⧙                                             0 ms Q |   2 ms T ¦   1 ms W⧘
+
+        ⧙-- TROUBLE WRITING elm-stuff/elm-watch-stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch-stuff.json
+
+        I write stuff to ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+
+        ⧙I had trouble writing that file:⧘
+
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch-stuff.json'
+
+        The file contains nothing essential, but something weird is going on.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙01:00:00⧘ Compilation finished in ⧙4⧘ ms.
       `);
     });
   });
