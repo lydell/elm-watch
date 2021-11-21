@@ -98,7 +98,10 @@ function badElmBinEnv(dir: string, fixture: string): Env {
 
 async function runWithBadElmBin(
   fixture: string,
-  { postprocess = false } = {}
+  {
+    postprocess = false,
+    onIdle,
+  }: { postprocess?: boolean; onIdle?: OnIdle } = {}
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
   const BUILD = path.join(dir, "build");
@@ -109,9 +112,10 @@ async function runWithBadElmBin(
   }
   return runAbsolute(
     postprocess ? path.join(dir, "postprocess") : dir,
-    ["make", "app"],
+    [onIdle === undefined ? "make" : "hot", "app"],
     {
       env: badElmBinEnv(dir, fixture),
+      onIdle,
     }
   );
 }
@@ -1711,7 +1715,7 @@ describe("errors", () => {
       `);
     });
 
-    test("fail to overwrite Elm’s output", async () => {
+    test("fail to overwrite Elm’s output after postprocess", async () => {
       expect(
         await runWithBadElmBin("exit-0-write-readonly", { postprocess: true })
       ).toMatchInlineSnapshot(`
@@ -1732,6 +1736,34 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
 
         🚨 Compilation finished in ⧙5⧘ ms.
+      `);
+    });
+
+    test("fail to write dummy output", async () => {
+      expect(
+        await runWithBadElmBin("exit-0-write-readonly", {
+          onIdle: () => "Stop",
+        })
+      ).toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- TROUBLE WRITING DUMMY OUTPUT ------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        There are no websocket connections for this output, so I only typecheck the
+        code. That went well. Then I tried to write a dummy output file here:
+
+        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+
+        Doing so I encountered this error:
+
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙5⧘ ms.
       `);
     });
 
