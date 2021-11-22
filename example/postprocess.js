@@ -9,7 +9,12 @@ export default async function postprocess([code, targetName, compilationMode]) {
 
     case "optimize":
       return minify(code, {
-        minimal: targetName === "ApplicationMain",
+        minimal: [
+          "ApplicationMain",
+          "ElmSpaExample",
+          "Ucm",
+          "UnisonShare",
+        ].includes(targetName),
       });
 
     default:
