@@ -1783,8 +1783,8 @@ function printDurationMs(durationMs: number): string {
   const [string, unit] =
     durationMs < SECOND
       ? [durationMs.toString(), "ms"]
-      : [divided.toFixed(divided < 10 ? 1 : 0), "s"];
-  return `${string.padStart(3, " ")} ${unit}`;
+      : [divided.toFixed(divided < 10 ? 2 : divided < 100 ? 1 : 0), "s"];
+  return `${string} ${unit}`.padStart(6, " ");
 }
 
 function maybePrintDurations(
