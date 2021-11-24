@@ -1077,7 +1077,7 @@ The compiled JavaScript code running in the browser seems to have sent a message
 
 ${printJsonError(error)}
 
-The web socket code I generate is supposed to always send string messages, so something is up here.
+The web socket code I generate is supposed to always send correct messages, so something is up here.
   `.trim();
 }
 
