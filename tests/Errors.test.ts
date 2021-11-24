@@ -860,7 +860,7 @@ describe("errors", () => {
 
         It doesn't make sense to compile Elm files from different projects into one output.
 
-        Either split this output, or move the inputs to the same project with the same
+        Either split this target, or move the inputs to the same project with the same
         ⧙elm.json⧘.
 
         🚨 ⧙1⧘ error found
@@ -1750,7 +1750,7 @@ describe("errors", () => {
         ⧙-- TROUBLE WRITING DUMMY OUTPUT ------------------------------------------------⧘
         ⧙Target: app⧘
 
-        There are no websocket connections for this output, so I only typecheck the
+        There are no websocket connections for this target, so I only typecheck the
         code. That went well. Then I tried to write a dummy output file here:
 
         /Users/you/project/tests/fixtures/errors/valid/build/app.js
@@ -2790,7 +2790,7 @@ describe("errors", () => {
       ⧙Target: app⧘
 
       I thought that all outputs had finished compiling, but my inner state says
-      this output is still in the ⧙QueuedForElmMake⧘ phase.
+      this target is still in the ⧙QueuedForElmMake⧘ phase.
 
       ⧙This is not supposed to ever happen.⧘
 
@@ -2798,7 +2798,7 @@ describe("errors", () => {
       ⧙Target: admin⧘
 
       I thought that all outputs had finished compiling, but my inner state says
-      this output is still in the ⧙QueuedForElmMake⧘ phase.
+      this target is still in the ⧙QueuedForElmMake⧘ phase.
 
       ⧙This is not supposed to ever happen.⧘
 

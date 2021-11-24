@@ -312,7 +312,7 @@ ${join(
 
 It doesn't make sense to compile Elm files from different projects into one output.
 
-Either split this output, or move the inputs to the same project with the same
+Either split this target, or move the inputs to the same project with the same
 ${elmJson}.
 `;
 }
@@ -682,7 +682,7 @@ export function stuckInProgressState(
 ): ErrorTemplate {
   return fancyError("STUCK IN PROGRESS", outputPath)`
 I thought that all outputs had finished compiling, but my inner state says
-this output is still in the ${bold(state)} phase.
+this target is still in the ${bold(state)} phase.
 
 ${bold("This is not supposed to ever happen.")}
 `;
@@ -869,7 +869,7 @@ export function writeProxyOutputError(
   error: Error
 ): ErrorTemplate {
   return fancyError("TROUBLE WRITING DUMMY OUTPUT", outputPath)`
-There are no websocket connections for this output, so I only typecheck the
+There are no websocket connections for this target, so I only typecheck the
 code. That went well. Then I tried to write a dummy output file here:
 
 ${outputPath.theOutputPath.absolutePath}
