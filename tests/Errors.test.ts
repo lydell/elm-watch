@@ -2960,5 +2960,23 @@ describe("errors", () => {
         ⧙(no output)⧘
       `);
     });
+
+    test("portConflictForNoPort", () => {
+      expect(
+        printError(Errors.portConflictForNoPort(new Error("The error message")))
+      ).toMatchInlineSnapshot(`
+        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+
+        I ask the operating system for an arbitrary available port for the
+        web socket server.
+
+        The operating system is supposed to always be able to find an available port,
+        but it looks like that wasn't the case this time!
+
+        This is the error message I got:
+
+        The error message
+      `);
+    });
   });
 });
