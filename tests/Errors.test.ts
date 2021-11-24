@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as http from "http";
 import * as os from "os";
 import * as path from "path";
 
@@ -67,12 +68,7 @@ async function runAbsolute(
 
   const stderrString = clean(stderr.getOutput());
 
-  assertExitCode(
-    onIdle === undefined ? 1 : 0,
-    exitCode,
-    stdout.content,
-    stderrString
-  );
+  assertExitCode(1, exitCode, stdout.content, stderrString);
   expect(stdout.content).toBe("");
 
   return stderrString;
@@ -873,7 +869,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-is-folder", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          onIdle: () => "StopError",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -904,7 +900,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-bad-json", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          onIdle: () => "StopError",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -935,7 +931,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-decode-error", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          onIdle: () => "StopError",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -1742,7 +1738,7 @@ describe("errors", () => {
     test("fail to write dummy output", async () => {
       expect(
         await runWithBadElmBin("exit-0-write-readonly", {
-          onIdle: () => "Stop",
+          onIdle: () => "StopError",
         })
       ).toMatchInlineSnapshot(`
         🚨 app
@@ -2538,7 +2534,7 @@ describe("errors", () => {
       expect(
         await runAbsolute(dir, ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          onIdle: () => "StopError",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -2566,7 +2562,7 @@ describe("errors", () => {
     expect(
       await run("import-walker-file-system-error", ["hot"], {
         env: elmBinAlwaysSucceedEnv,
-        onIdle: () => "Stop",
+        onIdle: () => "StopError",
       })
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
@@ -2589,6 +2585,75 @@ describe("errors", () => {
 
       🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
     `);
+  });
+
+  describe("port conflict", () => {
+    let server: http.Server;
+
+    beforeEach(() => {
+      server = http.createServer();
+      server.listen(9123);
+    });
+
+    afterEach(() => {
+      server.close();
+    });
+
+    test("for persisted port", async () => {
+      expect(
+        await run("port-conflict-for-persisted-port", ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          onIdle: () => "StopError",
+        })
+      ).toMatchInlineSnapshot(`
+        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch-stuff.json
+
+        I ask the operating system for an arbitrary available port for the
+        web socket server.
+
+        I then save the port I got to ⧙elm-stuff/elm-watch-stuff.json⧘. Otherwise I would
+        get a new port number on each restart, which means that if you had tabs
+        open in the browser they would try to connect to the old port number.
+
+        I tried to use such a saved port number from a previous run (or from previous
+        configuration). But now that port (9123) wasn't available!
+
+        Most likely you already have elm-watch running somewhere else! If so,
+        find it and use that, or kill it.
+
+        If not, something else could have started using port 9123
+        (though it's not very likely.) Then you can either try to find what that is,
+        or remove ⧙elm-stuff/elm-watch-stuff.json⧘ here:
+
+        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch-stuff.json
+
+        Then I will ask the operating system for a new arbitrary available port.
+      `);
+    });
+
+    test("from config", async () => {
+      expect(
+        await run("port-conflict-for-port-from-config", ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          onIdle: () => "StopError",
+        })
+      ).toMatchInlineSnapshot(`
+        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/port-conflict-for-port-from-config/elm-watch.json
+
+        In your ⧙elm-watch.json⧘ you have this:
+
+        "port": 9123
+
+        But something else seems to already be running on that port!
+        You might already have elm-watch running somewhere, or it could be a completely
+        different program.
+
+        You need to either find and stop that other thing, switch to another port or
+        remove "port" from ⧙elm-watch.json⧘ (which will use an arbitrary available port.)
+      `);
+    });
   });
 
   describe("CI", () => {
