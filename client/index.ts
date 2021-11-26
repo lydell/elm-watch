@@ -21,7 +21,7 @@ const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
 );
 const COMPILATION_MODE = "%COMPILATION_MODE%" as CompilationModeWithProxy;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
-const CONTAINER_ID = "elmWatch";
+const CONTAINER_ID = "elm-watch";
 
 type Mutable = {
   webSocket: WebSocket;
