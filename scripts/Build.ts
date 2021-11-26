@@ -4,6 +4,7 @@ import * as path from "path";
 
 const DIR = path.dirname(__dirname);
 const BUILD = path.join(DIR, "build");
+const CLIENT_DIR = path.join(DIR, "client");
 
 const READ_MORE =
   "**[➡️ Full readme](https://github.com/lydell/elm-watch/#readme)**";
@@ -65,7 +66,12 @@ async function run(): Promise<void> {
 
   fs.writeFileSync(
     path.join(BUILD, "ClientCode.js"),
-    `exports.code = require("fs").readFileSync(require("path").join(__dirname, "client.js"), "utf8");`
+    `
+const fs = require("fs");
+const path = require("path");
+exports.client = fs.readFileSync(path.join(__dirname, "client.js"), "utf8");
+exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
+    `.trim()
   );
 
   const clientResult = await esbuild.build(clientEsbuildOptions);
@@ -73,6 +79,7 @@ async function run(): Promise<void> {
   for (const output of clientResult.outputFiles) {
     switch (path.basename(output.path)) {
       case "client.js":
+      case "proxy.js":
         fs.writeFileSync(
           output.path,
           output.text.replace(/%VERSION%/g, PACKAGE_REAL.version)
@@ -152,8 +159,11 @@ function secondIndexOf(string: string, substring: string): number {
 
 export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
   bundle: true,
-  entryPoints: [path.join(__dirname, "..", "client", "index.ts")],
-  outfile: path.join(BUILD, "client.js"),
+  entryPoints: [
+    path.join(CLIENT_DIR, "client.ts"),
+    path.join(CLIENT_DIR, "proxy.ts"),
+  ],
+  outdir: BUILD,
   platform: "browser",
   write: false,
 };

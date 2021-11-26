@@ -53,7 +53,7 @@ async function run({
 
   await new Promise((resolve, reject) => {
     const loadBuiltFiles = (): void => {
-      delete (window as unknown as { Elm: unknown }).Elm;
+      delete window.Elm;
       jest.resetModules();
       Promise.all(absoluteScripts.map((script) => import(script))).catch(
         reject

@@ -15,16 +15,6 @@ export type WriteStream = Writable & {
   columns?: number;
 };
 
-// Print date and time in UTC in snapshots.
-/* eslint-disable @typescript-eslint/unbound-method */
-Date.prototype.getFullYear = Date.prototype.getUTCFullYear;
-Date.prototype.getMonth = Date.prototype.getUTCMonth;
-Date.prototype.getDate = Date.prototype.getUTCDate;
-Date.prototype.getHours = Date.prototype.getUTCHours;
-Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
-Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
-/* eslint-enable @typescript-eslint/unbound-method */
-
 /**
  * More type safe version of `Array#join`.
  */

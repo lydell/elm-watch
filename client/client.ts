@@ -17,10 +17,44 @@ import {
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
+    Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCH_GET_NOW: GetNow;
     __ELM_WATCH_RELOAD_PAGE: () => void;
   }
 }
+
+type UppercaseLetter =
+  | "A"
+  | "B"
+  | "C"
+  | "D"
+  | "E"
+  | "F"
+  | "G"
+  | "H"
+  | "I"
+  | "J"
+  | "K"
+  | "L"
+  | "M"
+  | "N"
+  | "O"
+  | "P"
+  | "Q"
+  | "R"
+  | "S"
+  | "T"
+  | "U"
+  | "V"
+  | "W"
+  | "X"
+  | "Y"
+  | "Z";
+
+type ElmModule = {
+  init: (...args: Array<never>) => void;
+  [key: `${UppercaseLetter}${string}`]: ElmModule;
+};
 
 const stubbedReload = window.__ELM_WATCH_RELOAD_PAGE !== undefined;
 
@@ -587,12 +621,12 @@ const runCmd =
         return;
 
       case "ReloadPage":
-        window.__ELM_WATCH_RELOAD_PAGE();
         if (stubbedReload) {
           mutable.removeListeners();
           mutable.webSocket.close();
           resolvePromise(undefined);
         }
+        window.__ELM_WATCH_RELOAD_PAGE();
         return;
 
       case "Render":

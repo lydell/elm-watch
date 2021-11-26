@@ -2,17 +2,26 @@
 // pre-compiled JS from a file.
 
 import * as esbuild from "esbuild";
+import * as path from "path";
 
 import { clientEsbuildOptions } from "../scripts/Build";
-import { isNonEmptyArray } from "./NonEmptyArray";
 
 const result = esbuild.buildSync(clientEsbuildOptions);
 
-// istanbul ignore if
-if (!isNonEmptyArray(result.outputFiles) || result.outputFiles.length > 1) {
-  throw new Error(
-    `ClientCode: Expected 1 output from esbuild, but got: ${result.outputFiles.length}`
+function getOutput(name: string): string {
+  const match = result.outputFiles.find(
+    (output) => path.basename(output.path) === name
   );
+  // istanbul ignore if
+  if (match === undefined) {
+    throw new Error(
+      `ClientCode: Found no output from esbuild matching ${JSON.stringify(
+        name
+      )} in ${JSON.stringify(result.outputFiles.map((output) => output.path))}`
+    );
+  }
+  return match.text;
 }
 
-export const code = result.outputFiles[0].text;
+export const client = getOutput("client.js");
+export const proxy = getOutput("proxy.js");

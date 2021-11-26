@@ -16,6 +16,16 @@ import {
 toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
 toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
 
+// Print date and time in UTC in snapshots.
+/* eslint-disable @typescript-eslint/unbound-method */
+Date.prototype.getFullYear = Date.prototype.getUTCFullYear;
+Date.prototype.getMonth = Date.prototype.getUTCMonth;
+Date.prototype.getDate = Date.prototype.getUTCDate;
+Date.prototype.getHours = Date.prototype.getUTCHours;
+Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
+Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
+/* eslint-enable @typescript-eslint/unbound-method */
+
 // Read file with normalized line endings to make snapshotting easier
 // cross-platform.
 export function readFile(filePath: string): string {
