@@ -14,6 +14,24 @@ import {
   WebSocketToServerMessage,
 } from "./WebSocketMessages";
 
+declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+  interface Window {
+    __ELM_WATCH_GET_NOW: GetNow;
+    __ELM_WATCH_RELOAD_PAGE: () => void;
+  }
+}
+
+const stubbedReload = window.__ELM_WATCH_RELOAD_PAGE !== undefined;
+
+// So we can have a fixed date in tests.
+window.__ELM_WATCH_GET_NOW ??= () => new Date();
+
+// Jest doesn’t support navigation, so we overwrite this in tests.
+window.__ELM_WATCH_RELOAD_PAGE ??= () => {
+  window.location.reload();
+};
+
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
 const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
@@ -24,6 +42,7 @@ const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
 
 type Mutable = {
+  removeListeners: () => void;
   webSocket: WebSocket;
 };
 
@@ -189,9 +208,9 @@ function run(): void {
   const targetRoot = createTargetRoot(TARGET_NAME);
   root.append(targetRoot);
 
-  const getNow: GetNow = () => new Date();
+  const getNow: GetNow = () => window.__ELM_WATCH_GET_NOW();
 
-  void runTeaProgram<Mutable, Msg, Model, Cmd, never>({
+  void runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow),
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
@@ -210,7 +229,7 @@ function run(): void {
   // This is great when working on the styling of all statuses.
   // When this call is commented out, esbuild won’t include the
   // `renderMockStatuses` function in the output.
-  // renderMockStatuses(root);
+  // renderMockStatuses(getNow, root);
 }
 
 function getOrCreateContainer(): HTMLElement {
@@ -244,17 +263,23 @@ function createTargetRoot(targetName: string): HTMLElement {
 const initMutable =
   (getNow: GetNow) =>
   (dispatch: (msg: Msg) => void): Mutable => {
-    window.addEventListener("focus", () => {
-      dispatch({ tag: "FocusedTab" });
-    });
-
-    window.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        dispatch({ tag: "PageVisibilityChangedToVisible", date: getNow() });
-      }
-    });
+    const removeListeners = [
+      addEventListener(window, "focus", () => {
+        dispatch({ tag: "FocusedTab" });
+      }),
+      addEventListener(window, "visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          dispatch({ tag: "PageVisibilityChangedToVisible", date: getNow() });
+        }
+      }),
+    ];
 
     return {
+      removeListeners: () => {
+        for (const removeListener of removeListeners) {
+          removeListener();
+        }
+      },
       webSocket: initWebSocket(
         getNow,
         INITIAL_ELM_COMPILED_TIMESTAMP,
@@ -262,6 +287,17 @@ const initMutable =
       ),
     };
   };
+
+function addEventListener<EventName extends string>(
+  target: EventTarget,
+  eventName: EventName,
+  listener: () => void
+): () => void {
+  target.addEventListener(eventName, listener);
+  return () => {
+    target.removeEventListener(eventName, listener);
+  };
+}
 
 function initWebSocket(
   getNow: GetNow,
@@ -523,7 +559,12 @@ function printRetryWaitMs(attemptNumber: number): string {
 
 const runCmd =
   (getNow: GetNow, targetRoot: HTMLElement) =>
-  (cmd: Cmd, mutable: Mutable, dispatch: (msg: Msg) => void): void => {
+  (
+    cmd: Cmd,
+    mutable: Mutable,
+    dispatch: (msg: Msg) => void,
+    resolvePromise: (result: undefined) => void
+  ): void => {
     switch (cmd.tag) {
       case "Eval": {
         // eslint-disable-next-line @typescript-eslint/no-implied-eval
@@ -546,7 +587,12 @@ const runCmd =
         return;
 
       case "ReloadPage":
-        window.location.reload();
+        window.__ELM_WATCH_RELOAD_PAGE();
+        if (stubbedReload) {
+          mutable.removeListeners();
+          mutable.webSocket.close();
+          resolvePromise(undefined);
+        }
         return;
 
       case "Render":
@@ -1276,7 +1322,9 @@ function viewCompilationModeChooser({
   }
 }
 
-function renderMockStatuses(root: Element): void {
+function renderMockStatuses(getNow: GetNow, root: Element): void {
+  const date = getNow();
+
   const info: Omit<Info, "targetName"> = {
     version: VERSION,
     webSocketUrl: "ws://localhost:53167",
@@ -1293,21 +1341,21 @@ function renderMockStatuses(root: Element): void {
   > = {
     Busy: {
       tag: "Busy",
-      date: new Date(),
+      date,
     },
     Idle: {
       tag: "Idle",
-      date: new Date(),
+      date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
     },
     "Really long target name that is annoying to work display correctly": {
       tag: "Idle",
-      date: new Date(),
+      date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
     },
     DisabledDebugger1: {
       tag: "Idle",
-      date: new Date(),
+      date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
@@ -1322,7 +1370,7 @@ function renderMockStatuses(root: Element): void {
     },
     DisabledDebugger2: {
       tag: "Idle",
-      date: new Date(),
+      date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
@@ -1337,7 +1385,7 @@ function renderMockStatuses(root: Element): void {
     },
     NoElmApps: {
       tag: "Idle",
-      date: new Date(),
+      date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
@@ -1348,7 +1396,7 @@ function renderMockStatuses(root: Element): void {
     },
     WindowElmDecodeError: {
       tag: "Idle",
-      date: new Date(),
+      date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
@@ -1364,30 +1412,30 @@ function renderMockStatuses(root: Element): void {
     },
     CompileError: {
       tag: "CompileError",
-      date: new Date(),
+      date,
     },
     Connecting: {
       tag: "Connecting",
-      date: new Date(),
+      date,
       attemptNumber: 1,
     },
     Connecting2: {
       tag: "Connecting",
-      date: new Date(),
+      date,
       attemptNumber: 2,
     },
     Connecting100: {
       tag: "Connecting",
-      date: new Date(),
+      date,
       attemptNumber: 100,
     },
     EvalError: {
       tag: "EvalError",
-      date: new Date(),
+      date,
     },
     SleepingBeforeReconnect: {
       tag: "SleepingBeforeReconnect",
-      date: new Date(),
+      date,
       attemptNumber: 1,
     },
     UnexpectedError: {
@@ -1403,7 +1451,7 @@ elm-watch 1.0.1
 
 Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
       `.trim(),
-      date: new Date(),
+      date,
     },
   };
 
@@ -1416,7 +1464,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       uiExpanded: true,
     };
     render(
-      () => new Date(),
+      getNow,
       targetRoot,
       () => {
         // Ignore messages.

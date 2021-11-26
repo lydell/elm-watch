@@ -35,7 +35,19 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
 
     const runCmds = (cmds: Array<Cmd>): void => {
       for (const cmd of cmds) {
-        options.runCmd(cmd, mutable, dispatch, resolve, reject);
+        options.runCmd(
+          cmd,
+          mutable,
+          dispatch,
+          (result) => {
+            cmds.length = 0;
+            resolve(result);
+          },
+          (error) => {
+            cmds.length = 0;
+            reject(error);
+          }
+        );
       }
     };
 
