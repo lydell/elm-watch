@@ -869,7 +869,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-is-folder", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "StopError",
+          onIdle: () => "Stop",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -900,7 +900,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-bad-json", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "StopError",
+          onIdle: () => "Stop",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -931,7 +931,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-decode-error", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "StopError",
+          onIdle: () => "Stop",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -1738,7 +1738,7 @@ describe("errors", () => {
     test("fail to write dummy output", async () => {
       expect(
         await runWithBadElmBin("exit-0-write-readonly", {
-          onIdle: () => "StopError",
+          onIdle: () => "Stop",
         })
       ).toMatchInlineSnapshot(`
         🚨 app
@@ -2534,7 +2534,7 @@ describe("errors", () => {
       expect(
         await runAbsolute(dir, ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "StopError",
+          onIdle: () => "Stop",
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -2562,7 +2562,7 @@ describe("errors", () => {
     expect(
       await run("import-walker-file-system-error", ["hot"], {
         env: elmBinAlwaysSucceedEnv,
-        onIdle: () => "StopError",
+        onIdle: () => "Stop",
       })
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
@@ -2603,7 +2603,7 @@ describe("errors", () => {
       expect(
         await run("port-conflict-for-persisted-port", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "StopError",
+          onIdle: () => "Stop",
         })
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
@@ -2636,7 +2636,7 @@ describe("errors", () => {
       expect(
         await run("port-conflict-for-port-from-config", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "StopError",
+          onIdle: () => "Stop",
         })
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘

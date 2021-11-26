@@ -287,7 +287,6 @@ export type HotRunResult =
     }
   | {
       tag: "ExitOnIdle";
-      exitCode: number;
     }
   | {
       tag: "Restart";
@@ -1461,13 +1460,9 @@ const runCmd =
             case "KeepGoing":
               return;
 
-            case "StopError":
-            case "StopSuccess":
+            case "Stop":
               closeAll(mutable).then(() => {
-                resolvePromise({
-                  tag: "ExitOnIdle",
-                  exitCode: response === "StopError" ? 1 : 0,
-                });
+                resolvePromise({ tag: "ExitOnIdle" });
               }, rejectPromise);
               return;
           }

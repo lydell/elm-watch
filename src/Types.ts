@@ -71,7 +71,7 @@ export type CliArg = {
 
 export type GetNow = () => Date;
 
-export type OnIdle = () => "KeepGoing" | "StopError" | "StopSuccess";
+export type OnIdle = () => "KeepGoing" | "Stop";
 
 export function equalsInputPath(
   elmFile: AbsolutePath,

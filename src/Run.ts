@@ -266,7 +266,7 @@ export async function run(
                           return { tag: "Exit", exitCode: 1 };
 
                         case "ExitOnIdle":
-                          return { tag: "Exit", exitCode: result.exitCode };
+                          return { tag: "Exit", exitCode: 1 };
 
                         case "Restart":
                           return result;
