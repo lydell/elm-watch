@@ -300,7 +300,6 @@ export function getOutputActions({
           ? 0
           : prioritizedOutputs.get(outputPath);
 
-      // eslint-disable-next-line @typescript-eslint/no-loop-func
       const needsElmMakeOrQueue = (): void => {
         if (elmMakeBusy) {
           queueActions.push({

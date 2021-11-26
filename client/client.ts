@@ -52,7 +52,7 @@ type UppercaseLetter =
   | "Z";
 
 type ElmModule = {
-  init: (...args: Array<never>) => void;
+  init: (options?: { node?: Element; flags?: unknown }) => void;
   [key: `${UppercaseLetter}${string}`]: ElmModule;
 };
 
@@ -622,11 +622,16 @@ const runCmd =
 
       case "ReloadPage":
         if (stubbedReload) {
+          mutable.webSocket.addEventListener("close", () => {
+            window.__ELM_WATCH_RELOAD_PAGE();
+          });
           mutable.removeListeners();
           mutable.webSocket.close();
+          targetRoot.remove();
           resolvePromise(undefined);
+        } else {
+          window.__ELM_WATCH_RELOAD_PAGE();
         }
-        window.__ELM_WATCH_RELOAD_PAGE();
         return;
 
       case "Render":

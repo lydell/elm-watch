@@ -18,8 +18,12 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     const [initialModel, initialCmds] = options.init;
     let model: Model = initialModel;
     const msgQueue: Array<Msg> = [];
+    let killed = false;
 
     const dispatch = (dispatchedMsg: Msg): void => {
+      if (killed) {
+        return;
+      }
       const alreadyRunning = msgQueue.length > 0;
       msgQueue.push(dispatchedMsg);
       if (alreadyRunning) {
@@ -41,10 +45,12 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
           dispatch,
           (result) => {
             cmds.length = 0;
+            killed = true;
             resolve(result);
           },
           (error) => {
             cmds.length = 0;
+            killed = true;
             reject(error);
           }
         );

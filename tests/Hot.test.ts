@@ -21,6 +21,7 @@ async function run({
   fixture,
   scripts,
   args = [],
+  init,
   onIdle,
   isTTY = true,
   bin,
@@ -28,6 +29,7 @@ async function run({
   fixture: string;
   scripts: Array<string>;
   args?: Array<string>;
+  init: () => void;
   onIdle: OnIdle;
   isTTY?: boolean;
   bin?: string;
@@ -48,21 +50,38 @@ async function run({
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
-  let i = 0;
-  let idle = 0;
-
   await new Promise((resolve, reject) => {
-    const loadBuiltFiles = (): void => {
+    const loadBuiltFiles = (isReload: boolean): void => {
       delete window.Elm;
-      jest.resetModules();
-      Promise.all(absoluteScripts.map((script) => import(script))).catch(
-        reject
-      );
+      Promise.all(
+        absoluteScripts.map((script) => {
+          // Copying the script does a couple of things:
+          // - Avoiding require/import cache.
+          // - Makes it easier to debug the tests since one can see all the outputs through time.
+          // - Lets us make a few replacements for Jest.
+          const newScript = script.replace(/\.(\w+)$/, `.${idle}.$1`);
+          const content = fs
+            .readFileSync(script, "utf8")
+            .replace(/\(this\)\);\s*$/, "(window));")
+            .replace(/^\s*console.warn\('[^']+'\);/m, "");
+          fs.writeFileSync(newScript, content);
+          return import(newScript);
+        })
+      ).then(() => {
+        if (isReload) {
+          init();
+        }
+      }, reject);
     };
 
+    let i = 0;
     let i2 = 0;
-    window.__ELM_WATCH_GET_NOW = () => new Date((i2 += 2000));
-    window.__ELM_WATCH_RELOAD_PAGE = loadBuiltFiles;
+    let idle = 0;
+
+    window.__ELM_WATCH_GET_NOW = () => new Date(i2++);
+    window.__ELM_WATCH_RELOAD_PAGE = () => {
+      loadBuiltFiles(true);
+    };
 
     elmWatchCli(["hot", ...args], {
       cwd: dir,
@@ -83,12 +102,13 @@ async function run({
         idle++;
         switch (idle) {
           case 1:
-            loadBuiltFiles();
+            loadBuiltFiles(false);
             return "KeepGoing";
           case 2:
             return "KeepGoing";
-          default:
+          default: {
             return onIdle();
+          }
         }
       },
     }).then(resolve, reject);
@@ -99,7 +119,7 @@ async function run({
   expect(stdout.content).toBe("");
 
   const text =
-    document.querySelector("#elm-watch")?.shadowRoot?.lastElementChild
+    document.getElementById("elm-watch")?.shadowRoot?.lastElementChild
       ?.textContent ??
     `#elm-watch not found in:\n${document.documentElement.outerHTML}`;
 
@@ -112,6 +132,11 @@ test("hot", async () => {
   const { terminal, browser } = await run({
     fixture: "hot",
     scripts: ["main.js"],
+    init: () => {
+      const div = document.createElement("div");
+      document.body.append(div);
+      window.Elm?.Main?.init({ node: div });
+    },
     onIdle: () => "Stop",
   });
 
@@ -120,9 +145,13 @@ test("hot", async () => {
 
     📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-    ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main⧘
-    ✅ ⧙00:00:00⧘ Compilation finished in ⧙6⧘ ms.
+    ⧙ℹ️ 00:00:00 Web socket connected for: Main⧘
+    ✅ ⧙00:00:00⧘ Everything up to date.
   `);
 
-  expect(browser).toMatchInlineSnapshot(`▼❌00:00:16Main`);
+  expect(browser).toMatchInlineSnapshot(`▼✅00:00:00Main`);
+
+  expect(document.body.outerHTML).toMatchInlineSnapshot(
+    `<body>Hello, World!</body>`
+  );
 });

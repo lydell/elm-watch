@@ -2050,6 +2050,9 @@ function onWebSocketConnected(
                     status: { tag: "AlreadyUpToDate" },
                   },
                 },
+                ...(newModel.hotState.tag === "Idle"
+                  ? [{ tag: "RunOnIdle" } as const]
+                  : []),
               ],
             ];
           } else {
