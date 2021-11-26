@@ -89,24 +89,37 @@ export function silentlyReadIntEnvValue(
 }
 
 export function toError(arg: unknown): NodeJS.ErrnoException {
-  return arg instanceof Error
+  return toError.jestWorkaround(arg);
+}
+
+// Workaround for https://github.com/facebook/jest/issues/2549
+// In the tests we overwrite this.
+// We could have used the jest-environment-node-single-context npm package,
+// but it only works for the `node` environment, not `jsdom`.
+// istanbul ignore next
+toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException =>
+  arg instanceof Error
     ? arg
     : new Error(
         `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
       );
-}
 
 export type JsonError = DecoderError | SyntaxError;
 
 export function toJsonError(arg: unknown): JsonError {
-  return arg instanceof DecoderError || arg instanceof SyntaxError
+  return arg instanceof DecoderError ? arg : toJsonError.jestWorkaround(arg);
+}
+
+// See `toError.jestWorkaround`.
+// istanbul ignore next
+toJsonError.jestWorkaround = (arg: unknown): JsonError =>
+  arg instanceof SyntaxError
     ? arg
     : new SyntaxError(
         `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
           arg
         )}`
       );
-}
 
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"

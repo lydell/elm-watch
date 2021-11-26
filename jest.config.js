@@ -14,7 +14,7 @@ const ignoreCoverage = {
 
 module.exports = {
   preset: "ts-jest",
-  testEnvironment: "jest-environment-node-single-context",
+  testEnvironment: "node",
   collectCoverageFrom: ["src/**/*.ts"],
   coverageThreshold: {
     global: requireCoverage,

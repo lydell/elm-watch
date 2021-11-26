@@ -5,7 +5,16 @@ import * as stream from "stream";
 
 import { EMOJI } from "../src/Compile";
 import { printStdio } from "../src/Errors";
-import type { ReadStream, WriteStream } from "../src/Helpers";
+import {
+  JsonError,
+  ReadStream,
+  toError,
+  toJsonError,
+  WriteStream,
+} from "../src/Helpers";
+
+toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
+toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
 
 // Read file with normalized line endings to make snapshotting easier
 // cross-platform.
