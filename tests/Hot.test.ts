@@ -118,12 +118,29 @@ async function run({
 
   expect(stdout.content).toBe("");
 
+  const element =
+    document.getElementById("elm-watch")?.shadowRoot?.lastElementChild;
+
   const text =
-    document.getElementById("elm-watch")?.shadowRoot?.lastElementChild
-      ?.textContent ??
-    `#elm-watch not found in:\n${document.documentElement.outerHTML}`;
+    element instanceof Node
+      ? getTextContent(element)
+      : `#elm-watch not found in:\n${document.documentElement.outerHTML}`;
 
   return { terminal: stderrString, browser: text };
+}
+
+function getTextContent(element: Node): string {
+  return Array.from(walkTextNodes(element), (node) => node.data).join(" ");
+}
+
+function* walkTextNodes(element: Node): Generator<Text, void, void> {
+  for (const node of element.childNodes) {
+    if (node instanceof Text) {
+      yield node;
+    } else if (node instanceof Node) {
+      yield* walkTextNodes(node);
+    }
+  }
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -149,7 +166,7 @@ test("hot", async () => {
     ✅ ⧙00:00:00⧘ Everything up to date.
   `);
 
-  expect(browser).toMatchInlineSnapshot(`▼✅00:00:00Main`);
+  expect(browser).toMatchInlineSnapshot(`▼ ✅ 00:00:00 Main`);
 
   expect(document.body.outerHTML).toMatchInlineSnapshot(
     `<body>Hello, World!</body>`
