@@ -20,6 +20,7 @@ declare global {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCH_GET_NOW: GetNow;
     __ELM_WATCH_RELOAD_PAGE: () => void;
+    __ELM_WATCH_ON_RENDER: () => void;
   }
 }
 
@@ -64,6 +65,10 @@ window.__ELM_WATCH_GET_NOW ??= () => new Date();
 // Jest doesn’t support navigation, so we overwrite this in tests.
 window.__ELM_WATCH_RELOAD_PAGE ??= () => {
   window.location.reload();
+};
+
+window.__ELM_WATCH_ON_RENDER ??= () => {
+  // Do nothing.
 };
 
 const VERSION = "%VERSION%";
@@ -738,10 +743,15 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   try {
     programTypes = ProgramTypes(window);
   } catch (unknownError) {
-    return {
-      tag: "DecodeError",
-      message: possiblyDecodeErrorToString(unknownError),
-    };
+    return COMPILATION_MODE === "proxy"
+      ? {
+          tag: "DebuggerModeStatus",
+          status: { tag: "Enabled" },
+        }
+      : {
+          tag: "DecodeError",
+          message: possiblyDecodeErrorToString(unknownError),
+        };
   }
 
   if (programTypes.length === 0) {
@@ -852,6 +862,8 @@ function render(
   if (manageFocus && firstFocusableElement instanceof HTMLElement) {
     firstFocusableElement.focus();
   }
+
+  window.__ELM_WATCH_ON_RENDER();
 }
 
 const CLASS = {
@@ -1010,7 +1022,7 @@ function view(
       ? viewExpandedUi(model.status, statusData, info)
       : undefined,
     h(
-      HTMLSpanElement,
+      HTMLDivElement,
       {
         className: CLASS.shortStatusContainer,
         // Placed on the span to increase clickable area.
@@ -1032,11 +1044,7 @@ function view(
       info.compilationMode === "optimize"
         ? icon("⚡️", "Optimize mode")
         : undefined,
-      icon(
-        initializedElmAppsStatusIcon(info.initializedElmAppsStatus) ??
-          statusData.icon,
-        statusData.status
-      ),
+      icon(statusData.icon, statusData.status),
       h(
         HTMLTimeElement,
         {
@@ -1170,7 +1178,7 @@ function viewStatus(
 
     case "Idle":
       return {
-        icon: "✅",
+        icon: idleIcon(info.initializedElmAppsStatus),
         status: "Successfully compiled",
         dl: [],
         content: viewCompilationModeChooser({
@@ -1220,9 +1228,7 @@ function viewStatus(
   }
 }
 
-function initializedElmAppsStatusIcon(
-  status: InitializedElmAppsStatus
-): string | undefined {
+function idleIcon(status: InitializedElmAppsStatus): string {
   switch (status.tag) {
     case "DecodeError":
       return "❌";
@@ -1231,7 +1237,7 @@ function initializedElmAppsStatusIcon(
       return "❓";
 
     case "DebuggerModeStatus":
-      return undefined;
+      return "✅";
   }
 }
 
