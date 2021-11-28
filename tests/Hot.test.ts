@@ -16,7 +16,7 @@ import {
 } from "./Helpers";
 
 const CONTAINER_ID = "elm-watch";
-const FIXTURES_DIR = path.join(__dirname, "fixtures");
+const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 
 async function run({
   fixture,
@@ -192,44 +192,162 @@ function shouldAddNewline(node: Node): boolean {
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
-test("hot", async () => {
-  const { terminal, browser, renders } = await run({
-    fixture: "hot",
-    scripts: ["main.js"],
-    init: () => {
-      const div = document.createElement("div");
-      document.body.append(div);
-      window.Elm?.Main?.init({ node: div });
-    },
-    onIdle: () => "Stop",
+describe("hot", () => {
+  beforeEach(() => {
+    document.getElementById(CONTAINER_ID)?.remove();
   });
 
-  expect(terminal).toMatchInlineSnapshot(`
-    ✅ Main⧙                                  0 ms Q |   2 ms E ¦   1 ms W |   1 ms I⧘
+  test("successfull connect (collapsed)", async () => {
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      init: () => {
+        const div = document.createElement("div");
+        document.body.append(div);
+        window.Elm?.HtmlMain?.init({ node: div });
+      },
+      onIdle: () => "Stop",
+    });
 
-    📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Html⧙                                  0 ms Q |   2 ms E ¦   1 ms W |   1 ms I⧘
 
-    ⧙ℹ️ 00:00:00 Web socket connected for: Main⧘
-    ✅ ⧙00:00:00⧘ Everything up to date.
-  `);
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-  expect(browser).toMatchInlineSnapshot(`▼ ✅ 00:00:00 Main`);
+      ⧙ℹ️ 00:00:00 Web socket connected for: Html⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
 
-  expect(renders).toMatchInlineSnapshot(`
-    ▼ 🔌 00:00:00 Main
-    ================================================================================
-    ▼ ⏳ 00:00:00 Main
-    ================================================================================
-    ▼ ⏳ 00:00:00 Main
-    ================================================================================
-    ▼ 🔌 00:00:00 Main
-    ================================================================================
-    ▼ ⏳ 00:00:00 Main
-    ================================================================================
-    ▼ ✅ 00:00:00 Main
-  `);
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 Html
+      ================================================================================
+      ▼ ⏳ 00:00:00 Html
+      ================================================================================
+      ▼ ⏳ 00:00:00 Html
+      ================================================================================
+      ▼ 🔌 00:00:00 Html
+      ================================================================================
+      ▼ ⏳ 00:00:00 Html
+      ================================================================================
+      ▼ ✅ 00:00:00 Html
+    `);
 
-  expect(document.body.outerHTML).toMatchInlineSnapshot(
-    `<body>Hello, World!</body>`
-  );
+    expect(document.body.outerHTML).toMatchInlineSnapshot(
+      `<body>Hello, World!</body>`
+    );
+  });
+
+  test("successfull connect (expanded, not TTY, Worker)", async () => {
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Worker"],
+      scripts: ["Worker.js"],
+      expandUi: true,
+      isTTY: false,
+      init: () => {
+        window.Elm?.Worker?.init();
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Worker: elm make (typecheck only)
+      ✅ Worker⧙     0 ms Q |   2 ms T ¦   1 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙5⧘ ms.
+      ⏳ Worker: elm make
+      ✅ Worker⧙     0 ms Q |   5 ms E ¦   1 ms W |   1 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Worker⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙9⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Worker⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: Worker⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      #elm-watch not found in:
+      <html><head></head><body>Hello, World!</body></html>
+      ================================================================================
+      ▼ 🔌 00:00:00 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:62152
+      updated 1970-01-01 00:00:00
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds Connecting web socket…
+      ▲ 🔌 00:00:00 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:62152
+      updated 1970-01-01 00:00:00
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◯ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 00:00:00 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:62152
+      updated 1970-01-01 00:00:00
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 00:00:00 Worker
+      ================================================================================
+      ▼ 🔌 00:00:00 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:62152
+      updated 1970-01-01 00:00:00
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds Connecting web socket…
+      ▲ 🔌 00:00:00 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:62152
+      updated 1970-01-01 00:00:00
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 00:00:00 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:62152
+      updated 1970-01-01 00:00:00
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ▲ ✅ 00:00:00 Worker
+    `);
+  });
 });
