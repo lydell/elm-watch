@@ -97,9 +97,9 @@ async function run({
 
       const text =
         element instanceof Node
-          ? Array.from(element.childNodes, getTextContent).join(
-              `\n${"-".repeat(80)}\n`
-            )
+          ? Array.from(element.childNodes, getTextContent)
+              .join(`\n${"-".repeat(80)}\n`)
+              .replace(/(ws:\/\/localhost):\d{5}/g, "$1:59123")
           : `#${CONTAINER_ID} not found in:\n${document.documentElement.outerHTML}`;
 
       renders.push(text);
@@ -285,7 +285,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:62152
+      web socket ws://localhost:59123
       updated 1970-01-01 00:00:00
       status Connecting
       attempt 1
@@ -294,7 +294,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:62152
+      web socket ws://localhost:59123
       updated 1970-01-01 00:00:00
       status Waiting for compilation
       Compilation mode
@@ -305,7 +305,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:62152
+      web socket ws://localhost:59123
       updated 1970-01-01 00:00:00
       status Waiting for compilation
       Compilation mode
@@ -318,7 +318,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:62152
+      web socket ws://localhost:59123
       updated 1970-01-01 00:00:00
       status Connecting
       attempt 1
@@ -327,7 +327,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:62152
+      web socket ws://localhost:59123
       updated 1970-01-01 00:00:00
       status Waiting for compilation
       Compilation mode
@@ -338,7 +338,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:62152
+      web socket ws://localhost:59123
       updated 1970-01-01 00:00:00
       status Successfully compiled
       Compilation mode
