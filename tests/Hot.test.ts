@@ -168,6 +168,15 @@ function* walkTextNodes(element: Node): Generator<Text, void, void> {
       yield document.createTextNode(
         (node.checked ? "◉" : "◯") + (node.disabled ? " (disabled)" : "")
       );
+    } else if (node instanceof HTMLButtonElement) {
+      const textContent = (node.textContent ?? "").trim();
+      if (textContent.length === 1) {
+        yield document.createTextNode(textContent);
+      } else {
+        yield document.createTextNode("\n[");
+        yield document.createTextNode(textContent);
+        yield document.createTextNode("]");
+      }
     } else {
       yield* walkTextNodes(node);
     }
@@ -289,7 +298,8 @@ describe("hot", () => {
       updated 1970-01-01 00:00:00
       status Connecting
       attempt 1
-      sleep 1.01 seconds Connecting web socket…
+      sleep 1.01 seconds
+      [Connecting web socket…]
       ▲ 🔌 00:00:00 Worker
       ================================================================================
       target Worker
@@ -322,7 +332,8 @@ describe("hot", () => {
       updated 1970-01-01 00:00:00
       status Connecting
       attempt 1
-      sleep 1.01 seconds Connecting web socket…
+      sleep 1.01 seconds
+      [Connecting web socket…]
       ▲ 🔌 00:00:00 Worker
       ================================================================================
       target Worker
