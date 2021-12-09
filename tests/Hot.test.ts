@@ -204,7 +204,7 @@ describe("hot", () => {
     document.getElementById(CONTAINER_ID)?.remove();
   });
 
-  test("successfull connect (collapsed)", async () => {
+  test("successful connect (collapsed)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",
       args: ["Html"],
@@ -245,7 +245,7 @@ describe("hot", () => {
     );
   });
 
-  test("successfull connect (expanded, not TTY, Worker)", async () => {
+  test("successful connect (expanded, not TTY, Worker)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",
       args: ["Worker"],
