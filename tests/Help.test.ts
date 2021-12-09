@@ -16,15 +16,13 @@ async function helpHelper(
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();
 
-  let i = 0;
-
   const exitCode = await elmWatchCli(args, {
     cwd: __dirname,
     env,
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(i++),
+    getNow: () => new Date(0),
     onIdle: undefined,
   });
 

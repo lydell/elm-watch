@@ -34,8 +34,6 @@ async function run(
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
-  let i = 0;
-
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
     env: {
@@ -48,7 +46,7 @@ async function run(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(i++),
+    getNow: () => new Date(0),
     onIdle: undefined,
   });
 
@@ -66,9 +64,9 @@ describe("successful make", () => {
   test("standard mode", async () => {
     expect(await run("successful-make", ["make"])).toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms.
+      ✅ Compilation finished in ⧙0⧘ ms.
     `);
   });
 
@@ -76,9 +74,9 @@ describe("successful make", () => {
     expect(await run("successful-make", ["make", "--debug"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms.
+      ✅ Compilation finished in ⧙0⧘ ms.
     `);
   });
 
@@ -86,9 +84,9 @@ describe("successful make", () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙   87.5 KiB → 0.00 KiB (0.0%)     0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙   87.5 KiB → 0.00 KiB (0.0%)     0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms.
+      ✅ Compilation finished in ⧙0⧘ ms.
     `);
   });
 
@@ -106,9 +104,9 @@ describe("successful make", () => {
          ● elm/json 1.1.3
          ● elm/url 1.0.0
          ● elm/core 1.0.5
-      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms.
+      ✅ Compilation finished in ⧙0⧘ ms.
     `);
   });
 
@@ -121,9 +119,9 @@ describe("successful make", () => {
       ⏳ main: elm make --optimize
       🟢 main: elm make done
       ⏳ main: postprocess
-      ✅ main⧙   87.5 KiB → 0.00 KiB (0.0%)     0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙   87.5 KiB → 0.00 KiB (0.0%)     0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms.
+      ✅ Compilation finished in ⧙0⧘ ms.
     `);
   });
 
@@ -131,9 +129,9 @@ describe("successful make", () => {
     expect(await run("postprocess-elm-watch-node", ["make"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -141,9 +139,9 @@ describe("successful make", () => {
     expect(await run("postprocess-elm-watch-node/cjs", ["make"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -151,9 +149,9 @@ describe("successful make", () => {
     expect(await run("postprocess-elm-watch-node/mjs", ["make"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -161,9 +159,9 @@ describe("successful make", () => {
     expect(await run("postprocess-elm-watch-node/mjs-default", ["make"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙                                  0 ms Q |   1 ms E |   1 ms R |   1 ms P⧘
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙6⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -172,10 +170,10 @@ describe("successful make", () => {
       .toMatchInlineSnapshot(`
       ✅ Dependencies
       ✅ Dependencies (2/2)
-      ✅ app⧙                                   0 ms Q |   2 ms E |   1 ms R |   4 ms P⧘
-      ✅ admin⧙                                 0 ms Q |   4 ms E |   1 ms R |   2 ms P⧘
+      ✅ app⧙                                   0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
+      ✅ admin⧙                                 0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
 
-      ✅ Compilation finished in ⧙11⧘ ms.
+      ✅ Compilation finished in ⧙0⧘ ms.
     `);
   });
 });

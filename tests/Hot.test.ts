@@ -85,11 +85,9 @@ async function run({
       }, reject);
     };
 
-    let i = 0;
-    let i2 = 0;
     let idle = 0;
 
-    window.__ELM_WATCH_GET_NOW = () => new Date(i2++);
+    window.__ELM_WATCH_GET_NOW = () => new Date(0);
     window.__ELM_WATCH_RELOAD_PAGE = () => {
       loadBuiltFiles(true);
     };
@@ -121,7 +119,7 @@ async function run({
       stdin: new FailReadStream(),
       stdout,
       stderr,
-      getNow: () => new Date(i++),
+      getNow: () => new Date(0),
       onIdle: () => {
         idle++;
         switch (idle) {
@@ -211,7 +209,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Html⧙                                  0 ms Q |   2 ms E ¦   1 ms W |   1 ms I⧘
+      ✅ Html⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -255,18 +253,18 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Worker: elm make (typecheck only)
-      ✅ Worker⧙     0 ms Q |   2 ms T ¦   1 ms W⧘
+      ✅ Worker⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙5⧘ ms.
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ Worker: elm make
-      ✅ Worker⧙     0 ms Q |   5 ms E ¦   1 ms W |   1 ms I⧘
+      ✅ Worker⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Worker⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙9⧘ ms.
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 

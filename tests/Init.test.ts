@@ -31,15 +31,13 @@ async function initSuccessHelper(
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
 
-  let i = 0;
-
   const exitCode = await elmWatchCli(["init"], {
     cwd: dir,
     env: {},
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(i++),
+    getNow: () => new Date(0),
     onIdle: undefined,
   });
 
@@ -61,15 +59,13 @@ async function initFailHelper(
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
 
-  let i = 0;
-
   const exitCode = await elmWatchCli(["init", ...args], {
     cwd: dir,
     env: {},
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(i++),
+    getNow: () => new Date(0),
     onIdle: undefined,
   });
 

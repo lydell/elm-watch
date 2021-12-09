@@ -48,8 +48,6 @@ async function runAbsolute(
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
-  let i = 0;
-
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
     env:
@@ -62,7 +60,7 @@ async function runAbsolute(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(i++),
+    getNow: () => new Date(0),
     onIdle,
   });
 
@@ -715,7 +713,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙1⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -736,7 +734,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙1⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -757,7 +755,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙1⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -786,7 +784,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙1⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
   });
@@ -808,7 +806,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙1⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -835,7 +833,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙1⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -861,7 +859,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙1⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -892,7 +890,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -923,7 +921,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -956,7 +954,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       `);
     });
   });
@@ -1221,7 +1219,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1255,7 +1253,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1287,7 +1285,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
   });
@@ -1316,7 +1314,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1343,7 +1341,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1370,43 +1368,43 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
     test("exit 1 + stderr that isn’t json", async () => {
       expect(await runWithBadElmBin("exit-1-stderr-not-{"))
         .toMatchInlineSnapshot(`
-          🚨 app
+        🚨 app
 
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙Target: app⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙Target: app⧘
 
-          I ran the following commands:
+        I ran the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with JSON on stderr (compile errors).
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
 
-          ⧙But it exited like this:⧘
+        ⧙But it exited like this:⧘
 
-          exit 1
-          This flag was given a bad value:
+        exit 1
+        This flag was given a bad value:
 
-              --output=.js
+            --output=.js
 
-          I need a valid <output-file> value. For example:
+        I need a valid <output-file> value. For example:
 
-              --output=elm.js
-              --output=index.html
-              --output=/dev/null
+            --output=elm.js
+            --output=index.html
+            --output=/dev/null
 
-          🚨 ⧙1⧘ error found
+        🚨 ⧙1⧘ error found
 
-          🚨 Compilation finished in ⧙3⧘ ms.
-        `);
+        🚨 Compilation finished in ⧙0⧘ ms.
+      `);
     });
 
     test("exit 2 + no output", async () => {
@@ -1431,40 +1429,40 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
     test("exit 2 + both stdout and stderr", async () => {
       expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
         .toMatchInlineSnapshot(`
-          🚨 app
+        🚨 app
 
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          ⧙Target: app⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙Target: app⧘
 
-          I ran the following commands:
+        I ran the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with JSON on stderr (compile errors).
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
 
-          ⧙But it exited like this:⧘
+        ⧙But it exited like this:⧘
 
-          exit 2
-          STDOUT:
-          stuff on stdout
-          second write to stdout
+        exit 2
+        STDOUT:
+        stuff on stdout
+        second write to stdout
 
-          STDERR:
-          stuff on stderr
+        STDERR:
+        stuff on stderr
 
-          🚨 ⧙1⧘ error found
+        🚨 ⧙1⧘ error found
 
-          🚨 Compilation finished in ⧙3⧘ ms.
-        `);
+        🚨 Compilation finished in ⧙0⧘ ms.
+      `);
     });
   });
 
@@ -1488,7 +1486,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1514,7 +1512,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1542,7 +1540,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1570,7 +1568,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1593,7 +1591,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1625,7 +1623,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1662,7 +1660,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙3⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
   });
@@ -1684,7 +1682,7 @@ describe("errors", () => {
 
       🚨 ⧙1⧘ error found
 
-      🚨 Compilation finished in ⧙4⧘ ms.
+      🚨 Compilation finished in ⧙0⧘ ms.
     `);
   });
 
@@ -1707,7 +1705,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙4⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1731,7 +1729,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1759,7 +1757,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙00:00:00⧘ Compilation finished in ⧙5⧘ ms.
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1789,7 +1787,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -1914,7 +1912,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -2040,7 +2038,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -2069,7 +2067,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -2103,7 +2101,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -2128,7 +2126,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -2157,7 +2155,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
   });
@@ -2182,7 +2180,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2205,7 +2203,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2229,7 +2227,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2258,7 +2256,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2287,7 +2285,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2314,7 +2312,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2348,7 +2346,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2378,7 +2376,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2402,7 +2400,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2426,7 +2424,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2456,7 +2454,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙0⧘ ms⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
   });
@@ -2538,7 +2536,7 @@ describe("errors", () => {
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ Main⧙                                             0 ms Q |   2 ms T ¦   1 ms W⧘
+        ✅ Main⧙                                             0 ms Q |   0 ms T ¦   0 ms W⧘
 
         ⧙-- TROUBLE WRITING elm-stuff/elm-watch-stuff.json ------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch-stuff.json
@@ -2553,7 +2551,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       `);
     });
   });
@@ -2583,7 +2581,7 @@ describe("errors", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙4⧘ ms.
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
     `);
   });
 
@@ -2704,7 +2702,7 @@ describe("errors", () => {
 
         🚨 ⧙2⧘ errors found
 
-        🚨 Compilation finished in ⧙11⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
 
       expect(fs.existsSync(appPath)).toBe(true);
@@ -2737,7 +2735,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙5⧘ ms.
+        🚨 Compilation finished in ⧙0⧘ ms.
       `);
     });
 
@@ -2754,6 +2752,7 @@ describe("errors", () => {
             ...TEST_ENV,
             NO_COLOR: "",
           },
+
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -2794,7 +2793,7 @@ describe("errors", () => {
 
         2 errors found
 
-        Compilation finished in 11 ms.
+        Compilation finished in 0 ms.
       `);
 
       expect(fs.existsSync(appPath)).toBe(true);
@@ -2807,6 +2806,7 @@ describe("errors", () => {
             ...TEST_ENV,
             NO_COLOR: "",
           },
+
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -2832,7 +2832,7 @@ describe("errors", () => {
 
         1 error found
 
-        Compilation finished in 5 ms.
+        Compilation finished in 0 ms.
       `);
     });
   });
@@ -2869,7 +2869,7 @@ describe("errors", () => {
 
       🚨 ⧙2⧘ errors found
 
-      🚨 Compilation finished in ⧙3⧘ ms.
+      🚨 Compilation finished in ⧙0⧘ ms.
     `);
   });
 
