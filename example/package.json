@@ -10,10 +10,10 @@
     "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/ucm.js public/submodules/codebase-ui/src/unisonShare.js --bundle --outdir=public/build --loader:.svg=file --loader:.woff2=file"
   },
   "devDependencies": {
-    "elm-tooling": "1.6.0",
+    "elm-tooling": "1.7.0",
     "elm-watch": "file:../build",
-    "esbuild": "0.13.13",
+    "esbuild": "0.14.2",
     "run-pty": "2.3.2",
-    "uglify-js": "3.14.3"
+    "uglify-js": "3.14.4"
   }
 }

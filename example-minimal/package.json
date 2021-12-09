@@ -1,7 +1,7 @@
 {
   "private": true,
   "type": "module",
-  "name": "example",
+  "name": "example-minimal",
   "scripts": {
     "postinstall": "elm-tooling install",
     "start": "elm-watch hot",

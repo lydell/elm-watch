@@ -1,1 +1,1 @@
-exports.trim = s => s.trim();
+exports.trim = (s) => s.trim();

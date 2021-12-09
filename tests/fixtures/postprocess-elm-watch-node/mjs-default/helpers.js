@@ -1,1 +1,1 @@
-export const trim = s => s.trim();
+export const trim = (s) => s.trim();
