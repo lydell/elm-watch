@@ -221,6 +221,10 @@ function shouldAddNewline(node: Node): boolean {
   }
 }
 
+function failInit(): never {
+  throw new Error("Expected `init` not to be called!");
+}
+
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot", () => {
@@ -388,9 +392,7 @@ describe("hot", () => {
       fixture: "basic",
       args: ["Readonly"],
       scripts: ["Readonly.js"],
-      init: () => {
-        throw new Error("Expected `init` not to be called!");
-      },
+      init: failInit,
       onIdle: () => {
         idle++;
         switch (idle) {
@@ -453,9 +455,7 @@ describe("hot", () => {
       fixture: "basic",
       args: ["InjectError"],
       scripts: ["InjectError.js"],
-      init: () => {
-        throw new Error("Expected `init` not to be called!");
-      },
+      init: failInit,
       onIdle: () => {
         idle++;
         switch (idle) {
@@ -555,7 +555,7 @@ describe("hot", () => {
       window.WebSocket = originalWebSocket;
     });
 
-    test("bad url", async () => {
+    function modifyUrl(f: (url: URL) => void): void {
       class TestWebSocket extends WebSocket {
         constructor(url: URL | string) {
           if (typeof url === "string") {
@@ -564,21 +564,25 @@ describe("hot", () => {
             );
           }
 
-          url.pathname = "nope";
+          f(url);
 
           super(url);
         }
       }
 
       window.WebSocket = TestWebSocket;
+    }
+
+    test("bad url", async () => {
+      modifyUrl((url) => {
+        url.pathname = "nope";
+      });
 
       const { terminal, renders } = await run({
         fixture: "basic",
         args: ["BadUrl"],
         scripts: ["BadUrl.js"],
-        init: () => {
-          throw new Error("Expected `init` not to be called!");
-        },
+        init: failInit,
         onIdle: () => "Stop",
       });
 
@@ -613,6 +617,55 @@ describe("hot", () => {
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
         ▲ ❌ 00:00:00 BadUrl
+      `);
+    });
+
+    test("params decode error", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("elmCompiledTimestamp", "2021-12-11");
+      });
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["ParamsDecodeError"],
+        scripts: ["ParamsDecodeError.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        ✅ ParamsDecodeError⧙                                0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 ParamsDecodeError
+        ================================================================================
+        ▼ ⏳ 00:00:00 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        I ran into trouble parsing the web socket connection URL parameters:
+
+        At root["elmCompiledTimestamp"]:
+        Expected a number
+        Got: "2021-12-11"
+
+        The URL looks like this:
+
+        /?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+
+        The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        ▲ ❌ 00:00:00 ParamsDecodeError
       `);
     });
   });

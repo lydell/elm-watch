@@ -1805,7 +1805,16 @@ const WebSocketConnectedParams = Decode.fieldsAuto(
   {
     elmWatchVersion: Decode.string,
     targetName: Decode.string,
-    elmCompiledTimestamp: Decode.chain(Decode.string, Number),
+    elmCompiledTimestamp: Decode.chain(Decode.string, (string) => {
+      const number = Number(string);
+      if (Number.isFinite(number)) {
+        return number;
+      }
+      throw new Decode.DecoderError({
+        message: "Expected a number",
+        value: string,
+      });
+    }),
   },
   { exact: "throw" }
 );

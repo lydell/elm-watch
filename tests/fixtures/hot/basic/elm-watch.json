@@ -29,6 +29,12 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/BadUrl.js"
+        },
+        "ParamsDecodeError": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/ParamsDecodeError.js"
         }
     }
 }
