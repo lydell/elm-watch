@@ -90,19 +90,20 @@ async function run({
       loadBuiltFiles(true);
     };
     window.__ELM_WATCH_ON_RENDER = (targetName) => {
-      const element =
-        document.getElementById(CONTAINER_ID)?.shadowRoot?.lastElementChild;
+      withShadowRoot((shadowRoot) => {
+        const element = shadowRoot.lastElementChild;
 
-      const text =
-        element instanceof Node
-          ? Array.from(element.childNodes, getTextContent)
-              .join(`\n${"-".repeat(80)}\n`)
-              .replace(/(ws:\/\/localhost):\d{5}/g, "$1:59123")
-          : `#${CONTAINER_ID} not found in:\n${
-              document.documentElement.outerHTML
-            } for ${args.join(", ")}. Target: ${targetName}`;
+        const text =
+          element instanceof Node
+            ? Array.from(element.childNodes, getTextContent)
+                .join(`\n${"-".repeat(80)}\n`)
+                .replace(/(ws:\/\/localhost):\d{5}/g, "$1:59123")
+            : `#${CONTAINER_ID} not found in:\n${
+                document.documentElement.outerHTML
+              } for ${args.join(", ")}. Target: ${targetName}`;
 
-      renders.push(text);
+        renders.push(text);
+      });
     };
 
     elmWatchCli(["hot", ...args], {
@@ -166,11 +167,21 @@ const stopOnFirstSuccess = (): OnIdle => {
   };
 };
 
+function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
+  const shadowRoot =
+    document.getElementById(CONTAINER_ID)?.shadowRoot ?? undefined;
+
+  if (shadowRoot === undefined) {
+    throw new Error(`Couldn’t find #${CONTAINER_ID}!`);
+  }
+
+  f(shadowRoot);
+}
+
 function expandUi(): void {
-  document
-    .getElementById(CONTAINER_ID)
-    ?.shadowRoot?.querySelector("button")
-    ?.click();
+  withShadowRoot((shadowRoot) => {
+    shadowRoot?.querySelector("button")?.click();
+  });
 }
 
 function getTextContent(element: Node): string {
@@ -769,6 +780,8 @@ describe("hot", () => {
         BadUrl
         ParamsDecodeError
         WrongVersion
+        TargetDisabled
+        SendBadJson
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         ▲ ❌ 00:00:00 TargetNotFound
@@ -829,9 +842,103 @@ describe("hot", () => {
         ParamsDecodeError
         WrongVersion
         TargetNotFound
+        SendBadJson
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
         ▲ ❌ 00:00:00 TargetDisabled
+      `);
+    });
+
+    test("send bad json", async () => {
+      let idle = 0;
+
+      class TestWebSocket extends WebSocket {
+        override send(message: string): void {
+          switch (idle) {
+            case 2:
+              idle++;
+              super.send(JSON.stringify({ tag: "Nope" }));
+              break;
+            default:
+              super.send(message);
+              break;
+          }
+        }
+      }
+
+      window.WebSocket = TestWebSocket;
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["SendBadJson"],
+        scripts: ["SendBadJson.js"],
+        init: () => {
+          // Do nothing.
+        },
+        onIdle: () => {
+          idle++;
+          switch (idle) {
+            case 1:
+              expandUi();
+              withShadowRoot((shadowRoot) => {
+                shadowRoot.querySelector("input")?.click();
+              });
+              return "KeepGoing";
+            case 2:
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ SendBadJson⧙                           0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: SendBadJson⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 SendBadJson
+        ================================================================================
+        ▼ ⏳ 00:00:00 SendBadJson
+        ================================================================================
+        ▼ ⏳ 00:00:00 SendBadJson
+        ================================================================================
+        target SendBadJson
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 00:00:00 SendBadJson
+        ================================================================================
+        ▼ 🔌 00:00:00 SendBadJson
+        ================================================================================
+        ▼ ⏳ 00:00:00 SendBadJson
+        ================================================================================
+        ▼ ❓ 00:00:00 SendBadJson
+        ================================================================================
+        target SendBadJson
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
+
+        At root["tag"]:
+        Expected one of these tags: "ChangedCompilationMode", "FocusedTab", "ReachedIdleState"
+        Got: "Nope"
+
+        The web socket code I generate is supposed to always send correct messages, so something is up here.
+        ▲ ❌ 00:00:00 SendBadJson
       `);
     });
   });

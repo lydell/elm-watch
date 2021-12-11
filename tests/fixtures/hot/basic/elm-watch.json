@@ -53,6 +53,12 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/TargetDisabled.js"
+        },
+        "SendBadJson": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/SendBadJson.js"
         }
     }
 }
