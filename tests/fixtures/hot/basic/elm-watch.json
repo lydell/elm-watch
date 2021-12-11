@@ -35,6 +35,12 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/ParamsDecodeError.js"
+        },
+        "WrongVersion": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/WrongVersion.js"
         }
     }
 }

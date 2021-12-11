@@ -668,5 +668,52 @@ describe("hot", () => {
         ▲ ❌ 00:00:00 ParamsDecodeError
       `);
     });
+
+    test("wrong version", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("elmWatchVersion", "0.0.0");
+      });
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["WrongVersion"],
+        scripts: ["WrongVersion.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        ✅ WrongVersion⧙                                     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 WrongVersion
+        ================================================================================
+        ▼ ⏳ 00:00:00 WrongVersion
+        ================================================================================
+        target WrongVersion
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it was compiled with:
+
+        elm-watch 0.0.0
+
+        But the server is:
+
+        elm-watch %VERSION%
+
+        Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        ▲ ❌ 00:00:00 WrongVersion
+      `);
+    });
   });
 });
