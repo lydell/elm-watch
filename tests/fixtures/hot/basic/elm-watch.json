@@ -23,6 +23,12 @@
                 "src/Worker.elm"
             ],
             "output": "build/InjectError.js"
+        },
+        "BadUrl": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/BadUrl.js"
         }
     }
 }

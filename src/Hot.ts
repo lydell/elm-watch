@@ -113,6 +113,14 @@ type WebSocketConnection = {
 
 type OutputPathError = { tag: "OutputPathError" };
 
+type WebSocketMessageReceivedOutput =
+  | OutputPathError
+  | {
+      tag: "Output";
+      outputPath: OutputPath;
+      outputState: OutputState;
+    };
+
 type Msg =
   | {
       tag: "CompilationPartDone";
@@ -148,8 +156,7 @@ type Msg =
   | {
       tag: "WebSocketMessageReceived";
       date: Date;
-      outputPath: OutputPath;
-      outputState: OutputState;
+      output: WebSocketMessageReceivedOutput;
       webSocket: WebSocket;
       data: WebSocket.Data;
     }
@@ -809,23 +816,6 @@ const update =
       }
 
       case "WebSocketMessageReceived": {
-        const onError = (errorMessage: string): [Model, Array<Cmd>] => [
-          model,
-          [
-            {
-              tag: "WebSocketSend",
-              webSocket: msg.webSocket,
-              message: {
-                tag: "StatusChanged",
-                status: {
-                  tag: "ClientError",
-                  message: errorMessage,
-                },
-              },
-            },
-          ],
-        ];
-
         const result = parseWebSocketToServerMessage(msg.data);
 
         switch (result.tag) {
@@ -833,14 +823,28 @@ const update =
             return onWebSocketToServerMessage(
               model,
               msg.date,
-              msg.outputPath,
-              msg.outputState,
+              msg.output,
               msg.webSocket,
               result.message
             );
 
           case "DecodeError":
-            return onError(Errors.webSocketDecodeError(result.error));
+            return [
+              model,
+              [
+                {
+                  tag: "WebSocketSend",
+                  webSocket: msg.webSocket,
+                  message: {
+                    tag: "StatusChanged",
+                    status: {
+                      tag: "ClientError",
+                      message: Errors.webSocketDecodeError(result.error),
+                    },
+                  },
+                },
+              ],
+            ];
         }
       }
 
@@ -1584,24 +1588,13 @@ function onWebSocketServerMsg(
         webSocketConnectionIsForOutputPath(webSocketConnection, outputPath)
       );
 
-      if (output === undefined) {
-        rejectPromise(
-          new Error(
-            `No output found for web socket message ${JSON.stringify(
-              msg.tag
-            )} and output path: ${JSON.stringify(
-              webSocketConnection.outputPath
-            )}`
-          )
-        );
-        return;
-      }
-
       dispatch({
         tag: "WebSocketMessageReceived",
         date: now,
-        outputPath: output.outputPath,
-        outputState: output.outputState,
+        output:
+          output === undefined
+            ? { tag: "OutputPathError" }
+            : { tag: "Output", ...output },
         webSocket: msg.webSocket,
         data: msg.data,
       });
@@ -2340,33 +2333,39 @@ function onWebSocketShouldLogEvent(
 function onWebSocketToServerMessage(
   model: Model,
   date: Date,
-  outputPath: OutputPath,
-  outputState: OutputState,
+  output: WebSocketMessageReceivedOutput,
   webSocket: WebSocket,
   message: WebSocketToServerMessage
 ): [Model, Array<Cmd>] {
   switch (message.tag) {
     case "ChangedCompilationMode": {
-      const [nextModel, cmds] = onChangedCompilationMode(
-        date,
-        model,
-        outputPath,
-        outputState,
-        message.compilationMode
-      );
+      switch (output.tag) {
+        case "OutputPathError":
+          return [model, []];
 
-      return [
-        nextModel,
-        [
-          {
-            tag: "ChangeCompilationMode",
-            outputState,
-            compilationMode: message.compilationMode,
-          },
-          ...cmds,
-          { tag: "SleepBeforeNextAction" },
-        ],
-      ];
+        case "Output": {
+          const [nextModel, cmds] = onChangedCompilationMode(
+            date,
+            model,
+            output.outputPath,
+            output.outputState,
+            message.compilationMode
+          );
+
+          return [
+            nextModel,
+            [
+              {
+                tag: "ChangeCompilationMode",
+                outputState: output.outputState,
+                compilationMode: message.compilationMode,
+              },
+              ...cmds,
+              { tag: "SleepBeforeNextAction" },
+            ],
+          ];
+        }
+      }
     }
 
     case "FocusedTab":

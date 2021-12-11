@@ -547,4 +547,73 @@ describe("hot", () => {
 
     expect(content).toMatch("Not supposed to be here!");
   });
+
+  describe("Parse web socket connect request url errors", () => {
+    const originalWebSocket = WebSocket;
+
+    afterEach(() => {
+      window.WebSocket = originalWebSocket;
+    });
+
+    test("bad url", async () => {
+      class TestWebSocket extends WebSocket {
+        constructor(url: URL | string) {
+          if (typeof url === "string") {
+            throw new Error(
+              "TestWebSocket expects the url to be a URL object, not a string!"
+            );
+          }
+
+          url.pathname = "nope";
+
+          super(url);
+        }
+      }
+
+      window.WebSocket = TestWebSocket;
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["BadUrl"],
+        scripts: ["BadUrl.js"],
+        init: () => {
+          throw new Error("Expected `init` not to be called!");
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        ✅ BadUrl⧙                                           0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 BadUrl
+        ================================================================================
+        ▼ ⏳ 00:00:00 BadUrl
+        ================================================================================
+        target BadUrl
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        I expected the web socket connection URL to start with:
+
+        /?
+
+        But it looks like this:
+
+        /nope?elmWatchVersion=%25VERSION%25&targetName=BadUrl&elmCompiledTimestamp=0
+
+        The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
+        ▲ ❌ 00:00:00 BadUrl
+      `);
+    });
+  });
 });
