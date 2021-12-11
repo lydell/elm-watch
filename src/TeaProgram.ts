@@ -57,7 +57,17 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
       }
     };
 
-    const mutable = options.initMutable(dispatch, resolve, reject);
+    const mutable = options.initMutable(
+      dispatch,
+      (result) => {
+        killed = true;
+        resolve(result);
+      },
+      (error) => {
+        killed = true;
+        reject(error);
+      }
+    );
 
     runCmds(initialCmds);
   });

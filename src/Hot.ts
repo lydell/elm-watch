@@ -2371,6 +2371,12 @@ function onWebSocketToServerMessage(
 
     case "FocusedTab":
       return [model, [{ tag: "WebSocketUpdatePriority", webSocket }]];
+
+    case "ReachedIdleState":
+      return [
+        model,
+        model.hotState.tag === "Idle" ? [{ tag: "RunOnIdle" } as const] : [],
+      ];
   }
 }
 

@@ -49,6 +49,9 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
   FocusedTab: Decode.fieldsAuto({
     tag: () => "FocusedTab" as const,
   }),
+  ReachedIdleState: Decode.fieldsAuto({
+    tag: () => "ReachedIdleState" as const,
+  }),
 });
 
 export function encodeWebSocketToClientMessage(

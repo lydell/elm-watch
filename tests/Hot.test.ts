@@ -91,7 +91,7 @@ async function run({
     window.__ELM_WATCH_RELOAD_PAGE = () => {
       loadBuiltFiles(true);
     };
-    window.__ELM_WATCH_ON_RENDER = () => {
+    window.__ELM_WATCH_ON_RENDER = (targetName) => {
       const element =
         document.getElementById(CONTAINER_ID)?.shadowRoot?.lastElementChild;
 
@@ -100,7 +100,9 @@ async function run({
           ? Array.from(element.childNodes, getTextContent)
               .join(`\n${"-".repeat(80)}\n`)
               .replace(/(ws:\/\/localhost):\d{5}/g, "$1:59123")
-          : `#${CONTAINER_ID} not found in:\n${document.documentElement.outerHTML}`;
+          : `#${CONTAINER_ID} not found in:\n${
+              document.documentElement.outerHTML
+            } for ${args.join(", ")}. Target: ${targetName}`;
 
       renders.push(text);
     };
@@ -127,9 +129,17 @@ async function run({
             loadBuiltFiles(false);
             return "KeepGoing";
           case 2:
+          case 3:
             return "KeepGoing";
           default: {
-            return onIdle();
+            const result = onIdle();
+            switch (result) {
+              case "KeepGoing":
+                return "KeepGoing";
+              case "Stop":
+                window.__ELM_WATCH_KILL_ALL();
+                return "Stop";
+            }
           }
         }
       },
@@ -287,9 +297,6 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      #elm-watch not found in:
-      <html><head></head><body>Hello, World!</body></html>
-      ================================================================================
       ▼ 🔌 00:00:00 Worker
       ================================================================================
       target Worker

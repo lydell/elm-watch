@@ -20,7 +20,8 @@ declare global {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCH_GET_NOW: GetNow;
     __ELM_WATCH_RELOAD_PAGE: () => void;
-    __ELM_WATCH_ON_RENDER: () => void;
+    __ELM_WATCH_ON_RENDER: (targetName: string) => void;
+    __ELM_WATCH_KILL_ALL: () => void;
   }
 }
 
@@ -71,6 +72,10 @@ window.__ELM_WATCH_ON_RENDER ??= () => {
   // Do nothing.
 };
 
+window.__ELM_WATCH_KILL_ALL ??= () => {
+  // Do nothing.
+};
+
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
 const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
@@ -88,6 +93,10 @@ type Mutable = {
 type Msg =
   | {
       tag: "EvalErrored";
+      date: Date;
+    }
+  | {
+      tag: "EvalSucceeded";
       date: Date;
     }
   | {
@@ -301,7 +310,10 @@ function createTargetRoot(targetName: string): HTMLElement {
 
 const initMutable =
   (getNow: GetNow) =>
-  (dispatch: (msg: Msg) => void): Mutable => {
+  (
+    dispatch: (msg: Msg) => void,
+    resolvePromise: (result: undefined) => void
+  ): Mutable => {
     const removeListeners = [
       addEventListener(window, "focus", () => {
         dispatch({ tag: "FocusedTab" });
@@ -312,6 +324,12 @@ const initMutable =
         }
       }),
     ];
+
+    const original = window.__ELM_WATCH_KILL_ALL;
+    window.__ELM_WATCH_KILL_ALL = () => {
+      resolvePromise(undefined);
+      original();
+    };
 
     return {
       removeListeners: () => {
@@ -393,7 +411,20 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
           status: { tag: "EvalError", date: msg.date },
           uiExpanded: true,
         },
-        [],
+        [sendReachedIdleState],
+      ];
+
+    case "EvalSucceeded":
+      return [
+        {
+          ...model,
+          status: {
+            tag: "Idle",
+            date: msg.date,
+            sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+          },
+        },
+        [sendReachedIdleState],
       ];
 
     case "FocusedTab":
@@ -497,7 +528,7 @@ function onWebSocketToClientMessage(
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "StatusChanged": {
-      return [statusChanged(date, msg, model), []];
+      return statusChanged(date, msg, model);
     }
 
     case "SuccessfullyCompiled":
@@ -506,11 +537,6 @@ function onWebSocketToClientMessage(
         : [
             {
               ...model,
-              status: {
-                tag: "Idle",
-                date,
-                sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-              },
               elmCompiledTimestamp: msg.elmCompiledTimestamp,
             },
             [{ tag: "Eval", code: msg.code }],
@@ -522,39 +548,61 @@ function statusChanged(
   date: Date,
   { status }: StatusChanged,
   model: Model
-): Model {
+): [Model, Array<Cmd>] {
   switch (status.tag) {
     case "AlreadyUpToDate":
-      return {
-        ...model,
-        status: {
-          tag: "Idle",
-          date,
-          sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      return [
+        {
+          ...model,
+          status: {
+            tag: "Idle",
+            date,
+            sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+          },
+          canHotReload: true,
         },
-        canHotReload: true,
-      };
+        [sendReachedIdleState],
+      ];
 
     case "Busy":
-      return {
-        ...model,
-        status: { tag: "Busy", date, compilationMode: status.compilationMode },
-      };
+      return [
+        {
+          ...model,
+          status: {
+            tag: "Busy",
+            date,
+            compilationMode: status.compilationMode,
+          },
+        },
+        [],
+      ];
 
     case "ClientError":
-      return {
-        ...model,
-        status: { tag: "UnexpectedError", date, message: status.message },
-        uiExpanded: true,
-      };
+      return [
+        {
+          ...model,
+          status: { tag: "UnexpectedError", date, message: status.message },
+          uiExpanded: true,
+        },
+        [sendReachedIdleState],
+      ];
 
     case "CompileError":
-      return {
-        ...model,
-        status: { tag: "CompileError", date },
-      };
+      return [
+        {
+          ...model,
+          status: { tag: "CompileError", date },
+        },
+        [sendReachedIdleState],
+      ];
   }
 }
+
+const sendReachedIdleState: Cmd = {
+  tag: "SendMessage",
+  message: { tag: "ReachedIdleState" },
+  sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+};
 
 function reconnect(
   model: Model,
@@ -610,6 +658,7 @@ const runCmd =
         const f = new Function(cmd.code);
         try {
           f();
+          dispatch({ tag: "EvalSucceeded", date: getNow() });
         } catch (unknownError) {
           void Promise.reject(unknownError);
           dispatch({ tag: "EvalErrored", date: getNow() });
@@ -863,7 +912,7 @@ function render(
     firstFocusableElement.focus();
   }
 
-  window.__ELM_WATCH_ON_RENDER();
+  window.__ELM_WATCH_ON_RENDER(TARGET_NAME);
 }
 
 const CLASS = {
