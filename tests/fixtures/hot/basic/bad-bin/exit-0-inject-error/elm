@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+const childProcess = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
+const child = childProcess.spawn("elm", process.argv.slice(2), {
+  env: {
+    ...process.env,
+    PATH: process.env.PATH.split(path.delimiter)
+      .filter((part) => !part.includes("bad-bin"))
+      .join(path.delimiter),
+  },
+  stdio: "inherit",
+});
+
+child.on("exit", (exitCode) => {
+  if (!process.argv.some((arg) => arg.includes("/dev/null"))) {
+    const file = path.join(__dirname, "..", "..", "build", "InjectError.js");
+    const content = fs.readFileSync(file, "utf8");
+    const newContent = content.replace(
+      /^var _Platform_worker =.+\s*\{/gm,
+      "$& console.log('Not supposed to be here!');"
+    );
+    fs.writeFileSync(file, newContent);
+  }
+  process.exit(exitCode);
+});

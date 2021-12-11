@@ -17,6 +17,12 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/Readonly.js"
+        },
+        "InjectError": {
+            "inputs": [
+                "src/Worker.elm"
+            ],
+            "output": "build/InjectError.js"
         }
     }
 }

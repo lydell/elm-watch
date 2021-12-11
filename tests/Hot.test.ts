@@ -445,4 +445,106 @@ describe("hot", () => {
       ▲ 🚨 00:00:00 Readonly
     `);
   });
+
+  test("fail to inject hot reload", async () => {
+    let idle = 0;
+
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["InjectError"],
+      scripts: ["InjectError.js"],
+      init: () => {
+        throw new Error("Expected `init` not to be called!");
+      },
+      onIdle: () => {
+        idle++;
+        switch (idle) {
+          case 1:
+            return "KeepGoing";
+          default:
+            expandUi();
+            return "Stop";
+        }
+      },
+      bin: "exit-0-inject-error",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      🚨 InjectError
+
+      ⧙-- TROUBLE INJECTING HOT RELOAD ------------------------------------------------⧘
+      ⧙Target: InjectError⧘
+
+      I tried to do some search and replace on Elm's JS output to inject
+      code for hot reloading, but that didn't work out as expected!
+
+      I tried to replace some specific code, but couldn't find it!
+
+      I wrote that to this file so you can inspect it:
+
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-e6379b09e00e33c51443abf9fe0f14b87076905294f07a6ecbf740486abc4d3b.txt
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: InjectError⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 InjectError
+      ================================================================================
+      ▼ ⏳ 00:00:00 InjectError
+      ================================================================================
+      ▼ ⏳ 00:00:00 InjectError
+      ================================================================================
+      ▼ 🚨 00:00:00 InjectError
+      ================================================================================
+      target InjectError
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 1970-01-01 00:00:00
+      status Compilation error
+      Check the terminal to see errors!
+      ▲ 🚨 00:00:00 InjectError
+    `);
+
+    const dir = path.join(FIXTURES_DIR, "basic", "build");
+    const files = fs
+      .readdirSync(dir)
+      .filter((name) =>
+        name.startsWith("elm-watch-InjectSearchAndReplaceNotFound-")
+      );
+
+    expect(files).toHaveLength(1);
+
+    const file = path.join(dir, files[0] as string);
+    const content = fs.readFileSync(file, "utf8");
+
+    expect(content.split("\n").slice(0, 20).join("\n")).toMatchInlineSnapshot(`
+      Modifying Elm's JS output for hot reloading failed!
+
+      ### Probe (found):
+      /^var _Platform_worker =/m
+
+      ### Regex to replace (not found!):
+      /^var _Platform_worker =.+\\s*\\{\\s*return _Platform_initialize\\(/gm
+
+      ### Replacement:
+      $&"Platform.worker",
+
+      ### Code running replacements on:
+      (function(scope){
+      'use strict';
+
+      function F(arity, fun, wrapper) {
+        wrapper.a = arity;
+        wrapper.f = fun;
+        return wrapper;
+      }
+    `);
+
+    expect(content).toMatch("Not supposed to be here!");
+  });
 });
