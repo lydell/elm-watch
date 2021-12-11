@@ -715,5 +715,124 @@ describe("hot", () => {
         ▲ ❌ 00:00:00 WrongVersion
       `);
     });
+
+    test("target not found", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("targetName", "nope");
+      });
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["TargetNotFound"],
+        scripts: ["TargetNotFound.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        ✅ TargetNotFound⧙                                   0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 TargetNotFound
+        ================================================================================
+        ▼ ⏳ 00:00:00 TargetNotFound
+        ================================================================================
+        target TargetNotFound
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        nope
+
+        But I can't find that target in elm-watch.json!
+
+        These targets are available in elm-watch.json:
+
+        TargetNotFound
+
+        These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
+
+        Html
+        Worker
+        Readonly
+        InjectError
+        BadUrl
+        ParamsDecodeError
+        WrongVersion
+
+        Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        ▲ ❌ 00:00:00 TargetNotFound
+      `);
+    });
+
+    test("target disabled", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("targetName", "Html");
+      });
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["TargetDisabled"],
+        scripts: ["TargetDisabled.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        ✅ TargetDisabled⧙                                   0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 TargetDisabled
+        ================================================================================
+        ▼ ⏳ 00:00:00 TargetDisabled
+        ================================================================================
+        target TargetDisabled
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        Html
+
+        That target does exist in elm-watch.json, but isn't enabled.
+
+        These targets are enabled via CLI arguments:
+
+        TargetDisabled
+
+        These targets exist in elm-watch.json but aren't enabled:
+
+        Html
+        Worker
+        Readonly
+        InjectError
+        BadUrl
+        ParamsDecodeError
+        WrongVersion
+        TargetNotFound
+
+        If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
+        ▲ ❌ 00:00:00 TargetDisabled
+      `);
+    });
   });
 });

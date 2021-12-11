@@ -41,6 +41,18 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/WrongVersion.js"
+        },
+        "TargetNotFound": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/TargetNotFound.js"
+        },
+        "TargetDisabled": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/TargetDisabled.js"
         }
     }
 }
