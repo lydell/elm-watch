@@ -10,20 +10,17 @@ import { Env, toError } from "../src/Helpers";
 import { OnIdle } from "../src/Types";
 import {
   assertExitCode,
+  badElmBinEnv,
   clean,
   CursorWriteStream,
   FailReadStream,
   MemoryWriteStream,
   prependPATH,
   stringSnapshotSerializer,
+  TEST_ENV,
 } from "./Helpers";
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
-
-const TEST_ENV = {
-  __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
-  ELM_WATCH_MAX_PARALLEL: "2",
-};
 
 async function run(
   fixture: string,
@@ -78,18 +75,6 @@ const elmBinAlwaysSucceedEnv = {
   PATH: prependPATH(path.join(__dirname, "fixtures", "elm-bin-always-succeed")),
 };
 
-function badElmBinEnv(dir: string, fixture: string): Env {
-  return {
-    ...process.env,
-    ...TEST_ENV,
-    PATH: prependPATH(path.join(dir, "bad-bin", fixture)),
-    // The default timeout is optimized for calling Elm directly.
-    // The bad-bin `elm`s are Node.js scripts – just starting Node.js can take
-    // 100ms. So raise the bar to stabilize the tests.
-    __ELM_WATCH_LOADING_MESSAGE_DELAY: "10000",
-  };
-}
-
 async function runWithBadElmBin(
   fixture: string,
   {
@@ -108,7 +93,7 @@ async function runWithBadElmBin(
     postprocess ? path.join(dir, "postprocess") : dir,
     [onIdle === undefined ? "make" : "hot", "app"],
     {
-      env: badElmBinEnv(dir, fixture),
+      env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
       onIdle,
     }
   );
@@ -129,7 +114,7 @@ async function runWithBadElmBinAndExpectedJson(
   }
 
   const output = await runAbsolute(dir, ["make", "app"], {
-    env: badElmBinEnv(dir, fixture),
+    env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
   });
 
   let writtenJson;

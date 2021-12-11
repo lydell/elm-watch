@@ -11,6 +11,12 @@
                 "src/Worker.elm"
             ],
             "output": "build/Worker.js"
+        },
+        "Readonly": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/Readonly.js"
         }
     }
 }

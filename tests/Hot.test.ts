@@ -7,12 +7,13 @@ import * as path from "path";
 import { elmWatchCli } from "../src";
 import { OnIdle } from "../src/Types";
 import {
+  badElmBinEnv,
   clean,
   CursorWriteStream,
   FailReadStream,
   MemoryWriteStream,
-  prependPATH,
   stringSnapshotSerializer,
+  TEST_ENV,
 } from "./Helpers";
 
 const CONTAINER_ID = "elm-watch";
@@ -24,7 +25,7 @@ async function run({
   args = [],
   init,
   onIdle,
-  expandUi = false,
+  expandUiImmediately = false,
   isTTY = true,
   bin,
 }: {
@@ -33,7 +34,7 @@ async function run({
   args?: Array<string>;
   init: () => void;
   onIdle: OnIdle;
-  expandUi?: boolean;
+  expandUiImmediately?: boolean;
   isTTY?: boolean;
   bin?: string;
 }): Promise<{ terminal: string; browser: string; renders: string }> {
@@ -73,11 +74,8 @@ async function run({
           return import(newScript);
         })
       ).then(() => {
-        if (expandUi) {
-          document
-            .getElementById(CONTAINER_ID)
-            ?.shadowRoot?.querySelector("button")
-            ?.click();
+        if (expandUiImmediately) {
+          expandUi();
         }
         if (isReload) {
           init();
@@ -109,15 +107,13 @@ async function run({
 
     elmWatchCli(["hot", ...args], {
       cwd: dir,
-      env: {
-        ...process.env,
-        __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
-        ELM_WATCH_MAX_PARALLEL: "2",
-        PATH:
-          bin === undefined
-            ? process.env.PATH
-            : prependPATH(path.join(dir, bin)),
-      },
+      env:
+        bin === undefined
+          ? {
+              ...process.env,
+              ...TEST_ENV,
+            }
+          : badElmBinEnv(path.join(dir, "bad-bin", bin)),
       stdin: new FailReadStream(),
       stdout,
       stderr,
@@ -125,11 +121,8 @@ async function run({
       onIdle: () => {
         idle++;
         switch (idle) {
-          case 1:
+          case 1: // Typecheck-only done.
             loadBuiltFiles(false);
-            return "KeepGoing";
-          case 2:
-          case 3:
             return "KeepGoing";
           default: {
             const result = onIdle();
@@ -157,6 +150,27 @@ async function run({
     browser: lastText,
     renders: renders.join(`\n${"=".repeat(80)}\n`),
   };
+}
+
+const stopOnFirstSuccess = (): OnIdle => {
+  let idle = 0;
+  return () => {
+    idle++;
+    switch (idle) {
+      case 1: // Compilation done after websocket connected.
+      case 2: // Client rendered ✅.
+        return "KeepGoing";
+      default:
+        return "Stop";
+    }
+  };
+};
+
+function expandUi(): void {
+  document
+    .getElementById(CONTAINER_ID)
+    ?.shadowRoot?.querySelector("button")
+    ?.click();
 }
 
 function getTextContent(element: Node): string {
@@ -224,7 +238,7 @@ describe("hot", () => {
         document.body.append(div);
         window.Elm?.HtmlMain?.init({ node: div });
       },
-      onIdle: () => "Stop",
+      onIdle: stopOnFirstSuccess(),
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -260,12 +274,12 @@ describe("hot", () => {
       fixture: "basic",
       args: ["Worker"],
       scripts: ["Worker.js"],
-      expandUi: true,
+      expandUiImmediately: true,
       isTTY: false,
       init: () => {
         window.Elm?.Worker?.init();
       },
-      onIdle: () => "Stop",
+      onIdle: stopOnFirstSuccess(),
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -364,6 +378,71 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       ▲ ✅ 00:00:00 Worker
+    `);
+  });
+
+  test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
+    let idle = 0;
+
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Readonly"],
+      scripts: ["Readonly.js"],
+      init: () => {
+        throw new Error("Expected `init` not to be called!");
+      },
+      onIdle: () => {
+        idle++;
+        switch (idle) {
+          case 1:
+            return "KeepGoing";
+          default:
+            expandUi();
+            return "Stop";
+        }
+      },
+      bin: "exit-0-write-readonly",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      🚨 Readonly
+
+      ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
+      ⧙Target: Readonly⧘
+
+      I managed to compile your code and read the generated file:
+
+      /Users/you/project/tests/fixtures/hot/basic/build/Readonly.js
+
+      I injected code for hot reloading, and then tried to write that back to the file
+      but I encountered this error:
+
+      EACCES: permission denied, open '/Users/you/project/tests/fixtures/hot/basic/build/Readonly.js'
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Readonly⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 Readonly
+      ================================================================================
+      ▼ ⏳ 00:00:00 Readonly
+      ================================================================================
+      ▼ ⏳ 00:00:00 Readonly
+      ================================================================================
+      ▼ 🚨 00:00:00 Readonly
+      ================================================================================
+      target Readonly
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 1970-01-01 00:00:00
+      status Compilation error
+      Check the terminal to see errors!
+      ▲ 🚨 00:00:00 Readonly
     `);
   });
 });

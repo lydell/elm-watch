@@ -6,6 +6,7 @@ import * as stream from "stream";
 import { EMOJI } from "../src/Compile";
 import { printStdio } from "../src/Errors";
 import {
+  Env,
   JsonError,
   ReadStream,
   toError,
@@ -30,6 +31,23 @@ Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
 // cross-platform.
 export function readFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
+}
+
+export const TEST_ENV = {
+  __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
+  ELM_WATCH_MAX_PARALLEL: "2",
+};
+
+export function badElmBinEnv(dir: string): Env {
+  return {
+    ...process.env,
+    ...TEST_ENV,
+    PATH: prependPATH(dir),
+    // The default timeout is optimized for calling Elm directly.
+    // The bad-bin `elm`s are Node.js scripts – just starting Node.js can take
+    // 100ms. So raise the bar to stabilize the tests.
+    __ELM_WATCH_LOADING_MESSAGE_DELAY: "10000",
+  };
 }
 
 export function prependPATH(folder: string): string {

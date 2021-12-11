@@ -19,7 +19,9 @@ const existingObject =
 const elmProxy = new Proxy(existingObject ?? {}, {
   get(target, property, receiver) {
     const value = Reflect.get(target, property, receiver) as unknown;
-    if (value !== undefined) {
+    // Jest tries to read `_isMockFunction`.
+    // There shouldn’t ever be anything starting with an underscore in `window.Elm` so whatever.
+    if (value !== undefined || property.toString().startsWith("_")) {
       return value;
     }
     throw error;
