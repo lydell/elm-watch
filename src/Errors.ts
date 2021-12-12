@@ -1012,13 +1012,14 @@ export function webSocketTargetNotFound(
 ): string {
   const extra = isNonEmptyArray(disabledOutputs)
     ? `
+
 These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
 
 ${join(
   mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName),
   "\n"
 )}
-  `.trim()
+  `.trimEnd()
     : "";
 
   return `
@@ -1033,9 +1034,7 @@ These targets are available in elm-watch.json:
 ${join(
   enabledOutputs.map((outputPath) => outputPath.targetName),
   "\n"
-)}
-
-${extra}
+)}${extra}
 
 Maybe this target used to exist in elm-watch.json, but you removed or changed it?
   `.trim();
