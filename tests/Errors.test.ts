@@ -1031,6 +1031,7 @@ describe("errors", () => {
             path.join(__dirname, "that", "bin"),
             path.join(__dirname, "final", "bin"),
           ].join(path.delimiter),
+          notPath: "should not be seen",
         })
       ).toMatchInlineSnapshot(`
         You seem to have several PATH-like environment variables set. The last one

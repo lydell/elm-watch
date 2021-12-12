@@ -1300,7 +1300,8 @@ function truncate(string: string): string {
   const roughLimit = 20;
   const half = Math.floor(roughLimit / 2);
   return string.length <= roughLimit
-    ? string
+    ? // istanbul ignore next
+      string
     : `${string.slice(0, half)}...${string.slice(-half)}`;
 }
 
