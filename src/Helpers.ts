@@ -114,5 +114,7 @@ toJsonError.jestWorkaround = (arg: unknown): JsonError =>
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
     ? (error as { stack: string }).stack
+    : typeof (error as { message?: string } | undefined)?.message === "string"
+    ? (error as { message: string }).message
     : repr(error);
 }
