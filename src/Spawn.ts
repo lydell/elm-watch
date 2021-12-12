@@ -103,13 +103,13 @@ export function spawnKillable(command: Command): {
         }
       });
 
+      // istanbul ignore next
       child.stdout.on("error", (error: Error) => {
-        // istanbul ignore next
         resolve({ tag: "OtherSpawnError", error, command });
       });
 
+      // istanbul ignore next
       child.stderr.on("error", (error: Error) => {
-        // istanbul ignore next
         resolve({ tag: "OtherSpawnError", error, command });
       });
 
@@ -151,8 +151,8 @@ export function spawnKillable(command: Command): {
       }
     });
 
+  // istanbul ignore next
   return {
-    // istanbul ignore next
     promise: IS_WINDOWS
       ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
       : promise(childProcess.spawn),
