@@ -396,6 +396,45 @@ describe("hot", () => {
     `);
   });
 
+  test("successful connect (package)", async () => {
+    const { terminal, renders } = await run({
+      fixture: "package",
+      args: ["Main"],
+      scripts: ["Main.js"],
+      init: () => {
+        const div = document.createElement("div");
+        document.body.append(div);
+        window.Elm?.Main?.init({ node: div });
+      },
+      onIdle: stopOnFirstSuccess(),
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ 🔌 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ✅ 00:00:00 Main
+    `);
+
+    expect(document.body.outerHTML).toMatchInlineSnapshot(`<body>main</body>`);
+  });
+
   test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
     let idle = 0;
 
