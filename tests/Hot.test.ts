@@ -32,12 +32,17 @@ async function run({
   fixture: string;
   scripts: Array<string>;
   args?: Array<string>;
-  init: () => void;
+  init: (node: HTMLDivElement) => void;
   onIdle: OnIdle;
   expandUiImmediately?: boolean;
   isTTY?: boolean;
   bin?: string;
-}): Promise<{ terminal: string; browser: string; renders: string }> {
+}): Promise<{
+  terminal: string;
+  browser: string;
+  renders: string;
+  div: HTMLDivElement;
+}> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
   const absoluteScripts = scripts.map((script) => path.join(build, script));
@@ -53,6 +58,11 @@ async function run({
 
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
+
+  const outerDiv = document.createElement("div");
+  const innerDiv = document.createElement("div");
+  outerDiv.append(innerDiv);
+  document.body.append(outerDiv);
 
   const renders: Array<string> = [];
 
@@ -78,7 +88,7 @@ async function run({
           expandUi();
         }
         if (isReload) {
-          init();
+          init(innerDiv);
         }
       }, reject);
     };
@@ -150,6 +160,7 @@ async function run({
     terminal: stderrString,
     browser: lastText,
     renders: renders.join(`\n${"=".repeat(80)}\n`),
+    div: outerDiv,
   };
 }
 
@@ -244,14 +255,12 @@ describe("hot", () => {
   });
 
   test("successful connect (collapsed)", async () => {
-    const { terminal, renders } = await run({
+    const { terminal, renders, div } = await run({
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
-      init: () => {
-        const div = document.createElement("div");
-        document.body.append(div);
-        window.Elm?.HtmlMain?.init({ node: div });
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
       },
       onIdle: stopOnFirstSuccess(),
     });
@@ -279,9 +288,7 @@ describe("hot", () => {
       ▼ ✅ 00:00:00 Html
     `);
 
-    expect(document.body.outerHTML).toMatchInlineSnapshot(
-      `<body>Hello, World!</body>`
-    );
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
   });
 
   test("successful connect (expanded, not TTY, Worker)", async () => {
@@ -397,14 +404,12 @@ describe("hot", () => {
   });
 
   test("successful connect (package)", async () => {
-    const { terminal, renders } = await run({
+    const { terminal, renders, div } = await run({
       fixture: "package",
       args: ["Main"],
       scripts: ["Main.js"],
-      init: () => {
-        const div = document.createElement("div");
-        document.body.append(div);
-        window.Elm?.Main?.init({ node: div });
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
       },
       onIdle: stopOnFirstSuccess(),
     });
@@ -432,7 +437,7 @@ describe("hot", () => {
       ▼ ✅ 00:00:00 Main
     `);
 
-    expect(document.body.outerHTML).toMatchInlineSnapshot(`<body>main</body>`);
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
   });
 
   test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
