@@ -196,32 +196,30 @@ function expandUi(): void {
 }
 
 function getTextContent(element: Node): string {
-  return Array.from(walkTextNodes(element), (node) => node.data)
+  return Array.from(walkTextNodes(element))
     .join("")
     .trim()
     .replace(/\n /g, "\n");
 }
 
-function* walkTextNodes(element: Node): Generator<Text, void, void> {
+function* walkTextNodes(element: Node): Generator<string, void, void> {
   if (shouldAddNewline(element)) {
-    yield document.createTextNode("\n");
+    yield "\n";
   }
   for (const node of element.childNodes) {
     if (node instanceof Text) {
-      yield document.createTextNode(" ");
-      yield node;
+      yield " ";
+      yield node.data;
     } else if (node instanceof HTMLInputElement && node.type === "radio") {
-      yield document.createTextNode(
-        (node.checked ? "◉" : "◯") + (node.disabled ? " (disabled)" : "")
-      );
+      yield (node.checked ? "◉" : "◯") + (node.disabled ? " (disabled)" : "");
     } else if (node instanceof HTMLButtonElement) {
       const textContent = (node.textContent ?? "").trim();
       if (textContent.length === 1) {
-        yield document.createTextNode(textContent);
+        yield textContent;
       } else {
-        yield document.createTextNode("\n[");
-        yield document.createTextNode(textContent);
-        yield document.createTextNode("]");
+        yield "\n[";
+        yield textContent;
+        yield "]";
       }
     } else {
       yield* walkTextNodes(node);
