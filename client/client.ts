@@ -835,12 +835,6 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   };
 }
 
-function emptyNode(node: Node): void {
-  while (node.firstChild !== null) {
-    node.removeChild(node.firstChild);
-  }
-}
-
 function h<T extends HTMLElement>(
   t: new () => T,
   {
@@ -895,9 +889,7 @@ function render(
   info: Info,
   manageFocus: boolean
 ): void {
-  emptyNode(targetRoot);
-
-  targetRoot.append(
+  targetRoot.replaceChildren(
     view(
       (msg) => {
         dispatch({ tag: "UiMsg", date: getNow(), msg });
