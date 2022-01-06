@@ -53,8 +53,13 @@ type UppercaseLetter =
   | "Y"
   | "Z";
 
-type ElmModule = {
-  init: (options?: { node?: Element; flags?: unknown }) => void;
+export type ElmModule = {
+  init: (options?: { node?: Element; flags?: unknown }) => {
+    ports?: Record<
+      string,
+      { subscribe?: (value: unknown) => void; send?: (value: unknown) => void }
+    >;
+  };
   [key: `${UppercaseLetter}${string}`]: ElmModule;
 };
 

@@ -1,0 +1,10 @@
+{
+    "targets": {
+        "Application": {
+            "inputs": [
+                "src/Application.elm"
+            ],
+            "output": "build/Application.js"
+        }
+    }
+}

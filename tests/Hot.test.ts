@@ -4,8 +4,9 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import { ElmModule } from "../client/client";
 import { elmWatchCli } from "../src";
-import { OnIdle } from "../src/Types";
+import { CompilationMode, OnIdle } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
@@ -18,6 +19,13 @@ import {
 
 const CONTAINER_ID = "elm-watch";
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
+
+// eslint-disable-next-line no-console
+console.warn = () => {
+  // Disable Elm’s “Compiled in DEV mode” logs.
+};
+
+let bodyCounter = 0;
 
 async function run({
   fixture,
@@ -33,7 +41,7 @@ async function run({
   scripts: Array<string>;
   args?: Array<string>;
   init: (node: HTMLDivElement) => void;
-  onIdle: OnIdle;
+  onIdle: (body: HTMLBodyElement) => "KeepGoing" | "Stop";
   expandUiImmediately?: boolean;
   isTTY?: boolean;
   bin?: string;
@@ -46,11 +54,16 @@ async function run({
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
   const absoluteScripts = scripts.map((script) => path.join(build, script));
+  const elmWatchStuff = path.join(dir, "elm-stuff", "elm-watch-stuff.json");
 
   if (fs.rmSync !== undefined) {
     fs.rmSync(build, { recursive: true, force: true });
   } else if (fs.existsSync(build)) {
     fs.rmdirSync(build, { recursive: true });
+  }
+
+  if (fs.existsSync(elmWatchStuff)) {
+    fs.unlinkSync(elmWatchStuff);
   }
 
   const stdout = new MemoryWriteStream();
@@ -59,10 +72,12 @@ async function run({
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
+  const bodyIndex = bodyCounter + 2; // head + original body
+  const body = document.createElement("body");
   const outerDiv = document.createElement("div");
-  const innerDiv = document.createElement("div");
-  outerDiv.append(innerDiv);
-  document.body.append(outerDiv);
+  body.append(outerDiv);
+  document.documentElement.append(body);
+  bodyCounter++;
 
   const renders: Array<string> = [];
 
@@ -79,7 +94,10 @@ async function run({
           const content = fs
             .readFileSync(script, "utf8")
             .replace(/\(this\)\);\s*$/, "(window));")
-            .replace(/^\s*console.warn\('[^']+'\);/m, "");
+            .replace(
+              /^(\s*var bodyNode) = .+;/m,
+              `$1 = document.documentElement.children[${bodyIndex}];`
+            );
           fs.writeFileSync(newScript, content);
           return import(newScript);
         })
@@ -88,6 +106,9 @@ async function run({
           expandUi();
         }
         if (isReload) {
+          const innerDiv = document.createElement("div");
+          outerDiv.replaceChildren(innerDiv);
+          body.replaceChildren(outerDiv);
           init(innerDiv);
         }
       }, reject);
@@ -136,7 +157,7 @@ async function run({
             loadBuiltFiles(false);
             return "KeepGoing";
           default: {
-            const result = onIdle();
+            const result = onIdle(body);
             switch (result) {
               case "KeepGoing":
                 return "KeepGoing";
@@ -184,15 +205,55 @@ function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
 
   if (shadowRoot === undefined) {
     throw new Error(`Couldn’t find #${CONTAINER_ID}!`);
+  } else {
+    f(shadowRoot);
   }
-
-  f(shadowRoot);
 }
 
 function expandUi(): void {
+  expandUiHelper(true);
+}
+
+// function collapseUi(): void {
+//   expandUiHelper(false);
+// }
+
+function expandUiHelper(wantExpanded: boolean): void {
   withShadowRoot((shadowRoot) => {
-    shadowRoot?.querySelector("button")?.click();
+    const button = shadowRoot?.querySelector("button");
+    if (button instanceof HTMLElement) {
+      if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
+        button.click();
+      }
+    } else {
+      throw new Error(`Could not button for expanding UI.`);
+    }
   });
+}
+
+function switchCompilationMode(compilationMode: CompilationMode): void {
+  expandUi();
+  withShadowRoot((shadowRoot) => {
+    const radio = shadowRoot?.querySelectorAll('input[type="radio"]')[
+      switchCompilationModeHelper(compilationMode)
+    ];
+    if (radio instanceof HTMLElement) {
+      radio.click();
+    } else {
+      throw new Error(`Could not find radio button for ${compilationMode}.`);
+    }
+  });
+}
+
+function switchCompilationModeHelper(compilationMode: CompilationMode): number {
+  switch (compilationMode) {
+    case "debug":
+      return 0;
+    case "standard":
+      return 1;
+    case "optimize":
+      return 2;
+  }
 }
 
 function getTextContent(element: Node): string {
@@ -241,8 +302,59 @@ function shouldAddNewline(node: Node): boolean {
   }
 }
 
+function htmlWithoutDebugger(body: HTMLBodyElement): string {
+  if (
+    body.lastElementChild instanceof HTMLDivElement &&
+    body.lastElementChild.style.position === "fixed"
+  ) {
+    const clone = body.cloneNode(true);
+    if (clone instanceof HTMLBodyElement && clone.lastElementChild !== null) {
+      clone.removeChild(clone.lastElementChild);
+      return clone.outerHTML;
+    }
+    throw new Error(
+      "body.cloneNode(true) didn’t return a <body> with a lastElementChild."
+    );
+  } else {
+    return body.outerHTML;
+  }
+}
+
 function failInit(): never {
   throw new Error("Expected `init` not to be called!");
+}
+
+function click(element: HTMLElement, selector: string): void {
+  const target = element.querySelector(selector);
+  if (target instanceof HTMLElement) {
+    target.click();
+  } else {
+    throw new Error(
+      `Element to click is not considered clickable: ${selector} -> ${
+        target === null ? "not found" : target.nodeName
+      }`
+    );
+  }
+}
+
+async function waitOneFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve();
+    });
+  });
+}
+
+function makeTrigger(): { promise: Promise<void>; trigger: () => void } {
+  let trigger = (): void => {
+    throw new Error("trigger was never reassigned!");
+  };
+  const promise = new Promise<void>((resolve) => {
+    trigger = () => {
+      resolve();
+    };
+  });
+  return { promise, trigger };
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -535,7 +647,7 @@ describe("hot", () => {
 
       I wrote that to this file so you can inspect it:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-e6379b09e00e33c51443abf9fe0f14b87076905294f07a6ecbf740486abc4d3b.txt
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-ad064e3cc0e8c86d9c08636f341b296e3a757f5914c638f11ec9541e7010c273.txt
 
       🚨 ⧙1⧘ error found
 
@@ -590,12 +702,12 @@ describe("hot", () => {
       ### Code running replacements on:
       (function(scope){
       'use strict';
+      var _Platform_effectManagers = {}, _Scheduler_enqueue;
 
       function F(arity, fun, wrapper) {
         wrapper.a = arity;
         wrapper.f = fun;
         return wrapper;
-      }
     `);
 
     expect(content).toMatch("Not supposed to be here!");
@@ -1031,6 +1143,585 @@ describe("hot", () => {
         The web socket code I generate is supposed to always send correct messages, so something is up here.
         ▲ ❌ 00:00:00 SendBadJson
       `);
+    });
+  });
+
+  describe("hot reloading", () => {
+    test("Application", async () => {
+      const fixture = "hot-reload";
+      const name = "Application";
+      const src = path.join(FIXTURES_DIR, fixture, "src");
+
+      const write = (n: number): void => {
+        const content = fs.readFileSync(
+          path.join(src, `${name}${n}.elm`),
+          "utf8"
+        );
+        fs.writeFileSync(
+          path.join(src, `${name}.elm`),
+          content.replace(`module ${name}${n}`, `module ${name}`)
+        );
+      };
+
+      const writeSimpleChange = (): void => {
+        const content = fs.readFileSync(path.join(src, `${name}.elm`), "utf8");
+        fs.writeFileSync(
+          path.join(src, `${name}.elm`),
+          content.replace(`hot reload`, `simple text change`)
+        );
+      };
+
+      write(1);
+
+      const trigger = makeTrigger();
+
+      let app: ReturnType<ElmModule["init"]> | undefined;
+      let lastValueFromElm: unknown;
+      let probe: HTMLElement | null = null;
+      let idle = 0;
+
+      const sendToElm = (value: number): void => {
+        const send = app?.ports?.fromJs?.send;
+        if (send === undefined) {
+          throw new Error("Failed to find 'fromJs' send port.");
+        }
+        send(value);
+      };
+
+      const terminate = (): void => {
+        const send = app?.ports?.terminate?.send;
+        if (send === undefined) {
+          throw new Error("Failed to find 'terminate' send port.");
+        }
+        send(null);
+      };
+
+      const { terminal, renders } = await run({
+        fixture,
+        args: [name],
+        scripts: [`${name}.js`],
+        isTTY: false,
+        init: (node) => {
+          app = window.Elm?.[name]?.init({ node });
+          const subscribe = app?.ports?.toJs?.subscribe;
+          if (subscribe === undefined) {
+            throw new Error("Failed to find 'toJs' subscribe port.");
+          }
+          subscribe((value: unknown) => {
+            lastValueFromElm = value;
+          });
+        },
+        onIdle: (body) => {
+          idle++;
+          switch (idle) {
+            case 2: // Client rendered ✅.
+              void assertInit(body).then(() => {
+                write(2);
+              });
+              return "KeepGoing";
+            case 5:
+              void assertHotReload(body).then(() => {
+                terminate();
+                switchCompilationMode("debug");
+                write(1);
+              });
+              return "KeepGoing";
+            case 7: // Client rendered ✅.
+              // Assert that the debugger appeared.
+              // eslint-disable-next-line jest/no-conditional-expect
+              expect(body.querySelectorAll("svg")).toHaveLength(1);
+              void assertInit(body).then(() => {
+                write(2);
+              });
+              return "KeepGoing";
+            case 10:
+              void assertHotReload(body).then(() => {
+                terminate();
+                switchCompilationMode("optimize");
+                write(1);
+              });
+              return "KeepGoing";
+            case 13:
+              void assertInit(body).then(() => {
+                terminate();
+                write(2);
+              });
+              return "KeepGoing";
+            case 17:
+              void assertReloadForOptimize(body).then(() => {
+                writeSimpleChange();
+              });
+              return "KeepGoing";
+            case 19:
+              void assertHotReloadForOptimize(body).then(() => {
+                terminate();
+                trigger.trigger();
+              });
+              return "Stop";
+            default:
+              return "KeepGoing";
+          }
+        },
+      });
+
+      await trigger.promise;
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ Application: elm make (typecheck only)
+        ✅ Application⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ Application: elm make
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Application⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⏳ Application: elm make
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ Application: elm make --debug
+        ⏳ Application: interrupted
+        ⏳ Application: elm make --debug
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed compilation mode to "debug" of: Application
+        ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⏳ Application: elm make --debug
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ Application: elm make --optimize
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed compilation mode to "optimize" of: Application⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ Application: elm make --optimize
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm
+           (1 more event)
+        ℹ️ 00:00:00 Web socket connected needing compilation of: Application⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⏳ Application: elm make --optimize
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⏳ Application: elm make --optimize
+        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ 🔌 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ✅ 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ✅ 00:00:00 Application
+        ================================================================================
+        target Application
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Successfully compiled
+        Compilation mode
+        ◯ Debug
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 00:00:00 Application
+        ================================================================================
+        target Application
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 00:00:00 Application
+        ================================================================================
+        target Application
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 00:00:00 Application
+        ================================================================================
+        target Application
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ 🔌 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ✅ 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ✅ 00:00:00 Application
+        ================================================================================
+        target Application
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Successfully compiled
+        Compilation mode
+        ◉ Debug
+        ◯ Standard
+        ◯ Optimize
+        ▲ ✅ 00:00:00 Application
+        ================================================================================
+        target Application
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
+        ▲ ⏳ 00:00:00 Application
+        ================================================================================
+        target Application
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
+        ▲ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ 🔌 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ 🔌 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ✅ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ 🔌 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ✅ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 Application
+        ================================================================================
+        ▼ ⚡️ ✅ 00:00:00 Application
+      `);
+
+      async function assertInit(body: HTMLBodyElement): Promise<void> {
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/
+          originalFromJs: []
+          originalUrlRequested: 0
+          originalUrlChanged: 0
+          newFromJs: []
+          newUrlRequested: 0
+          newUrlChanged: 0
+          browserOnClick: 0
+          </pre></div></body>
+        `);
+
+        probe = body.querySelector(".probe");
+        expect(probe).not.toBeNull();
+
+        click(body, "a");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/link
+          originalFromJs: []
+          originalUrlRequested: 1
+          originalUrlChanged: 1
+          newFromJs: []
+          newUrlRequested: 0
+          newUrlChanged: 0
+          browserOnClick: 0
+          </pre></div></body>
+        `);
+
+        click(body, "button");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: []
+          originalUrlRequested: 1
+          originalUrlChanged: 2
+          newFromJs: []
+          newUrlRequested: 0
+          newUrlChanged: 0
+          browserOnClick: 0
+          </pre></div></body>
+        `);
+
+        sendToElm(2);
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: [2]
+          originalUrlRequested: 1
+          originalUrlChanged: 2
+          newFromJs: []
+          newUrlRequested: 0
+          newUrlChanged: 0
+          browserOnClick: 0
+          </pre></div></body>
+        `);
+        expect(lastValueFromElm).toBe(4);
+      }
+
+      async function assertHotReload(body: HTMLBodyElement): Promise<void> {
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: [2]
+          originalUrlRequested: 1
+          originalUrlChanged: 2
+          newFromJs: []
+          newUrlRequested: 0
+          newUrlChanged: 0
+          browserOnClick: 0
+          </pre></div></body>
+        `);
+
+        expect(body.querySelector(".probe")).toBe(probe);
+
+        click(body, "a");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/link
+          originalFromJs: [2]
+          originalUrlRequested: 1
+          originalUrlChanged: 2
+          newFromJs: []
+          newUrlRequested: 1
+          newUrlChanged: 1
+          browserOnClick: 1
+          </pre></div></body>
+        `);
+
+        click(body, "button");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: [2]
+          originalUrlRequested: 1
+          originalUrlChanged: 2
+          newFromJs: []
+          newUrlRequested: 1
+          newUrlChanged: 2
+          browserOnClick: 2
+          </pre></div></body>
+        `);
+
+        sendToElm(3);
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: [2]
+          originalUrlRequested: 1
+          originalUrlChanged: 2
+          newFromJs: [3]
+          newUrlRequested: 1
+          newUrlChanged: 2
+          browserOnClick: 2
+          </pre></div></body>
+        `);
+        expect(lastValueFromElm).toBe(12);
+      }
+
+      async function assertReloadForOptimize(
+        body: HTMLBodyElement
+      ): Promise<void> {
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/
+          originalFromJs: []
+          originalUrlRequested: 0
+          originalUrlChanged: 0
+          newFromJs: []
+          newUrlRequested: 0
+          newUrlChanged: 0
+          browserOnClick: 0
+          </pre></div></body>
+        `);
+
+        expect(body.querySelector(".probe")).not.toBe(probe);
+
+        click(body, "a");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/link
+          originalFromJs: []
+          originalUrlRequested: 0
+          originalUrlChanged: 0
+          newFromJs: []
+          newUrlRequested: 1
+          newUrlChanged: 1
+          browserOnClick: 1
+          </pre></div></body>
+        `);
+
+        click(body, "button");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: []
+          originalUrlRequested: 0
+          originalUrlChanged: 0
+          newFromJs: []
+          newUrlRequested: 1
+          newUrlChanged: 2
+          browserOnClick: 2
+          </pre></div></body>
+        `);
+
+        sendToElm(3);
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: []
+          originalUrlRequested: 0
+          originalUrlChanged: 0
+          newFromJs: [3]
+          newUrlRequested: 1
+          newUrlChanged: 2
+          browserOnClick: 2
+          </pre></div></body>
+        `);
+        expect(lastValueFromElm).toBe(12);
+      }
+
+      async function assertHotReloadForOptimize(
+        body: HTMLBodyElement
+      ): Promise<void> {
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After simple text change</h1><a href="/link">Link</a><button>Button</button><pre>
+          url: http://localhost/push
+          originalFromJs: []
+          originalUrlRequested: 0
+          originalUrlChanged: 0
+          newFromJs: [3]
+          newUrlRequested: 1
+          newUrlChanged: 2
+          browserOnClick: 2
+          </pre></div></body>
+        `);
+        await Promise.resolve();
+      }
     });
   });
 });
