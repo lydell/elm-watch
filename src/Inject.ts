@@ -37,6 +37,11 @@ const mainReplacements: Array<Replacement> = [
     probe: /^function _Platform_initialize\(/m,
     replacements: [
       {
+        search: /^\s*(['"])use strict\1;/m,
+        // Make sure these are always defined for easier code in `_Platform_initialize`.
+        replace: `$&\nvar _Platform_effectManagers = {}, _Scheduler_enqueue;`,
+      },
+      {
         search:
           /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
         replace: `
@@ -74,7 +79,22 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
   setUpdateAndSubscriptions();
   _Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-  function __elmWatchHotReload(newImpl) {
+  function __elmWatchHotReload(newImpl, new_Platform_effectManagers, new_Scheduler_enqueue) {
+    _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
+    _Scheduler_enqueue = new_Scheduler_enqueue;
+
+    for (var key in new_Platform_effectManagers) {
+      var manager = new_Platform_effectManagers[key];
+      if (!(key in _Platform_effectManagers)) {
+        _Platform_effectManagers[key] = manager;
+        managers[key] = _Platform_instantiateManager(manager, sendToApp);
+        if (manager.a) {
+          console.info("elm-watch: A new port '" + key + "' was added. You might want to reload the page!");
+          manager.a(key, sendToApp)
+        }
+      }
+    }
+
     for (var key in newImpl) {
       if (key === "_impl" && impl._impl) {
         for (var subKey in newImpl[key]) {
@@ -84,6 +104,7 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
         impl[key] = newImpl[key];
       }
     }
+
     setUpdateAndSubscriptions();
     stepper(model, true /* isSync */);
     _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
@@ -178,7 +199,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
               Promise.reject(new Error("elm-watch: Cannot hot reload because \`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`. You need to reload the page!"));
             }
             try {
-              app.__elmWatchHotReload(newImpl);
+              app.__elmWatchHotReload(newImpl, _Platform_effectManagers, _Scheduler_enqueue);
             } catch (error) {
               errored = true;
               Promise.reject(new Error("elm-watch: Error during hot reload for \`" + moduleName + "\`:\\n" + error + "\\n" + (error ? error.stack : "")));
