@@ -364,9 +364,11 @@ export function inject(outputPath: OutputPath, code: string): InjectResult {
       code: newCode,
     };
   } catch (unknownError) {
+    // istanbul ignore else
     if (unknownError instanceof StrictReplaceError) {
       return unknownError.error;
     }
+    // istanbul ignore next
     throw unknownError;
   }
 }
@@ -374,10 +376,12 @@ export function inject(outputPath: OutputPath, code: string): InjectResult {
 function getRecordNames(code: string): Record<string, string> {
   const match = /^\s*impl\.(\w+),\s*impl\.(\w+),\s*impl\.(\w+),/m.exec(code);
 
+  // istanbul ignore if
   if (match === null) {
     return {};
   }
 
+  // istanbul ignore next
   const [
     ,
     init = "init_missing",
@@ -388,6 +392,7 @@ function getRecordNames(code: string): Record<string, string> {
   const extra = Object.fromEntries(
     Array.from(
       code.matchAll(/^\s*var (\w+) = impl\.(\w+);/gm),
+      // istanbul ignore next
       ([, from = "from_missing", to = "to_missing"]) => [from, to]
     )
   );
@@ -543,12 +548,11 @@ export function getRecordFields(
       return new Set();
 
     // If the set of accessed record field names changes in optimize mode, we cannot hot reload.
-    case "optimize":
-      return new Set(
-        (code.match(RECORD_FIELD_REGEX) ?? []).filter((string) =>
-          string.startsWith(".")
-        )
-      );
+    case "optimize": {
+      // istanbul ignore next
+      const matches = code.match(RECORD_FIELD_REGEX) ?? [];
+      return new Set(matches.filter((string) => string.startsWith(".")));
+    }
   }
 }
 
