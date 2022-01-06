@@ -175,18 +175,18 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
             var app = obj.__elmWatchApps[index];
             if (app.__elmWatchProgramType !== programType) {
               errored = true;
-              Promise.reject(new Error(\`elm-watch: Cannot hot reload because \\\`\${moduleName}.main\\\` changed from \\\`\${app.__elmWatchProgramType}\\\` to \\\`\${programType}\\\`. You need to reload the page!\`));
+              Promise.reject(new Error("elm-watch: Cannot hot reload because \`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`. You need to reload the page!"));
             }
             try {
               app.__elmWatchHotReload(newImpl);
             } catch (error) {
               errored = true;
-              Promise.reject(new Error(\`elm-watch: Error during hot reload for \\\`\${moduleName}\\\`: \${error}\`));
+              Promise.reject(new Error("elm-watch: Error during hot reload for \`" + moduleName + "\`:\\n" + error + "\\n" + (error ? error.stack : "")));
             }
           }
         } else {
           errored = true;
-          Promise.reject(new Error(\`elm-watch: \\\`\${moduleName}.init\\\` exists but wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally? If not, rename one of them so I know which is which!\`));
+          Promise.reject(new Error("elm-watch: \`" + moduleName + ".init\` exists but wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally? If not, rename one of them so I know which is which!"));
         }
       } else {
         obj.__elmWatchApps = [];
