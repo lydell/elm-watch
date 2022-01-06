@@ -1674,6 +1674,13 @@ function handleOutputActionResultToCmd(
         },
       };
 
+    case "FullyCompiledJSButReloadNeeded":
+      return {
+        tag: "WebSocketSendToOutput",
+        outputPath: handleOutputActionResult.outputPath,
+        message: { tag: "SuccessfullyCompiledButReloadNeeded" },
+      };
+
     case "Nothing":
       return { tag: "NoCmd" };
   }

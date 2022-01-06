@@ -30,12 +30,17 @@ const SuccessfullyCompiled = Decode.fieldsAuto({
   compilationMode: CompilationMode,
 });
 
+const SuccessfullyCompiledButReloadNeeded = Decode.fieldsAuto({
+  tag: () => "SuccessfullyCompiledButReloadNeeded" as const,
+});
+
 export type WebSocketToClientMessage = ReturnType<
   typeof WebSocketToClientMessage
 >;
 export const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
   StatusChanged,
   SuccessfullyCompiled,
+  SuccessfullyCompiledButReloadNeeded,
 });
 
 export type WebSocketToServerMessage = ReturnType<

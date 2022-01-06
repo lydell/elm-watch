@@ -541,6 +541,9 @@ function onWebSocketToClientMessage(
             },
             [{ tag: "Eval", code: msg.code }],
           ];
+
+    case "SuccessfullyCompiledButReloadNeeded":
+      return [model, [{ tag: "ReloadPage" }]];
   }
 }
 
@@ -1398,7 +1401,16 @@ function viewCompilationModeChooser({
                       },
               }),
               ...(status.tag === "Enabled"
-                ? [name]
+                ? mode === "optimize" && mode === selectedMode
+                  ? [
+                      name,
+                      h(
+                        HTMLElement,
+                        { localName: "small" },
+                        "Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!"
+                      ),
+                    ]
+                  : [name]
                 : [name, h(HTMLElement, { localName: "small" }, status.reason)])
             )
           )

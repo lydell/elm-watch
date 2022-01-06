@@ -60,6 +60,7 @@ export type OutputState = {
   compilationMode: CompilationMode;
   status: OutputStatus;
   allRelatedElmFilePaths: Set<string>;
+  recordFields: Set<string>;
   dirty: boolean;
 };
 
@@ -95,6 +96,7 @@ export type OutputStatus =
       postprocessArray: NonEmptyArray<string>;
       code: Buffer | string;
       elmCompiledTimestamp: number;
+      recordFields: Set<string>;
       durations: Array<Duration>;
     }
   | {
@@ -290,6 +292,7 @@ export function initProject({
                 : persisted.compilationMode,
             status: { tag: "NotWrittenToDisk", durations: [] },
             allRelatedElmFilePaths: new Set(),
+            recordFields: new Set(),
             dirty: true,
           });
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);

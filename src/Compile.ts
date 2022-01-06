@@ -216,6 +216,7 @@ type NeedsPostprocessOutputAction = {
   priority: number;
   code: Buffer | string;
   elmCompiledTimestamp: number;
+  recordFields: Set<string>;
 };
 
 type QueueForElmMakeOutputAction = {
@@ -353,6 +354,7 @@ export function getOutputActions({
             priority: priority ?? 0,
             code: outputState.status.code,
             elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
+            recordFields: outputState.status.recordFields,
           });
           break;
 
@@ -501,6 +503,10 @@ export type HandleOutputActionResult =
       compilationMode: CompilationMode;
     }
   | {
+      tag: "FullyCompiledJSButReloadNeeded";
+      outputPath: OutputPath;
+    }
+  | {
       tag: "Nothing";
     };
 
@@ -578,6 +584,7 @@ export async function handleOutputAction({
         postprocessWorkerPool,
         code: action.code,
         elmCompiledTimestamp: action.elmCompiledTimestamp,
+        recordFields: action.recordFields,
       });
 
     case "QueueForElmMake":
@@ -784,6 +791,7 @@ function onCompileSuccess(
             postprocessArray: postprocess.postprocessArray,
             code: buffer,
             elmCompiledTimestamp,
+            recordFields: new Set(),
             durations: appendDuration(outputState, [duration]),
           };
           updateStatusLineHelper();
@@ -792,9 +800,9 @@ function onCompileSuccess(
       }
 
     case "hot": {
-      let buffer;
+      let code;
       try {
-        buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
+        code = fs.readFileSync(outputPath.theOutputPath.absolutePath, "utf8");
       } catch (unknownError) {
         const error = toError(unknownError);
         outputState.status = { tag: "ReadOutputError", error };
@@ -802,14 +810,11 @@ function onCompileSuccess(
         return { tag: "CompileError", outputPath };
       }
 
-      // This will inject `elmCompiledTimestamp` into the built code, which is
-      // later used to detect if recompiles are needed or not. Note: This needs
-      // to be the timestamp of when Elm finished compiling, not when
-      // postprocessing finished. That’s because we haven’t done the
-      // postprocessing yet, but have to inject before that. So we’re storing
-      // the timestamp when Elm finished rather than when the entire process was
-      // finished.
-      const result = Inject.inject(outputPath, buffer.toString("utf8"));
+      const recordFields = Inject.getRecordFields(
+        outputState.compilationMode,
+        code
+      );
+      const result = Inject.inject(outputPath, code);
 
       const injectDuration: Duration = {
         tag: "Inject",
@@ -831,6 +836,14 @@ function onCompileSuccess(
                   outputPath.theOutputPath.absolutePath,
                   Buffer.concat([
                     Buffer.from(
+                      // This will inject `elmCompiledTimestamp` into the built
+                      // code, which is later used to detect if recompiles are
+                      // needed or not. Note: This needs to be the timestamp of
+                      // when Elm finished compiling, not when postprocessing
+                      // finished. That’s because we haven’t done the
+                      // postprocessing yet, but have to inject before that. So
+                      // we’re storing the timestamp when Elm finished rather
+                      // than when the entire process was finished.
                       Inject.clientCode(
                         outputPath,
                         elmCompiledTimestamp,
@@ -851,6 +864,11 @@ function onCompileSuccess(
                 updateStatusLineHelper();
                 return { tag: "CompileError", outputPath };
               }
+              const sameRecordFields = Inject.compareRecordFields(
+                outputState.recordFields,
+                recordFields
+              );
+              outputState.recordFields = recordFields;
               outputState.status = {
                 tag: "Success",
                 elmFileSize: newBuffer.byteLength,
@@ -862,13 +880,18 @@ function onCompileSuccess(
                 ]),
               };
               updateStatusLineHelper();
-              return {
-                tag: "FullyCompiledJS",
-                outputPath,
-                code: newBuffer,
-                elmCompiledTimestamp,
-                compilationMode: outputState.compilationMode,
-              };
+              return sameRecordFields
+                ? {
+                    tag: "FullyCompiledJS",
+                    outputPath,
+                    code: newBuffer,
+                    elmCompiledTimestamp,
+                    compilationMode: outputState.compilationMode,
+                  }
+                : {
+                    tag: "FullyCompiledJSButReloadNeeded",
+                    outputPath,
+                  };
             }
 
             case "Postprocess": {
@@ -877,6 +900,7 @@ function onCompileSuccess(
                 postprocessArray: postprocess.postprocessArray,
                 code: result.code,
                 elmCompiledTimestamp,
+                recordFields,
                 durations: appendDuration(outputState, [
                   duration,
                   injectDuration,
@@ -942,6 +966,7 @@ async function postprocessHelper({
   postprocessWorkerPool,
   code,
   elmCompiledTimestamp,
+  recordFields,
 }: {
   env: Env;
   logger: Logger;
@@ -956,6 +981,7 @@ async function postprocessHelper({
   postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
   elmCompiledTimestamp: number;
+  recordFields: Set<string>;
 }): Promise<HandleOutputActionResult> {
   const startTimestamp = getNow().getTime();
 
@@ -1055,6 +1081,11 @@ async function postprocessHelper({
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
     }
+    const sameRecordFields = Inject.compareRecordFields(
+      outputState.recordFields,
+      recordFields
+    );
+    outputState.recordFields = recordFields;
     outputState.status = {
       tag: "Success",
       elmFileSize: Buffer.byteLength(code),
@@ -1068,13 +1099,18 @@ async function postprocessHelper({
       ]),
     };
     updateStatusLineHelper();
-    return {
-      tag: "FullyCompiledJS",
-      outputPath,
-      code: postprocessResult.code,
-      elmCompiledTimestamp,
-      compilationMode: outputState.compilationMode,
-    };
+    return sameRecordFields
+      ? {
+          tag: "FullyCompiledJS",
+          outputPath,
+          code: postprocessResult.code,
+          elmCompiledTimestamp,
+          compilationMode: outputState.compilationMode,
+        }
+      : {
+          tag: "FullyCompiledJSButReloadNeeded",
+          outputPath,
+        };
   }
 
   outputState.status = postprocessResult;

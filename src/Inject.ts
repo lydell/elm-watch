@@ -2,7 +2,12 @@ import * as ClientCode from "./ClientCode";
 import * as Errors from "./Errors";
 import { absoluteDirname } from "./PathHelpers";
 import { Port } from "./Port";
-import { AbsolutePath, CompilationModeWithProxy, OutputPath } from "./Types";
+import {
+  AbsolutePath,
+  CompilationMode,
+  CompilationModeWithProxy,
+  OutputPath,
+} from "./Types";
 
 type Replacement = {
   // The `probe` is a simpler regex that determines if `replacements` should be
@@ -520,4 +525,42 @@ export function versionedIdentifier(webSocketPort: Port): string {
     version: "%VERSION%",
     webSocketPort: webSocketPort.thePort,
   })}\n`;
+}
+
+// Matches string literals, multiline comments, singleline comments and `.foo`.
+// We’re only interested in `.foo` – but only outside strings and comments.
+// Copied from: https://github.com/lydell/js-tokens/blob/15439aa6c3a66afa852c3549f8f57076935ead1f/index.coffee
+const RECORD_FIELD_REGEX =
+  /(['"])(?:(?!\1)[^\\\n\r]|\\(?:\r\n|[^]))*(\1)?|\/\*(?:[^*]|\*(?!\/))*(\*\/)?|\/\/.*|\.[\w$]{1,4}\b/g;
+
+export function getRecordFields(
+  compilationMode: CompilationMode,
+  code: string
+): Set<string> {
+  switch (compilationMode) {
+    case "debug":
+    case "standard":
+      return new Set();
+
+    // If the set of accessed record field names changes in optimize mode, we cannot hot reload.
+    case "optimize":
+      return new Set(
+        (code.match(RECORD_FIELD_REGEX) ?? []).filter((string) =>
+          string.startsWith(".")
+        )
+      );
+  }
+}
+
+export function compareRecordFields(
+  oldSet: Set<string>,
+  newSet: Set<string>
+): boolean {
+  return (
+    compareRecordFieldsHelper(oldSet) === compareRecordFieldsHelper(newSet)
+  );
+}
+
+function compareRecordFieldsHelper(set: Set<string>): string {
+  return Array.from(set).sort().join(",");
 }
