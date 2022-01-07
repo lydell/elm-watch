@@ -25,7 +25,7 @@ declare global {
   }
 }
 
-type UppercaseLetter =
+export type UppercaseLetter =
   | "A"
   | "B"
   | "C"

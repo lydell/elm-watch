@@ -4,7 +4,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { ElmModule } from "../client/client";
+import { ElmModule, UppercaseLetter } from "../client/client";
 import { elmWatchCli } from "../src";
 import { CompilationMode } from "../src/Types";
 import {
@@ -1143,9 +1143,15 @@ describe("hot", () => {
   });
 
   describe("hot reloading", () => {
-    test("Application", async () => {
+    function runHotReload({ name }: { name: `${UppercaseLetter}${string}` }): {
+      write: (n: number) => void;
+      writeSimpleChange: () => void;
+      sendToElm: (value: number) => void;
+      terminate: () => void;
+      lastValueFromElm: { value: unknown };
+      go: (onIdle: OnIdle) => ReturnType<typeof run>;
+    } {
       const fixture = "hot-reload";
-      const name = "Application";
       const src = path.join(FIXTURES_DIR, fixture, "src");
 
       const write = (n: number): void => {
@@ -1167,13 +1173,8 @@ describe("hot", () => {
         );
       };
 
-      write(1);
-
-      const trigger = makeTrigger();
-
       let app: ReturnType<ElmModule["init"]> | undefined;
-      let lastValueFromElm: unknown;
-      let probe: HTMLElement | null = null;
+      const lastValueFromElm: { value: unknown } = { value: undefined };
 
       const sendToElm = (value: number): void => {
         const send = app?.ports?.fromJs?.send;
@@ -1191,71 +1192,99 @@ describe("hot", () => {
         send(null);
       };
 
-      const { terminal, renders } = await run({
-        fixture,
-        args: [name],
-        scripts: [`${name}.js`],
-        isTTY: false,
-        init: (node) => {
-          app = window.Elm?.[name]?.init({ node });
-          const subscribe = app?.ports?.toJs?.subscribe;
-          if (subscribe === undefined) {
-            throw new Error("Failed to find 'toJs' subscribe port.");
-          }
-          subscribe((value: unknown) => {
-            lastValueFromElm = value;
-          });
-        },
-        onIdle: ({ idle, body }) => {
-          switch (idle) {
-            case 2: // Client rendered ✅.
-              void assertInit(body).then(() => {
-                write(2);
-              });
-              return "KeepGoing";
-            case 5:
-              void assertHotReload(body).then(() => {
-                terminate();
-                switchCompilationMode("debug");
-                write(1);
-              });
-              return "KeepGoing";
-            case 7: // Client rendered ✅.
-              // Assert that the debugger appeared.
-              // eslint-disable-next-line jest/no-conditional-expect
-              expect(body.querySelectorAll("svg")).toHaveLength(1);
-              void assertInit(body).then(() => {
-                write(2);
-              });
-              return "KeepGoing";
-            case 10:
-              void assertHotReload(body).then(() => {
-                terminate();
-                switchCompilationMode("optimize");
-                write(1);
-              });
-              return "KeepGoing";
-            case 13:
-              void assertInit(body).then(() => {
-                terminate();
-                write(2);
-              });
-              return "KeepGoing";
-            case 17:
-              void assertReloadForOptimize(body).then(() => {
-                writeSimpleChange();
-              });
-              return "KeepGoing";
-            case 19:
-              void assertHotReloadForOptimize(body).then(() => {
-                terminate();
-                trigger.trigger();
-              });
-              return "Stop";
-            default:
-              return "KeepGoing";
-          }
-        },
+      return {
+        write,
+        writeSimpleChange,
+        sendToElm,
+        terminate,
+        lastValueFromElm,
+        go: (onIdle: OnIdle) =>
+          run({
+            fixture,
+            args: [name],
+            scripts: [`${name}.js`],
+            isTTY: false,
+            init: (node) => {
+              app = window.Elm?.[name]?.init({ node });
+              if (app?.ports !== undefined) {
+                const subscribe = app.ports.toJs?.subscribe;
+                if (subscribe === undefined) {
+                  throw new Error("Failed to find 'toJs' subscribe port.");
+                }
+                subscribe((value: unknown) => {
+                  lastValueFromElm.value = value;
+                });
+              }
+            },
+            onIdle,
+          }),
+      };
+    }
+
+    test("Application", async () => {
+      const {
+        write,
+        writeSimpleChange,
+        sendToElm,
+        terminate,
+        lastValueFromElm,
+        go,
+      } = runHotReload({ name: "Application" });
+
+      const trigger = makeTrigger();
+      let probe: HTMLElement | null = null;
+
+      write(1);
+
+      const { terminal, renders } = await go(({ idle, body }) => {
+        switch (idle) {
+          case 2:
+            void assertInit(body).then(() => {
+              write(2);
+            });
+            return "KeepGoing";
+          case 5:
+            void assertHotReload(body).then(() => {
+              terminate();
+              switchCompilationMode("debug");
+              write(1);
+            });
+            return "KeepGoing";
+          case 7:
+            // Assert that the debugger appeared.
+            // eslint-disable-next-line jest/no-conditional-expect
+            expect(body.querySelectorAll("svg")).toHaveLength(1);
+            void assertInit(body).then(() => {
+              write(2);
+            });
+            return "KeepGoing";
+          case 10:
+            void assertHotReload(body).then(() => {
+              terminate();
+              switchCompilationMode("optimize");
+              write(1);
+            });
+            return "KeepGoing";
+          case 13:
+            void assertInit(body).then(() => {
+              terminate();
+              write(2);
+            });
+            return "KeepGoing";
+          case 17:
+            void assertReloadForOptimize(body).then(() => {
+              writeSimpleChange();
+            });
+            return "KeepGoing";
+          case 19:
+            void assertHotReloadForOptimize(body).then(() => {
+              terminate();
+              trigger.trigger();
+            });
+            return "Stop";
+          default:
+            return "KeepGoing";
+        }
       });
 
       await trigger.promise;
@@ -1568,7 +1597,7 @@ describe("hot", () => {
           browserOnClick: 0
           </pre></div></body>
         `);
-        expect(lastValueFromElm).toBe(4);
+        expect(lastValueFromElm.value).toBe(4);
       }
 
       async function assertHotReload(body: HTMLBodyElement): Promise<void> {
@@ -1631,7 +1660,7 @@ describe("hot", () => {
           browserOnClick: 2
           </pre></div></body>
         `);
-        expect(lastValueFromElm).toBe(12);
+        expect(lastValueFromElm.value).toBe(12);
       }
 
       async function assertReloadForOptimize(
@@ -1696,7 +1725,7 @@ describe("hot", () => {
           browserOnClick: 2
           </pre></div></body>
         `);
-        expect(lastValueFromElm).toBe(12);
+        expect(lastValueFromElm.value).toBe(12);
       }
 
       async function assertHotReloadForOptimize(
