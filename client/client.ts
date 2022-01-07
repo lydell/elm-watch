@@ -19,7 +19,7 @@ declare global {
   interface Window {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCH_GET_NOW: GetNow;
-    __ELM_WATCH_RELOAD_PAGE: () => void;
+    __ELM_WATCH_RELOAD_PAGE?: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_KILL_ALL: () => void;
   }
@@ -63,15 +63,8 @@ export type ElmModule = {
   [key: `${UppercaseLetter}${string}`]: ElmModule;
 };
 
-const stubbedReload = window.__ELM_WATCH_RELOAD_PAGE !== undefined;
-
 // So we can have a fixed date in tests.
 window.__ELM_WATCH_GET_NOW ??= () => new Date();
-
-// Jest doesn’t support navigation, so we overwrite this in tests.
-window.__ELM_WATCH_RELOAD_PAGE ??= () => {
-  window.location.reload();
-};
 
 window.__ELM_WATCH_ON_RENDER ??= () => {
   // Do nothing.
@@ -682,19 +675,22 @@ const runCmd =
         );
         return;
 
-      case "ReloadPage":
-        if (stubbedReload) {
+      case "ReloadPage": {
+        // Jest doesn’t support navigation.
+        const reload = window.__ELM_WATCH_RELOAD_PAGE;
+        if (reload !== undefined) {
           mutable.webSocket.addEventListener("close", () => {
-            window.__ELM_WATCH_RELOAD_PAGE();
+            reload();
           });
           mutable.removeListeners();
           mutable.webSocket.close();
           targetRoot.remove();
           resolvePromise(undefined);
         } else {
-          window.__ELM_WATCH_RELOAD_PAGE();
+          window.location.reload();
         }
         return;
+      }
 
       case "Render":
         render(
