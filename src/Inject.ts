@@ -145,18 +145,15 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
   }
 
   var node = args && args['node'] ? args['node'] : _Debug_crash(0);
-
-  function render() {
-    var nextNode = _VirtualDom_render(virtualNode, function() {});
-    node.parentNode.replaceChild(nextNode, node);
-    node = nextNode;
-  }
-
-  render();
+  var nextNode = _VirtualDom_render(virtualNode, function() {});
+  node.parentNode.replaceChild(nextNode, node);
+  node = nextNode;
+  var sendToApp = function() {};
 
   function __elmWatchHotReload(newVirtualNode) {
+    var patches = _VirtualDom_diff(virtualNode, newVirtualNode);
+    node = _VirtualDom_applyPatches(node, virtualNode, patches, sendToApp);
     virtualNode = newVirtualNode;
-    render();
   }
 
   return Object.defineProperties(
