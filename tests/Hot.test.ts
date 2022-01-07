@@ -216,9 +216,9 @@ function expandUi(): void {
   expandUiHelper(true);
 }
 
-// function collapseUi(): void {
-//   expandUiHelper(false);
-// }
+function collapseUi(): void {
+  expandUiHelper(false);
+}
 
 function expandUiHelper(wantExpanded: boolean): void {
   withShadowRoot((shadowRoot) => {
@@ -239,12 +239,25 @@ function switchCompilationMode(compilationMode: CompilationMode): void {
     const radio = shadowRoot?.querySelectorAll('input[type="radio"]')[
       switchCompilationModeHelper(compilationMode)
     ];
-    if (radio instanceof HTMLElement) {
+    if (radio instanceof HTMLInputElement) {
       radio.click();
     } else {
       throw new Error(`Could not find radio button for ${compilationMode}.`);
     }
   });
+}
+
+function assertDebugDisabled(): void {
+  expandUi();
+  withShadowRoot((shadowRoot) => {
+    const radio = shadowRoot?.querySelector('input[type="radio"]');
+    if (radio instanceof HTMLInputElement) {
+      expect(radio.disabled).toBe(true);
+    } else {
+      throw new Error(`Could not find any radio button!`);
+    }
+  });
+  collapseUi();
 }
 
 function switchCompilationModeHelper(compilationMode: CompilationMode): number {
@@ -1220,6 +1233,220 @@ describe("hot", () => {
           }),
       };
     }
+
+    test("Html", async () => {
+      const { write, writeSimpleChange, go } = runHotReload({
+        name: "HtmlMain",
+      });
+
+      let probe: HTMLElement | null = null;
+
+      write(1);
+
+      const { terminal, renders } = await go(({ idle, div }) => {
+        switch (idle) {
+          case 3:
+            assertDebugDisabled();
+            assertInit(div);
+            writeSimpleChange();
+            return "KeepGoing";
+          case 5:
+            assertHotReload(div);
+            switchCompilationMode("optimize");
+            write(1);
+            return "KeepGoing";
+          case 8:
+            assertDebugDisabled();
+            assertInit(div);
+            writeSimpleChange();
+            return "KeepGoing";
+          case 10:
+            assertHotReload(div);
+            return "Stop";
+          default:
+            return "KeepGoing";
+        }
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ HtmlMain: elm make (typecheck only)
+        ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ HtmlMain: elm make
+        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⏳ HtmlMain: elm make
+        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/HtmlMain.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ HtmlMain: elm make --optimize
+        ⏳ HtmlMain: interrupted
+        ⏳ HtmlMain: elm make --optimize
+        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed compilation mode to "optimize" of: HtmlMain
+        ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/HtmlMain.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⏳ HtmlMain: elm make --optimize
+        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/HtmlMain.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ 🔌 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
+        ▲ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
+        ▲ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
+        ▲ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⚡️ 🔌 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ Standard
+        ◉ Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
+        ▲ ⚡️ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ✅ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ⏳ 00:00:00 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ✅ 00:00:00 HtmlMain
+      `);
+
+      function assertInit(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><h1 class="probe">hot reload</h1></div>`
+        );
+        probe = div.querySelector(".probe");
+        expect(probe).not.toBeNull();
+      }
+
+      function assertHotReload(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><h1 class="probe">simple text change</h1></div>`
+        );
+        expect(div.querySelector(".probe")).toBe(probe);
+      }
+    });
 
     test("Application", async () => {
       const {

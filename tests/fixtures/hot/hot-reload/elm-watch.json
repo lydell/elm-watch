@@ -1,5 +1,11 @@
 {
     "targets": {
+        "HtmlMain": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/HtmlMain.js"
+        },
         "Application": {
             "inputs": [
                 "src/Application.elm"
