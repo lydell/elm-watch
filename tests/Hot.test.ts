@@ -360,18 +360,6 @@ async function waitOneFrame(): Promise<void> {
   });
 }
 
-function makeTrigger(): { promise: Promise<void>; trigger: () => void } {
-  let trigger = (): void => {
-    throw new Error("trigger was never reassigned!");
-  };
-  const promise = new Promise<void>((resolve) => {
-    trigger = () => {
-      resolve();
-    };
-  });
-  return { promise, trigger };
-}
-
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot", () => {
@@ -1162,7 +1150,10 @@ describe("hot", () => {
       sendToElm: (value: number) => void;
       terminate: () => void;
       lastValueFromElm: { value: unknown };
-      go: (onIdle: OnIdle) => ReturnType<typeof run>;
+      // This returns nothing, because the terminal and browser output gets
+      // very long-winded and is a bit flaky due to timing. That’s not what
+      // we’re tesing here.
+      go: (onIdle: OnIdle) => Promise<void>;
     } {
       const fixture = "hot-reload";
       const src = path.join(FIXTURES_DIR, fixture, "src");
@@ -1211,12 +1202,11 @@ describe("hot", () => {
         sendToElm,
         terminate,
         lastValueFromElm,
-        go: (onIdle: OnIdle) =>
-          run({
+        go: async (onIdle: OnIdle) => {
+          await run({
             fixture,
             args: [name],
             scripts: [`${name}.js`],
-            isTTY: false,
             init: (node) => {
               app = window.Elm?.[name]?.init({ node });
               if (app?.ports !== undefined) {
@@ -1230,7 +1220,8 @@ describe("hot", () => {
               }
             },
             onIdle,
-          }),
+          });
+        },
       };
     }
 
@@ -1243,7 +1234,7 @@ describe("hot", () => {
 
       write(1);
 
-      const { terminal, renders } = await go(({ idle, div }) => {
+      await go(({ idle, div }) => {
         switch (idle) {
           case 3:
             assertDebugDisabled();
@@ -1267,170 +1258,6 @@ describe("hot", () => {
             return "KeepGoing";
         }
       });
-
-      expect(terminal).toMatchInlineSnapshot(`
-        ⏳ Dependencies
-        ✅ Dependencies
-        ⏳ HtmlMain: elm make (typecheck only)
-        ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-        ⏳ HtmlMain: elm make
-        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-        ⏳ HtmlMain: elm make
-        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/HtmlMain.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-        ⏳ HtmlMain: elm make --optimize
-        ⏳ HtmlMain: interrupted
-        ⏳ HtmlMain: elm make --optimize
-        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed compilation mode to "optimize" of: HtmlMain
-        ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/HtmlMain.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-        ⏳ HtmlMain: elm make --optimize
-        ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/HtmlMain.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-      `);
-
-      expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ 🔌 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Successfully compiled
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        ▲ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Successfully compiled
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        ▲ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◯ (disabled) Standard
-        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
-        ▲ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◯ (disabled) Standard
-        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
-        ▲ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◯ (disabled) Standard
-        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
-        ▲ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⚡️ 🔌 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⚡️ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Successfully compiled
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◯ Standard
-        ◉ Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
-        ▲ ⚡️ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⚡️ ✅ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 HtmlMain
-        ================================================================================
-        ▼ ⚡️ ✅ 00:00:00 HtmlMain
-      `);
 
       function assertInit(div: HTMLDivElement): void {
         expect(div.outerHTML).toMatchInlineSnapshot(
@@ -1458,12 +1285,11 @@ describe("hot", () => {
         go,
       } = runHotReload({ name: "Application" });
 
-      const trigger = makeTrigger();
       let probe: HTMLElement | null = null;
 
       write(1);
 
-      const { terminal, renders } = await go(({ idle, body }) => {
+      await go(({ idle, body }) => {
         switch (idle) {
           case 2:
             void assertInit(body).then(() => {
@@ -1506,262 +1332,12 @@ describe("hot", () => {
           case 19:
             void assertHotReloadForOptimize(body).then(() => {
               terminate();
-              trigger.trigger();
             });
             return "Stop";
           default:
             return "KeepGoing";
         }
       });
-
-      await trigger.promise;
-
-      expect(terminal).toMatchInlineSnapshot(`
-        ⏳ Dependencies
-        ✅ Dependencies
-        ⏳ Application: elm make (typecheck only)
-        ✅ Application⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-        ⏳ Application: elm make
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Application⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-        ⏳ Application: elm make
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-        ⏳ Application: elm make --debug
-        ⏳ Application: interrupted
-        ⏳ Application: elm make --debug
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed compilation mode to "debug" of: Application
-        ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-        ⏳ Application: elm make --debug
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-        ⏳ Application: elm make --optimize
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed compilation mode to "optimize" of: Application⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-        ⏳ Application: elm make --optimize
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm
-           (1 more event)
-        ℹ️ 00:00:00 Web socket connected needing compilation of: Application⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-        ⏳ Application: elm make --optimize
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Web socket connected for: Application⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
-        ⏳ Application: elm make --optimize
-        ✅ Application⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/Application.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-      `);
-
-      expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ 🔌 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ✅ 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ✅ 00:00:00 Application
-        ================================================================================
-        target Application
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Successfully compiled
-        Compilation mode
-        ◯ Debug
-        ◉ Standard
-        ◯ Optimize
-        ▲ ✅ 00:00:00 Application
-        ================================================================================
-        target Application
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◉ (disabled) Debug
-        ◯ (disabled) Standard
-        ◯ (disabled) Optimize
-        ▲ ⏳ 00:00:00 Application
-        ================================================================================
-        target Application
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◉ (disabled) Debug
-        ◯ (disabled) Standard
-        ◯ (disabled) Optimize
-        ▲ ⏳ 00:00:00 Application
-        ================================================================================
-        target Application
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◉ (disabled) Debug
-        ◯ (disabled) Standard
-        ◯ (disabled) Optimize
-        ▲ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ 🔌 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ✅ 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ✅ 00:00:00 Application
-        ================================================================================
-        target Application
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Successfully compiled
-        Compilation mode
-        ◉ Debug
-        ◯ Standard
-        ◯ Optimize
-        ▲ ✅ 00:00:00 Application
-        ================================================================================
-        target Application
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug
-        ◯ (disabled) Standard
-        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
-        ▲ ⏳ 00:00:00 Application
-        ================================================================================
-        target Application
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug
-        ◯ (disabled) Standard
-        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
-        ▲ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ 🔌 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ 🔌 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ✅ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ 🔌 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ✅ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ⏳ 00:00:00 Application
-        ================================================================================
-        ▼ ⚡️ ✅ 00:00:00 Application
-      `);
 
       async function assertInit(body: HTMLBodyElement): Promise<void> {
         expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
