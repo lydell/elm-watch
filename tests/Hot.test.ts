@@ -6,7 +6,7 @@ import * as path from "path";
 
 import { ElmModule } from "../client/client";
 import { elmWatchCli } from "../src";
-import { CompilationMode, OnIdle } from "../src/Types";
+import { CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
@@ -27,6 +27,12 @@ console.warn = () => {
 
 let bodyCounter = 0;
 
+type OnIdle = (params: {
+  idle: number;
+  div: HTMLDivElement;
+  body: HTMLBodyElement;
+}) => "KeepGoing" | "Stop";
+
 async function run({
   fixture,
   scripts,
@@ -41,7 +47,7 @@ async function run({
   scripts: Array<string>;
   args?: Array<string>;
   init: (node: HTMLDivElement) => void;
-  onIdle: (body: HTMLBodyElement) => "KeepGoing" | "Stop";
+  onIdle: OnIdle;
   expandUiImmediately?: boolean;
   isTTY?: boolean;
   bin?: string;
@@ -114,7 +120,7 @@ async function run({
       }, reject);
     };
 
-    let idle = 0;
+    let idle = -1;
 
     window.__ELM_WATCH_GET_NOW = () => new Date(0);
     window.__ELM_WATCH_RELOAD_PAGE = () => {
@@ -153,11 +159,11 @@ async function run({
       onIdle: () => {
         idle++;
         switch (idle) {
-          case 1: // Typecheck-only done.
+          case 0: // Typecheck-only done.
             loadBuiltFiles(false);
             return "KeepGoing";
           default: {
-            const result = onIdle(body);
+            const result = onIdle({ idle, div: outerDiv, body });
             switch (result) {
               case "KeepGoing":
                 return "KeepGoing";
@@ -185,18 +191,14 @@ async function run({
   };
 }
 
-const stopOnFirstSuccess = (): OnIdle => {
-  let idle = 0;
-  return () => {
-    idle++;
-    switch (idle) {
-      case 1: // Compilation done after websocket connected.
-      case 2: // Client rendered ✅.
-        return "KeepGoing";
-      default:
-        return "Stop";
-    }
-  };
+const stopOnFirstSuccess: OnIdle = ({ idle }) => {
+  switch (idle) {
+    case 1: // Compilation done after websocket connected.
+    case 2: // Client rendered ✅.
+      return "KeepGoing";
+    default:
+      return "Stop";
+  }
 };
 
 function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
@@ -372,7 +374,7 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.HtmlMain?.init({ node });
       },
-      onIdle: stopOnFirstSuccess(),
+      onIdle: stopOnFirstSuccess,
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -411,7 +413,7 @@ describe("hot", () => {
       init: () => {
         window.Elm?.Worker?.init();
       },
-      onIdle: stopOnFirstSuccess(),
+      onIdle: stopOnFirstSuccess,
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -521,7 +523,7 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.Main?.init({ node });
       },
-      onIdle: stopOnFirstSuccess(),
+      onIdle: stopOnFirstSuccess,
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -551,15 +553,12 @@ describe("hot", () => {
   });
 
   test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
-    let idle = 0;
-
     const { terminal, renders } = await run({
       fixture: "basic",
       args: ["Readonly"],
       scripts: ["Readonly.js"],
       init: failInit,
-      onIdle: () => {
-        idle++;
+      onIdle: ({ idle }) => {
         switch (idle) {
           case 1:
             return "KeepGoing";
@@ -614,15 +613,12 @@ describe("hot", () => {
   });
 
   test("fail to inject hot reload", async () => {
-    let idle = 0;
-
     const { terminal, renders } = await run({
       fixture: "basic",
       args: ["InjectError"],
       scripts: ["InjectError.js"],
       init: failInit,
-      onIdle: () => {
-        idle++;
+      onIdle: ({ idle }) => {
         switch (idle) {
           case 1:
             return "KeepGoing";
@@ -1178,7 +1174,6 @@ describe("hot", () => {
       let app: ReturnType<ElmModule["init"]> | undefined;
       let lastValueFromElm: unknown;
       let probe: HTMLElement | null = null;
-      let idle = 0;
 
       const sendToElm = (value: number): void => {
         const send = app?.ports?.fromJs?.send;
@@ -1211,8 +1206,7 @@ describe("hot", () => {
             lastValueFromElm = value;
           });
         },
-        onIdle: (body) => {
-          idle++;
+        onIdle: ({ idle, body }) => {
           switch (idle) {
             case 2: // Client rendered ✅.
               void assertInit(body).then(() => {
