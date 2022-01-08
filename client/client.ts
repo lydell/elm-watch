@@ -1435,6 +1435,7 @@ function viewCompilationModeChooser({
               h(HTMLInputElement, {
                 type: "radio",
                 name: `CompilationMode-${targetName}`,
+                value: mode,
                 checked: mode === selectedMode,
                 disabled: sendKey === undefined || status.tag === "Disabled",
                 onchange:

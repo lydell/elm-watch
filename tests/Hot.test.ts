@@ -256,13 +256,27 @@ function expandUiHelper(wantExpanded: boolean): void {
 function switchCompilationMode(compilationMode: CompilationMode): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const radio = shadowRoot?.querySelectorAll('input[type="radio"]')[
-      switchCompilationModeHelper(compilationMode)
-    ];
+    const radio = shadowRoot?.querySelector(
+      `input[type="radio"][value="${compilationMode}"]`
+    );
     if (radio instanceof HTMLInputElement) {
       radio.click();
     } else {
       throw new Error(`Could not find radio button for ${compilationMode}.`);
+    }
+  });
+}
+
+function assertCompilationMode(compilationMode: CompilationMode): void {
+  expandUi();
+  withShadowRoot((shadowRoot) => {
+    const radio = shadowRoot?.querySelector(`input[type="radio"]:checked`);
+    if (radio instanceof HTMLInputElement) {
+      expect(radio.value).toMatchInlineSnapshot(compilationMode);
+    } else {
+      throw new Error(
+        `Could not find a checked radio button (expecting to be ${compilationMode}).`
+      );
     }
   });
 }
@@ -288,17 +302,6 @@ function assertDebugger(body: HTMLBodyElement): void {
       svg,
     ]
   `);
-}
-
-function switchCompilationModeHelper(compilationMode: CompilationMode): number {
-  switch (compilationMode) {
-    case "debug":
-      return 0;
-    case "standard":
-      return 1;
-    case "optimize":
-      return 2;
-  }
 }
 
 function getTextContent(element: Node): string {
@@ -1267,6 +1270,7 @@ describe("hot", () => {
             write(1);
             return "KeepGoing";
           case 3:
+            assertCompilationMode("optimize");
             assertDebugDisabled();
             assertInit(div);
             writeSimpleChange();
@@ -1331,6 +1335,7 @@ describe("hot", () => {
             write(1);
             return "KeepGoing";
           case 3:
+            assertCompilationMode("debug");
             assertDebugger(body);
             await assertInit(body);
             write(2);
@@ -1342,6 +1347,7 @@ describe("hot", () => {
             write(1);
             return "KeepGoing";
           case 5:
+            assertCompilationMode("optimize");
             await assertInit(body);
             terminate();
             write(2);
