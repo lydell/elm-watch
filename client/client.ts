@@ -963,6 +963,7 @@ const CLASS = {
   container: "container",
   expandedUiContainer: "expandedUiContainer",
   shortStatusContainer: "shortStatusContainer",
+  debugModeIcon: "debugModeIcon",
   targetName: "targetName",
   targetRoot: "targetRoot",
   root: "root",
@@ -1040,6 +1041,7 @@ time::after {
   font-family: system-ui;
 }
 
+.${CLASS.targetRoot}:only-of-type .${CLASS.debugModeIcon},
 .${CLASS.targetRoot}:only-of-type .${CLASS.targetName} {
   display: none;
 }
@@ -1133,9 +1135,7 @@ function view(
           model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch"
         )
       ),
-      info.compilationMode === "optimize"
-        ? icon("⚡️", "Optimize mode")
-        : undefined,
+      compilationModeIcon(info.compilationMode),
       icon(statusData.icon, statusData.status),
       h(
         HTMLTimeElement,
@@ -1150,10 +1150,14 @@ function view(
   );
 }
 
-function icon(emoji: string, alt: string): HTMLElement {
+function icon(
+  emoji: string,
+  alt: string,
+  props?: Partial<HTMLSpanElement>
+): HTMLElement {
   return h(
     HTMLSpanElement,
-    { attrs: { "aria-label": alt } },
+    { attrs: { "aria-label": alt }, ...props },
     h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, emoji)
   );
 }
@@ -1330,6 +1334,21 @@ function idleIcon(status: InitializedElmAppsStatus): string {
 
     case "DebuggerModeStatus":
       return "✅";
+  }
+}
+
+function compilationModeIcon(
+  compilationMode: CompilationModeWithProxy
+): HTMLElement | undefined {
+  switch (compilationMode) {
+    case "proxy":
+      return undefined;
+    case "debug":
+      return icon("🌳", "Debug mode", { className: CLASS.debugModeIcon });
+    case "standard":
+      return undefined;
+    case "optimize":
+      return icon("⚡️", "Optimize mode");
   }
 }
 
