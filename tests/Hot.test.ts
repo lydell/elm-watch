@@ -1266,10 +1266,12 @@ describe("hot", () => {
             return "KeepGoing";
           case 2:
             assertHotReload(div);
-            switchCompilationMode("optimize");
             write(1);
             return "KeepGoing";
           case 3:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 4:
             assertCompilationMode("optimize");
             assertDebugDisabled();
             assertInit(div);
@@ -1284,8 +1286,9 @@ describe("hot", () => {
       expect(log).toMatchInlineSnapshot(`
         1 AlreadyUpToDate
         2 EvalSucceeded
-        3 AlreadyUpToDate
-        4 EvalSucceeded
+        3 EvalSucceeded
+        4 AlreadyUpToDate
+        5 EvalSucceeded
       `);
 
       function assertInit(div: HTMLDivElement): void {
@@ -1331,28 +1334,32 @@ describe("hot", () => {
           case 2:
             await assertHotReload(body);
             terminate();
-            switchCompilationMode("debug");
             write(1);
             return "KeepGoing";
           case 3:
+            switchCompilationMode("debug");
+            return "KeepGoing";
+          case 4:
             assertCompilationMode("debug");
             assertDebugger(body);
             await assertInit(body);
             write(2);
             return "KeepGoing";
-          case 4:
+          case 5:
             await assertHotReload(body);
             terminate();
-            switchCompilationMode("optimize");
             write(1);
             return "KeepGoing";
-          case 5:
+          case 6:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 7:
             assertCompilationMode("optimize");
             await assertInit(body);
             terminate();
             write(2);
             return "KeepGoing";
-          case 6:
+          case 8:
             await assertReloadForOptimize(body);
             writeSimpleChange();
             return "KeepGoing";
@@ -1366,11 +1373,13 @@ describe("hot", () => {
       expect(log).toMatchInlineSnapshot(`
         1 AlreadyUpToDate
         2 EvalSucceeded
-        3 AlreadyUpToDate
-        4 EvalSucceeded
-        5 AlreadyUpToDate
-        6 AlreadyUpToDate
-        7 EvalSucceeded
+        3 EvalSucceeded
+        4 AlreadyUpToDate
+        5 EvalSucceeded
+        6 EvalSucceeded
+        7 AlreadyUpToDate
+        8 AlreadyUpToDate
+        9 EvalSucceeded
       `);
 
       async function assertInit(body: HTMLBodyElement): Promise<void> {
