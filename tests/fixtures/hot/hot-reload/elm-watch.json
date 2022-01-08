@@ -12,6 +12,12 @@
             ],
             "output": "build/Sandbox.js"
         },
+        "Element": {
+            "inputs": [
+                "src/Element.elm"
+            ],
+            "output": "build/Element.js"
+        },
         "Application": {
             "inputs": [
                 "src/Application.elm"
