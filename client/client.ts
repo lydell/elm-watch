@@ -19,6 +19,7 @@ declare global {
   interface Window {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCH_GET_NOW: GetNow;
+    __ELM_WATCH_SKIP_RECONNECT_TIME_CHECK: boolean;
     __ELM_WATCH_RELOAD_PAGE?: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
@@ -66,6 +67,8 @@ export type ElmModule = {
 
 // So we can have a fixed date in tests.
 window.__ELM_WATCH_GET_NOW ??= () => new Date();
+
+window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK ??= false;
 
 window.__ELM_WATCH_ON_RENDER ??= () => {
   // Do nothing.
@@ -655,7 +658,8 @@ function reconnect(
   return model.status.tag === "SleepingBeforeReconnect" &&
     (date.getTime() - model.status.date.getTime() >=
       retryWaitMs(model.status.attemptNumber) ||
-      force)
+      force ||
+      window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK)
     ? [
         {
           ...model,

@@ -130,6 +130,8 @@ async function run({
       }, reject);
     };
 
+    window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK = true;
+
     window.__ELM_WATCH_GET_NOW = () => new Date(0);
 
     window.__ELM_WATCH_RELOAD_PAGE = () => {
@@ -378,6 +380,14 @@ async function waitOneFrame(): Promise<void> {
     requestAnimationFrame(() => {
       resolve();
     });
+  });
+}
+
+async function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
   });
 }
 
@@ -1154,6 +1164,146 @@ describe("hot", () => {
         ▲ ❌ 00:00:00 SendBadJson
       `);
     });
+  });
+
+  test("changes to elm-watch.json", async () => {
+    const fixture = "changes-to-elm-watch-json";
+    const elmWatchJsonPath = path.join(FIXTURES_DIR, fixture, "elm-watch.json");
+    const elmWatchJsonTemplatePath = path.join(
+      FIXTURES_DIR,
+      fixture,
+      "elm-watch.template.json"
+    );
+    const elmWatchJsonString = fs.readFileSync(
+      elmWatchJsonTemplatePath,
+      "utf8"
+    );
+    fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: ["HtmlMain"],
+      scripts: ["HtmlMain.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: async ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert1(div);
+            fs.writeFileSync(
+              elmWatchJsonPath,
+              elmWatchJsonString.slice(0, -10)
+            );
+            await wait(100);
+            fs.writeFileSync(
+              elmWatchJsonPath,
+              elmWatchJsonString.replace(/"postprocess":.*/, "")
+            );
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      🟢 HtmlMain: elm make done
+      ⏳ HtmlMain: postprocess
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json
+
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+      ⧙I had trouble reading it as JSON:⧘
+
+      Unexpected end of JSON input
+
+      🚨 ⧙1⧘ error found
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+    `);
+
+    function assert1(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>THE TEXT!</div>`);
+    }
+
+    function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+    }
   });
 
   // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
