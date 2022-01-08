@@ -62,7 +62,6 @@ async function run({
   terminal: string;
   browser: string;
   renders: string;
-  log: string;
   div: HTMLDivElement;
 }> {
   const dir = path.join(FIXTURES_DIR, fixture);
@@ -95,7 +94,6 @@ async function run({
   bodyCounter++;
 
   const renders: Array<string> = [];
-  const log: Array<string> = [];
   let loads = 0;
 
   await new Promise((resolve, reject) => {
@@ -155,17 +153,9 @@ async function run({
       });
     };
 
-    // If the test looks like it will time out, try to log what has happened.
-    // Will hopefully help getting clues for test flakiness.
-    const timeoutId = setTimeout(() => {
-      // eslint-disable-next-line no-console
-      console.log(`${args.join(", ")}\n${log.join("\n")}`);
-    }, 3000);
-
     let idle = 0;
     window.__ELM_WATCH_ON_REACHED_IDLE_STATE = (reason) => {
       idle++;
-      log.push(`${idle} ${reason}`);
       Promise.resolve(onIdle({ idle, div: outerDiv, body, reason })).then(
         (result) => {
           switch (result) {
@@ -173,7 +163,6 @@ async function run({
               return;
             case "Stop":
               window.__ELM_WATCH_KILL_ALL();
-              clearTimeout(timeoutId);
               return;
           }
         },
@@ -216,7 +205,6 @@ async function run({
     terminal: stderrString,
     browser: lastText,
     renders: renders.join(`\n${"=".repeat(80)}\n`),
-    log: log.join("\n"),
     div: outerDiv,
   };
 }
@@ -1257,7 +1245,7 @@ describe("hot", () => {
 
       write(1);
 
-      const { log } = await go(({ idle, div }) => {
+      await go(({ idle, div }) => {
         switch (idle) {
           case 1:
             assertDebugDisabled();
@@ -1282,14 +1270,6 @@ describe("hot", () => {
             return "Stop";
         }
       });
-
-      expect(log).toMatchInlineSnapshot(`
-        1 AlreadyUpToDate
-        2 EvalSucceeded
-        3 EvalSucceeded
-        4 AlreadyUpToDate
-        5 EvalSucceeded
-      `);
 
       function assertInit(div: HTMLDivElement): void {
         expect(div.outerHTML).toMatchInlineSnapshot(
@@ -1320,7 +1300,7 @@ describe("hot", () => {
 
       write(1);
 
-      const { log } = await go(async ({ idle, body, div }) => {
+      await go(async ({ idle, body, div }) => {
         switch (idle) {
           case 1:
             await assertInit(div);
@@ -1360,18 +1340,6 @@ describe("hot", () => {
             return "Stop";
         }
       });
-
-      expect(log).toMatchInlineSnapshot(`
-        1 AlreadyUpToDate
-        2 EvalSucceeded
-        3 EvalSucceeded
-        4 AlreadyUpToDate
-        5 EvalSucceeded
-        6 EvalSucceeded
-        7 AlreadyUpToDate
-        8 AlreadyUpToDate
-        9 EvalSucceeded
-      `);
 
       async function assertInit(div: HTMLDivElement): Promise<void> {
         expect(htmlWithoutDebugger(div)).toMatchInlineSnapshot(`
@@ -1468,7 +1436,7 @@ describe("hot", () => {
 
       write(1);
 
-      const { log } = await go(async ({ idle, body, div }) => {
+      await go(async ({ idle, body, div }) => {
         switch (idle) {
           case 1:
             await assertInit(div);
@@ -1512,18 +1480,6 @@ describe("hot", () => {
             return "Stop";
         }
       });
-
-      expect(log).toMatchInlineSnapshot(`
-        1 AlreadyUpToDate
-        2 EvalSucceeded
-        3 EvalSucceeded
-        4 AlreadyUpToDate
-        5 EvalSucceeded
-        6 EvalSucceeded
-        7 AlreadyUpToDate
-        8 AlreadyUpToDate
-        9 EvalSucceeded
-      `);
 
       async function assertInit(div: HTMLDivElement): Promise<void> {
         expect(htmlWithoutDebugger(div)).toMatchInlineSnapshot(`
@@ -1678,7 +1634,7 @@ describe("hot", () => {
 
       write(1);
 
-      const { log } = await go(async ({ idle, body }) => {
+      await go(async ({ idle, body }) => {
         switch (idle) {
           case 1:
             await assertInit(body);
@@ -1722,18 +1678,6 @@ describe("hot", () => {
             return "Stop";
         }
       });
-
-      expect(log).toMatchInlineSnapshot(`
-        1 AlreadyUpToDate
-        2 EvalSucceeded
-        3 EvalSucceeded
-        4 AlreadyUpToDate
-        5 EvalSucceeded
-        6 EvalSucceeded
-        7 AlreadyUpToDate
-        8 AlreadyUpToDate
-        9 EvalSucceeded
-      `);
 
       async function assertInit(body: HTMLBodyElement): Promise<void> {
         expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
@@ -1888,7 +1832,7 @@ describe("hot", () => {
 
       write(1);
 
-      const { log } = await go(async ({ idle, body }) => {
+      await go(async ({ idle, body }) => {
         switch (idle) {
           case 1:
             await assertInit(body);
@@ -1932,18 +1876,6 @@ describe("hot", () => {
             return "Stop";
         }
       });
-
-      expect(log).toMatchInlineSnapshot(`
-        1 AlreadyUpToDate
-        2 EvalSucceeded
-        3 EvalSucceeded
-        4 AlreadyUpToDate
-        5 EvalSucceeded
-        6 EvalSucceeded
-        7 AlreadyUpToDate
-        8 AlreadyUpToDate
-        9 EvalSucceeded
-      `);
 
       async function assertInit(body: HTMLBodyElement): Promise<void> {
         expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
@@ -2165,7 +2097,7 @@ describe("hot", () => {
 
       write(1);
 
-      const { log } = await go(async ({ idle }) => {
+      await go(async ({ idle }) => {
         switch (idle) {
           case 1:
             assertDebugDisabled();
@@ -2193,15 +2125,6 @@ describe("hot", () => {
             return "Stop";
         }
       });
-
-      expect(log).toMatchInlineSnapshot(`
-        1 AlreadyUpToDate
-        2 EvalSucceeded
-        3 EvalSucceeded
-        4 AlreadyUpToDate
-        5 AlreadyUpToDate
-        6 EvalSucceeded
-      `);
 
       async function assertInit(): Promise<void> {
         sendToElm(1);
