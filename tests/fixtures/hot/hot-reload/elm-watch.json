@@ -29,6 +29,12 @@
                 "src/Application.elm"
             ],
             "output": "build/Application.js"
+        },
+        "Worker": {
+            "inputs": [
+                "src/Worker.elm"
+            ],
+            "output": "build/Worker.js"
         }
     }
 }

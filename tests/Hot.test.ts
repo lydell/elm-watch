@@ -1197,7 +1197,7 @@ describe("hot", () => {
         const content = fs.readFileSync(path.join(src, `${name}.elm`), "utf8");
         fs.writeFileSync(
           path.join(src, `${name}.elm`),
-          content.replace(`hot reload`, `simple text change`)
+          content.replace(/hot reload/g, `simple text change`)
         );
       };
 
@@ -2156,6 +2156,83 @@ describe("hot", () => {
           browserOnClick: 2
           </pre></div></body>
         `);
+      }
+    });
+
+    test("Worker", async () => {
+      const { write, writeSimpleChange, sendToElm, lastValueFromElm, go } =
+        runHotReload({ name: "Worker" });
+
+      write(1);
+
+      const { log } = await go(async ({ idle }) => {
+        switch (idle) {
+          case 1:
+            assertDebugDisabled();
+            await assertInit();
+            write(2);
+            return "KeepGoing";
+          case 2:
+            await assertHotReload();
+            write(1);
+            return "KeepGoing";
+          case 3:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 4:
+            assertCompilationMode("optimize");
+            await assertInit();
+            write(2);
+            return "KeepGoing";
+          case 5:
+            await assertReloadForOptimize();
+            writeSimpleChange();
+            return "KeepGoing";
+          default:
+            await assertHotReloadForOptimize();
+            return "Stop";
+        }
+      });
+
+      expect(log).toMatchInlineSnapshot(`
+        1 AlreadyUpToDate
+        2 EvalSucceeded
+        3 EvalSucceeded
+        4 AlreadyUpToDate
+        5 AlreadyUpToDate
+        6 EvalSucceeded
+      `);
+
+      async function assertInit(): Promise<void> {
+        sendToElm(1);
+        await waitOneFrame();
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(
+          `Before hot reload: [1]`
+        );
+      }
+
+      async function assertHotReload(): Promise<void> {
+        sendToElm(2);
+        await waitOneFrame();
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(
+          `Before: [1]. After hot reload: [2]`
+        );
+      }
+
+      async function assertReloadForOptimize(): Promise<void> {
+        sendToElm(3);
+        await waitOneFrame();
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(
+          `Before: []. After hot reload: [3]`
+        );
+      }
+
+      async function assertHotReloadForOptimize(): Promise<void> {
+        sendToElm(4);
+        await waitOneFrame();
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(
+          `Before: []. After simple text change: [3, 4]`
+        );
       }
     });
   });
