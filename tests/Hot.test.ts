@@ -350,21 +350,21 @@ function shouldAddNewline(node: Node): boolean {
   }
 }
 
-function htmlWithoutDebugger(body: HTMLBodyElement): string {
+function htmlWithoutDebugger(element: HTMLElement): string {
   if (
-    body.lastElementChild instanceof HTMLDivElement &&
-    body.lastElementChild.style.position === "fixed"
+    element.lastElementChild instanceof HTMLDivElement &&
+    element.lastElementChild.style.position === "fixed"
   ) {
-    const clone = body.cloneNode(true);
-    if (clone instanceof HTMLBodyElement && clone.lastElementChild !== null) {
+    const clone = element.cloneNode(true);
+    if (clone instanceof HTMLElement && clone.lastElementChild !== null) {
       clone.removeChild(clone.lastElementChild);
       return clone.outerHTML;
     }
     throw new Error(
-      "body.cloneNode(true) didn’t return a <body> with a lastElementChild."
+      "element.cloneNode(true) didn’t return an HTMLElement with a lastElementChild."
     );
   } else {
-    return body.outerHTML;
+    return element.outerHTML;
   }
 }
 
@@ -1311,6 +1311,147 @@ describe("hot", () => {
       }
     });
 
+    test("Sandbox", async () => {
+      const { write, writeSimpleChange, go } = runHotReload({
+        name: "Sandbox",
+      });
+
+      let probe: HTMLElement | null = null;
+
+      write(1);
+
+      const { log } = await go(async ({ idle, body, div }) => {
+        switch (idle) {
+          case 1:
+            await assertInit(div);
+            write(2);
+            return "KeepGoing";
+          case 2:
+            await assertHotReload(div);
+            write(1);
+            return "KeepGoing";
+          case 3:
+            switchCompilationMode("debug");
+            return "KeepGoing";
+          case 4:
+            assertCompilationMode("debug");
+            assertDebugger(body);
+            await assertInit(div);
+            write(2);
+            return "KeepGoing";
+          case 5:
+            await assertHotReload(div);
+            write(1);
+            return "KeepGoing";
+          case 6:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 7:
+            assertCompilationMode("optimize");
+            await assertInit(div);
+            write(2);
+            return "KeepGoing";
+          case 8:
+            await assertReloadForOptimize(div);
+            writeSimpleChange();
+            return "KeepGoing";
+          default:
+            assertHotReloadForOptimize(div);
+            return "Stop";
+        }
+      });
+
+      expect(log).toMatchInlineSnapshot(`
+        1 AlreadyUpToDate
+        2 EvalSucceeded
+        3 EvalSucceeded
+        4 AlreadyUpToDate
+        5 EvalSucceeded
+        6 EvalSucceeded
+        7 AlreadyUpToDate
+        8 AlreadyUpToDate
+        9 EvalSucceeded
+      `);
+
+      async function assertInit(div: HTMLDivElement): Promise<void> {
+        expect(htmlWithoutDebugger(div)).toMatchInlineSnapshot(`
+          <div><div><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
+          originalButtonClicked: 0
+          newButtonClicked: 0
+          </pre></div></div>
+        `);
+
+        probe = div.querySelector(".probe");
+        expect(probe?.outerHTML).toMatchInlineSnapshot(
+          `<h1 class="probe">Before hot reload</h1>`
+        );
+
+        click(div, "button");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(div)).toMatchInlineSnapshot(`
+          <div><div><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
+          originalButtonClicked: 1
+          newButtonClicked: 0
+          </pre></div></div>
+        `);
+      }
+
+      async function assertHotReload(div: HTMLDivElement): Promise<void> {
+        expect(htmlWithoutDebugger(div)).toMatchInlineSnapshot(`
+          <div><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          originalButtonClicked: 1
+          newButtonClicked: 0
+          </pre></div></div>
+        `);
+
+        expect(div.querySelector(".probe") === probe).toMatchInlineSnapshot(
+          `true`
+        );
+
+        click(div, "button");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(div)).toMatchInlineSnapshot(`
+          <div><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          originalButtonClicked: 1
+          newButtonClicked: 1
+          </pre></div></div>
+        `);
+      }
+
+      async function assertReloadForOptimize(
+        div: HTMLDivElement
+      ): Promise<void> {
+        expect(div.outerHTML).toMatchInlineSnapshot(`
+          <div><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          originalButtonClicked: 0
+          newButtonClicked: 0
+          </pre></div></div>
+        `);
+
+        expect(div.querySelector(".probe") === probe).toMatchInlineSnapshot(
+          `false`
+        );
+
+        click(div, "button");
+        await waitOneFrame();
+        expect(div.outerHTML).toMatchInlineSnapshot(`
+          <div><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          originalButtonClicked: 0
+          newButtonClicked: 1
+          </pre></div></div>
+        `);
+      }
+
+      function assertHotReloadForOptimize(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(`
+          <div><div><h1 class="probe">After simple text change</h1><button>Button</button><pre>
+          originalButtonClicked: 0
+          newButtonClicked: 1
+          </pre></div></div>
+        `);
+      }
+    });
+
     test("Application", async () => {
       const {
         write,
@@ -1516,7 +1657,7 @@ describe("hot", () => {
       async function assertReloadForOptimize(
         body: HTMLBodyElement
       ): Promise<void> {
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+        expect(body.outerHTML).toMatchInlineSnapshot(`
           <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
           url: http://localhost/
           originalFromJs: []
@@ -1535,7 +1676,7 @@ describe("hot", () => {
 
         click(body, "a");
         await waitOneFrame();
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+        expect(body.outerHTML).toMatchInlineSnapshot(`
           <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
           url: http://localhost/link
           originalFromJs: []
@@ -1550,7 +1691,7 @@ describe("hot", () => {
 
         click(body, "button");
         await waitOneFrame();
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+        expect(body.outerHTML).toMatchInlineSnapshot(`
           <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
           url: http://localhost/push
           originalFromJs: []
@@ -1565,7 +1706,7 @@ describe("hot", () => {
 
         sendToElm(3);
         await waitOneFrame();
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+        expect(body.outerHTML).toMatchInlineSnapshot(`
           <body><div><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
           url: http://localhost/push
           originalFromJs: []
@@ -1581,7 +1722,7 @@ describe("hot", () => {
       }
 
       function assertHotReloadForOptimize(body: HTMLBodyElement): void {
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+        expect(body.outerHTML).toMatchInlineSnapshot(`
           <body><div><h1 class="probe">After simple text change</h1><a href="/link">Link</a><button>Button</button><pre>
           url: http://localhost/push
           originalFromJs: []

@@ -6,6 +6,12 @@
             ],
             "output": "build/HtmlMain.js"
         },
+        "Sandbox": {
+            "inputs": [
+                "src/Sandbox.elm"
+            ],
+            "output": "build/Sandbox.js"
+        },
         "Application": {
             "inputs": [
                 "src/Application.elm"
