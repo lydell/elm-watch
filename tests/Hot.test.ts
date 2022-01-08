@@ -62,6 +62,7 @@ async function run({
   terminal: string;
   browser: string;
   renders: string;
+  log: string;
   div: HTMLDivElement;
 }> {
   const dir = path.join(FIXTURES_DIR, fixture);
@@ -94,6 +95,7 @@ async function run({
   bodyCounter++;
 
   const renders: Array<string> = [];
+  const log: Array<string> = [];
   let loads = 0;
 
   await new Promise((resolve, reject) => {
@@ -153,9 +155,17 @@ async function run({
       });
     };
 
+    // If the test looks like it will time out, try to log what has happened.
+    // Will hopefully help getting clues for test flakiness.
+    const timeoutId = setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.log(`${args.join(", ")}\n${log.join("\n")}`);
+    }, 3000);
+
     let idle = 0;
     window.__ELM_WATCH_ON_REACHED_IDLE_STATE = (reason) => {
       idle++;
+      log.push(`${idle} ${reason}`);
       Promise.resolve(onIdle({ idle, div: outerDiv, body, reason })).then(
         (result) => {
           switch (result) {
@@ -163,6 +173,7 @@ async function run({
               return;
             case "Stop":
               window.__ELM_WATCH_KILL_ALL();
+              clearTimeout(timeoutId);
               return;
           }
         },
@@ -205,6 +216,7 @@ async function run({
     terminal: stderrString,
     browser: lastText,
     renders: renders.join(`\n${"=".repeat(80)}\n`),
+    log: log.join("\n"),
     div: outerDiv,
   };
 }
@@ -260,12 +272,22 @@ function assertDebugDisabled(): void {
   withShadowRoot((shadowRoot) => {
     const radio = shadowRoot?.querySelector('input[type="radio"]');
     if (radio instanceof HTMLInputElement) {
-      expect(radio.disabled).toBe(true);
+      expect(radio.disabled).toMatchInlineSnapshot(`true`);
     } else {
       throw new Error(`Could not find any radio button!`);
     }
   });
   collapseUi();
+}
+
+function assertDebugger(body: HTMLBodyElement): void {
+  expect(
+    Array.from(body.querySelectorAll("svg"), (element) => element.localName)
+  ).toMatchInlineSnapshot(`
+    Array [
+      svg,
+    ]
+  `);
 }
 
 function switchCompilationModeHelper(compilationMode: CompilationMode): number {
@@ -1143,6 +1165,8 @@ describe("hot", () => {
     });
   });
 
+  // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
+  // That results in a much better debugging experience (fewer timeouts).
   describe("hot reloading", () => {
     function runHotReload({ name }: { name: `${UppercaseLetter}${string}` }): {
       write: (n: number) => void;
@@ -1150,10 +1174,7 @@ describe("hot", () => {
       sendToElm: (value: number) => void;
       terminate: () => void;
       lastValueFromElm: { value: unknown };
-      // This returns nothing, because the terminal and browser output gets
-      // very long-winded and is a bit flaky due to timing. That’s not what
-      // we’re tesing here.
-      go: (onIdle: OnIdle) => Promise<void>;
+      go: (onIdle: OnIdle) => ReturnType<typeof run>;
     } {
       const fixture = "hot-reload";
       const src = path.join(FIXTURES_DIR, fixture, "src");
@@ -1202,8 +1223,8 @@ describe("hot", () => {
         sendToElm,
         terminate,
         lastValueFromElm,
-        go: async (onIdle: OnIdle) => {
-          await run({
+        go: (onIdle: OnIdle) =>
+          run({
             fixture,
             args: [name],
             scripts: [`${name}.js`],
@@ -1220,8 +1241,7 @@ describe("hot", () => {
               }
             },
             onIdle,
-          });
-        },
+          }),
       };
     }
 
@@ -1234,7 +1254,7 @@ describe("hot", () => {
 
       write(1);
 
-      await go(({ idle, div }) => {
+      const { log } = await go(({ idle, div }) => {
         switch (idle) {
           case 1:
             assertDebugDisabled();
@@ -1257,19 +1277,30 @@ describe("hot", () => {
         }
       });
 
+      expect(log).toMatchInlineSnapshot(`
+        1 AlreadyUpToDate
+        2 EvalSucceeded
+        3 AlreadyUpToDate
+        4 EvalSucceeded
+      `);
+
       function assertInit(div: HTMLDivElement): void {
         expect(div.outerHTML).toMatchInlineSnapshot(
           `<div><h1 class="probe">hot reload</h1></div>`
         );
         probe = div.querySelector(".probe");
-        expect(probe).not.toBeNull();
+        expect(probe?.outerHTML).toMatchInlineSnapshot(
+          `<h1 class="probe">hot reload</h1>`
+        );
       }
 
       function assertHotReload(div: HTMLDivElement): void {
         expect(div.outerHTML).toMatchInlineSnapshot(
           `<div><h1 class="probe">simple text change</h1></div>`
         );
-        expect(div.querySelector(".probe")).toBe(probe);
+        expect(div.querySelector(".probe") === probe).toMatchInlineSnapshot(
+          `true`
+        );
       }
     });
 
@@ -1287,7 +1318,7 @@ describe("hot", () => {
 
       write(1);
 
-      await go(async ({ idle, body }) => {
+      const { log } = await go(async ({ idle, body }) => {
         switch (idle) {
           case 1:
             await assertInit(body);
@@ -1300,9 +1331,7 @@ describe("hot", () => {
             write(1);
             return "KeepGoing";
           case 3:
-            // Assert that the debugger appeared.
-            // eslint-disable-next-line jest/no-conditional-expect
-            expect(body.querySelectorAll("svg")).toHaveLength(1);
+            assertDebugger(body);
             await assertInit(body);
             write(2);
             return "KeepGoing";
@@ -1328,6 +1357,16 @@ describe("hot", () => {
         }
       });
 
+      expect(log).toMatchInlineSnapshot(`
+        1 AlreadyUpToDate
+        2 EvalSucceeded
+        3 AlreadyUpToDate
+        4 EvalSucceeded
+        5 AlreadyUpToDate
+        6 AlreadyUpToDate
+        7 EvalSucceeded
+      `);
+
       async function assertInit(body: HTMLBodyElement): Promise<void> {
         expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
           <body><div><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
@@ -1343,7 +1382,9 @@ describe("hot", () => {
         `);
 
         probe = body.querySelector(".probe");
-        expect(probe).not.toBeNull();
+        expect(probe?.outerHTML).toMatchInlineSnapshot(
+          `<h1 class="probe">Before hot reload</h1>`
+        );
 
         click(body, "a");
         await waitOneFrame();
@@ -1389,7 +1430,7 @@ describe("hot", () => {
           browserOnClick: 0
           </pre></div></body>
         `);
-        expect(lastValueFromElm.value).toBe(4);
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(`4`);
       }
 
       async function assertHotReload(body: HTMLBodyElement): Promise<void> {
@@ -1406,7 +1447,9 @@ describe("hot", () => {
           </pre></div></body>
         `);
 
-        expect(body.querySelector(".probe")).toBe(probe);
+        expect(body.querySelector(".probe") === probe).toMatchInlineSnapshot(
+          `true`
+        );
 
         click(body, "a");
         await waitOneFrame();
@@ -1452,7 +1495,7 @@ describe("hot", () => {
           browserOnClick: 2
           </pre></div></body>
         `);
-        expect(lastValueFromElm.value).toBe(12);
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(`12`);
       }
 
       async function assertReloadForOptimize(
@@ -1471,7 +1514,9 @@ describe("hot", () => {
           </pre></div></body>
         `);
 
-        expect(body.querySelector(".probe")).not.toBe(probe);
+        expect(body.querySelector(".probe") === probe).toMatchInlineSnapshot(
+          `false`
+        );
 
         click(body, "a");
         await waitOneFrame();
@@ -1517,7 +1562,7 @@ describe("hot", () => {
           browserOnClick: 2
           </pre></div></body>
         `);
-        expect(lastValueFromElm.value).toBe(12);
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(`12`);
       }
 
       function assertHotReloadForOptimize(body: HTMLBodyElement): void {
