@@ -47,7 +47,6 @@ async function run(
     stdout,
     stderr,
     getNow: () => new Date(0),
-    onIdle: undefined,
   });
 
   const stderrString = clean(stderr.getOutput());

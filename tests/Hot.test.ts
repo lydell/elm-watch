@@ -4,7 +4,11 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { ElmModule, UppercaseLetter } from "../client/client";
+import {
+  ElmModule,
+  ReachedIdleStateReason,
+  UppercaseLetter,
+} from "../client/client";
 import { elmWatchCli } from "../src";
 import { CompilationMode } from "../src/Types";
 import {
@@ -31,7 +35,10 @@ type OnIdle = (params: {
   idle: number;
   div: HTMLDivElement;
   body: HTMLBodyElement;
-}) => "KeepGoing" | "Stop";
+  reason: ReachedIdleStateReason;
+}) => OnIdleResult | Promise<OnIdleResult>;
+
+type OnIdleResult = "KeepGoing" | "Stop";
 
 async function run({
   fixture,
@@ -67,6 +74,7 @@ async function run({
   } else if (fs.existsSync(build)) {
     fs.rmdirSync(build, { recursive: true });
   }
+  fs.mkdirSync(build, { recursive: true });
 
   if (fs.existsSync(elmWatchStuff)) {
     fs.unlinkSync(elmWatchStuff);
@@ -86,9 +94,11 @@ async function run({
   bodyCounter++;
 
   const renders: Array<string> = [];
+  let loads = 0;
 
   await new Promise((resolve, reject) => {
     const loadBuiltFiles = (isReload: boolean): void => {
+      loads++;
       delete window.Elm;
       Promise.all(
         absoluteScripts.map((script) => {
@@ -96,7 +106,7 @@ async function run({
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
           // - Lets us make a few replacements for Jest.
-          const newScript = script.replace(/\.(\w+)$/, `.${idle}.$1`);
+          const newScript = script.replace(/\.(\w+)$/, `.${loads}.$1`);
           const content = fs
             .readFileSync(script, "utf8")
             .replace(/\(this\)\);\s*$/, "(window));")
@@ -120,12 +130,12 @@ async function run({
       }, reject);
     };
 
-    let idle = -1;
-
     window.__ELM_WATCH_GET_NOW = () => new Date(0);
+
     window.__ELM_WATCH_RELOAD_PAGE = () => {
       loadBuiltFiles(true);
     };
+
     window.__ELM_WATCH_ON_RENDER = (targetName) => {
       withShadowRoot((shadowRoot) => {
         const element = shadowRoot.lastElementChild;
@@ -143,6 +153,32 @@ async function run({
       });
     };
 
+    let idle = 0;
+    window.__ELM_WATCH_ON_REACHED_IDLE_STATE = (reason) => {
+      idle++;
+      Promise.resolve(onIdle({ idle, div: outerDiv, body, reason })).then(
+        (result) => {
+          switch (result) {
+            case "KeepGoing":
+              return;
+            case "Stop":
+              window.__ELM_WATCH_KILL_ALL();
+              return;
+          }
+        },
+        reject
+      );
+    };
+
+    const watcher = fs.watch(build, () => {
+      if (absoluteScripts.every(fs.existsSync)) {
+        watcher.close();
+        loadBuiltFiles(false);
+      }
+    });
+
+    watcher.on("error", reject);
+
     elmWatchCli(["hot", ...args], {
       cwd: dir,
       env:
@@ -156,24 +192,6 @@ async function run({
       stdout,
       stderr,
       getNow: () => new Date(0),
-      onIdle: () => {
-        idle++;
-        switch (idle) {
-          case 0: // Typecheck-only done.
-            loadBuiltFiles(false);
-            return "KeepGoing";
-          default: {
-            const result = onIdle({ idle, div: outerDiv, body });
-            switch (result) {
-              case "KeepGoing":
-                return "KeepGoing";
-              case "Stop":
-                window.__ELM_WATCH_KILL_ALL();
-                return "Stop";
-            }
-          }
-        }
-      },
     }).then(resolve, reject);
   });
 
@@ -190,16 +208,6 @@ async function run({
     div: outerDiv,
   };
 }
-
-const stopOnFirstSuccess: OnIdle = ({ idle }) => {
-  switch (idle) {
-    case 1: // Compilation done after websocket connected.
-    case 2: // Client rendered ✅.
-      return "KeepGoing";
-    default:
-      return "Stop";
-  }
-};
 
 function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
   const shadowRoot =
@@ -375,7 +383,7 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.HtmlMain?.init({ node });
       },
-      onIdle: stopOnFirstSuccess,
+      onIdle: () => "Stop",
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -414,7 +422,7 @@ describe("hot", () => {
       init: () => {
         window.Elm?.Worker?.init();
       },
-      onIdle: stopOnFirstSuccess,
+      onIdle: () => "Stop",
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -524,7 +532,7 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.Main?.init({ node });
       },
-      onIdle: stopOnFirstSuccess,
+      onIdle: () => "Stop",
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -559,14 +567,9 @@ describe("hot", () => {
       args: ["Readonly"],
       scripts: ["Readonly.js"],
       init: failInit,
-      onIdle: ({ idle }) => {
-        switch (idle) {
-          case 1:
-            return "KeepGoing";
-          default:
-            expandUi();
-            return "Stop";
-        }
+      onIdle: () => {
+        expandUi();
+        return "Stop";
       },
       bin: "exit-0-write-readonly",
     });
@@ -619,14 +622,9 @@ describe("hot", () => {
       args: ["InjectError"],
       scripts: ["InjectError.js"],
       init: failInit,
-      onIdle: ({ idle }) => {
-        switch (idle) {
-          case 1:
-            return "KeepGoing";
-          default:
-            expandUi();
-            return "Stop";
-        }
+      onIdle: () => {
+        expandUi();
+        return "Stop";
       },
       bin: "exit-0-inject-error",
     });
@@ -1050,18 +1048,15 @@ describe("hot", () => {
     });
 
     test("send bad json", async () => {
-      let idle = 0;
+      let first = true;
 
       class TestWebSocket extends WebSocket {
         override send(message: string): void {
-          switch (idle) {
-            case 2:
-              idle++;
-              super.send(JSON.stringify({ tag: "Nope" }));
-              break;
-            default:
-              super.send(message);
-              break;
+          if (first) {
+            super.send(JSON.stringify({ tag: "Nope" }));
+            first = false;
+          } else {
+            super.send(message);
           }
         }
       }
@@ -1072,19 +1067,13 @@ describe("hot", () => {
         fixture: "basic",
         args: ["SendBadJson"],
         scripts: ["SendBadJson.js"],
-        init: () => {
-          // Do nothing.
+        init: (node) => {
+          window.Elm?.HtmlMain?.init({ node });
         },
-        onIdle: () => {
-          idle++;
+        onIdle: ({ idle }) => {
           switch (idle) {
             case 1:
-              expandUi();
-              withShadowRoot((shadowRoot) => {
-                shadowRoot.querySelector("input")?.click();
-              });
-              return "KeepGoing";
-            case 2:
+              switchCompilationMode("optimize");
               return "KeepGoing";
             default:
               return "Stop";
@@ -1108,22 +1097,33 @@ describe("hot", () => {
         ================================================================================
         ▼ ⏳ 00:00:00 SendBadJson
         ================================================================================
+        ▼ 🔌 00:00:00 SendBadJson
+        ================================================================================
+        ▼ ⏳ 00:00:00 SendBadJson
+        ================================================================================
+        ▼ ✅ 00:00:00 SendBadJson
+        ================================================================================
+        target SendBadJson
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 1970-01-01 00:00:00
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 00:00:00 SendBadJson
+        ================================================================================
         target SendBadJson
         elm-watch %VERSION%
         web socket ws://localhost:59123
         updated 1970-01-01 00:00:00
         status Waiting for compilation
         Compilation mode
-        ◯ (disabled) Debug
-        ◉ (disabled) Standard
-        ◯ (disabled) Optimize
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
         ▲ ⏳ 00:00:00 SendBadJson
-        ================================================================================
-        ▼ 🔌 00:00:00 SendBadJson
-        ================================================================================
-        ▼ ⏳ 00:00:00 SendBadJson
-        ================================================================================
-        ▼ ❓ 00:00:00 SendBadJson
         ================================================================================
         target SendBadJson
         elm-watch %VERSION%
@@ -1134,7 +1134,7 @@ describe("hot", () => {
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
-        Expected one of these tags: "ChangedCompilationMode", "FocusedTab", "ReachedIdleState"
+        Expected one of these tags: "ChangedCompilationMode", "FocusedTab", "ExitRequested"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
@@ -1236,26 +1236,24 @@ describe("hot", () => {
 
       await go(({ idle, div }) => {
         switch (idle) {
+          case 1:
+            assertDebugDisabled();
+            assertInit(div);
+            writeSimpleChange();
+            return "KeepGoing";
+          case 2:
+            assertHotReload(div);
+            switchCompilationMode("optimize");
+            write(1);
+            return "KeepGoing";
           case 3:
             assertDebugDisabled();
             assertInit(div);
             writeSimpleChange();
             return "KeepGoing";
-          case 5:
-            assertHotReload(div);
-            switchCompilationMode("optimize");
-            write(1);
-            return "KeepGoing";
-          case 8:
-            assertDebugDisabled();
-            assertInit(div);
-            writeSimpleChange();
-            return "KeepGoing";
-          case 10:
+          default:
             assertHotReload(div);
             return "Stop";
-          default:
-            return "KeepGoing";
         }
       });
 
@@ -1289,53 +1287,44 @@ describe("hot", () => {
 
       write(1);
 
-      await go(({ idle, body }) => {
+      await go(async ({ idle, body }) => {
         switch (idle) {
+          case 1:
+            await assertInit(body);
+            write(2);
+            return "KeepGoing";
           case 2:
-            void assertInit(body).then(() => {
-              write(2);
-            });
+            await assertHotReload(body);
+            terminate();
+            switchCompilationMode("debug");
+            write(1);
             return "KeepGoing";
-          case 5:
-            void assertHotReload(body).then(() => {
-              terminate();
-              switchCompilationMode("debug");
-              write(1);
-            });
-            return "KeepGoing";
-          case 7:
+          case 3:
             // Assert that the debugger appeared.
             // eslint-disable-next-line jest/no-conditional-expect
             expect(body.querySelectorAll("svg")).toHaveLength(1);
-            void assertInit(body).then(() => {
-              write(2);
-            });
+            await assertInit(body);
+            write(2);
             return "KeepGoing";
-          case 10:
-            void assertHotReload(body).then(() => {
-              terminate();
-              switchCompilationMode("optimize");
-              write(1);
-            });
+          case 4:
+            await assertHotReload(body);
+            terminate();
+            switchCompilationMode("optimize");
+            write(1);
             return "KeepGoing";
-          case 13:
-            void assertInit(body).then(() => {
-              terminate();
-              write(2);
-            });
+          case 5:
+            await assertInit(body);
+            terminate();
+            write(2);
             return "KeepGoing";
-          case 17:
-            void assertReloadForOptimize(body).then(() => {
-              writeSimpleChange();
-            });
+          case 6:
+            await assertReloadForOptimize(body);
+            writeSimpleChange();
             return "KeepGoing";
-          case 19:
-            void assertHotReloadForOptimize(body).then(() => {
-              terminate();
-            });
-            return "Stop";
           default:
-            return "KeepGoing";
+            assertHotReloadForOptimize(body);
+            terminate();
+            return "Stop";
         }
       });
 
@@ -1531,9 +1520,7 @@ describe("hot", () => {
         expect(lastValueFromElm.value).toBe(12);
       }
 
-      async function assertHotReloadForOptimize(
-        body: HTMLBodyElement
-      ): Promise<void> {
+      function assertHotReloadForOptimize(body: HTMLBodyElement): void {
         expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
           <body><div><h1 class="probe">After simple text change</h1><a href="/link">Link</a><button>Button</button><pre>
           url: http://localhost/push
@@ -1546,7 +1533,6 @@ describe("hot", () => {
           browserOnClick: 2
           </pre></div></body>
         `);
-        await Promise.resolve();
       }
     });
   });

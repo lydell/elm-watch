@@ -38,7 +38,6 @@ async function initSuccessHelper(
     stdout,
     stderr,
     getNow: () => new Date(0),
-    onIdle: undefined,
   });
 
   assertExitCode(0, exitCode, stdout.content, stderr.content);
@@ -66,7 +65,6 @@ async function initFailHelper(
     stdout,
     stderr,
     getNow: () => new Date(0),
-    onIdle: undefined,
   });
 
   assertExitCode(1, exitCode, stdout.content, stderr.content);

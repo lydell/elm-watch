@@ -5,7 +5,7 @@ import { makeLogger } from "./Logger";
 import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { run } from "./Run";
-import { CliArg, Cwd, GetNow, OnIdle } from "./Types";
+import { CliArg, Cwd, GetNow } from "./Types";
 
 type Options = {
   cwd: string;
@@ -14,7 +14,6 @@ type Options = {
   stdout: WriteStream;
   stderr: WriteStream;
   getNow: GetNow;
-  onIdle: OnIdle | undefined;
 };
 
 export async function elmWatchCli(
@@ -26,7 +25,6 @@ export async function elmWatchCli(
     stdout,
     stderr,
     getNow,
-    onIdle,
   }: Options
 ): Promise<number> {
   const logger = makeLogger({ env, stdout, stderr });
@@ -75,7 +73,6 @@ export async function elmWatchCli(
               env,
               logger,
               getNow,
-              onIdle,
               runMode,
               restArgs,
               result === undefined ? [] : result.restartReasons,
@@ -109,7 +106,6 @@ if (require.main === module) {
     stdout: process.stdout,
     stderr: process.stderr,
     getNow: () => new Date(),
-    onIdle: undefined,
   }).then(
     (exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.

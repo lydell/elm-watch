@@ -10,14 +10,7 @@ import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
 import { initProject } from "./Project";
-import {
-  CliArg,
-  Cwd,
-  ElmWatchJsonPath,
-  GetNow,
-  OnIdle,
-  RunMode,
-} from "./Types";
+import { CliArg, Cwd, ElmWatchJsonPath, GetNow, RunMode } from "./Types";
 
 type RunResult =
   | {
@@ -38,7 +31,6 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
-  onIdle: OnIdle | undefined,
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.WatcherEvent | Hot.WebSocketRelatedEvent>,
@@ -246,7 +238,6 @@ export async function run(
                         env,
                         logger,
                         getNow,
-                        onIdle,
                         restartReasons,
                         postprocessWorkerPool,
                         webSocketState,

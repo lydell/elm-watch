@@ -7,7 +7,6 @@ import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import * as Errors from "../src/Errors";
 import { Env, toError } from "../src/Helpers";
-import { OnIdle } from "../src/Types";
 import {
   assertExitCode,
   badElmBinEnv,
@@ -25,7 +24,7 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 async function run(
   fixture: string,
   args: Array<string>,
-  options?: { env?: Env; isTTY?: boolean; onIdle?: OnIdle }
+  options?: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean }
 ): Promise<string> {
   return runAbsolute(path.join(FIXTURES_DIR, fixture), args, options);
 }
@@ -36,8 +35,8 @@ async function runAbsolute(
   {
     env,
     isTTY = true,
-    onIdle,
-  }: { env?: Env; isTTY?: boolean; onIdle?: OnIdle } = {}
+    exitHotOnError = false,
+  }: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean } = {}
 ): Promise<string> {
   const stdout = new MemoryWriteStream();
   const stderr = new CursorWriteStream();
@@ -47,18 +46,19 @@ async function runAbsolute(
 
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
-    env:
-      env === undefined
+    env: {
+      ...(exitHotOnError ? { __ELM_WATCH_EXIT_ON_ERROR: "" } : {}),
+      ...(env === undefined
         ? {
             ...process.env,
             ...TEST_ENV,
           }
-        : env,
+        : env),
+    },
     stdin: new FailReadStream(),
     stdout,
     stderr,
     getNow: () => new Date(0),
-    onIdle,
   });
 
   const stderrString = clean(stderr.getOutput());
@@ -79,8 +79,8 @@ async function runWithBadElmBin(
   fixture: string,
   {
     postprocess = false,
-    onIdle,
-  }: { postprocess?: boolean; onIdle?: OnIdle } = {}
+    exitHotOnError = false,
+  }: { postprocess?: boolean; exitHotOnError?: boolean } = {}
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
   const BUILD = path.join(dir, "build");
@@ -91,10 +91,10 @@ async function runWithBadElmBin(
   }
   return runAbsolute(
     postprocess ? path.join(dir, "postprocess") : dir,
-    [onIdle === undefined ? "make" : "hot", "app"],
+    [exitHotOnError ? "hot" : "make", "app"],
     {
       env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
-      onIdle,
+      exitHotOnError,
     }
   );
 }
@@ -852,7 +852,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-is-folder", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -883,7 +883,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-bad-json", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -914,7 +914,7 @@ describe("errors", () => {
       expect(
         await run("elm-json-decode-error", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -1722,7 +1722,7 @@ describe("errors", () => {
     test("fail to write dummy output", async () => {
       expect(
         await runWithBadElmBin("exit-0-write-readonly", {
-          onIdle: () => "Stop",
+          exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
         🚨 app
@@ -2518,7 +2518,7 @@ describe("errors", () => {
       expect(
         await runAbsolute(dir, ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
@@ -2546,7 +2546,7 @@ describe("errors", () => {
     expect(
       await run("import-walker-file-system-error", ["hot"], {
         env: elmBinAlwaysSucceedEnv,
-        onIdle: () => "Stop",
+        exitHotOnError: true,
       })
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
@@ -2587,7 +2587,7 @@ describe("errors", () => {
       expect(
         await run("port-conflict-for-persisted-port", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
@@ -2620,7 +2620,7 @@ describe("errors", () => {
       expect(
         await run("port-conflict-for-port-from-config", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
-          onIdle: () => "Stop",
+          exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘

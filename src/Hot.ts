@@ -46,7 +46,6 @@ import {
   ElmWatchJsonPath,
   equalsInputPath,
   GetNow,
-  OnIdle,
   OutputPath,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
@@ -228,6 +227,9 @@ type Cmd =
       includeInterrupted: boolean;
     }
   | {
+      tag: "ExitOnIdle";
+    }
+  | {
       tag: "HandleElmWatchStuffJsonWriteError";
     }
   | {
@@ -261,9 +263,6 @@ type Cmd =
     }
   | {
       tag: "RestartWorkers";
-    }
-  | {
-      tag: "RunOnIdle";
     }
   | {
       tag: "SleepBeforeNextAction";
@@ -313,13 +312,14 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
-  onIdle: OnIdle | undefined,
   restartReasons: Array<WatcherEvent | WebSocketRelatedEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
   project: Project,
   portChoice: PortChoice
 ): Promise<HotRunResult> {
+  const exitOnError = "__ELM_WATCH_EXIT_ON_ERROR" in env;
+
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
       env,
@@ -330,8 +330,8 @@ export async function run(
       portChoice
     ),
     init: init(getNow(), restartReasons),
-    update: update(project),
-    runCmd: runCmd(env, logger, getNow, onIdle),
+    update: update(project, exitOnError),
+    runCmd: runCmd(env, logger, getNow, exitOnError),
   });
 }
 
@@ -540,7 +540,7 @@ const init = (
 ];
 
 const update =
-  (project: Project) =>
+  (project: Project, exitOnError: boolean) =>
   (msg: Msg, model: Model): [Model, Array<Cmd>] => {
     switch (msg.tag) {
       case "GotWatcherEvent": {
@@ -648,9 +648,9 @@ const update =
                   message: compileFinishedMessage(duration),
                   events: model.hotState.events,
                 },
-                {
-                  tag: "RunOnIdle",
-                },
+                isNonEmptyArray(errors) && exitOnError
+                  ? { tag: "ExitOnIdle" }
+                  : { tag: "NoCmd" },
               ],
             ];
           }
@@ -672,7 +672,7 @@ const update =
               case "Error":
                 return [
                   { ...model, hotState: { tag: "Idle" } },
-                  [{ tag: "RunOnIdle" }],
+                  [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
                 ];
 
               case "Success": {
@@ -754,6 +754,9 @@ const update =
                   },
                 },
               },
+              newModel.hotState.tag === "Idle" && exitOnError
+                ? { tag: "ExitOnIdle" }
+                : { tag: "NoCmd" },
             ],
           ];
         };
@@ -1162,9 +1165,6 @@ function runNextAction(
                 ),
                 events: model.nextAction.events,
               },
-              {
-                tag: "RunOnIdle",
-              },
             ],
           ];
 
@@ -1238,7 +1238,7 @@ function runCompile(
 }
 
 const runCmd =
-  (env: Env, logger: Logger, getNow: GetNow, onIdle: OnIdle | undefined) =>
+  (env: Env, logger: Logger, getNow: GetNow, exitOnError: boolean) =>
   (
     cmd: Cmd,
     mutable: Mutable,
@@ -1336,6 +1336,11 @@ const runCmd =
                 mutable.elmWatchStuffJsonWriteError
               )
             );
+            if (exitOnError) {
+              closeAll(mutable).then(() => {
+                resolvePromise({ tag: "ExitOnIdle" });
+              }, rejectPromise);
+            }
           }
         }
         return;
@@ -1457,20 +1462,10 @@ const runCmd =
         }, rejectPromise);
         return;
 
-      case "RunOnIdle":
-        if (onIdle !== undefined) {
-          const response = onIdle();
-          switch (response) {
-            case "KeepGoing":
-              return;
-
-            case "Stop":
-              closeAll(mutable).then(() => {
-                resolvePromise({ tag: "ExitOnIdle" });
-              }, rejectPromise);
-              return;
-          }
-        }
+      case "ExitOnIdle":
+        closeAll(mutable).then(() => {
+          resolvePromise({ tag: "ExitOnIdle" });
+        }, rejectPromise);
         return;
 
       case "SleepBeforeNextAction":
@@ -2059,9 +2054,6 @@ function onWebSocketConnected(
                     status: { tag: "AlreadyUpToDate" },
                   },
                 },
-                ...(newModel.hotState.tag === "Idle"
-                  ? [{ tag: "RunOnIdle" } as const]
-                  : []),
               ],
             ];
           } else {
@@ -2387,10 +2379,19 @@ function onWebSocketToServerMessage(
     case "FocusedTab":
       return [model, [{ tag: "WebSocketUpdatePriority", webSocket }]];
 
-    case "ReachedIdleState":
+    case "ExitRequested":
       return [
         model,
-        model.hotState.tag === "Idle" ? [{ tag: "RunOnIdle" } as const] : [],
+        [
+          model.hotState.tag === "Idle"
+            ? { tag: "ExitOnIdle" }
+            : {
+                tag: "Throw",
+                error: new Error(
+                  `Got ExitRequested. Expected hotState to be Idle but it is: ${model.hotState.tag}`
+                ),
+              },
+        ],
       ];
   }
 }

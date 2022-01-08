@@ -21,6 +21,7 @@ declare global {
     __ELM_WATCH_GET_NOW: GetNow;
     __ELM_WATCH_RELOAD_PAGE?: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
+    __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
     __ELM_WATCH_KILL_ALL: () => void;
   }
 }
@@ -67,6 +68,10 @@ export type ElmModule = {
 window.__ELM_WATCH_GET_NOW ??= () => new Date();
 
 window.__ELM_WATCH_ON_RENDER ??= () => {
+  // Do nothing.
+};
+
+window.__ELM_WATCH_ON_REACHED_IDLE_STATE ??= () => {
   // Do nothing.
 };
 
@@ -184,6 +189,10 @@ type Cmd =
   | {
       tag: "SleepBeforeReconnect";
       attemptNumber: number;
+    }
+  | {
+      tag: "TriggerReachedIdleState";
+      reason: ReachedIdleStateReason;
     };
 
 type Status =
@@ -220,6 +229,13 @@ type Status =
       date: Date;
       message: string;
     };
+
+export type ReachedIdleStateReason =
+  | "AlreadyUpToDate"
+  | "ClientError"
+  | "CompileError"
+  | "EvalErrored"
+  | "EvalSucceeded";
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
@@ -323,13 +339,7 @@ const initMutable =
       }),
     ];
 
-    const original = window.__ELM_WATCH_KILL_ALL;
-    window.__ELM_WATCH_KILL_ALL = () => {
-      resolvePromise(undefined);
-      original();
-    };
-
-    return {
+    const mutable: Mutable = {
       removeListeners: () => {
         for (const removeListener of removeListeners) {
           removeListener();
@@ -341,6 +351,16 @@ const initMutable =
         dispatch
       ),
     };
+
+    const original = window.__ELM_WATCH_KILL_ALL;
+    window.__ELM_WATCH_KILL_ALL = () => {
+      resolvePromise(undefined);
+      const message: WebSocketToServerMessage = { tag: "ExitRequested" };
+      mutable.webSocket.send(JSON.stringify(message));
+      original();
+    };
+
+    return mutable;
   };
 
 function addEventListener<EventName extends string>(
@@ -409,7 +429,12 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
           status: { tag: "EvalError", date: msg.date },
           uiExpanded: true,
         },
-        [sendReachedIdleState],
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "EvalErrored",
+          },
+        ],
       ];
 
     case "EvalSucceeded":
@@ -422,7 +447,12 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
         },
-        [sendReachedIdleState],
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "EvalSucceeded",
+          },
+        ],
       ];
 
     case "FocusedTab":
@@ -562,7 +592,12 @@ function statusChanged(
           },
           canHotReload: true,
         },
-        [sendReachedIdleState],
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "AlreadyUpToDate",
+          },
+        ],
       ];
 
     case "Busy":
@@ -585,7 +620,12 @@ function statusChanged(
           status: { tag: "UnexpectedError", date, message: status.message },
           uiExpanded: true,
         },
-        [sendReachedIdleState],
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "ClientError",
+          },
+        ],
       ];
 
     case "CompileError":
@@ -594,16 +634,15 @@ function statusChanged(
           ...model,
           status: { tag: "CompileError", date },
         },
-        [sendReachedIdleState],
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "CompileError",
+          },
+        ],
       ];
   }
 }
-
-const sendReachedIdleState: Cmd = {
-  tag: "SendMessage",
-  message: { tag: "ReachedIdleState" },
-  sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-};
 
 function reconnect(
   model: Model,
@@ -651,7 +690,8 @@ const runCmd =
     cmd: Cmd,
     mutable: Mutable,
     dispatch: (msg: Msg) => void,
-    resolvePromise: (result: undefined) => void
+    resolvePromise: (result: undefined) => void,
+    rejectPromise: (error: Error) => void
   ): void => {
     switch (cmd.tag) {
       case "Eval": {
@@ -719,6 +759,13 @@ const runCmd =
             dispatch({ tag: "SleepBeforeReconnectDone", date: getNow() });
           }
         }, retryWaitMs(cmd.attemptNumber));
+        return;
+
+      case "TriggerReachedIdleState":
+        // Let the cmd queue be emptied first.
+        Promise.resolve().then(() => {
+          window.__ELM_WATCH_ON_REACHED_IDLE_STATE(cmd.reason);
+        }, rejectPromise);
         return;
     }
   };

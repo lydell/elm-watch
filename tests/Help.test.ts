@@ -23,7 +23,6 @@ async function helpHelper(
     stdout,
     stderr,
     getNow: () => new Date(0),
-    onIdle: undefined,
   });
 
   const stdoutString = clean(stdout.getOutput());
