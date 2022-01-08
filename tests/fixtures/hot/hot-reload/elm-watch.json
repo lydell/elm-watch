@@ -18,6 +18,12 @@
             ],
             "output": "build/Element.js"
         },
+        "Document": {
+            "inputs": [
+                "src/Document.elm"
+            ],
+            "output": "build/Document.js"
+        },
         "Application": {
             "inputs": [
                 "src/Application.elm"

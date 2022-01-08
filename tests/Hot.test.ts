@@ -1664,6 +1664,216 @@ describe("hot", () => {
       }
     });
 
+    test("Document", async () => {
+      const {
+        write,
+        writeSimpleChange,
+        sendToElm,
+        terminate,
+        lastValueFromElm,
+        go,
+      } = runHotReload({ name: "Document" });
+
+      let probe: HTMLElement | null = null;
+
+      write(1);
+
+      const { log } = await go(async ({ idle, body }) => {
+        switch (idle) {
+          case 1:
+            await assertInit(body);
+            write(2);
+            return "KeepGoing";
+          case 2:
+            await assertHotReload(body);
+            terminate();
+            write(1);
+            return "KeepGoing";
+          case 3:
+            switchCompilationMode("debug");
+            return "KeepGoing";
+          case 4:
+            assertCompilationMode("debug");
+            assertDebugger(body);
+            await assertInit(body);
+            write(2);
+            return "KeepGoing";
+          case 5:
+            await assertHotReload(body);
+            terminate();
+            write(1);
+            return "KeepGoing";
+          case 6:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 7:
+            assertCompilationMode("optimize");
+            await assertInit(body);
+            terminate();
+            write(2);
+            return "KeepGoing";
+          case 8:
+            await assertReloadForOptimize(body);
+            writeSimpleChange();
+            return "KeepGoing";
+          default:
+            assertHotReloadForOptimize(body);
+            terminate();
+            return "Stop";
+        }
+      });
+
+      expect(log).toMatchInlineSnapshot(`
+        1 AlreadyUpToDate
+        2 EvalSucceeded
+        3 EvalSucceeded
+        4 AlreadyUpToDate
+        5 EvalSucceeded
+        6 EvalSucceeded
+        7 AlreadyUpToDate
+        8 AlreadyUpToDate
+        9 EvalSucceeded
+      `);
+
+      async function assertInit(body: HTMLBodyElement): Promise<void> {
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
+          browserOnClick: 0
+          originalButtonClicked: 0
+          newButtonClicked: 0
+          originalFromJs: []
+          newFromJs: []
+          </pre></div></body>
+        `);
+
+        probe = body.querySelector(".probe");
+        expect(probe?.outerHTML).toMatchInlineSnapshot(
+          `<h1 class="probe">Before hot reload</h1>`
+        );
+
+        click(body, "button");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
+          browserOnClick: 0
+          originalButtonClicked: 1
+          newButtonClicked: 0
+          originalFromJs: []
+          newFromJs: []
+          </pre></div></body>
+        `);
+
+        sendToElm(2);
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
+          browserOnClick: 0
+          originalButtonClicked: 1
+          newButtonClicked: 0
+          originalFromJs: [2]
+          newFromJs: []
+          </pre></div></body>
+        `);
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(`4`);
+      }
+
+      async function assertHotReload(body: HTMLBodyElement): Promise<void> {
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          browserOnClick: 0
+          originalButtonClicked: 1
+          newButtonClicked: 0
+          originalFromJs: [2]
+          newFromJs: []
+          </pre></div></body>
+        `);
+
+        expect(body.querySelector(".probe") === probe).toMatchInlineSnapshot(
+          `true`
+        );
+
+        click(body, "button");
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          browserOnClick: 1
+          originalButtonClicked: 1
+          newButtonClicked: 1
+          originalFromJs: [2]
+          newFromJs: []
+          </pre></div></body>
+        `);
+
+        sendToElm(3);
+        await waitOneFrame();
+        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          browserOnClick: 1
+          originalButtonClicked: 1
+          newButtonClicked: 1
+          originalFromJs: [2]
+          newFromJs: [3]
+          </pre></div></body>
+        `);
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(`12`);
+      }
+
+      async function assertReloadForOptimize(
+        body: HTMLBodyElement
+      ): Promise<void> {
+        expect(body.outerHTML).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          browserOnClick: 0
+          originalButtonClicked: 0
+          newButtonClicked: 0
+          originalFromJs: []
+          newFromJs: []
+          </pre></div></body>
+        `);
+
+        expect(body.querySelector(".probe") === probe).toMatchInlineSnapshot(
+          `false`
+        );
+
+        click(body, "button");
+        await waitOneFrame();
+        expect(body.outerHTML).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          browserOnClick: 1
+          originalButtonClicked: 0
+          newButtonClicked: 1
+          originalFromJs: []
+          newFromJs: []
+          </pre></div></body>
+        `);
+
+        sendToElm(3);
+        await waitOneFrame();
+        expect(body.outerHTML).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          browserOnClick: 1
+          originalButtonClicked: 0
+          newButtonClicked: 1
+          originalFromJs: []
+          newFromJs: [3]
+          </pre></div></body>
+        `);
+        expect(lastValueFromElm.value).toMatchInlineSnapshot(`12`);
+      }
+
+      function assertHotReloadForOptimize(body: HTMLBodyElement): void {
+        expect(body.outerHTML).toMatchInlineSnapshot(`
+          <body><div><h1 class="probe">After simple text change</h1><button>Button</button><pre>
+          browserOnClick: 1
+          originalButtonClicked: 0
+          newButtonClicked: 1
+          originalFromJs: []
+          newFromJs: [3]
+          </pre></div></body>
+        `);
+      }
+    });
+
     test("Application", async () => {
       const {
         write,
