@@ -1,0 +1,23 @@
+{
+    "targets": {
+        "Target1": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/Main.js"
+        },
+        "Target2": {
+            "inputs": [
+                "src/Main.elm",
+                "src/Main2.elm"
+            ],
+            "output": "build/Main2.js"
+        },
+        "Target3": {
+            "inputs": [
+                "src/Symlink.elm"
+            ],
+            "output": "build/Main3.js"
+        }
+    }
+}

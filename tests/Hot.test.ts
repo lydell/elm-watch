@@ -1306,6 +1306,65 @@ describe("hot", () => {
     }
   });
 
+  test("typecheck-only should not break because of duplicate inputs", async () => {
+    const { terminal, renders } = await run({
+      fixture: "typecheck-only-unique",
+      args: [],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Target1: elm make (typecheck only)
+      ⏳ Target2: elm make (typecheck only)
+      ⏳ Target3: elm make (typecheck only)
+      ✅ Target1⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Target2⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Target3⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ Target1: elm make
+      ✅ Target1⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Target1⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Target1⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: Target1⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 Target1
+      ================================================================================
+      ▼ ⏳ 00:00:00 Target1
+      ================================================================================
+      ▼ ⏳ 00:00:00 Target1
+      ================================================================================
+      ▼ 🔌 00:00:00 Target1
+      ================================================================================
+      ▼ ⏳ 00:00:00 Target1
+      ================================================================================
+      ▼ ✅ 00:00:00 Target1
+    `);
+  });
+
   // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
   // That results in a much better debugging experience (fewer timeouts).
   describe("hot reloading", () => {
