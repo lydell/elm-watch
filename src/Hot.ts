@@ -30,11 +30,7 @@ import {
   toJsonError,
 } from "./Helpers";
 import type { Logger } from "./Logger";
-import {
-  isNonEmptyArray,
-  mapNonEmptyArray,
-  NonEmptyArray,
-} from "./NonEmptyArray";
+import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
@@ -187,10 +183,7 @@ type NextAction =
     }
   | {
       tag: "Restart";
-      eventsWithMessages: NonEmptyArray<{
-        event: WatcherEvent;
-        message: string;
-      }>;
+      events: NonEmptyArray<WatcherEvent>;
     };
 
 type HotState =
@@ -888,7 +881,6 @@ function onWatcherEvent(
       switch (eventName) {
         case "added":
           return makeRestartNextAction(
-            restartBecauseJsonFileChangedMessage(basename, eventName),
             makeWatcherEvent(eventName, absolutePathString, now),
             nextAction,
             project
@@ -901,7 +893,6 @@ function onWatcherEvent(
             project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath
           ) {
             return makeRestartNextAction(
-              restartBecauseJsonFileChangedMessage(basename, eventName),
               makeWatcherEvent(eventName, absolutePathString, now),
               nextAction,
               project
@@ -914,7 +905,6 @@ function onWatcherEvent(
       switch (eventName) {
         case "added":
           return makeRestartNextAction(
-            restartBecauseJsonFileChangedMessage(basename, eventName),
             makeWatcherEvent(eventName, absolutePathString, now),
             nextAction,
             project
@@ -929,7 +919,6 @@ function onWatcherEvent(
             )
           ) {
             return makeRestartNextAction(
-              restartBecauseJsonFileChangedMessage(basename, eventName),
               makeWatcherEvent(eventName, absolutePathString, now),
               nextAction,
               project
@@ -977,12 +966,7 @@ function onElmFileWatcherEvent(
   const elmFile = event.file;
 
   if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
-    return makeRestartNextAction(
-      restartBecauseRelatedToElmJsonsErrorsMessage(event.eventName),
-      event,
-      nextAction,
-      project
-    );
+    return makeRestartNextAction(event, nextAction, project);
   }
 
   const dirtyOutputs: Array<{
@@ -995,12 +979,7 @@ function onElmFileWatcherEvent(
       if (event.eventName === "removed") {
         for (const inputPath of outputState.inputs) {
           if (equalsInputPath(elmFile, inputPath)) {
-            return makeRestartNextAction(
-              restartBecauseInputWasRemovedMessage(),
-              event,
-              nextAction,
-              project
-            );
+            return makeRestartNextAction(event, nextAction, project);
           }
         }
       }
@@ -1112,8 +1091,7 @@ function runNextAction(
       return [model, []];
 
     case "Restart": {
-      const { eventsWithMessages } = model.nextAction;
-      const events = mapNonEmptyArray(eventsWithMessages, ({ event }) => event);
+      const { events } = model.nextAction;
 
       switch (model.hotState.tag) {
         case "Idle":
@@ -1127,18 +1105,8 @@ function runNextAction(
 
         case "Dependencies":
         case "Compiling": {
-          return [
-            { ...model, hotState: { tag: "Restarting", events } },
-            // The actual restart is triggered once the current compilation is over.
-            [
-              { tag: "ClearScreen" },
-              {
-                tag: "LogInfoMessageWithTimeline",
-                message: restartingMessage(eventsWithMessages),
-                events,
-              },
-            ],
-          ];
+          // The actual restart is triggered once the current compilation is over.
+          return [{ ...model, hotState: { tag: "Restarting", events } }, []];
         }
 
         case "Restarting":
@@ -1719,7 +1687,6 @@ function makeWatcherEvent(
 }
 
 function makeRestartNextAction(
-  message: string,
   event: WatcherEvent,
   nextAction: NextAction,
   project: Project
@@ -1727,10 +1694,8 @@ function makeRestartNextAction(
   return [
     {
       tag: "Restart",
-      eventsWithMessages:
-        nextAction.tag === "Restart"
-          ? [...nextAction.eventsWithMessages, { event, message }]
-          : [{ event, message }],
+      events:
+        nextAction.tag === "Restart" ? [...nextAction.events, event] : [event],
     },
     [
       {
@@ -2620,35 +2585,6 @@ function printNumMoreEvents({
     : numMoreEvents === 1
     ? `${indent}(1 more event)`
     : `${indent}(${numMoreEvents} more events)`;
-}
-
-function restartBecauseJsonFileChangedMessage(
-  changedFile: "elm-watch.json" | "elm.json",
-  eventName: WatcherEventName
-): string {
-  return `An ${bold(changedFile)} file ${eventName}.`;
-}
-
-function restartBecauseRelatedToElmJsonsErrorsMessage(
-  eventName: WatcherEventName
-): string {
-  return `A problematic input Elm file was ${eventName}.`;
-}
-
-function restartBecauseInputWasRemovedMessage(): string {
-  return "An input Elm file was removed.";
-}
-
-function restartingMessage(
-  events: NonEmptyArray<{ event: WatcherEvent; message: string }>
-): string {
-  return join(
-    [
-      ...new Set(mapNonEmptyArray(events, ({ message }) => message)),
-      "Restarting!",
-    ],
-    "\n"
-  );
 }
 
 function compileFinishedMessage(duration: number): string {
