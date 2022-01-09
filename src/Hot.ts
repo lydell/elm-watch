@@ -766,9 +766,6 @@ const update =
                   },
                 },
               },
-              newModel.hotState.tag === "Idle" && exitOnError
-                ? { tag: "ExitOnIdle" }
-                : { tag: "NoCmd" },
             ],
           ];
         };
