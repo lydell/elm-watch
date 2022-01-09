@@ -35,6 +35,8 @@ import type {
   ElmWatchStuffJsonPath,
   InputPath,
   OutputPath,
+  UncheckedInputPath,
+  WriteOutputErrorReasonForWriting,
 } from "./Types";
 
 export type Project = {
@@ -130,10 +132,6 @@ export type OutputFsError =
       error: Error;
     };
 
-export type WriteOutputErrorReasonForWriting =
-  | "InjectWebSocketClient"
-  | "Postprocess";
-
 type ElmJsonError =
   | {
       tag: "DuplicateInputs";
@@ -168,12 +166,6 @@ type ElmJsonError =
         elmJsonPath: ElmJsonPath;
       }>;
     };
-
-export type UncheckedInputPath = {
-  tag: "UncheckedInputPath";
-  theUncheckedInputPath: AbsolutePath;
-  originalString: string;
-};
 
 export type Duration =
   | {

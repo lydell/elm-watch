@@ -49,6 +49,13 @@ export type InputPath = {
   realpath: AbsolutePath;
 };
 
+// src/Main.elm, but unchecked
+export type UncheckedInputPath = {
+  tag: "UncheckedInputPath";
+  theUncheckedInputPath: AbsolutePath;
+  originalString: string;
+};
+
 // build/main.js
 export type OutputPath = {
   tag: "OutputPath";
@@ -68,6 +75,10 @@ export type CliArg = {
   tag: "CliArg";
   theArg: string;
 };
+
+export type WriteOutputErrorReasonForWriting =
+  | "InjectWebSocketClient"
+  | "Postprocess";
 
 export type GetNow = () => Date;
 

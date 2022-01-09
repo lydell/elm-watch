@@ -14,10 +14,6 @@ import {
 import { absolutePathFromString } from "./PathHelpers";
 import { Port } from "./Port";
 import { ELM_WATCH_NODE, UnknownValueAsString } from "./Postprocess";
-import {
-  UncheckedInputPath,
-  WriteOutputErrorReasonForWriting,
-} from "./Project";
 import { Command, ExitReason } from "./Spawn";
 import {
   AbsolutePath,
@@ -30,6 +26,8 @@ import {
   InputPath,
   OutputPath,
   RunMode,
+  UncheckedInputPath,
+  WriteOutputErrorReasonForWriting,
 } from "./Types";
 
 const elmJson = bold("elm.json");
