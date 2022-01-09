@@ -49,8 +49,9 @@ export function spawnKillable(command: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
 } {
+  // istanbul ignore next
   let kill = (): void => {
-    // Reassigned below.
+    throw new Error("spawnKillable: `kill` was never reassigned!");
   };
 
   const promise = (
@@ -139,6 +140,7 @@ export function spawnKillable(command: Command): {
       });
 
       kill = () => {
+        // istanbul ignore else
         if (!killed) {
           child.kill();
           reject(SPAWN_KILLED);
