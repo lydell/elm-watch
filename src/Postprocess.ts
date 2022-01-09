@@ -433,9 +433,9 @@ class PostprocessWorker {
         break;
       }
 
+      // istanbul ignore next
       case "Terminated":
-        // Do nothing.
-        break;
+      // Do nothing.
     }
   }
 }
