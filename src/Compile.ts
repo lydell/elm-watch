@@ -1030,12 +1030,14 @@ async function postprocessHelper({
   try {
     postprocessResult = await promise;
   } catch (unknownError) {
+    // istanbul ignore else
     if (unknownError === SPAWN_KILLED || unknownError === WORKER_TERMINATED) {
       outputState.dirty = true;
       outputState.status = { tag: "Interrupted" };
       updateStatusLineHelper();
       return { tag: "Nothing" };
     }
+    // istanbul ignore next
     throw unknownError;
   }
 

@@ -48,6 +48,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
             killed = true;
             resolve(result);
           },
+          // istanbul ignore next
           (error) => {
             cmds.length = 0;
             killed = true;
@@ -63,6 +64,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
         killed = true;
         resolve(result);
       },
+      // istanbul ignore next
       (error) => {
         killed = true;
         reject(error);

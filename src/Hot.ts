@@ -596,7 +596,9 @@ const update =
         });
 
         switch (model.hotState.tag) {
+          // istanbul ignore next
           case "Dependencies":
+          // istanbul ignore next
           case "Idle":
             return [
               model,
@@ -711,7 +713,9 @@ const update =
               [{ tag: "Restart", restartReasons: model.hotState.events }],
             ];
 
+          // istanbul ignore next
           case "Idle":
+          // istanbul ignore next
           case "Compiling":
             return [
               model,
@@ -1465,6 +1469,7 @@ const runCmd =
         }, 10);
         return;
 
+      // istanbul ignore next
       case "Throw":
         rejectPromise(cmd.error);
         return;
@@ -2379,7 +2384,8 @@ function onWebSocketToServerMessage(
         [
           model.hotState.tag === "Idle"
             ? { tag: "ExitOnIdle" }
-            : {
+            : // istanbul ignore next
+              {
                 tag: "Throw",
                 error: new Error(
                   `Got ExitRequested. Expected hotState to be Idle but it is: ${model.hotState.tag}`
