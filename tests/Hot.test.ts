@@ -1766,6 +1766,65 @@ describe("hot", () => {
     `);
   });
 
+  test("persisted debug mode for Html", async () => {
+    // You can set "compilationMode": "debug" for Html and Worker programs in
+    // elm-watch-stuff.json. The only thing that happens is that the disabled
+    // "debug" radio button is checked.
+    const { terminal, renders } = await run({
+      fixture: "persisted-debug-mode-for-html",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ body }) => {
+        // No debugger.
+        expect(body.outerHTML).toMatchInlineSnapshot(
+          `<body><div>Html</div></body>`
+        );
+        expandUi();
+        return "Stop";
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ 🌳 🔌 00:00:00 Main
+      ================================================================================
+      ▼ 🌳 🔌 00:00:00 Main
+      ================================================================================
+      ▼ 🌳 ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ 🌳 ✅ 00:00:00 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 1970-01-01 00:00:00
+      status Successfully compiled
+      Compilation mode
+      ◉ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◯ Standard
+      ◯ Optimize
+      ▲ 🌳 ✅ 00:00:00 Main
+    `);
+  });
+
   test("late init", async () => {
     const { terminal, renders } = await run({
       fixture: "late-init",
