@@ -216,6 +216,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         obj.init = function() {
           var app = exports.init.apply(exports, arguments);
           obj.__elmWatchApps.push(app);
+          window.__ELM_WATCH_ON_INIT();
           return app;
         };
       }

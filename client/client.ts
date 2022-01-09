@@ -21,6 +21,7 @@ declare global {
     __ELM_WATCH_GET_NOW: GetNow;
     __ELM_WATCH_SKIP_RECONNECT_TIME_CHECK: boolean;
     __ELM_WATCH_RELOAD_PAGE?: () => void;
+    __ELM_WATCH_ON_INIT: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
     __ELM_WATCH_KILL_ALL: () => void;
@@ -102,6 +103,9 @@ type Mutable = {
 };
 
 type Msg =
+  | {
+      tag: "AppInit";
+    }
   | {
       tag: "EvalErrored";
       date: Date;
@@ -360,6 +364,10 @@ const initMutable =
       ),
     };
 
+    window.__ELM_WATCH_ON_INIT = () => {
+      dispatch({ tag: "AppInit" });
+    };
+
     const originalKillAll = window.__ELM_WATCH_KILL_ALL;
     window.__ELM_WATCH_KILL_ALL = () => {
       resolvePromise(undefined);
@@ -441,6 +449,10 @@ const init = (date: Date): [Model, Array<Cmd>] => {
 
 function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    case "AppInit":
+      // Just cause a re-render, so the status icon can update.
+      return [model, []];
+
     case "EvalErrored":
       return [
         {
