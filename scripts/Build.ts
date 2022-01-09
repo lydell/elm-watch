@@ -117,7 +117,8 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
     ],
   });
 
-  const toModuleRegex = /__toModule\((require\("[^"]+"\))\)/g;
+  const toModuleRegex = /__toESM\((require\("[^"]+"\))\)/g;
+  const exportsRegex = /module.exports = .+/g;
 
   for (const output of result.outputFiles) {
     switch (path.basename(output.path)) {
@@ -128,6 +129,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
             output.text.lastIndexOf("//")
           )
           .replace(toModuleRegex, "$1")
+          .replace(exportsRegex, "")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
           .trim();
         const code = `#!/usr/bin/env node\n${replaced}`;
