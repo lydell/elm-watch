@@ -1312,6 +1312,7 @@ const runCmd =
           // Retry writing it.
           writeElmWatchStuffJson(mutable);
           // If still an error, print it.
+          // istanbul ignore else
           if (mutable.elmWatchStuffJsonWriteError !== undefined) {
             logger.error("");
             logger.errorTemplate(
@@ -1320,6 +1321,7 @@ const runCmd =
                 mutable.elmWatchStuffJsonWriteError
               )
             );
+            // istanbul ignore else
             if (exitOnError) {
               closeAll(mutable).then(() => {
                 resolvePromise({ tag: "ExitOnIdle" });
