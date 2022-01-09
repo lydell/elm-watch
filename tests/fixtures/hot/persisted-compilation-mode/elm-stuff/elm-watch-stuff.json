@@ -1,0 +1,8 @@
+{
+    "port": 9988,
+    "targets": {
+        "Main": {
+            "compilationMode": "debug"
+        }
+    }
+}

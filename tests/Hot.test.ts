@@ -52,6 +52,7 @@ async function run({
   bin,
   env,
   getNow = () => new Date(0),
+  keepElmStuffJson = false,
 }: {
   fixture: string;
   scripts: Array<string>;
@@ -63,6 +64,7 @@ async function run({
   bin?: string;
   env?: Env;
   getNow?: GetNow;
+  keepElmStuffJson?: boolean;
 }): Promise<{
   terminal: string;
   browser: string;
@@ -81,7 +83,7 @@ async function run({
   }
   fs.mkdirSync(build, { recursive: true });
 
-  if (fs.existsSync(elmWatchStuff)) {
+  if (fs.existsSync(elmWatchStuff) && !keepElmStuffJson) {
     fs.unlinkSync(elmWatchStuff);
   }
 
@@ -1696,6 +1698,45 @@ describe("hot", () => {
 
       ⧙ℹ️ 11:11:11 Web socket disconnected for: One⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
+    `);
+  });
+
+  test("persisted compilation mode", async () => {
+    const { terminal, renders } = await run({
+      fixture: "persisted-compilation-mode",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ body }) => {
+        assertDebugger(body);
+        return "Stop";
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ 🌳 🔌 00:00:00 Main
+      ================================================================================
+      ▼ 🌳 ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ 🌳 ✅ 00:00:00 Main
     `);
   });
 
