@@ -68,7 +68,9 @@ export class WebSocketServer {
         webSocket,
         // `request.url` is always a string here, but the types says it can be undefined:
         // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
-        urlString: request.url ?? "/",
+        urlString:
+          // istanbul ignore next
+          request.url ?? "/",
       });
 
       webSocket.on("message", (data) => {
@@ -83,6 +85,7 @@ export class WebSocketServer {
         this.dispatch({ tag: "WebSocketClosed", webSocket });
       });
 
+      // istanbul ignore next
       webSocket.on("error", (error) => {
         this.dispatch({
           tag: "WebSocketServerError",
@@ -97,7 +100,8 @@ export class WebSocketServer {
         error:
           error.code === "EADDRINUSE"
             ? { tag: "PortConflict", portChoice, error }
-            : { tag: "OtherError", error },
+            : // istanbul ignore next
+              { tag: "OtherError", error },
       });
     });
   }
@@ -109,6 +113,9 @@ export class WebSocketServer {
   setDispatch(dispatch: (msg: WebSocketServerMsg) => void): void {
     this.dispatch = dispatch;
     for (const msg of this.msgQueue) {
+      // When testing, a change to elm.json gives a 5 ms room where queueing is needed.
+      // That’s very unlikely to even be needed, and very hard to test.
+      // istanbul ignore next
       dispatch(msg);
     }
   }
@@ -121,6 +128,7 @@ export class WebSocketServer {
     return new Promise((resolve, reject) => {
       // This terminates all connections and closes the server.
       this.webSocketServer.close((error) => {
+        // istanbul ignore else
         if (error === undefined) {
           resolve();
         } else {
