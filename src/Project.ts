@@ -341,7 +341,7 @@ export function initProject({
   }
 
   const maxParallel = silentlyReadIntEnvValue(
-    env.ELM_WATCH_MAX_PARALLEL,
+    env.__ELM_WATCH_MAX_PARALLEL,
     os.cpus().length
   );
 

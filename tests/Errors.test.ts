@@ -2829,7 +2829,7 @@ describe("errors", () => {
         env: {
           ...process.env,
           ...TEST_ENV,
-          ELM_WATCH_MAX_PARALLEL: "0",
+          __ELM_WATCH_MAX_PARALLEL: "0",
         },
       })
     ).toMatchInlineSnapshot(`

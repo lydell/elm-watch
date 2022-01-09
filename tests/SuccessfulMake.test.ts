@@ -39,7 +39,7 @@ async function run(
     env: {
       ...process.env,
       __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
-      ELM_WATCH_MAX_PARALLEL: "2",
+      __ELM_WATCH_MAX_PARALLEL: "2",
       PATH:
         bin === undefined ? process.env.PATH : prependPATH(path.join(dir, bin)),
     },
