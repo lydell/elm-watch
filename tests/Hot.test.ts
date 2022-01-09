@@ -1477,6 +1477,123 @@ describe("hot", () => {
     }
   });
 
+  test("kill postprocess (elm-watch-node)", async () => {
+    const fixture = "kill-postprocess-elm-watch-node";
+    const input = path.join(FIXTURES_DIR, fixture, "src", "Main.elm");
+    const tmp = path.join(FIXTURES_DIR, fixture, "postprocess.tmp");
+    fs.writeFileSync(tmp, "1");
+    const { terminal, renders } = await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: async ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert1(div);
+            touch(input);
+            await wait(1000); // Wait for Elm to finish and postprocess to start.
+            touch(input); // Touch while postprocessing.
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make (typecheck only)
+      ✅ Main⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ Main: elm make
+      🟢 Main: elm make done
+      ⏳ Main: postprocess
+      ✅ Main⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⏳ Main: elm make
+      🟢 Main: elm make done
+      ⏳ Main: postprocess
+      ⏳ Main: interrupted
+      ⏳ Main: elm make
+      🟢 Main: elm make done
+      ⏳ Main: postprocess
+      ✅ Main⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm
+      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ 🔌 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ✅ 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ⏳ 00:00:00 Main
+      ================================================================================
+      ▼ ✅ 00:00:00 Main
+    `);
+
+    function assert1(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div>postprocess content before</div>`
+      );
+    }
+
+    function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div>postprocess content after</div>`
+      );
+    }
+  });
+
   // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
   // That results in a much better debugging experience (fewer timeouts).
   describe("hot reloading", () => {
