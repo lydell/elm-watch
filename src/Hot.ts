@@ -610,7 +610,7 @@ const update =
               msg.handleOutputActionResult
             );
 
-            if (outputActions.actions.length > 0) {
+            if (isNonEmptyArray(outputActions.actions)) {
               return [
                 model,
                 [
