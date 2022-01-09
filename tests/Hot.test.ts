@@ -1705,6 +1705,7 @@ describe("hot", () => {
     function runHotReload({ name }: { name: `${UppercaseLetter}${string}` }): {
       write: (n: number) => void;
       writeSimpleChange: () => void;
+      removeInput: () => void;
       sendToElm: (value: number) => void;
       terminate: () => void;
       lastValueFromElm: { value: unknown };
@@ -1712,24 +1713,24 @@ describe("hot", () => {
     } {
       const fixture = "hot-reload";
       const src = path.join(FIXTURES_DIR, fixture, "src");
+      let lastContent = "";
 
       const write = (n: number): void => {
         const content = fs.readFileSync(
           path.join(src, `${name}${n}.elm`),
           "utf8"
         );
-        fs.writeFileSync(
-          path.join(src, `${name}.elm`),
-          content.replace(`module ${name}${n}`, `module ${name}`)
-        );
+        lastContent = content.replace(`module ${name}${n}`, `module ${name}`);
+        fs.writeFileSync(path.join(src, `${name}.elm`), lastContent);
       };
 
       const writeSimpleChange = (): void => {
-        const content = fs.readFileSync(path.join(src, `${name}.elm`), "utf8");
-        fs.writeFileSync(
-          path.join(src, `${name}.elm`),
-          content.replace(/hot reload/g, `simple text change`)
-        );
+        lastContent = lastContent.replace(/hot reload/g, `simple text change`);
+        fs.writeFileSync(path.join(src, `${name}.elm`), lastContent);
+      };
+
+      const removeInput = (): void => {
+        fs.unlinkSync(path.join(src, `${name}.elm`));
       };
 
       let app: ReturnType<ElmModule["init"]> | undefined;
@@ -1754,6 +1755,7 @@ describe("hot", () => {
       return {
         write,
         writeSimpleChange,
+        removeInput,
         sendToElm,
         terminate,
         lastValueFromElm,
@@ -1762,6 +1764,7 @@ describe("hot", () => {
             fixture,
             args: [name],
             scripts: [`${name}.js`],
+            isTTY: false,
             init: (node) => {
               app = window.Elm?.[name]?.init({ node });
               if (app?.ports !== undefined) {
@@ -2698,6 +2701,103 @@ describe("hot", () => {
         await waitOneFrame();
         expect(lastValueFromElm.value).toMatchInlineSnapshot(
           `Before: []. After simple text change: [3, 4]`
+        );
+      }
+    });
+
+    test("remove input file", async () => {
+      const { write, writeSimpleChange, removeInput, go } = runHotReload({
+        name: "RemoveInput",
+      });
+
+      write(1);
+
+      const { terminal } = await go(async ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            await assert1(div);
+            removeInput();
+            return "KeepGoing";
+          case 2:
+            writeSimpleChange();
+            return "KeepGoing" as const;
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ RemoveInput: elm make (typecheck only)
+        ✅ RemoveInput⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ RemoveInput: elm make
+        ✅ RemoveInput⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: RemoveInput⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket disconnected for: RemoveInput⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Web socket connected for: RemoveInput⧘
+        ✅ ⧙00:00:00⧘ Everything up to date.
+        🚨 RemoveInput
+
+        ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+        ⧙Target: RemoveInput⧘
+
+        You asked me to compile these inputs:
+
+        src/RemoveInput.elm ⧙(/Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm)⧘
+
+        ⧙But they don't exist!⧘
+
+        Is something misspelled? Or do you need to create them?
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
+        🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ RemoveInput: elm make
+        ✅ RemoveInput⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
+        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      `);
+
+      async function assert1(div: HTMLDivElement): Promise<void> {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><div><h1>hot reload</h1><button>Button</button><pre>0</pre></div></div>`
+        );
+
+        click(div, "button");
+        await waitOneFrame();
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><div><h1>hot reload</h1><button>Button</button><pre>1</pre></div></div>`
+        );
+      }
+
+      function assert2(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><div><h1>simple text change</h1><button>Button</button><pre>1</pre></div></div>`
         );
       }
     });

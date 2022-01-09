@@ -322,7 +322,11 @@ export async function run(
       project,
       portChoice
     ),
-    init: init(getNow(), restartReasons),
+    init: init(
+      getNow(),
+      restartReasons,
+      project.elmJsonsErrors.map(({ outputPath }) => outputPath)
+    ),
     update: update(project, exitOnError),
     runCmd: runCmd(env, logger, getNow, exitOnError),
   });
@@ -519,7 +523,8 @@ function watcherOnAll(
 
 const init = (
   now: Date,
-  restartReasons: Array<WatcherEvent | WebSocketRelatedEvent>
+  restartReasons: Array<WatcherEvent | WebSocketRelatedEvent>,
+  elmJsonsErrorsOutputPaths: Array<OutputPath>
 ): [Model, Array<Cmd>] => [
   {
     nextAction: { tag: "NoAction" },
@@ -529,7 +534,17 @@ const init = (
       events: restartReasons,
     },
   },
-  [{ tag: "ClearScreen" }, { tag: "InstallDependencies" }],
+  [
+    { tag: "ClearScreen" },
+    { tag: "InstallDependencies" },
+    ...elmJsonsErrorsOutputPaths.map(
+      (outputPath): Cmd => ({
+        tag: "WebSocketSendToOutput",
+        outputPath,
+        message: { tag: "StatusChanged", status: { tag: "CompileError" } },
+      })
+    ),
+  ],
 ];
 
 const update =

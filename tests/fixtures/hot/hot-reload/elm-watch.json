@@ -35,6 +35,12 @@
                 "src/Worker.elm"
             ],
             "output": "build/Worker.js"
+        },
+        "RemoveInput": {
+            "inputs": [
+                "src/RemoveInput.elm"
+            ],
+            "output": "build/RemoveInput.js"
         }
     }
 }
