@@ -2034,28 +2034,42 @@ function onWebSocketConnected(
           if (
             outputState.status.elmCompiledTimestamp === elmCompiledTimestamp
           ) {
-            const [newModel, cmds] = onWebSocketShouldLogEvent(
-              {
-                tag: "WebSocketConnectedNeedingNoAction",
-                date,
-                outputPath,
+            const cmd: Cmd = {
+              tag: "WebSocketSendToOutput",
+              outputPath,
+              message: {
+                tag: "StatusChanged",
+                status: { tag: "AlreadyUpToDate" },
               },
-              model
-            );
-            return [
-              newModel,
-              [
-                ...cmds,
-                {
-                  tag: "WebSocketSendToOutput",
-                  outputPath,
-                  message: {
-                    tag: "StatusChanged",
-                    status: { tag: "AlreadyUpToDate" },
+            };
+
+            const noActionEvent: WebSocketRelatedEvent = {
+              tag: "WebSocketConnectedNeedingNoAction",
+              date,
+              outputPath,
+            };
+
+            switch (model.hotState.tag) {
+              case "Idle": {
+                const [newModel, cmds] = onWebSocketShouldLogEvent(
+                  noActionEvent,
+                  model
+                );
+                return [newModel, [...cmds, cmd]];
+              }
+
+              case "Compiling":
+                return [
+                  {
+                    ...model,
+                    hotState: {
+                      ...model.hotState,
+                      events: [...model.hotState.events, noActionEvent],
+                    },
                   },
-                },
-              ],
-            ];
+                  [cmd],
+                ];
+            }
           } else {
             return onWebSocketRecompileNeeded(
               event,

@@ -10,7 +10,8 @@ import {
   UppercaseLetter,
 } from "../client/client";
 import { elmWatchCli } from "../src";
-import { CompilationMode } from "../src/Types";
+import { Env } from "../src/Helpers";
+import { CompilationMode, GetNow } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
@@ -49,6 +50,8 @@ async function run({
   expandUiImmediately = false,
   isTTY = true,
   bin,
+  env,
+  getNow = () => new Date(0),
 }: {
   fixture: string;
   scripts: Array<string>;
@@ -58,6 +61,8 @@ async function run({
   expandUiImmediately?: boolean;
   isTTY?: boolean;
   bin?: string;
+  env?: Env;
+  getNow?: GetNow;
 }): Promise<{
   terminal: string;
   browser: string;
@@ -132,7 +137,7 @@ async function run({
 
     window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK = true;
 
-    window.__ELM_WATCH_GET_NOW = () => new Date(0);
+    window.__ELM_WATCH_GET_NOW = getNow;
 
     window.__ELM_WATCH_RELOAD_PAGE = () => {
       loadBuiltFiles(true);
@@ -188,12 +193,16 @@ async function run({
           ? {
               ...process.env,
               ...TEST_ENV,
+              ...env,
             }
-          : badElmBinEnv(path.join(dir, "bad-bin", bin)),
+          : {
+              ...badElmBinEnv(path.join(dir, "bad-bin", bin)),
+              ...env,
+            },
       stdin: new FailReadStream(),
       stdout,
       stderr,
-      getNow: () => new Date(0),
+      getNow,
     }).then(resolve, reject);
   });
 
@@ -1592,6 +1601,102 @@ describe("hot", () => {
         `<div>postprocess content after</div>`
       );
     }
+  });
+
+  test("limit postprocess workers", async () => {
+    let now = 0;
+    const timeout = 50;
+    const { terminal } = await run({
+      fixture: "limit-postprocess-workers",
+      args: [],
+      scripts: ["One.js", "Two.js"],
+      isTTY: false,
+      env: {
+        __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS: timeout.toString(),
+      },
+      getNow: () => new Date((now += timeout)),
+      init: (node) => {
+        const node1 = document.createElement("div");
+        const node2 = document.createElement("div");
+        node.append(node1, node2);
+        window.Elm?.One?.init({ node: node1 });
+        window.Elm?.Two?.init({ node: node2 });
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1:
+            return "KeepGoing"; // First script has loaded.
+          default:
+            window.__ELM_WATCH_KILL_ONE("Two");
+            await wait(timeout * 2); // Wait for the worker to be killed.
+            return "Stop";
+        }
+      },
+    });
+
+    const cleanedTerminal = terminal
+      .replace(/ *⧙?[\d.]+⧘? m?s\b.*/g, " (timings)")
+      .replace(/\d{2,}/g, (match) => "1".repeat(match.length));
+
+    expect(cleanedTerminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ One: elm make (typecheck only)
+      ⏳ Two: elm make (typecheck only)
+      ✅ One⧙ (timings)
+      ✅ Two⧙ (timings)
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:11111)⧘
+
+      ✅ ⧙11:11:11⧘ Compilation finished in (timings)
+      ⏳ One: elm make
+      ⚪️ Two: queued
+      🟢 One: elm make done
+      ⏳ One: postprocess
+      ⏳ Two: elm make
+      🟢 Two: elm make done
+      ⏳ Two: postprocess
+      ✅ One⧙ (timings)
+      ✅ Two⧙ (timings)
+
+      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Web socket connected needing compilation of: One
+         (2 more events)
+      ℹ️ 11:11:11 Web socket connected for: One⧘
+      ✅ ⧙11:11:11⧘ Compilation finished in (timings)
+
+      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
+      ✅ ⧙11:11:11⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Web socket connected for: Two⧘
+      ✅ ⧙11:11:11⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
+      ✅ ⧙11:11:11⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Terminated 1 superfluous worker⧘
+      ✅ ⧙11:11:11⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Web socket disconnected for: One⧘
+      ✅ ⧙11:11:11⧘ Everything up to date.
+    `);
   });
 
   // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.

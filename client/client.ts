@@ -24,6 +24,7 @@ declare global {
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
     __ELM_WATCH_KILL_ALL: () => void;
+    __ELM_WATCH_KILL_ONE: (targetName: string) => void;
   }
 }
 
@@ -79,6 +80,10 @@ window.__ELM_WATCH_ON_REACHED_IDLE_STATE ??= () => {
 };
 
 window.__ELM_WATCH_KILL_ALL ??= () => {
+  // Do nothing.
+};
+
+window.__ELM_WATCH_KILL_ONE ??= () => {
   // Do nothing.
 };
 
@@ -276,7 +281,7 @@ function run(): void {
   const getNow: GetNow = () => window.__ELM_WATCH_GET_NOW();
 
   void runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
-    initMutable: initMutable(getNow),
+    initMutable: initMutable(getNow, targetRoot),
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(msg, model);
@@ -326,7 +331,7 @@ function createTargetRoot(targetName: string): HTMLElement {
 }
 
 const initMutable =
-  (getNow: GetNow) =>
+  (getNow: GetNow, targetRoot: HTMLElement) =>
   (
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: undefined) => void
@@ -355,12 +360,23 @@ const initMutable =
       ),
     };
 
-    const original = window.__ELM_WATCH_KILL_ALL;
+    const originalKillAll = window.__ELM_WATCH_KILL_ALL;
     window.__ELM_WATCH_KILL_ALL = () => {
       resolvePromise(undefined);
       const message: WebSocketToServerMessage = { tag: "ExitRequested" };
       mutable.webSocket.send(JSON.stringify(message));
-      original();
+      originalKillAll();
+    };
+
+    const originalKillOne = window.__ELM_WATCH_KILL_ONE;
+    window.__ELM_WATCH_KILL_ONE = (targetName) => {
+      if (targetName === TARGET_NAME) {
+        mutable.removeListeners();
+        mutable.webSocket.close();
+        targetRoot.remove();
+        resolvePromise(undefined);
+      }
+      originalKillOne(targetName);
     };
 
     return mutable;
