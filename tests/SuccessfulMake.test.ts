@@ -175,4 +175,15 @@ describe("successful make", () => {
       ✅ Compilation finished in ⧙0⧘ ms.
     `);
   });
+
+  test("multiple elm-watch-node", async () => {
+    expect(await run("multiple-elm-watch-node", ["make"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ main⧙                                  0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
+      ✅ secondary⧙                             0 ms Q |   0 ms E |   0 ms R |   0 ms P⧘
+
+      ✅ Compilation finished in ⧙0⧘ ms⧙ (using 2 elm-watch-node workers).⧘
+    `);
+  });
 });
