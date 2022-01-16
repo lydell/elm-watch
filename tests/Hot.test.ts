@@ -2025,6 +2025,158 @@ describe("hot", () => {
     }
   });
 
+  test("non interesting .elm files changed, with disabled targets", async () => {
+    const fixture = "non-interesting-elm-files-changed-disabled-targets";
+    const unusedFolder = path.join(FIXTURES_DIR, fixture, "src", "Unused");
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: ["HtmlMain1"],
+      scripts: ["HtmlMain1.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.HtmlMain1?.init({ node });
+      },
+      onIdle: async ({ div }) => {
+        assert(div);
+        for (const filePath of fs.readdirSync(unusedFolder)) {
+          await wait(8);
+          touch(path.join(unusedFolder, filePath));
+        }
+        await wait(100);
+        return "Stop" as const;
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain1: elm make (typecheck only)
+      ✅ HtmlMain1⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain1: elm make
+      ✅ HtmlMain1⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain1⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain1⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain1⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File1.elm
+      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File2.elm⧘
+      ✅ ⧙00:00:00⧘ FYI: The above Elm files are not imported by any of the enabled targets. Nothing to do!
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 HtmlMain1
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain1
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain1
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain1
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain1
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain1
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain1
+    `);
+
+    function assert(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+    }
+  });
+
+  test("non interesting .elm files changed, with all targets enabled", async () => {
+    const fixture = "non-interesting-elm-files-changed-all-targets";
+    const unusedFile1 = path.join(FIXTURES_DIR, fixture, "src", "Unused.elm");
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: [],
+      scripts: ["HtmlMain.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: async ({ div }) => {
+        assert(div);
+        touch(unusedFile1);
+        await wait(100);
+        return "Stop" as const;
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-all-targets/src/Unused.elm⧘
+      ✅ ⧙00:00:00⧘ FYI: The above Elm file is not imported by any target. Nothing to do!
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+    `);
+
+    function assert(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+    }
+  });
+
   test("typecheck-only should not break because of duplicate inputs", async () => {
     const { terminal, renders } = await run({
       fixture: "typecheck-only-unique",

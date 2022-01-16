@@ -1143,7 +1143,9 @@ function runNextAction(
                 tag: "LogInfoMessageWithTimeline",
                 message: notInterestingElmFileChangedMessage(
                   model.nextAction.events.flatMap((event) =>
-                    event.tag === "WatcherEvent" ? event : []
+                    event.tag === "WatcherEvent"
+                      ? event
+                      : /* istanbul ignore next */ []
                   ),
                   project.disabledOutputs
                 ),
@@ -1152,8 +1154,11 @@ function runNextAction(
             ],
           ];
 
+        // istanbul ignore next
         case "Compiling":
+        // istanbul ignore next
         case "Dependencies":
+        // istanbul ignore next
         case "Restarting":
           return [model, []];
       }

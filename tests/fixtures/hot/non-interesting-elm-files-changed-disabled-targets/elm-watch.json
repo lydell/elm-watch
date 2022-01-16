@@ -1,0 +1,16 @@
+{
+    "targets": {
+        "HtmlMain1": {
+            "inputs": [
+                "src/HtmlMain1.elm"
+            ],
+            "output": "build/HtmlMain1.js"
+        },
+        "HtmlMain2": {
+            "inputs": [
+                "src/HtmlMain2.elm"
+            ],
+            "output": "build/HtmlMain2.js"
+        }
+    }
+}
