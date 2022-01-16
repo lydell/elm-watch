@@ -53,6 +53,7 @@ async function run({
   env,
   getNow = () => new Date(0),
   keepElmStuffJson = false,
+  cwd = ".",
 }: {
   fixture: string;
   scripts: Array<string>;
@@ -65,6 +66,7 @@ async function run({
   env?: Env;
   getNow?: GetNow;
   keepElmStuffJson?: boolean;
+  cwd?: string;
 }): Promise<{
   terminal: string;
   browser: string;
@@ -189,7 +191,7 @@ async function run({
     watcher.on("error", reject);
 
     elmWatchCli(["hot", ...args], {
-      cwd: dir,
+      cwd: path.join(dir, cwd),
       env:
         bin === undefined
           ? {
@@ -1201,23 +1203,38 @@ describe("hot", () => {
   test("changes to elm-watch.json", async () => {
     const fixture = "changes-to-elm-watch-json";
     const elmWatchJsonPath = path.join(FIXTURES_DIR, fixture, "elm-watch.json");
+    const elmWatchJsonPath2 = path.join(
+      FIXTURES_DIR,
+      fixture,
+      "src",
+      "elm-watch.json"
+    );
     const elmWatchJsonTemplatePath = path.join(
       FIXTURES_DIR,
       fixture,
       "elm-watch.template.json"
     );
-    const roguePath = path.join(FIXTURES_DIR, fixture, "src", "elm-watch.json");
+    const roguePath = path.join(
+      FIXTURES_DIR,
+      fixture,
+      "rogue",
+      "elm-watch.json"
+    );
     const elmWatchJsonString = fs.readFileSync(
       elmWatchJsonTemplatePath,
       "utf8"
     );
     fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
+    if (fs.existsSync(elmWatchJsonPath2)) {
+      fs.unlinkSync(elmWatchJsonPath2);
+    }
 
     const { terminal, renders } = await run({
       fixture,
       args: ["HtmlMain"],
       scripts: ["HtmlMain.js"],
+      cwd: "src",
       isTTY: false,
       init: (node) => {
         window.Elm?.HtmlMain?.init({ node });
@@ -1236,13 +1253,26 @@ describe("hot", () => {
               elmWatchJsonPath,
               elmWatchJsonString.replace(/"postprocess":.*/, "")
             );
+            return "KeepGoing" as const;
+          case 2:
+            assert2(div);
+            fs.writeFileSync(elmWatchJsonPath2, "{}");
+            await wait(100);
+            fs.unlinkSync(elmWatchJsonPath2);
+            return "KeepGoing";
+          case 3:
+            assert2(div);
+            fs.unlinkSync(elmWatchJsonPath);
             return "KeepGoing";
           default:
-            assert2(div);
-            return "Stop";
+            throw new Error(
+              "Expected elm-watch to exit due to no elm-watch.json!"
+            );
         }
       },
     });
+
+    window.__ELM_WATCH_KILL_ALL();
 
     expect(terminal).toMatchInlineSnapshot(`
       ⏳ Dependencies
@@ -1302,6 +1332,52 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json
+
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+      ⧙I had trouble with the JSON inside:⧘
+
+      At root["targets"]:
+      Expected an object
+      Got: undefined
+
+      🚨 ⧙1⧘ error found
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
+
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+      ⧙But I couldn't find one!⧘
+
+      You need to create one with JSON like this:
+
+      {
+          "targets": {
+              "MyTargetName": {
+                  "inputs": [
+                      "src/Main.elm"
+                  ],
+                  "output": "build/main.js"
+              }
+          }
+      }
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -1332,6 +1408,22 @@ describe("hot", () => {
       ▼ ⏳ 00:00:00 HtmlMain
       ================================================================================
       ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
     `);
 
     function assert1(div: HTMLDivElement): void {
