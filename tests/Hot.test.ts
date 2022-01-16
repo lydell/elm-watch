@@ -1438,6 +1438,7 @@ describe("hot", () => {
   test("changes to elm.json", async () => {
     const fixture = "changes-to-elm-json";
     const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+    const elmJsonPath2 = path.join(FIXTURES_DIR, fixture, "src", "elm.json");
     const elmJsonTemplatePath = path.join(
       FIXTURES_DIR,
       fixture,
@@ -1447,12 +1448,16 @@ describe("hot", () => {
     const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
     fs.writeFileSync(elmJsonPath, elmJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
+    if (fs.existsSync(elmJsonPath2)) {
+      fs.unlinkSync(elmJsonPath2);
+    }
 
     const { terminal, renders } = await run({
       fixture,
       args: ["HtmlMain"],
       scripts: ["HtmlMain.js"],
       isTTY: false,
+      cwd: "src",
       init: (node) => {
         window.Elm?.HtmlMain?.init({ node });
       },
@@ -1466,8 +1471,18 @@ describe("hot", () => {
           case 2:
             fs.writeFileSync(elmJsonPath, elmJsonString);
             return "KeepGoing";
-          default:
+          case 3:
             assert(div);
+            fs.writeFileSync(elmJsonPath2, "{\n}");
+            return "KeepGoing";
+          case 4:
+            fs.unlinkSync(elmJsonPath2);
+            return "KeepGoing";
+          case 5:
+            assert(div);
+            fs.unlinkSync(elmJsonPath);
+            return "KeepGoing";
+          default:
             return "Stop";
         }
       },
@@ -1546,6 +1561,52 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ Dependencies
+      ⛔️ Dependencies
+      ⏳ HtmlMain: elm make
+      🚨 HtmlMain
+
+      ⧙-- MISSING FIELD ---------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json
+
+      I ran into a problem with your elm.json file. I ran into some trouble here:
+
+      1| {
+         ⧙^⧘
+      I was expecting to run into an ⧙OBJECT⧘ with a ⧙"type"⧘ field.
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      🚨 HtmlMain
+
+      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
+      ⧙Target: HtmlMain⧘
+
+      I could not find an ⧙elm.json⧘ for these inputs:
+
+      src/HtmlMain.elm
+
+      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -1572,6 +1633,20 @@ describe("hot", () => {
       ▼ ⏳ 00:00:00 HtmlMain
       ================================================================================
       ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🚨 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🚨 00:00:00 HtmlMain
     `);
 
     function assert(div: HTMLDivElement): void {
