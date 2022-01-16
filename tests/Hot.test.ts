@@ -1688,8 +1688,15 @@ describe("hot", () => {
               postprocessString.replace("toUpperCase", "toLowerCase")
             );
             return "KeepGoing";
-          default:
+          case 3:
             assert2(div);
+            fs.unlinkSync(postprocessPath);
+            return "KeepGoing";
+          case 4:
+            fs.writeFileSync(postprocessPath, postprocessString);
+            return "KeepGoing";
+          default:
+            assert1(div);
             return "Stop";
         }
       },
@@ -1764,6 +1771,39 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      🟢 HtmlMain: elm make done
+      ⏳ HtmlMain: postprocess
+      🚨 HtmlMain
+
+      ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js
+
+      I tried to import your postprocess file:
+
+      const imported = await import("/Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
+
+      But that resulted in this error:
+
+      Cannot find module '/Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js' imported from /Users/you/project/src/PostprocessWorker.ts
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      🟢 HtmlMain: elm make done
+      ⏳ HtmlMain: postprocess
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -1781,6 +1821,16 @@ describe("hot", () => {
       ▼ 🔌 00:00:00 HtmlMain
       ================================================================================
       ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🚨 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
       ================================================================================
       ▼ ⏳ 00:00:00 HtmlMain
       ================================================================================
