@@ -1206,11 +1206,13 @@ describe("hot", () => {
       fixture,
       "elm-watch.template.json"
     );
+    const roguePath = path.join(FIXTURES_DIR, fixture, "src", "elm-watch.json");
     const elmWatchJsonString = fs.readFileSync(
       elmWatchJsonTemplatePath,
       "utf8"
     );
     fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
+    fs.writeFileSync(roguePath, "ROGUE");
 
     const { terminal, renders } = await run({
       fixture,
@@ -1228,6 +1230,7 @@ describe("hot", () => {
               elmWatchJsonPath,
               elmWatchJsonString.slice(0, -10)
             );
+            touch(roguePath);
             await wait(100);
             fs.writeFileSync(
               elmWatchJsonPath,
@@ -1348,8 +1351,10 @@ describe("hot", () => {
       fixture,
       "elm.template.json"
     );
+    const roguePath = path.join(FIXTURES_DIR, fixture, "rogue", "elm.json");
     const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
     fs.writeFileSync(elmJsonPath, elmJsonString);
+    fs.writeFileSync(roguePath, "ROGUE");
 
     const { terminal, renders } = await run({
       fixture,
@@ -1364,6 +1369,7 @@ describe("hot", () => {
           case 1:
             assert(div);
             fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
+            touch(roguePath);
             return "KeepGoing";
           case 2:
             fs.writeFileSync(elmJsonPath, elmJsonString);
@@ -1489,8 +1495,10 @@ describe("hot", () => {
       fixture,
       "postprocess.template.js"
     );
+    const roguePath = path.join(FIXTURES_DIR, fixture, "src", "postprocess.js");
     const postprocessString = fs.readFileSync(postprocessTemplatePath, "utf8");
     fs.writeFileSync(postprocessPath, postprocessString);
+    fs.writeFileSync(roguePath, "ROGUE");
 
     const { terminal, renders } = await run({
       fixture,
@@ -1505,6 +1513,7 @@ describe("hot", () => {
           case 1:
             assert1(div);
             fs.writeFileSync(postprocessPath, postprocessString.slice(0, -10));
+            touch(roguePath);
             return "KeepGoing";
           case 2:
             fs.writeFileSync(
