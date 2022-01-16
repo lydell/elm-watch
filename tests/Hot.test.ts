@@ -85,8 +85,8 @@ async function run({
   }
   fs.mkdirSync(build, { recursive: true });
 
-  if (fs.existsSync(elmWatchStuff) && !keepElmStuffJson) {
-    fs.unlinkSync(elmWatchStuff);
+  if (!keepElmStuffJson) {
+    rm(elmWatchStuff);
   }
 
   const stdout = new MemoryWriteStream();
@@ -407,6 +407,16 @@ async function wait(ms: number): Promise<void> {
 function touch(filePath: string): void {
   const now = new Date();
   fs.utimesSync(filePath, now, now);
+}
+
+function rm(filePath: string): void {
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch {
+      fs.rmdirSync(filePath);
+    }
+  }
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -1226,9 +1236,7 @@ describe("hot", () => {
     );
     fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
-    if (fs.existsSync(elmWatchJsonPath2)) {
-      fs.unlinkSync(elmWatchJsonPath2);
-    }
+    rm(elmWatchJsonPath2);
 
     const { terminal, renders } = await run({
       fixture,
@@ -1448,9 +1456,7 @@ describe("hot", () => {
     const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
     fs.writeFileSync(elmJsonPath, elmJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
-    if (fs.existsSync(elmJsonPath2)) {
-      fs.unlinkSync(elmJsonPath2);
-    }
+    rm(elmJsonPath2);
 
     const { terminal, renders } = await run({
       fixture,
@@ -1853,6 +1859,169 @@ describe("hot", () => {
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>the text!</div>`);
+    }
+  });
+
+  // - Create and delete directories named `Something.elm`.
+  // - Create and delete a file named like a package (`Html.elm`).
+  test("changes to .elm files", async () => {
+    const fixture = "changes-to-elm-files";
+    const htmlPath = path.join(FIXTURES_DIR, fixture, "src", "Html.elm");
+    rm(htmlPath);
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: ["HtmlMain"],
+      scripts: ["HtmlMain.js"],
+      isTTY: false,
+      cwd: "src",
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert(div);
+            fs.mkdirSync(htmlPath);
+            return "KeepGoing";
+          case 2:
+            fs.rmdirSync(htmlPath);
+            return "KeepGoing";
+          case 3:
+            fs.writeFileSync(htmlPath, "");
+            return "KeepGoing";
+          case 4:
+            fs.unlinkSync(htmlPath);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⏳ HtmlMain: elm make
+      🚨 HtmlMain
+
+      ⧙-- TROUBLE READING ELM FILES ---------------------------------------------------⧘
+      ⧙Target: HtmlMain⧘
+
+      When figuring out all Elm files that your inputs depend on I read a lot of Elm files.
+      Doing so I encountered this error:
+
+      EISDIR: illegal operation on a directory, read
+
+      (I still managed to compile your code, but the watcher will not work properly
+      and "postprocess" was not run.)
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      🚨 HtmlMain
+
+      ⧙-- AMBIGUOUS IMPORT ------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/HtmlMain.elm:3:8
+
+      You are trying to import a \`Html\` module:
+
+      3| import Html
+                ⧙^^^^⧘
+      But I found multiple modules with that name. One in the ⧙elm/html⧘ package, and
+      another defined locally in the
+      ⧙/Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      file. I do not have a way to choose between them.
+
+      Try changing the name of the locally defined module to clear up the ambiguity?
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🚨 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🚨 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+    `);
+
+    function assert(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
     }
   });
 
