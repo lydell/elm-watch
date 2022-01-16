@@ -1340,6 +1340,147 @@ describe("hot", () => {
     }
   });
 
+  test("changes to elm.json", async () => {
+    const fixture = "changes-to-elm-json";
+    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+    const elmJsonTemplatePath = path.join(
+      FIXTURES_DIR,
+      fixture,
+      "elm.template.json"
+    );
+    const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
+    fs.writeFileSync(elmJsonPath, elmJsonString);
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: ["HtmlMain"],
+      scripts: ["HtmlMain.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert(div);
+            fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
+            return "KeepGoing";
+          case 2:
+            fs.writeFileSync(elmJsonPath, elmJsonString);
+            return "KeepGoing";
+          default:
+            assert(div);
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⏳ Dependencies
+      ⛔️ Dependencies
+      ⏳ HtmlMain: elm make
+      🚨 HtmlMain
+
+      ⧙-- EXTRA COMMA -----------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
+
+      I ran into a problem with your elm.json file. I was partway through parsing a
+      JSON object when I got stuck here:
+
+      20|     "test-dependencies": {
+      21|         "direct": {},
+      22|         "indirect": {
+                               ⧙^⧘
+      I saw a comma right before I got stuck here, so I was expecting to see a field
+      name like ⧙"type"⧘ or ⧙"dependencies"⧘ next.
+
+      This error is commonly caused by trailing commas in JSON objects. Those are
+      actually disallowed by <https://json.org> so check the previous line for a
+      trailing comma that may need to be deleted.
+
+      ⧙Note⧘: Here is an example of a valid JSON object for reference:
+
+          {
+            ⧙"name"⧘: ⧙"Tom"⧘,
+            ⧙"age"⧘: ⧙42⧘
+          }
+
+      Notice that (1) the field names are in double quotes and (2) there is no
+      trailing comma after the last entry. Both are strict requirements in JSON!
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🚨 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+    `);
+
+    function assert(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+    }
+  });
+
   test("typecheck-only should not break because of duplicate inputs", async () => {
     const { terminal, renders } = await run({
       fixture: "typecheck-only-unique",
