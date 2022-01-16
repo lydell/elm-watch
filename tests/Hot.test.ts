@@ -1481,6 +1481,155 @@ describe("hot", () => {
     }
   });
 
+  test("changes to elm-watch-node JS file", async () => {
+    const fixture = "changes-to-postprocess";
+    const postprocessPath = path.join(FIXTURES_DIR, fixture, "postprocess.js");
+    const postprocessTemplatePath = path.join(
+      FIXTURES_DIR,
+      fixture,
+      "postprocess.template.js"
+    );
+    const postprocessString = fs.readFileSync(postprocessTemplatePath, "utf8");
+    fs.writeFileSync(postprocessPath, postprocessString);
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: ["HtmlMain"],
+      scripts: ["HtmlMain.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert1(div);
+            fs.writeFileSync(postprocessPath, postprocessString.slice(0, -10));
+            return "KeepGoing";
+          case 2:
+            fs.writeFileSync(
+              postprocessPath,
+              postprocessString.replace("toUpperCase", "toLowerCase")
+            );
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal.replace(/^ +at.+\n/gm, "")).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      🟢 HtmlMain: elm make done
+      ⏳ HtmlMain: postprocess
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⏳ HtmlMain: elm make
+      🟢 HtmlMain: elm make done
+      ⏳ HtmlMain: postprocess
+      🚨 HtmlMain
+
+      ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js
+
+      I tried to import your postprocess file:
+
+      const imported = await import("/Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
+
+      But that resulted in this error:
+
+      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js:1
+      module.exports = ([code]) => code.replace("The text!", match => match.toUppe
+                                                                            ^^^^^^
+
+      SyntaxError: missing ) after argument list
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⏳ HtmlMain: elm make
+      🟢 HtmlMain: elm make done
+      ⏳ HtmlMain: postprocess
+      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🔌 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ 🚨 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ⏳ 00:00:00 HtmlMain
+      ================================================================================
+      ▼ ✅ 00:00:00 HtmlMain
+    `);
+
+    function assert1(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>THE TEXT!</div>`);
+    }
+
+    function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>the text!</div>`);
+    }
+  });
+
   test("typecheck-only should not break because of duplicate inputs", async () => {
     const { terminal, renders } = await run({
       fixture: "typecheck-only-unique",
