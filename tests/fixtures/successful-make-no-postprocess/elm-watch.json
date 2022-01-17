@@ -1,0 +1,10 @@
+{
+    "targets": {
+        "💣 Mine Sweeper Clone": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/main.js"
+        }
+    }
+}

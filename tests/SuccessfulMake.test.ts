@@ -186,4 +186,14 @@ describe("successful make", () => {
       ✅ Compilation finished in ⧙0⧘ ms⧙ (using 2 elm-watch-node workers).⧘
     `);
   });
+
+  test("no postprocess", async () => {
+    expect(await run("successful-make-no-postprocess", ["make"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ 💣 Mine Sweeper Clone⧙                                       0 ms Q |   0 ms E⧘
+
+      ✅ Compilation finished in ⧙0⧘ ms.
+    `);
+  });
 });
