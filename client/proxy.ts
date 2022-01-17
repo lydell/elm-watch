@@ -1,4 +1,4 @@
-const error = new Error(
+const error: Error & { elmWatchProxy?: true } = new Error(
   `
 Certain parts of \`window.Elm\` aren't available yet! That's fine though!
 
@@ -11,6 +11,8 @@ automatically reloaded. But if you get compilation errors you'll need to fix
 them first.
   `.trim()
 );
+
+error.elmWatchProxy = true;
 
 const existing = window.Elm;
 const existingObject =
@@ -34,6 +36,9 @@ const elmProxy = new Proxy(existingObject ?? {}, {
     throw error;
   },
   has(target, property) {
+    if (property === "__elmWatchProxy") {
+      return true;
+    }
     const has = Reflect.has(target, property);
     if (has) {
       return true;

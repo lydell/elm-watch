@@ -873,6 +873,12 @@ const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   let programTypes;
   try {
+    if (window.Elm !== undefined && "__elmWatchProxy" in window.Elm) {
+      return {
+        tag: "DebuggerModeStatus",
+        status: { tag: "Enabled" },
+      };
+    }
     programTypes = ProgramTypes(window);
   } catch (unknownError) {
     return COMPILATION_MODE === "proxy"

@@ -351,7 +351,9 @@ export function getOutputActions({
             tag: "NeedsPostprocess",
             output,
             postprocessArray: outputState.status.postprocessArray,
-            priority: priority ?? 0,
+            priority:
+              // istanbul ignore next
+              priority ?? 0,
             code: outputState.status.code,
             elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
             recordFields: outputState.status.recordFields,
@@ -554,8 +556,15 @@ export async function handleOutputAction({
 
     case "NeedsElmMakeTypecheckOnly":
       switch (runMode.tag) {
+        // istanbul ignore next
         case "make":
-          return { tag: "Nothing" };
+          throw new Error(
+            `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${JSON.stringify(
+              action,
+              null,
+              2
+            )}`
+          );
 
         case "hot":
           await typecheck({
@@ -1213,6 +1222,7 @@ async function typecheck({
     ),
   ]);
 
+  // istanbul ignore next
   const isAmbiguousError =
     elmMakeResult.tag === "ElmMakeError" &&
     elmMakeResult.error.tag === "GeneralError" &&
@@ -1241,6 +1251,8 @@ async function typecheck({
 
     // If we don’t know which targets the error is for, we need to re-run the
     // typechecking individually. This is rare.
+    // In fact, when writing tests I couldn’t figure out when it could happen.
+    // istanbul ignore if
     if (isAmbiguousError) {
       promises.push(
         typecheck({

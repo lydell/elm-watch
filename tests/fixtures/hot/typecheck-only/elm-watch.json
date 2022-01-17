@@ -1,0 +1,28 @@
+{
+    "targets": {
+        "Main1": {
+            "inputs": [
+                "src/Main1.elm"
+            ],
+            "output": "build/Main1.js"
+        },
+        "Main2": {
+            "inputs": [
+                "src/Main2.elm"
+            ],
+            "output": "build/Main2.js"
+        },
+        "Main3": {
+            "inputs": [
+                "src/Main3.elm"
+            ],
+            "output": "build/Main3.js"
+        },
+        "Main4": {
+            "inputs": [
+                "src/Main4.elm"
+            ],
+            "output": "build/Main4.js"
+        }
+    }
+}
