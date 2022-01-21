@@ -1,4 +1,5 @@
 {
+    "postprocess": ["elm-watch-node", "postprocess.js"],
     "targets": {
         "Main1": {
             "inputs": [

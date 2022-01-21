@@ -2792,15 +2792,21 @@ describe("hot", () => {
       ✅ Main3⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
       ✅ Main4⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
 
+      📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ Main3: elm make
       ⚪️ Main4: queued
-      ✅ Main3⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      🟢 Main3: elm make done
+      ⏳ Main3: postprocess
       ⏳ Main4: elm make
-      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      🟢 Main4: elm make done
+      ⏳ Main4: postprocess
+      ✅ Main3⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
 
+      📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main3
@@ -2808,11 +2814,13 @@ describe("hot", () => {
       ℹ️ 00:00:00 Web socket connected for: Main3⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
 
+      📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Web socket disconnected for: Main4⧘
       ✅ ⧙00:00:00⧘ Everything up to date.
 
+      📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Web socket connected for: Main4⧘
@@ -2821,21 +2829,29 @@ describe("hot", () => {
       ⚪️ Main4: queued
       ⚪️ Main1: queued
       ⚪️ Main2: queued
-      ✅ Main3⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      🟢 Main3: elm make done
+      ⏳ Main3: postprocess
       ⏳ Main4: elm make
-      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Main3⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      🟢 Main4: elm make done
+      ⏳ Main4: postprocess
       ⏳ Main1: elm make (typecheck only)
       ⏳ Main2: elm make (typecheck only)
       ✅ Main1⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
       ✅ Main2⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
 
+      📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ Main4: elm make
-      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      🟢 Main4: elm make done
+      ⏳ Main4: postprocess
+      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
 
+      📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Main4.elm⧘
