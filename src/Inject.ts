@@ -115,13 +115,11 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
     try {
       newInitPair = init(result.a);
     } catch (error) {
-      console.info("elm-watch: Your \`init\` function failed to run with the same flags as last time. Full page reload to run with new flags!\\nThis is the error:\\n" + error);
-      window.__ELM_WATCH_TRIGGER_RELOAD_PAGE();
+      window.__ELM_WATCH_RELOAD_PAGE("elm-watch: I did a full page reload because your \`init\` function failed to run with the same flags as last time. The idea is to try to run with new flags!\\nThis is the error:\\n" + error);
       return;
     }
     if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
-      console.info("elm-watch: Your \`init\` function returned something different than last time. Full page reload to start fresh!");
-      window.__ELM_WATCH_TRIGGER_RELOAD_PAGE();
+      window.__ELM_WATCH_RELOAD_PAGE("elm-watch: I did a full page reload because your \`init\` function returned something different than last time. Let's start fresh!");
       return;
     }
 
@@ -282,8 +280,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
           for (var index = 0; index < obj.__elmWatchApps.length; index++) {
             var app = obj.__elmWatchApps[index];
             if (app.__elmWatchProgramType !== programType) {
-              console.info("elm-watch: \`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`. Full page reload!");
-              window.__ELM_WATCH_TRIGGER_RELOAD_PAGE();
+              window.__ELM_WATCH_RELOAD_PAGE("elm-watch: I did a full page reload because \`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`.");
               return false;
             }
             try {

@@ -70,6 +70,7 @@ async function run({
 }): Promise<{
   terminal: string;
   browser: string;
+  browserConsole: string;
   renders: string;
   div: HTMLDivElement;
 }> {
@@ -102,13 +103,24 @@ async function run({
   document.documentElement.append(body);
   bodyCounter++;
 
+  const browserConsole: Array<string> = [];
   const renders: Array<string> = [];
   let loads = 0;
 
   await new Promise((resolve, reject) => {
     const loadBuiltFiles = (isReload: boolean): void => {
       loads++;
-      delete window.Elm;
+
+      for (const key of [
+        "Elm",
+        "__ELM_WATCH_RELOAD_STATUSES",
+        "__ELM_WATCH_ON_INIT",
+        "__ELM_WATCH_EXIT",
+        "__ELM_WATCH_KILL_MATCHING",
+      ]) {
+        delete (window as unknown as Record<string, unknown>)[key];
+      }
+
       Promise.all(
         absoluteScripts.map((script) => {
           // Copying the script does a couple of things:
@@ -116,8 +128,9 @@ async function run({
           // - Makes it easier to debug the tests since one can see all the outputs through time.
           // - Lets us make a few replacements for Jest.
           const newScript = script.replace(/\.(\w+)$/, `.${loads}.$1`);
-          const content = fs
-            .readFileSync(script, "utf8")
+          const c = fs.readFileSync(script, "utf8");
+          console.log("Load", newScript, c.slice(0, 20));
+          const content = c
             .replace(/\(this\)\);\s*$/, "(window));")
             .replace(
               /^(\s*var bodyNode) = .+;/m,
@@ -127,6 +140,7 @@ async function run({
           return import(newScript);
         })
       ).then(() => {
+        console.log("Loaded all scripts!", absoluteScripts);
         if (expandUiImmediately) {
           expandUi();
         }
@@ -150,12 +164,21 @@ async function run({
       }, reject);
     };
 
+    for (const key of Object.keys(window)) {
+      if (key.startsWith("__ELM_WATCH")) {
+        delete (window as unknown as Record<string, unknown>)[key];
+      }
+    }
+
     window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK = true;
 
     window.__ELM_WATCH_GET_NOW = getNow;
 
-    window.__ELM_WATCH_RELOAD_PAGE = () => {
-      loadBuiltFiles(true);
+    window.__ELM_WATCH_RELOAD_PAGE = (message) => {
+      browserConsole.push(message);
+      window.__ELM_WATCH_KILL_MATCHING(/^/).then(() => {
+        loadBuiltFiles(true);
+      }, reject);
     };
 
     window.__ELM_WATCH_ON_RENDER = (targetName) => {
@@ -184,7 +207,7 @@ async function run({
             case "KeepGoing":
               return;
             case "Stop":
-              window.__ELM_WATCH_KILL_ALL();
+              window.__ELM_WATCH_EXIT();
               return;
           }
         },
@@ -230,6 +253,7 @@ async function run({
   return {
     terminal: stderrString,
     browser: lastText,
+    browserConsole: browserConsole.join("\n\n"),
     renders: renders.join(`\n${"=".repeat(80)}\n`),
     div: outerDiv,
   };
@@ -438,7 +462,7 @@ describe("hot", () => {
   });
 
   test("successful connect (collapsed)", async () => {
-    const { terminal, renders, div } = await run({
+    const { terminal, browserConsole, renders, div } = await run({
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
@@ -456,6 +480,11 @@ describe("hot", () => {
       ⧙ℹ️ 00:00:00 Web socket connected for: Html⧘
       ✅ ⧙00:00:00⧘ Everything up to date.
     `);
+
+    // TODO: Assert `browserConsole` in more places!
+    expect(browserConsole).toMatchInlineSnapshot(
+      `elm-watch: I did a full page reload because compilation mode changed from proxy to standard.`
+    );
 
     expect(renders).toMatchInlineSnapshot(`
       ▼ 🔌 00:00:00 Html
@@ -718,7 +747,7 @@ describe("hot", () => {
 
       I wrote that to this file so you can inspect it:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-e350dd8c5507e92b6da873f1f78e716b2734f2992de99ba1109151f4c1b0a9d9.txt
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-7ac509ed37ef5e9388107814da2216c152517a67f706f61e3f787b39fbafd92c.txt
 
       🚨 ⧙1⧘ error found
 
@@ -1291,7 +1320,7 @@ describe("hot", () => {
       },
     });
 
-    window.__ELM_WATCH_KILL_ALL();
+    window.__ELM_WATCH_EXIT();
 
     expect(terminal).toMatchInlineSnapshot(`
       ⏳ Dependencies
@@ -2477,7 +2506,7 @@ describe("hot", () => {
     }
   });
 
-  test("limit postprocess workers", async () => {
+  test.only("limit postprocess workers", async () => {
     let now = 0;
     const timeout = 50;
     const { terminal } = await run({
@@ -2496,12 +2525,13 @@ describe("hot", () => {
         window.Elm?.One?.init({ node: node1 });
         window.Elm?.Two?.init({ node: node2 });
       },
-      onIdle: async ({ idle }) => {
+      onIdle: async ({ idle, reason }) => {
+        console.log("idle", idle, reason);
         switch (idle) {
           case 1:
             return "KeepGoing"; // First script has loaded.
           default:
-            window.__ELM_WATCH_KILL_ONE("Two");
+            await window.__ELM_WATCH_KILL_MATCHING(/^Two$/);
             await wait(timeout * 2); // Wait for the worker to be killed.
             return "Stop";
         }

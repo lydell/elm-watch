@@ -20,13 +20,13 @@ declare global {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCH_GET_NOW: GetNow;
     __ELM_WATCH_SKIP_RECONNECT_TIME_CHECK: boolean;
-    __ELM_WATCH_RELOAD_PAGE?: () => void;
-    __ELM_WATCH_TRIGGER_RELOAD_PAGE: () => void;
+    __ELM_WATCH_RELOAD_STATUSES: Record<string, ReloadStatus>;
+    __ELM_WATCH_RELOAD_PAGE: (message: string) => void;
     __ELM_WATCH_ON_INIT: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
-    __ELM_WATCH_KILL_ALL: () => void;
-    __ELM_WATCH_KILL_ONE: (targetName: string) => void;
+    __ELM_WATCH_EXIT: () => void;
+    __ELM_WATCH_KILL_MATCHING: (targetName: RegExp) => Promise<void>;
   }
 }
 
@@ -68,10 +68,26 @@ export type ElmModule = {
   [key: `${UppercaseLetter}${string}`]: ElmModule;
 };
 
+type ReloadStatus =
+  | {
+      tag: "MightWantToReload";
+    }
+  | {
+      tag: "NoReloadWanted";
+    }
+  | {
+      tag: "ReloadRequested";
+      message: string;
+    };
+
 // So we can have a fixed date in tests.
 window.__ELM_WATCH_GET_NOW ??= () => new Date();
 
 window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK ??= false;
+
+window.__ELM_WATCH_ON_INIT ??= () => {
+  // Do nothing.
+};
 
 window.__ELM_WATCH_ON_RENDER ??= () => {
   // Do nothing.
@@ -81,17 +97,35 @@ window.__ELM_WATCH_ON_REACHED_IDLE_STATE ??= () => {
   // Do nothing.
 };
 
-window.__ELM_WATCH_TRIGGER_RELOAD_PAGE ??= () => {
+window.__ELM_WATCH_RELOAD_STATUSES ??= {};
+window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
+  window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = {
+    tag: "ReloadRequested",
+    message,
+  };
+  reloadPageIfNeeded();
+};
+
+function reloadPageIfNeeded(): void {
+  const busy = Object.values(window.__ELM_WATCH_RELOAD_STATUSES).filter(
+    (status) => status.tag === "MightWantToReload"
+  );
+  const requested = Object.values(window.__ELM_WATCH_RELOAD_STATUSES).flatMap(
+    (status) => (status.tag === "ReloadRequested" ? [status.message] : [])
+  );
+  console.log("Reload if needed!", TARGET_NAME, busy, requested);
+  if (busy.length === 0 && requested.length > 0) {
+    // eslint-disable-next-line no-console
+    console.info(requested.join("\n"));
+    window.location.reload();
+  }
+}
+
+window.__ELM_WATCH_EXIT ??= () => {
   // Do nothing.
 };
 
-window.__ELM_WATCH_KILL_ALL ??= () => {
-  // Do nothing.
-};
-
-window.__ELM_WATCH_KILL_ONE ??= () => {
-  // Do nothing.
-};
+window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
 
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
@@ -101,6 +135,8 @@ const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
 const COMPILATION_MODE = "%COMPILATION_MODE%" as CompilationModeWithProxy;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
+
+console.log("client.ts boot", TARGET_NAME);
 
 type Mutable = {
   removeListeners: () => void;
@@ -125,9 +161,6 @@ type Msg =
   | {
       tag: "PageVisibilityChangedToVisible";
       date: Date;
-    }
-  | {
-      tag: "ReloadPageTriggered";
     }
   | {
       tag: "SleepBeforeReconnectDone";
@@ -168,17 +201,6 @@ type UiMsg =
 type Model = {
   status: Status;
   elmCompiledTimestamp: number;
-  // Scenario:
-  // 1. An output is fully compiled (not proxy).
-  // 2. All websockets for that output are disconnected.
-  // 3. You edit `init`.
-  // 4. You open the page again.
-  // The output is then recompiled, since the old compiled output is not
-  // up-to-date. If we hot reload at this time, you won’t see the `init`
-  // changes, which makes it feel something is wrong with the watcher. So it’s
-  // better to reload the page in that case. Which means that only if we get an
-  // "AlreadyUpToDate" we should hot reload.
-  canHotReload: boolean;
   uiExpanded: boolean;
 };
 
@@ -193,6 +215,7 @@ type Cmd =
     }
   | {
       tag: "ReloadPage";
+      message: string;
     }
   | {
       tag: "Render";
@@ -213,6 +236,10 @@ type Cmd =
   | {
       tag: "TriggerReachedIdleState";
       reason: ReachedIdleStateReason;
+    }
+  | {
+      tag: "UpdateGlobalStatus";
+      reloadStatus: ReloadStatus;
     };
 
 type Status =
@@ -297,11 +324,24 @@ function run(): void {
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(msg, model);
+      console.log(
+        "update",
+        TARGET_NAME,
+        "data" in msg && typeof msg.data === "string"
+          ? { ...msg, data: msg.data.split("\n")[0] }
+          : msg,
+        newModel,
+        cmds
+      );
       return [
         newModel,
         [
           ...cmds,
           { tag: "Render", model: newModel, manageFocus: msg.tag === "UiMsg" },
+          {
+            tag: "UpdateGlobalStatus",
+            reloadStatus: statusToReloadStatus(newModel.status),
+          },
         ],
       ];
     },
@@ -312,6 +352,21 @@ function run(): void {
   // When this call is commented out, esbuild won’t include the
   // `renderMockStatuses` function in the output.
   // renderMockStatuses(getNow, root);
+}
+
+function statusToReloadStatus(status: Status): ReloadStatus {
+  switch (status.tag) {
+    case "Busy":
+    case "Connecting":
+      return { tag: "MightWantToReload" };
+
+    case "CompileError":
+    case "EvalError":
+    case "Idle":
+    case "SleepingBeforeReconnect":
+    case "UnexpectedError":
+      return { tag: "NoReloadWanted" };
+  }
 }
 
 function getOrCreateContainer(): HTMLElement {
@@ -372,34 +427,56 @@ const initMutable =
       ),
     };
 
+    window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = {
+      tag: "MightWantToReload",
+    };
+
+    const originalOnInit = window.__ELM_WATCH_ON_INIT;
     window.__ELM_WATCH_ON_INIT = () => {
       dispatch({ tag: "AppInit" });
+      originalOnInit();
     };
 
-    const originalTriggerReloadPage = window.__ELM_WATCH_TRIGGER_RELOAD_PAGE;
-    window.__ELM_WATCH_TRIGGER_RELOAD_PAGE = () => {
-      dispatch({ tag: "ReloadPageTriggered" });
-      originalTriggerReloadPage();
-    };
-
-    const originalKillAll = window.__ELM_WATCH_KILL_ALL;
-    window.__ELM_WATCH_KILL_ALL = () => {
+    const originalExit = window.__ELM_WATCH_EXIT;
+    window.__ELM_WATCH_EXIT = () => {
       resolvePromise(undefined);
       const message: WebSocketToServerMessage = { tag: "ExitRequested" };
       mutable.webSocket.send(JSON.stringify(message));
-      originalKillAll();
+      originalExit();
     };
 
-    const originalKillOne = window.__ELM_WATCH_KILL_ONE;
-    window.__ELM_WATCH_KILL_ONE = (targetName) => {
-      if (targetName === TARGET_NAME) {
-        mutable.removeListeners();
-        mutable.webSocket.close();
-        targetRoot.remove();
-        resolvePromise(undefined);
-      }
-      originalKillOne(targetName);
-    };
+    const originalKillMatching = window.__ELM_WATCH_KILL_MATCHING;
+    window.__ELM_WATCH_KILL_MATCHING = (targetName) =>
+      new Promise((resolve, reject) => {
+        console.log(
+          "__ELM_WATCH_KILL_MATCHING",
+          TARGET_NAME,
+          targetName,
+          mutable.webSocket.readyState,
+          WebSocket.CLOSED
+        );
+        if (
+          targetName.test(TARGET_NAME) &&
+          mutable.webSocket.readyState !== WebSocket.CLOSED
+        ) {
+          mutable.webSocket.addEventListener("close", () => {
+            console.log(
+              "__ELM_WATCH_KILL_MATCHING closed!!!",
+              TARGET_NAME,
+              targetName,
+              mutable.webSocket.readyState,
+              WebSocket.CLOSED
+            );
+            originalKillMatching(targetName).then(resolve, reject);
+          });
+          mutable.removeListeners();
+          mutable.webSocket.close();
+          targetRoot.remove();
+          resolvePromise(undefined);
+        } else {
+          originalKillMatching(targetName).then(resolve, reject);
+        }
+      });
 
     return mutable;
   };
@@ -455,7 +532,6 @@ const init = (date: Date): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
-    canHotReload: false,
     uiExpanded: false,
   };
   return [model, [{ tag: "Render", model, manageFocus: false }]];
@@ -516,9 +592,6 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "PageVisibilityChangedToVisible":
       return reconnect(model, msg.date, { force: true });
-
-    case "ReloadPageTriggered":
-      return [model, [{ tag: "ReloadPage" }]];
 
     case "SleepBeforeReconnectDone":
       return reconnect(model, msg.date, { force: false });
@@ -608,8 +681,16 @@ function onWebSocketToClientMessage(
     }
 
     case "SuccessfullyCompiled":
-      return !model.canHotReload || msg.compilationMode !== COMPILATION_MODE
-        ? [model, [{ tag: "ReloadPage" }]]
+      return msg.compilationMode !== COMPILATION_MODE
+        ? [
+            model,
+            [
+              {
+                tag: "ReloadPage",
+                message: `elm-watch: I did a full page reload because compilation mode changed from ${COMPILATION_MODE} to ${msg.compilationMode}.`,
+              },
+            ],
+          ]
         : [
             {
               ...model,
@@ -618,8 +699,16 @@ function onWebSocketToClientMessage(
             [{ tag: "Eval", code: msg.code }],
           ];
 
-    case "SuccessfullyCompiledButReloadNeeded":
-      return [model, [{ tag: "ReloadPage" }]];
+    case "SuccessfullyCompiledButRecordFieldsChanged":
+      return [
+        model,
+        [
+          {
+            tag: "ReloadPage",
+            message: `elm-watch: I did a full page reload because record field mangling in ${COMPILATION_MODE} was different than last time.`,
+          },
+        ],
+      ];
   }
 }
 
@@ -638,7 +727,6 @@ function statusChanged(
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
-          canHotReload: true,
         },
         [
           {
@@ -739,7 +827,7 @@ const runCmd =
     cmd: Cmd,
     mutable: Mutable,
     dispatch: (msg: Msg) => void,
-    resolvePromise: (result: undefined) => void,
+    _resolvePromise: (result: undefined) => void,
     rejectPromise: (error: Error) => void
   ): void => {
     switch (cmd.tag) {
@@ -764,22 +852,9 @@ const runCmd =
         );
         return;
 
-      case "ReloadPage": {
-        // Jest doesn’t support navigation.
-        const reload = window.__ELM_WATCH_RELOAD_PAGE;
-        if (reload !== undefined) {
-          mutable.webSocket.addEventListener("close", () => {
-            reload();
-          });
-          mutable.removeListeners();
-          mutable.webSocket.close();
-          targetRoot.remove();
-          resolvePromise(undefined);
-        } else {
-          window.location.reload();
-        }
+      case "ReloadPage":
+        window.__ELM_WATCH_RELOAD_PAGE(cmd.message);
         return;
-      }
 
       case "Render":
         render(
@@ -815,6 +890,16 @@ const runCmd =
         Promise.resolve().then(() => {
           window.__ELM_WATCH_ON_REACHED_IDLE_STATE(cmd.reason);
         }, rejectPromise);
+        return;
+
+      case "UpdateGlobalStatus":
+        if (
+          window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME]?.tag !==
+          "ReloadRequested"
+        ) {
+          window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = cmd.reloadStatus;
+        }
+        reloadPageIfNeeded();
         return;
     }
   };
@@ -1681,7 +1766,6 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     const model: Model = {
       status,
       elmCompiledTimestamp: 0,
-      canHotReload: false,
       uiExpanded: true,
     };
     render(

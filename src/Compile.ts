@@ -505,7 +505,7 @@ export type HandleOutputActionResult =
       compilationMode: CompilationMode;
     }
   | {
-      tag: "FullyCompiledJSButReloadNeeded";
+      tag: "FullyCompiledJSButRecordFieldsChanged";
       outputPath: OutputPath;
     }
   | {
@@ -898,7 +898,7 @@ function onCompileSuccess(
                     compilationMode: outputState.compilationMode,
                   }
                 : {
-                    tag: "FullyCompiledJSButReloadNeeded",
+                    tag: "FullyCompiledJSButRecordFieldsChanged",
                     outputPath,
                   };
             }
@@ -1119,7 +1119,7 @@ async function postprocessHelper({
           compilationMode: outputState.compilationMode,
         }
       : {
-          tag: "FullyCompiledJSButReloadNeeded",
+          tag: "FullyCompiledJSButRecordFieldsChanged",
           outputPath,
         };
   }

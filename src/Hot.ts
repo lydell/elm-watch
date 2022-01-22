@@ -1661,11 +1661,11 @@ function handleOutputActionResultToCmd(
         },
       };
 
-    case "FullyCompiledJSButReloadNeeded":
+    case "FullyCompiledJSButRecordFieldsChanged":
       return {
         tag: "WebSocketSendToOutput",
         outputPath: handleOutputActionResult.outputPath,
-        message: { tag: "SuccessfullyCompiledButReloadNeeded" },
+        message: { tag: "SuccessfullyCompiledButRecordFieldsChanged" },
       };
 
     case "Nothing":

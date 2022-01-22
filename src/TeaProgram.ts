@@ -55,6 +55,9 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
             reject(error);
           }
         );
+        if (killed) {
+          break;
+        }
       }
     };
 
