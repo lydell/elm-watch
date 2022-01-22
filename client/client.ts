@@ -21,6 +21,7 @@ declare global {
     __ELM_WATCH_GET_NOW: GetNow;
     __ELM_WATCH_SKIP_RECONNECT_TIME_CHECK: boolean;
     __ELM_WATCH_RELOAD_PAGE?: () => void;
+    __ELM_WATCH_TRIGGER_RELOAD_PAGE: () => void;
     __ELM_WATCH_ON_INIT: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
@@ -80,6 +81,10 @@ window.__ELM_WATCH_ON_REACHED_IDLE_STATE ??= () => {
   // Do nothing.
 };
 
+window.__ELM_WATCH_TRIGGER_RELOAD_PAGE ??= () => {
+  // Do nothing.
+};
+
 window.__ELM_WATCH_KILL_ALL ??= () => {
   // Do nothing.
 };
@@ -120,6 +125,9 @@ type Msg =
   | {
       tag: "PageVisibilityChangedToVisible";
       date: Date;
+    }
+  | {
+      tag: "ReloadPageTriggered";
     }
   | {
       tag: "SleepBeforeReconnectDone";
@@ -368,6 +376,12 @@ const initMutable =
       dispatch({ tag: "AppInit" });
     };
 
+    const originalTriggerReloadPage = window.__ELM_WATCH_TRIGGER_RELOAD_PAGE;
+    window.__ELM_WATCH_TRIGGER_RELOAD_PAGE = () => {
+      dispatch({ tag: "ReloadPageTriggered" });
+      originalTriggerReloadPage();
+    };
+
     const originalKillAll = window.__ELM_WATCH_KILL_ALL;
     window.__ELM_WATCH_KILL_ALL = () => {
       resolvePromise(undefined);
@@ -502,6 +516,9 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "PageVisibilityChangedToVisible":
       return reconnect(model, msg.date, { force: true });
+
+    case "ReloadPageTriggered":
+      return [model, [{ tag: "ReloadPage" }]];
 
     case "SleepBeforeReconnectDone":
       return reconnect(model, msg.date, { force: false });

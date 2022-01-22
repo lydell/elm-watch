@@ -110,6 +110,21 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
       }
     }
 
+    init = impl.%init% || impl._impl.%init%;
+    var newInitPair;
+    try {
+      newInitPair = init(result.a);
+    } catch (error) {
+      console.info("elm-watch: Your \`init\` function failed to run with the same flags as last time. Full page reload to run with new flags!\\nThis is the error:\\n" + error);
+      window.__ELM_WATCH_TRIGGER_RELOAD_PAGE();
+      return;
+    }
+    if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
+      console.info("elm-watch: Your \`init\` function returned something different than last time. Full page reload to start fresh!");
+      window.__ELM_WATCH_TRIGGER_RELOAD_PAGE();
+      return;
+    }
+
     setUpdateAndSubscriptions();
     stepper(model, true /* isSync */);
     _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
@@ -122,6 +137,76 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
       __elmWatchProgramType: { value: programType },
     }
   );
+}
+
+// Copy-paste of _Utils_eq but does not assume that x and y have the same type,
+// and considers functions to always be equal.
+function _Utils_eq_elmWatchInternal(x, y) {
+  for (
+    var pair, stack = [], isEqual = _Utils_eqHelp_elmWatchInternal(x, y, 0, stack);
+    isEqual && (pair = stack.pop());
+    isEqual = _Utils_eqHelp_elmWatchInternal(pair.a, pair.b, 0, stack)
+    )
+  {}
+
+  return isEqual;
+}
+
+function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack) {
+  if (x === y) {
+    return true;
+  }
+
+  var xType = _Utils_typeof_elmWatchInternal(x);
+  var yType = _Utils_typeof_elmWatchInternal(y);
+
+  if (xType !== yType) {
+    return false;
+  }
+
+  switch (xType) {
+    case "primitive":
+      return false;
+    case "function":
+      return true;
+  }
+
+  if (x.$ !== y.$) {
+    return false;
+  }
+
+  if (x.$ === 'Set_elm_builtin') {
+    x = $elm$core$Set$toList(x);
+    y = $elm$core$Set$toList(y);
+  } else if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin' || x.$ < 0) {
+    x = $elm$core$Dict$toList(x);
+    y = $elm$core$Dict$toList(y);
+  }
+
+  if (Object.keys(x).length !== Object.keys(y).length) {
+    return false;
+  }
+
+  if (depth > 100) {
+    stack.push(_Utils_Tuple2(x, y));
+    return true;
+  }
+
+  for (var key in x) {
+    if (!_Utils_eqHelp_elmWatchInternal(x[key], y[key], depth + 1, stack)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function _Utils_typeof_elmWatchInternal(x) {
+  var type = typeof x;
+  return type === "function"
+    ? "function"
+    : type !== "object" || type === null
+    ? "primitive"
+    : "objectOrArray";
 }
         `.trim(),
       },
@@ -197,8 +282,9 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
           for (var index = 0; index < obj.__elmWatchApps.length; index++) {
             var app = obj.__elmWatchApps[index];
             if (app.__elmWatchProgramType !== programType) {
-              errored = true;
-              Promise.reject(new Error("elm-watch: Cannot hot reload because \`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`. You need to reload the page!"));
+              console.info("elm-watch: \`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`. Full page reload!");
+              window.__ELM_WATCH_TRIGGER_RELOAD_PAGE();
+              return false;
             }
             try {
               app.__elmWatchHotReload(newImpl, _Platform_effectManagers, _Scheduler_enqueue);
@@ -235,13 +321,13 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   },
 
   // ### _Browser_application
-  // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`.
+  // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`. Always init with the same URL.
   {
     probe: /^function _Browser_application\(/m,
     replacements: [
       {
-        search: /^\s*var onUrlChange = impl\.%onUrlChange%;/m,
-        replace: ``,
+        search: /^(\s*)var onUrlChange = impl\.%onUrlChange%;/m,
+        replace: `$1var initUrl;`,
       },
       {
         search: /^\s*var onUrlRequest = impl\.%onUrlRequest%;/m,
@@ -255,6 +341,11 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search: /^(\s*)sendToApp\(onUrlRequest\(/m,
         replace: `$1sendToApp(impl.%onUrlRequest%(`,
+      },
+      {
+        search:
+          /^(\s*)return A3\(impl\.%init%, flags, _Browser_getUrl\(\), key\);/m,
+        replace: `$1return A3(impl.%init%, flags, initUrl || (initUrl = _Browser_getUrl()), key);`,
       },
       {
         search:
