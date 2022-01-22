@@ -115,17 +115,16 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
     try {
       newInitPair = init(result.a);
     } catch (error) {
-      window.__ELM_WATCH_RELOAD_PAGE("elm-watch: I did a full page reload because your \`init\` function failed to run with the same flags as last time. The idea is to try to run with new flags!\\nThis is the error:\\n" + error);
-      return;
+      return { tag: "ReloadPage", reason: "failed to run with the same flags as last time. The idea is to try to run with new flags!\\nThis is the error:\\n" + error };
     }
     if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
-      window.__ELM_WATCH_RELOAD_PAGE("elm-watch: I did a full page reload because your \`init\` function returned something different than last time. Let's start fresh!");
-      return;
+      return { tag: "ReloadPage", reason: "returned something different than last time. Let's start fresh!" };
     }
 
     setUpdateAndSubscriptions();
     stepper(model, true /* isSync */);
     _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
+    return { tag: "Success" };
   }
 
   return Object.defineProperties(
@@ -237,6 +236,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
     var patches = _VirtualDom_diff(virtualNode, newVirtualNode);
     node = _VirtualDom_applyPatches(node, virtualNode, patches, sendToApp);
     virtualNode = newVirtualNode;
+    return { tag: "Success" };
   }
 
   return Object.defineProperties(
@@ -262,14 +262,17 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
           /^function _Platform_export\(exports\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
         replace: `
 function _Platform_export(exports) {
-  var errored = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
-  if (errored) {
+  var result = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
+  if (result.errored) { 
     throw new Error("elm-watch: Encountered errors on load or hot reload. See earlier errors in the console.");
+  } else if (result.reloadReasons.length > 0) {
+    throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(result.reloadReasons))).join("\\n"));
   }
 }
 
 function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   var errored = false;
+  var reloadReasons = [];
   for (var name in exports) {
     if (name === "init") {
       if ("init" in obj) {
@@ -280,14 +283,22 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
           for (var index = 0; index < obj.__elmWatchApps.length; index++) {
             var app = obj.__elmWatchApps[index];
             if (app.__elmWatchProgramType !== programType) {
-              window.__ELM_WATCH_RELOAD_PAGE("elm-watch: I did a full page reload because \`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`.");
-              return false;
-            }
-            try {
-              app.__elmWatchHotReload(newImpl, _Platform_effectManagers, _Scheduler_enqueue);
-            } catch (error) {
-              errored = true;
-              Promise.reject(new Error("elm-watch: Error during hot reload for \`" + moduleName + "\`:\\n" + error + "\\n" + (error ? error.stack : "")));
+              reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`.");
+            } else {
+              var result;
+              try {
+                result = app.__elmWatchHotReload(newImpl, _Platform_effectManagers, _Scheduler_enqueue);
+                switch (result.tag) {
+                  case "Success":
+                    break;
+                  case "ReloadPage":
+                    reloadReasons.push("\`" + moduleName + ".init\` " + result.reason);
+                    break;
+                }
+              } catch (error) {
+                errored = true;
+                Promise.reject(new Error("elm-watch: Error during hot reload for \`" + moduleName + "\`:\\n" + error + "\\n" + (error ? error.stack : "")));
+              }
             }
           }
         } else {
@@ -304,13 +315,14 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         };
       }
     } else {
-      var innerErrored = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
-      if (innerErrored) {
+      var inner = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
+      if (inner.errored) {
         errored = true;
       }
+      reloadReasons = reloadReasons.concat(inner.reloadReasons);
     }
   }
-  return errored;
+  return { errored: errored, reloadReasons: reloadReasons };
 }
         `.trim(),
       },
@@ -647,6 +659,8 @@ export function compareRecordFields(
   newSet: Set<string>
 ): boolean {
   return (
+    // When switching from optimize to standard/optimize, count that as no change.
+    newSet.size === 0 ||
     compareRecordFieldsHelper(oldSet) === compareRecordFieldsHelper(newSet)
   );
 }

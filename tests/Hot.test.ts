@@ -128,9 +128,8 @@ async function run({
           // - Makes it easier to debug the tests since one can see all the outputs through time.
           // - Lets us make a few replacements for Jest.
           const newScript = script.replace(/\.(\w+)$/, `.${loads}.$1`);
-          const c = fs.readFileSync(script, "utf8");
-          console.log("Load", newScript, c.slice(0, 20));
-          const content = c
+          const content = fs
+            .readFileSync(script, "utf8")
             .replace(/\(this\)\);\s*$/, "(window));")
             .replace(
               /^(\s*var bodyNode) = .+;/m,
@@ -140,7 +139,6 @@ async function run({
           return import(newScript);
         })
       ).then(() => {
-        console.log("Loaded all scripts!", absoluteScripts);
         if (expandUiImmediately) {
           expandUi();
         }
@@ -483,7 +481,7 @@ describe("hot", () => {
 
     // TODO: Assert `browserConsole` in more places!
     expect(browserConsole).toMatchInlineSnapshot(
-      `elm-watch: I did a full page reload because compilation mode changed from proxy to standard.`
+      `elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS. (Html)`
     );
 
     expect(renders).toMatchInlineSnapshot(`
@@ -747,7 +745,7 @@ describe("hot", () => {
 
       I wrote that to this file so you can inspect it:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-7ac509ed37ef5e9388107814da2216c152517a67f706f61e3f787b39fbafd92c.txt
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-977d9a80e873e13b1dabe3381f3cafa510925bbe3a5e7f521c877d94d9c8c2fb.txt
 
       🚨 ⧙1⧘ error found
 
@@ -1229,7 +1227,7 @@ describe("hot", () => {
         Compilation mode
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
-        ◉ (disabled) Optimize Note: It's not always possible to hot reload optimized code, because of record field mangling. Sometimes the whole page is reloaded!
+        ◉ (disabled) Optimize
         ▲ ⏳ 00:00:00 SendBadJson
         ================================================================================
         target SendBadJson
@@ -2506,7 +2504,7 @@ describe("hot", () => {
     }
   });
 
-  test.only("limit postprocess workers", async () => {
+  test("limit postprocess workers", async () => {
     let now = 0;
     const timeout = 50;
     const { terminal } = await run({
@@ -2525,8 +2523,7 @@ describe("hot", () => {
         window.Elm?.One?.init({ node: node1 });
         window.Elm?.Two?.init({ node: node2 });
       },
-      onIdle: async ({ idle, reason }) => {
-        console.log("idle", idle, reason);
+      onIdle: async ({ idle }) => {
         switch (idle) {
           case 1:
             return "KeepGoing"; // First script has loaded.
@@ -2568,8 +2565,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
 
       ⧙ℹ️ 11:11:11 Web socket connected needing compilation of: One
-         (2 more events)
-      ℹ️ 11:11:11 Web socket connected for: One⧘
+      ℹ️ 11:11:11 Web socket connected needing compilation of: Two⧘
       ✅ ⧙11:11:11⧘ Compilation finished in (timings)
 
       📊 ⧙elm-watch-node workers:⧘ 2
@@ -2579,21 +2575,33 @@ describe("hot", () => {
       ✅ ⧙11:11:11⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:11111)⧘
 
-      ⧙ℹ️ 11:11:11 Web socket connected for: Two⧘
+      ⧙ℹ️ 11:11:11 Web socket disconnected for: One⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
 
-      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
 
-      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
+      ⧙ℹ️ 11:11:11 Web socket connected for: One⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
 
       ⧙ℹ️ 11:11:11 Terminated 1 superfluous worker⧘
+      ✅ ⧙11:11:11⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Web socket connected for: Two⧘
+      ✅ ⧙11:11:11⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
+
+      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:11111)⧘
@@ -2780,7 +2788,7 @@ describe("hot", () => {
     const main4Path = path.join(FIXTURES_DIR, fixture, "src", "Main4.elm");
     const sharedPath = path.join(FIXTURES_DIR, fixture, "src", "Shared.elm");
 
-    const { terminal, renders } = await run({
+    const { terminal } = await run({
       fixture,
       args: [],
       scripts: ["Main3.js", "Main4.js"],
@@ -2840,14 +2848,25 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main3
-         (2 more events)
-      ℹ️ 00:00:00 Web socket connected for: Main3⧘
+      ℹ️ 00:00:00 Web socket connected needing compilation of: Main4⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 00:00:00 Web socket disconnected for: Main4⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main3⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
+
+      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket connected for: Main3⧘
       ✅ ⧙00:00:00⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 2
@@ -2886,102 +2905,6 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Main4.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
-    `);
-
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Main3
-      ================================================================================
-      ▼ 🔌 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main4
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main3
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main4
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main3
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main4
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main3
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main4
-      --------------------------------------------------------------------------------
-      ▼ ✅ 00:00:00 Main3
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ 🔌 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ✅ 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ✅ 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ⏳ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ✅ 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 00:00:00 Main4
-      ================================================================================
-      ▼ ✅ 00:00:00 Main3
-      --------------------------------------------------------------------------------
-      ▼ ✅ 00:00:00 Main4
     `);
   });
 
