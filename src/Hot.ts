@@ -182,9 +182,6 @@ type NextAction =
       tag: "NoAction";
     }
   | {
-      tag: "PrintEvents";
-    }
-  | {
       tag: "Restart";
     };
 
@@ -594,10 +591,10 @@ function update(
     }
 
     case "SleepBeforeNextActionDone": {
-      const [nextModel, cmds] = runNextAction(msg.date, project, model);
+      const [newModel, cmds] = runNextAction(msg.date, project, model);
       return [
         {
-          ...nextModel,
+          ...newModel,
           nextAction: { tag: "NoAction" },
         },
         cmds,
@@ -667,9 +664,7 @@ function update(
               isNonEmptyArray(errors)
                 ? { tag: "PrintCompileErrors", errors }
                 : { tag: "NoCmd" },
-              {
-                tag: "HandleElmWatchStuffJsonWriteError",
-              },
+              { tag: "HandleElmWatchStuffJsonWriteError" },
               {
                 tag: "LogInfoMessageWithTimeline",
                 message: compileFinishedMessage(duration),
@@ -744,40 +739,55 @@ function update(
       }
 
     case "WebSocketClosed":
-      return onWebSocketRelatedEventNeedingNoCompilation(
+      return [
         {
-          tag: "WebSocketClosed",
-          date: msg.date,
-          outputPath: msg.outputPath,
+          ...model,
+          latestEvents: [
+            ...model.latestEvents,
+            {
+              tag: "WebSocketClosed",
+              date: msg.date,
+              outputPath: msg.outputPath,
+            },
+          ],
         },
-        model
-      );
+        [],
+      ];
 
     case "WebSocketConnected": {
       const result = msg.parseWebSocketConnectRequestUrlResult;
 
       switch (result.tag) {
-        case "Success":
-          return onWebSocketConnected(
+        case "Success": {
+          const [newModel, latestEvent, cmds] = onWebSocketConnected(
             msg.date,
             model,
             result.outputPath,
             result.outputState,
             result.elmCompiledTimestamp
           );
-
-        default: {
-          const [newModel, cmds] = onWebSocketRelatedEventNeedingNoCompilation(
-            {
-              tag: "WebSocketConnectedWithErrors",
-              date: msg.date,
-            },
-            model
-          );
           return [
-            newModel,
+            {
+              ...newModel,
+              latestEvents: [...newModel.latestEvents, latestEvent],
+            },
+            cmds,
+          ];
+        }
+
+        default:
+          return [
+            {
+              ...model,
+              latestEvents: [
+                ...model.latestEvents,
+                {
+                  tag: "WebSocketConnectedWithErrors",
+                  date: msg.date,
+                },
+              ],
+            },
             [
-              ...cmds,
               {
                 tag: "WebSocketSend",
                 webSocket: msg.webSocket,
@@ -791,7 +801,6 @@ function update(
               },
             ],
           ];
-        }
       }
     }
 
@@ -833,14 +842,20 @@ function update(
       return [model, [{ tag: "LimitWorkers" }]];
 
     case "WorkersLimited":
-      return onWebSocketRelatedEventNeedingNoCompilation(
+      return [
         {
-          tag: "WorkersLimitedAfterWebSocketClosed",
-          date: msg.date,
-          numTerminatedWorkers: msg.numTerminatedWorkers,
+          ...model,
+          latestEvents: [
+            ...model.latestEvents,
+            {
+              tag: "WorkersLimitedAfterWebSocketClosed",
+              date: msg.date,
+              numTerminatedWorkers: msg.numTerminatedWorkers,
+            },
+          ],
         },
-        model
-      );
+        [],
+      ];
   }
 }
 
@@ -926,11 +941,20 @@ function onWatcherEvent(
               scriptPathString
             );
             if (absolutePathString === scriptPath.absolutePath) {
-              return onElmWatchNodeScriptWatcherEvent(
-                project,
-                makeWatcherEvent(eventName, absolutePathString, now),
-                nextAction
-              );
+              return [
+                compileNextAction(nextAction),
+                {
+                  ...makeWatcherEvent(eventName, absolutePathString, now),
+                  affectsAnyTarget: true,
+                },
+                [
+                  {
+                    tag: "MarkAsDirty",
+                    outputs: getFlatOutputs(project),
+                  },
+                  { tag: "RestartWorkers" },
+                ],
+              ];
             }
           }
           return undefined;
@@ -974,62 +998,13 @@ function onElmFileWatcherEvent(
     }
   }
 
-  if (isNonEmptyArray(dirtyOutputs)) {
-    const cmd: Cmd = { tag: "MarkAsDirty", outputs: dirtyOutputs };
-    switch (nextAction.tag) {
-      case "Restart":
-        return [nextAction, { ...event, affectsAnyTarget: true }, [cmd]];
-
-      case "Compile":
-      case "PrintEvents":
-      case "NoAction":
-        return [
-          { tag: "Compile" },
-          { ...event, affectsAnyTarget: true },
-          [cmd],
-        ];
-    }
-  } else {
-    switch (nextAction.tag) {
-      case "Restart":
-      case "Compile":
-        return [nextAction, { ...event, affectsAnyTarget: false }, []];
-
-      case "PrintEvents":
-      case "NoAction":
-        return [
-          { tag: "PrintEvents" },
-          { ...event, affectsAnyTarget: false },
-          [],
-        ];
-    }
-  }
-}
-
-function onElmWatchNodeScriptWatcherEvent(
-  project: Project,
-  event: WatcherEvent,
-  nextAction: NextAction
-): [NextAction, LatestEvent, Array<Cmd>] | undefined {
-  const cmds: Array<Cmd> = [
-    {
-      tag: "MarkAsDirty",
-      outputs: getFlatOutputs(project),
-    },
-    {
-      tag: "RestartWorkers",
-    },
-  ];
-
-  switch (nextAction.tag) {
-    case "Restart":
-      return [nextAction, { ...event, affectsAnyTarget: true }, cmds];
-
-    case "Compile":
-    case "PrintEvents":
-    case "NoAction":
-      return [{ tag: "Compile" }, { ...event, affectsAnyTarget: true }, cmds];
-  }
+  return isNonEmptyArray(dirtyOutputs)
+    ? [
+        compileNextAction(nextAction),
+        { ...event, affectsAnyTarget: true },
+        [{ tag: "MarkAsDirty", outputs: dirtyOutputs }],
+      ]
+    : [nextAction, { ...event, affectsAnyTarget: false }, []];
 }
 
 function runNextAction(
@@ -1038,9 +1013,6 @@ function runNextAction(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (model.nextAction.tag) {
-    case "NoAction":
-      return [model, []];
-
     case "Restart":
       switch (model.hotState.tag) {
         case "Idle":
@@ -1097,28 +1069,27 @@ function runNextAction(
           return [model, []];
       }
 
-    case "PrintEvents":
+    case "NoAction":
       switch (model.hotState.tag) {
         case "Idle":
-          return [
-            { ...model, latestEvents: [] },
-            [
-              {
-                tag: "LogInfoMessageWithTimeline",
-                message: printEventsMessage(
-                  model.latestEvents,
-                  project.disabledOutputs
-                ),
-                events: model.latestEvents,
-              },
-            ],
-          ];
+          return isNonEmptyArray(model.latestEvents)
+            ? [
+                { ...model, latestEvents: [] },
+                [
+                  {
+                    tag: "LogInfoMessageWithTimeline",
+                    message: printEventsMessage(
+                      model.latestEvents,
+                      project.disabledOutputs
+                    ),
+                    events: model.latestEvents,
+                  },
+                ],
+              ]
+            : [model, []];
 
-        // istanbul ignore next
         case "Compiling":
-        // istanbul ignore next
         case "Dependencies":
-        // istanbul ignore next
         case "Restarting":
           return [model, []];
       }
@@ -1890,41 +1861,28 @@ function onWebSocketConnected(
   outputPath: OutputPath,
   outputState: OutputState,
   elmCompiledTimestamp: number
-): [Model, Array<Cmd>] {
+): [Model, LatestEvent, Array<Cmd>] {
   const event: WebSocketRelatedEvent = {
     tag: "WebSocketConnectedNeedingCompilation",
     date,
     outputPath,
   };
 
+  const recompileNeeded = (): [Model, LatestEvent, Array<Cmd>] => {
+    const [newModel, cmds] = onWebSocketRecompileNeeded(
+      model,
+      outputPath,
+      outputState
+    );
+    return [newModel, event, cmds];
+  };
+
   switch (model.hotState.tag) {
     case "Restarting":
-      return [
-        {
-          ...model,
-          latestEvents: [...model.latestEvents, event],
-        },
-        [
-          {
-            tag: "WebSocketSendToOutput",
-            outputPath,
-            message: {
-              tag: "StatusChanged",
-              status: {
-                tag: "Busy",
-                compilationMode: outputState.compilationMode,
-              },
-            },
-          },
-        ],
-      ];
-
     case "Dependencies":
       return [
-        {
-          ...model,
-          latestEvents: [...model.latestEvents, event],
-        },
+        model,
+        event,
         [
           {
             tag: "WebSocketSendToOutput",
@@ -1944,59 +1902,31 @@ function onWebSocketConnected(
     case "Compiling":
       switch (outputState.status.tag) {
         case "Success":
-          if (
-            outputState.status.elmCompiledTimestamp === elmCompiledTimestamp
-          ) {
-            const cmd: Cmd = {
-              tag: "WebSocketSendToOutput",
-              outputPath,
-              message: {
-                tag: "StatusChanged",
-                status: { tag: "AlreadyUpToDate" },
-              },
-            };
-
-            const noActionEvent: WebSocketRelatedEvent = {
-              tag: "WebSocketConnectedNeedingNoAction",
-              date,
-              outputPath,
-            };
-
-            switch (model.hotState.tag) {
-              case "Idle": {
-                const [newModel, cmds] = onWebSocketShouldLogEvent(
-                  noActionEvent,
-                  model
-                );
-                return [newModel, [...cmds, cmd]];
-              }
-
-              case "Compiling":
-                return [
+          return outputState.status.elmCompiledTimestamp ===
+            elmCompiledTimestamp
+            ? [
+                model,
+                {
+                  tag: "WebSocketConnectedNeedingNoAction",
+                  date,
+                  outputPath,
+                },
+                [
                   {
-                    ...model,
-                    latestEvents: [...model.latestEvents, noActionEvent],
+                    tag: "WebSocketSendToOutput",
+                    outputPath,
+                    message: {
+                      tag: "StatusChanged",
+                      status: { tag: "AlreadyUpToDate" },
+                    },
                   },
-                  [cmd],
-                ];
-            }
-          } else {
-            return onWebSocketRecompileNeeded(
-              event,
-              model,
-              outputPath,
-              outputState
-            );
-          }
+                ],
+              ]
+            : recompileNeeded();
 
         case "NotWrittenToDisk":
         case "ElmMakeTypecheckOnly":
-          return onWebSocketRecompileNeeded(
-            event,
-            model,
-            outputPath,
-            outputState
-          );
+          return recompileNeeded();
 
         case "ElmMake":
         case "Postprocess":
@@ -2005,19 +1935,12 @@ function onWebSocketConnected(
         case "QueuedForPostprocess":
           switch (model.hotState.tag) {
             case "Idle":
-              return onWebSocketRecompileNeeded(
-                event,
-                model,
-                outputPath,
-                outputState
-              );
+              return recompileNeeded();
 
             case "Compiling":
               return [
-                {
-                  ...model,
-                  latestEvents: [...model.latestEvents, event],
-                },
+                model,
+                event,
                 [
                   {
                     tag: "WebSocketSendToOutput",
@@ -2038,11 +1961,10 @@ function onWebSocketConnected(
           // Make sure only error statuses are left.
           const _: OutputError = outputState.status;
           void _;
-          const [newModel, cmds] = onWebSocketShouldLogEvent(event, model);
           return [
-            newModel,
+            model,
+            event,
             [
-              ...cmds,
               {
                 tag: "WebSocketSendToOutput",
                 outputPath,
@@ -2065,41 +1987,11 @@ function onChangedCompilationMode(
   outputState: OutputState,
   newCompilationMode: CompilationMode
 ): [Model, Array<Cmd>] {
-  const event: WebSocketRelatedEvent = {
-    tag: "WebSocketChangedCompilationMode",
-    date,
-    outputPath,
-    compilationMode: newCompilationMode,
-  };
-
   switch (model.hotState.tag) {
     case "Restarting":
-      return [
-        {
-          ...model,
-          latestEvents: [...model.latestEvents, event],
-        },
-        [
-          {
-            tag: "WebSocketSendToOutput",
-            outputPath,
-            message: {
-              tag: "StatusChanged",
-              status: {
-                tag: "Busy",
-                compilationMode: newCompilationMode,
-              },
-            },
-          },
-        ],
-      ];
-
     case "Dependencies":
       return [
-        {
-          ...model,
-          latestEvents: [...model.latestEvents, event],
-        },
+        model,
         [
           {
             tag: "WebSocketSendToOutput",
@@ -2117,33 +2009,11 @@ function onChangedCompilationMode(
 
     case "Idle":
     case "Compiling":
-      return onWebSocketRecompileNeeded(event, model, outputPath, outputState);
-  }
-}
-
-function onWebSocketRelatedEventNeedingNoCompilation(
-  event: WebSocketRelatedEvent,
-  model: Model
-): [Model, Array<Cmd>] {
-  switch (model.hotState.tag) {
-    case "Restarting":
-    case "Dependencies":
-    case "Compiling":
-      return [
-        {
-          ...model,
-          latestEvents: [...model.latestEvents, event],
-        },
-        [],
-      ];
-
-    case "Idle":
-      return onWebSocketShouldLogEvent(event, model);
+      return onWebSocketRecompileNeeded(model, outputPath, outputState);
   }
 }
 
 function onWebSocketRecompileNeeded(
-  event: WebSocketRelatedEvent,
   model: Model,
   outputPath: OutputPath,
   outputState: OutputState
@@ -2151,7 +2021,7 @@ function onWebSocketRecompileNeeded(
   switch (model.nextAction.tag) {
     case "Restart":
       return [
-        { ...model, latestEvents: [...model.latestEvents, event] },
+        model,
         [
           {
             tag: "WebSocketSendToOutput",
@@ -2168,13 +2038,11 @@ function onWebSocketRecompileNeeded(
       ];
 
     case "Compile":
-    case "PrintEvents":
     case "NoAction":
       return [
         {
           ...model,
           nextAction: { tag: "Compile" },
-          latestEvents: [...model.latestEvents, event],
         },
         [
           {
@@ -2186,29 +2054,13 @@ function onWebSocketRecompileNeeded(
   }
 }
 
-function onWebSocketShouldLogEvent(
-  event: WebSocketRelatedEvent,
-  model: Model
-): [Model, Array<Cmd>] {
-  const newModel: Model = {
-    ...model,
-    latestEvents: [...model.latestEvents, event],
-  };
-
-  switch (model.nextAction.tag) {
+function compileNextAction(nextAction: NextAction): NextAction {
+  switch (nextAction.tag) {
     case "Restart":
     case "Compile":
-    case "PrintEvents":
-      return [newModel, []];
-
+      return nextAction;
     case "NoAction":
-      return [
-        {
-          ...newModel,
-          nextAction: { tag: "PrintEvents" },
-        },
-        [],
-      ];
+      return { tag: "Compile" };
   }
 }
 
@@ -2227,7 +2079,7 @@ function onWebSocketToServerMessage(
           return [model, []];
 
         case "Output": {
-          const [nextModel, cmds] = onChangedCompilationMode(
+          const [newModel, cmds] = onChangedCompilationMode(
             date,
             model,
             output.outputPath,
@@ -2236,7 +2088,18 @@ function onWebSocketToServerMessage(
           );
 
           return [
-            nextModel,
+            {
+              ...newModel,
+              latestEvents: [
+                ...newModel.latestEvents,
+                {
+                  tag: "WebSocketChangedCompilationMode",
+                  date,
+                  outputPath: output.outputPath,
+                  compilationMode: message.compilationMode,
+                },
+              ],
+            },
             [
               {
                 tag: "ChangeCompilationMode",
@@ -2270,9 +2133,6 @@ function onWebSocketToServerMessage(
       }
 
       switch (model.nextAction.tag) {
-        case "NoAction":
-          return [model, [{ tag: "ExitOnIdle" }]];
-
         // istanbul ignore next
         case "Restart":
         // istanbul ignore next
@@ -2289,7 +2149,7 @@ function onWebSocketToServerMessage(
             ],
           ];
 
-        case "PrintEvents": {
+        case "NoAction": {
           const [newModel, cmds] = runNextAction(date, project, model);
           return [newModel, [...cmds, { tag: "ExitOnIdle" }]];
         }
