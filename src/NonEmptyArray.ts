@@ -45,3 +45,10 @@ export function nonEmptyArrayUniqueBy<T>(
   }
   return result;
 }
+
+export function appendNonEmptyArray<T>(
+  array: Array<T>,
+  item: T
+): NonEmptyArray<T> {
+  return [...array, item] as unknown as NonEmptyArray<T>;
+}

@@ -1768,7 +1768,9 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+         (1 more event)
+      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
       🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
@@ -1931,7 +1933,9 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+         (1 more event)
+      ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
       🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
@@ -2279,7 +2283,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
+         (2 more events)
       ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
     `);
@@ -2381,7 +2386,8 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
+         (2 more events)
       ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
     `);
@@ -2791,7 +2797,9 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main4
+         (3 more events)
+      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ Main4: elm make
       🟢 Main4: elm make done

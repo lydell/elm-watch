@@ -30,7 +30,11 @@ import {
   toJsonError,
 } from "./Helpers";
 import type { Logger } from "./Logger";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import {
+  appendNonEmptyArray,
+  isNonEmptyArray,
+  NonEmptyArray,
+} from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
@@ -1053,8 +1057,21 @@ function onElmFileWatcherEvent(
           [cmd],
         ];
 
-      case "NoAction":
       case "PrintNonInterestingEvents":
+        return [
+          {
+            tag: "Compile",
+            events: appendNonEmptyArray(
+              nextAction.events.filter(
+                (event2) => event2.tag !== "WatcherEvent"
+              ),
+              event
+            ),
+          },
+          [cmd],
+        ];
+
+      case "NoAction":
         return [
           {
             tag: "Compile",
@@ -1118,8 +1135,19 @@ function onElmWatchNodeScriptWatcherEvent(
         cmds,
       ];
 
-    case "NoAction":
     case "PrintNonInterestingEvents":
+      return [
+        {
+          tag: "Compile",
+          events: appendNonEmptyArray(
+            nextAction.events.filter((event2) => event2.tag !== "WatcherEvent"),
+            event
+          ),
+        },
+        cmds,
+      ];
+
+    case "NoAction":
       return [
         {
           tag: "Compile",
@@ -2314,8 +2342,29 @@ function onWebSocketRecompileNeeded(
         ],
       ];
 
-    case "NoAction":
     case "PrintNonInterestingEvents":
+      return [
+        {
+          ...model,
+          nextAction: {
+            tag: "Compile",
+            events: appendNonEmptyArray(
+              model.nextAction.events.filter(
+                (event2) => event2.tag !== "WatcherEvent"
+              ),
+              event
+            ),
+          },
+        },
+        [
+          {
+            tag: "MarkAsDirty",
+            outputs: [{ outputPath, outputState }],
+          },
+        ],
+      ];
+
+    case "NoAction":
       return [
         {
           ...model,
