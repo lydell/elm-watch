@@ -19,9 +19,7 @@ type RunResult =
     }
   | {
       tag: "Restart";
-      restartReasons: NonEmptyArray<
-        Hot.WatcherEvent | Hot.WebSocketRelatedEvent
-      >;
+      restartReasons: Array<Hot.LatestEvent>;
       postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: Hot.WebSocketState | undefined;
     };
@@ -33,7 +31,7 @@ export async function run(
   getNow: GetNow,
   runMode: RunMode,
   args: Array<CliArg>,
-  restartReasons: Array<Hot.WatcherEvent | Hot.WebSocketRelatedEvent>,
+  restartReasons: Array<Hot.LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: Hot.WebSocketState | undefined
 ): Promise<RunResult> {
@@ -295,7 +293,7 @@ async function handleElmWatchJsonError(
       logger.clearScreen();
       return {
         tag: "Restart",
-        restartReasons: [elmWatchJsonEvent],
+        restartReasons: [{ ...elmWatchJsonEvent, affectsAnyTarget: true }],
         postprocessWorkerPool,
         webSocketState: undefined,
       };

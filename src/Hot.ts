@@ -30,11 +30,7 @@ import {
   toJsonError,
 } from "./Helpers";
 import type { Logger } from "./Logger";
-import {
-  appendNonEmptyArray,
-  isNonEmptyArray,
-  NonEmptyArray,
-} from "./NonEmptyArray";
+import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
@@ -67,14 +63,14 @@ const SLEEP_ON_COMPILATION_MODE_CHANGE = 10;
 
 type WatcherEventName = "added" | "changed" | "removed";
 
-export type WatcherEvent = {
+type WatcherEvent = {
   tag: "WatcherEvent";
   date: Date;
   eventName: WatcherEventName;
   file: AbsolutePath;
 };
 
-export type WebSocketRelatedEvent =
+type WebSocketRelatedEvent =
   | {
       tag: "WebSocketChangedCompilationMode";
       date: Date;
@@ -105,6 +101,10 @@ export type WebSocketRelatedEvent =
       date: Date;
       numTerminatedWorkers: number;
     };
+
+export type LatestEvent =
+  | WebSocketRelatedEvent
+  | (WatcherEvent & { affectsAnyTarget: boolean });
 
 type Mutable = {
   watcher: chokidar.FSWatcher;
@@ -186,42 +186,37 @@ type Msg =
 type Model = {
   nextAction: NextAction;
   hotState: HotState;
+  latestEvents: Array<LatestEvent>;
 };
 
 type NextAction =
   | {
       tag: "Compile";
-      events: NonEmptyArray<WatcherEvent | WebSocketRelatedEvent>;
     }
   | {
       tag: "NoAction";
     }
   | {
-      tag: "PrintNonInterestingEvents";
-      events: NonEmptyArray<WatcherEvent | WebSocketRelatedEvent>;
+      tag: "PrintEvents";
     }
   | {
       tag: "Restart";
-      events: NonEmptyArray<WatcherEvent>;
     };
 
 type HotState =
   | {
       tag: "Compiling";
       start: Date;
-      events: Array<WatcherEvent | WebSocketRelatedEvent>;
     }
   | {
       tag: "Dependencies";
       start: Date;
-      events: Array<WatcherEvent | WebSocketRelatedEvent>;
     }
   | {
       tag: "Idle";
     }
   | {
       tag: "Restarting";
-      events: NonEmptyArray<WatcherEvent | WebSocketRelatedEvent>;
     };
 
 type Cmd =
@@ -253,7 +248,7 @@ type Cmd =
   | {
       tag: "LogInfoMessageWithTimeline";
       message: string;
-      events: Array<WatcherEvent | WebSocketRelatedEvent>;
+      events: Array<LatestEvent>;
     }
   | {
       tag: "MarkAsDirty";
@@ -271,7 +266,7 @@ type Cmd =
     }
   | {
       tag: "Restart";
-      restartReasons: NonEmptyArray<WatcherEvent | WebSocketRelatedEvent>;
+      restartReasons: Array<LatestEvent>;
     }
   | {
       tag: "RestartWorkers";
@@ -309,7 +304,7 @@ export type HotRunResult =
     }
   | {
       tag: "Restart";
-      restartReasons: NonEmptyArray<WatcherEvent | WebSocketRelatedEvent>;
+      restartReasons: Array<LatestEvent>;
       postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: WebSocketState | undefined;
     };
@@ -325,7 +320,7 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
-  restartReasons: Array<WatcherEvent | WebSocketRelatedEvent>,
+  restartReasons: Array<LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
   project: Project,
@@ -543,7 +538,7 @@ function watcherOnAll(
 
 const init = (
   now: Date,
-  restartReasons: Array<WatcherEvent | WebSocketRelatedEvent>,
+  restartReasons: Array<LatestEvent>,
   elmJsonsErrorsOutputPaths: Array<OutputPath>
 ): [Model, Array<Cmd>] => [
   {
@@ -551,8 +546,8 @@ const init = (
     hotState: {
       tag: "Dependencies",
       start: now,
-      events: restartReasons,
     },
+    latestEvents: restartReasons,
   },
   [
     { tag: "ClearScreen" },
@@ -584,12 +579,13 @@ const update =
           return [model, []];
         }
 
-        const [updatedNextAction, cmds] = result;
+        const [updatedNextAction, latestEvent, cmds] = result;
 
         return [
           {
             ...model,
             nextAction: updatedNextAction,
+            latestEvents: [...model.latestEvents, latestEvent],
           },
           [
             ...cmds,
@@ -667,7 +663,7 @@ const update =
             const errors = Compile.extractErrors(project);
 
             return [
-              { ...model, hotState: { tag: "Idle" } },
+              { ...model, hotState: { tag: "Idle" }, latestEvents: [] },
               [
                 cmd,
                 isNonEmptyArray(errors)
@@ -679,7 +675,7 @@ const update =
                 {
                   tag: "LogInfoMessageWithTimeline",
                   message: compileFinishedMessage(duration),
-                  events: model.hotState.events,
+                  events: model.latestEvents,
                 },
                 isNonEmptyArray(errors) && exitOnError
                   ? { tag: "ExitOnIdle" }
@@ -692,7 +688,7 @@ const update =
             return outputActions.numExecuting === 0
               ? [
                   model,
-                  [{ tag: "Restart", restartReasons: model.hotState.events }],
+                  [{ tag: "Restart", restartReasons: model.latestEvents }],
                 ]
               : [model, []];
         }
@@ -715,7 +711,6 @@ const update =
                     hotState: {
                       tag: "Compiling",
                       start: model.hotState.start,
-                      events: model.hotState.events,
                     },
                   },
                   [
@@ -733,7 +728,7 @@ const update =
           case "Restarting":
             return [
               model,
-              [{ tag: "Restart", restartReasons: model.hotState.events }],
+              [{ tag: "Restart", restartReasons: model.latestEvents }],
             ];
 
           // istanbul ignore next
@@ -918,7 +913,7 @@ function onWatcherEvent(
   eventName: WatcherEventName,
   absolutePathString: string,
   nextAction: NextAction
-): [NextAction, Array<Cmd>] | undefined {
+): [NextAction, LatestEvent, Array<Cmd>] | undefined {
   if (absolutePathString.endsWith(".elm")) {
     return onElmFileWatcherEvent(
       project,
@@ -1015,7 +1010,7 @@ function onElmFileWatcherEvent(
   project: Project,
   event: WatcherEvent,
   nextAction: NextAction
-): [NextAction, Array<Cmd>] | undefined {
+): [NextAction, LatestEvent, Array<Cmd>] | undefined {
   const elmFile = event.file;
 
   if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
@@ -1046,37 +1041,14 @@ function onElmFileWatcherEvent(
     const cmd: Cmd = { tag: "MarkAsDirty", outputs: dirtyOutputs };
     switch (nextAction.tag) {
       case "Restart":
-        return [nextAction, [cmd]];
+        return [nextAction, { ...event, affectsAnyTarget: true }, [cmd]];
 
       case "Compile":
-        return [
-          {
-            tag: "Compile",
-            events: [...nextAction.events, event],
-          },
-          [cmd],
-        ];
-
-      case "PrintNonInterestingEvents":
-        return [
-          {
-            tag: "Compile",
-            events: appendNonEmptyArray(
-              nextAction.events.filter(
-                (event2) => event2.tag !== "WatcherEvent"
-              ),
-              event
-            ),
-          },
-          [cmd],
-        ];
-
+      case "PrintEvents":
       case "NoAction":
         return [
-          {
-            tag: "Compile",
-            events: [event],
-          },
+          { tag: "Compile" },
+          { ...event, affectsAnyTarget: true },
           [cmd],
         ];
     }
@@ -1084,23 +1056,13 @@ function onElmFileWatcherEvent(
     switch (nextAction.tag) {
       case "Restart":
       case "Compile":
-        return [nextAction, []];
+        return [nextAction, { ...event, affectsAnyTarget: false }, []];
 
+      case "PrintEvents":
       case "NoAction":
         return [
-          {
-            tag: "PrintNonInterestingEvents",
-            events: [event],
-          },
-          [],
-        ];
-
-      case "PrintNonInterestingEvents":
-        return [
-          {
-            tag: "PrintNonInterestingEvents",
-            events: [...nextAction.events, event],
-          },
+          { tag: "PrintEvents" },
+          { ...event, affectsAnyTarget: false },
           [],
         ];
     }
@@ -1111,7 +1073,7 @@ function onElmWatchNodeScriptWatcherEvent(
   project: Project,
   event: WatcherEvent,
   nextAction: NextAction
-): [NextAction, Array<Cmd>] | undefined {
+): [NextAction, LatestEvent, Array<Cmd>] | undefined {
   const cmds: Array<Cmd> = [
     {
       tag: "MarkAsDirty",
@@ -1124,37 +1086,12 @@ function onElmWatchNodeScriptWatcherEvent(
 
   switch (nextAction.tag) {
     case "Restart":
-      return [nextAction, cmds];
+      return [nextAction, { ...event, affectsAnyTarget: true }, cmds];
 
     case "Compile":
-      return [
-        {
-          tag: "Compile",
-          events: [...nextAction.events, event],
-        },
-        cmds,
-      ];
-
-    case "PrintNonInterestingEvents":
-      return [
-        {
-          tag: "Compile",
-          events: appendNonEmptyArray(
-            nextAction.events.filter((event2) => event2.tag !== "WatcherEvent"),
-            event
-          ),
-        },
-        cmds,
-      ];
-
+    case "PrintEvents":
     case "NoAction":
-      return [
-        {
-          tag: "Compile",
-          events: [event],
-        },
-        cmds,
-      ];
+      return [{ tag: "Compile" }, { ...event, affectsAnyTarget: true }, cmds];
   }
 }
 
@@ -1167,46 +1104,75 @@ function runNextAction(
     case "NoAction":
       return [model, []];
 
-    case "Restart": {
-      const { events } = model.nextAction;
-
+    case "Restart":
       switch (model.hotState.tag) {
         case "Idle":
           return [
-            { ...model, hotState: { tag: "Restarting", events } },
+            { ...model, hotState: { tag: "Restarting" } },
             [
               { tag: "ClearScreen" },
-              { tag: "Restart", restartReasons: events },
+              { tag: "Restart", restartReasons: model.latestEvents },
             ],
           ];
 
         case "Dependencies":
         case "Compiling": {
           // The actual restart is triggered once the current compilation is over.
-          return [{ ...model, hotState: { tag: "Restarting", events } }, []];
+          return [{ ...model, hotState: { tag: "Restarting" } }, []];
         }
 
         case "Restarting":
           return [model, []];
       }
-    }
 
     case "Compile":
-      return runCompile(model, model.nextAction.events, start);
-
-    case "PrintNonInterestingEvents":
       switch (model.hotState.tag) {
-        case "Idle":
+        case "Idle": {
+          return [
+            {
+              ...model,
+              hotState: { tag: "Compiling", start },
+            },
+            [
+              {
+                tag: "CompileAllOutputsAsNeeded",
+                mode: "AfterIdle",
+                includeInterrupted: true,
+              },
+            ],
+          ];
+        }
+
+        case "Compiling":
           return [
             model,
             [
               {
+                tag: "CompileAllOutputsAsNeeded",
+                mode: "ContinueCompilation",
+                includeInterrupted: true,
+              },
+            ],
+          ];
+
+        case "Dependencies":
+        case "Restarting":
+          return [model, []];
+      }
+
+    case "PrintEvents":
+      switch (model.hotState.tag) {
+        case "Idle":
+          return [
+            { ...model, latestEvents: [] },
+            [
+              {
                 tag: "LogInfoMessageWithTimeline",
-                message: nonInterestingEventsMessage(
-                  model.nextAction.events,
+                message: printEventsMessage(
+                  model.latestEvents,
                   project.disabledOutputs
                 ),
-                events: model.nextAction.events,
+                events: model.latestEvents,
               },
             ],
           ];
@@ -1219,67 +1185,6 @@ function runNextAction(
         case "Restarting":
           return [model, []];
       }
-  }
-}
-
-function runCompile(
-  model: Model,
-  events: Array<WatcherEvent | WebSocketRelatedEvent>,
-  start: Date
-): [Model, Array<Cmd>] {
-  switch (model.hotState.tag) {
-    case "Idle": {
-      return [
-        {
-          ...model,
-          hotState: {
-            tag: "Compiling",
-            start,
-            events,
-          },
-        },
-        [
-          {
-            tag: "CompileAllOutputsAsNeeded",
-            mode: "AfterIdle",
-            includeInterrupted: true,
-          },
-        ],
-      ];
-    }
-
-    case "Compiling":
-      return [
-        {
-          ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, ...events],
-          },
-        },
-        [
-          {
-            tag: "CompileAllOutputsAsNeeded",
-            mode: "ContinueCompilation",
-            includeInterrupted: true,
-          },
-        ],
-      ];
-
-    case "Dependencies":
-      return [
-        {
-          ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, ...events],
-          },
-        },
-        [],
-      ];
-
-    case "Restarting":
-      return [model, []];
   }
 }
 
@@ -1427,7 +1332,7 @@ const runCmd =
           date: getNow(),
           mutable,
           message: cmd.message,
-          events: cmd.events,
+          events: filterLatestEvents(cmd.events),
           fancy: logger.fancy,
           isTTY: logger.raw.stderr.isTTY,
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
@@ -1770,13 +1675,10 @@ function makeRestartNextAction(
   event: WatcherEvent,
   nextAction: NextAction,
   project: Project
-): [NextAction, Array<Cmd>] {
+): [NextAction, LatestEvent, Array<Cmd>] {
   return [
-    {
-      tag: "Restart",
-      events:
-        nextAction.tag === "Restart" ? [...nextAction.events, event] : [event],
-    },
+    { tag: "Restart" },
+    { ...event, affectsAnyTarget: true },
     [
       {
         // Interrupt all compilation.
@@ -2028,10 +1930,7 @@ function onWebSocketConnected(
       return [
         {
           ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, event],
-          },
+          latestEvents: [...model.latestEvents, event],
         },
         [
           {
@@ -2052,10 +1951,7 @@ function onWebSocketConnected(
       return [
         {
           ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, event],
-          },
+          latestEvents: [...model.latestEvents, event],
         },
         [
           {
@@ -2107,10 +2003,7 @@ function onWebSocketConnected(
                 return [
                   {
                     ...model,
-                    hotState: {
-                      ...model.hotState,
-                      events: [...model.hotState.events, noActionEvent],
-                    },
+                    latestEvents: [...model.latestEvents, noActionEvent],
                   },
                   [cmd],
                 ];
@@ -2151,10 +2044,7 @@ function onWebSocketConnected(
               return [
                 {
                   ...model,
-                  hotState: {
-                    ...model.hotState,
-                    events: [...model.hotState.events, event],
-                  },
+                  latestEvents: [...model.latestEvents, event],
                 },
                 [
                   {
@@ -2215,10 +2105,7 @@ function onChangedCompilationMode(
       return [
         {
           ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, event],
-          },
+          latestEvents: [...model.latestEvents, event],
         },
         [
           {
@@ -2239,10 +2126,7 @@ function onChangedCompilationMode(
       return [
         {
           ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, event],
-          },
+          latestEvents: [...model.latestEvents, event],
         },
         [
           {
@@ -2271,26 +2155,12 @@ function onWebSocketRelatedEventNeedingNoCompilation(
 ): [Model, Array<Cmd>] {
   switch (model.hotState.tag) {
     case "Restarting":
-      return [
-        {
-          ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, event],
-          },
-        },
-        [],
-      ];
-
     case "Dependencies":
     case "Compiling":
       return [
         {
           ...model,
-          hotState: {
-            ...model.hotState,
-            events: [...model.hotState.events, event],
-          },
+          latestEvents: [...model.latestEvents, event],
         },
         [],
       ];
@@ -2309,7 +2179,7 @@ function onWebSocketRecompileNeeded(
   switch (model.nextAction.tag) {
     case "Restart":
       return [
-        model,
+        { ...model, latestEvents: [...model.latestEvents, event] },
         [
           {
             tag: "WebSocketSendToOutput",
@@ -2326,52 +2196,13 @@ function onWebSocketRecompileNeeded(
       ];
 
     case "Compile":
-      return [
-        {
-          ...model,
-          nextAction: {
-            tag: "Compile",
-            events: [...model.nextAction.events, event],
-          },
-        },
-        [
-          {
-            tag: "MarkAsDirty",
-            outputs: [{ outputPath, outputState }],
-          },
-        ],
-      ];
-
-    case "PrintNonInterestingEvents":
-      return [
-        {
-          ...model,
-          nextAction: {
-            tag: "Compile",
-            events: appendNonEmptyArray(
-              model.nextAction.events.filter(
-                (event2) => event2.tag !== "WatcherEvent"
-              ),
-              event
-            ),
-          },
-        },
-        [
-          {
-            tag: "MarkAsDirty",
-            outputs: [{ outputPath, outputState }],
-          },
-        ],
-      ];
-
+    case "PrintEvents":
     case "NoAction":
       return [
         {
           ...model,
-          nextAction: {
-            tag: "Compile",
-            events: [event],
-          },
+          nextAction: { tag: "Compile" },
+          latestEvents: [...model.latestEvents, event],
         },
         [
           {
@@ -2387,31 +2218,22 @@ function onWebSocketShouldLogEvent(
   event: WebSocketRelatedEvent,
   model: Model
 ): [Model, Array<Cmd>] {
+  const newModel: Model = {
+    ...model,
+    latestEvents: [...model.latestEvents, event],
+  };
+
   switch (model.nextAction.tag) {
     case "Restart":
-      return [model, []];
-
     case "Compile":
-    case "PrintNonInterestingEvents":
-      return [
-        {
-          ...model,
-          nextAction: {
-            ...model.nextAction,
-            events: [...model.nextAction.events, event],
-          },
-        },
-        [],
-      ];
+    case "PrintEvents":
+      return [newModel, []];
 
     case "NoAction":
       return [
         {
-          ...model,
-          nextAction: {
-            tag: "PrintNonInterestingEvents",
-            events: [event],
-          },
+          ...newModel,
+          nextAction: { tag: "PrintEvents" },
         },
         [],
       ];
@@ -2493,13 +2315,13 @@ function onWebSocketToServerMessage(
               {
                 tag: "Throw",
                 error: new Error(
-                  `Got ExitRequested. Expected nextAction to be NoAction or PrintNonInterestingEvents but it is: ${model.nextAction.tag}`
+                  `Got ExitRequested. Expected nextAction to be NoAction or PrintEvents but it is: ${model.nextAction.tag}`
                 ),
               },
             ],
           ];
 
-        case "PrintNonInterestingEvents": {
+        case "PrintEvents": {
           const [newModel, cmds] = runNextAction(date, project, model);
           return [newModel, [...cmds, { tag: "ExitOnIdle" }]];
         }
@@ -2526,6 +2348,15 @@ function webSocketSendToOutput(
   }
 }
 
+function filterLatestEvents(events: Array<LatestEvent>): Array<LatestEvent> {
+  // Changes to .elm files that don’t affect anything are only
+  // interesting/non-confusing if they happen on their own.
+  const filtered = events.filter(
+    (event) => !(event.tag === "WatcherEvent" && !event.affectsAnyTarget)
+  );
+  return isNonEmptyArray(filtered) ? filtered : events;
+}
+
 function infoMessageWithTimeline({
   date,
   mutable,
@@ -2538,7 +2369,7 @@ function infoMessageWithTimeline({
   date: Date;
   mutable: Mutable;
   message: string;
-  events: Array<WatcherEvent | WebSocketRelatedEvent>;
+  events: Array<LatestEvent>;
   fancy: boolean;
   isTTY: boolean;
   hasErrors: boolean;
@@ -2624,7 +2455,7 @@ function printTimeline({
   fancy,
   isTTY,
 }: {
-  events: Array<WatcherEvent | WebSocketRelatedEvent>;
+  events: Array<LatestEvent>;
   fancy: boolean;
   isTTY: boolean;
 }): string | undefined {
@@ -2655,7 +2486,7 @@ function printEvent({
   fancy,
   isTTY,
 }: {
-  event: WatcherEvent | WebSocketRelatedEvent;
+  event: LatestEvent;
   fancy: boolean;
   isTTY: boolean;
 }): string {
@@ -2669,9 +2500,7 @@ function printEvent({
   });
 }
 
-function printEventMessage(
-  event: WatcherEvent | WebSocketRelatedEvent
-): string {
+function printEventMessage(event: LatestEvent): string {
   switch (event.tag) {
     case "WatcherEvent":
       return `${capitalize(event.eventName)} ${event.file.absolutePath}`;
@@ -2723,14 +2552,16 @@ function compileFinishedMessage(duration: number): string {
   return `Compilation finished in ${bold(duration.toString())} ms.`;
 }
 
-function nonInterestingEventsMessage(
-  events: Array<WatcherEvent | WebSocketRelatedEvent>,
+function printEventsMessage(
+  events: Array<LatestEvent>,
   disabledOutputs: HashSet<OutputPath>
 ): string {
   const what1 = events.length === 1 ? "file is" : "files are";
   const what2 =
     disabledOutputs.size > 0 ? "any of the enabled targets" : "any target";
-  return events.every((event) => event.tag === "WatcherEvent")
+  return events.every(
+    (event) => event.tag === "WatcherEvent" && !event.affectsAnyTarget
+  )
     ? `FYI: The above Elm ${what1} not imported by ${what2}. Nothing to do!`
     : "Everything up to date.";
 }
