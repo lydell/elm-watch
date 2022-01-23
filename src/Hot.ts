@@ -1875,23 +1875,7 @@ function onWebSocketConnected(
   switch (model.hotState.tag) {
     case "Restarting":
     case "Dependencies":
-      return [
-        model,
-        event,
-        [
-          {
-            tag: "WebSocketSendToOutput",
-            outputPath,
-            message: {
-              tag: "StatusChanged",
-              status: {
-                tag: "Busy",
-                compilationMode: outputState.compilationMode,
-              },
-            },
-          },
-        ],
-      ];
+      return [model, event, []];
 
     case "Idle":
     case "Compiling":
@@ -1933,23 +1917,7 @@ function onWebSocketConnected(
               return recompileNeeded();
 
             case "Compiling":
-              return [
-                model,
-                event,
-                [
-                  {
-                    tag: "WebSocketSendToOutput",
-                    outputPath,
-                    message: {
-                      tag: "StatusChanged",
-                      status: {
-                        tag: "Busy",
-                        compilationMode: outputState.compilationMode,
-                      },
-                    },
-                  },
-                ],
-              ];
+              return [model, event, []];
           }
 
         default: {
@@ -1979,28 +1947,12 @@ function onChangedCompilationMode(
   date: Date,
   model: Model,
   outputPath: OutputPath,
-  outputState: OutputState,
-  newCompilationMode: CompilationMode
+  outputState: OutputState
 ): [Model, Array<Cmd>] {
   switch (model.hotState.tag) {
     case "Restarting":
     case "Dependencies":
-      return [
-        model,
-        [
-          {
-            tag: "WebSocketSendToOutput",
-            outputPath,
-            message: {
-              tag: "StatusChanged",
-              status: {
-                tag: "Busy",
-                compilationMode: newCompilationMode,
-              },
-            },
-          },
-        ],
-      ];
+      return [model, []];
 
     case "Idle":
     case "Compiling":
@@ -2015,22 +1967,7 @@ function onWebSocketRecompileNeeded(
 ): [Model, Array<Cmd>] {
   switch (model.nextAction.tag) {
     case "Restart":
-      return [
-        model,
-        [
-          {
-            tag: "WebSocketSendToOutput",
-            outputPath,
-            message: {
-              tag: "StatusChanged",
-              status: {
-                tag: "Busy",
-                compilationMode: outputState.compilationMode,
-              },
-            },
-          },
-        ],
-      ];
+      return [model, []];
 
     case "Compile":
     case "NoAction":
@@ -2078,8 +2015,7 @@ function onWebSocketToServerMessage(
             date,
             model,
             output.outputPath,
-            output.outputState,
-            message.compilationMode
+            output.outputState
           );
 
           return [
