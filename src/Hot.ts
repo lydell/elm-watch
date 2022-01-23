@@ -46,21 +46,6 @@ import {
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
-// Sleep for a little bit to avoid unnecessary recompilation when using “save
-// all” in an editor, or when running `git switch some-branch` or `git restore
-// .`. These operations results in many files being added/changed/deleted,
-// usually with 0-1 ms between each event.
-const SLEEP_ON_WATCHER_EVENT = 10;
-
-// Also sleep for a little bit when web sockets connect and disconnect. That’s
-// useful when there are burst connections because of multiple scripts on the
-// same page, or many tabs with elm-watch. This is slower than file system events.
-const SLEEP_ON_WEBSOCKET_EVENT = 100;
-
-// When switching compilation mode, sleep a short amount of time so that the
-// change feels more immediate.
-const SLEEP_ON_COMPILATION_MODE_CHANGE = 10;
-
 type WatcherEventName = "added" | "changed" | "removed";
 
 type WatcherEvent = {
@@ -342,7 +327,21 @@ export async function run(
       restartReasons,
       project.elmJsonsErrors.map(({ outputPath }) => outputPath)
     ),
-    update: update(project, exitOnError),
+    update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
+      const [newModel, cmds] = update(project, exitOnError, msg, model);
+      return [
+        newModel,
+        [
+          ...cmds,
+          newModel.latestEvents.length > model.latestEvents.length
+            ? {
+                tag: "SleepBeforeNextAction",
+                sleepMs: getNextActionSleepMs(newModel.latestEvents),
+              }
+            : { tag: "NoCmd" },
+        ],
+      ];
+    },
     runCmd: runCmd(env, logger, getNow, exitOnError),
   });
 }
@@ -562,217 +561,297 @@ const init = (
   ],
 ];
 
-const update =
-  (project: Project, exitOnError: boolean) =>
-  (msg: Msg, model: Model): [Model, Array<Cmd>] => {
-    switch (msg.tag) {
-      case "GotWatcherEvent": {
-        const result = onWatcherEvent(
-          msg.date,
-          project,
-          msg.eventName,
-          msg.absolutePathString,
-          model.nextAction
-        );
+function update(
+  project: Project,
+  exitOnError: boolean,
+  msg: Msg,
+  model: Model
+): [Model, Array<Cmd>] {
+  switch (msg.tag) {
+    case "GotWatcherEvent": {
+      const result = onWatcherEvent(
+        msg.date,
+        project,
+        msg.eventName,
+        msg.absolutePathString,
+        model.nextAction
+      );
 
-        if (result === undefined) {
-          return [model, []];
-        }
-
-        const [updatedNextAction, latestEvent, cmds] = result;
-
-        return [
-          {
-            ...model,
-            nextAction: updatedNextAction,
-            latestEvents: [...model.latestEvents, latestEvent],
-          },
-          [
-            ...cmds,
-            { tag: "SleepBeforeNextAction", sleepMs: SLEEP_ON_WATCHER_EVENT },
-          ],
-        ];
+      if (result === undefined) {
+        return [model, []];
       }
 
-      case "SleepBeforeNextActionDone": {
-        const [nextModel, cmds] = runNextAction(msg.date, project, model);
-        return [
-          {
-            ...nextModel,
-            nextAction: { tag: "NoAction" },
-          },
-          cmds,
-        ];
-      }
+      const [updatedNextAction, latestEvent, cmds] = result;
 
-      case "CompilationPartDone": {
-        const includeInterrupted = model.nextAction.tag !== "Compile";
-        const outputActions = Compile.getOutputActions({
-          project,
-          runMode: "hot",
-          includeInterrupted,
-          prioritizedOutputs: msg.prioritizedOutputs,
-        });
+      return [
+        {
+          ...model,
+          nextAction: updatedNextAction,
+          latestEvents: [...model.latestEvents, latestEvent],
+        },
+        cmds,
+      ];
+    }
 
-        switch (model.hotState.tag) {
-          // istanbul ignore next
-          case "Dependencies":
-          // istanbul ignore next
-          case "Idle":
+    case "SleepBeforeNextActionDone": {
+      const [nextModel, cmds] = runNextAction(msg.date, project, model);
+      return [
+        {
+          ...nextModel,
+          nextAction: { tag: "NoAction" },
+        },
+        cmds,
+      ];
+    }
+
+    case "CompilationPartDone": {
+      const includeInterrupted = model.nextAction.tag !== "Compile";
+      const outputActions = Compile.getOutputActions({
+        project,
+        runMode: "hot",
+        includeInterrupted,
+        prioritizedOutputs: msg.prioritizedOutputs,
+      });
+
+      switch (model.hotState.tag) {
+        // istanbul ignore next
+        case "Dependencies":
+        // istanbul ignore next
+        case "Idle":
+          return [
+            model,
+            [
+              {
+                tag: "Throw",
+                error: new Error(
+                  `HotState became ${model.hotState.tag} while compiling!`
+                ),
+              },
+            ],
+          ];
+
+        case "Compiling": {
+          const duration = msg.date.getTime() - model.hotState.start.getTime();
+
+          const cmd = handleOutputActionResultToCmd(
+            msg.handleOutputActionResult
+          );
+
+          if (isNonEmptyArray(outputActions.actions)) {
             return [
               model,
               [
+                cmd,
                 {
-                  tag: "Throw",
-                  error: new Error(
-                    `HotState became ${model.hotState.tag} while compiling!`
-                  ),
+                  tag: "CompileAllOutputsAsNeeded",
+                  mode: "ContinueCompilation",
+                  includeInterrupted,
                 },
               ],
             ];
+          }
 
-          case "Compiling": {
-            const duration =
-              msg.date.getTime() - model.hotState.start.getTime();
+          if (
+            outputActions.numExecuting > 0 ||
+            outputActions.numInterrupted > 0
+          ) {
+            return [model, [cmd]];
+          }
 
-            const cmd = handleOutputActionResultToCmd(
-              msg.handleOutputActionResult
-            );
+          const errors = Compile.extractErrors(project);
 
-            if (isNonEmptyArray(outputActions.actions)) {
+          return [
+            { ...model, hotState: { tag: "Idle" }, latestEvents: [] },
+            [
+              cmd,
+              isNonEmptyArray(errors)
+                ? { tag: "PrintCompileErrors", errors }
+                : { tag: "NoCmd" },
+              {
+                tag: "HandleElmWatchStuffJsonWriteError",
+              },
+              {
+                tag: "LogInfoMessageWithTimeline",
+                message: compileFinishedMessage(duration),
+                events: model.latestEvents,
+              },
+              isNonEmptyArray(errors) && exitOnError
+                ? { tag: "ExitOnIdle" }
+                : { tag: "NoCmd" },
+            ],
+          ];
+        }
+
+        case "Restarting":
+          return outputActions.numExecuting === 0
+            ? [model, [{ tag: "Restart", restartReasons: model.latestEvents }]]
+            : [model, []];
+      }
+    }
+
+    case "InstallDependenciesDone":
+      switch (model.hotState.tag) {
+        case "Dependencies": {
+          switch (msg.installResult.tag) {
+            case "Error":
               return [
-                model,
+                { ...model, hotState: { tag: "Idle" } },
+                [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
+              ];
+
+            case "Success": {
+              return [
+                {
+                  ...model,
+                  hotState: {
+                    tag: "Compiling",
+                    start: model.hotState.start,
+                  },
+                },
                 [
-                  cmd,
                   {
                     tag: "CompileAllOutputsAsNeeded",
-                    mode: "ContinueCompilation",
-                    includeInterrupted,
+                    mode: "AfterInstallDependencies",
+                    includeInterrupted: true,
                   },
                 ],
               ];
             }
-
-            if (
-              outputActions.numExecuting > 0 ||
-              outputActions.numInterrupted > 0
-            ) {
-              return [model, [cmd]];
-            }
-
-            const errors = Compile.extractErrors(project);
-
-            return [
-              { ...model, hotState: { tag: "Idle" }, latestEvents: [] },
-              [
-                cmd,
-                isNonEmptyArray(errors)
-                  ? { tag: "PrintCompileErrors", errors }
-                  : { tag: "NoCmd" },
-                {
-                  tag: "HandleElmWatchStuffJsonWriteError",
-                },
-                {
-                  tag: "LogInfoMessageWithTimeline",
-                  message: compileFinishedMessage(duration),
-                  events: model.latestEvents,
-                },
-                isNonEmptyArray(errors) && exitOnError
-                  ? { tag: "ExitOnIdle" }
-                  : { tag: "NoCmd" },
-              ],
-            ];
           }
-
-          case "Restarting":
-            return outputActions.numExecuting === 0
-              ? [
-                  model,
-                  [{ tag: "Restart", restartReasons: model.latestEvents }],
-                ]
-              : [model, []];
         }
+
+        case "Restarting":
+          return [
+            model,
+            [{ tag: "Restart", restartReasons: model.latestEvents }],
+          ];
+
+        // istanbul ignore next
+        case "Idle":
+        // istanbul ignore next
+        case "Compiling":
+          return [
+            model,
+            [
+              {
+                tag: "Throw",
+                error: new Error(
+                  `HotState became ${model.hotState.tag} while installing dependencies!`
+                ),
+              },
+            ],
+          ];
       }
 
-      case "InstallDependenciesDone":
-        switch (model.hotState.tag) {
-          case "Dependencies": {
-            switch (msg.installResult.tag) {
-              case "Error":
-                return [
-                  { ...model, hotState: { tag: "Idle" } },
-                  [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
-                ];
+    case "WebSocketClosed":
+      return onWebSocketRelatedEventNeedingNoCompilation(
+        {
+          tag: "WebSocketClosed",
+          date: msg.date,
+          outputPath: msg.outputPath,
+        },
+        model
+      );
 
-              case "Success": {
-                return [
-                  {
-                    ...model,
-                    hotState: {
-                      tag: "Compiling",
-                      start: model.hotState.start,
-                    },
-                  },
-                  [
-                    {
-                      tag: "CompileAllOutputsAsNeeded",
-                      mode: "AfterInstallDependencies",
-                      includeInterrupted: true,
-                    },
-                  ],
-                ];
-              }
-            }
-          }
+    case "WebSocketConnected": {
+      const result = msg.parseWebSocketConnectRequestUrlResult;
 
-          case "Restarting":
-            return [
-              model,
-              [{ tag: "Restart", restartReasons: model.latestEvents }],
-            ];
-
-          // istanbul ignore next
-          case "Idle":
-          // istanbul ignore next
-          case "Compiling":
-            return [
-              model,
-              [
-                {
-                  tag: "Throw",
-                  error: new Error(
-                    `HotState became ${model.hotState.tag} while installing dependencies!`
-                  ),
-                },
-              ],
-            ];
-        }
-
-      case "WebSocketClosed":
-        return onWebSocketRelatedEventNeedingNoCompilation(
+      const onError = (errorMessage: string): [Model, Array<Cmd>] => {
+        const [newModel, cmds] = onWebSocketRelatedEventNeedingNoCompilation(
           {
-            tag: "WebSocketClosed",
+            tag: "WebSocketConnectedWithErrors",
             date: msg.date,
-            outputPath: msg.outputPath,
           },
           model
         );
-
-      case "WebSocketConnected": {
-        const result = msg.parseWebSocketConnectRequestUrlResult;
-
-        const onError = (errorMessage: string): [Model, Array<Cmd>] => {
-          const [newModel, cmds] = onWebSocketRelatedEventNeedingNoCompilation(
+        return [
+          newModel,
+          [
+            ...cmds,
             {
-              tag: "WebSocketConnectedWithErrors",
-              date: msg.date,
+              tag: "WebSocketSend",
+              webSocket: msg.webSocket,
+              message: {
+                tag: "StatusChanged",
+                status: {
+                  tag: "ClientError",
+                  message: errorMessage,
+                },
+              },
             },
-            model
+          ],
+        ];
+      };
+
+      switch (result.tag) {
+        case "Success":
+          return onWebSocketConnected(
+            msg.date,
+            model,
+            result.outputPath,
+            result.outputState,
+            result.elmCompiledTimestamp
           );
+
+        case "BadUrl":
+          return onError(
+            Errors.webSocketBadUrl(result.expectedStart, result.actualUrlString)
+          );
+
+        case "ParamsDecodeError":
+          return onError(
+            Errors.webSocketParamsDecodeError(
+              result.error,
+              result.actualUrlString
+            )
+          );
+
+        case "WrongVersion":
+          return onError(
+            Errors.webSocketWrongVersion(
+              result.expectedVersion,
+              result.actualVersion
+            )
+          );
+
+        case "TargetNotFound":
+          return onError(
+            Errors.webSocketTargetNotFound(
+              result.targetName,
+              result.enabledOutputs,
+              result.disabledOutputs
+            )
+          );
+
+        case "TargetDisabled":
+          return onError(
+            Errors.webSocketTargetDisabled(
+              result.targetName,
+              result.enabledOutputs,
+              result.disabledOutputs
+            )
+          );
+      }
+    }
+
+    case "WebSocketMessageReceived": {
+      const result = parseWebSocketToServerMessage(msg.data);
+
+      switch (result.tag) {
+        case "Success":
+          return onWebSocketToServerMessage(
+            project,
+            model,
+            msg.date,
+            msg.output,
+            msg.webSocket,
+            result.message
+          );
+
+        case "DecodeError":
           return [
-            newModel,
+            model,
             [
-              ...cmds,
               {
                 tag: "WebSocketSend",
                 webSocket: msg.webSocket,
@@ -780,132 +859,29 @@ const update =
                   tag: "StatusChanged",
                   status: {
                     tag: "ClientError",
-                    message: errorMessage,
+                    message: Errors.webSocketDecodeError(result.error),
                   },
                 },
-              },
-              {
-                tag: "SleepBeforeNextAction",
-                sleepMs: SLEEP_ON_WEBSOCKET_EVENT,
               },
             ],
           ];
-        };
-
-        switch (result.tag) {
-          case "Success": {
-            const [nextModel, cmds] = onWebSocketConnected(
-              msg.date,
-              model,
-              result.outputPath,
-              result.outputState,
-              result.elmCompiledTimestamp
-            );
-
-            return [
-              nextModel,
-              [
-                ...cmds,
-                {
-                  tag: "SleepBeforeNextAction",
-                  sleepMs: SLEEP_ON_WEBSOCKET_EVENT,
-                },
-              ],
-            ];
-          }
-
-          case "BadUrl":
-            return onError(
-              Errors.webSocketBadUrl(
-                result.expectedStart,
-                result.actualUrlString
-              )
-            );
-
-          case "ParamsDecodeError":
-            return onError(
-              Errors.webSocketParamsDecodeError(
-                result.error,
-                result.actualUrlString
-              )
-            );
-
-          case "WrongVersion":
-            return onError(
-              Errors.webSocketWrongVersion(
-                result.expectedVersion,
-                result.actualVersion
-              )
-            );
-
-          case "TargetNotFound":
-            return onError(
-              Errors.webSocketTargetNotFound(
-                result.targetName,
-                result.enabledOutputs,
-                result.disabledOutputs
-              )
-            );
-
-          case "TargetDisabled":
-            return onError(
-              Errors.webSocketTargetDisabled(
-                result.targetName,
-                result.enabledOutputs,
-                result.disabledOutputs
-              )
-            );
-        }
       }
-
-      case "WebSocketMessageReceived": {
-        const result = parseWebSocketToServerMessage(msg.data);
-
-        switch (result.tag) {
-          case "Success":
-            return onWebSocketToServerMessage(
-              project,
-              model,
-              msg.date,
-              msg.output,
-              msg.webSocket,
-              result.message
-            );
-
-          case "DecodeError":
-            return [
-              model,
-              [
-                {
-                  tag: "WebSocketSend",
-                  webSocket: msg.webSocket,
-                  message: {
-                    tag: "StatusChanged",
-                    status: {
-                      tag: "ClientError",
-                      message: Errors.webSocketDecodeError(result.error),
-                    },
-                  },
-                },
-              ],
-            ];
-        }
-      }
-
-      case "WorkerLimitTimeoutPassed":
-        return [model, [{ tag: "LimitWorkers" }]];
-
-      case "WorkersLimited":
-        return onWebSocketRelatedEventNeedingNoCompilation(
-          {
-            tag: "WorkersLimitedAfterWebSocketClosed",
-            date: msg.date,
-            numTerminatedWorkers: msg.numTerminatedWorkers,
-          },
-          model
-        );
     }
-  };
+
+    case "WorkerLimitTimeoutPassed":
+      return [model, [{ tag: "LimitWorkers" }]];
+
+    case "WorkersLimited":
+      return onWebSocketRelatedEventNeedingNoCompilation(
+        {
+          tag: "WorkersLimitedAfterWebSocketClosed",
+          date: msg.date,
+          numTerminatedWorkers: msg.numTerminatedWorkers,
+        },
+        model
+      );
+  }
+}
 
 function onWatcherEvent(
   now: Date,
@@ -2272,10 +2248,6 @@ function onWebSocketToServerMessage(
                 compilationMode: message.compilationMode,
               },
               ...cmds,
-              {
-                tag: "SleepBeforeNextAction",
-                sleepMs: SLEEP_ON_COMPILATION_MODE_CHANGE,
-              },
             ],
           ];
         }
@@ -2345,6 +2317,37 @@ function webSocketSendToOutput(
     if (webSocketConnectionIsForOutputPath(webSocketConnection, outputPath)) {
       webSocketSend(webSocketConnection.webSocket, message);
     }
+  }
+}
+
+function getNextActionSleepMs(events: Array<LatestEvent>): number {
+  return Math.max(0, ...events.map(getLatestEventSleepMs));
+}
+
+function getLatestEventSleepMs(event: LatestEvent): number {
+  switch (event.tag) {
+    // Sleep for a little bit to avoid unnecessary recompilation when using
+    // “save all” in an editor, or when running `git switch some-branch` or `git
+    // restore .`. These operations results in many files being
+    // added/changed/deleted, usually with 0-1 ms between each event.
+    case "WatcherEvent":
+      return 10;
+
+    // Also sleep for a little bit when web sockets connect and disconnect.
+    // That’s useful when there are burst connections because of multiple
+    // scripts on the same page, or many tabs with elm-watch. This is slower
+    // than file system events.
+    case "WebSocketClosed":
+    case "WebSocketConnectedNeedingCompilation":
+    case "WebSocketConnectedNeedingNoAction":
+    case "WebSocketConnectedWithErrors":
+    case "WorkersLimitedAfterWebSocketClosed":
+      return 100;
+
+    // When switching compilation mode, sleep a short amount of time so that the
+    // change feels more immediate.
+    case "WebSocketChangedCompilationMode":
+      return 10;
   }
 }
 
