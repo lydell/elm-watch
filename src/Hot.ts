@@ -882,7 +882,6 @@ function onWatcherEvent(
         case "added":
           return makeRestartNextAction(
             makeWatcherEvent(eventName, absolutePathString, now),
-            nextAction,
             project
           );
 
@@ -894,7 +893,6 @@ function onWatcherEvent(
           ) {
             return makeRestartNextAction(
               makeWatcherEvent(eventName, absolutePathString, now),
-              nextAction,
               project
             );
           }
@@ -906,7 +904,6 @@ function onWatcherEvent(
         case "added":
           return makeRestartNextAction(
             makeWatcherEvent(eventName, absolutePathString, now),
-            nextAction,
             project
           );
 
@@ -920,7 +917,6 @@ function onWatcherEvent(
           ) {
             return makeRestartNextAction(
               makeWatcherEvent(eventName, absolutePathString, now),
-              nextAction,
               project
             );
           }
@@ -975,7 +971,7 @@ function onElmFileWatcherEvent(
   const elmFile = event.file;
 
   if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
-    return makeRestartNextAction(event, nextAction, project);
+    return makeRestartNextAction(event, project);
   }
 
   const dirtyOutputs: Array<{
@@ -988,7 +984,7 @@ function onElmFileWatcherEvent(
       if (event.eventName === "removed") {
         for (const inputPath of outputState.inputs) {
           if (equalsInputPath(elmFile, inputPath)) {
-            return makeRestartNextAction(event, nextAction, project);
+            return makeRestartNextAction(event, project);
           }
         }
       }
@@ -1581,7 +1577,6 @@ function makeWatcherEvent(
 
 function makeRestartNextAction(
   event: WatcherEvent,
-  nextAction: NextAction,
   project: Project
 ): [NextAction, LatestEvent, Array<Cmd>] {
   return [
