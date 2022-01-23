@@ -756,33 +756,6 @@ function update(
     case "WebSocketConnected": {
       const result = msg.parseWebSocketConnectRequestUrlResult;
 
-      const onError = (errorMessage: string): [Model, Array<Cmd>] => {
-        const [newModel, cmds] = onWebSocketRelatedEventNeedingNoCompilation(
-          {
-            tag: "WebSocketConnectedWithErrors",
-            date: msg.date,
-          },
-          model
-        );
-        return [
-          newModel,
-          [
-            ...cmds,
-            {
-              tag: "WebSocketSend",
-              webSocket: msg.webSocket,
-              message: {
-                tag: "StatusChanged",
-                status: {
-                  tag: "ClientError",
-                  message: errorMessage,
-                },
-              },
-            },
-          ],
-        ];
-      };
-
       switch (result.tag) {
         case "Success":
           return onWebSocketConnected(
@@ -793,44 +766,32 @@ function update(
             result.elmCompiledTimestamp
           );
 
-        case "BadUrl":
-          return onError(
-            Errors.webSocketBadUrl(result.expectedStart, result.actualUrlString)
+        default: {
+          const [newModel, cmds] = onWebSocketRelatedEventNeedingNoCompilation(
+            {
+              tag: "WebSocketConnectedWithErrors",
+              date: msg.date,
+            },
+            model
           );
-
-        case "ParamsDecodeError":
-          return onError(
-            Errors.webSocketParamsDecodeError(
-              result.error,
-              result.actualUrlString
-            )
-          );
-
-        case "WrongVersion":
-          return onError(
-            Errors.webSocketWrongVersion(
-              result.expectedVersion,
-              result.actualVersion
-            )
-          );
-
-        case "TargetNotFound":
-          return onError(
-            Errors.webSocketTargetNotFound(
-              result.targetName,
-              result.enabledOutputs,
-              result.disabledOutputs
-            )
-          );
-
-        case "TargetDisabled":
-          return onError(
-            Errors.webSocketTargetDisabled(
-              result.targetName,
-              result.enabledOutputs,
-              result.disabledOutputs
-            )
-          );
+          return [
+            newModel,
+            [
+              ...cmds,
+              {
+                tag: "WebSocketSend",
+                webSocket: msg.webSocket,
+                message: {
+                  tag: "StatusChanged",
+                  status: {
+                    tag: "ClientError",
+                    message: webSocketConnectRequestUrlErrorToString(result),
+                  },
+                },
+              },
+            ],
+          ];
+        }
       }
     }
 
@@ -1853,6 +1814,41 @@ function parseWebSocketConnectRequestUrl(
     outputState: match.outputState,
     elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
   };
+}
+
+function webSocketConnectRequestUrlErrorToString(
+  error: ParseWebSocketConnectRequestUrlError
+): string {
+  switch (error.tag) {
+    case "BadUrl":
+      return Errors.webSocketBadUrl(error.expectedStart, error.actualUrlString);
+
+    case "ParamsDecodeError":
+      return Errors.webSocketParamsDecodeError(
+        error.error,
+        error.actualUrlString
+      );
+
+    case "WrongVersion":
+      return Errors.webSocketWrongVersion(
+        error.expectedVersion,
+        error.actualVersion
+      );
+
+    case "TargetNotFound":
+      return Errors.webSocketTargetNotFound(
+        error.targetName,
+        error.enabledOutputs,
+        error.disabledOutputs
+      );
+
+    case "TargetDisabled":
+      return Errors.webSocketTargetDisabled(
+        error.targetName,
+        error.enabledOutputs,
+        error.disabledOutputs
+      );
+  }
 }
 
 type ParseWebSocketToServerMessageResult =
