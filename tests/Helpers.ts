@@ -36,6 +36,8 @@ export function readFile(filePath: string): string {
 export const TEST_ENV = {
   __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
   __ELM_WATCH_MAX_PARALLEL: "2",
+  // TODO: Remove this if not needed!
+  // __ELM_WATCH_SLEEP_BEFORE_NEXT_ACTION: "10",
 };
 
 export function badElmBinEnv(dir: string): Env {

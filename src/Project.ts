@@ -62,7 +62,9 @@ export type OutputState = {
   compilationMode: CompilationMode;
   status: OutputStatus;
   allRelatedElmFilePaths: Set<string>;
-  recordFields: Set<string>;
+  // We only calculate `recordFields` in optimize mode. Having `| undefined`
+  // makes that more clear.
+  recordFields: Set<string> | undefined;
   dirty: boolean;
 };
 
@@ -98,7 +100,7 @@ export type OutputStatus =
       postprocessArray: NonEmptyArray<string>;
       code: Buffer | string;
       elmCompiledTimestamp: number;
-      recordFields: Set<string>;
+      recordFields: Set<string> | undefined;
       durations: Array<Duration>;
     }
   | {
@@ -284,7 +286,7 @@ export function initProject({
                 : persisted.compilationMode,
             status: { tag: "NotWrittenToDisk", durations: [] },
             allRelatedElmFilePaths: new Set(),
-            recordFields: new Set(),
+            recordFields: undefined,
             dirty: true,
           });
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);

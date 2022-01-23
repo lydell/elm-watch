@@ -46,6 +46,21 @@ import {
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
+// Sleep for a little bit to avoid unnecessary recompilation when using “save
+// all” in an editor, or when running `git switch some-branch` or `git restore
+// .`. These operations results in many files being added/changed/deleted,
+// usually with 0-1 ms between each event.
+const SLEEP_ON_WATCHER_EVENT = 10;
+
+// Also sleep for a little bit when web sockets connect and disconnect. That’s
+// useful when there are burst connections because of multiple scripts on the
+// same page, or many tabs with elm-watch. This is slower than file system events.
+const SLEEP_ON_WEBSOCKET_EVENT = 100;
+
+// When switching compilation mode, sleep a short amount of time so that the
+// change feels more immediate.
+const SLEEP_ON_COMPILATION_MODE_CHANGE = 10;
+
 type WatcherEventName = "added" | "changed" | "removed";
 
 export type WatcherEvent = {
@@ -259,6 +274,7 @@ type Cmd =
     }
   | {
       tag: "SleepBeforeNextAction";
+      sleepMs: number;
     }
   | {
       tag: "Throw";
@@ -571,7 +587,10 @@ const update =
             ...model,
             nextAction: updatedNextAction,
           },
-          [...cmds, { tag: "SleepBeforeNextAction" }],
+          [
+            ...cmds,
+            { tag: "SleepBeforeNextAction", sleepMs: SLEEP_ON_WATCHER_EVENT },
+          ],
         ];
       }
 
@@ -766,6 +785,10 @@ const update =
                   },
                 },
               },
+              {
+                tag: "SleepBeforeNextAction",
+                sleepMs: SLEEP_ON_WEBSOCKET_EVENT,
+              },
             ],
           ];
         };
@@ -780,7 +803,16 @@ const update =
               result.elmCompiledTimestamp
             );
 
-            return [nextModel, [...cmds, { tag: "SleepBeforeNextAction" }]];
+            return [
+              nextModel,
+              [
+                ...cmds,
+                {
+                  tag: "SleepBeforeNextAction",
+                  sleepMs: SLEEP_ON_WEBSOCKET_EVENT,
+                },
+              ],
+            ];
           }
 
           case "BadUrl":
@@ -833,6 +865,7 @@ const update =
         switch (result.tag) {
           case "Success":
             return onWebSocketToServerMessage(
+              project,
               model,
               msg.date,
               msg.output,
@@ -1141,12 +1174,8 @@ function runNextAction(
             [
               {
                 tag: "LogInfoMessageWithTimeline",
-                message: notInterestingElmFileChangedMessage(
-                  model.nextAction.events.flatMap((event) =>
-                    event.tag === "WatcherEvent"
-                      ? event
-                      : /* istanbul ignore next */ []
-                  ),
+                message: nonInterestingEventsMessage(
+                  model.nextAction.events,
                   project.disabledOutputs
                 ),
                 events: model.nextAction.events,
@@ -1460,17 +1489,13 @@ const runCmd =
         return;
 
       case "SleepBeforeNextAction":
-        // Sleep for a little bit to avoid unnecessary recompilation when using
-        // “save all” in an editor, or when running `git switch some-branch` or
-        // `git restore .`. These operations results in many files being
-        // added/changed/deleted, usually with 0-1 ms between each event.
         if (mutable.watcherTimeoutId !== undefined) {
           clearTimeout(mutable.watcherTimeoutId);
         }
         mutable.watcherTimeoutId = setTimeout(() => {
           mutable.watcherTimeoutId = undefined;
           dispatch({ tag: "SleepBeforeNextActionDone", date: getNow() });
-        }, 10);
+        }, silentlyReadIntEnvValue(env.__ELM_WATCH_SLEEP_BEFORE_NEXT_ACTION, cmd.sleepMs));
         return;
 
       // istanbul ignore next
@@ -1674,6 +1699,9 @@ function handleOutputActionResultToCmd(
 }
 
 async function closeAll(mutable: Mutable): Promise<void> {
+  if (mutable.watcherTimeoutId !== undefined) {
+    clearTimeout(mutable.watcherTimeoutId);
+  }
   await Promise.all([
     mutable.watcher.close(),
     mutable.webSocketServer.close(),
@@ -2329,19 +2357,20 @@ function onWebSocketShouldLogEvent(
 
     case "NoAction":
       return [
-        model,
-        [
-          {
-            tag: "LogInfoMessageWithTimeline",
-            message: onWebSocketShouldLogEventMessage(),
+        {
+          ...model,
+          nextAction: {
+            tag: "PrintNonInterestingEvents",
             events: [event],
           },
-        ],
+        },
+        [],
       ];
   }
 }
 
 function onWebSocketToServerMessage(
+  project: Project,
   model: Model,
   date: Date,
   output: WebSocketMessageReceivedOutput,
@@ -2372,7 +2401,10 @@ function onWebSocketToServerMessage(
                 compilationMode: message.compilationMode,
               },
               ...cmds,
-              { tag: "SleepBeforeNextAction" },
+              {
+                tag: "SleepBeforeNextAction",
+                sleepMs: SLEEP_ON_COMPILATION_MODE_CHANGE,
+              },
             ],
           ];
         }
@@ -2383,20 +2415,46 @@ function onWebSocketToServerMessage(
       return [model, [{ tag: "WebSocketUpdatePriority", webSocket }]];
 
     case "ExitRequested":
-      return [
-        model,
-        [
-          model.hotState.tag === "Idle"
-            ? { tag: "ExitOnIdle" }
-            : // istanbul ignore next
+      // istanbul ignore if
+      if (model.hotState.tag !== "Idle") {
+        return [
+          model,
+          [
+            {
+              tag: "Throw",
+              error: new Error(
+                `Got ExitRequested. Expected hotState to be Idle but it is: ${model.hotState.tag}`
+              ),
+            },
+          ],
+        ];
+      }
+
+      switch (model.nextAction.tag) {
+        case "NoAction":
+          return [model, [{ tag: "ExitOnIdle" }]];
+
+        // istanbul ignore next
+        case "Restart":
+        // istanbul ignore next
+        case "Compile":
+          return [
+            model,
+            [
               {
                 tag: "Throw",
                 error: new Error(
-                  `Got ExitRequested. Expected hotState to be Idle but it is: ${model.hotState.tag}`
+                  `Got ExitRequested. Expected nextAction to be NoAction or PrintNonInterestingEvents but it is: ${model.nextAction.tag}`
                 ),
               },
-        ],
-      ];
+            ],
+          ];
+
+        case "PrintNonInterestingEvents": {
+          const [newModel, cmds] = runNextAction(date, project, model);
+          return [newModel, [...cmds, { tag: "ExitOnIdle" }]];
+        }
+      }
   }
 }
 
@@ -2616,16 +2674,14 @@ function compileFinishedMessage(duration: number): string {
   return `Compilation finished in ${bold(duration.toString())} ms.`;
 }
 
-function notInterestingElmFileChangedMessage(
-  events: Array<WatcherEvent>,
+function nonInterestingEventsMessage(
+  events: Array<WatcherEvent | WebSocketRelatedEvent>,
   disabledOutputs: HashSet<OutputPath>
 ): string {
   const what1 = events.length === 1 ? "file is" : "files are";
   const what2 =
     disabledOutputs.size > 0 ? "any of the enabled targets" : "any target";
-  return `FYI: The above Elm ${what1} not imported by ${what2}. Nothing to do!`;
-}
-
-function onWebSocketShouldLogEventMessage(): string {
-  return "Everything up to date.";
+  return events.every((event) => event.tag === "WatcherEvent")
+    ? `FYI: The above Elm ${what1} not imported by ${what2}. Nothing to do!`
+    : "Everything up to date.";
 }

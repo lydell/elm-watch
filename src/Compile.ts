@@ -216,7 +216,7 @@ type NeedsPostprocessOutputAction = {
   priority: number;
   code: Buffer | string;
   elmCompiledTimestamp: number;
-  recordFields: Set<string>;
+  recordFields: Set<string> | undefined;
 };
 
 type QueueForElmMakeOutputAction = {
@@ -800,7 +800,7 @@ function onCompileSuccess(
             postprocessArray: postprocess.postprocessArray,
             code: buffer,
             elmCompiledTimestamp,
-            recordFields: new Set(),
+            recordFields: undefined,
             durations: appendDuration(outputState, [duration]),
           };
           updateStatusLineHelper();
@@ -873,7 +873,7 @@ function onCompileSuccess(
                 updateStatusLineHelper();
                 return { tag: "CompileError", outputPath };
               }
-              const sameRecordFields = Inject.compareRecordFields(
+              const recordFieldsChanged = Inject.recordFieldsChanged(
                 outputState.recordFields,
                 recordFields
               );
@@ -889,17 +889,17 @@ function onCompileSuccess(
                 ]),
               };
               updateStatusLineHelper();
-              return sameRecordFields
+              return recordFieldsChanged
                 ? {
+                    tag: "FullyCompiledJSButRecordFieldsChanged",
+                    outputPath,
+                  }
+                : {
                     tag: "FullyCompiledJS",
                     outputPath,
                     code: newBuffer,
                     elmCompiledTimestamp,
                     compilationMode: outputState.compilationMode,
-                  }
-                : {
-                    tag: "FullyCompiledJSButRecordFieldsChanged",
-                    outputPath,
                   };
             }
 
@@ -990,7 +990,7 @@ async function postprocessHelper({
   postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
   elmCompiledTimestamp: number;
-  recordFields: Set<string>;
+  recordFields: Set<string> | undefined;
 }): Promise<HandleOutputActionResult> {
   const startTimestamp = getNow().getTime();
 
@@ -1092,7 +1092,7 @@ async function postprocessHelper({
       updateStatusLineHelper();
       return { tag: "CompileError", outputPath };
     }
-    const sameRecordFields = Inject.compareRecordFields(
+    const recordFieldsChanged = Inject.recordFieldsChanged(
       outputState.recordFields,
       recordFields
     );
@@ -1110,17 +1110,17 @@ async function postprocessHelper({
       ]),
     };
     updateStatusLineHelper();
-    return sameRecordFields
+    return recordFieldsChanged
       ? {
+          tag: "FullyCompiledJSButRecordFieldsChanged",
+          outputPath,
+        }
+      : {
           tag: "FullyCompiledJS",
           outputPath,
           code: postprocessResult.code,
           elmCompiledTimestamp,
           compilationMode: outputState.compilationMode,
-        }
-      : {
-          tag: "FullyCompiledJSButRecordFieldsChanged",
-          outputPath,
         };
   }
 

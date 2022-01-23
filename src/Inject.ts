@@ -639,11 +639,11 @@ const RECORD_FIELD_REGEX =
 export function getRecordFields(
   compilationMode: CompilationMode,
   code: string
-): Set<string> {
+): Set<string> | undefined {
   switch (compilationMode) {
     case "debug":
     case "standard":
-      return new Set();
+      return undefined;
 
     // If the set of accessed record field names changes in optimize mode, we cannot hot reload.
     case "optimize": {
@@ -654,13 +654,17 @@ export function getRecordFields(
   }
 }
 
-export function compareRecordFields(
-  oldSet: Set<string>,
-  newSet: Set<string>
+// Only one scenario counts as changed:
+// We had a set of record fields (optimize mode), and then got a different set
+// of record fields (also in optimize mode). Mode changes (which results in
+// either side being `undefined`) does not count.
+export function recordFieldsChanged(
+  oldSet: Set<string> | undefined,
+  newSet: Set<string> | undefined
 ): boolean {
-  return (
-    // When switching from optimize to standard/optimize, count that as no change.
-    newSet.size === 0 ||
+  return !(
+    oldSet === undefined ||
+    newSet === undefined ||
     compareRecordFieldsHelper(oldSet) === compareRecordFieldsHelper(newSet)
   );
 }

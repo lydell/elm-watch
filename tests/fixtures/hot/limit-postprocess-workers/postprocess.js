@@ -8,6 +8,6 @@ async function wait(ms) {
 
 module.exports = async ([code, targetName]) => {
   // This helps with test flakiness.
-  await wait(100);
+  await wait(50);
   return code;
 };

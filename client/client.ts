@@ -656,59 +656,49 @@ function onWebSocketToClientMessage(
   msg: WebSocketToClientMessage,
   model: Model
 ): [Model, Array<Cmd>] {
-  const compilationModeChanged = (
-    compilationMode: CompilationMode
-  ): [Model, Array<Cmd>] | undefined =>
-    compilationMode !== COMPILATION_MODE
-      ? [
-          {
-            ...model,
-            status: {
-              tag: "WaitingForReload",
-              date,
-              reasons: [
-                COMPILATION_MODE === "proxy"
-                  ? "this stub file is ready to be replaced with real compiled JS."
-                  : `compilation mode changed from ${COMPILATION_MODE} to ${compilationMode}.`,
-              ],
-            },
-          },
-          [],
-        ]
-      : undefined;
-
   switch (msg.tag) {
-    case "StatusChanged": {
+    case "StatusChanged":
       return statusChanged(date, msg, model);
-    }
 
     case "SuccessfullyCompiled":
-      return (
-        compilationModeChanged(msg.compilationMode) ?? [
-          {
-            ...model,
-            elmCompiledTimestamp: msg.elmCompiledTimestamp,
-          },
-          [{ tag: "Eval", code: msg.code }],
-        ]
-      );
+      return msg.compilationMode !== COMPILATION_MODE
+        ? [
+            {
+              ...model,
+              status: {
+                tag: "WaitingForReload",
+                date,
+                reasons: [
+                  COMPILATION_MODE === "proxy"
+                    ? "this stub file is ready to be replaced with real compiled JS."
+                    : `compilation mode changed from ${COMPILATION_MODE} to ${msg.compilationMode}.`,
+                ],
+              },
+            },
+            [],
+          ]
+        : [
+            {
+              ...model,
+              elmCompiledTimestamp: msg.elmCompiledTimestamp,
+            },
+            [{ tag: "Eval", code: msg.code }],
+          ];
 
     case "SuccessfullyCompiledButRecordFieldsChanged":
-      return (
-        compilationModeChanged("optimize") ?? [
-          {
-            ...model,
-            status: {
-              tag: "WaitingForReload",
-              date,
-              reasons: [
-                `record field mangling in optimize mode was different than last time.`,
-              ],
-            },
+      return [
+        {
+          ...model,
+          status: {
+            tag: "WaitingForReload",
+            date,
+            reasons: [
+              `record field mangling in optimize mode was different than last time.`,
+            ],
           },
-          [],
-        ]
-      );
+        },
+        [],
+      ];
   }
 }
 
