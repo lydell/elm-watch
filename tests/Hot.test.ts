@@ -1288,12 +1288,13 @@ describe("hot", () => {
         switch (idle) {
           case 1:
             assert1(div);
+            await wait(100);
+            touch(roguePath);
             fs.writeFileSync(
               elmWatchJsonPath,
               elmWatchJsonString.slice(0, -10)
             );
-            touch(roguePath);
-            await wait(150);
+            await wait(100);
             fs.writeFileSync(
               elmWatchJsonPath,
               elmWatchJsonString.replace(/"postprocess":.*/, "")
@@ -1301,12 +1302,14 @@ describe("hot", () => {
             return "KeepGoing" as const;
           case 2:
             assert2(div);
+            await wait(100);
             fs.writeFileSync(elmWatchJsonPath2, "{}");
-            await wait(150);
+            await wait(100);
             fs.unlinkSync(elmWatchJsonPath2);
             return "KeepGoing";
           case 3:
             assert2(div);
+            await wait(100);
             fs.unlinkSync(elmWatchJsonPath);
             return "KeepGoing";
           default:
@@ -1339,6 +1342,13 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
       ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json
 
@@ -1571,7 +1581,9 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+         (1 more event)
+      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
       🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ Dependencies
       ✅ Dependencies
