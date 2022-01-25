@@ -2029,7 +2029,7 @@ describe("hot", () => {
     }
   });
 
-  test.skip("non interesting .elm files changed, with disabled targets", async () => {
+  test("non interesting .elm files changed, with disabled targets", async () => {
     const fixture = "non-interesting-elm-files-changed-disabled-targets";
     const unusedFolder = path.join(FIXTURES_DIR, fixture, "src", "Unused");
 
@@ -2043,6 +2043,7 @@ describe("hot", () => {
       },
       onIdle: async ({ div }) => {
         assert(div);
+        await wait(100);
         for (const filePath of fs.readdirSync(unusedFolder)) {
           await wait(8);
           touch(path.join(unusedFolder, filePath));
@@ -2069,14 +2070,10 @@ describe("hot", () => {
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain1⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
 
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain1⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
-
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain1⧘
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain1
+      ℹ️ 00:00:00 Web socket connected for: HtmlMain1⧘
       ✅ ⧙00:00:00⧘ Everything up to date.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
@@ -2107,7 +2104,7 @@ describe("hot", () => {
     }
   });
 
-  test.skip("non interesting .elm files changed, with all targets enabled", async () => {
+  test("non interesting .elm files changed, with all targets enabled", async () => {
     const fixture = "non-interesting-elm-files-changed-all-targets";
     const unusedFile1 = path.join(FIXTURES_DIR, fixture, "src", "Unused.elm");
 
@@ -2121,6 +2118,7 @@ describe("hot", () => {
       },
       onIdle: async ({ div }) => {
         assert(div);
+        await wait(100);
         touch(unusedFile1);
         await wait(100);
         return "Stop" as const;
@@ -2144,14 +2142,10 @@ describe("hot", () => {
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
 
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
-
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
       ✅ ⧙00:00:00⧘ Everything up to date.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
