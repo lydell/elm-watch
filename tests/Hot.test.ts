@@ -2435,18 +2435,16 @@ describe("hot", () => {
     }
   });
 
-  test.skip("limit postprocess workers", async () => {
-    let now = 0;
-    const timeout = 50;
+  test("limit postprocess workers", async () => {
     const { terminal } = await run({
       fixture: "limit-postprocess-workers",
       args: [],
       scripts: ["One.js", "Two.js"],
       isTTY: false,
       env: {
-        __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS: timeout.toString(),
+        __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS: "150",
       },
-      getNow: () => new Date((now += timeout)),
+      getNow: () => new Date(),
       init: (node) => {
         const node1 = document.createElement("div");
         const node2 = document.createElement("div");
@@ -2459,8 +2457,9 @@ describe("hot", () => {
           case 1:
             return "KeepGoing"; // First script has loaded.
           default:
+            await wait(100);
             await window.__ELM_WATCH_KILL_MATCHING(/^Two$/);
-            await wait(timeout * 2); // Wait for the worker to be killed.
+            await wait(200); // Wait for the worker to be killed.
             return "Stop";
         }
       },
@@ -2500,44 +2499,23 @@ describe("hot", () => {
       ✅ ⧙11:11:11⧘ Compilation finished in (timings)
 
       📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
 
-      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
+      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two
+         (2 more events)
+      ℹ️ 11:11:11 Web socket connected for: Two⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:11111)⧘
-
-      ⧙ℹ️ 11:11:11 Web socket disconnected for: One⧘
-      ✅ ⧙11:11:11⧘ Everything up to date.
-
-      📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
 
-      ⧙ℹ️ 11:11:11 Web socket connected for: One⧘
+      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
 
       ⧙ℹ️ 11:11:11 Terminated 1 superfluous worker⧘
-      ✅ ⧙11:11:11⧘ Everything up to date.
-
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
-
-      ⧙ℹ️ 11:11:11 Web socket connected for: Two⧘
-      ✅ ⧙11:11:11⧘ Everything up to date.
-
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
-
-      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
-      ✅ ⧙11:11:11⧘ Everything up to date.
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:11111)⧘
-
-      ⧙ℹ️ 11:11:11 Web socket disconnected for: One⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
     `);
   });
