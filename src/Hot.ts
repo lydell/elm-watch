@@ -1332,7 +1332,7 @@ const runCmd =
         mutable.watcherTimeoutId = setTimeout(() => {
           mutable.watcherTimeoutId = undefined;
           dispatch({ tag: "SleepBeforeNextActionDone", date: getNow() });
-        }, silentlyReadIntEnvValue(env.__ELM_WATCH_SLEEP_BEFORE_NEXT_ACTION, cmd.sleepMs));
+        }, cmd.sleepMs);
         return;
 
       // istanbul ignore next
