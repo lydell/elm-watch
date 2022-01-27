@@ -199,8 +199,13 @@ async function run({
     let idle = 0;
     window.__ELM_WATCH_ON_REACHED_IDLE_STATE = (reason) => {
       idle++;
-      Promise.resolve(onIdle({ idle, div: outerDiv, body, reason })).then(
-        (result) => {
+      // So that another idle state can’t change the previous’ number while it’s waiting.
+      const localIdle = idle;
+      // Wait for logs to settle. This file is pretty slow to run through
+      // anyway, so this wait is just a drop in the ocean.
+      wait(100)
+        .then(() => onIdle({ idle: localIdle, div: outerDiv, body, reason }))
+        .then((result) => {
           switch (result) {
             case "KeepGoing":
               return;
@@ -208,9 +213,7 @@ async function run({
               window.__ELM_WATCH_EXIT();
               return;
           }
-        },
-        reject
-      );
+        }, reject);
     };
 
     const watcher = fs.watch(build, () => {
@@ -1288,7 +1291,6 @@ describe("hot", () => {
         switch (idle) {
           case 1:
             assert1(div);
-            await wait(100);
             touch(roguePath);
             fs.writeFileSync(
               elmWatchJsonPath,
@@ -1302,14 +1304,12 @@ describe("hot", () => {
             return "KeepGoing" as const;
           case 2:
             assert2(div);
-            await wait(100);
             fs.writeFileSync(elmWatchJsonPath2, "{}");
             await wait(100);
             fs.unlinkSync(elmWatchJsonPath2);
             return "KeepGoing";
           case 3:
             assert2(div);
-            await wait(100);
             fs.unlinkSync(elmWatchJsonPath);
             return "KeepGoing";
           default:
@@ -1545,6 +1545,12 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
       ⏳ Dependencies
       ⛔️ Dependencies
       ⏳ HtmlMain: elm make
@@ -1581,9 +1587,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-         (1 more event)
-      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
       🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ Dependencies
       ✅ Dependencies
@@ -1755,6 +1759,13 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -1780,9 +1791,7 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-         (1 more event)
-      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
       🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
@@ -1927,6 +1936,12 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
+      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
       ⏳ HtmlMain: elm make
       🚨 HtmlMain
 
@@ -1945,9 +1960,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-         (1 more event)
-      ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
       🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
@@ -2043,7 +2056,6 @@ describe("hot", () => {
       },
       onIdle: async ({ div }) => {
         assert(div);
-        await wait(100);
         for (const filePath of fs.readdirSync(unusedFolder)) {
           await wait(8);
           touch(path.join(unusedFolder, filePath));
@@ -2118,7 +2130,6 @@ describe("hot", () => {
       },
       onIdle: async ({ div }) => {
         assert(div);
-        await wait(100);
         touch(unusedFile1);
         await wait(100);
         return "Stop" as const;
@@ -2278,6 +2289,12 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
+      ℹ️ 00:00:00 Web socket connected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
@@ -2289,8 +2306,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-         (2 more events)
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm
       ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
     `);
@@ -2380,6 +2396,13 @@ describe("hot", () => {
 
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙elm-watch-node workers:⧘ 1
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
+      ℹ️ 00:00:00 Web socket connected for: Main⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
@@ -2392,8 +2415,7 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-         (2 more events)
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm
       ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
     `);
@@ -2457,7 +2479,6 @@ describe("hot", () => {
           case 1:
             return "KeepGoing"; // First script has loaded.
           default:
-            await wait(100);
             await window.__ELM_WATCH_KILL_MATCHING(/^Two$/);
             await wait(200); // Wait for the worker to be killed.
             return "Stop";
@@ -2762,6 +2783,14 @@ describe("hot", () => {
       ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main3
       ℹ️ 00:00:00 Web socket connected needing compilation of: Main4⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+
+      📊 ⧙elm-watch-node workers:⧘ 2
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main4
+         (2 more events)
+      ℹ️ 00:00:00 Web socket connected for: Main4⧘
+      ✅ ⧙00:00:00⧘ Everything up to date.
       ⏳ Main3: elm make
       ⚪️ Main4: queued
       ⚪️ Main1: queued
@@ -2781,9 +2810,7 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main4
-         (3 more events)
-      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
+      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
       ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
       ⏳ Main4: elm make
       🟢 Main4: elm make done
