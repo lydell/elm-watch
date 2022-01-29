@@ -50,10 +50,10 @@ const mainReplacements: Array<Replacement> = [
         search:
           /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
         replace: `
-function _Platform_initialize(programType, flagDecoder, args, init, impl, stepperBuilder)
+function _Platform_initialize(programType, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
   if (args === "__elmWatchReturnImpl") {
-    return [impl, programType];
+    return [impl, debugMetadata, programType];
   }
 
   var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
@@ -84,7 +84,7 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
   setUpdateAndSubscriptions();
   _Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-  function __elmWatchHotReload(newImpl, new_Platform_effectManagers, new_Scheduler_enqueue) {
+  function __elmWatchHotReload(newImpl, newDebugMetadata, new_Platform_effectManagers, new_Scheduler_enqueue, moduleName) {
     _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
     _Scheduler_enqueue = new_Scheduler_enqueue;
 
@@ -110,15 +110,21 @@ function _Platform_initialize(programType, flagDecoder, args, init, impl, steppe
       }
     }
 
+    if (!_Utils_eq_elmWatchInternal(debugMetadata, newDebugMetadata)) {
+      return { tag: "ReloadPage", reason: "the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).' };
+    }
     init = impl.%init% || impl._impl.%init%;
+    if (typeof $elm$browser$Debugger$Main$wrapInit !== "undefined") {
+      init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newDebugMetadata), initPair.a.popout, init);
+    }
     var newInitPair;
     try {
       newInitPair = init(result.a);
     } catch (error) {
-      return { tag: "ReloadPage", reason: "failed to run with the same flags as last time. The idea is to try to run with new flags!\\nThis is the error:\\n" + error };
+      return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` failed to run with the same flags as last time. The idea is to try to run with new flags!\\nThis is the error:\\n" + error };
     }
     if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
-      return { tag: "ReloadPage", reason: "returned something different than last time. Let's start fresh!" };
+      return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!" };
     }
 
     setUpdateAndSubscriptions();
@@ -223,7 +229,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
   var programType = "Html";
 
   if (args === "__elmWatchReturnImpl") {
-    return [virtualNode, programType];
+    return [virtualNode, debugMetadata, programType];
   }
 
   var node = args && args['node'] ? args['node'] : _Debug_crash(0);
@@ -279,7 +285,8 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         if ("__elmWatchApps" in obj) {
           var result = exports.init("__elmWatchReturnImpl");
           var newImpl = result[0];
-          var programType = result[1];
+          var newDebugMetadata = result[1];
+          var programType = result[2];
           for (var index = 0; index < obj.__elmWatchApps.length; index++) {
             var app = obj.__elmWatchApps[index];
             if (app.__elmWatchProgramType !== programType) {
@@ -287,12 +294,12 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
             } else {
               var result;
               try {
-                result = app.__elmWatchHotReload(newImpl, _Platform_effectManagers, _Scheduler_enqueue);
+                result = app.__elmWatchHotReload(newImpl, newDebugMetadata, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
                 switch (result.tag) {
                   case "Success":
                     break;
                   case "ReloadPage":
-                    reloadReasons.push("\`" + moduleName + ".init\` " + result.reason);
+                    reloadReasons.push(result.reason);
                     break;
                 }
               } catch (error) {
@@ -381,7 +388,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   // `_Browser_application` calls `_Browser_document`/`_Debugger_document`.
   // `$elm$browser$Browser$sandbox` calls `_Browser_element`/`_Debugger_element`.
   // In those cases we need `impl._impl`.
-  // Also pass the type of program to `_Platform_initialize`.
+  // Also pass the type of program and the `debugMetadata` to `_Platform_initialize`.
   {
     probe:
       /^var (?:_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =/m,
@@ -399,7 +406,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&"Platform.worker",`,
+        replace: `$&"Platform.worker", debugMetadata,`,
       },
     ],
   },
@@ -409,7 +416,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&impl._impl ? "Browser.sandbox" : "Browser.element",`,
+        replace: `$&impl._impl ? "Browser.sandbox" : "Browser.element", debugMetadata,`,
       },
     ],
   },
@@ -419,7 +426,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&impl._impl ? "Browser.application" : "Browser.document",`,
+        replace: `$&impl._impl ? "Browser.application" : "Browser.document", debugMetadata,`,
       },
     ],
   },
