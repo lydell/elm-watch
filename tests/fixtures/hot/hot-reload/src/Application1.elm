@@ -1,4 +1,4 @@
-port module Application1 exposing (main)
+module Application1 exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
@@ -8,21 +8,12 @@ import Html.Events
 import Url exposing (Url)
 
 
-port toJs : Int -> Cmd msg
-
-
-port fromJs : (Int -> msg) -> Sub msg
-
-
-port terminate : (() -> msg) -> Sub msg
-
-
 type Msg
     = PushUrlButtonClicked
-    | OriginalFromJs Int
     | OriginalUrlRequested Browser.UrlRequest
     | OriginalUrlChanged Url
-    | Terminate
+    | NewUrlRequested Browser.UrlRequest
+    | NewUrlChanged Url
 
 
 type alias Model =
@@ -32,10 +23,6 @@ type alias Model =
     , originalUrlChanged : Int
     , newUrlRequested : Int
     , newUrlChanged : Int
-    , browserOnClick : Int
-    , originalFromJs : List Int
-    , newFromJs : List Int
-    , terminated : Bool
     }
 
 
@@ -47,10 +34,6 @@ init () url key =
       , originalUrlChanged = 0
       , newUrlRequested = 0
       , newUrlChanged = 0
-      , browserOnClick = 0
-      , originalFromJs = []
-      , newFromJs = []
-      , terminated = False
       }
     , Cmd.none
     )
@@ -61,9 +44,6 @@ update msg model =
     case msg of
         PushUrlButtonClicked ->
             ( model, Nav.pushUrl model.key "/push" )
-
-        OriginalFromJs int ->
-            ( { model | originalFromJs = int :: model.originalFromJs }, toJs (int * 2) )
 
         OriginalUrlRequested urlRequest ->
             case urlRequest of
@@ -80,27 +60,32 @@ update msg model =
             , Cmd.none
             )
 
-        Terminate ->
-            ( { model | terminated = True }, Nav.pushUrl model.key "/" )
+        NewUrlRequested urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( { model | newUrlRequested = model.newUrlRequested + 1 }
+                    , Nav.pushUrl model.key (Url.toString url)
+                    )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        NewUrlChanged url ->
+            ( { model | url = url, newUrlChanged = model.newUrlChanged + 1 }
+            , Cmd.none
+            )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if model.terminated then
-        Sub.none
-
-    else
-        Sub.batch
-            [ fromJs OriginalFromJs
-            , terminate (\() -> Terminate)
-            ]
+    Sub.none
 
 
 view : Model -> Browser.Document Msg
 view model =
     { title = "Application"
     , body =
-        [ Html.div []
+        [ Html.main_ []
             [ Html.h1 [ Html.Attributes.class "probe" ] [ Html.text "Before hot reload" ]
             , Html.a [ Html.Attributes.href "/link" ] [ Html.text "Link" ]
             , Html.button [ Html.Events.onClick PushUrlButtonClicked ] [ Html.text "Button" ]
@@ -113,25 +98,13 @@ view model =
 modelToString : Model -> String
 modelToString model =
     [ ( "url", Url.toString model.url )
-    , ( "originalFromJs", fromJsToString model.originalFromJs )
     , ( "originalUrlRequested", String.fromInt model.originalUrlRequested )
     , ( "originalUrlChanged", String.fromInt model.originalUrlChanged )
-    , ( "newFromJs", fromJsToString model.newFromJs )
     , ( "newUrlRequested", String.fromInt model.newUrlRequested )
     , ( "newUrlChanged", String.fromInt model.newUrlChanged )
-    , ( "browserOnClick", String.fromInt model.browserOnClick )
     ]
         |> List.map (\( key, value ) -> key ++ ": " ++ value)
         |> String.join "\n"
-
-
-fromJsToString : List Int -> String
-fromJsToString list =
-    let
-        content =
-            list |> List.map String.fromInt |> String.join ", "
-    in
-    "[" ++ content ++ "]"
 
 
 main : Program () Model Msg

@@ -453,6 +453,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 describe("hot", () => {
   beforeEach(() => {
     document.getElementById(CONTAINER_ID)?.remove();
+    window.history.replaceState(null, "", "/");
   });
 
   test("successful connect (collapsed)", async () => {
@@ -739,7 +740,7 @@ describe("hot", () => {
 
       I wrote that to this file so you can inspect it:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-8efca6152c767035f48b52d5a11252398f87445b381bbf8f224d5264fd33b139.txt
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-1cef2ae8d6462de725789672822191e1c18ea8413009cbb627ff3b754a82a1df.txt
 
       🚨 ⧙1⧘ error found
 
@@ -3088,6 +3089,117 @@ describe("hot", () => {
             <main><h1 class="probe">After hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 1
             newButtonClicked: 1
+            </pre></main>
+          `);
+        }
+      }
+    );
+
+    test.each(["standard", "debug", "optimize"] as const)(
+      "Application URL messages change: %s",
+      async (compilationMode) => {
+        const { replace, go } = runHotReload({
+          name: "Application",
+          programType: "Application",
+          compilationMode,
+        });
+
+        const { browserConsole } = await go(async ({ idle, main }) => {
+          switch (idle) {
+            case 1:
+              await assertInit(main);
+              replace((content) =>
+                content
+                  .replace("Before hot reload", "After hot reload")
+                  .replace(
+                    "onUrlRequest = OriginalUrlRequested",
+                    "onUrlRequest = NewUrlRequested"
+                  )
+                  .replace(
+                    "onUrlChange = OriginalUrlChanged",
+                    "onUrlChange = NewUrlChanged"
+                  )
+              );
+              return "KeepGoing";
+            default:
+              await assertHotReload(main);
+              return "Stop";
+          }
+        });
+
+        expect(browserConsole).toMatchInlineSnapshot(`
+          elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+          (target: Application)
+        `);
+
+        async function assertInit(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+            url: http://localhost/
+            originalUrlRequested: 0
+            originalUrlChanged: 0
+            newUrlRequested: 0
+            newUrlChanged: 0
+            </pre></main>
+          `);
+
+          click(main, "a");
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+            url: http://localhost/link
+            originalUrlRequested: 1
+            originalUrlChanged: 1
+            newUrlRequested: 0
+            newUrlChanged: 0
+            </pre></main>
+          `);
+
+          click(main, "button");
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+            url: http://localhost/push
+            originalUrlRequested: 1
+            originalUrlChanged: 2
+            newUrlRequested: 0
+            newUrlChanged: 0
+            </pre></main>
+          `);
+        }
+
+        async function assertHotReload(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+            url: http://localhost/push
+            originalUrlRequested: 1
+            originalUrlChanged: 2
+            newUrlRequested: 0
+            newUrlChanged: 0
+            </pre></main>
+          `);
+
+          click(main, "a");
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+            url: http://localhost/link
+            originalUrlRequested: 1
+            originalUrlChanged: 2
+            newUrlRequested: 1
+            newUrlChanged: 1
+            </pre></main>
+          `);
+
+          click(main, "button");
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
+            url: http://localhost/push
+            originalUrlRequested: 1
+            originalUrlChanged: 2
+            newUrlRequested: 1
+            newUrlChanged: 2
             </pre></main>
           `);
         }

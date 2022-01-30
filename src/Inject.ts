@@ -60,6 +60,8 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
   var flagResult = A2(_Json_run, flagDecoder, flags);
   $elm$core$Result$isOk(flagResult) || _Debug_crash(2 /**/, _Json_errorToString(flagResult.a) /**/);
   var managers = {};
+  var initUrl = typeof _Browser_getUrl === "undefined" ? undefined : _Browser_getUrl();
+  window.__ELM_WATCH_INIT_URL = initUrl;
   var initPair = init(flagResult.a);
   var model = initPair.a;
   var stepper = stepperBuilder(sendToApp, model);
@@ -122,6 +124,7 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
     if (typeof $elm$browser$Debugger$Main$wrapInit !== "undefined") {
       init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
     }
+    window.__ELM_WATCH_INIT_URL = initUrl;
     var newInitPair = init(newFlagResult.a);
     if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
       return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!" };
@@ -326,13 +329,14 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   },
 
   // ### _Browser_application
-  // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`. Always init with the same URL.
+  // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`. Init
+  // with URL given from `_Platform_initialize` (via `window.__ELM_WATCH_INIT_URL`).
   {
     probe: /^function _Browser_application\(/m,
     replacements: [
       {
         search: /^(\s*)var onUrlChange = impl\.%onUrlChange%;/m,
-        replace: `$1var initUrl;`,
+        replace: ``,
       },
       {
         search: /^\s*var onUrlRequest = impl\.%onUrlRequest%;/m,
@@ -350,7 +354,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search:
           /^(\s*)return A3\(impl\.%init%, flags, _Browser_getUrl\(\), key\);/m,
-        replace: `$1return A3(impl.%init%, flags, initUrl || (initUrl = _Browser_getUrl()), key);`,
+        replace: `$1return A3(impl.%init%, flags, window.__ELM_WATCH_INIT_URL, key);`,
       },
       {
         search:
