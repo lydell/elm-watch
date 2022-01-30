@@ -6,6 +6,12 @@
             ],
             "output": "build/HtmlMain.js"
         },
+        "DomAndMsgChange": {
+            "inputs": [
+                "src/DomAndMsgChange.elm"
+            ],
+            "output": "build/DomAndMsgChange.js"
+        },
         "Sandbox": {
             "inputs": [
                 "src/Sandbox.elm"
