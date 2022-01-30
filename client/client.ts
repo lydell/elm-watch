@@ -835,7 +835,7 @@ const runCmd =
             dispatch({
               tag: "EvalNeedsReload",
               date: getNow(),
-              reasons: unknownError.message.split("\n").slice(1),
+              reasons: unknownError.message.split("\n\n---\n\n").slice(1),
             });
           } else {
             void Promise.reject(unknownError);
@@ -1039,7 +1039,7 @@ function reloadPageIfNeeded(): void {
     const first = reasons[0];
     const [separator, reasonString] =
       reasons.length === 1 && first !== undefined && first[1].length === 1
-        ? [" ", `${first[1].join("")} (${first[0]})`]
+        ? [" ", `${first[1].join("")}\n(target: ${first[0]})`]
         : [
             ":\n\n",
             reasons

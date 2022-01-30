@@ -52,14 +52,15 @@ const mainReplacements: Array<Replacement> = [
         replace: `
 function _Platform_initialize(programType, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
-  if (args === "__elmWatchReturnImpl") {
-    return [impl, debugMetadata, programType];
+  if (args === "__elmWatchReturnData") {
+    return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType };
   }
 
-  var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
-  $elm$core$Result$isOk(result) || _Debug_crash(2 /**/, _Json_errorToString(result.a) /**/);
+  var flags = _Json_wrap(args ? args['flags'] : undefined);
+  var flagResult = A2(_Json_run, flagDecoder, flags);
+  $elm$core$Result$isOk(flagResult) || _Debug_crash(2 /**/, _Json_errorToString(flagResult.a) /**/);
   var managers = {};
-  var initPair = init(result.a);
+  var initPair = init(flagResult.a);
   var model = initPair.a;
   var stepper = stepperBuilder(sendToApp, model);
   var ports = _Platform_setupEffects(managers, sendToApp);
@@ -84,7 +85,7 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
   setUpdateAndSubscriptions();
   _Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-  function __elmWatchHotReload(newImpl, newDebugMetadata, new_Platform_effectManagers, new_Scheduler_enqueue, moduleName) {
+  function __elmWatchHotReload(newData, new_Platform_effectManagers, new_Scheduler_enqueue, moduleName) {
     _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
     _Scheduler_enqueue = new_Scheduler_enqueue;
 
@@ -100,29 +101,28 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
       }
     }
 
-    for (var key in newImpl) {
+    for (var key in newData.impl) {
       if (key === "_impl" && impl._impl) {
-        for (var subKey in newImpl[key]) {
-          impl._impl[subKey] = newImpl[key][subKey];
+        for (var subKey in newData.impl[key]) {
+          impl._impl[subKey] = newData.impl[key][subKey];
         }
       } else {
-        impl[key] = newImpl[key];
+        impl[key] = newData.impl[key];
       }
     }
 
-    if (!_Utils_eq_elmWatchInternal(debugMetadata, newDebugMetadata)) {
+    var newFlagResult = A2(_Json_run, newData.flagDecoder, flags);
+    if (!$elm$core$Result$isOk(newFlagResult)) {
+      return { tag: "ReloadPage", reason: "the flags type in \`" + moduleName + "\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\\nThis is the error:\\n" + _Json_errorToString(newFlagResult.a) };
+    }
+    if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
       return { tag: "ReloadPage", reason: "the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).' };
     }
     init = impl.%init% || impl._impl.%init%;
     if (typeof $elm$browser$Debugger$Main$wrapInit !== "undefined") {
-      init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newDebugMetadata), initPair.a.popout, init);
+      init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
     }
-    var newInitPair;
-    try {
-      newInitPair = init(result.a);
-    } catch (error) {
-      return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` failed to run with the same flags as last time. The idea is to try to run with new flags!\\nThis is the error:\\n" + error };
-    }
+    var newInitPair = init(newFlagResult.a);
     if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
       return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!" };
     }
@@ -228,8 +228,8 @@ function _Utils_typeof_elmWatchInternal(x) {
 var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args) {
   var programType = "Html";
 
-  if (args === "__elmWatchReturnImpl") {
-    return [virtualNode, debugMetadata, programType];
+  if (args === "__elmWatchReturnData") {
+    return { virtualNode: virtualNode, programType: programType };
   }
 
   var node = args && args['node'] ? args['node'] : _Debug_crash(0);
@@ -238,10 +238,10 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
   node = nextNode;
   var sendToApp = function() {};
 
-  function __elmWatchHotReload(newVirtualNode) {
-    var patches = _VirtualDom_diff(virtualNode, newVirtualNode);
+  function __elmWatchHotReload(newData) {
+    var patches = _VirtualDom_diff(virtualNode, newData.virtualNode);
     node = _VirtualDom_applyPatches(node, virtualNode, patches, sendToApp);
-    virtualNode = newVirtualNode;
+    virtualNode = newData.virtualNode;
     return { tag: "Success" };
   }
 
@@ -272,7 +272,7 @@ function _Platform_export(exports) {
   if (result.errored) { 
     throw new Error("elm-watch: Encountered errors on load or hot reload. See earlier errors in the console.");
   } else if (result.reloadReasons.length > 0) {
-    throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(result.reloadReasons))).join("\\n"));
+    throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(result.reloadReasons))).join("\\n\\n---\\n\\n"));
   }
 }
 
@@ -283,18 +283,15 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
     if (name === "init") {
       if ("init" in obj) {
         if ("__elmWatchApps" in obj) {
-          var result = exports.init("__elmWatchReturnImpl");
-          var newImpl = result[0];
-          var newDebugMetadata = result[1];
-          var programType = result[2];
+          var data = exports.init("__elmWatchReturnData");
           for (var index = 0; index < obj.__elmWatchApps.length; index++) {
             var app = obj.__elmWatchApps[index];
-            if (app.__elmWatchProgramType !== programType) {
-              reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + programType + "\`.");
+            if (app.__elmWatchProgramType !== data.programType) {
+              reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + data.programType + "\`.");
             } else {
               var result;
               try {
-                result = app.__elmWatchHotReload(newImpl, newDebugMetadata, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
+                result = app.__elmWatchHotReload(data, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
                 switch (result.tag) {
                   case "Success":
                     break;

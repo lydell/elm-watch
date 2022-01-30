@@ -745,7 +745,7 @@ describe("hot", () => {
 
       I wrote that to this file so you can inspect it:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-7ba39783d194ebbae1e36c1907ecda006ae041848cd2e58db170aaf9c6e00a69.txt
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-556f8a91451abc72a643700aade840fcaa730bca94e60a500711627133259700.txt
 
       🚨 ⧙1⧘ error found
 
@@ -3027,17 +3027,23 @@ describe("hot", () => {
       });
 
       expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS. (Sandbox)
+        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+        (target: Sandbox)
 
-        elm-watch: I did a full page reload because compilation mode changed from standard to debug. (Sandbox)
+        elm-watch: I did a full page reload because compilation mode changed from standard to debug.
+        (target: Sandbox)
 
-        elm-watch: I did a full page reload because the message type in \`Elm.Sandbox\` changed in debug mode ("debug metadata" changed). (Sandbox)
+        elm-watch: I did a full page reload because the message type in \`Elm.Sandbox\` changed in debug mode ("debug metadata" changed).
+        (target: Sandbox)
 
-        elm-watch: I did a full page reload because the message type in \`Elm.Sandbox\` changed in debug mode ("debug metadata" changed). (Sandbox)
+        elm-watch: I did a full page reload because the message type in \`Elm.Sandbox\` changed in debug mode ("debug metadata" changed).
+        (target: Sandbox)
 
-        elm-watch: I did a full page reload because compilation mode changed from debug to optimize. (Sandbox)
+        elm-watch: I did a full page reload because compilation mode changed from debug to optimize.
+        (target: Sandbox)
 
-        elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time. (Sandbox)
+        elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
+        (target: Sandbox)
       `);
 
       async function assertInit(div: HTMLDivElement): Promise<void> {
