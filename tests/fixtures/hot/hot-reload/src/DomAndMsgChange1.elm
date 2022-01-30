@@ -54,7 +54,7 @@ viewDocument model =
 
 view : Model -> Html Msg
 view model =
-    Html.div []
+    Html.main_ []
         [ Html.h1 [ Html.Attributes.class "probe" ] [ Html.text "Before hot reload" ]
         , Html.button [ Html.Events.onClick OriginalButtonClicked ] [ Html.text "Button" ]
         , Html.pre [] [ Html.text ("\n" ++ modelToString model ++ "\n") ]

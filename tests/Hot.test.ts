@@ -10,6 +10,7 @@ import {
   UppercaseLetter,
 } from "../client/client";
 import { elmWatchCli } from "../src";
+import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Helpers";
 import { CompilationMode, GetNow } from "../src/Types";
 import {
@@ -35,6 +36,7 @@ let bodyCounter = 0;
 type OnIdle = (params: {
   idle: number;
   div: HTMLDivElement;
+  main: HTMLElement;
   body: HTMLBodyElement;
   reason: ReachedIdleStateReason;
 }) => OnIdleResult | Promise<OnIdleResult>;
@@ -127,7 +129,10 @@ async function run({
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
           // - Lets us make a few replacements for Jest.
-          const newScript = script.replace(/\.(\w+)$/, `.${loads}.$1`);
+          const newScript = script.replace(
+            /\.(\w+)$/,
+            `.${bodyIndex}.${loads}.$1`
+          );
           const content = fs
             .readFileSync(script, "utf8")
             .replace(/\(this\)\);\s*$/, "(window));")
@@ -201,10 +206,16 @@ async function run({
       idle++;
       // So that another idle state can’t change the previous’ number while it’s waiting.
       const localIdle = idle;
+      const actualMain = body.querySelector("main");
+      const fallbackMain = document.createElement("main");
+      fallbackMain.textContent = "No `main` element found.";
+      const main = actualMain ?? fallbackMain;
       // Wait for logs to settle. This file is pretty slow to run through
       // anyway, so this wait is just a drop in the ocean.
       wait(100)
-        .then(() => onIdle({ idle: localIdle, div: outerDiv, body, reason }))
+        .then(() =>
+          onIdle({ idle: localIdle, div: outerDiv, main, body, reason })
+        )
         .then((result) => {
           switch (result) {
             case "KeepGoing":
@@ -389,24 +400,6 @@ function shouldAddNewline(node: Node): boolean {
   }
 }
 
-function htmlWithoutDebugger(element: HTMLElement): string {
-  if (
-    element.lastElementChild instanceof HTMLDivElement &&
-    element.lastElementChild.style.position === "fixed"
-  ) {
-    const clone = element.cloneNode(true);
-    if (clone instanceof HTMLElement && clone.lastElementChild !== null) {
-      clone.removeChild(clone.lastElementChild);
-      return clone.outerHTML;
-    }
-    throw new Error(
-      "element.cloneNode(true) didn’t return an HTMLElement with a lastElementChild."
-    );
-  } else {
-    return element.outerHTML;
-  }
-}
-
 function failInit(): never {
   throw new Error("Expected `init` not to be called!");
 }
@@ -483,9 +476,10 @@ describe("hot", () => {
       ✅ ⧙00:00:00⧘ Everything up to date.
     `);
 
-    expect(browserConsole).toMatchInlineSnapshot(
-      `elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS. (Html)`
-    );
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+      (target: Html)
+    `);
 
     expect(renders).toMatchInlineSnapshot(`
       ▼ 🔌 00:00:00 Html
@@ -2827,10 +2821,22 @@ describe("hot", () => {
   // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
   // That results in a much better debugging experience (fewer timeouts).
   describe("hot reloading", () => {
-    function runHotReload({ name }: { name: `${UppercaseLetter}${string}` }): {
-      write: (n: number) => void;
+    function runHotReload({
+      name,
+      programType,
+      compilationMode,
+    }: {
+      name: `${UppercaseLetter}${string}`;
+      programType:
+        | "Application"
+        | "Document"
+        | "Element"
+        | "Html"
+        | "Sandbox"
+        | "Worker";
+      compilationMode: CompilationMode;
+    }): {
       replace: (f: (fileContent: string) => string) => void;
-      replaceOld: (options: { search: RegExp; replace: string }) => void;
       removeInput: () => void;
       sendToElm: (value: number) => void;
       terminate: () => void;
@@ -2838,7 +2844,21 @@ describe("hot", () => {
       go: (onIdle: OnIdle) => ReturnType<typeof run>;
     } {
       const fixture = "hot-reload";
-      const src = path.join(FIXTURES_DIR, fixture, "src");
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const src = path.join(dir, "src");
+
+      const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
+        port: 58888,
+        targets:
+          compilationMode === "standard"
+            ? {}
+            : {
+                [name]: {
+                  compilationMode,
+                },
+              },
+      };
+
       let lastContent = "";
 
       const write = (n: number): void => {
@@ -2846,20 +2866,14 @@ describe("hot", () => {
           path.join(src, `${name}${n}.elm`),
           "utf8"
         );
-        lastContent = content.replace(`module ${name}${n}`, `module ${name}`);
+        lastContent = content
+          .replace(`module ${name}${n}`, `module ${name}`)
+          .replace(/^(main =\s*)\w+$/m, `$1main${programType}`);
         fs.writeFileSync(path.join(src, `${name}.elm`), lastContent);
       };
 
       const replace = (f: (fileContent: string) => string): void => {
         lastContent = f(lastContent);
-        fs.writeFileSync(path.join(src, `${name}.elm`), lastContent);
-      };
-
-      const replaceOld = (options: {
-        search: RegExp;
-        replace: string;
-      }): void => {
-        lastContent = lastContent.replace(options.search, options.replace);
         fs.writeFileSync(path.join(src, `${name}.elm`), lastContent);
       };
 
@@ -2887,19 +2901,25 @@ describe("hot", () => {
       };
 
       return {
-        write,
         replace,
-        replaceOld,
         removeInput,
         sendToElm,
         terminate,
         lastValueFromElm,
-        go: (onIdle: OnIdle) =>
-          run({
+        go: (onIdle: OnIdle) => {
+          fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
+          fs.writeFileSync(
+            path.join(dir, "elm-stuff", "elm-watch-stuff.json"),
+            JSON.stringify(elmWatchStuffJson)
+          );
+          write(1);
+
+          return run({
             fixture,
             args: [name],
             scripts: [`${name}.js`],
             isTTY: false,
+            keepElmStuffJson: true,
             init: (node) => {
               app = window.Elm?.[name]?.init({ node });
               if (app?.ports !== undefined) {
@@ -2913,33 +2933,34 @@ describe("hot", () => {
               }
             },
             onIdle,
-          }),
+          });
+        },
       };
     }
 
     test("Html", async () => {
-      const {
-        write,
-        replaceOld: replace,
-        go,
-      } = runHotReload({
+      const { replace, go } = runHotReload({
         name: "HtmlMain",
+        programType: "Html",
+        compilationMode: "standard",
       });
 
       let probe: HTMLElement | null = null;
-
-      write(1);
 
       await go(({ idle, div }) => {
         switch (idle) {
           case 1:
             assertDebugDisabled();
             assertInit(div);
-            replace({ search: /hot reload/g, replace: "simple text change" });
+            replace((content) =>
+              content.replace("hot reload", "simple text change")
+            );
             return "KeepGoing";
           case 2:
             assertHotReload(div);
-            write(1);
+            replace((content) =>
+              content.replace("simple text change", "hot reload")
+            );
             return "KeepGoing";
           case 3:
             switchCompilationMode("optimize");
@@ -2948,7 +2969,9 @@ describe("hot", () => {
             assertCompilationMode("optimize");
             assertDebugDisabled();
             assertInit(div);
-            replace({ search: /hot reload/g, replace: "simple text change" });
+            replace((content) =>
+              content.replace("hot reload", "simple text change")
+            );
             return "KeepGoing";
           default:
             assertHotReload(div);
@@ -2976,86 +2999,103 @@ describe("hot", () => {
       }
     });
 
-    test("DOM and Msg change", async () => {
-      const { write, replace, go } = runHotReload({
-        name: "DomAndMsgChange",
-      });
+    test.each([
+      ["Sandbox", "standard"],
+      ["Sandbox", "debug"],
+      ["Sandbox", "optimize"],
+      ["Element", "standard"],
+      ["Element", "debug"],
+      ["Element", "optimize"],
+      ["Document", "standard"],
+      ["Document", "debug"],
+      ["Document", "optimize"],
+      ["Application", "standard"],
+      ["Application", "debug"],
+      ["Application", "optimize"],
+    ] as const)(
+      "DOM and Msg change: %s / %s",
+      async (programType, compilationMode) => {
+        const { replace, go } = runHotReload({
+          name: "DomAndMsgChange",
+          programType,
+          compilationMode,
+        });
 
-      let probe: HTMLElement | null = null;
+        let probe: HTMLElement | null = null;
 
-      write(1);
+        const { browserConsole } = await go(async ({ idle, main }) => {
+          switch (idle) {
+            case 1:
+              await assertInit(main);
+              replace((content) =>
+                content
+                  .replace("Before hot reload", "After hot reload")
+                  .replace(
+                    "onClick OriginalButtonClicked",
+                    "onClick NewButtonClicked"
+                  )
+              );
+              return "KeepGoing";
+            default:
+              await assertHotReload(main);
+              return "Stop";
+          }
+        });
 
-      const { browserConsole } = await go(async ({ idle, body }) => {
-        switch (idle) {
-          case 1:
-            await assertInit(body);
-            replace((content) =>
-              content
-                .replace("Before hot reload", "After hot reload")
-                .replace(
-                  "onClick OriginalButtonClicked",
-                  "onClick NewButtonClicked"
-                )
-            );
-            return "KeepGoing";
-          default:
-            await assertHotReload(body);
-            return "Stop";
-        }
-      });
-
-      expect(browserConsole).toMatchInlineSnapshot(`
+        expect(browserConsole).toMatchInlineSnapshot(`
           elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
           (target: DomAndMsgChange)
         `);
 
-      async function assertInit(body: HTMLBodyElement): Promise<void> {
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
-            <body><div><div><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
+        async function assertInit(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 0
             newButtonClicked: 0
-            </pre></div></div></body>
+            </pre></main>
           `);
 
-        probe = body.querySelector(".probe");
-        expect(probe?.outerHTML).toMatchInlineSnapshot(
-          `<h1 class="probe">Before hot reload</h1>`
-        );
+          probe = main.querySelector(".probe");
+          expect(probe?.outerHTML).toMatchInlineSnapshot(
+            `<h1 class="probe">Before hot reload</h1>`
+          );
 
-        click(body, "button");
-        await waitOneFrame();
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
-            <body><div><div><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
+          click(main, "button");
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 1
             newButtonClicked: 0
-            </pre></div></div></body>
+            </pre></main>
           `);
-      }
+        }
 
-      async function assertHotReload(body: HTMLBodyElement): Promise<void> {
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
-            <body><div><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+        async function assertHotReload(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">After hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 1
             newButtonClicked: 0
-            </pre></div></div></body>
+            </pre></main>
           `);
 
-        expect(body.querySelector(".probe") === probe).toMatchInlineSnapshot(
-          `true`
-        );
+          expect(main.querySelector(".probe") === probe).toMatchInlineSnapshot(
+            `true`
+          );
 
-        click(body, "button");
-        await waitOneFrame();
-        expect(htmlWithoutDebugger(body)).toMatchInlineSnapshot(`
-            <body><div><div><h1 class="probe">After hot reload</h1><button>Button</button><pre>
+          click(main, "button");
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`
+            <main><h1 class="probe">After hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 1
             newButtonClicked: 1
-            </pre></div></div></body>
+            </pre></main>
           `);
+        }
       }
-    });
+    );
 
-    test("Sandbox", async () => {
+    /*
+    testy("Sandbox", async () => {
       const {
         write,
         replaceOld: replace,
@@ -3266,7 +3306,7 @@ describe("hot", () => {
       }
     });
 
-    test("Element", async () => {
+    testy("Element", async () => {
       const {
         write,
         replaceOld: replace,
@@ -3466,7 +3506,7 @@ describe("hot", () => {
       }
     });
 
-    test.skip("Document", async () => {
+    testy("Document", async () => {
       const {
         write,
         replaceOld: replace,
@@ -3664,7 +3704,7 @@ describe("hot", () => {
       }
     });
 
-    test.skip("Application", async () => {
+    testy("Application", async () => {
       const {
         write,
         replaceOld: replace,
@@ -3937,7 +3977,7 @@ describe("hot", () => {
       }
     });
 
-    test.skip("Worker", async () => {
+    testy("Worker", async () => {
       const {
         write,
         replaceOld: replace,
@@ -4011,18 +4051,14 @@ describe("hot", () => {
         );
       }
     });
+  */
 
     test("remove input file", async () => {
-      const {
-        write,
-        replaceOld: replace,
-        removeInput,
-        go,
-      } = runHotReload({
+      const { replace, removeInput, go } = runHotReload({
         name: "RemoveInput",
+        programType: "Sandbox",
+        compilationMode: "standard",
       });
-
-      write(1);
 
       const { terminal } = await go(async ({ idle, div }) => {
         switch (idle) {
@@ -4031,7 +4067,9 @@ describe("hot", () => {
             removeInput();
             return "KeepGoing";
           case 2:
-            replace({ search: /hot reload/g, replace: "simple text change" });
+            replace((content) =>
+              content.replace("hot reload", "simple text change")
+            );
             return "KeepGoing" as const;
           default:
             assert2(div);
