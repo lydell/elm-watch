@@ -268,16 +268,13 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
           /^function _Platform_export\(exports\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
         replace: `
 function _Platform_export(exports) {
-  var result = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
-  if (result.errored) { 
-    throw new Error("elm-watch: Encountered errors on load or hot reload. See earlier errors in the console.");
-  } else if (result.reloadReasons.length > 0) {
-    throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(result.reloadReasons))).join("\\n\\n---\\n\\n"));
+  var reloadReasons = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
+  if (reloadReasons.length > 0) {
+    throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(reloadReasons))).join("\\n\\n---\\n\\n"));
   }
 }
 
 function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
-  var errored = false;
   var reloadReasons = [];
   for (var name in exports) {
     if (name === "init") {
@@ -300,14 +297,12 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
                     break;
                 }
               } catch (error) {
-                errored = true;
-                Promise.reject(new Error("elm-watch: Error during hot reload for \`" + moduleName + "\`:\\n" + error + "\\n" + (error ? error.stack : "")));
+                reloadReasons.push("hot reload for \`" + moduleName + "\` failed, probably because of incompatible model changes.\\nThis is the error:\\n" + error + "\\n" + (error ? error.stack : ""));
               }
             }
           }
         } else {
-          errored = true;
-          Promise.reject(new Error("elm-watch: \`" + moduleName + ".init\` exists but wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally? If not, rename one of them so I know which is which!"));
+          throw new Error("elm-watch: I'm trying to create \`" + moduleName + ".init\`, but it already exists and wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally?");
         }
       } else {
         obj.__elmWatchApps = [];
@@ -319,14 +314,11 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
         };
       }
     } else {
-      var inner = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
-      if (inner.errored) {
-        errored = true;
-      }
-      reloadReasons = reloadReasons.concat(inner.reloadReasons);
+      var innerReasons = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
+      reloadReasons = reloadReasons.concat(innerReasons);
     }
   }
-  return { errored: errored, reloadReasons: reloadReasons };
+  return reloadReasons;
 }
         `.trim(),
       },
