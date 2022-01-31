@@ -3219,7 +3219,7 @@ describe("hot", () => {
       ["Worker", "standard"],
       ["Worker", "optimize"],
     ] as const)(
-      "port change: %s / %s",
+      "Port change: %s / %s",
       async (programType, compilationMode) => {
         const { replace, sendToElm, lastValueFromElm, go } = runHotReload({
           name: "PortChange",
@@ -3260,6 +3260,94 @@ describe("hot", () => {
           expect(lastValueFromElm.value).toMatchInlineSnapshot(
             `Before: [1]. After hot reload: [2]`
           );
+        }
+      }
+    );
+
+    test.each([
+      ["Element", "standard"],
+      ["Element", "debug"],
+      ["Element", "optimize"],
+      ["Document", "standard"],
+      ["Document", "debug"],
+      ["Document", "optimize"],
+      ["Application", "standard"],
+      ["Application", "debug"],
+      ["Application", "optimize"],
+    ] as const)(
+      "Add subscription: %s / %s",
+      async (programType, compilationMode) => {
+        const { replace, go } = runHotReload({
+          name: "AddSubscription",
+          programType,
+          compilationMode,
+        });
+
+        const { browserConsole } = await go(async ({ idle, main }) => {
+          switch (idle) {
+            case 1:
+              await assertInit(main);
+              replace((content) =>
+                content.replace(/-- /g, "").replace("Sub.none", "")
+              );
+              return "KeepGoing";
+            default:
+              if (compilationMode === "optimize") {
+                await assertReloadForOptimize(main);
+              } else {
+                await assertHotReload(main);
+              }
+              return "Stop";
+          }
+        });
+
+        if (compilationMode === "optimize") {
+          assertBrowserConsoleOptimize();
+        } else {
+          assertBrowserConsole();
+        }
+
+        function assertBrowserConsole(): void {
+          expect(browserConsole).toMatchInlineSnapshot(`
+            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+            (target: AddSubscription)
+          `);
+        }
+
+        function assertBrowserConsoleOptimize(): void {
+          expect(browserConsole).toMatchInlineSnapshot(`
+            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+            (target: AddSubscription)
+
+            elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
+            (target: AddSubscription)
+          `);
+        }
+
+        async function assertInit(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>0</main>`);
+
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>-1</main>`);
+        }
+
+        async function assertHotReload(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>-1</main>`);
+
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>8</main>`);
+        }
+
+        async function assertReloadForOptimize(
+          main: HTMLElement
+        ): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>0</main>`);
+
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>9</main>`);
         }
       }
     );

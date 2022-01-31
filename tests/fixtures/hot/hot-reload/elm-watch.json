@@ -18,6 +18,12 @@
             ],
             "output": "build/PortChange.js"
         },
+        "AddSubscription": {
+            "inputs": [
+                "src/AddSubscription.elm"
+            ],
+            "output": "build/AddSubscription.js"
+        },
         "Sandbox": {
             "inputs": [
                 "src/Sandbox.elm"
