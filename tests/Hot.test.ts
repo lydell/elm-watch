@@ -2460,7 +2460,7 @@ describe("hot", () => {
   });
 
   test("limit postprocess workers", async () => {
-    const { terminal } = await run({
+    const { terminal, browserConsole } = await run({
       fixture: "limit-postprocess-workers",
       args: [],
       scripts: ["One.js", "Two.js"],
@@ -2540,6 +2540,16 @@ describe("hot", () => {
 
       ⧙ℹ️ 11:11:11 Terminated 1 superfluous worker⧘
       ✅ ⧙11:11:11⧘ Everything up to date.
+    `);
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because:
+
+      One
+      - this stub file is ready to be replaced with real compiled JS.
+
+      Two
+      - this stub file is ready to be replaced with real compiled JS.
     `);
   });
 
