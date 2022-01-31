@@ -3039,6 +3039,7 @@ describe("hot", () => {
         const { browserConsole } = await go(async ({ idle, body, main }) => {
           switch (idle) {
             case 1:
+              assertCompilationMode(compilationMode);
               if (compilationMode === "debug") {
                 assertDebugger(body);
               }
