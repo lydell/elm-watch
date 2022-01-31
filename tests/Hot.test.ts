@@ -2844,6 +2844,7 @@ describe("hot", () => {
       name,
       programType,
       compilationMode,
+      init,
     }: {
       name: `${UppercaseLetter}${string}`;
       programType:
@@ -2854,6 +2855,7 @@ describe("hot", () => {
         | "Sandbox"
         | "Worker";
       compilationMode: CompilationMode;
+      init?: (node: HTMLDivElement) => void;
     }): {
       replace: (f: (fileContent: string) => string) => void;
       removeInput: () => void;
@@ -2929,18 +2931,20 @@ describe("hot", () => {
             scripts: [`${name}.js`],
             isTTY: false,
             keepElmStuffJson: true,
-            init: (node) => {
-              app = window.Elm?.[name]?.init({ node });
-              if (app?.ports !== undefined) {
-                const subscribe = app.ports.toJs?.subscribe;
-                if (subscribe === undefined) {
-                  throw new Error("Failed to find 'toJs' subscribe port.");
+            init:
+              init ??
+              ((node) => {
+                app = window.Elm?.[name]?.init({ node });
+                if (app?.ports !== undefined) {
+                  const subscribe = app.ports.toJs?.subscribe;
+                  if (subscribe === undefined) {
+                    throw new Error("Failed to find 'toJs' subscribe port.");
+                  }
+                  subscribe((value: unknown) => {
+                    lastValueFromElm.value = value;
+                  });
                 }
-                subscribe((value: unknown) => {
-                  lastValueFromElm.value = value;
-                });
-              }
-            },
+              }),
             onIdle,
           });
         },
@@ -3452,6 +3456,59 @@ describe("hot", () => {
         expect(div.outerHTML).toMatchInlineSnapshot(
           `<div><div><h1>simple text change</h1><button>Button</button><pre>1</pre></div></div>`
         );
+      }
+    });
+
+    test("Flags change", async () => {
+      let initCount = 0;
+
+      const { replace, go } = runHotReload({
+        name: "FlagsChange",
+        programType: "Element",
+        compilationMode: "standard",
+        init: (node) => {
+          initCount++;
+          window.Elm?.FlagsChange?.init({
+            node,
+            flags: initCount === 1 ? { one: "one" } : { one: "one", two: 2 },
+          });
+        },
+      });
+
+      const { browserConsole } = await go(({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert1(div);
+            replace((content) => content.replace(/-- /g, ""));
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      });
+
+      expect(browserConsole).toMatchInlineSnapshot(`
+        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+        (target: FlagsChange)
+
+        elm-watch: I did a full page reload because the flags type in \`Elm.FlagsChange\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!
+        This is the error:
+        Problem with the given value:
+
+        {
+                "one": "one"
+            }
+
+        Expecting an OBJECT with a field named \`two\`
+        (target: FlagsChange)
+      `);
+
+      function assert1(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(`<div>one</div>`);
+      }
+
+      function assert2(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(`<div>one 2</div>`);
       }
     });
   });

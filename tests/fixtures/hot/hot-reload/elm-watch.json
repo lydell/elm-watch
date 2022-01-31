@@ -24,41 +24,23 @@
             ],
             "output": "build/AddSubscription.js"
         },
-        "Sandbox": {
-            "inputs": [
-                "src/Sandbox.elm"
-            ],
-            "output": "build/Sandbox.js"
-        },
-        "Element": {
-            "inputs": [
-                "src/Element.elm"
-            ],
-            "output": "build/Element.js"
-        },
-        "Document": {
-            "inputs": [
-                "src/Document.elm"
-            ],
-            "output": "build/Document.js"
-        },
         "Application": {
             "inputs": [
                 "src/Application.elm"
             ],
             "output": "build/Application.js"
         },
-        "Worker": {
-            "inputs": [
-                "src/Worker.elm"
-            ],
-            "output": "build/Worker.js"
-        },
         "RemoveInput": {
             "inputs": [
                 "src/RemoveInput.elm"
             ],
             "output": "build/RemoveInput.js"
+        },
+        "FlagsChange": {
+            "inputs": [
+                "src/FlagsChange.elm"
+            ],
+            "output": "build/FlagsChange.js"
         }
     }
 }
