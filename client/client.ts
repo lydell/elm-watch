@@ -434,14 +434,14 @@ const initMutable =
           mutable.webSocket.readyState !== WebSocket.CLOSED
         ) {
           mutable.webSocket.addEventListener("close", () => {
-            originalKillMatching(targetName).then(resolve, reject);
+            originalKillMatching(targetName).then(resolve).catch(reject);
           });
           mutable.removeListeners();
           mutable.webSocket.close();
           targetRoot.remove();
           resolvePromise(undefined);
         } else {
-          originalKillMatching(targetName).then(resolve, reject);
+          originalKillMatching(targetName).then(resolve).catch(reject);
         }
       });
 
@@ -884,9 +884,11 @@ const runCmd =
 
       case "TriggerReachedIdleState":
         // Let the cmd queue be emptied first.
-        Promise.resolve().then(() => {
-          window.__ELM_WATCH_ON_REACHED_IDLE_STATE(cmd.reason);
-        }, rejectPromise);
+        Promise.resolve()
+          .then(() => {
+            window.__ELM_WATCH_ON_REACHED_IDLE_STATE(cmd.reason);
+          })
+          .catch(rejectPromise);
         return;
 
       case "UpdateGlobalStatus":

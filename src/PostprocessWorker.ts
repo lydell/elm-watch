@@ -34,20 +34,19 @@ function main(port: PortWrapper): void {
   port.on("message", (message: MessageToWorker) => {
     switch (message.tag) {
       case "StartPostprocess":
-        elmWatchNode(message.args).then(
-          (result) => {
+        elmWatchNode(message.args)
+          .then((result) => {
             port.postMessage({
               tag: "PostprocessDone",
               result: { tag: "Resolve", value: result },
             });
-          },
-          (error: unknown) => {
+          })
+          .catch((error: unknown) => {
             port.postMessage({
               tag: "PostprocessDone",
               result: { tag: "Reject", error },
             });
-          }
-        );
+          });
         break;
     }
   });

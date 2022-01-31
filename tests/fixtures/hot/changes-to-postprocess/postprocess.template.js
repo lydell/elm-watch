@@ -1,1 +1,2 @@
-module.exports = ([code]) => code.replace("The text!", match => match.toUpperCase());
+module.exports = ([code]) =>
+  code.replace("The text!", (match) => match.toUpperCase());

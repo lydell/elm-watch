@@ -143,28 +143,30 @@ async function run({
           fs.writeFileSync(newScript, content);
           return import(newScript);
         })
-      ).then(() => {
-        if (expandUiImmediately) {
-          expandUi();
-        }
-        if (isReload) {
-          const innerDiv = document.createElement("div");
-          outerDiv.replaceChildren(innerDiv);
-          body.replaceChildren(outerDiv);
-          try {
-            init(innerDiv);
-          } catch (unknownError) {
-            const isElmWatchProxyError =
-              typeof unknownError === "object" &&
-              unknownError !== null &&
-              (unknownError as { elmWatchProxy?: boolean }).elmWatchProxy ===
-                true;
-            if (!isElmWatchProxyError || absoluteScripts.length === 1) {
-              throw unknownError;
+      )
+        .then(() => {
+          if (expandUiImmediately) {
+            expandUi();
+          }
+          if (isReload) {
+            const innerDiv = document.createElement("div");
+            outerDiv.replaceChildren(innerDiv);
+            body.replaceChildren(outerDiv);
+            try {
+              init(innerDiv);
+            } catch (unknownError) {
+              const isElmWatchProxyError =
+                typeof unknownError === "object" &&
+                unknownError !== null &&
+                (unknownError as { elmWatchProxy?: boolean }).elmWatchProxy ===
+                  true;
+              if (!isElmWatchProxyError || absoluteScripts.length === 1) {
+                throw unknownError;
+              }
             }
           }
-        }
-      }, reject);
+        })
+        .catch(reject);
     };
 
     for (const key of Object.keys(window)) {
@@ -179,9 +181,12 @@ async function run({
 
     window.__ELM_WATCH_RELOAD_PAGE = (message) => {
       browserConsole.push(message);
-      window.__ELM_WATCH_KILL_MATCHING(/^/).then(() => {
-        loadBuiltFiles(true);
-      }, reject);
+      window
+        .__ELM_WATCH_KILL_MATCHING(/^/)
+        .then(() => {
+          loadBuiltFiles(true);
+        })
+        .catch(reject);
     };
 
     window.__ELM_WATCH_ON_RENDER = (targetName) => {
@@ -224,7 +229,8 @@ async function run({
               window.__ELM_WATCH_EXIT();
               return;
           }
-        }, reject);
+        })
+        .catch(reject);
     };
 
     const watcher = fs.watch(build, () => {
@@ -253,7 +259,9 @@ async function run({
       stdout,
       stderr,
       getNow,
-    }).then(resolve, reject);
+    })
+      .then(resolve)
+      .catch(reject);
   });
 
   const stderrString = clean(stderr.getOutput());
@@ -1774,9 +1782,9 @@ describe("hot", () => {
 
       But that resulted in this error:
 
-      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js:1
-      module.exports = ([code]) => code.replace("The text!", match => match.toUppe
-                                                                            ^^^^^^
+      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js:2
+        code.replace("The text!", (match) => match.toUppe
+                                                   ^^^^^^
 
       SyntaxError: missing ) after argument list
 

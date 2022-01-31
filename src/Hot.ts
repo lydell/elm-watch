@@ -366,9 +366,12 @@ export async function watchElmWatchJsonOnce(
           absolutePath: absolutePathString,
         },
       };
-      watcher.close().then(() => {
-        resolve(event);
-      }, reject);
+      watcher
+        .close()
+        .then(() => {
+          resolve(event);
+        })
+        .catch(reject);
     });
   });
 }
@@ -457,9 +460,11 @@ const initMutable =
 
     // The port isn’t finalized until a few moments later (when the persisted
     // port is not available).
-    webSocketServer.listening.then(() => {
-      writeElmWatchStuffJson(mutable);
-    }, rejectPromise);
+    webSocketServer.listening
+      .then(() => {
+        writeElmWatchStuffJson(mutable);
+      })
+      .catch(rejectPromise);
 
     return mutable;
   };
@@ -1154,16 +1159,18 @@ const runCmd =
               action,
               postprocess: mutable.project.postprocess,
               postprocessWorkerPool: mutable.postprocessWorkerPool,
-            }).then((handleOutputActionResult) => {
-              dispatch({
-                tag: "CompilationPartDone",
-                date: getNow(),
-                prioritizedOutputs: makePrioritizedOutputs(
-                  mutable.webSocketConnections
-                ),
-                handleOutputActionResult,
-              });
-            }, rejectPromise);
+            })
+              .then((handleOutputActionResult) => {
+                dispatch({
+                  tag: "CompilationPartDone",
+                  date: getNow(),
+                  prioritizedOutputs: makePrioritizedOutputs(
+                    mutable.webSocketConnections
+                  ),
+                  handleOutputActionResult,
+                });
+              })
+              .catch(rejectPromise);
           }
         } else if (outputActions.numExecuting === 0) {
           dispatch({
@@ -1194,9 +1201,11 @@ const runCmd =
             );
             // istanbul ignore else
             if (exitOnError) {
-              closeAll(mutable).then(() => {
-                resolvePromise({ tag: "ExitOnIdle" });
-              }, rejectPromise);
+              closeAll(mutable)
+                .then(() => {
+                  resolvePromise({ tag: "ExitOnIdle" });
+                })
+                .catch(rejectPromise);
             }
           }
         }
@@ -1208,19 +1217,23 @@ const runCmd =
           .then(() => Compile.installDependencies(env, logger, mutable.project))
           .then((installResult) => {
             dispatch({ tag: "InstallDependenciesDone", installResult });
-          }, rejectPromise);
+          })
+          .catch(rejectPromise);
         return;
 
       case "LimitWorkers":
-        mutable.postprocessWorkerPool.limit().then((numTerminatedWorkers) => {
-          if (numTerminatedWorkers > 0) {
-            dispatch({
-              tag: "WorkersLimited",
-              date: getNow(),
-              numTerminatedWorkers,
-            });
-          }
-        }, rejectPromise);
+        mutable.postprocessWorkerPool
+          .limit()
+          .then((numTerminatedWorkers) => {
+            if (numTerminatedWorkers > 0) {
+              dispatch({
+                tag: "WorkersLimited",
+                date: getNow(),
+                numTerminatedWorkers,
+              });
+            }
+          })
+          .catch(rejectPromise);
         return;
 
       case "LogInfoMessageWithTimeline": {
@@ -1297,32 +1310,39 @@ const runCmd =
           elmWatchJsonChanged
             ? mutable.postprocessWorkerPool.terminate()
             : undefined,
-        ]).then(() => {
-          resolvePromise({
-            tag: "Restart",
-            restartReasons: cmd.restartReasons,
-            postprocessWorkerPool: mutable.postprocessWorkerPool,
-            webSocketState: elmWatchJsonChanged
-              ? undefined
-              : {
-                  webSocketServer: mutable.webSocketServer,
-                  webSocketConnections: mutable.webSocketConnections,
-                },
-          });
-        }, rejectPromise);
+        ])
+          .then(() => {
+            resolvePromise({
+              tag: "Restart",
+              restartReasons: cmd.restartReasons,
+              postprocessWorkerPool: mutable.postprocessWorkerPool,
+              webSocketState: elmWatchJsonChanged
+                ? undefined
+                : {
+                    webSocketServer: mutable.webSocketServer,
+                    webSocketConnections: mutable.webSocketConnections,
+                  },
+            });
+          })
+          .catch(rejectPromise);
         return;
       }
 
       case "RestartWorkers":
-        mutable.postprocessWorkerPool.terminate().then(() => {
-          mutable.postprocessWorkerPool.getOrCreateAvailableWorker();
-        }, rejectPromise);
+        mutable.postprocessWorkerPool
+          .terminate()
+          .then(() => {
+            mutable.postprocessWorkerPool.getOrCreateAvailableWorker();
+          })
+          .catch(rejectPromise);
         return;
 
       case "ExitOnIdle":
-        closeAll(mutable).then(() => {
-          resolvePromise({ tag: "ExitOnIdle" });
-        }, rejectPromise);
+        closeAll(mutable)
+          .then(() => {
+            resolvePromise({ tag: "ExitOnIdle" });
+          })
+          .catch(rejectPromise);
         return;
 
       case "SleepBeforeNextAction":
@@ -1454,16 +1474,18 @@ function onWebSocketServerMsg(
       switch (msg.error.tag) {
         case "PortConflict": {
           const { portChoice } = msg.error;
-          closeAll(mutable).then(() => {
-            resolvePromise({
-              tag: "ExitOnHandledFatalError",
-              errorTemplate: portChoiceError(
-                mutable.project,
-                portChoice,
-                msg.error.error
-              ),
-            });
-          }, rejectPromise);
+          closeAll(mutable)
+            .then(() => {
+              resolvePromise({
+                tag: "ExitOnHandledFatalError",
+                errorTemplate: portChoiceError(
+                  mutable.project,
+                  portChoice,
+                  msg.error.error
+                ),
+              });
+            })
+            .catch(rejectPromise);
           return;
         }
 

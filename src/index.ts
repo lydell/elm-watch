@@ -87,7 +87,7 @@ export async function elmWatchCli(
               return result.exitCode;
           }
         };
-        doIt().then(resolve, reject);
+        doIt().then(resolve).catch(reject);
       });
     }
 
@@ -106,17 +106,16 @@ if (require.main === module) {
     stdout: process.stdout,
     stderr: process.stderr,
     getNow: () => new Date(),
-  }).then(
-    (exitCode) => {
+  })
+    .then((exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.
       process.exitCode = exitCode;
-    },
-    (error: unknown) => {
+    })
+    .catch((error: unknown) => {
       process.stderr.write(
         `Unexpected error:\n${unknownErrorToString(error)}\n`
       );
       // Forcefully exit since the watcher might still be running.
       process.exit(1);
-    }
-  );
+    });
 }

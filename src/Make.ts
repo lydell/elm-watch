@@ -61,14 +61,16 @@ export async function run(
             action,
             postprocess: project.postprocess,
             postprocessWorkerPool,
-          }).then(() => {
-            const nextOutputActions = getNextOutputActions(project);
-            if (isNonEmptyArray(nextOutputActions.actions)) {
-              cycle(nextOutputActions);
-            } else if (nextOutputActions.numExecuting === 0) {
-              resolve();
-            }
-          }, reject);
+          })
+            .then(() => {
+              const nextOutputActions = getNextOutputActions(project);
+              if (isNonEmptyArray(nextOutputActions.actions)) {
+                cycle(nextOutputActions);
+              } else if (nextOutputActions.numExecuting === 0) {
+                resolve();
+              }
+            })
+            .catch(reject);
         }
       };
       cycle(initialOutputActions);
