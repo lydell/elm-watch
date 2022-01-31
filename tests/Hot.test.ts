@@ -2840,7 +2840,6 @@ describe("hot", () => {
       replace: (f: (fileContent: string) => string) => void;
       removeInput: () => void;
       sendToElm: (value: number) => void;
-      terminate: () => void;
       lastValueFromElm: { value: unknown };
       go: (onIdle: OnIdle) => ReturnType<typeof run>;
     } {
@@ -2893,19 +2892,10 @@ describe("hot", () => {
         send(value);
       };
 
-      const terminate = (): void => {
-        const send = app?.ports?.terminate?.send;
-        if (send === undefined) {
-          throw new Error("Failed to find 'terminate' send port.");
-        }
-        send(null);
-      };
-
       return {
         replace,
         removeInput,
         sendToElm,
-        terminate,
         lastValueFromElm,
         go: (onIdle: OnIdle) => {
           fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
