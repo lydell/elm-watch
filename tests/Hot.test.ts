@@ -3036,9 +3036,12 @@ describe("hot", () => {
 
         let probe: HTMLElement | null = null;
 
-        const { browserConsole } = await go(async ({ idle, main }) => {
+        const { browserConsole } = await go(async ({ idle, body, main }) => {
           switch (idle) {
             case 1:
+              if (compilationMode === "debug") {
+                assertDebugger(body);
+              }
               await assertInit(main);
               replace((content) =>
                 content
