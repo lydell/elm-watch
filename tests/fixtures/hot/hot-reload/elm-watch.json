@@ -12,6 +12,12 @@
             ],
             "output": "build/DomAndMsgChange.js"
         },
+        "PortChange": {
+            "inputs": [
+                "src/PortChange.elm"
+            ],
+            "output": "build/PortChange.js"
+        },
         "Sandbox": {
             "inputs": [
                 "src/Sandbox.elm"

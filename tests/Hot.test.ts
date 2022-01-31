@@ -3206,6 +3206,64 @@ describe("hot", () => {
       }
     );
 
+    test.each([
+      ["Element", "standard"],
+      ["Element", "debug"],
+      ["Element", "optimize"],
+      ["Document", "standard"],
+      ["Document", "debug"],
+      ["Document", "optimize"],
+      ["Application", "standard"],
+      ["Application", "debug"],
+      ["Application", "optimize"],
+      ["Worker", "standard"],
+      ["Worker", "optimize"],
+    ] as const)(
+      "port change: %s / %s",
+      async (programType, compilationMode) => {
+        const { replace, sendToElm, lastValueFromElm, go } = runHotReload({
+          name: "PortChange",
+          programType,
+          compilationMode,
+        });
+
+        const { browserConsole } = await go(async ({ idle }) => {
+          switch (idle) {
+            case 1:
+              await assertInit();
+              replace((content) =>
+                content.replace("fromJs OriginalFromJs", "fromJs NewFromJs")
+              );
+              return "KeepGoing";
+            default:
+              await assertHotReload();
+              return "Stop";
+          }
+        });
+
+        expect(browserConsole).toMatchInlineSnapshot(`
+          elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+          (target: PortChange)
+        `);
+
+        async function assertInit(): Promise<void> {
+          sendToElm(1);
+          await waitOneFrame();
+          expect(lastValueFromElm.value).toMatchInlineSnapshot(
+            `Before hot reload: [1]`
+          );
+        }
+
+        async function assertHotReload(): Promise<void> {
+          sendToElm(2);
+          await waitOneFrame();
+          expect(lastValueFromElm.value).toMatchInlineSnapshot(
+            `Before: [1]. After hot reload: [2]`
+          );
+        }
+      }
+    );
+
     /*
     testy("Sandbox", async () => {
       const {
