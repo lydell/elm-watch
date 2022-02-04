@@ -47,6 +47,12 @@
                 "src/AddMsg.elm"
             ],
             "output": "build/AddMsg.js"
+        },
+        "InitTweakValue": {
+            "inputs": [
+                "src/InitTweakValue.elm"
+            ],
+            "output": "build/InitTweakValue.js"
         }
     }
 }

@@ -3589,5 +3589,44 @@ describe("hot", () => {
         }
       }
     );
+
+    test("Init tweak value", async () => {
+      const { replace, go } = runHotReload({
+        name: "InitTweakValue",
+        programType: "Element",
+        compilationMode: "standard",
+        init: (node) => {
+          window.Elm?.InitTweakValue?.init({ node });
+        },
+      });
+
+      const { browserConsole } = await go(({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert1(div);
+            replace((content) => content.replace(/-- /g, ""));
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      });
+
+      expect(browserConsole).toMatchInlineSnapshot(`
+        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+        (target: InitTweakValue)
+
+        elm-watch: I did a full page reload because \`Elm.InitTweakValue.init\` returned something different than last time. Let's start fresh!
+        (target: InitTweakValue)
+      `);
+
+      function assert1(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(`<div>init</div>`);
+      }
+
+      function assert2(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(`<div>init_tweaked</div>`);
+      }
+    });
   });
 });
