@@ -65,6 +65,12 @@
                 "src/InitChangeCmd.elm"
             ],
             "output": "build/InitChangeCmd.js"
+        },
+        "ChangeProgramType": {
+            "inputs": [
+                "src/ChangeProgramType.elm"
+            ],
+            "output": "build/ChangeProgramType.js"
         }
     }
 }

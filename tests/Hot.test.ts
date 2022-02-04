@@ -2858,6 +2858,7 @@ describe("hot", () => {
       init?: (node: HTMLDivElement) => void;
     }): {
       replace: (f: (fileContent: string) => string) => void;
+      write: (n: number) => void;
       removeInput: () => void;
       sendToElm: (value: number) => void;
       lastValueFromElm: { value: unknown };
@@ -2914,6 +2915,7 @@ describe("hot", () => {
 
       return {
         replace,
+        write,
         removeInput,
         sendToElm,
         lastValueFromElm,
@@ -3722,6 +3724,46 @@ describe("hot", () => {
           expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
         }
       });
+    });
+
+    test("Change program type", async () => {
+      const { write, go } = runHotReload({
+        name: "ChangeProgramType",
+        programType: "Sandbox",
+        compilationMode: "standard",
+      });
+
+      const { browserConsole } = await go(({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert1(div);
+            write(2);
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      });
+
+      expect(browserConsole).toMatchInlineSnapshot(`
+        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+        (target: ChangeProgramType)
+
+        elm-watch: I did a full page reload because \`Elm.ChangeProgramType.main\` changed from \`Browser.sandbox\` to \`Browser.element\`.
+        (target: ChangeProgramType)
+      `);
+
+      function assert1(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div>Browser.sandbox</div>`
+        );
+      }
+
+      function assert2(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div>Browser.element</div>`
+        );
+      }
     });
   });
 });
