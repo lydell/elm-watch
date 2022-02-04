@@ -59,6 +59,12 @@
                 "src/InitNewField.elm"
             ],
             "output": "build/InitNewField.js"
+        },
+        "InitChangeCmd": {
+            "inputs": [
+                "src/InitChangeCmd.elm"
+            ],
+            "output": "build/InitChangeCmd.js"
         }
     }
 }

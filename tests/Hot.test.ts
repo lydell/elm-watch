@@ -3523,9 +3523,6 @@ describe("hot", () => {
           name: "AddMsg",
           programType: "Element",
           compilationMode,
-          init: (node) => {
-            window.Elm?.AddMsg?.init({ node });
-          },
         });
 
         const { browserConsole } = await go(async ({ idle, main }) => {
@@ -3634,9 +3631,6 @@ describe("hot", () => {
         name: "InitNewField",
         programType: "Element",
         compilationMode: "standard",
-        init: (node) => {
-          window.Elm?.InitNewField?.init({ node });
-        },
       });
 
       const { browserConsole } = await go(({ idle, div }) => {
@@ -3668,6 +3662,66 @@ describe("hot", () => {
           `<div>field1 with newField</div>`
         );
       }
+    });
+
+    describe("Init change cmd", () => {
+      // eslint-disable-next-line no-console
+      const originalConsoleInfo = console.info;
+
+      afterEach(() => {
+        // eslint-disable-next-line no-console
+        console.info = originalConsoleInfo;
+      });
+
+      test("Init change cmd", async () => {
+        const mockConsoleInfo = jest.fn();
+        // eslint-disable-next-line no-console
+        console.info = mockConsoleInfo;
+
+        const { replace, lastValueFromElm, go } = runHotReload({
+          name: "InitChangeCmd",
+          programType: "Element",
+          compilationMode: "standard",
+        });
+
+        const { browserConsole } = await go(({ idle }) => {
+          switch (idle) {
+            case 1:
+              assert1();
+              replace((content) =>
+                content.replace("module", "port module").replace(/-- /g, "")
+              );
+              return "KeepGoing";
+            default:
+              assert2();
+              return "Stop";
+          }
+        });
+
+        expect(browserConsole).toMatchInlineSnapshot(`
+          elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+          (target: InitChangeCmd)
+
+          elm-watch: I did a full page reload because \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
+          (target: InitChangeCmd)
+        `);
+
+        expect(mockConsoleInfo.mock.calls).toMatchInlineSnapshot(`
+          Array [
+            Array [
+              elm-watch: A new port 'toJs' was added. You might want to reload the page!,
+            ],
+          ]
+        `);
+
+        function assert1(): void {
+          expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
+        }
+
+        function assert2(): void {
+          expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
+        }
+      });
     });
   });
 });
