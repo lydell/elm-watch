@@ -71,7 +71,6 @@ async function run({
   cwd?: string;
 }): Promise<{
   terminal: string;
-  browser: string;
   browserConsole: string;
   renders: string;
   div: HTMLDivElement;
@@ -268,11 +267,8 @@ async function run({
 
   expect(stdout.content).toBe("");
 
-  const lastText = renders[renders.length - 1] ?? "No renders!";
-
   return {
     terminal: stderrString,
-    browser: lastText,
     browserConsole: browserConsole.join("\n\n"),
     renders: renders.join(`\n${"=".repeat(80)}\n`),
     div: outerDiv,
@@ -3763,6 +3759,59 @@ describe("hot", () => {
         expect(div.outerHTML).toMatchInlineSnapshot(
           `<div>Browser.element</div>`
         );
+      }
+    });
+
+    test("View fails after hot reload", async () => {
+      const { replace, go } = runHotReload({
+        name: "ViewFailsAfterHotReload",
+        programType: "Element",
+        compilationMode: "standard",
+      });
+
+      const { browserConsole } = await go(async ({ idle, main }) => {
+        switch (idle) {
+          case 1:
+            await assert1(main);
+            replace((content) =>
+              content
+                .replace("Maybe Int", "Maybe String")
+                .replace("String.fromInt", "String.toUpper")
+                .replace("1337", '"Just"')
+            );
+            return "KeepGoing";
+          default:
+            await assert2(main);
+            return "Stop";
+        }
+      });
+
+      expect(
+        browserConsole.replace(/(\n\s*at _String_toUpper).*(\n\s*at.+)*/, "$1")
+      ).toMatchInlineSnapshot(`
+        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+        (target: ViewFailsAfterHotReload)
+
+        elm-watch: I did a full page reload because hot reload for \`Elm.ViewFailsAfterHotReload\` failed, probably because of incompatible model changes.
+        This is the error:
+        TypeError: str.toUpperCase is not a function
+        TypeError: str.toUpperCase is not a function
+            at _String_toUpper
+        (target: ViewFailsAfterHotReload)
+      `);
+
+      async function assert1(main: HTMLElement): Promise<void> {
+        expect(main.outerHTML).toMatchInlineSnapshot(`<main>Nothing</main>`);
+        main.click();
+        await waitOneFrame();
+        expect(main.outerHTML).toMatchInlineSnapshot(`<main>1337</main>`);
+      }
+
+      async function assert2(main: HTMLElement): Promise<void> {
+        expect(main.outerHTML).toMatchInlineSnapshot(`<main>Nothing</main>`);
+        main.click();
+        await waitOneFrame();
+        expect(main.outerHTML).toMatchInlineSnapshot(`<main>JUST</main>`);
       }
     });
   });

@@ -71,6 +71,12 @@
                 "src/ChangeProgramType.elm"
             ],
             "output": "build/ChangeProgramType.js"
+        },
+        "ViewFailsAfterHotReload": {
+            "inputs": [
+                "src/ViewFailsAfterHotReload.elm"
+            ],
+            "output": "build/ViewFailsAfterHotReload.js"
         }
     }
 }
