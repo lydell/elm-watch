@@ -53,6 +53,12 @@
                 "src/InitTweakValue.elm"
             ],
             "output": "build/InitTweakValue.js"
+        },
+        "InitNewField": {
+            "inputs": [
+                "src/InitNewField.elm"
+            ],
+            "output": "build/InitNewField.js"
         }
     }
 }
