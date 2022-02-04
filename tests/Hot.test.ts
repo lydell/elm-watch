@@ -3515,5 +3515,79 @@ describe("hot", () => {
         expect(div.outerHTML).toMatchInlineSnapshot(`<div>one 2</div>`);
       }
     });
+
+    test.each(["standard", "debug", "optimize"] as const)(
+      "Add Msg: %s",
+      async (compilationMode) => {
+        const { replace, go } = runHotReload({
+          name: "AddMsg",
+          programType: "Element",
+          compilationMode,
+          init: (node) => {
+            window.Elm?.AddMsg?.init({ node });
+          },
+        });
+
+        const { browserConsole } = await go(async ({ idle, main }) => {
+          switch (idle) {
+            case 1:
+              await assert1(main);
+              replace((content) => content.replace(/-- /g, ""));
+              return "KeepGoing";
+            default:
+              if (compilationMode === "debug") {
+                await assert2Debug(main);
+              } else {
+                await assert2(main);
+              }
+              return "Stop";
+          }
+        });
+
+        if (compilationMode === "debug") {
+          assertBrowserConsoleDebug();
+        } else {
+          assertBrowserConsole();
+        }
+
+        function assertBrowserConsole(): void {
+          expect(browserConsole).toMatchInlineSnapshot(`
+            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+            (target: AddMsg)
+          `);
+        }
+
+        function assertBrowserConsoleDebug(): void {
+          expect(browserConsole).toMatchInlineSnapshot(`
+            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+            (target: AddMsg)
+
+            elm-watch: I did a full page reload because the message type in \`Elm.AddMsg\` changed in debug mode ("debug metadata" changed).
+            (target: AddMsg)
+          `);
+        }
+
+        async function assert1(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>init</main>`);
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>Msg1</main>`);
+        }
+
+        async function assert2(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>Msg1</main>`);
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>AddedMsg</main>`);
+        }
+
+        async function assert2Debug(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>init</main>`);
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(`<main>AddedMsg</main>`);
+        }
+      }
+    );
   });
 });

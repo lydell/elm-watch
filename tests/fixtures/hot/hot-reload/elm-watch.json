@@ -41,6 +41,12 @@
                 "src/FlagsChange.elm"
             ],
             "output": "build/FlagsChange.js"
+        },
+        "AddMsg": {
+            "inputs": [
+                "src/AddMsg.elm"
+            ],
+            "output": "build/AddMsg.js"
         }
     }
 }
