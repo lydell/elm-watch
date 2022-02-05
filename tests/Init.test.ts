@@ -7,6 +7,7 @@ import {
   assertExitCode,
   clean,
   FailReadStream,
+  logDebug,
   MemoryWriteStream,
   readFile,
   stringSnapshotSerializer,
@@ -37,6 +38,7 @@ async function initSuccessHelper(
     stdin: new FailReadStream(),
     stdout,
     stderr,
+    logDebug,
   });
 
   assertExitCode(0, exitCode, stdout.content, stderr.content);
@@ -63,6 +65,7 @@ async function initFailHelper(
     stdin: new FailReadStream(),
     stdout,
     stderr,
+    logDebug,
   });
 
   assertExitCode(1, exitCode, stdout.content, stderr.content);

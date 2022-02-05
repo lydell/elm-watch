@@ -14,6 +14,7 @@ type Options = {
   stdin: ReadStream;
   stdout: WriteStream;
   stderr: WriteStream;
+  logDebug: (message: string) => void;
 };
 
 export async function elmWatchCli(
@@ -24,10 +25,16 @@ export async function elmWatchCli(
     // stdin,
     stdout,
     stderr,
+    logDebug,
   }: Options
 ): Promise<number> {
   const getNow: GetNow = () => new Date();
-  const logger = makeLogger({ env, stdout, stderr });
+  const logger = makeLogger({
+    env,
+    stdout,
+    stderr,
+    logDebug,
+  });
   const cwd: Cwd = {
     tag: "Cwd",
     path: absolutePathFromString(
@@ -101,6 +108,7 @@ if (require.main === module) {
     stdin: process.stdin,
     stdout: process.stdout,
     stderr: process.stderr,
+    logDebug: (message) => process.stderr.write(`${message}\n`),
   })
     .then((exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.

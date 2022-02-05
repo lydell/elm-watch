@@ -12,12 +12,14 @@ import {
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS, Env } from "../src/Env";
+import { makeLogger } from "../src/Logger";
 import { CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
   FailReadStream,
+  logDebug,
   MemoryWriteStream,
   stringSnapshotSerializer,
   TEST_ENV,
@@ -203,6 +205,29 @@ async function run({
       });
     };
 
+    const fullEnv: Env =
+      bin === undefined
+        ? {
+            ...process.env,
+            ...TEST_ENV,
+            ...env,
+          }
+        : {
+            ...badElmBinEnv(path.join(dir, "bad-bin", bin)),
+            ...env,
+          };
+
+    const logger = makeLogger({
+      env: fullEnv,
+      stdout: process.stdout,
+      stderr: process.stderr,
+      logDebug: (message) => {
+        logDebug(`Browser: ${message}`);
+      },
+    });
+
+    window.__ELM_WATCH_LOG_DEBUG = logger.debug;
+
     let idle = 0;
     window.__ELM_WATCH_ON_REACHED_IDLE_STATE = (reason) => {
       idle++;
@@ -241,20 +266,11 @@ async function run({
 
     elmWatchCli(["hot", ...args], {
       cwd: path.join(dir, cwd),
-      env:
-        bin === undefined
-          ? {
-              ...process.env,
-              ...TEST_ENV,
-              ...env,
-            }
-          : {
-              ...badElmBinEnv(path.join(dir, "bad-bin", bin)),
-              ...env,
-            },
+      env: fullEnv,
       stdin: new FailReadStream(),
       stdout,
       stderr,
+      logDebug,
     })
       .then(resolve)
       .catch(reject);

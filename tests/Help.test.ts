@@ -5,6 +5,7 @@ import {
   clean,
   CursorWriteStream,
   FailReadStream,
+  logDebug,
   MemoryWriteStream,
   stringSnapshotSerializer,
 } from "./Helpers";
@@ -22,6 +23,7 @@ async function helpHelper(
     stdin: new FailReadStream(),
     stdout,
     stderr,
+    logDebug,
   });
 
   const stdoutString = clean(stdout.getOutput());

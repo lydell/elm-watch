@@ -7,6 +7,7 @@ import {
   clean,
   CursorWriteStream,
   FailReadStream,
+  logDebug,
   MemoryWriteStream,
   prependPATH,
   stringSnapshotSerializer,
@@ -46,6 +47,7 @@ async function run(
     stdin: new FailReadStream(),
     stdout,
     stderr,
+    logDebug,
   });
 
   const stdoutString = clean(stdout.getOutput());

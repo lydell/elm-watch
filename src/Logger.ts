@@ -39,10 +39,12 @@ export function makeLogger({
   env,
   stdout,
   stderr,
+  logDebug,
 }: {
   env: Env;
   stdout: WriteStream;
   stderr: WriteStream;
+  logDebug: (message: string) => void;
 }): Logger {
   const debug = __ELM_WATCH_DEBUG in env;
 
@@ -70,8 +72,8 @@ export function makeLogger({
     // istanbul ignore next
     debug(...args) {
       if (debug) {
-        stderr.write(
-          `${join(
+        logDebug(
+          join(
             args.map((arg, index) =>
               index === 0 && typeof arg === "string" && !noColor
                 ? bold(arg)
@@ -82,7 +84,7 @@ export function makeLogger({
                   })
             ),
             "\n"
-          )}\n`
+          )
         );
       }
     },

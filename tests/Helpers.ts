@@ -32,6 +32,11 @@ Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
 Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
 /* eslint-enable @typescript-eslint/unbound-method */
 
+// This uses `console` rather than `process.stdout` so Jest can capture it.
+// And `.log` instead of `.error`, because Jest colors `.error` red.
+// eslint-disable-next-line no-console
+export const logDebug = console.log;
+
 // Read file with normalized line endings to make snapshotting easier
 // cross-platform.
 export function readFile(filePath: string): string {

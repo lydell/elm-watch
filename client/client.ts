@@ -27,6 +27,7 @@ declare global {
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
     __ELM_WATCH_EXIT: () => void;
     __ELM_WATCH_KILL_MATCHING: (targetName: RegExp) => Promise<void>;
+    __ELM_WATCH_LOG_DEBUG: typeof console.debug;
   }
 }
 
@@ -108,6 +109,10 @@ window.__ELM_WATCH_EXIT ??= () => {
 };
 
 window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
+
+window.__ELM_WATCH_LOG_DEBUG ??=
+  // eslint-disable-next-line no-console
+  console.debug;
 
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
@@ -279,8 +284,7 @@ const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
 
 function logDebug(...args: Array<unknown>): void {
   if (DEBUG) {
-    // eslint-disable-next-line no-console
-    console.debug(...args);
+    window.__ELM_WATCH_LOG_DEBUG(...args);
   }
 }
 
@@ -326,7 +330,7 @@ function run(): void {
         },
         { tag: "Render", model: newModel, manageFocus: msg.tag === "UiMsg" },
       ];
-      logDebug(msg.tag, msg, newModel, allCmds);
+      logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
     runCmd: runCmd(getNow, targetRoot),
@@ -391,7 +395,11 @@ const initMutable =
     resolvePromise: (result: undefined) => void
   ): Mutable => {
     const removeListeners = [
-      addEventListener(window, "focus", () => {
+      addEventListener(window, "focus", (event) => {
+        // Used in tests to trigger focus for just one target.
+        if (event instanceof CustomEvent && event.detail !== TARGET_NAME) {
+          return;
+        }
         dispatch({ tag: "FocusedTab" });
       }),
       addEventListener(window, "visibilitychange", () => {
@@ -457,7 +465,7 @@ const initMutable =
 function addEventListener<EventName extends string>(
   target: EventTarget,
   eventName: EventName,
-  listener: () => void
+  listener: (event: Event) => void
 ): () => void {
   target.addEventListener(eventName, listener);
   return () => {
