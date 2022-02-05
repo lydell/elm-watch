@@ -31,7 +31,7 @@ function isImport(chars: NonEmptyArray<number>): boolean {
 
 export type ModuleName = NonEmptyArray<string>;
 
-export type ReadState = {
+type ReadState = {
   tokenizerState: TokenizerState;
   parserState: ParserState;
   importedModules: Array<ModuleName>;

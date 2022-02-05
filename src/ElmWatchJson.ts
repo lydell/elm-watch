@@ -29,7 +29,7 @@ function isValidOutputName(name: string): boolean {
 
 const TARGET_NAME = /^[^\s-](?:.*\S)?$/;
 
-export function isValidTargetName(name: string): boolean {
+function isValidTargetName(name: string): boolean {
   return TARGET_NAME.test(name);
 }
 
@@ -95,7 +95,7 @@ const Config = Decode.fieldsAuto(
   { exact: "throw" }
 );
 
-export type ParseResult =
+type ParseResult =
   | {
       tag: "DecodeError";
       elmWatchJsonPath: ElmWatchJsonPath;

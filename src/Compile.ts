@@ -191,7 +191,7 @@ type IndexedOutputWithSource = {
   source: "Dirty" | "Queued";
 };
 
-export type OutputAction =
+type OutputAction =
   | NeedsElmMakeOutputAction
   | NeedsElmMakeTypecheckOnlyOutputAction
   | NeedsPostprocessOutputAction

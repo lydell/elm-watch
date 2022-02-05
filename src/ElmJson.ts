@@ -17,7 +17,7 @@ export const ElmJson = Decode.fieldsUnion("type", {
   }),
 });
 
-export type ParseResult =
+type ParseResult =
   | ParseError
   | {
       tag: "Parsed";

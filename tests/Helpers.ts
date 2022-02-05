@@ -69,32 +69,6 @@ export class FailReadStream extends stream.Readable implements ReadStream {
   }
 }
 
-export class RawReadStream extends stream.Readable implements ReadStream {
-  isRaw = false;
-
-  isTTY = true;
-
-  private index = 0;
-
-  constructor(private chars: Array<string>) {
-    super();
-  }
-
-  override _read(size: number): void {
-    if (!this.isRaw) {
-      throw new Error(
-        `Expected \`.setRawMode(true)\` to be called before reading, but tried to read ${size} bytes with \`.isRaw = false\`.`
-      );
-    }
-    this.push(this.chars[this.index]);
-    this.index++;
-  }
-
-  setRawMode(isRaw: boolean): void {
-    this.isRaw = isRaw;
-  }
-}
-
 export class MemoryWriteStream extends stream.Writable implements WriteStream {
   isTTY = true;
 
@@ -110,33 +84,6 @@ export class MemoryWriteStream extends stream.Writable implements WriteStream {
     this.content += chunk.toString();
     callback();
   }
-}
-
-export function duoStream(): {
-  markedStream: WriteStream;
-  unmarkedStream: MemoryWriteStream;
-} {
-  const unmarkedStream = new MemoryWriteStream();
-
-  class MarkedWriteStream extends stream.Writable implements WriteStream {
-    isTTY = unmarkedStream.isTTY;
-
-    columns = unmarkedStream.columns;
-
-    override _write(
-      chunk: Buffer | string,
-      _encoding: BufferEncoding,
-      callback: (error?: Error | null) => void
-    ): void {
-      unmarkedStream.write(`⟪${chunk.toString()}⟫`);
-      callback();
-    }
-  }
-
-  return {
-    markedStream: new MarkedWriteStream(),
-    unmarkedStream,
-  };
 }
 
 const SPLIT_REGEX = /(\n|\x1B\[\d*(?:;\d*)?[A-Z])/;

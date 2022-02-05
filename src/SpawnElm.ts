@@ -39,7 +39,7 @@ export type RunElmMakeError =
       command: Command;
     };
 
-export type NullOutputPath = { tag: "NullOutputPath" };
+type NullOutputPath = { tag: "NullOutputPath" };
 
 export async function make({
   elmJsonPath,
@@ -125,7 +125,7 @@ export function compilationModeToArg(
   }
 }
 
-export function outputPathToAbsoluteString(
+function outputPathToAbsoluteString(
   outputPath: NullOutputPath | OutputPath
 ): string {
   switch (outputPath.tag) {
@@ -184,7 +184,7 @@ function parseElmMakeJson(
   }
 }
 
-export type ElmInstallResult =
+type ElmInstallResult =
   | {
       tag: "CreatingDummyFailed";
       error: Error;

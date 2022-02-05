@@ -49,7 +49,7 @@ export function getPath(
   };
 }
 
-export type ParseResult =
+type ParseResult =
   | ParseError
   | {
       tag: "NoElmWatchStuffJson";
@@ -61,7 +61,7 @@ export type ParseResult =
       elmWatchStuffJson: ElmWatchStuffJson;
     };
 
-export type ParseError =
+type ParseError =
   | {
       tag: "ElmWatchStuffJsonDecodeError";
       error: JsonError;

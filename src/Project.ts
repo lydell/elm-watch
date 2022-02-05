@@ -68,7 +68,7 @@ export type OutputState = {
   dirty: boolean;
 };
 
-export type OutputStatus =
+type OutputStatus =
   | OutputError
   | {
       tag: "ElmMake";
@@ -119,7 +119,7 @@ export type OutputError =
   | RunElmMakeError
   | WalkImportsError;
 
-export type OutputFsError =
+type OutputFsError =
   | {
       tag: "ReadOutputError";
       error: Error;
@@ -197,7 +197,7 @@ export type Duration =
       durationMs: number;
     };
 
-export type InitProjectResult =
+type InitProjectResult =
   | {
       tag: "DuplicateOutputs";
       duplicates: NonEmptyArray<{

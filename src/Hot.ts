@@ -275,7 +275,7 @@ type Cmd =
       webSocket: WebSocket;
     };
 
-export type HotRunResult =
+type HotRunResult =
   | {
       tag: "ExitOnHandledFatalError";
       errorTemplate: Errors.ErrorTemplate;

@@ -22,7 +22,7 @@ export type WebSocketServerMsg =
       error: WebSocketServerError;
     };
 
-export type WebSocketServerError =
+type WebSocketServerError =
   | {
       tag: "OtherError";
       error: Error;
