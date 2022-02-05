@@ -589,13 +589,15 @@ ${code}
 export function proxyFile(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
-  webSocketPort: Port
+  webSocketPort: Port,
+  debug: boolean
 ): string {
   return `${clientCode(
     outputPath,
     elmCompiledTimestamp,
     "proxy",
-    webSocketPort
+    webSocketPort,
+    debug
   )}\n${ClientCode.proxy}`;
 }
 
@@ -603,7 +605,8 @@ export function clientCode(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
   compilationMode: CompilationModeWithProxy,
-  webSocketPort: Port
+  webSocketPort: Port,
+  debug: boolean
 ): string {
   return (
     versionedIdentifier(webSocketPort) +
@@ -615,6 +618,7 @@ export function clientCode(
       )
       .replace(/%COMPILATION_MODE%/g, compilationMode)
       .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString())
+      .replace(/%DEBUG%/g, debug.toString())
   );
 }
 

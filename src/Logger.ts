@@ -1,7 +1,8 @@
 import * as readline from "readline";
+import * as util from "util";
 
 import { ErrorTemplate } from "./Errors";
-import { CLEAR, Env, removeColor, WriteStream } from "./Helpers";
+import { bold, CLEAR, Env, join, removeColor, WriteStream } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 
 export type Logger = {
@@ -12,7 +13,7 @@ export type Logger = {
   write: (message: string) => void;
   writeToStderrMakesALotOfSenseHere: (message: string) => void;
   errorTemplate: (template: ErrorTemplate) => void;
-  debug: typeof console.error;
+  debug: typeof console.debug;
   clearScreen: () => void;
   clearScreenDown: () => void;
   clearLine: (dir: readline.Direction) => void;
@@ -20,6 +21,7 @@ export type Logger = {
 };
 
 export type LoggerConfig = {
+  debug: boolean;
   fancy: boolean;
   isTTY: boolean;
   mockedTimings: boolean;
@@ -35,6 +37,10 @@ export function makeLogger({
   stdout: WriteStream;
   stderr: WriteStream;
 }): Logger {
+  // This enables `logger.debug()` calls (written to stderr).
+  // Since the stuff written to stdout uses cursor movements,
+  // you probably want to make `isTTY` below be `false` (disables
+  // cursor movements), or redirect stderr to a file.
   const DEBUG = "__ELM_WATCH_DEBUG" in env;
 
   const NO_COLOR = "NO_COLOR" in env;
@@ -61,8 +67,20 @@ export function makeLogger({
     // istanbul ignore next
     debug(...args) {
       if (DEBUG) {
-        // eslint-disable-next-line no-console
-        console.error(...args);
+        stderr.write(
+          `${join(
+            args.map((arg, index) =>
+              index === 0 && typeof arg === "string" && !NO_COLOR
+                ? bold(arg)
+                : util.inspect(arg, {
+                    depth: Infinity,
+                    colors: !NO_COLOR,
+                    maxStringLength: 1000,
+                  })
+            ),
+            "\n"
+          )}\n`
+        );
       }
     },
     clearScreen(): void {
@@ -86,6 +104,7 @@ export function makeLogger({
       }
     },
     config: {
+      debug: DEBUG,
       fancy: !IS_WINDOWS && !NO_COLOR,
       isTTY,
       mockedTimings: "__ELM_WATCHED_MOCKED_TIMINGS" in env,

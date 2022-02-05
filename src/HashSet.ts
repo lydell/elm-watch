@@ -1,3 +1,5 @@
+import * as util from "util";
+
 /**
  * Like a `Set`, but the items are looked up by structure instead of by
  * reference.
@@ -65,6 +67,10 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
   }
 
   [Symbol.toStringTag] = "HashSet";
+
+  [util.inspect.custom](): Set<V> {
+    return new Set(this);
+  }
 }
 
 function hash(value: Record<string, unknown>): string {

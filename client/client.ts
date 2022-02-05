@@ -117,6 +117,7 @@ const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
 const COMPILATION_MODE = "%COMPILATION_MODE%" as CompilationModeWithProxy;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
+const DEBUG = String("%DEBUG%") === "true";
 
 type Mutable = {
   removeListeners: () => void;
@@ -276,6 +277,13 @@ const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
   "This value is supposed to only be obtained via `Status`."
 );
 
+function logDebug(...args: Array<unknown>): void {
+  if (DEBUG) {
+    // eslint-disable-next-line no-console
+    console.debug(...args);
+  }
+}
+
 function run(): void {
   const container = getOrCreateContainer();
   const { shadowRoot } = container;
@@ -310,17 +318,16 @@ function run(): void {
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(msg, model);
-      return [
-        newModel,
-        [
-          ...cmds,
-          {
-            tag: "UpdateGlobalStatus",
-            reloadStatus: statusToReloadStatus(newModel.status),
-          },
-          { tag: "Render", model: newModel, manageFocus: msg.tag === "UiMsg" },
-        ],
+      const allCmds: Array<Cmd> = [
+        ...cmds,
+        {
+          tag: "UpdateGlobalStatus",
+          reloadStatus: statusToReloadStatus(newModel.status),
+        },
+        { tag: "Render", model: newModel, manageFocus: msg.tag === "UiMsg" },
       ];
+      logDebug(msg.tag, msg, newModel, allCmds);
+      return [newModel, allCmds];
     },
     runCmd: runCmd(getNow, targetRoot),
   });

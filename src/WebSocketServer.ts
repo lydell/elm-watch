@@ -1,3 +1,4 @@
+import * as util from "util";
 import WebSocket, { Server as WsServer } from "ws";
 
 import { Port, PortChoice } from "./Port";
@@ -63,6 +64,13 @@ export class WebSocketServer {
     });
 
     this.webSocketServer.on("connection", (webSocket, request) => {
+      (
+        webSocket as WebSocket & {
+          [util.inspect.custom]: util.CustomInspectFunction;
+        }
+      )[util.inspect.custom] = (_depth, options) =>
+        options.stylize("WebSocket", "special");
+
       this.dispatch({
         tag: "WebSocketConnected",
         webSocket,

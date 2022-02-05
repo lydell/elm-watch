@@ -331,18 +331,17 @@ export async function run(
         msg,
         model
       );
-      return [
-        newModel,
-        [
-          ...cmds,
-          newModel.latestEvents.length > model.latestEvents.length
-            ? {
-                tag: "SleepBeforeNextAction",
-                sleepMs: getNextActionSleepMs(newModel.latestEvents),
-              }
-            : { tag: "NoCmd" },
-        ],
+      const allCmds: Array<Cmd> = [
+        ...cmds,
+        newModel.latestEvents.length > model.latestEvents.length
+          ? {
+              tag: "SleepBeforeNextAction",
+              sleepMs: getNextActionSleepMs(newModel.latestEvents),
+            }
+          : { tag: "NoCmd" },
       ];
+      logger.debug(msg.tag, msg, newModel, allCmds);
+      return [newModel, allCmds];
     },
     runCmd: runCmd(env, logger, getNow, exitOnError),
   });

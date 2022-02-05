@@ -718,6 +718,7 @@ async function compileOneOutput({
   switch (combinedResult.tag) {
     case "elm make success + walker success":
       return onCompileSuccess(
+        logger.config,
         getNow,
         updateStatusLineHelper,
         runMode,
@@ -750,6 +751,7 @@ async function compileOneOutput({
 }
 
 function onCompileSuccess(
+  loggerConfig: LoggerConfig,
   getNow: GetNow,
   updateStatusLineHelper: () => void,
   runMode: RunModeWithExtraData,
@@ -856,7 +858,8 @@ function onCompileSuccess(
                         outputPath,
                         elmCompiledTimestamp,
                         outputState.compilationMode,
-                        runMode.webSocketPort
+                        runMode.webSocketPort,
+                        loggerConfig.debug
                       )
                     ),
                     newBuffer,
@@ -1073,7 +1076,8 @@ async function postprocessHelper({
                   outputPath,
                   elmCompiledTimestamp,
                   outputState.compilationMode,
-                  runMode.webSocketPort
+                  runMode.webSocketPort,
+                  logger.config.debug
                 )
               ),
               postprocessResult.code,
@@ -1303,7 +1307,12 @@ async function typecheck({
               );
               fs.writeFileSync(
                 outputPath.theOutputPath.absolutePath,
-                Inject.proxyFile(outputPath, getNow().getTime(), webSocketPort)
+                Inject.proxyFile(
+                  outputPath,
+                  getNow().getTime(),
+                  webSocketPort,
+                  logger.config.debug
+                )
               );
               // The proxy file doesn’t count as writing to disk…
               outputState.status = {

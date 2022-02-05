@@ -1,3 +1,5 @@
+import * as util from "util";
+
 /**
  * Like a `Map`, but the keys are looked up by structure instead of by
  * reference.
@@ -71,6 +73,10 @@ export class HashMap<K extends Record<string, unknown>, V>
   }
 
   [Symbol.toStringTag] = "HashMap";
+
+  [util.inspect.custom](): Map<K, V> {
+    return new Map(this);
+  }
 }
 
 function hash(value: Record<string, unknown>): string {
