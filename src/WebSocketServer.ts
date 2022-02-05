@@ -68,8 +68,9 @@ export class WebSocketServer {
         webSocket as WebSocket & {
           [util.inspect.custom]: util.CustomInspectFunction;
         }
-      )[util.inspect.custom] = (_depth, options) =>
-        options.stylize("WebSocket", "special");
+      )[util.inspect.custom] =
+        // istanbul ignore next
+        (_depth, options) => options.stylize("WebSocket", "special");
 
       this.dispatch({
         tag: "WebSocketConnected",

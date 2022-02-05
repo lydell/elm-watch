@@ -74,6 +74,7 @@ export class HashMap<K extends Record<string, unknown>, V>
 
   [Symbol.toStringTag] = "HashMap";
 
+  // istanbul ignore next
   [util.inspect.custom](): Map<K, V> {
     return new Map(this);
   }

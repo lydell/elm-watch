@@ -68,6 +68,7 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 
   [Symbol.toStringTag] = "HashSet";
 
+  // istanbul ignore next
   [util.inspect.custom](): Set<V> {
     return new Set(this);
   }
