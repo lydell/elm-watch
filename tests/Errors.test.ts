@@ -38,8 +38,8 @@ async function runAbsolute(
     exitHotOnError = false,
   }: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean } = {}
 ): Promise<string> {
-  const stdout = new MemoryWriteStream();
-  const stderr = new CursorWriteStream();
+  const stdout = new CursorWriteStream();
+  const stderr = new MemoryWriteStream();
 
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
@@ -60,12 +60,12 @@ async function runAbsolute(
     stderr,
   });
 
-  const stderrString = clean(stderr.getOutput());
+  const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(1, exitCode, stdout.content, stderrString);
-  expect(stdout.content).toBe("");
+  assertExitCode(1, exitCode, stdoutString, stderr.content);
+  expect(stderr.content).toBe("");
 
-  return stderrString;
+  return stdoutString;
 }
 
 const elmBinAlwaysSucceedEnv = {

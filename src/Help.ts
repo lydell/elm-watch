@@ -1,17 +1,12 @@
 import { EMOJI, emojiWidthFix } from "./Compile";
 import { bold, dim, join } from "./Helpers";
+import { LoggerConfig } from "./Logger";
 
 const elmWatchJson = bold("elm-watch.json");
 
-export function render({
-  fancy,
-  isTTY,
-}: {
-  fancy: boolean;
-  isTTY: boolean;
-}): string {
+export function render(loggerConfig: LoggerConfig): string {
   // Not trimming on purpose.
-  const symbolLegend = fancy
+  const symbolLegend = loggerConfig.fancy
     ? `
 ${bold("Symbol legend:")}
 
@@ -21,7 +16,7 @@ ${join(
     return `${indent}${emojiWidthFix({
       emoji,
       column: indent.length + 3,
-      isTTY,
+      isTTY: loggerConfig.isTTY,
     })} ${description}`;
   }),
   "\n"
@@ -55,7 +50,7 @@ ${bold("Durations legend:")}
     ${bold("I")} inject hot reloading code
     ${bold("R")} queued for postprocess
     ${bold("P")} postprocess
-    ${bold(fancy ? "¦" : "/")} next is run in parallel
+    ${bold(loggerConfig.fancy ? "¦" : "/")} next is run in parallel
 
 ${dim("---")}
 

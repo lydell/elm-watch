@@ -1,7 +1,6 @@
 import * as chokidar from "chokidar";
 import * as fs from "fs";
 import * as path from "path";
-import * as readline from "readline";
 import * as Decode from "tiny-decoders";
 import { URLSearchParams } from "url";
 import type WebSocket from "ws";
@@ -29,7 +28,7 @@ import {
   toError,
   toJsonError,
 } from "./Helpers";
-import type { Logger } from "./Logger";
+import type { Logger, LoggerConfig } from "./Logger";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
@@ -325,13 +324,13 @@ export async function run(
       project.elmJsonsErrors.map(({ outputPath }) => outputPath)
     ),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
-      const [newModel, cmds] = update({
+      const [newModel, cmds] = update(
+        logger.config,
         project,
         exitOnError,
-        mockedTimings: logger.mockedTimings,
         msg,
-        model,
-      });
+        model
+      );
       return [
         newModel,
         [
@@ -569,19 +568,13 @@ const init = (
   ],
 ];
 
-function update({
-  project,
-  exitOnError,
-  mockedTimings,
-  msg,
-  model,
-}: {
-  project: Project;
-  exitOnError: boolean;
-  mockedTimings: boolean;
-  msg: Msg;
-  model: Model;
-}): [Model, Array<Cmd>] {
+function update(
+  loggerConfig: LoggerConfig,
+  project: Project,
+  exitOnError: boolean,
+  msg: Msg,
+  model: Model
+): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "GotWatcherEvent": {
       const result = onWatcherEvent(
@@ -685,7 +678,7 @@ function update({
               { tag: "HandleElmWatchStuffJsonWriteError" },
               {
                 tag: "LogInfoMessageWithTimeline",
-                message: compileFinishedMessage({ duration, mockedTimings }),
+                message: compileFinishedMessage(loggerConfig, duration),
                 events: model.latestEvents,
               },
               isNonEmptyArray(errors) && exitOnError
@@ -1205,7 +1198,7 @@ const runCmd =
           // If still an error, print it.
           // istanbul ignore else
           if (mutable.elmWatchStuffJsonWriteError !== undefined) {
-            logger.error("");
+            logger.write("");
             logger.errorTemplate(
               Errors.elmWatchStuffJsonWriteError(
                 mutable.project.elmWatchStuffJsonPath,
@@ -1250,30 +1243,22 @@ const runCmd =
         return;
 
       case "LogInfoMessageWithTimeline": {
-        if (mutable.lastInfoMessage !== undefined && logger.raw.stderr.isTTY) {
-          readline.moveCursor(
-            logger.raw.stderr,
-            0,
-            -mutable.lastInfoMessage.split("\n").length
-          );
-          readline.clearScreenDown(logger.raw.stderr);
+        if (mutable.lastInfoMessage !== undefined) {
+          logger.moveCursor(0, -mutable.lastInfoMessage.split("\n").length);
+          logger.clearScreenDown();
         }
         const fullMessage = infoMessageWithTimeline({
+          loggerConfig: logger.config,
           date: getNow(),
           mutable,
           message: cmd.message,
           events: filterLatestEvents(cmd.events),
-          fancy: logger.fancy,
-          isTTY: logger.raw.stderr.isTTY,
-          mockedTimings: logger.mockedTimings,
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
         });
-        logger.error(fullMessage);
-        if (logger.raw.stderr.isTTY) {
-          // For the `run-pty` tool: Let it know that it’s safe to render the
-          // keyboard shortcuts below the cursor text again.
-          readline.clearScreenDown(logger.raw.stderr);
-        }
+        logger.write(fullMessage);
+        // For the `run-pty` tool: Let it know that it’s safe to render the
+        // keyboard shortcuts below the cursor text again.
+        logger.clearScreenDown();
         mutable.lastInfoMessage = fullMessage;
         return;
       }
@@ -2184,38 +2169,32 @@ function filterLatestEvents(events: Array<LatestEvent>): Array<LatestEvent> {
 }
 
 function infoMessageWithTimeline({
+  loggerConfig,
   date,
   mutable,
   message,
   events,
-  fancy,
-  isTTY,
-  mockedTimings,
   hasErrors,
 }: {
+  loggerConfig: LoggerConfig;
   date: Date;
   mutable: Mutable;
   message: string;
   events: Array<LatestEvent>;
-  fancy: boolean;
-  isTTY: boolean;
-  mockedTimings: boolean;
   hasErrors: boolean;
 }): string {
   return join(
     [
       "", // Empty line separator.
-      printStats({ mutable, fancy, isTTY }),
+      printStats(loggerConfig, mutable),
       "",
-      printTimeline({ events, fancy, isTTY, mockedTimings }),
+      printTimeline(loggerConfig, events),
       printMessageWithTimeAndEmoji({
+        loggerConfig,
         emojiName: hasErrors ? "Error" : "Success",
         date,
         dateHighlight: bold,
         message,
-        fancy,
-        isTTY,
-        mockedTimings,
       }),
     ].flatMap((part) => (part === undefined ? [] : part)),
     "\n"
@@ -2223,43 +2202,31 @@ function infoMessageWithTimeline({
 }
 
 function printMessageWithTimeAndEmoji({
+  loggerConfig,
   emojiName,
   date,
   dateHighlight: highlightTime,
   message,
-  fancy,
-  isTTY,
-  mockedTimings,
 }: {
+  loggerConfig: LoggerConfig;
   emojiName: Compile.EmojiName;
   date: Date;
   dateHighlight: (string: string) => string;
   message: string;
-  fancy: boolean;
-  isTTY: boolean;
-  mockedTimings: boolean;
 }): string {
-  const newDate = mockedTimings
+  const newDate = loggerConfig.mockedTimings
     ? new Date("2022-02-05T13:10:05Z")
     : /* istanbul ignore next */ date;
   return Compile.printStatusLine({
     maxWidth: Infinity,
-    fancy,
-    isTTY,
+    fancy: loggerConfig.fancy,
+    isTTY: loggerConfig.isTTY,
     emojiName,
     string: `${highlightTime(formatTime(newDate))} ${message}`,
   });
 }
 
-function printStats({
-  mutable,
-  fancy,
-  isTTY,
-}: {
-  mutable: Mutable;
-  fancy: boolean;
-  isTTY: boolean;
-}): string {
+function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
   return join(
     [
@@ -2274,8 +2241,8 @@ function printStats({
         ? []
         : Compile.printStatusLine({
             maxWidth: Infinity,
-            fancy,
-            isTTY,
+            fancy: loggerConfig.fancy,
+            isTTY: loggerConfig.isTTY,
             emojiName: "Stats",
             string: part,
           })
@@ -2284,17 +2251,10 @@ function printStats({
   );
 }
 
-function printTimeline({
-  events,
-  fancy,
-  isTTY,
-  mockedTimings,
-}: {
-  events: Array<LatestEvent>;
-  fancy: boolean;
-  isTTY: boolean;
-  mockedTimings: boolean;
-}): string | undefined {
+function printTimeline(
+  loggerConfig: LoggerConfig,
+  events: Array<LatestEvent>
+): string | undefined {
   if (!isNonEmptyArray(events)) {
     return undefined;
   }
@@ -2306,36 +2266,22 @@ function printTimeline({
   return dim(
     join(
       [
-        printEvent({ event: first, fancy, isTTY, mockedTimings }),
-        printNumMoreEvents({ numMoreEvents, fancy }),
-        last === undefined
-          ? undefined
-          : printEvent({ event: last, fancy, isTTY, mockedTimings }),
+        printEvent(loggerConfig, first),
+        printNumMoreEvents(loggerConfig, numMoreEvents),
+        last === undefined ? undefined : printEvent(loggerConfig, last),
       ].flatMap((part) => (part === undefined ? [] : part)),
       "\n"
     )
   );
 }
 
-function printEvent({
-  event,
-  fancy,
-  isTTY,
-  mockedTimings,
-}: {
-  event: LatestEvent;
-  fancy: boolean;
-  isTTY: boolean;
-  mockedTimings: boolean;
-}): string {
+function printEvent(loggerConfig: LoggerConfig, event: LatestEvent): string {
   return printMessageWithTimeAndEmoji({
+    loggerConfig,
     emojiName: "Information",
     date: event.date,
     dateHighlight: (string) => string,
     message: printEventMessage(event),
-    fancy,
-    isTTY,
-    mockedTimings,
   });
 }
 
@@ -2372,14 +2318,11 @@ function printEventMessage(event: LatestEvent): string {
   }
 }
 
-function printNumMoreEvents({
-  numMoreEvents,
-  fancy,
-}: {
-  numMoreEvents: number;
-  fancy: boolean;
-}): string | undefined {
-  const indent = fancy ? "   " : "";
+function printNumMoreEvents(
+  loggerConfig: LoggerConfig,
+  numMoreEvents: number
+): string | undefined {
+  const indent = loggerConfig.fancy ? "   " : "";
   return numMoreEvents <= 0
     ? undefined
     : numMoreEvents === 1
@@ -2387,15 +2330,14 @@ function printNumMoreEvents({
     : `${indent}(${numMoreEvents} more events)`;
 }
 
-function compileFinishedMessage({
-  duration,
-  mockedTimings,
-}: {
-  duration: number;
-  mockedTimings: boolean;
-}): string {
+function compileFinishedMessage(
+  loggerConfig: LoggerConfig,
+  duration: number
+): string {
   return `Compilation finished in ${bold(
-    mockedTimings ? "123" : /* istanbul ignore next */ duration.toString()
+    loggerConfig.mockedTimings
+      ? "123"
+      : /* istanbul ignore next */ duration.toString()
   )} ms.`;
 }
 

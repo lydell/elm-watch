@@ -284,7 +284,7 @@ async function handleElmWatchJsonError(
       return { tag: "Exit", exitCode: 1 };
 
     case "hot": {
-      logger.error("");
+      logger.write("");
       Compile.printNumErrors(logger, 1);
       const elmWatchJsonEvent = await Hot.watchElmWatchJsonOnce(
         getNow,

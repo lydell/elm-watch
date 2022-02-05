@@ -89,8 +89,8 @@ async function run({
     rm(elmWatchStuff);
   }
 
-  const stdout = new MemoryWriteStream();
-  const stderr = new CursorWriteStream();
+  const stdout = new CursorWriteStream();
+  const stderr = new MemoryWriteStream();
 
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
@@ -260,12 +260,12 @@ async function run({
       .catch(reject);
   });
 
-  const stderrString = clean(stderr.getOutput());
+  const stdoutString = clean(stdout.getOutput());
 
-  expect(stdout.content).toBe("");
+  expect(stderr.content).toBe("");
 
   return {
-    terminal: stderrString,
+    terminal: stdoutString,
     browserConsole: browserConsole.join("\n\n"),
     renders: renders.join(`\n${"=".repeat(80)}\n`),
     div: outerDiv,

@@ -1,21 +1,29 @@
+import * as readline from "readline";
+
 import { ErrorTemplate } from "./Errors";
 import { CLEAR, Env, removeColor, WriteStream } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 
 export type Logger = {
-  handleColor: (string: string) => string;
-  log: (message: string) => void;
-  error: (message: string) => void;
+  config: LoggerConfig;
+  // The default is to write to `stdout`. `stderr` is used for debug logging.
+  // But if there’s a use case for `elm-watch something 2>/dev/null` – use
+  // `writeToStderrMakesALotOfSenseHere`.
+  write: (message: string) => void;
+  writeToStderrMakesALotOfSenseHere: (message: string) => void;
   errorTemplate: (template: ErrorTemplate) => void;
+  debug: typeof console.error;
   clearScreen: () => void;
+  clearScreenDown: () => void;
+  clearLine: (dir: readline.Direction) => void;
+  moveCursor: (dx: number, dy: number) => void;
+};
+
+export type LoggerConfig = {
   fancy: boolean;
+  isTTY: boolean;
   mockedTimings: boolean;
-  raw: {
-    NO_COLOR: boolean;
-    stdout: WriteStream;
-    stderr: WriteStream;
-    stderrColumns: number;
-  };
+  columns: number;
 };
 
 export function makeLogger({
@@ -27,36 +35,61 @@ export function makeLogger({
   stdout: WriteStream;
   stderr: WriteStream;
 }): Logger {
+  const DEBUG = "__ELM_WATCH_DEBUG" in env;
+
   const NO_COLOR = "NO_COLOR" in env;
   const handleColor = (string: string): string =>
     NO_COLOR ? removeColor(string) : string;
 
   // `.columns` is `undefined` if not a TTY.
-  const stderrColumns = stderr.columns ?? 80;
+  const columns = stdout.columns ?? 80;
+  const isTTY =
+    "__ELM_WATCH_NOT_TTY" in env
+      ? /* istanbul ignore next */ false
+      : stdout.isTTY;
 
   return {
-    handleColor,
-    log(message) {
+    write(message) {
       stdout.write(`${handleColor(message)}\n`);
     },
-    error(message) {
+    writeToStderrMakesALotOfSenseHere(message: string) {
       stderr.write(`${handleColor(message)}\n`);
     },
     errorTemplate(template) {
-      stderr.write(`${handleColor(template(stderrColumns))}\n`);
+      stdout.write(`${handleColor(template(columns))}\n`);
     },
-    clearScreen(): void {
-      if (stderr.isTTY) {
-        stderr.write(CLEAR);
+    // istanbul ignore next
+    debug(...args) {
+      if (DEBUG) {
+        // eslint-disable-next-line no-console
+        console.error(...args);
       }
     },
-    fancy: !IS_WINDOWS && !NO_COLOR,
-    mockedTimings: "__ELM_WATCHED_MOCKED_TIMINGS" in env,
-    raw: {
-      NO_COLOR,
-      stdout,
-      stderr,
-      stderrColumns,
+    clearScreen(): void {
+      if (isTTY) {
+        stdout.write(CLEAR);
+      }
+    },
+    clearScreenDown(): void {
+      if (isTTY) {
+        readline.clearScreenDown(stdout);
+      }
+    },
+    clearLine(dir: readline.Direction) {
+      if (isTTY) {
+        readline.clearLine(stdout, dir);
+      }
+    },
+    moveCursor(dx: number, dy: number) {
+      if (isTTY) {
+        readline.moveCursor(stdout, dx, dy);
+      }
+    },
+    config: {
+      fancy: !IS_WINDOWS && !NO_COLOR,
+      isTTY,
+      mockedTimings: "__ELM_WATCHED_MOCKED_TIMINGS" in env,
+      columns,
     },
   };
 }

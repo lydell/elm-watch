@@ -9,9 +9,13 @@ import { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
 
 const elmWatchJson = bold("elm-watch.json");
 
+// `elm-watch init 2>/dev/null` feels like a reasonable thing to do in a script.
+// (Try to create an elm-watch.json and don’t care about errors.)
 export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   if (isNonEmptyArray(args)) {
-    logger.error(`${bold("elm-watch init")} takes no arguments.`);
+    logger.writeToStderrMakesALotOfSenseHere(
+      `${bold("elm-watch init")} takes no arguments.`
+    );
     return 1;
   }
 
@@ -21,7 +25,9 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   };
 
   if (fs.existsSync(elmWatchJsonPath.theElmWatchJsonPath.absolutePath)) {
-    logger.error(`${elmWatchJson} already exists in the current directory!`);
+    logger.writeToStderrMakesALotOfSenseHere(
+      `${elmWatchJson} already exists in the current directory!`
+    );
     return 1;
   }
 
@@ -37,11 +43,13 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
     );
   } catch (unknownError) {
     const error = toError(unknownError);
-    logger.error(`Failed to write ${elmWatchJson}:\n\n${error.message}`);
+    logger.writeToStderrMakesALotOfSenseHere(
+      `Failed to write ${elmWatchJson}:\n\n${error.message}`
+    );
     return 1;
   }
 
-  logger.log(
+  logger.write(
     `
 Created a minimal ${elmWatchJson} in the current directory to get you started.
 Go check it out!

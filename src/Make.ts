@@ -1,6 +1,6 @@
 import * as Compile from "./Compile";
 import { bold, dim, Env } from "./Helpers";
-import type { Logger } from "./Logger";
+import type { Logger, LoggerConfig } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
 import { Project } from "./Project";
@@ -89,14 +89,12 @@ export async function run(
   }
 
   const duration = getNow().getTime() - startTimestamp;
-  logger.error("");
-  logger.error(
+  logger.write("");
+  logger.write(
     compileFinishedMessage({
+      loggerConfig: logger.config,
       duration,
       numWorkers,
-      fancy: logger.fancy,
-      isTTY: logger.raw.stderr.isTTY,
-      mockedTimings: logger.mockedTimings,
       hasErrors: failed,
     })
   );
@@ -123,18 +121,14 @@ function getNextOutputActions(project: Project): Compile.OutputActions {
 }
 
 function compileFinishedMessage({
+  loggerConfig,
   duration,
   numWorkers,
-  fancy,
-  isTTY,
-  mockedTimings,
   hasErrors,
 }: {
+  loggerConfig: LoggerConfig;
   duration: number;
   numWorkers: number;
-  fancy: boolean;
-  isTTY: boolean;
-  mockedTimings: boolean;
   hasErrors: boolean;
 }): string {
   const workersString =
@@ -148,11 +142,13 @@ function compileFinishedMessage({
 
   return Compile.printStatusLine({
     maxWidth: Infinity,
-    fancy,
-    isTTY,
+    fancy: loggerConfig.fancy,
+    isTTY: loggerConfig.isTTY,
     emojiName: hasErrors ? "Error" : "Success",
     string: `Compilation finished in ${bold(
-      mockedTimings ? "123" : /* istanbul ignore next */ duration.toString()
+      loggerConfig.mockedTimings
+        ? "123"
+        : /* istanbul ignore next */ duration.toString()
     )} ms${workersString}`,
   });
 }

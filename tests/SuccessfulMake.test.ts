@@ -29,8 +29,8 @@ async function run(
     fs.rmdirSync(build, { recursive: true });
   }
 
-  const stdout = new MemoryWriteStream();
-  const stderr = new CursorWriteStream();
+  const stdout = new CursorWriteStream();
+  const stderr = new MemoryWriteStream();
 
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
@@ -48,12 +48,12 @@ async function run(
     stderr,
   });
 
-  const stderrString = clean(stderr.getOutput());
+  const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(0, exitCode, stdout.content, stderrString);
-  expect(stdout.content).toBe("");
+  assertExitCode(0, exitCode, stdoutString, stderr.content);
+  expect(stderr.content).toBe("");
 
-  return stderrString;
+  return stdoutString;
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);

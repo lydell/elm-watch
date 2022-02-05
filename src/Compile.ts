@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as readline from "readline";
 
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
@@ -20,7 +19,7 @@ import {
   WalkImportsResult,
 } from "./ImportWalker";
 import * as Inject from "./Inject";
-import { Logger } from "./Logger";
+import { Logger, LoggerConfig } from "./Logger";
 import {
   flattenNonEmptyArray,
   isNonEmptyArray,
@@ -76,11 +75,11 @@ export async function installDependencies(
     nonFancy: string
   ): string =>
     printStatusLine({
-      maxWidth: logger.raw.stderrColumns,
-      fancy: logger.fancy,
-      isTTY: logger.raw.stderr.isTTY,
+      maxWidth: logger.config.columns,
+      fancy: logger.config.fancy,
+      isTTY: logger.config.isTTY,
       emojiName,
-      string: logger.fancy ? message : `${message}: ${nonFancy}`,
+      string: logger.config.fancy ? message : `${message}: ${nonFancy}`,
     });
 
   const elmJsonsArray = Array.from(project.elmJsons);
@@ -101,14 +100,14 @@ export async function installDependencies(
     // Avoid printing `loadingMessage` if there’s nothing to download.
     let didWriteLoadingMessage = false;
     const timeoutId = setTimeout(() => {
-      logger.error(loadingMessage);
+      logger.write(loadingMessage);
       didWriteLoadingMessage = true;
     }, loadingMessageDelay);
 
     const clearLoadingMessage = (): void => {
-      if (didWriteLoadingMessage && logger.raw.stderr.isTTY) {
-        readline.moveCursor(logger.raw.stderr, 0, -1);
-        readline.clearLine(logger.raw.stderr, 0);
+      if (didWriteLoadingMessage) {
+        logger.moveCursor(0, -1);
+        logger.clearLine(0);
       }
     };
 
@@ -116,8 +115,8 @@ export async function installDependencies(
       error: Errors.ErrorTemplate
     ): InstallDependenciesResult => {
       clearLoadingMessage();
-      logger.error(printStatusLineHelper("Error", message, "error"));
-      logger.error("");
+      logger.write(printStatusLineHelper("Error", message, "error"));
+      logger.write("");
       logger.errorTemplate(error);
       return { tag: "Error" };
     };
@@ -131,7 +130,7 @@ export async function installDependencies(
       case "ElmJsonError":
         if (didWriteLoadingMessage) {
           clearLoadingMessage();
-          logger.error(printStatusLineHelper("Skipped", message, "skipped"));
+          logger.write(printStatusLineHelper("Skipped", message, "skipped"));
         }
         break;
 
@@ -139,10 +138,10 @@ export async function installDependencies(
         const gotOutput = result.elmInstallOutput !== "";
         if (didWriteLoadingMessage || gotOutput) {
           clearLoadingMessage();
-          logger.error(printStatusLineHelper("Success", message, "success"));
+          logger.write(printStatusLineHelper("Success", message, "success"));
         }
         if (gotOutput) {
-          logger.error(result.elmInstallOutput);
+          logger.write(result.elmInstallOutput);
         }
         break;
       }
@@ -1456,7 +1455,7 @@ export function printSpaceForOutputs(
   runMode: RunMode,
   outputActions: OutputActions
 ): void {
-  if (!logger.raw.stderr.isTTY) {
+  if (!logger.config.isTTY) {
     return;
   }
   if (isNonEmptyArray(outputActions.outputsWithoutAction)) {
@@ -1465,23 +1464,28 @@ export function printSpaceForOutputs(
         (output2) => output2.index === index
       );
       if (output === undefined) {
-        logger.raw.stderr.write("\n");
+        writeNewLines(logger, 1);
       } else {
-        logger.error(
-          statusLine({
+        logger.write(
+          statusLine(
+            logger.config,
             runMode,
-            outputPath: output.outputPath,
-            outputState: output.outputState,
-            maxWidth: logger.raw.stderrColumns,
-            fancy: logger.fancy,
-            isTTY: logger.raw.stderr.isTTY,
-            mockedTimings: logger.mockedTimings,
-          })
+            output.outputPath,
+            output.outputState
+          )
         );
       }
     }
   } else {
-    logger.raw.stderr.write("\n".repeat(outputActions.total));
+    writeNewLines(logger, outputActions.total);
+  }
+}
+
+function writeNewLines(logger: Logger, count: number): void {
+  // istanbul ignore else
+  if (count > 0) {
+    // -1 because the logger always adds a newline.
+    logger.write("\n".repeat(count - 1));
   }
 }
 
@@ -1500,25 +1504,10 @@ function updateStatusLine({
   index: number;
   total: number;
 }): void {
-  const shouldMoveCursor = logger.raw.stderr.isTTY;
-  if (shouldMoveCursor) {
-    readline.moveCursor(logger.raw.stderr, 0, -total + index);
-    readline.clearLine(logger.raw.stderr, 0);
-  }
-  logger.error(
-    statusLine({
-      runMode,
-      outputPath,
-      outputState,
-      maxWidth: logger.raw.stderrColumns,
-      fancy: logger.fancy,
-      isTTY: logger.raw.stderr.isTTY,
-      mockedTimings: logger.mockedTimings,
-    })
-  );
-  if (shouldMoveCursor) {
-    readline.moveCursor(logger.raw.stderr, 0, total - index - 1);
-  }
+  logger.moveCursor(0, -total + index);
+  logger.clearLine(0);
+  logger.write(statusLine(logger.config, runMode, outputPath, outputState));
+  logger.moveCursor(0, total - index - 1);
 }
 
 export type EmojiName = keyof typeof EMOJI;
@@ -1579,16 +1568,15 @@ export function printStatusLinesForElmJsonsErrors(
   logger: Logger,
   project: Project
 ): void {
-  const { isTTY } = logger.raw.stderr;
   for (const { outputPath } of project.elmJsonsErrors) {
     const { targetName } = outputPath;
-    logger.error(
+    logger.write(
       printStatusLine({
-        maxWidth: logger.raw.stderrColumns,
-        fancy: logger.fancy,
-        isTTY,
+        maxWidth: logger.config.columns,
+        fancy: logger.config.fancy,
+        isTTY: logger.config.isTTY,
         emojiName: "Error",
-        string: logger.fancy ? targetName : `${targetName}: error`,
+        string: logger.config.fancy ? targetName : `${targetName}: error`,
       })
     );
   }
@@ -1599,21 +1587,21 @@ export function printErrors(
   errors: NonEmptyArray<Errors.ErrorTemplate>
 ): void {
   const errorStrings = Array.from(
-    new Set(errors.map((template) => template(logger.raw.stderrColumns)))
+    new Set(errors.map((template) => template(logger.config.columns)))
   );
 
-  logger.error("");
-  logger.error(join(errorStrings, "\n\n"));
-  logger.error("");
+  logger.write("");
+  logger.write(join(errorStrings, "\n\n"));
+  logger.write("");
   printNumErrors(logger, errorStrings.length);
 }
 
 export function printNumErrors(logger: Logger, numErrors: number): void {
-  logger.error(
+  logger.write(
     printStatusLine({
-      maxWidth: logger.raw.stderrColumns,
-      fancy: logger.fancy,
-      isTTY: logger.raw.stderr.isTTY,
+      maxWidth: logger.config.columns,
+      fancy: logger.config.fancy,
+      isTTY: logger.config.isTTY,
       emojiName: "Error",
       string: `${bold(numErrors.toString())} error${
         numErrors === 1 ? "" : "s"
@@ -1622,31 +1610,20 @@ export function printNumErrors(logger: Logger, numErrors: number): void {
   );
 }
 
-function statusLine({
-  runMode,
-  outputPath,
-  outputState,
-  maxWidth,
-  fancy,
-  isTTY,
-  mockedTimings,
-}: {
-  runMode: RunMode;
-  outputPath: OutputPath;
-  outputState: OutputState;
-  maxWidth: number;
-  fancy: boolean;
-  isTTY: boolean;
-  mockedTimings: boolean;
-}): string {
+function statusLine(
+  loggerConfig: LoggerConfig,
+  runMode: RunMode,
+  outputPath: OutputPath,
+  outputState: OutputState
+): string {
   const { targetName } = outputPath;
   const { status } = outputState;
 
   const helper = (emojiName: EmojiName, string: string): string =>
     printStatusLine({
-      maxWidth,
-      fancy,
-      isTTY,
+      maxWidth: loggerConfig.columns,
+      fancy: loggerConfig.fancy,
+      isTTY: loggerConfig.isTTY,
       emojiName,
       string,
     });
@@ -1662,10 +1639,12 @@ function statusLine({
     }
 
     // Emojis take two terminal columns, plus a space that we add after.
-    const startLength = fancy ? start.length + 3 : start.length;
+    const startLength = loggerConfig.fancy ? start.length + 3 : start.length;
     const end = join(strings, "   ");
-    const max = Math.min(maxWidth, 100);
-    const padding = isTTY ? Math.max(3, max - end.length - startLength) : 3;
+    const max = Math.min(loggerConfig.columns, 100);
+    const padding = loggerConfig.isTTY
+      ? Math.max(3, max - end.length - startLength)
+      : 3;
 
     // The `\0` business is a clever way of truncating without messing up the
     // `dim` color.
@@ -1678,36 +1657,26 @@ function statusLine({
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
-        [
-          maybePrintDurations({
-            durations: status.durations,
-            fancy,
-            mockedTimings,
-          }),
-        ],
+        [maybePrintDurations(loggerConfig, status.durations)],
         "Success",
-        fancy ? targetName : `${targetName}: success`
+        loggerConfig.fancy ? targetName : `${targetName}: success`
       );
     }
 
     case "Success": {
       return withExtraDetailsAtEnd(
         [
-          maybePrintFileSize(
+          maybePrintFileSize({
             runMode,
-            outputState.compilationMode,
-            status.elmFileSize,
-            status.postprocessFileSize,
-            fancy
-          ),
-          maybePrintDurations({
-            durations: status.durations,
-            fancy,
-            mockedTimings,
+            compilationMode: outputState.compilationMode,
+            elmFileSize: status.elmFileSize,
+            postprocessFileSize: status.postprocessFileSize,
+            fancy: loggerConfig.fancy,
           }),
+          maybePrintDurations(loggerConfig, status.durations),
         ],
         "Success",
-        fancy ? targetName : `${targetName}: success`
+        loggerConfig.fancy ? targetName : `${targetName}: success`
       );
     }
 
@@ -1752,7 +1721,10 @@ function statusLine({
     case "WriteOutputError":
     case "WriteProxyOutputError":
     case "InjectSearchAndReplaceNotFound":
-      return helper("Error", fancy ? targetName : `${targetName}: error`);
+      return helper(
+        "Error",
+        loggerConfig.fancy ? targetName : `${targetName}: error`
+      );
   }
 }
 
@@ -1797,13 +1769,19 @@ export function printStatusLine({
     : `${string.slice(0, maxWidth - 3)}...`;
 }
 
-function maybePrintFileSize(
-  runMode: RunMode,
-  compilationMode: CompilationMode,
-  elmFileSize: number,
-  postprocessFileSize: number,
-  fancy: boolean
-): string | undefined {
+function maybePrintFileSize({
+  runMode,
+  compilationMode,
+  elmFileSize,
+  postprocessFileSize,
+  fancy,
+}: {
+  runMode: RunMode;
+  compilationMode: CompilationMode;
+  elmFileSize: number;
+  postprocessFileSize: number;
+  fancy: boolean;
+}): string | undefined {
   switch (runMode) {
     case "make":
       switch (compilationMode) {
@@ -1850,15 +1828,10 @@ function printDurationMs(durationMs: number): string {
   return `${string} ${unit}`.padStart(6, " ");
 }
 
-function maybePrintDurations({
-  durations,
-  fancy,
-  mockedTimings,
-}: {
-  durations: Array<Duration>;
-  fancy: boolean;
-  mockedTimings: boolean;
-}): string | undefined {
+function maybePrintDurations(
+  loggerConfig: LoggerConfig,
+  durations: Array<Duration>
+): string | undefined {
   if (!isNonEmptyArray(durations)) {
     return undefined;
   }
@@ -1872,10 +1845,10 @@ function maybePrintDurations({
   return join(
     mapNonEmptyArray(newDurations, (duration) =>
       printDuration(
-        mockedTimings
+        loggerConfig.mockedTimings
           ? mockDuration(duration)
           : /* istanbul ignore next */ duration,
-        fancy
+        loggerConfig.fancy
       )
     ),
     " | "

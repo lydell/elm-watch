@@ -39,9 +39,7 @@ export async function elmWatchCli(
     (arg) => arg === "-h" || arg === "-help" || arg === "--help"
   );
   if (isHelp) {
-    logger.log(
-      Help.render({ fancy: logger.fancy, isTTY: logger.raw.stdout.isTTY })
-    );
+    logger.write(Help.render(logger.config));
     return 0;
   }
 
@@ -52,9 +50,7 @@ export async function elmWatchCli(
   switch (args[0]) {
     case undefined:
     case "help":
-      logger.log(
-        Help.render({ fancy: logger.fancy, isTTY: logger.raw.stdout.isTTY })
-      );
+      logger.write(Help.render(logger.config));
       return 0;
 
     case "init":
@@ -91,7 +87,7 @@ export async function elmWatchCli(
     }
 
     default:
-      logger.error(`Unknown command: ${args[0]}`);
+      logger.write(`Unknown command: ${args[0]}`);
       return 1;
   }
 }
