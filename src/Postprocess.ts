@@ -1,7 +1,8 @@
 import * as path from "path";
 import { Worker } from "worker_threads";
 
-import { Env, toError } from "./Helpers";
+import { Env } from "./Env";
+import { toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
 import { Command, ExitReason, spawnKillable, SpawnResult } from "./Spawn";

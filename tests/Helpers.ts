@@ -4,9 +4,14 @@ import * as path from "path";
 import * as stream from "stream";
 
 import { EMOJI } from "../src/Compile";
+import {
+  __ELM_WATCH_LOADING_MESSAGE_DELAY,
+  __ELM_WATCH_MAX_PARALLEL,
+  __ELM_WATCHED_MOCKED_TIMINGS,
+  Env,
+} from "../src/Env";
 import { printStdio } from "../src/Errors";
 import {
-  Env,
   JsonError,
   ReadStream,
   toError,
@@ -34,9 +39,9 @@ export function readFile(filePath: string): string {
 }
 
 export const TEST_ENV = {
-  __ELM_WATCH_LOADING_MESSAGE_DELAY: "0",
-  __ELM_WATCH_MAX_PARALLEL: "2",
-  __ELM_WATCHED_MOCKED_TIMINGS: "",
+  [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
+  [__ELM_WATCH_MAX_PARALLEL]: "2",
+  [__ELM_WATCHED_MOCKED_TIMINGS]: "",
 };
 
 export function badElmBinEnv(dir: string): Env {
@@ -47,7 +52,7 @@ export function badElmBinEnv(dir: string): Env {
     // The default timeout is optimized for calling Elm directly.
     // The bad-bin `elm`s are Node.js scripts – just starting Node.js can take
     // 100ms. So raise the bar to stabilize the tests.
-    __ELM_WATCH_LOADING_MESSAGE_DELAY: "10000",
+    [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "10000",
   };
 }
 

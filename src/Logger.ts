@@ -1,8 +1,15 @@
 import * as readline from "readline";
 import * as util from "util";
 
+import {
+  __ELM_WATCH_DEBUG,
+  __ELM_WATCH_NOT_TTY,
+  __ELM_WATCHED_MOCKED_TIMINGS,
+  Env,
+  NO_COLOR,
+} from "./Env";
 import { ErrorTemplate } from "./Errors";
-import { bold, CLEAR, Env, join, removeColor, WriteStream } from "./Helpers";
+import { bold, CLEAR, join, removeColor, WriteStream } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 
 export type Logger = {
@@ -37,20 +44,16 @@ export function makeLogger({
   stdout: WriteStream;
   stderr: WriteStream;
 }): Logger {
-  // This enables `logger.debug()` calls (written to stderr).
-  // Since the stuff written to stdout uses cursor movements,
-  // you probably want to make `isTTY` below be `false` (disables
-  // cursor movements), or redirect stderr to a file.
-  const DEBUG = "__ELM_WATCH_DEBUG" in env;
+  const debug = __ELM_WATCH_DEBUG in env;
 
-  const NO_COLOR = "NO_COLOR" in env;
+  const noColor = NO_COLOR in env;
   const handleColor = (string: string): string =>
-    NO_COLOR ? removeColor(string) : string;
+    noColor ? removeColor(string) : string;
 
   // `.columns` is `undefined` if not a TTY.
   const columns = stdout.columns ?? 80;
   const isTTY =
-    "__ELM_WATCH_NOT_TTY" in env
+    __ELM_WATCH_NOT_TTY in env
       ? /* istanbul ignore next */ false
       : stdout.isTTY;
 
@@ -66,15 +69,15 @@ export function makeLogger({
     },
     // istanbul ignore next
     debug(...args) {
-      if (DEBUG) {
+      if (debug) {
         stderr.write(
           `${join(
             args.map((arg, index) =>
-              index === 0 && typeof arg === "string" && !NO_COLOR
+              index === 0 && typeof arg === "string" && !noColor
                 ? bold(arg)
                 : util.inspect(arg, {
                     depth: Infinity,
-                    colors: !NO_COLOR,
+                    colors: !noColor,
                     maxStringLength: 1000,
                   })
             ),
@@ -104,10 +107,10 @@ export function makeLogger({
       }
     },
     config: {
-      debug: DEBUG,
-      fancy: !IS_WINDOWS && !NO_COLOR,
+      debug,
+      fancy: !IS_WINDOWS && !noColor,
       isTTY,
-      mockedTimings: "__ELM_WATCHED_MOCKED_TIMINGS" in env,
+      mockedTimings: __ELM_WATCHED_MOCKED_TIMINGS in env,
       columns,
     },
   };

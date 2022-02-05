@@ -2,13 +2,13 @@ import * as fs from "fs";
 
 import * as ElmJson from "./ElmJson";
 import * as ElmMakeError from "./ElmMakeError";
+import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
 import {
   bold,
   cursorHorizontalAbsolute,
   dim,
-  Env,
   join,
   silentlyReadIntEnvValue,
   toError,
@@ -65,7 +65,7 @@ export async function installDependencies(
   project: Project
 ): Promise<InstallDependenciesResult> {
   const loadingMessageDelay = silentlyReadIntEnvValue(
-    env.__ELM_WATCH_LOADING_MESSAGE_DELAY,
+    env[__ELM_WATCH_LOADING_MESSAGE_DELAY],
     100
   );
 

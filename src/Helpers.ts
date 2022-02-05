@@ -3,8 +3,6 @@ import { DecoderError, repr } from "tiny-decoders";
 
 import { NonEmptyArray } from "./NonEmptyArray";
 
-export type Env = Record<string, string | undefined>;
-
 export type ReadStream = Readable & {
   isTTY: boolean;
   setRawMode: (mode: boolean) => void;

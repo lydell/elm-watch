@@ -1,5 +1,6 @@
 import * as Compile from "./Compile";
-import { bold, dim, Env } from "./Helpers";
+import { Env } from "./Env";
+import { bold, dim } from "./Helpers";
 import type { Logger, LoggerConfig } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";

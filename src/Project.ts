@@ -3,14 +3,10 @@ import * as os from "os";
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
+import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
-import {
-  Env,
-  getSetSingleton,
-  silentlyReadIntEnvValue,
-  toError,
-} from "./Helpers";
+import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
 import { InjectError } from "./Inject";
 import {
@@ -335,7 +331,7 @@ export function initProject({
   }
 
   const maxParallel = silentlyReadIntEnvValue(
-    env.__ELM_WATCH_MAX_PARALLEL,
+    env[__ELM_WATCH_MAX_PARALLEL],
     os.cpus().length
   );
 

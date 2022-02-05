@@ -4,7 +4,8 @@ import * as path from "path";
 import { DecoderError } from "tiny-decoders";
 
 import * as ElmWatchJson from "./ElmWatchJson";
-import { bold, dim, Env, join, JsonError, toError } from "./Helpers";
+import { Env } from "./Env";
+import { bold, dim, join, JsonError, toError } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,

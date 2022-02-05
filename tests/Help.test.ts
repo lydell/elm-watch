@@ -1,5 +1,5 @@
 import { elmWatchCli } from "../src";
-import type { Env } from "../src/Helpers";
+import type { Env } from "../src/Env";
 import {
   assertExitCode,
   clean,

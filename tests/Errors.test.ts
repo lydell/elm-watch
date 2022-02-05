@@ -5,8 +5,14 @@ import * as path from "path";
 
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
+import {
+  __ELM_WATCH_EXIT_ON_ERROR,
+  __ELM_WATCH_MAX_PARALLEL,
+  Env,
+  NO_COLOR,
+} from "../src/Env";
 import * as Errors from "../src/Errors";
-import { Env, toError } from "../src/Helpers";
+import { toError } from "../src/Helpers";
 import {
   assertExitCode,
   badElmBinEnv,
@@ -47,7 +53,7 @@ async function runAbsolute(
   const exitCode = await elmWatchCli(args, {
     cwd: dir,
     env: {
-      ...(exitHotOnError ? { __ELM_WATCH_EXIT_ON_ERROR: "" } : {}),
+      ...(exitHotOnError ? { [__ELM_WATCH_EXIT_ON_ERROR]: "" } : {}),
       ...(env === undefined
         ? {
             ...process.env,
@@ -2735,7 +2741,7 @@ describe("errors", () => {
           env: {
             ...process.env,
             ...TEST_ENV,
-            NO_COLOR: "",
+            [NO_COLOR]: "",
           },
 
           isTTY: false,
@@ -2789,7 +2795,7 @@ describe("errors", () => {
           env: {
             ...process.env,
             ...TEST_ENV,
-            NO_COLOR: "",
+            [NO_COLOR]: "",
           },
 
           isTTY: false,
@@ -2828,7 +2834,7 @@ describe("errors", () => {
         env: {
           ...process.env,
           ...TEST_ENV,
-          __ELM_WATCH_MAX_PARALLEL: "0",
+          [__ELM_WATCH_MAX_PARALLEL]: "0",
         },
       })
     ).toMatchInlineSnapshot(`

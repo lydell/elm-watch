@@ -1,4 +1,5 @@
 import { EMOJI, emojiWidthFix } from "./Compile";
+import { NO_COLOR } from "./Env";
 import { bold, dim, join } from "./Helpers";
 import { LoggerConfig } from "./Logger";
 
@@ -55,7 +56,7 @@ ${bold("Durations legend:")}
 ${dim("---")}
 
 ${bold("Environment variables:")}
-    ${bold("NO_COLOR")}
+    ${bold(NO_COLOR)}
         Disable colored output
 
 ${bold("Documentation:")}

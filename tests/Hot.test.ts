@@ -11,7 +11,7 @@ import {
 } from "../client/client";
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
-import { Env } from "../src/Helpers";
+import { __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS, Env } from "../src/Env";
 import { CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
@@ -2464,7 +2464,7 @@ describe("hot", () => {
       scripts: ["One.js", "Two.js"],
       isTTY: false,
       env: {
-        __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS: "150",
+        [__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS]: "150",
       },
       init: (node) => {
         const node1 = document.createElement("div");

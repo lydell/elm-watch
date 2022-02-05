@@ -1,6 +1,6 @@
 import * as childProcess from "child_process";
 
-import { Env } from "./Helpers";
+import { Env } from "./Env";
 import { IS_WINDOWS } from "./IsWindows";
 import { AbsolutePath } from "./Types";
 

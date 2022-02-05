@@ -12,6 +12,11 @@ import {
 } from "../client/WebSocketMessages";
 import * as Compile from "./Compile";
 import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
+import {
+  __ELM_WATCH_EXIT_ON_ERROR,
+  __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  Env,
+} from "./Env";
 import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
 import { HashMap } from "./HashMap";
@@ -20,7 +25,6 @@ import {
   bold,
   capitalize,
   dim,
-  Env,
   formatTime,
   join,
   JsonError,
@@ -307,7 +311,7 @@ export async function run(
   project: Project,
   portChoice: PortChoice
 ): Promise<HotRunResult> {
-  const exitOnError = "__ELM_WATCH_EXIT_ON_ERROR" in env;
+  const exitOnError = __ELM_WATCH_EXIT_ON_ERROR in env;
 
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
@@ -400,7 +404,7 @@ const initMutable =
     // because the user refreshed the page (which results in a disconnect +
     // connect).
     const workerLimitTimeoutMs = silentlyReadIntEnvValue(
-      env.__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+      env[__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS],
       10000
     );
 

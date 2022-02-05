@@ -2,8 +2,9 @@ import * as fs from "fs";
 import * as os from "os";
 
 import { ElmMakeError } from "./ElmMakeError";
+import { Env } from "./Env";
 import * as Errors from "./Errors";
-import { Env, JsonError, toError, toJsonError } from "./Helpers";
+import { JsonError, toError, toJsonError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn } from "./Spawn";
