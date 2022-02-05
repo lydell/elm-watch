@@ -2513,15 +2513,15 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
-      ⏳ One: elm make
-      ⚪️ Two: queued
-      🟢 One: elm make done
-      ⏳ One: postprocess
       ⏳ Two: elm make
+      ⚪️ One: queued
       🟢 Two: elm make done
       ⏳ Two: postprocess
-      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ⏳ One: elm make
+      🟢 One: elm make done
+      ⏳ One: postprocess
       ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
@@ -2788,15 +2788,15 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
-      ⏳ Main3: elm make
-      ⚪️ Main4: queued
-      🟢 Main3: elm make done
-      ⏳ Main3: postprocess
       ⏳ Main4: elm make
+      ⚪️ Main3: queued
       🟢 Main4: elm make done
       ⏳ Main4: postprocess
-      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ⏳ Main3: elm make
+      🟢 Main3: elm make done
+      ⏳ Main3: postprocess
       ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
@@ -2812,21 +2812,21 @@ describe("hot", () => {
          (2 more events)
       ℹ️ 13:10:05 Web socket connected for: Main4⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
-      ⏳ Main3: elm make
-      ⚪️ Main4: queued
+      ⏳ Main4: elm make
+      ⚪️ Main3: queued
       ⚪️ Main1: queued
       ⚪️ Main2: queued
-      🟢 Main3: elm make done
-      ⏳ Main3: postprocess
-      ⏳ Main4: elm make
-      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       🟢 Main4: elm make done
       ⏳ Main4: postprocess
+      ⏳ Main3: elm make
+      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      🟢 Main3: elm make done
+      ⏳ Main3: postprocess
       ⏳ Main1: elm make (typecheck only)
       ⏳ Main2: elm make (typecheck only)
+      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       ✅ Main1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
       ✅ Main2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
@@ -2842,6 +2842,99 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Main4.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+    `);
+  });
+
+  test("prioritize last focused target", async () => {
+    const fixture = "prioritization";
+    const sharedFile = path.join(FIXTURES_DIR, fixture, "src", "Shared.elm");
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["One.js", "Two.js"],
+      isTTY: false,
+      init: (node) => {
+        const node1 = document.createElement("div");
+        const node2 = document.createElement("div");
+        node.append(node1, node2);
+        window.Elm?.One?.init({ node: node1 });
+        window.Elm?.Two?.init({ node: node2 });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            // One of them loaded.
+            return "KeepGoing";
+          case 2:
+            // `Two` should be compiled first here since it loaded last.
+            touch(sharedFile);
+            return "KeepGoing"; // First script has loaded.
+          case 3:
+            // One of them done.
+            return "KeepGoing";
+          case 4:
+            // This should give priority to `One`.
+            window.dispatchEvent(new CustomEvent("focus", { detail: "One" }));
+            touch(sharedFile);
+            return "KeepGoing";
+          case 5:
+            // One of them done.
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ One: elm make (typecheck only)
+      ⏳ Two: elm make (typecheck only)
+      ✅ One⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Two⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ⏳ Two: elm make
+      ⚪️ One: queued
+      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ⏳ One: elm make
+      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: One
+      ℹ️ 13:10:05 Web socket connected needing compilation of: Two⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Two
+         (2 more events)
+      ℹ️ 13:10:05 Web socket connected for: Two⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      ⏳ Two: elm make
+      ⚪️ One: queued
+      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ⏳ One: elm make
+      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/prioritization/src/Shared.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ⏳ One: elm make
+      ⚪️ Two: queued
+      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ⏳ Two: elm make
+      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/prioritization/src/Shared.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
   });
