@@ -96,6 +96,7 @@ export async function run(
       numWorkers,
       fancy: logger.fancy,
       isTTY: logger.raw.stderr.isTTY,
+      mockedTimings: logger.mockedTimings,
       hasErrors: failed,
     })
   );
@@ -126,12 +127,14 @@ function compileFinishedMessage({
   numWorkers,
   fancy,
   isTTY,
+  mockedTimings,
   hasErrors,
 }: {
   duration: number;
   numWorkers: number;
   fancy: boolean;
   isTTY: boolean;
+  mockedTimings: boolean;
   hasErrors: boolean;
 }): string {
   const workersString =
@@ -149,7 +152,7 @@ function compileFinishedMessage({
     isTTY,
     emojiName: hasErrors ? "Error" : "Success",
     string: `Compilation finished in ${bold(
-      duration.toString()
+      mockedTimings ? "123" : /* istanbul ignore next */ duration.toString()
     )} ms${workersString}`,
   });
 }

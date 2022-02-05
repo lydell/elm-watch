@@ -9,6 +9,7 @@ export type Logger = {
   errorTemplate: (template: ErrorTemplate) => void;
   clearScreen: () => void;
   fancy: boolean;
+  mockedTimings: boolean;
   raw: {
     NO_COLOR: boolean;
     stdout: WriteStream;
@@ -50,6 +51,7 @@ export function makeLogger({
       }
     },
     fancy: !IS_WINDOWS && !NO_COLOR,
+    mockedTimings: "__ELM_WATCHED_MOCKED_TIMINGS" in env,
     raw: {
       NO_COLOR,
       stdout,

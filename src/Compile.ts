@@ -1475,6 +1475,7 @@ export function printSpaceForOutputs(
             maxWidth: logger.raw.stderrColumns,
             fancy: logger.fancy,
             isTTY: logger.raw.stderr.isTTY,
+            mockedTimings: logger.mockedTimings,
           })
         );
       }
@@ -1512,6 +1513,7 @@ function updateStatusLine({
       maxWidth: logger.raw.stderrColumns,
       fancy: logger.fancy,
       isTTY: logger.raw.stderr.isTTY,
+      mockedTimings: logger.mockedTimings,
     })
   );
   if (shouldMoveCursor) {
@@ -1627,6 +1629,7 @@ function statusLine({
   maxWidth,
   fancy,
   isTTY,
+  mockedTimings,
 }: {
   runMode: RunMode;
   outputPath: OutputPath;
@@ -1634,6 +1637,7 @@ function statusLine({
   maxWidth: number;
   fancy: boolean;
   isTTY: boolean;
+  mockedTimings: boolean;
 }): string {
   const { targetName } = outputPath;
   const { status } = outputState;
@@ -1674,7 +1678,13 @@ function statusLine({
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
-        [maybePrintDurations(status.durations, fancy)],
+        [
+          maybePrintDurations({
+            durations: status.durations,
+            fancy,
+            mockedTimings,
+          }),
+        ],
         "Success",
         fancy ? targetName : `${targetName}: success`
       );
@@ -1690,7 +1700,11 @@ function statusLine({
             status.postprocessFileSize,
             fancy
           ),
-          maybePrintDurations(status.durations, fancy),
+          maybePrintDurations({
+            durations: status.durations,
+            fancy,
+            mockedTimings,
+          }),
         ],
         "Success",
         fancy ? targetName : `${targetName}: success`
@@ -1836,10 +1850,15 @@ function printDurationMs(durationMs: number): string {
   return `${string} ${unit}`.padStart(6, " ");
 }
 
-function maybePrintDurations(
-  durations: Array<Duration>,
-  fancy: boolean
-): string | undefined {
+function maybePrintDurations({
+  durations,
+  fancy,
+  mockedTimings,
+}: {
+  durations: Array<Duration>;
+  fancy: boolean;
+  mockedTimings: boolean;
+}): string | undefined {
   if (!isNonEmptyArray(durations)) {
     return undefined;
   }
@@ -1852,7 +1871,12 @@ function maybePrintDurations(
 
   return join(
     mapNonEmptyArray(newDurations, (duration) =>
-      printDuration(duration, fancy)
+      printDuration(
+        mockedTimings
+          ? mockDuration(duration)
+          : /* istanbul ignore next */ duration,
+        fancy
+      )
     ),
     " | "
   );
@@ -1883,6 +1907,48 @@ function printDuration(duration: Duration, fancy: boolean): string {
 
     case "Postprocess":
       return `${printDurationMs(duration.durationMs)} P`;
+  }
+}
+
+function mockDuration(duration: Duration): Duration {
+  switch (duration.tag) {
+    case "QueuedForElmMake":
+      return {
+        tag: "QueuedForElmMake",
+        durationMs: 1,
+      };
+
+    case "ElmMake":
+      return {
+        tag: "ElmMake",
+        elmDurationMs: 1234,
+        walkerDurationMs: duration.walkerDurationMs === -1 ? -1 : 55,
+      };
+
+    case "ElmMakeTypecheckOnly":
+      return {
+        tag: "ElmMakeTypecheckOnly",
+        elmDurationMs: 765,
+        walkerDurationMs: 50,
+      };
+
+    case "Inject":
+      return {
+        tag: "Inject",
+        durationMs: 9,
+      };
+
+    case "QueuedForPostprocess":
+      return {
+        tag: "QueuedForPostprocess",
+        durationMs: 0,
+      };
+
+    case "Postprocess":
+      return {
+        tag: "Postprocess",
+        durationMs: 31234,
+      };
   }
 }
 

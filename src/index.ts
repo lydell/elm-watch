@@ -13,7 +13,6 @@ type Options = {
   stdin: ReadStream;
   stdout: WriteStream;
   stderr: WriteStream;
-  getNow: GetNow;
 };
 
 export async function elmWatchCli(
@@ -24,9 +23,9 @@ export async function elmWatchCli(
     // stdin,
     stdout,
     stderr,
-    getNow,
   }: Options
 ): Promise<number> {
+  const getNow: GetNow = () => new Date();
   const logger = makeLogger({ env, stdout, stderr });
   const cwd: Cwd = {
     tag: "Cwd",
@@ -105,7 +104,6 @@ if (require.main === module) {
     stdin: process.stdin,
     stdout: process.stdout,
     stderr: process.stderr,
-    getNow: () => new Date(),
   })
     .then((exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.

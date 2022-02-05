@@ -325,7 +325,13 @@ export async function run(
       project.elmJsonsErrors.map(({ outputPath }) => outputPath)
     ),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
-      const [newModel, cmds] = update(project, exitOnError, msg, model);
+      const [newModel, cmds] = update({
+        project,
+        exitOnError,
+        mockedTimings: logger.mockedTimings,
+        msg,
+        model,
+      });
       return [
         newModel,
         [
@@ -563,12 +569,19 @@ const init = (
   ],
 ];
 
-function update(
-  project: Project,
-  exitOnError: boolean,
-  msg: Msg,
-  model: Model
-): [Model, Array<Cmd>] {
+function update({
+  project,
+  exitOnError,
+  mockedTimings,
+  msg,
+  model,
+}: {
+  project: Project;
+  exitOnError: boolean;
+  mockedTimings: boolean;
+  msg: Msg;
+  model: Model;
+}): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "GotWatcherEvent": {
       const result = onWatcherEvent(
@@ -672,7 +685,7 @@ function update(
               { tag: "HandleElmWatchStuffJsonWriteError" },
               {
                 tag: "LogInfoMessageWithTimeline",
-                message: compileFinishedMessage(duration),
+                message: compileFinishedMessage({ duration, mockedTimings }),
                 events: model.latestEvents,
               },
               isNonEmptyArray(errors) && exitOnError
@@ -1252,6 +1265,7 @@ const runCmd =
           events: filterLatestEvents(cmd.events),
           fancy: logger.fancy,
           isTTY: logger.raw.stderr.isTTY,
+          mockedTimings: logger.mockedTimings,
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
         });
         logger.error(fullMessage);
@@ -2176,6 +2190,7 @@ function infoMessageWithTimeline({
   events,
   fancy,
   isTTY,
+  mockedTimings,
   hasErrors,
 }: {
   date: Date;
@@ -2184,6 +2199,7 @@ function infoMessageWithTimeline({
   events: Array<LatestEvent>;
   fancy: boolean;
   isTTY: boolean;
+  mockedTimings: boolean;
   hasErrors: boolean;
 }): string {
   return join(
@@ -2191,7 +2207,7 @@ function infoMessageWithTimeline({
       "", // Empty line separator.
       printStats({ mutable, fancy, isTTY }),
       "",
-      printTimeline({ events, fancy, isTTY }),
+      printTimeline({ events, fancy, isTTY, mockedTimings }),
       printMessageWithTimeAndEmoji({
         emojiName: hasErrors ? "Error" : "Success",
         date,
@@ -2199,6 +2215,7 @@ function infoMessageWithTimeline({
         message,
         fancy,
         isTTY,
+        mockedTimings,
       }),
     ].flatMap((part) => (part === undefined ? [] : part)),
     "\n"
@@ -2212,6 +2229,7 @@ function printMessageWithTimeAndEmoji({
   message,
   fancy,
   isTTY,
+  mockedTimings,
 }: {
   emojiName: Compile.EmojiName;
   date: Date;
@@ -2219,13 +2237,17 @@ function printMessageWithTimeAndEmoji({
   message: string;
   fancy: boolean;
   isTTY: boolean;
+  mockedTimings: boolean;
 }): string {
+  const newDate = mockedTimings
+    ? new Date("2022-02-05T13:10:05Z")
+    : /* istanbul ignore next */ date;
   return Compile.printStatusLine({
     maxWidth: Infinity,
     fancy,
     isTTY,
     emojiName,
-    string: `${highlightTime(formatTime(date))} ${message}`,
+    string: `${highlightTime(formatTime(newDate))} ${message}`,
   });
 }
 
@@ -2266,10 +2288,12 @@ function printTimeline({
   events,
   fancy,
   isTTY,
+  mockedTimings,
 }: {
   events: Array<LatestEvent>;
   fancy: boolean;
   isTTY: boolean;
+  mockedTimings: boolean;
 }): string | undefined {
   if (!isNonEmptyArray(events)) {
     return undefined;
@@ -2282,11 +2306,11 @@ function printTimeline({
   return dim(
     join(
       [
-        printEvent({ event: first, fancy, isTTY }),
+        printEvent({ event: first, fancy, isTTY, mockedTimings }),
         printNumMoreEvents({ numMoreEvents, fancy }),
         last === undefined
           ? undefined
-          : printEvent({ event: last, fancy, isTTY }),
+          : printEvent({ event: last, fancy, isTTY, mockedTimings }),
       ].flatMap((part) => (part === undefined ? [] : part)),
       "\n"
     )
@@ -2297,10 +2321,12 @@ function printEvent({
   event,
   fancy,
   isTTY,
+  mockedTimings,
 }: {
   event: LatestEvent;
   fancy: boolean;
   isTTY: boolean;
+  mockedTimings: boolean;
 }): string {
   return printMessageWithTimeAndEmoji({
     emojiName: "Information",
@@ -2309,6 +2335,7 @@ function printEvent({
     message: printEventMessage(event),
     fancy,
     isTTY,
+    mockedTimings,
   });
 }
 
@@ -2360,8 +2387,16 @@ function printNumMoreEvents({
     : `${indent}(${numMoreEvents} more events)`;
 }
 
-function compileFinishedMessage(duration: number): string {
-  return `Compilation finished in ${bold(duration.toString())} ms.`;
+function compileFinishedMessage({
+  duration,
+  mockedTimings,
+}: {
+  duration: number;
+  mockedTimings: boolean;
+}): string {
+  return `Compilation finished in ${bold(
+    mockedTimings ? "123" : /* istanbul ignore next */ duration.toString()
+  )} ms.`;
 }
 
 function printEventsMessage(

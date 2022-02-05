@@ -18,7 +18,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
-    __ELM_WATCH_GET_NOW: GetNow;
+    __ELM_WATCHED_MOCKED_TIMINGS: boolean;
     __ELM_WATCH_SKIP_RECONNECT_TIME_CHECK: boolean;
     __ELM_WATCH_RELOAD_STATUSES: Record<string, ReloadStatus>;
     __ELM_WATCH_RELOAD_PAGE: (message: string) => void;
@@ -80,8 +80,7 @@ type ReloadStatus =
       reasons: Array<string>;
     };
 
-// So we can have a fixed date in tests.
-window.__ELM_WATCH_GET_NOW ??= () => new Date();
+window.__ELM_WATCHED_MOCKED_TIMINGS ??= false;
 
 window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK ??= false;
 
@@ -304,7 +303,7 @@ function run(): void {
   const targetRoot = createTargetRoot(TARGET_NAME);
   root.append(targetRoot);
 
-  const getNow: GetNow = () => window.__ELM_WATCH_GET_NOW();
+  const getNow: GetNow = () => new Date();
 
   void runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, targetRoot),
@@ -1277,9 +1276,18 @@ time::after {
 
 function view(
   dispatch: (msg: UiMsg) => void,
-  model: Model,
+  passedModel: Model,
   info: Info
 ): HTMLElement {
+  const model: Model = window.__ELM_WATCHED_MOCKED_TIMINGS
+    ? {
+        ...passedModel,
+        status: {
+          ...passedModel.status,
+          date: new Date("2022-02-05T13:10:05Z"),
+        },
+      }
+    : passedModel;
   const statusData = viewStatus(dispatch, model.status, info);
 
   return h(

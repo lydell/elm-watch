@@ -12,7 +12,7 @@ import {
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Helpers";
-import { CompilationMode, GetNow } from "../src/Types";
+import { CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
@@ -53,7 +53,6 @@ async function run({
   isTTY = true,
   bin,
   env,
-  getNow = () => new Date(0),
   keepElmStuffJson = false,
   cwd = ".",
 }: {
@@ -66,7 +65,6 @@ async function run({
   isTTY?: boolean;
   bin?: string;
   env?: Env;
-  getNow?: GetNow;
   keepElmStuffJson?: boolean;
   cwd?: string;
 }): Promise<{
@@ -176,7 +174,7 @@ async function run({
 
     window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK = true;
 
-    window.__ELM_WATCH_GET_NOW = getNow;
+    window.__ELM_WATCHED_MOCKED_TIMINGS = true;
 
     window.__ELM_WATCH_RELOAD_PAGE = (message) => {
       browserConsole.push(message);
@@ -257,7 +255,6 @@ async function run({
       stdin: new FailReadStream(),
       stdout,
       stderr,
-      getNow,
     })
       .then(resolve)
       .catch(reject);
@@ -472,13 +469,13 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Html⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Html
-      ℹ️ 00:00:00 Web socket connected for: Html⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
+      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(browserConsole).toMatchInlineSnapshot(`
@@ -487,19 +484,19 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Html
+      ▼ 🔌 13:10:05 Html
       ================================================================================
-      ▼ ⏳ 00:00:00 Html
+      ▼ ⏳ 13:10:05 Html
       ================================================================================
-      ▼ ⏳ 00:00:00 Html
+      ▼ ⏳ 13:10:05 Html
       ================================================================================
-      ▼ 🔌 00:00:00 Html
+      ▼ 🔌 13:10:05 Html
       ================================================================================
-      ▼ 🔌 00:00:00 Html
+      ▼ 🔌 13:10:05 Html
       ================================================================================
-      ▼ ⏳ 00:00:00 Html
+      ▼ ⏳ 13:10:05 Html
       ================================================================================
-      ▼ ✅ 00:00:00 Html
+      ▼ ✅ 13:10:05 Html
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
@@ -522,104 +519,104 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Worker: elm make (typecheck only)
-      ✅ Worker⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Worker: elm make
-      ✅ Worker⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Worker⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Worker⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Worker⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Worker
-      ℹ️ 00:00:00 Web socket connected for: Worker⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Worker
+      ℹ️ 13:10:05 Web socket connected for: Worker⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Worker
+      ▼ 🔌 13:10:05 Worker
       ================================================================================
       target Worker
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
       sleep 1.01 seconds
       [Connecting web socket…]
-      ▲ 🔌 00:00:00 Worker
+      ▲ 🔌 13:10:05 Worker
       ================================================================================
       target Worker
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
       ◯ (disabled) Debug
       ◯ (disabled) Standard
       ◯ (disabled) Optimize
-      ▲ ⏳ 00:00:00 Worker
+      ▲ ⏳ 13:10:05 Worker
       ================================================================================
       target Worker
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
       ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ▲ ⏳ 00:00:00 Worker
+      ▲ ⏳ 13:10:05 Worker
       ================================================================================
-      ▼ 🔌 00:00:00 Worker
+      ▼ 🔌 13:10:05 Worker
       ================================================================================
       target Worker
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
       sleep 1.01 seconds
       [Connecting web socket…]
-      ▲ 🔌 00:00:00 Worker
+      ▲ 🔌 13:10:05 Worker
       ================================================================================
       target Worker
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
       sleep 1.01 seconds
       [Connecting web socket…]
-      ▲ 🔌 00:00:00 Worker
+      ▲ 🔌 13:10:05 Worker
       ================================================================================
       target Worker
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ▲ ⏳ 00:00:00 Worker
+      ▲ ⏳ 13:10:05 Worker
       ================================================================================
       target Worker
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
       ◉ Standard
       ◯ Optimize
-      ▲ ✅ 00:00:00 Worker
+      ▲ ✅ 13:10:05 Worker
     `);
   });
 
@@ -635,29 +632,29 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-      ℹ️ 00:00:00 Web socket connected for: Main⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ✅ 00:00:00 Main
+      ▼ ✅ 13:10:05 Main
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
@@ -695,26 +692,26 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Readonly⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Readonly⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Readonly
+      ▼ 🔌 13:10:05 Readonly
       ================================================================================
-      ▼ ⏳ 00:00:00 Readonly
+      ▼ ⏳ 13:10:05 Readonly
       ================================================================================
-      ▼ ⏳ 00:00:00 Readonly
+      ▼ ⏳ 13:10:05 Readonly
       ================================================================================
-      ▼ 🚨 00:00:00 Readonly
+      ▼ 🚨 13:10:05 Readonly
       ================================================================================
       target Readonly
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Compilation error
       Check the terminal to see errors!
-      ▲ 🚨 00:00:00 Readonly
+      ▲ 🚨 13:10:05 Readonly
     `);
   });
 
@@ -750,26 +747,26 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: InjectError⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InjectError⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 InjectError
+      ▼ 🔌 13:10:05 InjectError
       ================================================================================
-      ▼ ⏳ 00:00:00 InjectError
+      ▼ ⏳ 13:10:05 InjectError
       ================================================================================
-      ▼ ⏳ 00:00:00 InjectError
+      ▼ ⏳ 13:10:05 InjectError
       ================================================================================
-      ▼ 🚨 00:00:00 InjectError
+      ▼ 🚨 13:10:05 InjectError
       ================================================================================
       target InjectError
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Compilation error
       Check the terminal to see errors!
-      ▲ 🚨 00:00:00 InjectError
+      ▲ 🚨 13:10:05 InjectError
     `);
 
     const dir = path.join(FIXTURES_DIR, "basic", "build");
@@ -850,23 +847,28 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ BadUrl⧙                                           0 ms Q |   0 ms T ¦   0 ms W⧘
+        ✅ BadUrl⧙                                           1 ms Q | 765 ms T ¦  50 ms W⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
-      expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 BadUrl
+      expect(
+        renders.replace(
+          /elmCompiledTimestamp=\d+/,
+          "elmCompiledTimestamp=1644064438938"
+        )
+      ).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 BadUrl
         ================================================================================
-        ▼ ⏳ 00:00:00 BadUrl
+        ▼ ⏳ 13:10:05 BadUrl
         ================================================================================
         target BadUrl
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
         I expected the web socket connection URL to start with:
@@ -875,10 +877,10 @@ describe("hot", () => {
 
         But it looks like this:
 
-        /nope?elmWatchVersion=%25VERSION%25&targetName=BadUrl&elmCompiledTimestamp=0
+        /nope?elmWatchVersion=%25VERSION%25&targetName=BadUrl&elmCompiledTimestamp=1644064438938
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
-        ▲ ❌ 00:00:00 BadUrl
+        ▲ ❌ 13:10:05 BadUrl
       `);
     });
 
@@ -897,23 +899,23 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ ParamsDecodeError⧙                                0 ms Q |   0 ms T ¦   0 ms W⧘
+        ✅ ParamsDecodeError⧙                                1 ms Q | 765 ms T ¦  50 ms W⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 ParamsDecodeError
+        ▼ 🔌 13:10:05 ParamsDecodeError
         ================================================================================
-        ▼ ⏳ 00:00:00 ParamsDecodeError
+        ▼ ⏳ 13:10:05 ParamsDecodeError
         ================================================================================
         target ParamsDecodeError
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
         I ran into trouble parsing the web socket connection URL parameters:
@@ -927,7 +929,7 @@ describe("hot", () => {
         /?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        ▲ ❌ 00:00:00 ParamsDecodeError
+        ▲ ❌ 13:10:05 ParamsDecodeError
       `);
     });
 
@@ -946,23 +948,23 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ WrongVersion⧙                                     0 ms Q |   0 ms T ¦   0 ms W⧘
+        ✅ WrongVersion⧙                                     1 ms Q | 765 ms T ¦  50 ms W⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 WrongVersion
+        ▼ 🔌 13:10:05 WrongVersion
         ================================================================================
-        ▼ ⏳ 00:00:00 WrongVersion
+        ▼ ⏳ 13:10:05 WrongVersion
         ================================================================================
         target WrongVersion
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it was compiled with:
@@ -974,7 +976,7 @@ describe("hot", () => {
         elm-watch %VERSION%
 
         Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        ▲ ❌ 00:00:00 WrongVersion
+        ▲ ❌ 13:10:05 WrongVersion
       `);
     });
 
@@ -993,23 +995,23 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ TargetNotFound⧙                                   0 ms Q |   0 ms T ¦   0 ms W⧘
+        ✅ TargetNotFound⧙                                   1 ms Q | 765 ms T ¦  50 ms W⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 TargetNotFound
+        ▼ 🔌 13:10:05 TargetNotFound
         ================================================================================
-        ▼ ⏳ 00:00:00 TargetNotFound
+        ▼ ⏳ 13:10:05 TargetNotFound
         ================================================================================
         target TargetNotFound
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
@@ -1035,7 +1037,7 @@ describe("hot", () => {
         SendBadJson
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
-        ▲ ❌ 00:00:00 TargetNotFound
+        ▲ ❌ 13:10:05 TargetNotFound
       `);
     });
 
@@ -1054,23 +1056,23 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ Main⧙                                             0 ms Q |   0 ms T ¦   0 ms W⧘
+        ✅ Main⧙                                             1 ms Q | 765 ms T ¦  50 ms W⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 Main
+        ▼ 🔌 13:10:05 Main
         ================================================================================
-        ▼ ⏳ 00:00:00 Main
+        ▼ ⏳ 13:10:05 Main
         ================================================================================
         target Main
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
@@ -1084,7 +1086,7 @@ describe("hot", () => {
         Main
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
-        ▲ ❌ 00:00:00 Main
+        ▲ ❌ 13:10:05 Main
       `);
     });
 
@@ -1103,23 +1105,23 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ TargetDisabled⧙                                   0 ms Q |   0 ms T ¦   0 ms W⧘
+        ✅ TargetDisabled⧙                                   1 ms Q | 765 ms T ¦  50 ms W⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 TargetDisabled
+        ▼ 🔌 13:10:05 TargetDisabled
         ================================================================================
-        ▼ ⏳ 00:00:00 TargetDisabled
+        ▼ ⏳ 13:10:05 TargetDisabled
         ================================================================================
         target TargetDisabled
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
@@ -1145,7 +1147,7 @@ describe("hot", () => {
         SendBadJson
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
-        ▲ ❌ 00:00:00 TargetDisabled
+        ▲ ❌ 13:10:05 TargetDisabled
       `);
     });
 
@@ -1184,56 +1186,56 @@ describe("hot", () => {
       });
 
       expect(terminal).toMatchInlineSnapshot(`
-        ✅ SendBadJson⧙                           0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+        ✅ SendBadJson⧙                           1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: SendBadJson
-        ℹ️ 00:00:00 Web socket connected for: SendBadJson⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: SendBadJson
+        ℹ️ 13:10:05 Web socket connected for: SendBadJson⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 00:00:00 SendBadJson
+        ▼ 🔌 13:10:05 SendBadJson
         ================================================================================
-        ▼ ⏳ 00:00:00 SendBadJson
+        ▼ ⏳ 13:10:05 SendBadJson
         ================================================================================
-        ▼ ⏳ 00:00:00 SendBadJson
+        ▼ ⏳ 13:10:05 SendBadJson
         ================================================================================
-        ▼ 🔌 00:00:00 SendBadJson
+        ▼ 🔌 13:10:05 SendBadJson
         ================================================================================
-        ▼ 🔌 00:00:00 SendBadJson
+        ▼ 🔌 13:10:05 SendBadJson
         ================================================================================
-        ▼ ⏳ 00:00:00 SendBadJson
+        ▼ ⏳ 13:10:05 SendBadJson
         ================================================================================
-        ▼ ✅ 00:00:00 SendBadJson
+        ▼ ✅ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◉ Standard
         ◯ Optimize
-        ▲ ✅ 00:00:00 SendBadJson
+        ▲ ✅ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
         ◉ (disabled) Optimize
-        ▲ ⏳ 00:00:00 SendBadJson
+        ▲ ⏳ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
         elm-watch %VERSION%
         web socket ws://localhost:59123
-        updated 1970-01-01 00:00:00
+        updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
@@ -1243,7 +1245,7 @@ describe("hot", () => {
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        ▲ ❌ 00:00:00 SendBadJson
+        ▲ ❌ 13:10:05 SendBadJson
       `);
     });
   });
@@ -1324,29 +1326,29 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make (typecheck only)
-      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
+      ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
       ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json
 
@@ -1360,19 +1362,19 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make (typecheck only)
-      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json
 
@@ -1388,19 +1390,19 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make (typecheck only)
-      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -1422,49 +1424,49 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
     `);
 
     function assert1(div: HTMLDivElement): void {
@@ -1531,24 +1533,24 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make (typecheck only)
-      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
+      ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Dependencies
       ⛔️ Dependencies
       ⏳ HtmlMain: elm make
@@ -1585,17 +1587,17 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Dependencies
       ⛔️ Dependencies
       ⏳ HtmlMain: elm make
@@ -1614,17 +1616,17 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       🚨 HtmlMain
 
       ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
@@ -1640,48 +1642,48 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🚨 00:00:00 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🚨 00:00:00 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🚨 00:00:00 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
     `);
 
     function assert(div: HTMLDivElement): void {
@@ -1741,29 +1743,29 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make (typecheck only)
-      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
+      ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -1789,18 +1791,18 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -1822,54 +1824,54 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🚨 00:00:00 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🚨 00:00:00 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
     `);
 
     function assert1(div: HTMLDivElement): void {
@@ -1922,24 +1924,24 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make (typecheck only)
-      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
+      ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ HtmlMain: elm make
       🚨 HtmlMain
 
@@ -1958,15 +1960,15 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
       🚨 HtmlMain
 
@@ -1988,51 +1990,51 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🚨 00:00:00 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🚨 00:00:00 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
     `);
 
     function assert(div: HTMLDivElement): void {
@@ -2067,46 +2069,46 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain1: elm make (typecheck only)
-      ✅ HtmlMain1⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain1: elm make
-      ✅ HtmlMain1⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain1⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain1⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain1⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain1
-      ℹ️ 00:00:00 Web socket connected for: HtmlMain1⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain1
+      ℹ️ 13:10:05 Web socket connected for: HtmlMain1⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File1.elm
-      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File2.elm⧘
-      ✅ ⧙00:00:00⧘ FYI: The above Elm files are not imported by any of the enabled targets. Nothing to do!
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File1.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File2.elm⧘
+      ✅ ⧙13:10:05⧘ FYI: The above Elm files are not imported by any of the enabled targets. Nothing to do!
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 HtmlMain1
+      ▼ 🔌 13:10:05 HtmlMain1
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain1
+      ▼ ⏳ 13:10:05 HtmlMain1
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain1
+      ▼ ⏳ 13:10:05 HtmlMain1
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain1
+      ▼ 🔌 13:10:05 HtmlMain1
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain1
+      ▼ 🔌 13:10:05 HtmlMain1
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain1
+      ▼ ⏳ 13:10:05 HtmlMain1
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain1
+      ▼ ✅ 13:10:05 HtmlMain1
     `);
 
     function assert(div: HTMLDivElement): void {
@@ -2138,45 +2140,45 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make (typecheck only)
-      ✅ HtmlMain⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: HtmlMain
-      ℹ️ 00:00:00 Web socket connected for: HtmlMain⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
+      ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-all-targets/src/Unused.elm⧘
-      ✅ ⧙00:00:00⧘ FYI: The above Elm file is not imported by any target. Nothing to do!
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-all-targets/src/Unused.elm⧘
+      ✅ ⧙13:10:05⧘ FYI: The above Elm file is not imported by any target. Nothing to do!
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ 🔌 00:00:00 HtmlMain
+      ▼ 🔌 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 00:00:00 HtmlMain
+      ▼ ⏳ 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 00:00:00 HtmlMain
+      ▼ ✅ 13:10:05 HtmlMain
     `);
 
     function assert(div: HTMLDivElement): void {
@@ -2202,42 +2204,42 @@ describe("hot", () => {
       ⏳ Target1: elm make (typecheck only)
       ⏳ Target2: elm make (typecheck only)
       ⏳ Target3: elm make (typecheck only)
-      ✅ Target1⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-      ✅ Target2⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-      ✅ Target3⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Target1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Target2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Target3⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Target1: elm make
-      ✅ Target1⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Target1⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Target1⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Target1⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Target1
-      ℹ️ 00:00:00 Web socket connected for: Target1⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Target1
+      ℹ️ 13:10:05 Web socket connected for: Target1⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Target1
+      ▼ 🔌 13:10:05 Target1
       ================================================================================
-      ▼ ⏳ 00:00:00 Target1
+      ▼ ⏳ 13:10:05 Target1
       ================================================================================
-      ▼ ⏳ 00:00:00 Target1
+      ▼ ⏳ 13:10:05 Target1
       ================================================================================
-      ▼ 🔌 00:00:00 Target1
+      ▼ 🔌 13:10:05 Target1
       ================================================================================
-      ▼ 🔌 00:00:00 Target1
+      ▼ 🔌 13:10:05 Target1
       ================================================================================
-      ▼ ⏳ 00:00:00 Target1
+      ▼ ⏳ 13:10:05 Target1
       ================================================================================
-      ▼ ✅ 00:00:00 Target1
+      ▼ ✅ 13:10:05 Target1
     `);
   });
 
@@ -2273,26 +2275,26 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
-      ✅ Main⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-      ℹ️ 00:00:00 Web socket connected for: Main⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
@@ -2300,37 +2302,37 @@ describe("hot", () => {
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
-      ✅ Main⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm
-      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ✅ 00:00:00 Main
+      ▼ ✅ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ✅ 00:00:00 Main
+      ▼ ✅ 13:10:05 Main
     `);
 
     function assert1(div: HTMLDivElement): void {
@@ -2378,29 +2380,29 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
-      ✅ Main⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-      ℹ️ 00:00:00 Web socket connected for: Main⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
@@ -2408,38 +2410,38 @@ describe("hot", () => {
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
-      ✅ Main⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm
-      ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ✅ 00:00:00 Main
+      ▼ ✅ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ✅ 00:00:00 Main
+      ▼ ✅ 13:10:05 Main
     `);
 
     function assert1(div: HTMLDivElement): void {
@@ -2464,7 +2466,6 @@ describe("hot", () => {
       env: {
         __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS: "150",
       },
-      getNow: () => new Date(),
       init: (node) => {
         const node1 = document.createElement("div");
         const node2 = document.createElement("div");
@@ -2484,22 +2485,18 @@ describe("hot", () => {
       },
     });
 
-    const cleanedTerminal = terminal
-      .replace(/ *⧙?[\d.]+⧘? m?s\b.*/g, " (timings)")
-      .replace(/\d{2,}/g, (match) => "1".repeat(match.length));
-
-    expect(cleanedTerminal).toMatchInlineSnapshot(`
+    expect(terminal).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ One: elm make (typecheck only)
       ⏳ Two: elm make (typecheck only)
-      ✅ One⧙ (timings)
-      ✅ Two⧙ (timings)
+      ✅ One⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Two⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:11111)⧘
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙11:11:11⧘ Compilation finished in (timings)
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ One: elm make
       ⚪️ Two: queued
       🟢 One: elm make done
@@ -2507,35 +2504,35 @@ describe("hot", () => {
       ⏳ Two: elm make
       🟢 Two: elm make done
       ⏳ Two: postprocess
-      ✅ One⧙ (timings)
-      ✅ Two⧙ (timings)
+      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 11:11:11 Web socket connected needing compilation of: One
-      ℹ️ 11:11:11 Web socket connected needing compilation of: Two⧘
-      ✅ ⧙11:11:11⧘ Compilation finished in (timings)
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: One
+      ℹ️ 13:10:05 Web socket connected needing compilation of: Two⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:11111)⧘
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Two
          (2 more events)
-      ℹ️ 11:11:11 Web socket connected for: Two⧘
-      ✅ ⧙11:11:11⧘ Everything up to date.
+      ℹ️ 13:10:05 Web socket connected for: Two⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 11:11:11 Web socket disconnected for: Two⧘
-      ✅ ⧙11:11:11⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Two⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:11111)⧘
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 11:11:11 Terminated 1 superfluous worker⧘
-      ✅ ⧙11:11:11⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Terminated 1 superfluous worker⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(browserConsole).toMatchInlineSnapshot(`
@@ -2565,29 +2562,29 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-      ℹ️ 00:00:00 Web socket connected for: Main⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 00:00:00 Main
+      ▼ 🌳 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 00:00:00 Main
+      ▼ 🌳 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ⏳ 00:00:00 Main
+      ▼ 🌳 ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ✅ 00:00:00 Main
+      ▼ 🌳 ✅ 13:10:05 Main
     `);
   });
 
@@ -2614,40 +2611,40 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-      ℹ️ 00:00:00 Web socket connected for: Main⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 00:00:00 Main
+      ▼ 🌳 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 00:00:00 Main
+      ▼ 🌳 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ⏳ 00:00:00 Main
+      ▼ 🌳 ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ✅ 00:00:00 Main
+      ▼ 🌳 ✅ 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
       web socket ws://localhost:9988
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
       ◉ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◯ Standard
       ◯ Optimize
-      ▲ 🌳 ✅ 00:00:00 Main
+      ▲ 🌳 ✅ 13:10:05 Main
     `);
   });
 
@@ -2667,60 +2664,60 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main
-      ℹ️ 00:00:00 Web socket connected for: Main⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 00:00:00 Main
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🔌 00:00:00 Main
+      ▼ 🔌 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
       sleep 1.01 seconds
       [Connecting web socket…]
-      ▲ 🔌 00:00:00 Main
+      ▲ 🔌 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Waiting for compilation
       It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
-      ▲ ⏳ 00:00:00 Main
+      ▲ ⏳ 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Successfully compiled
       It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
-      ▲ ❓ 00:00:00 Main
+      ▲ ❓ 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
       web socket ws://localhost:59123
-      updated 1970-01-01 00:00:00
+      updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ Standard
       ◯ Optimize
-      ▲ ✅ 00:00:00 Main
+      ▲ ✅ 13:10:05 Main
     `);
   });
 
@@ -2766,15 +2763,15 @@ describe("hot", () => {
       ⏳ Main2: elm make (typecheck only)
       ⏳ Main3: elm make (typecheck only)
       ⏳ Main4: elm make (typecheck only)
-      ✅ Main1⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-      ✅ Main2⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-      ✅ Main3⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-      ✅ Main4⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+      ✅ Main1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main3⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main4⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Main3: elm make
       ⚪️ Main4: queued
       🟢 Main3: elm make done
@@ -2782,23 +2779,23 @@ describe("hot", () => {
       ⏳ Main4: elm make
       🟢 Main4: elm make done
       ⏳ Main4: postprocess
-      ✅ Main3⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
-      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: Main3
-      ℹ️ 00:00:00 Web socket connected needing compilation of: Main4⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main3
+      ℹ️ 13:10:05 Web socket connected needing compilation of: Main4⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Web socket disconnected for: Main4
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main4
          (2 more events)
-      ℹ️ 00:00:00 Web socket connected for: Main4⧘
-      ✅ ⧙00:00:00⧘ Everything up to date.
+      ℹ️ 13:10:05 Web socket connected for: Main4⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Main3: elm make
       ⚪️ Main4: queued
       ⚪️ Main1: queued
@@ -2806,30 +2803,30 @@ describe("hot", () => {
       🟢 Main3: elm make done
       ⏳ Main3: postprocess
       ⏳ Main4: elm make
-      ✅ Main3⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       🟢 Main4: elm make done
       ⏳ Main4: postprocess
       ⏳ Main1: elm make (typecheck only)
       ⏳ Main2: elm make (typecheck only)
-      ✅ Main1⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-      ✅ Main2⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
-      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       ⏳ Main4: elm make
       🟢 Main4: elm make done
       ⏳ Main4: postprocess
-      ✅ Main4⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I |   0 ms R |   0 ms P⧘
+      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 00:00:00 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Main4.elm⧘
-      ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Main4.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
   });
 
@@ -3394,24 +3391,24 @@ describe("hot", () => {
         ⏳ Dependencies
         ✅ Dependencies
         ⏳ RemoveInput: elm make (typecheck only)
-        ✅ RemoveInput⧙     0 ms Q |   0 ms T ¦   0 ms W⧘
+        ✅ RemoveInput⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
         ⏳ RemoveInput: elm make
-        ✅ RemoveInput⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+        ✅ RemoveInput⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket connected needing compilation of: RemoveInput⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: RemoveInput⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Web socket disconnected for: RemoveInput
-        ℹ️ 00:00:00 Web socket connected for: RemoveInput⧘
-        ✅ ⧙00:00:00⧘ Everything up to date.
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: RemoveInput
+        ℹ️ 13:10:05 Web socket connected for: RemoveInput⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
         🚨 RemoveInput
 
         ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
@@ -3429,17 +3426,17 @@ describe("hot", () => {
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Removed /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
-        🚨 ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
         ⏳ Dependencies
         ✅ Dependencies
         ⏳ RemoveInput: elm make
-        ✅ RemoveInput⧙     0 ms Q |   0 ms E ¦   0 ms W |   0 ms I⧘
+        ✅ RemoveInput⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 00:00:00 Added /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
-        ✅ ⧙00:00:00⧘ Compilation finished in ⧙0⧘ ms.
+        ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       `);
 
       async function assert1(div: HTMLDivElement): Promise<void> {

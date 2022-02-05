@@ -22,7 +22,6 @@ async function helpHelper(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(0),
   });
 
   const stdoutString = clean(stdout.getOutput());

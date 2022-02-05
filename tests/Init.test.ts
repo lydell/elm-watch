@@ -37,7 +37,6 @@ async function initSuccessHelper(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(0),
   });
 
   assertExitCode(0, exitCode, stdout.content, stderr.content);
@@ -64,7 +63,6 @@ async function initFailHelper(
     stdin: new FailReadStream(),
     stdout,
     stderr,
-    getNow: () => new Date(0),
   });
 
   assertExitCode(1, exitCode, stdout.content, stderr.content);
