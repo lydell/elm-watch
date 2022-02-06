@@ -11,7 +11,7 @@ import {
 } from "../client/client";
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
-import { __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS, Env } from "../src/Env";
+import { __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS, Env, NO_COLOR } from "../src/Env";
 import { makeLogger } from "../src/Logger";
 import { CompilationMode } from "../src/Types";
 import {
@@ -632,6 +632,75 @@ describe("hot", () => {
       ◯ Optimize
       ▲ ✅ 13:10:05 Worker
     `);
+  });
+
+  test("successful connect (non-fancy)", async () => {
+    const { terminal, div } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      env: {
+        [NO_COLOR]: "",
+      },
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
+
+      web socket connections: 1 (ws://0.0.0.0:59123)
+
+      13:10:05 Web socket disconnected for: Html
+      13:10:05 Web socket connected for: Html
+      13:10:05 Everything up to date.
+    `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
+  });
+
+  test("successful connect (non-fancy, not TTY)", async () => {
+    const { terminal, div } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      isTTY: false,
+      env: {
+        [NO_COLOR]: "",
+      },
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      Dependencies: in progress
+      Dependencies: success
+      Html: elm make (typecheck only)
+      Html: success     1 ms Q | 765 ms T /  50 ms W
+
+      web socket connections: 0 (ws://0.0.0.0:59123)
+
+      13:10:05 Compilation finished in 123 ms.
+      Html: elm make
+      Html: success     1 ms Q | 1.23 s E /  55 ms W |   9 ms I
+
+      web socket connections: 1 (ws://0.0.0.0:59123)
+
+      13:10:05 Web socket connected needing compilation of: Html
+      13:10:05 Compilation finished in 123 ms.
+
+      web socket connections: 1 (ws://0.0.0.0:59123)
+
+      13:10:05 Web socket disconnected for: Html
+      13:10:05 Web socket connected for: Html
+      13:10:05 Everything up to date.
+    `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
   });
 
   test("successful connect (package)", async () => {

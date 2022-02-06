@@ -5,6 +5,7 @@ describe("Helpers", () => {
     test("pad", () => {
       expect(formatDate(new Date("2021-01-01"))).toBe("2021-01-01");
     });
+
     test("no pad", () => {
       expect(formatDate(new Date("2021-10-20"))).toBe("2021-10-20");
     });

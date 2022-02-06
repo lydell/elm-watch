@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
+import { Env, NO_COLOR } from "../src/Env";
 import {
   assertExitCode,
   clean,
@@ -19,7 +20,7 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures");
 async function run(
   fixture: string,
   args: Array<string>,
-  { isTTY = true, bin }: { isTTY?: boolean; bin?: string } = {}
+  { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {}
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
@@ -41,6 +42,7 @@ async function run(
     env: {
       ...process.env,
       ...TEST_ENV,
+      ...env,
       PATH:
         bin === undefined ? process.env.PATH : prependPATH(path.join(dir, bin)),
     },
@@ -125,6 +127,24 @@ describe("successful make", () => {
     `);
   });
 
+  test("CI, non-fancy", async () => {
+    expect(
+      await run("successful-make", ["make", "--optimize"], {
+        isTTY: false,
+        env: { [NO_COLOR]: "" },
+      })
+    ).toMatchInlineSnapshot(`
+      Dependencies: in progress
+      Dependencies: success
+      main: elm make --optimize
+      main: elm make done
+      main: postprocess
+      main: success   87.5 KiB -> 0.00 KiB (0.0%)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P
+
+      Compilation finished in 123 ms.
+    `);
+  });
+
   test("postprocess with elm-watch-node (cjs default)", async () => {
     expect(await run("postprocess-elm-watch-node", ["make"]))
       .toMatchInlineSnapshot(`
@@ -193,6 +213,16 @@ describe("successful make", () => {
       .toMatchInlineSnapshot(`
       ✅ Dependencies
       ✅ 💣 Mine Sweeper Clone⧙                                       1 ms Q | 1.23 s E⧘
+
+      ✅ Compilation finished in ⧙123⧘ ms.
+    `);
+  });
+
+  test("no postprocess with optimize", async () => {
+    expect(await run("successful-make-no-postprocess", ["make", "--optimize"]))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ 💣 Mine Sweeper Clone⧙                          87.5 KiB     1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123⧘ ms.
     `);
