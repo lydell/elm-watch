@@ -674,6 +674,260 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
   });
 
+  test("successful connect from two targets", async () => {
+    const { terminal, browserConsole, renders, div } = await run({
+      fixture: "basic",
+      args: ["Html", "Worker"],
+      scripts: ["Html.js", "Worker.js"],
+      expandUiImmediately: true,
+      init: (node) => {
+        const node1 = document.createElement("div");
+        const node2 = document.createElement("div");
+        node.append(node1, node2);
+        window.Elm?.HtmlMain?.init({ node: node1 });
+        window.Elm?.Worker?.init({ node: node2 });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Worker⧙                                1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Worker
+         (2 more events)
+      ℹ️ 13:10:05 Web socket connected for: Worker⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because:
+
+      Html
+      - this stub file is ready to be replaced with real compiled JS.
+
+      Worker
+      - this stub file is ready to be replaced with real compiled JS.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◯ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ ⏳ 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ ⏳ 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ ⏳ 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for reload
+      Waiting for other targets to finish compiling…
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ▲ ⏳ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ▲ ✅ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ▲ ✅ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ ⏳ 13:10:05 Worker
+      ================================================================================
+      target Html
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ▲ ✅ 13:10:05 Html
+      --------------------------------------------------------------------------------
+      ▼ ✅ 13:10:05 Worker
+    `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(
+      `<div><div>Hello, World!<div></div></div></div>`
+    );
+  });
+
   test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",
