@@ -2945,6 +2945,7 @@ describe("hot", () => {
       programType,
       compilationMode,
       init,
+      expandUiImmediately,
     }: {
       name: `${UppercaseLetter}${string}`;
       programType:
@@ -2956,6 +2957,7 @@ describe("hot", () => {
         | "Worker";
       compilationMode: CompilationMode;
       init?: (node: HTMLDivElement) => void;
+      expandUiImmediately?: boolean;
     }): {
       replace: (f: (fileContent: string) => string) => void;
       write: (n: number) => void;
@@ -3033,6 +3035,7 @@ describe("hot", () => {
             scripts: [`${name}.js`],
             isTTY: false,
             keepElmStuffJson: true,
+            expandUiImmediately,
             init:
               init ??
               ((node) => {
@@ -4222,6 +4225,177 @@ describe("hot", () => {
           `<main><button>HOT RELOADED Count: -1</button></main>`
         );
       }
+    });
+
+    describe("Unexpected/unhandled error at eval", () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalPromiseReject = Promise.reject;
+      afterEach(() => {
+        Promise.reject = originalPromiseReject;
+      });
+
+      test("Unexpected/unhandled error at eval", async () => {
+        const error = new Error("Very unexpected error");
+
+        const mockPromiseReject = jest.fn();
+
+        Promise.reject = <T>(reason: unknown): Promise<T> => {
+          if (reason === error) {
+            mockPromiseReject(reason);
+            return undefined as unknown as Promise<T>;
+          } else {
+            return originalPromiseReject.call(Promise, reason) as Promise<T>;
+          }
+        };
+
+        const { replace, go } = runHotReload({
+          name: "HtmlMain",
+          programType: "Html",
+          compilationMode: "standard",
+          expandUiImmediately: true,
+        });
+
+        const { renders } = await go(({ idle, div }) => {
+          switch (idle) {
+            case 1:
+              assertInit(div);
+              Object.defineProperty(window.Elm?.HtmlMain, "__elmWatchApps", {
+                get() {
+                  throw error;
+                },
+              });
+              replace((content) =>
+                content.replace("hot reload", "simple text change")
+              );
+              return "KeepGoing";
+            default:
+              assertInit(div);
+              return "Stop";
+          }
+        });
+
+        expect(renders).toMatchInlineSnapshot(`
+          ▼ 🔌 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Connecting
+          attempt 1
+          sleep 1.01 seconds
+          [Connecting web socket…]
+          ▲ 🔌 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Waiting for compilation
+          Compilation mode
+          ◯ (disabled) Debug
+          ◯ (disabled) Standard
+          ◯ (disabled) Optimize
+          ▲ ⏳ 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Waiting for compilation
+          Compilation mode
+          ◯ (disabled) Debug
+          ◉ (disabled) Standard
+          ◯ (disabled) Optimize
+          ▲ ⏳ 13:10:05 HtmlMain
+          ================================================================================
+          ▼ 🔌 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Connecting
+          attempt 1
+          sleep 1.01 seconds
+          [Connecting web socket…]
+          ▲ 🔌 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Connecting
+          attempt 1
+          sleep 1.01 seconds
+          [Connecting web socket…]
+          ▲ 🔌 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Waiting for compilation
+          Compilation mode
+          ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+          ◉ (disabled) Standard
+          ◯ (disabled) Optimize
+          ▲ ⏳ 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Successfully compiled
+          Compilation mode
+          ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+          ◉ Standard
+          ◯ Optimize
+          ▲ ✅ 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Waiting for compilation
+          window.Elm does not look like expected! This is the error message:
+          At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+          Very unexpected error
+          ▲ ⏳ 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Waiting for compilation
+          window.Elm does not look like expected! This is the error message:
+          At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+          Very unexpected error
+          ▲ ⏳ 13:10:05 HtmlMain
+          ================================================================================
+          target HtmlMain
+          elm-watch %VERSION%
+          web socket ws://localhost:59123
+          updated 2022-02-05 13:10:05
+          status Eval error
+          Check the console in the browser developer tools to see errors!
+          ▲ ⛔️ 13:10:05 HtmlMain
+        `);
+
+        expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`
+          Array [
+            Array [
+              [Error: Very unexpected error],
+            ],
+          ]
+        `);
+
+        function assertInit(div: HTMLDivElement): void {
+          expect(div.outerHTML).toMatchInlineSnapshot(
+            `<div><h1 class="probe">hot reload</h1></div>`
+          );
+        }
+      });
     });
   });
 });
