@@ -11,6 +11,8 @@ import {
   cursorHorizontalAbsolute,
   dim,
   join,
+  printDurationMs,
+  printFileSize,
   silentlyReadIntEnvValue,
   toError,
 } from "./Helpers";
@@ -1806,29 +1808,6 @@ function maybePrintFileSize({
     case "hot":
       return undefined;
   }
-}
-
-const KiB = 1024;
-const MiB = KiB ** 2;
-
-function printFileSize(fileSize: number): string {
-  const [divided, unit] =
-    fileSize >= MiB ? [fileSize / MiB, "MiB"] : [fileSize / KiB, "KiB"];
-  const string = divided
-    .toFixed(divided < 10 ? 2 : divided < 100 ? 1 : 0)
-    .padStart(4, " ");
-  return `${string} ${unit}`;
-}
-
-const SECOND = 1000;
-
-function printDurationMs(durationMs: number): string {
-  const divided = durationMs / SECOND;
-  const [string, unit] =
-    durationMs < SECOND
-      ? [durationMs.toString(), "ms"]
-      : [divided.toFixed(divided < 10 ? 2 : divided < 100 ? 1 : 0), "s"];
-  return `${string} ${unit}`.padStart(6, " ");
 }
 
 function maybePrintDurations(
