@@ -1854,6 +1854,7 @@ type ParseWebSocketToServerMessageResult =
 function parseWebSocketToServerMessage(
   data: WebSocket.Data
 ): ParseWebSocketToServerMessageResult {
+  // istanbul ignore next
   const stringData =
     typeof data === "string"
       ? data
