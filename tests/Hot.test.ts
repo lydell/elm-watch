@@ -3920,5 +3920,109 @@ describe("hot", () => {
         expect(main.outerHTML).toMatchInlineSnapshot(`<main>JUST</main>`);
       }
     });
+
+    describe("Html.Lazy", () => {
+      // eslint-disable-next-line no-console
+      const originalConsoleLog = console.log;
+
+      afterEach(() => {
+        // eslint-disable-next-line no-console
+        console.log = originalConsoleLog;
+      });
+
+      test("Html.Lazy", async () => {
+        const mockConsoleLog = jest.fn();
+        // eslint-disable-next-line no-console
+        console.log = (...args) => {
+          if (
+            typeof args[0] === "string" &&
+            args[0].startsWith("ELM_LAZY_TEST")
+          ) {
+            mockConsoleLog(...args);
+          } else {
+            originalConsoleLog(...args);
+          }
+        };
+
+        const { replace, go } = runHotReload({
+          name: "Lazy",
+          programType: "Element",
+          compilationMode: "standard",
+        });
+
+        await go(async ({ idle, main }) => {
+          switch (idle) {
+            case 1:
+              await assert1(main);
+              replace((content) =>
+                content.replace("Is divisible by", "HOT RELOADED $&")
+              );
+              return "KeepGoing";
+            default:
+              await assert2(main);
+              return "Stop";
+          }
+        });
+
+        expect(mockConsoleLog.mock.calls).toMatchInlineSnapshot(`
+          Array [
+            Array [
+              ELM_LAZY_TEST isDivisible: True,
+            ],
+            Array [
+              ELM_LAZY_TEST isDivisible: False,
+            ],
+            Array [
+              ELM_LAZY_TEST isDivisible: False,
+            ],
+            Array [
+              ELM_LAZY_TEST isDivisible: True,
+            ],
+          ]
+        `);
+
+        async function assert1(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(
+            `<main><p>Number: 0</p><p>Is divisible by 4? Yes.</p></main>`
+          );
+          expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`1`);
+
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(
+            `<main><p>Number: 1</p><p>Is divisible by 4? No.</p></main>`
+          );
+          expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
+
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(
+            `<main><p>Number: 2</p><p>Is divisible by 4? No.</p></main>`
+          );
+          expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
+        }
+
+        async function assert2(main: HTMLElement): Promise<void> {
+          expect(main.outerHTML).toMatchInlineSnapshot(
+            `<main><p>Number: 2</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
+          );
+          expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
+
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(
+            `<main><p>Number: 3</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
+          );
+          expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
+
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toMatchInlineSnapshot(
+            `<main><p>Number: 4</p><p>HOT RELOADED Is divisible by 4? Yes.</p></main>`
+          );
+          expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`4`);
+        }
+      });
+    });
   });
 });

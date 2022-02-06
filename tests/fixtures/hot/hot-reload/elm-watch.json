@@ -77,6 +77,12 @@
                 "src/ViewFailsAfterHotReload.elm"
             ],
             "output": "build/ViewFailsAfterHotReload.js"
+        },
+        "Lazy": {
+            "inputs": [
+                "src/Lazy.elm"
+            ],
+            "output": "build/Lazy.js"
         }
     }
 }
