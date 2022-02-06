@@ -89,6 +89,18 @@
                 "src/Map.elm"
             ],
             "output": "build/Map.js"
+        },
+        "OutputsWithoutAction": {
+            "inputs": [
+                "src/OutputsWithoutAction.elm"
+            ],
+            "output": "build/OutputsWithoutAction.js"
+        },
+        "OutputsWithoutActionOther1": {
+            "inputs": [
+                "src/OutputsWithoutActionOther1.elm"
+            ],
+            "output": "build/OutputsWithoutActionOther1.js"
         }
     }
 }

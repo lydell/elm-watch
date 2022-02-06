@@ -3423,6 +3423,7 @@ describe("hot", () => {
       compilationMode,
       init,
       expandUiImmediately,
+      isTTY,
     }: {
       fixture?: string;
       name: `${UppercaseLetter}${string}`;
@@ -3436,6 +3437,7 @@ describe("hot", () => {
       compilationMode: CompilationMode;
       init?: (node: HTMLDivElement) => void;
       expandUiImmediately?: boolean;
+      isTTY?: boolean;
     }): {
       replace: (f: (fileContent: string) => string) => void;
       write: (n: number) => void;
@@ -3510,7 +3512,7 @@ describe("hot", () => {
             fixture,
             args: [name],
             scripts: [`${name}.js`],
-            isTTY: false,
+            isTTY,
             keepElmStuffJson: true,
             expandUiImmediately,
             init:
@@ -4056,6 +4058,7 @@ describe("hot", () => {
         name: "RemoveInput",
         programType: "Sandbox",
         compilationMode: "standard",
+        isTTY: false,
       });
 
       const { terminal } = await go(async ({ idle, div }) => {
@@ -4873,6 +4876,27 @@ describe("hot", () => {
           );
         }
       });
+    });
+
+    test("One target is active, one is idle (outputsWithoutAction)", async () => {
+      const { go } = runHotReload({
+        name: "OutputsWithoutAction",
+        programType: "Html",
+        compilationMode: "standard",
+      });
+
+      const { terminal } = await go(() => "Stop");
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ OutputsWithoutAction⧙                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+        ✅ OutputsWithoutActionOther1⧙                       1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: OutputsWithoutAction
+        ℹ️ 13:10:05 Web socket connected for: OutputsWithoutAction⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+      `);
     });
 
     test("Changed record fields in optimize with postprocess", async () => {
