@@ -3348,12 +3348,14 @@ describe("hot", () => {
   // That results in a much better debugging experience (fewer timeouts).
   describe("hot reloading", () => {
     function runHotReload({
+      fixture = "hot-reload",
       name,
       programType,
       compilationMode,
       init,
       expandUiImmediately,
     }: {
+      fixture?: string;
       name: `${UppercaseLetter}${string}`;
       programType:
         | "Application"
@@ -3373,7 +3375,6 @@ describe("hot", () => {
       lastValueFromElm: { value: unknown };
       go: (onIdle: OnIdle) => ReturnType<typeof run>;
     } {
-      const fixture = "hot-reload";
       const dir = path.join(FIXTURES_DIR, fixture);
       const src = path.join(dir, "src");
 
@@ -4803,6 +4804,46 @@ describe("hot", () => {
           );
         }
       });
+    });
+
+    test("Changed record fields in optimize with postprocess", async () => {
+      const { replace, go } = runHotReload({
+        fixture: "hot-reload-postprocess",
+        name: "ChangedRecordFields",
+        programType: "Element",
+        compilationMode: "optimize",
+        expandUiImmediately: true,
+      });
+
+      const { browserConsole } = await go(({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assertInit(div);
+            replace((content) => content.replace(/-- /g, ""));
+            return "KeepGoing";
+          default:
+            assertHotReload(div);
+            return "Stop";
+        }
+      });
+
+      expect(browserConsole).toMatchInlineSnapshot(`
+        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
+        (target: ChangedRecordFields)
+
+        elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
+        (target: ChangedRecordFields)
+      `);
+
+      function assertInit(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(`<div>Text</div>`);
+      }
+
+      function assertHotReload(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div>Text and new text</div>`
+        );
+      }
     });
   });
 });

@@ -1,0 +1,11 @@
+{
+    "postprocess": ["elm-watch-node", "postprocess.js"],
+    "targets": {
+        "ChangedRecordFields": {
+            "inputs": [
+                "src/ChangedRecordFields.elm"
+            ],
+            "output": "build/ChangedRecordFields.js"
+        }
+    }
+}
