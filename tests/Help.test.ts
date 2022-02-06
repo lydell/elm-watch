@@ -1,5 +1,5 @@
 import { elmWatchCli } from "../src";
-import type { Env } from "../src/Env";
+import { Env, NO_COLOR } from "../src/Env";
 import {
   assertExitCode,
   clean,
@@ -105,7 +105,8 @@ describe("help", () => {
   });
 
   test("NO_COLOR", async () => {
-    expect(await helpHelper(["help"], { NO_COLOR: "" })).toMatchInlineSnapshot(`
+    expect(await helpHelper(["help"], { [NO_COLOR]: "" }))
+      .toMatchInlineSnapshot(`
       elm-watch init
           Create a minimal elm-watch.json in the current directory
 
