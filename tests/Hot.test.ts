@@ -1971,17 +1971,31 @@ describe("hot", () => {
   test("changes to elm.json", async () => {
     const fixture = "changes-to-elm-json";
     const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
-    const elmJsonPath2 = path.join(FIXTURES_DIR, fixture, "src", "elm.json");
+    const elmJsonPathSub = path.join(
+      FIXTURES_DIR,
+      fixture,
+      "src",
+      "Sub",
+      "elm.json"
+    );
     const elmJsonTemplatePath = path.join(
       FIXTURES_DIR,
       fixture,
       "elm.template.json"
     );
     const roguePath = path.join(FIXTURES_DIR, fixture, "rogue", "elm.json");
+    const inputPath = path.join(FIXTURES_DIR, fixture, "src", "HtmlMain.elm");
+    const otherInputPath = path.join(
+      FIXTURES_DIR,
+      fixture,
+      "src",
+      "Sub",
+      "OtherMain.elm"
+    );
     const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
     fs.writeFileSync(elmJsonPath, elmJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
-    rm(elmJsonPath2);
+    rm(elmJsonPathSub);
 
     const { terminal, renders } = await run({
       fixture,
@@ -2003,15 +2017,22 @@ describe("hot", () => {
             fs.writeFileSync(elmJsonPath, elmJsonString);
             return "KeepGoing";
           case 3:
-            assert(div);
-            fs.writeFileSync(elmJsonPath2, "{\n}");
+            fs.writeFileSync(elmJsonPathSub, elmJsonString);
             return "KeepGoing";
           case 4:
-            fs.unlinkSync(elmJsonPath2);
+            touch(otherInputPath);
             return "KeepGoing";
           case 5:
-            assert(div);
             fs.unlinkSync(elmJsonPath);
+            return "KeepGoing";
+          case 6:
+            touch(inputPath);
+            return "KeepGoing";
+          case 7:
+            touch(otherInputPath);
+            return "KeepGoing";
+          case 8:
+            fs.unlinkSync(elmJsonPathSub);
             return "KeepGoing";
           default:
             return "Stop";
@@ -2088,35 +2109,54 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
-      ⏳ Dependencies
-      ⛔️ Dependencies
-      ⏳ HtmlMain: elm make
       🚨 HtmlMain
 
-      ⧙-- MISSING FIELD ---------------------------------------------------------------⧘
-      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json
+      ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
+      ⧙Target: HtmlMain⧘
 
-      I ran into a problem with your elm.json file. I ran into some trouble here:
+      I went looking for an ⧙elm.json⧘ for your inputs, but I found more than one!
 
-      1| {
-         ⧙^⧘
-      I was expecting to run into an ⧙OBJECT⧘ with a ⧙"type"⧘ field.
+      src/HtmlMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
+
+      src/Sub/OtherMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      It doesn't make sense to compile Elm files from different projects into one output.
+
+      Either split this target, or move the inputs to the same project with the same
+      ⧙elm.json⧘.
 
       🚨 ⧙1⧘ error found
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
+      ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
-      ⏳ Dependencies
-      ✅ Dependencies
-      ⏳ HtmlMain: elm make
-      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      🚨 HtmlMain
+
+      ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
+      ⧙Target: HtmlMain⧘
+
+      I went looking for an ⧙elm.json⧘ for your inputs, but I found more than one!
+
+      src/HtmlMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
+
+      src/Sub/OtherMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      It doesn't make sense to compile Elm files from different projects into one output.
+
+      Either split this target, or move the inputs to the same project with the same
+      ⧙elm.json⧘.
+
+      🚨 ⧙1⧘ error found
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/elm.json⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/OtherMain.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       🚨 HtmlMain
 
       ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
@@ -2128,11 +2168,84 @@ describe("hot", () => {
 
       Has it gone missing? Maybe run ⧙elm init⧘ to create one?
 
+      Note that I did find an ⧙elm.json⧘ for some inputs:
+
+      src/Sub/OtherMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      Make sure that one single ⧙elm.json⧘ covers all the inputs together!
+
       🚨 ⧙1⧘ error found
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 HtmlMain
+
+      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
+      ⧙Target: HtmlMain⧘
+
+      I could not find an ⧙elm.json⧘ for these inputs:
+
+      src/HtmlMain.elm
+
+      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+      Note that I did find an ⧙elm.json⧘ for some inputs:
+
+      src/Sub/OtherMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      Make sure that one single ⧙elm.json⧘ covers all the inputs together!
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/HtmlMain.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 HtmlMain
+
+      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
+      ⧙Target: HtmlMain⧘
+
+      I could not find an ⧙elm.json⧘ for these inputs:
+
+      src/HtmlMain.elm
+
+      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+      Note that I did find an ⧙elm.json⧘ for some inputs:
+
+      src/Sub/OtherMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      Make sure that one single ⧙elm.json⧘ covers all the inputs together!
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/OtherMain.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 HtmlMain
+
+      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
+      ⧙Target: HtmlMain⧘
+
+      I could not find an ⧙elm.json⧘ for these inputs:
+
+      src/HtmlMain.elm
+      src/Sub/OtherMain.elm
+
+      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
 
@@ -2165,13 +2278,13 @@ describe("hot", () => {
       ================================================================================
       ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ✅ 13:10:05 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
       ▼ 🚨 13:10:05 HtmlMain
     `);
@@ -4054,6 +4167,8 @@ describe("hot", () => {
     );
 
     test("remove input file", async () => {
+      const elmJsonPath = path.join(FIXTURES_DIR, "hot-reload", "elm.json");
+
       const { replace, removeInput, go } = runHotReload({
         name: "RemoveInput",
         programType: "Sandbox",
@@ -4068,6 +4183,7 @@ describe("hot", () => {
             removeInput();
             return "KeepGoing";
           case 2:
+            touch(elmJsonPath);
             replace((content) =>
               content.replace("hot reload", "simple text change")
             );

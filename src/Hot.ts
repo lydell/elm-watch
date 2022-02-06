@@ -927,6 +927,10 @@ function onWatcherEvent(
             Array.from(project.elmJsons).some(
               ([elmJsonPath]) =>
                 absolutePathString === elmJsonPath.theElmJsonPath.absolutePath
+            ) ||
+            isElmJsonFileRelatedToElmJsonsErrors(
+              absolutePathString,
+              project.elmJsonsErrors
             )
           ) {
             return makeRestartNextAction(
@@ -984,7 +988,7 @@ function onElmFileWatcherEvent(
 ): [NextAction, LatestEvent, Array<Cmd>] | undefined {
   const elmFile = event.file;
 
-  if (isRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
+  if (isElmFileRelatedToElmJsonsErrors(elmFile, project.elmJsonsErrors)) {
     return makeRestartNextAction(event, project);
   }
 
@@ -1616,7 +1620,7 @@ function makeRestartNextAction(
   ];
 }
 
-function isRelatedToElmJsonsErrors(
+function isElmFileRelatedToElmJsonsErrors(
   elmFile: AbsolutePath,
   elmJsonsErrors: Project["elmJsonsErrors"]
 ): boolean {
@@ -1629,6 +1633,10 @@ function isRelatedToElmJsonsErrors(
             inputs.some((inputPath) => equalsInputPath(elmFile, inputPath))
         );
 
+      // Note: Restarting because an .elm file changed here won’t change the
+      // fact that elm.json is missing. But it might feel clearer if the watcher
+      // still reacts to the inputs rather than saying that they don’t affect
+      // anything.
       case "ElmJsonNotFound":
         return (
           error.elmJsonNotFound.some((inputPath) =>
@@ -1653,9 +1661,35 @@ function isRelatedToElmJsonsErrors(
             elmFile.absolutePath
         );
 
+      // Changes to the .elm files don’t make the elm.json:s more unique, but
+      // see  "ElmJsonNotFound" above for why we restart anyway.
       case "NonUniqueElmJsonPaths":
         return error.nonUniqueElmJsonPaths.some(({ inputPath }) =>
           equalsInputPath(elmFile, inputPath)
+        );
+    }
+  });
+}
+
+function isElmJsonFileRelatedToElmJsonsErrors(
+  absoluteElmJsonFilePath: string,
+  elmJsonsErrors: Project["elmJsonsErrors"]
+): boolean {
+  return elmJsonsErrors.some(({ error }) => {
+    switch (error.tag) {
+      case "DuplicateInputs":
+      case "InputsFailedToResolve":
+      case "InputsNotFound":
+        return false;
+      case "ElmJsonNotFound":
+        return error.foundElmJsonPaths.some(
+          ({ elmJsonPath }) =>
+            elmJsonPath.theElmJsonPath.absolutePath === absoluteElmJsonFilePath
+        );
+      case "NonUniqueElmJsonPaths":
+        return error.nonUniqueElmJsonPaths.some(
+          ({ elmJsonPath }) =>
+            elmJsonPath.theElmJsonPath.absolutePath === absoluteElmJsonFilePath
         );
     }
   });

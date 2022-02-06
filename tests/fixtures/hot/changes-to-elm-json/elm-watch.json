@@ -2,7 +2,8 @@
     "targets": {
         "HtmlMain": {
             "inputs": [
-                "src/HtmlMain.elm"
+                "src/HtmlMain.elm",
+                "src/Sub/OtherMain.elm"
             ],
             "output": "build/HtmlMain.js"
         }
