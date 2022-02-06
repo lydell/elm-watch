@@ -4024,5 +4024,105 @@ describe("hot", () => {
         }
       });
     });
+
+    test("Html.map", async () => {
+      const { replace, go } = runHotReload({
+        name: "Map",
+        programType: "Element",
+        compilationMode: "standard",
+      });
+
+      await go(async ({ idle, main }) => {
+        switch (idle) {
+          case 1:
+            await assert1(main);
+            replace((content) => content.replace("Count", "HOT RELOADED $&"));
+            return "KeepGoing";
+          case 2:
+            await assert2(main);
+            replace((content) => content.replace("(*) 2", "(+) 2"));
+            return "KeepGoing";
+          case 3:
+            await assert3(main);
+            replace((content) =>
+              content
+                .replace("Html.map Clicked", "Html.map NewClicked")
+                .replace(/-- /g, "")
+            );
+            return "KeepGoing";
+          case 4:
+            await assert4(main);
+            replace((content) =>
+              content
+                .replace("onClick 1", "onClick (NewClicked 5)")
+                .replace(/\|> Html\.map .+/g, "")
+            );
+            return "KeepGoing";
+          default:
+            await assert5(main);
+            return "Stop";
+        }
+      });
+
+      async function assert1(main: HTMLElement): Promise<void> {
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>Count: 0</button></main>`
+        );
+
+        click(main, "button");
+        await waitOneFrame();
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>Count: 2</button></main>`
+        );
+      }
+
+      async function assert2(main: HTMLElement): Promise<void> {
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: 2</button></main>`
+        );
+
+        click(main, "button");
+        await waitOneFrame();
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: 4</button></main>`
+        );
+      }
+
+      async function assert3(main: HTMLElement): Promise<void> {
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: 4</button></main>`
+        );
+
+        click(main, "button");
+        await waitOneFrame();
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: 7</button></main>`
+        );
+      }
+
+      async function assert4(main: HTMLElement): Promise<void> {
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: 7</button></main>`
+        );
+
+        click(main, "button");
+        await waitOneFrame();
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: 4</button></main>`
+        );
+      }
+
+      async function assert5(main: HTMLElement): Promise<void> {
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: 4</button></main>`
+        );
+
+        click(main, "button");
+        await waitOneFrame();
+        expect(main.outerHTML).toMatchInlineSnapshot(
+          `<main><button>HOT RELOADED Count: -1</button></main>`
+        );
+      }
+    });
   });
 });

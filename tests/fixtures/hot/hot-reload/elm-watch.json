@@ -83,6 +83,12 @@
                 "src/Lazy.elm"
             ],
             "output": "build/Lazy.js"
+        },
+        "Map": {
+            "inputs": [
+                "src/Map.elm"
+            ],
+            "output": "build/Map.js"
         }
     }
 }
