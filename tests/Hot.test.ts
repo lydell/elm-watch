@@ -1262,6 +1262,157 @@ describe("hot", () => {
         ▲ ❌ 13:10:05 SendBadJson
       `);
     });
+
+    test("reconnect a few times", async () => {
+      let i = 0;
+      modifyUrl((url) => {
+        i++;
+        if (i <= 2) {
+          url.port = "65252"; // Hopefully unused port.
+        }
+      });
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        expandUiImmediately: true,
+        init: (node) => {
+          window.Elm?.HtmlMain?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Reconnect⧙                             1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: Reconnect
+        ℹ️ 13:10:05 Web socket connected for: Reconnect⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Sleeping
+        attempt 2
+        sleep 1.04 seconds
+        [Reconnect web socket now]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 2
+        sleep 1.04 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Sleeping
+        attempt 3
+        sleep 1.09 seconds
+        [Reconnect web socket now]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 3
+        sleep 1.09 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 13:10:05 Reconnect
+      `);
+    });
   });
 
   test("changes to elm-watch.json", async () => {

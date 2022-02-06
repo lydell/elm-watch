@@ -59,6 +59,12 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/SendBadJson.js"
+        },
+        "Reconnect": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/Reconnect.js"
         }
     }
 }
