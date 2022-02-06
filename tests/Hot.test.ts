@@ -3062,7 +3062,7 @@ describe("hot", () => {
 
       let probe: HTMLElement | null = null;
 
-      await go(({ idle, div }) => {
+      const { renders } = await go(({ idle, div }) => {
         switch (idle) {
           case 1:
             assertDebugDisabled();
@@ -3093,6 +3093,107 @@ describe("hot", () => {
             return "Stop";
         }
       });
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ 🔌 13:10:05 HtmlMain
+        ================================================================================
+        ▼ 🔌 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize
+        ▲ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize
+        ▲ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ 🔌 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ 🔌 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        target HtmlMain
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ Standard
+        ◉ Optimize
+        ▲ ⚡️ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ✅ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ⏳ 13:10:05 HtmlMain
+        ================================================================================
+        ▼ ⚡️ ✅ 13:10:05 HtmlMain
+      `);
 
       function assertInit(div: HTMLDivElement): void {
         expect(div.outerHTML).toMatchInlineSnapshot(
