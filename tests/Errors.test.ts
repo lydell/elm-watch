@@ -2647,6 +2647,33 @@ describe("errors", () => {
     });
   });
 
+  test("typecheck only should mark only relevant targets with errors", async () => {
+    expect(await run("typecheck-only", ["hot"], { exitHotOnError: true }))
+      .toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ Main1⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
+      🚨 Main2
+      🚨 Main3
+
+      ⧙-- UNKNOWN EXPORT --------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/errors/typecheck-only/src/Main2.elm:1:24
+
+      You are trying to expose a value named \`forMainTypo\` but I cannot find its
+      definition.
+
+      These names seem close though:
+
+          ⧙forMain3⧘
+          ⧙main⧘
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+    `);
+  });
+
   describe("CI", () => {
     const appPath = path.join(FIXTURES_DIR, "ci", "build", "app.js");
 
