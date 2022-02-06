@@ -19,7 +19,6 @@ declare global {
   interface Window {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCHED_MOCKED_TIMINGS: boolean;
-    __ELM_WATCH_SKIP_RECONNECT_TIME_CHECK: boolean;
     __ELM_WATCH_RELOAD_STATUSES: Record<string, ReloadStatus>;
     __ELM_WATCH_RELOAD_PAGE: (message: string) => void;
     __ELM_WATCH_ON_INIT: () => void;
@@ -82,8 +81,6 @@ type ReloadStatus =
     };
 
 window.__ELM_WATCHED_MOCKED_TIMINGS ??= false;
-
-window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK ??= false;
 
 window.__ELM_WATCH_ON_INIT ??= () => {
   // Do nothing.
@@ -795,8 +792,7 @@ function reconnect(
   return model.status.tag === "SleepingBeforeReconnect" &&
     (date.getTime() - model.status.date.getTime() >=
       retryWaitMs(model.status.attemptNumber) ||
-      force ||
-      window.__ELM_WATCH_SKIP_RECONNECT_TIME_CHECK)
+      force)
     ? [
         {
           ...model,
