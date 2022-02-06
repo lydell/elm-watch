@@ -1303,6 +1303,7 @@ describe("hot", () => {
         WrongVersion
         TargetDisabled
         SendBadJson
+        Reconnect
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         ▲ ❌ 13:10:05 TargetNotFound
@@ -1413,6 +1414,7 @@ describe("hot", () => {
         WrongVersion
         TargetNotFound
         SendBadJson
+        Reconnect
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
         ▲ ❌ 13:10:05 TargetDisabled
