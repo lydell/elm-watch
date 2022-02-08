@@ -953,6 +953,20 @@ remove "port" from ${elmWatchJson} (which will use an arbitrary available port.)
   `;
 }
 
+export function watcherError(error: Error): ErrorTemplate {
+  return fancyError("WATCHER ERROR", { tag: "NoLocation" })`
+The file watcher encountered an error, which means that it cannot continue.
+elm-watch is powered by its file watcher, so I have to exit at this point.
+
+See if this is something you can solve by maybe removing some problematic files
+or something!
+
+This is the error message I got:
+
+${error.message}
+  `;
+}
+
 export function webSocketBadUrl(
   expectedStart: string,
   actualUrlString: string

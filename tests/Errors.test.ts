@@ -730,6 +730,40 @@ describe("errors", () => {
       `);
     });
 
+    test("symlink loop – hot", async () => {
+      expect(await run("symlink-loop", ["hot"])).toMatchInlineSnapshot(`
+        🚨 main
+
+        ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
+        ⧙Target: main⧘
+
+        I start by checking if the inputs you give me exist,
+        but doing so resulted in errors!
+
+        Main.elm:
+        ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+
+        ⧙That's all I know, unfortunately!⧘
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ⧙-- WATCHER ERROR ---------------------------------------------------------------⧘
+
+        The file watcher encountered an error, which means that it cannot continue.
+        elm-watch is powered by its file watcher, so I have to exit at this point.
+
+        See if this is something you can solve by maybe removing some problematic files
+        or something!
+
+        This is the error message I got:
+
+        ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+      `);
+    });
+
     test("duplicate inputs", async () => {
       expect(await run("duplicate-inputs", ["make"])).toMatchInlineSnapshot(`
         🚨 main

@@ -416,7 +416,16 @@ const initMutable =
 
     watcherOnAll(
       watcher,
-      rejectPromise,
+      (error) => {
+        closeAll(mutable)
+          .then(() => {
+            resolvePromise({
+              tag: "ExitOnHandledFatalError",
+              errorTemplate: Errors.watcherError(error),
+            });
+          })
+          .catch(rejectPromise);
+      },
       (eventName: WatcherEventName, absolutePathString: string): void => {
         dispatch({
           tag: "GotWatcherEvent",
@@ -516,8 +525,8 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
 
 function watcherOnAll(
   watcher: chokidar.FSWatcher,
-  rejectPromise: (error: Error) => void,
-  callback: (eventName: WatcherEventName, absolutePathString: string) => void
+  onError: (error: Error) => void,
+  onSuccess: (eventName: WatcherEventName, absolutePathString: string) => void
 ): void {
   // We generally only care about files – not directories – but adding and
   // removing directories can cause/fix errors, if they are named
@@ -526,16 +535,16 @@ function watcherOnAll(
     switch (chokidarEventName) {
       case "add":
       case "addDir":
-        callback("added", absolutePathString);
+        onSuccess("added", absolutePathString);
         return;
 
       case "unlink":
       case "unlinkDir":
-        callback("removed", absolutePathString);
+        onSuccess("removed", absolutePathString);
         return;
 
       case "change":
-        callback("changed", absolutePathString);
+        onSuccess("changed", absolutePathString);
         return;
     }
   });
@@ -543,7 +552,7 @@ function watcherOnAll(
   // The only way I’ve managed to make this emit an error, is when I made an
   // infinite symlink loop (ELOOP). That basically makes the watcher unusable:
   // it will always choke on that cycle and emit an error here.
-  watcher.on("error", rejectPromise);
+  watcher.on("error", onError);
 }
 
 const init = (
