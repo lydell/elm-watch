@@ -1657,6 +1657,10 @@ function isElmFileRelatedToElmJsonsErrors(
           )
         );
 
+      // The only way I’ve found to trigger this is by a symlink loop.
+      // However, that causes the watcher to error out and we have to exit so
+      // this is never hit.
+      // istanbul ignore next
       case "InputsFailedToResolve":
         return error.inputsFailedToResolve.some(
           ({ inputPath }) =>

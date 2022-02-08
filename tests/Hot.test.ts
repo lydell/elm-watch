@@ -56,6 +56,7 @@ async function run({
   bin,
   env,
   keepElmStuffJson = false,
+  clearElmStuff = false,
   cwd = ".",
 }: {
   fixture: string;
@@ -68,6 +69,7 @@ async function run({
   bin?: string;
   env?: Env;
   keepElmStuffJson?: boolean;
+  clearElmStuff?: boolean;
   cwd?: string;
 }): Promise<{
   terminal: string;
@@ -78,7 +80,8 @@ async function run({
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
   const absoluteScripts = scripts.map((script) => path.join(build, script));
-  const elmWatchStuff = path.join(dir, "elm-stuff", "elm-watch-stuff.json");
+  const elmStuff = path.join(dir, "elm-stuff");
+  const elmWatchStuff = path.join(elmStuff, "elm-watch-stuff.json");
 
   if (fs.rmSync !== undefined) {
     fs.rmSync(build, { recursive: true, force: true });
@@ -89,6 +92,14 @@ async function run({
 
   if (!keepElmStuffJson) {
     rm(elmWatchStuff);
+  }
+
+  if (clearElmStuff) {
+    if (fs.rmSync !== undefined) {
+      fs.rmSync(elmStuff, { recursive: true, force: true });
+    } else if (fs.existsSync(elmStuff)) {
+      fs.rmdirSync(elmStuff, { recursive: true });
+    }
   }
 
   const stdout = new CursorWriteStream();
@@ -3520,6 +3531,9 @@ describe("hot", () => {
       args: ["Main"],
       scripts: ["Main.js"],
       isTTY: false,
+      // The test has a tendency to hang otherwise (`onIdle` is never called).
+      // Maybe `elm` doesn’t like the symlink shenanigans.
+      clearElmStuff: true,
       init: (node) => {
         window.Elm?.Main?.init({ node });
       },
@@ -3539,6 +3553,8 @@ describe("hot", () => {
         }
       },
     });
+
+    fs.unlinkSync(symlink);
 
     expect(terminal).toMatchInlineSnapshot(`
       ⏳ Dependencies
