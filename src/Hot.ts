@@ -1315,6 +1315,7 @@ const runCmd =
               return (
                 path.basename(event.file.absolutePath) === "elm-watch.json"
               );
+            // istanbul ignore next
             default:
               return false;
           }
@@ -1457,6 +1458,7 @@ function onWebSocketServerMsg(
         ({ webSocket }) => webSocket === msg.webSocket
       );
 
+      // istanbul ignore if
       if (webSocketConnection === undefined) {
         rejectPromise(
           new Error(
@@ -1505,6 +1507,7 @@ function onWebSocketServerMsg(
           return;
         }
 
+        // istanbul ignore next
         case "OtherError":
           rejectPromise(msg.error.error);
           return;
@@ -1518,6 +1521,7 @@ function portChoiceError(
   error: Error
 ): Errors.ErrorTemplate {
   switch (portChoice.tag) {
+    // istanbul ignore next
     case "NoPort":
       return Errors.portConflictForNoPort(error);
 
