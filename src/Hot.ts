@@ -540,8 +540,9 @@ function watcherOnAll(
     }
   });
 
-  // As far as I can tell, the watcher is never supposed to emit error events
-  // during normal operation.
+  // The only way I’ve managed to make this emit an error, is when I made an
+  // infinite symlink loop (ELOOP). That basically makes the watcher unusable:
+  // it will always choke on that cycle and emit an error here.
   watcher.on("error", rejectPromise);
 }
 

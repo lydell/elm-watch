@@ -1742,24 +1742,11 @@ describe("hot", () => {
 
   test("changes to elm-watch.json", async () => {
     const fixture = "changes-to-elm-watch-json";
-    const elmWatchJsonPath = path.join(FIXTURES_DIR, fixture, "elm-watch.json");
-    const elmWatchJsonPath2 = path.join(
-      FIXTURES_DIR,
-      fixture,
-      "src",
-      "elm-watch.json"
-    );
-    const elmWatchJsonTemplatePath = path.join(
-      FIXTURES_DIR,
-      fixture,
-      "elm-watch.template.json"
-    );
-    const roguePath = path.join(
-      FIXTURES_DIR,
-      fixture,
-      "rogue",
-      "elm-watch.json"
-    );
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const elmWatchJsonPath = path.join(dir, "elm-watch.json");
+    const elmWatchJsonPath2 = path.join(dir, "src", "elm-watch.json");
+    const elmWatchJsonTemplatePath = path.join(dir, "elm-watch.template.json");
+    const roguePath = path.join(dir, "rogue", "elm-watch.json");
     const elmWatchJsonString = fs.readFileSync(
       elmWatchJsonTemplatePath,
       "utf8"
@@ -1970,28 +1957,13 @@ describe("hot", () => {
 
   test("changes to elm.json", async () => {
     const fixture = "changes-to-elm-json";
-    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
-    const elmJsonPathSub = path.join(
-      FIXTURES_DIR,
-      fixture,
-      "src",
-      "Sub",
-      "elm.json"
-    );
-    const elmJsonTemplatePath = path.join(
-      FIXTURES_DIR,
-      fixture,
-      "elm.template.json"
-    );
-    const roguePath = path.join(FIXTURES_DIR, fixture, "rogue", "elm.json");
-    const inputPath = path.join(FIXTURES_DIR, fixture, "src", "HtmlMain.elm");
-    const otherInputPath = path.join(
-      FIXTURES_DIR,
-      fixture,
-      "src",
-      "Sub",
-      "OtherMain.elm"
-    );
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const elmJsonPath = path.join(dir, "elm.json");
+    const elmJsonPathSub = path.join(dir, "src", "Sub", "elm.json");
+    const elmJsonTemplatePath = path.join(dir, "elm.template.json");
+    const roguePath = path.join(dir, "rogue", "elm.json");
+    const inputPath = path.join(dir, "src", "HtmlMain.elm");
+    const otherInputPath = path.join(dir, "src", "Sub", "OtherMain.elm");
     const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
     fs.writeFileSync(elmJsonPath, elmJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
@@ -3524,6 +3496,142 @@ describe("hot", () => {
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/prioritization/src/Shared.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
     `);
+  });
+
+  test("duplicate inputs", async () => {
+    const fixture = "duplicate-inputs";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const elmJsonPath = path.join(dir, "elm.json");
+    const main = path.join(dir, "src", "Main.elm");
+    const main2 = path.join(dir, "src", "Main2.elm");
+    const symlink = path.join(dir, "src", "Symlink.elm");
+
+    // Can’t use the `rm` function here, since `fs.existsSync(symlink)` returns
+    // `false` if `symlink` is an existing symlink but points to a non-existing file.
+    try {
+      fs.unlinkSync(symlink);
+    } catch {
+      // Does not exist.
+    }
+    fs.symlinkSync(main2, symlink);
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert(div);
+            fs.unlinkSync(symlink);
+            fs.symlinkSync(main, symlink);
+            return "KeepGoing";
+          case 2:
+            touch(elmJsonPath);
+            touch(main);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make (typecheck only)
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      🚨 Main
+
+      ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
+      ⧙Target: Main⧘
+
+      Some of your inputs seem to be duplicates!
+
+      src/Main.elm
+      src/Symlink.elm ⧙(symlink)⧘
+      -> /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Main.elm
+
+      Make sure every input is listed just once!
+
+      Note that at least one of the inputs seems to be a symlink. They can be tricky!
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 Main
+
+      ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
+      ⧙Target: Main⧘
+
+      Some of your inputs seem to be duplicates!
+
+      src/Main.elm
+      src/Symlink.elm ⧙(symlink)⧘
+      -> /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Main.elm
+
+      Make sure every input is listed just once!
+
+      Note that at least one of the inputs seems to be a symlink. They can be tricky!
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Main.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ ✅ 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🚨 13:10:05 Main
+      ================================================================================
+      ▼ 🚨 13:10:05 Main
+    `);
+
+    function assert(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>Main</div>`);
+    }
   });
 
   // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
