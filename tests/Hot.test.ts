@@ -58,6 +58,7 @@ async function run({
   keepElmStuffJson = false,
   clearElmStuff = false,
   cwd = ".",
+  includeProxyReloads = false,
 }: {
   fixture: string;
   scripts: Array<string>;
@@ -71,6 +72,7 @@ async function run({
   keepElmStuffJson?: boolean;
   clearElmStuff?: boolean;
   cwd?: string;
+  includeProxyReloads?: boolean;
 }): Promise<{
   terminal: string;
   browserConsole: string;
@@ -188,7 +190,11 @@ async function run({
     window.__ELM_WATCHED_MOCKED_TIMINGS = true;
 
     window.__ELM_WATCH_RELOAD_PAGE = (message) => {
-      browserConsole.push(message);
+      if (message !== undefined) {
+        browserConsole.push(message);
+      } else if (includeProxyReloads) {
+        browserConsole.push("Proxy file reload!");
+      }
       window
         .__ELM_WATCH_KILL_MATCHING(/^/)
         .then(() => {
@@ -483,7 +489,7 @@ describe("hot", () => {
   });
 
   test("successful connect (collapsed)", async () => {
-    const { terminal, browserConsole, renders, div } = await run({
+    const { terminal, renders, div } = await run({
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
@@ -501,11 +507,6 @@ describe("hot", () => {
       ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
       ℹ️ 13:10:05 Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
-    `);
-
-    expect(browserConsole).toMatchInlineSnapshot(`
-      elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-      (target: Html)
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -752,260 +753,6 @@ describe("hot", () => {
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
-  });
-
-  test("successful connect from two targets", async () => {
-    const { terminal, browserConsole, renders, div } = await run({
-      fixture: "basic",
-      args: ["Html", "Worker"],
-      scripts: ["Html.js", "Worker.js"],
-      expandUiImmediately: true,
-      init: (node) => {
-        const node1 = document.createElement("div");
-        const node2 = document.createElement("div");
-        node.append(node1, node2);
-        window.Elm?.HtmlMain?.init({ node: node1 });
-        window.Elm?.Worker?.init({ node: node2 });
-      },
-      onIdle: () => "Stop",
-    });
-
-    expect(terminal).toMatchInlineSnapshot(`
-      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-      ✅ Worker⧙                                1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Worker
-         (2 more events)
-      ℹ️ 13:10:05 Web socket connected for: Worker⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
-    `);
-
-    expect(browserConsole).toMatchInlineSnapshot(`
-      elm-watch: I did a full page reload because:
-
-      Html
-      - this stub file is ready to be replaced with real compiled JS.
-
-      Worker
-      - this stub file is ready to be replaced with real compiled JS.
-    `);
-
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Html
-      ================================================================================
-      ▼ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ▲ ⏳ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ▲ ⏳ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ▲ ⏳ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ▲ ⏳ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ▲ ⏳ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for reload
-      Waiting for other targets to finish compiling…
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ▼ 🔌 13:10:05 Html
-      ================================================================================
-      ▼ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ▲ ⏳ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
-      ◉ Standard
-      ◯ Optimize
-      ▲ ✅ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
-      ◉ Standard
-      ◯ Optimize
-      ▲ ✅ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 13:10:05 Worker
-      ================================================================================
-      target Html
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` and \`Platform.worker\` programs.
-      ◉ Standard
-      ◯ Optimize
-      ▲ ✅ 13:10:05 Html
-      --------------------------------------------------------------------------------
-      ▼ ✅ 13:10:05 Worker
-    `);
-
-    expect(div.outerHTML).toMatchInlineSnapshot(
-      `<div><div>Hello, World!<div></div></div></div>`
-    );
   });
 
   test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
@@ -3044,7 +2791,7 @@ describe("hot", () => {
   });
 
   test("limit postprocess workers", async () => {
-    const { terminal, browserConsole } = await run({
+    const { terminal } = await run({
       fixture: "limit-postprocess-workers",
       args: [],
       scripts: ["One.js", "Two.js"],
@@ -3119,16 +2866,6 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Terminated 1 superfluous worker⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
-    `);
-
-    expect(browserConsole).toMatchInlineSnapshot(`
-      elm-watch: I did a full page reload because:
-
-      One
-      - this stub file is ready to be replaced with real compiled JS.
-
-      Two
-      - this stub file is ready to be replaced with real compiled JS.
     `);
   });
 
@@ -3660,7 +3397,10 @@ describe("hot", () => {
       compilationMode,
       init,
       expandUiImmediately,
+      includeProxyReloads,
       isTTY,
+      extraScripts = [],
+      extraElmWatchStuffJson = {},
     }: {
       fixture?: string;
       name: `${UppercaseLetter}${string}`;
@@ -3674,7 +3414,10 @@ describe("hot", () => {
       compilationMode: CompilationMode;
       init?: (node: HTMLDivElement) => void;
       expandUiImmediately?: boolean;
+      includeProxyReloads?: boolean;
       isTTY?: boolean;
+      extraScripts?: Array<string>;
+      extraElmWatchStuffJson?: ElmWatchStuffJsonWritable["targets"];
     }): {
       replace: (f: (fileContent: string) => string) => void;
       write: (n: number) => void;
@@ -3690,11 +3433,12 @@ describe("hot", () => {
         port: 58888,
         targets:
           compilationMode === "standard"
-            ? {}
+            ? extraElmWatchStuffJson
             : {
                 [name]: {
                   compilationMode,
                 },
+                ...extraElmWatchStuffJson,
               },
       };
 
@@ -3748,10 +3492,11 @@ describe("hot", () => {
           return run({
             fixture,
             args: [name],
-            scripts: [`${name}.js`],
+            scripts: [`${name}.js`, ...extraScripts],
             isTTY,
             keepElmStuffJson: true,
             expandUiImmediately,
+            includeProxyReloads,
             init:
               init ??
               ((node) => {
@@ -3958,7 +3703,7 @@ describe("hot", () => {
 
         let probe: HTMLElement | null = null;
 
-        const { browserConsole } = await go(async ({ idle, body, main }) => {
+        await go(async ({ idle, body, main }) => {
           switch (idle) {
             case 1:
               assertCompilationMode(compilationMode);
@@ -3980,11 +3725,6 @@ describe("hot", () => {
               return "Stop";
           }
         });
-
-        expect(browserConsole).toMatchInlineSnapshot(`
-          elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-          (target: DomAndMsgChange)
-        `);
 
         async function assertInit(main: HTMLElement): Promise<void> {
           expect(main.outerHTML).toMatchInlineSnapshot(`
@@ -4042,7 +3782,7 @@ describe("hot", () => {
           compilationMode,
         });
 
-        const { browserConsole } = await go(async ({ idle, main }) => {
+        await go(async ({ idle, main }) => {
           switch (idle) {
             case 1:
               await assertInit(main);
@@ -4064,11 +3804,6 @@ describe("hot", () => {
               return "Stop";
           }
         });
-
-        expect(browserConsole).toMatchInlineSnapshot(`
-          elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-          (target: Application)
-        `);
 
         async function assertInit(main: HTMLElement): Promise<void> {
           expect(main.outerHTML).toMatchInlineSnapshot(`
@@ -4165,7 +3900,7 @@ describe("hot", () => {
           compilationMode,
         });
 
-        const { browserConsole } = await go(async ({ idle }) => {
+        await go(async ({ idle }) => {
           switch (idle) {
             case 1:
               await assertInit();
@@ -4178,11 +3913,6 @@ describe("hot", () => {
               return "Stop";
           }
         });
-
-        expect(browserConsole).toMatchInlineSnapshot(`
-          elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-          (target: PortChange)
-        `);
 
         async function assertInit(): Promise<void> {
           sendToElm(1);
@@ -4246,17 +3976,11 @@ describe("hot", () => {
         }
 
         function assertBrowserConsole(): void {
-          expect(browserConsole).toMatchInlineSnapshot(`
-            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-            (target: AddSubscription)
-          `);
+          expect(browserConsole).toMatchInlineSnapshot(``);
         }
 
         function assertBrowserConsoleOptimize(): void {
           expect(browserConsole).toMatchInlineSnapshot(`
-            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-            (target: AddSubscription)
-
             elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
             (target: AddSubscription)
           `);
@@ -4418,9 +4142,6 @@ describe("hot", () => {
       });
 
       expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-        (target: FlagsChange)
-
         elm-watch: I did a full page reload because the flags type in \`Elm.FlagsChange\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!
         This is the error:
         Problem with the given value:
@@ -4474,17 +4195,11 @@ describe("hot", () => {
         }
 
         function assertBrowserConsole(): void {
-          expect(browserConsole).toMatchInlineSnapshot(`
-            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-            (target: AddMsg)
-          `);
+          expect(browserConsole).toMatchInlineSnapshot(``);
         }
 
         function assertBrowserConsoleDebug(): void {
           expect(browserConsole).toMatchInlineSnapshot(`
-            elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-            (target: AddMsg)
-
             elm-watch: I did a full page reload because the message type in \`Elm.AddMsg\` changed in debug mode ("debug metadata" changed).
             (target: AddMsg)
           `);
@@ -4518,9 +4233,6 @@ describe("hot", () => {
         name: "InitTweakValue",
         programType: "Element",
         compilationMode: "standard",
-        init: (node) => {
-          window.Elm?.InitTweakValue?.init({ node });
-        },
       });
 
       const { browserConsole } = await go(({ idle, div }) => {
@@ -4536,9 +4248,6 @@ describe("hot", () => {
       });
 
       expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-        (target: InitTweakValue)
-
         elm-watch: I did a full page reload because \`Elm.InitTweakValue.init\` returned something different than last time. Let's start fresh!
         (target: InitTweakValue)
       `);
@@ -4572,9 +4281,6 @@ describe("hot", () => {
       });
 
       expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-        (target: InitNewField)
-
         elm-watch: I did a full page reload because \`Elm.InitNewField.init\` returned something different than last time. Let's start fresh!
         (target: InitNewField)
       `);
@@ -4625,9 +4331,6 @@ describe("hot", () => {
         });
 
         expect(browserConsole).toMatchInlineSnapshot(`
-          elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-          (target: InitChangeCmd)
-
           elm-watch: I did a full page reload because \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
           (target: InitChangeCmd)
         `);
@@ -4670,9 +4373,6 @@ describe("hot", () => {
       });
 
       expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-        (target: ChangeProgramType)
-
         elm-watch: I did a full page reload because \`Elm.ChangeProgramType.main\` changed from \`Browser.sandbox\` to \`Browser.element\`.
         (target: ChangeProgramType)
       `);
@@ -4717,9 +4417,6 @@ describe("hot", () => {
       expect(
         browserConsole.replace(/(\n\s*at _String_toUpper).*(\n\s*at.+)*/, "$1")
       ).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-        (target: ViewFailsAfterHotReload)
-
         elm-watch: I did a full page reload because hot reload for \`Elm.ViewFailsAfterHotReload\` failed, probably because of incompatible model changes.
         This is the error:
         TypeError: str.toUpperCase is not a function
@@ -5139,6 +4836,481 @@ describe("hot", () => {
       `);
     });
 
+    test("Multiple targets with batched reload messages", async () => {
+      const { replace, go } = runHotReload({
+        name: "MultipleTargets",
+        programType: "Element",
+        compilationMode: "debug",
+        expandUiImmediately: true,
+        includeProxyReloads: true,
+        extraScripts: ["MultipleTargetsOther1.js"],
+        extraElmWatchStuffJson: {
+          MultipleTargetsOther1: {
+            compilationMode: "debug",
+          },
+        },
+        init: (node) => {
+          const node1 = document.createElement("div");
+          const node2 = document.createElement("div");
+          node.append(node1, node2);
+          window.Elm?.MultipleTargets?.init({ node: node1 });
+          window.Elm?.MultipleTargetsOther1?.init({ node: node2 });
+        },
+      });
+
+      const { terminal, renders, browserConsole } = await go(({ idle }) => {
+        switch (idle) {
+          case 1:
+            return "KeepGoing"; // First script has loaded.
+          case 2:
+            replace((content) => content.replace(/RenameMe/g, "Renamed"));
+            return "KeepGoing";
+          case 3:
+            return "KeepGoing"; // First script has reloaded.
+          default:
+            return "Stop";
+        }
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ MultipleTargets⧙                       1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+        ✅ MultipleTargetsOther1⧙                 1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: MultipleTargetsOther1
+           (2 more events)
+        ℹ️ 13:10:05 Web socket connected for: MultipleTargetsOther1⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 MultipleTargets
+        ================================================================================
+        ▼ 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for reload
+        Waiting for other targets to finish compiling…
+        ▲ ⏳ 13:10:05 MultipleTargets
+        ================================================================================
+        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        ================================================================================
+        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◉ Debug
+        ◯ Standard
+        ◯ Optimize
+        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◉ Debug
+        ◯ Standard
+        ◯ Optimize
+        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◉ Debug
+        ◯ Standard
+        ◯ Optimize
+        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 ✅ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 ✅ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        target MultipleTargetsOther1
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for reload
+        Waiting for other targets to finish compiling…
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        target MultipleTargetsOther1
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for reload
+        Waiting for other targets to finish compiling…
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for reload
+        Waiting for other targets to finish compiling…
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ================================================================================
+        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        ================================================================================
+        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◉ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◉ Debug
+        ◯ Standard
+        ◯ Optimize
+        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◉ Debug
+        ◯ Standard
+        ◯ Optimize
+        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◉ Debug
+        ◯ Standard
+        ◯ Optimize
+        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🌳 ✅ 13:10:05 MultipleTargetsOther1
+      `);
+
+      expect(browserConsole).toMatchInlineSnapshot(`
+        Proxy file reload!
+
+        elm-watch: I did a full page reload because:
+
+        MultipleTargets
+        - the message type in \`Elm.MultipleTargets\` changed in debug mode ("debug metadata" changed).
+
+        MultipleTargetsOther1
+        - the message type in \`Elm.MultipleTargetsOther1\` changed in debug mode ("debug metadata" changed).
+      `);
+    });
+
     test("Changed record fields in optimize with postprocess", async () => {
       const { replace, go } = runHotReload({
         fixture: "hot-reload-postprocess",
@@ -5161,9 +5333,6 @@ describe("hot", () => {
       });
 
       expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because this stub file is ready to be replaced with real compiled JS.
-        (target: ChangedRecordFields)
-
         elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
         (target: ChangedRecordFields)
       `);

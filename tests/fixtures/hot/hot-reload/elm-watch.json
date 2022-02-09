@@ -101,6 +101,18 @@
                 "src/OutputsWithoutActionOther1.elm"
             ],
             "output": "build/OutputsWithoutActionOther1.js"
+        },
+        "MultipleTargets": {
+            "inputs": [
+                "src/MultipleTargets.elm"
+            ],
+            "output": "build/MultipleTargets.js"
+        },
+        "MultipleTargetsOther1": {
+            "inputs": [
+                "src/MultipleTargetsOther1.elm"
+            ],
+            "output": "build/MultipleTargetsOther1.js"
         }
     }
 }

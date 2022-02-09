@@ -20,7 +20,7 @@ declare global {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCHED_MOCKED_TIMINGS: boolean;
     __ELM_WATCH_RELOAD_STATUSES: Record<string, ReloadStatus>;
-    __ELM_WATCH_RELOAD_PAGE: (message: string) => void;
+    __ELM_WATCH_RELOAD_PAGE: (message: string | undefined) => void;
     __ELM_WATCH_ON_INIT: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
@@ -99,10 +99,12 @@ window.__ELM_WATCH_RELOAD_STATUSES ??= {};
 const RELOAD_MESSAGE_KEY = "__elmWatchReloadMessage";
 
 window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
-  try {
-    window.sessionStorage.setItem(RELOAD_MESSAGE_KEY, message);
-  } catch {
-    // Ignore failing to write to sessionStorage.
+  if (message !== undefined) {
+    try {
+      window.sessionStorage.setItem(RELOAD_MESSAGE_KEY, message);
+    } catch {
+      // Ignore failing to write to sessionStorage.
+    }
   }
   window.location.reload();
 };
@@ -696,11 +698,12 @@ function onWebSocketToClientMessage(
               status: {
                 tag: "WaitingForReload",
                 date,
-                reasons: [
+                reasons:
                   COMPILATION_MODE === "proxy"
-                    ? "this stub file is ready to be replaced with real compiled JS."
-                    : `compilation mode changed from ${COMPILATION_MODE} to ${msg.compilationMode}.`,
-                ],
+                    ? []
+                    : [
+                        `compilation mode changed from ${COMPILATION_MODE} to ${msg.compilationMode}.`,
+                      ],
               },
             },
             [],
@@ -1048,6 +1051,7 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
 }
 
 function reloadPageIfNeeded(): void {
+  let shouldReload = false;
   const reasons: Array<[string, Array<string>]> = [];
 
   for (const [targetName, reloadStatus] of Object.entries(
@@ -1059,31 +1063,39 @@ function reloadPageIfNeeded(): void {
       case "NoReloadWanted":
         break;
       case "ReloadRequested":
-        reasons.push([targetName, reloadStatus.reasons]);
+        shouldReload = true;
+        if (reloadStatus.reasons.length > 0) {
+          reasons.push([targetName, reloadStatus.reasons]);
+        }
         break;
     }
   }
 
-  if (reasons.length > 0) {
-    const first = reasons[0];
-    const [separator, reasonString] =
-      reasons.length === 1 && first !== undefined && first[1].length === 1
-        ? [" ", `${first[1].join("")}\n(target: ${first[0]})`]
-        : [
-            ":\n\n",
-            reasons
-              .map(([targetName, subReasons]) =>
-                [
-                  targetName,
-                  ...subReasons.map((subReason) => `- ${subReason}`),
-                ].join("\n")
-              )
-              .join("\n\n"),
-          ];
-    const message = `elm-watch: I did a full page reload because${separator}${reasonString}`;
-    window.__ELM_WATCH_RELOAD_STATUSES = {};
-    window.__ELM_WATCH_RELOAD_PAGE(message);
+  if (!shouldReload) {
+    return;
   }
+
+  const first = reasons[0];
+  const [separator, reasonString] =
+    reasons.length === 1 && first !== undefined && first[1].length === 1
+      ? [" ", `${first[1].join("")}\n(target: ${first[0]})`]
+      : [
+          ":\n\n",
+          reasons
+            .map(([targetName, subReasons]) =>
+              [
+                targetName,
+                ...subReasons.map((subReason) => `- ${subReason}`),
+              ].join("\n")
+            )
+            .join("\n\n"),
+        ];
+  const message =
+    reasons.length === 0
+      ? undefined
+      : `elm-watch: I did a full page reload because${separator}${reasonString}`;
+  window.__ELM_WATCH_RELOAD_STATUSES = {};
+  window.__ELM_WATCH_RELOAD_PAGE(message);
 }
 
 function h<T extends HTMLElement>(
