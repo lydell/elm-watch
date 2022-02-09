@@ -95,9 +95,15 @@ window.__ELM_WATCH_ON_REACHED_IDLE_STATE ??= () => {
 };
 
 window.__ELM_WATCH_RELOAD_STATUSES ??= {};
+
+const RELOAD_MESSAGE_KEY = "__elmWatchReloadMessage";
+
 window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
-  // eslint-disable-next-line no-console
-  console.info(message);
+  try {
+    window.sessionStorage.setItem(RELOAD_MESSAGE_KEY, message);
+  } catch {
+    // Ignore failing to write to sessionStorage.
+  }
   window.location.reload();
 };
 
@@ -286,6 +292,17 @@ function logDebug(...args: Array<unknown>): void {
 }
 
 function run(): void {
+  try {
+    const message = window.sessionStorage.getItem(RELOAD_MESSAGE_KEY);
+    if (message !== null) {
+      // eslint-disable-next-line no-console
+      console.info(message);
+      window.sessionStorage.removeItem(RELOAD_MESSAGE_KEY);
+    }
+  } catch {
+    // Ignore failing to read or delete from sessionStorage.
+  }
+
   const container = getOrCreateContainer();
   const { shadowRoot } = container;
 
