@@ -1447,7 +1447,7 @@ function onWebSocketServerMsg(
         date: now,
         outputPath:
           removedConnection === undefined
-            ? { tag: "OutputPathError" }
+            ? /* istanbul ignore next */ { tag: "OutputPathError" }
             : removedConnection.outputPath,
       });
       return;

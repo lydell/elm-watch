@@ -9,6 +9,7 @@ import {
   ReachedIdleStateReason,
   UppercaseLetter,
 } from "../client/client";
+import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS, Env, NO_COLOR } from "../src/Env";
@@ -904,9 +905,11 @@ describe("hot", () => {
 
   describe("Parse web socket connect request url errors", () => {
     const originalWebSocket = WebSocket;
+    let _lastWebSocket: WebSocket | undefined = undefined;
 
     afterEach(() => {
       window.WebSocket = originalWebSocket;
+      _lastWebSocket = undefined;
     });
 
     function modifyUrl(f: (url: URL) => void): void {
@@ -921,10 +924,26 @@ describe("hot", () => {
           f(url);
 
           super(url);
+
+          _lastWebSocket = this;
         }
       }
 
       window.WebSocket = TestWebSocket;
+    }
+
+    function disconnect(): void {
+      if (_lastWebSocket === undefined) {
+        throw new Error("No WebSocket to disconnect!");
+      }
+      _lastWebSocket.close();
+    }
+
+    function send(message: WebSocketToServerMessage): void {
+      if (_lastWebSocket === undefined) {
+        throw new Error("No WebSocket to send message to!");
+      }
+      _lastWebSocket.send(JSON.stringify(message));
     }
 
     test("bad url", async () => {
@@ -979,7 +998,7 @@ describe("hot", () => {
       `);
     });
 
-    test("params decode error", async () => {
+    test("params decode error and disconnect", async () => {
       modifyUrl((url) => {
         url.searchParams.set("elmCompiledTimestamp", "2021-12-11");
       });
@@ -989,7 +1008,15 @@ describe("hot", () => {
         args: ["ParamsDecodeError"],
         scripts: ["ParamsDecodeError.js"],
         init: failInit,
-        onIdle: () => "Stop",
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              disconnect();
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
       });
 
       expect(terminal).toMatchInlineSnapshot(`
@@ -1025,10 +1052,60 @@ describe("hot", () => {
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         ▲ ❌ 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Sleeping
+        attempt 1
+        sleep 1.01 seconds
+        [Reconnect web socket now]
+        ▲ 🔌 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        I ran into trouble parsing the web socket connection URL parameters:
+
+        At root["elmCompiledTimestamp"]:
+        Expected a number
+        Got: "2021-12-11"
+
+        The URL looks like this:
+
+        /?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+
+        The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        ▲ ❌ 13:10:05 ParamsDecodeError
       `);
     });
 
-    test("wrong version", async () => {
+    test("wrong version and send message anyway", async () => {
       modifyUrl((url) => {
         url.searchParams.set("elmWatchVersion", "0.0.0");
       });
@@ -1038,7 +1115,13 @@ describe("hot", () => {
         args: ["WrongVersion"],
         scripts: ["WrongVersion.js"],
         init: failInit,
-        onIdle: () => "Stop",
+        onIdle: () => {
+          send({
+            tag: "ChangedCompilationMode",
+            compilationMode: "optimize",
+          });
+          return "Stop";
+        },
       });
 
       expect(terminal).toMatchInlineSnapshot(`
