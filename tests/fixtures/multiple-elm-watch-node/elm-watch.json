@@ -7,11 +7,17 @@
             ],
             "output": "build/main.js"
         },
-        "secondary": {
+        "second": {
             "inputs": [
                 "src/Main.elm"
             ],
-            "output": "build/secondary.js"
+            "output": "build/second.js"
+        },
+        "third": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/third.js"
         }
     }
 }

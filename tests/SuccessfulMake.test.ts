@@ -197,12 +197,25 @@ describe("successful make", () => {
     `);
   });
 
-  test("multiple elm-watch-node", async () => {
-    expect(await run("multiple-elm-watch-node", ["make"]))
+  test("multiple elm-watch-node, with queued postprocess", async () => {
+    expect(await run("multiple-elm-watch-node", ["make"], { isTTY: false }))
       .toMatchInlineSnapshot(`
+      ⏳ Dependencies
       ✅ Dependencies
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      ✅ secondary⧙                             1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ⏳ main: elm make
+      ⚪️ second: queued
+      ⚪️ third: queued
+      🟢 main: elm make done
+      ⏳ second: elm make
+      ⏳ main: postprocess
+      🟢 second: elm make done
+      ⏳ third: elm make
+      🟢 third: elm make done
+      ⏳ second: postprocess
+      ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ⏳ third: postprocess
+      ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
       ✅ Compilation finished in ⧙123⧘ ms⧙ (using 2 elm-watch-node workers).⧘
     `);
