@@ -6,6 +6,12 @@
                 "src/Sub/OtherMain.elm"
             ],
             "output": "build/HtmlMain.js"
+        },
+        "Other": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/Other.js"
         }
     }
 }

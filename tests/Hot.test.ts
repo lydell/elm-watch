@@ -2163,6 +2163,102 @@ describe("hot", () => {
     }
   });
 
+  test("changes to elm.json – typecheck only", async () => {
+    const fixture = "changes-to-elm-json";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const elmJsonPath = path.join(dir, "elm.json");
+    const elmJsonTemplatePath = path.join(dir, "elm.template.json");
+    const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
+    fs.writeFileSync(elmJsonPath, elmJsonString);
+
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["HtmlMain.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    // Both Elm and the Walker will fail on the invalid elm.json, but only the Elm error should be shown.
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ HtmlMain: elm make (typecheck only)
+      ⏳ Other: elm make (typecheck only)
+      ✅ HtmlMain⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Other⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ⏳ HtmlMain: elm make
+      ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
+      ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      ⏳ Dependencies
+      ⛔️ Dependencies
+      ⏳ HtmlMain: elm make
+      ⚪️ Other: queued
+      🚨 HtmlMain
+      ⏳ Other: elm make (typecheck only)
+      🚨 Other
+
+      ⧙-- EXTRA COMMA -----------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
+
+      I ran into a problem with your elm.json file. I was partway through parsing a
+      JSON object when I got stuck here:
+
+      20|     "test-dependencies": {
+      21|         "direct": {},
+      22|         "indirect": {
+                               ⧙^⧘
+      I saw a comma right before I got stuck here, so I was expecting to see a field
+      name like ⧙"type"⧘ or ⧙"dependencies"⧘ next.
+
+      This error is commonly caused by trailing commas in JSON objects. Those are
+      actually disallowed by <https://json.org> so check the previous line for a
+      trailing comma that may need to be deleted.
+
+      ⧙Note⧘: Here is an example of a valid JSON object for reference:
+
+          {
+            ⧙"name"⧘: ⧙"Tom"⧘,
+            ⧙"age"⧘: ⧙42⧘
+          }
+
+      Notice that (1) the field names are in double quotes and (2) there is no
+      trailing comma after the last entry. Both are strict requirements in JSON!
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+    `);
+  });
+
   test("changes to elm-watch-node JS file", async () => {
     const fixture = "changes-to-postprocess";
     const postprocessPath = path.join(FIXTURES_DIR, fixture, "postprocess.js");
