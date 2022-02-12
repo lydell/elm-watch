@@ -1639,8 +1639,9 @@ function statusLine(
     start: string
   ): string => {
     const strings = extra.flatMap((item) => (item === undefined ? [] : item));
+    // istanbul ignore if
     if (!isNonEmptyArray(strings)) {
-      return "";
+      return helper(emojiName, start);
     }
 
     // Emojis take two terminal columns, plus a space that we add after.
@@ -1706,6 +1707,7 @@ function statusLine(
     case "QueuedForPostprocess":
       return helper("QueuedForPostprocess", `${targetName}: elm make done`);
 
+    // istanbul ignore next
     case "ElmNotFoundError":
     case "CommandNotFoundError":
     case "OtherSpawnError":
@@ -1814,6 +1816,7 @@ function maybePrintDurations(
   loggerConfig: LoggerConfig,
   durations: Array<Duration>
 ): string | undefined {
+  // istanbul ignore if
   if (!isNonEmptyArray(durations)) {
     return undefined;
   }
@@ -2142,6 +2145,8 @@ function appendDuration(
   durations: Array<Duration>
 ): Array<Duration> {
   const previousDurations =
-    "durations" in outputState.status ? outputState.status.durations : [];
+    "durations" in outputState.status
+      ? outputState.status.durations
+      : /* istanbul ignore next */ [];
   return [...previousDurations, ...durations];
 }
