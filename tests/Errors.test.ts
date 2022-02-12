@@ -861,30 +861,37 @@ describe("errors", () => {
       `);
     });
 
-    test("elm.json not found for all inputs", async () => {
-      expect(await run("elm-json-not-found-for-all", ["make"]))
-        .toMatchInlineSnapshot(`
-        🚨 main
+    test("elm.json not found for all inputs (non-fancy)", async () => {
+      expect(
+        await run("elm-json-not-found-for-all", ["make"], {
+          env: {
+            ...process.env,
+            ...TEST_ENV,
+            [NO_COLOR]: "",
+          },
+        })
+      ).toMatchInlineSnapshot(`
+        main: error
 
-        ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
-        ⧙Target: main⧘
+        -- elm.json NOT FOUND ----------------------------------------------------------
+        Target: main
 
-        I could not find an ⧙elm.json⧘ for these inputs:
+        I could not find an elm.json for these inputs:
 
         Main.elm
 
-        Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+        Has it gone missing? Maybe run elm init to create one?
 
-        Note that I did find an ⧙elm.json⧘ for some inputs:
+        Note that I did find an elm.json for some inputs:
 
         pages/About.elm
         -> /Users/you/project/tests/fixtures/errors/elm-json-not-found-for-all/pages/elm.json
 
-        Make sure that one single ⧙elm.json⧘ covers all the inputs together!
+        Make sure that one single elm.json covers all the inputs together!
 
-        🚨 ⧙1⧘ error found
+        1 error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        Compilation finished in 123 ms.
       `);
     });
 
@@ -2831,7 +2838,6 @@ describe("errors", () => {
             ...TEST_ENV,
             [NO_COLOR]: "",
           },
-
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
@@ -2885,7 +2891,6 @@ describe("errors", () => {
             ...TEST_ENV,
             [NO_COLOR]: "",
           },
-
           isTTY: false,
         })
       ).toMatchInlineSnapshot(`
