@@ -841,12 +841,12 @@ describe("errors", () => {
   });
 
   describe("elm.json errors", () => {
-    test("elm.json not found", async () => {
+    test("elm.json not found, with long target name", async () => {
       expect(await run("elm-json-not-found", ["make"])).toMatchInlineSnapshot(`
-        🚨 main
+        🚨 yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooo…
 
         ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
-        ⧙Target: main⧘
+        ⧙Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo⧘
 
         I could not find an ⧙elm.json⧘ for these inputs:
 
@@ -861,7 +861,7 @@ describe("errors", () => {
       `);
     });
 
-    test("elm.json not found for all inputs (non-fancy)", async () => {
+    test("elm.json not found for all inputs, with long input name (non-fancy)", async () => {
       expect(
         await run("elm-json-not-found-for-all", ["make"], {
           env: {
@@ -871,10 +871,10 @@ describe("errors", () => {
           },
         })
       ).toMatchInlineSnapshot(`
-        main: error
+        yoooooooooooooooooooooooooooolooooooooooooooooooooooooooooooooooooooooooooooo...
 
         -- elm.json NOT FOUND ----------------------------------------------------------
-        Target: main
+        Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 
         I could not find an elm.json for these inputs:
 
