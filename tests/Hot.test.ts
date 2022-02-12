@@ -1409,7 +1409,7 @@ describe("hot", () => {
         Compilation mode
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
-        ◉ (disabled) Optimize
+        ◉ (disabled) Optimize 🚀
         ▲ ⏳ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
@@ -2984,13 +2984,13 @@ describe("hot", () => {
       ================================================================================
       ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 13:10:05 Main
+      ▼ 🐛 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 13:10:05 Main
+      ▼ 🐛 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ⏳ 13:10:05 Main
+      ▼ 🐛 ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ✅ 13:10:05 Main
+      ▼ 🐛 ✅ 13:10:05 Main
     `);
   });
 
@@ -3033,13 +3033,13 @@ describe("hot", () => {
       ================================================================================
       ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 13:10:05 Main
+      ▼ 🐛 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 🔌 13:10:05 Main
+      ▼ 🐛 🔌 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ⏳ 13:10:05 Main
+      ▼ 🐛 ⏳ 13:10:05 Main
       ================================================================================
-      ▼ 🌳 ✅ 13:10:05 Main
+      ▼ 🐛 ✅ 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
@@ -3047,10 +3047,10 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
-      ◉ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◉ (disabled) Debug 🐛 The Elm debugger isn't supported by \`Html\` programs.
       ◯ Standard
       ◯ Optimize
-      ▲ 🌳 ✅ 13:10:05 Main
+      ▲ 🐛 ✅ 13:10:05 Main
     `);
   });
 
@@ -3700,7 +3700,7 @@ describe("hot", () => {
         Compilation mode
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
-        ◉ (disabled) Optimize
+        ◉ (disabled) Optimize 🚀
         ▲ ⏳ 13:10:05 HtmlMain
         ================================================================================
         target HtmlMain
@@ -3711,16 +3711,16 @@ describe("hot", () => {
         Compilation mode
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
-        ◉ (disabled) Optimize
+        ◉ (disabled) Optimize 🚀
         ▲ ⏳ 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ 🔌 13:10:05 HtmlMain
+        ▼ 🚀 🔌 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ 🔌 13:10:05 HtmlMain
+        ▼ 🚀 🔌 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ ⏳ 13:10:05 HtmlMain
+        ▼ 🚀 ⏳ 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ ✅ 13:10:05 HtmlMain
+        ▼ 🚀 ✅ 13:10:05 HtmlMain
         ================================================================================
         target HtmlMain
         elm-watch %VERSION%
@@ -3730,16 +3730,16 @@ describe("hot", () => {
         Compilation mode
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ Standard
-        ◉ Optimize
-        ▲ ⚡️ ✅ 13:10:05 HtmlMain
+        ◉ Optimize 🚀
+        ▲ 🚀 ✅ 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ ✅ 13:10:05 HtmlMain
+        ▼ 🚀 ✅ 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ ⏳ 13:10:05 HtmlMain
+        ▼ 🚀 ⏳ 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ ⏳ 13:10:05 HtmlMain
+        ▼ 🚀 ⏳ 13:10:05 HtmlMain
         ================================================================================
-        ▼ ⚡️ ✅ 13:10:05 HtmlMain
+        ▼ 🚀 ✅ 13:10:05 HtmlMain
       `);
 
       function assertInit(div: HTMLDivElement): void {
@@ -5005,7 +5005,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 MultipleTargets
@@ -5018,7 +5018,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 MultipleTargets
@@ -5031,7 +5031,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 MultipleTargets
@@ -5044,7 +5044,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 MultipleTargets
@@ -5059,23 +5059,11 @@ describe("hot", () => {
         Waiting for other targets to finish compiling…
         ▲ ⏳ 13:10:05 MultipleTargets
         ================================================================================
-        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        ▼ 🐛 🔌 13:10:05 MultipleTargets
         ================================================================================
-        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        ▼ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
-        ================================================================================
-        target MultipleTargets
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
-        --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5085,9 +5073,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5097,9 +5085,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5109,9 +5097,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5121,9 +5109,21 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
+        ================================================================================
+        target MultipleTargets
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
+        --------------------------------------------------------------------------------
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5131,12 +5131,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5144,12 +5144,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
-        ◉ Debug
+        ◉ Debug 🐛
         ◯ Standard
         ◯ Optimize
-        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        ▲ 🐛 ✅ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5157,12 +5157,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
-        ◉ Debug
+        ◉ Debug 🐛
         ◯ Standard
         ◯ Optimize
-        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        ▲ 🐛 ✅ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5170,12 +5170,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
-        ◉ Debug
+        ◉ Debug 🐛
         ◯ Standard
         ◯ Optimize
-        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        ▲ 🐛 ✅ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 ✅ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ✅ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5183,12 +5183,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 ✅ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ✅ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5196,12 +5196,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5209,12 +5209,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5222,10 +5222,10 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
         target MultipleTargetsOther1
         elm-watch %VERSION%
@@ -5233,7 +5233,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for reload
         Waiting for other targets to finish compiling…
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5241,10 +5241,10 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
         target MultipleTargetsOther1
         elm-watch %VERSION%
@@ -5252,7 +5252,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for reload
         Waiting for other targets to finish compiling…
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5260,13 +5260,13 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for reload
         Waiting for other targets to finish compiling…
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         ================================================================================
-        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        ▼ 🐛 🔌 13:10:05 MultipleTargets
         ================================================================================
-        ▼ 🌳 🔌 13:10:05 MultipleTargets
+        ▼ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5276,9 +5276,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5288,9 +5288,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5300,9 +5300,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5312,9 +5312,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5324,9 +5324,9 @@ describe("hot", () => {
         attempt 1
         sleep 1.01 seconds
         [Connecting web socket…]
-        ▲ 🌳 🔌 13:10:05 MultipleTargets
+        ▲ 🐛 🔌 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5334,12 +5334,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug
+        ◉ (disabled) Debug 🐛
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ 🌳 ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5347,12 +5347,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
-        ◉ Debug
+        ◉ Debug 🐛
         ◯ Standard
         ◯ Optimize
-        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        ▲ 🐛 ✅ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 🔌 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5360,12 +5360,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
-        ◉ Debug
+        ◉ Debug 🐛
         ◯ Standard
         ◯ Optimize
-        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        ▲ 🐛 ✅ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 ⏳ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5373,12 +5373,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
-        ◉ Debug
+        ◉ Debug 🐛
         ◯ Standard
         ◯ Optimize
-        ▲ 🌳 ✅ 13:10:05 MultipleTargets
+        ▲ 🐛 ✅ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ 🌳 ✅ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ✅ 13:10:05 MultipleTargetsOther1
       `);
 
       expect(browserConsole).toMatchInlineSnapshot(`

@@ -1172,6 +1172,7 @@ function render(
 
 const CLASS = {
   chevronButton: "chevronButton",
+  compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
   expandedUiContainer: "expandedUiContainer",
   shortStatusContainer: "shortStatusContainer",
@@ -1294,6 +1295,12 @@ time::after {
   grid-column: 2;
 }
 
+.${CLASS.compilationModeWithIcon} {
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
 .${CLASS.shortStatusContainer} {
   line-height: 1;
   padding: 0.25em;
@@ -1360,10 +1367,7 @@ function view(
       icon(statusData.icon, statusData.status),
       h(
         HTMLTimeElement,
-        {
-          dateTime: model.status.date.toISOString(),
-          attrs: { "data-format": "04:44:44" },
-        },
+        { dateTime: model.status.date.toISOString() },
         formatTime(model.status.date)
       ),
       h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
@@ -1579,11 +1583,11 @@ function compilationModeIcon(
     case "proxy":
       return undefined;
     case "debug":
-      return icon("🌳", "Debug mode", { className: CLASS.debugModeIcon });
+      return icon("🐛", "Debug mode", { className: CLASS.debugModeIcon });
     case "standard":
       return undefined;
     case "optimize":
-      return icon("⚡️", "Optimize mode");
+      return icon("🚀", "Optimize mode");
   }
 }
 
@@ -1682,8 +1686,15 @@ function viewCompilationModeChooser({
           HTMLFieldSetElement,
           { disabled: sendKey === undefined },
           h(HTMLLegendElement, {}, "Compilation mode"),
-          ...compilationModes.map(({ mode, name, status }) =>
-            h(
+          ...compilationModes.map(({ mode, name, status }) => {
+            const nameWithIcon = h(
+              HTMLSpanElement,
+              { className: CLASS.compilationModeWithIcon },
+              name,
+              mode === selectedMode ? compilationModeIcon(mode) : undefined
+            );
+
+            return h(
               HTMLLabelElement,
               { className: status.tag },
               h(HTMLInputElement, {
@@ -1704,10 +1715,13 @@ function viewCompilationModeChooser({
                       },
               }),
               ...(status.tag === "Enabled"
-                ? [name]
-                : [name, h(HTMLElement, { localName: "small" }, status.reason)])
-            )
-          )
+                ? [nameWithIcon]
+                : [
+                    nameWithIcon,
+                    h(HTMLElement, { localName: "small" }, status.reason),
+                  ])
+            );
+          })
         ),
       ];
     }
