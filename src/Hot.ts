@@ -2369,7 +2369,9 @@ function printEventMessage(event: LatestEvent): string {
 
     case "WorkersLimitedAfterWebSocketClosed":
       return `Terminated ${event.numTerminatedWorkers} superfluous ${
-        event.numTerminatedWorkers === 1 ? "worker" : "workers"
+        event.numTerminatedWorkers === 1
+          ? "worker"
+          : /* istanbul ignore next */ "workers"
       }`;
   }
 }
@@ -2382,7 +2384,7 @@ function printNumMoreEvents(
   return numMoreEvents <= 0
     ? undefined
     : numMoreEvents === 1
-    ? `${indent}(1 more event)`
+    ? /* istanbul ignore next */ `${indent}(1 more event)`
     : `${indent}(${numMoreEvents} more events)`;
 }
 
