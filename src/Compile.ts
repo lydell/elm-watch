@@ -945,7 +945,7 @@ function needsToWriteProxyFile(
     const error = toError(unknownError);
     return error.code === "ENOENT"
       ? { tag: "Needed" }
-      : { tag: "ReadError", error };
+      : /* istanbul ignore next */ { tag: "ReadError", error };
   }
   const buffer = Buffer.alloc(versionedIdentifier.byteLength);
   try {

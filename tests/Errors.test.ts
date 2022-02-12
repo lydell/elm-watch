@@ -764,6 +764,31 @@ describe("errors", () => {
       `);
     });
 
+    test("hot failure to read previous output file", async () => {
+      expect(await run("output-is-folder", ["hot"], { exitHotOnError: true }))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 Main
+
+        ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+        ⧙Target: Main⧘
+
+        I managed to compile your code. Then I tried to read the output:
+
+        /Users/you/project/tests/fixtures/errors/output-is-folder/output/Main.js
+
+        Doing so I encountered this error:
+
+        EISDIR: illegal operation on a directory, read
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      `);
+    });
+
     test("duplicate inputs", async () => {
       expect(await run("duplicate-inputs", ["make"])).toMatchInlineSnapshot(`
         🚨 main
