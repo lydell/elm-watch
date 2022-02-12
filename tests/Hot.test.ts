@@ -756,6 +756,60 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
   });
 
+  test("fail to read Elm’s output (no postprocess)", async () => {
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Removed"],
+      scripts: ["Removed.js"],
+      init: failInit,
+      onIdle: () => {
+        expandUi();
+        return "Stop";
+      },
+      bin: "exit-0-remove-output",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      🚨 Removed
+
+      ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+      ⧙Target: Removed⧘
+
+      I managed to compile your code. Then I tried to read the output:
+
+      /Users/you/project/tests/fixtures/hot/basic/build/Removed.js
+
+      Doing so I encountered this error:
+
+      ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/build/Removed.js'
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Removed⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Removed
+      ================================================================================
+      ▼ ⏳ 13:10:05 Removed
+      ================================================================================
+      ▼ ⏳ 13:10:05 Removed
+      ================================================================================
+      ▼ 🚨 13:10:05 Removed
+      ================================================================================
+      target Removed
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Compilation error
+      Check the terminal to see errors!
+      ▲ 🚨 13:10:05 Removed
+    `);
+  });
+
   test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",
@@ -1206,6 +1260,7 @@ describe("hot", () => {
 
         Html
         Worker
+        Removed
         Readonly
         InjectError
         BadUrl
@@ -1317,6 +1372,7 @@ describe("hot", () => {
 
         Html
         Worker
+        Removed
         Readonly
         InjectError
         BadUrl

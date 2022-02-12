@@ -12,6 +12,12 @@
             ],
             "output": "build/Worker.js"
         },
+        "Removed": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/Removed.js"
+        },
         "Readonly": {
             "inputs": [
                 "src/HtmlMain.elm"
