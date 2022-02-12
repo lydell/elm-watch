@@ -113,6 +113,12 @@
                 "src/MultipleTargetsOther1.elm"
             ],
             "output": "build/MultipleTargetsOther1.js"
+        },
+        "InterruptElm": {
+            "inputs": [
+                "src/InterruptElm.elm"
+            ],
+            "output": "build/InterruptElm.js"
         }
     }
 }

@@ -1048,11 +1048,9 @@ async function postprocessHelper({
     throw unknownError;
   }
 
-  if (outputState.dirty) {
-    outputState.status = { tag: "Interrupted" };
-    updateStatusLineHelper();
-    return { tag: "Nothing" };
-  }
+  // There’s no need doing the usual `if (outputState.dirty)` check here, since
+  // we always `.kill()` running postprocessing when marking as dirty (which is
+  // handled above).
 
   if (postprocessResult.tag === "Success") {
     try {
