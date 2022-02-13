@@ -46,6 +46,17 @@ type OnIdle = (params: {
 
 type OnIdleResult = "KeepGoing" | "Stop";
 
+type SharedRunOptions = {
+  expandUiImmediately?: boolean;
+  isTTY?: boolean;
+  bin?: string;
+  env?: Env;
+  keepElmStuffJson?: boolean;
+  clearElmStuff?: boolean;
+  cwd?: string;
+  includeProxyReloads?: boolean;
+};
+
 async function run({
   fixture,
   scripts,
@@ -60,20 +71,12 @@ async function run({
   clearElmStuff = false,
   cwd = ".",
   includeProxyReloads = false,
-}: {
+}: SharedRunOptions & {
   fixture: string;
   scripts: Array<string>;
   args?: Array<string>;
   init: (node: HTMLDivElement) => void;
   onIdle: OnIdle;
-  expandUiImmediately?: boolean;
-  isTTY?: boolean;
-  bin?: string;
-  env?: Env;
-  keepElmStuffJson?: boolean;
-  clearElmStuff?: boolean;
-  cwd?: string;
-  includeProxyReloads?: boolean;
 }): Promise<{
   terminal: string;
   browserConsole: string;
@@ -3631,13 +3634,10 @@ describe("hot", () => {
       programType,
       compilationMode,
       init,
-      expandUiImmediately,
-      includeProxyReloads,
-      isTTY,
       extraScripts = [],
       extraElmWatchStuffJson = {},
-      bin,
-    }: {
+      ...sharedOptions
+    }: SharedRunOptions & {
       fixture?: string;
       name: `${UppercaseLetter}${string}`;
       programType:
@@ -3649,12 +3649,8 @@ describe("hot", () => {
         | "Worker";
       compilationMode: CompilationMode;
       init?: (node: HTMLDivElement) => void;
-      expandUiImmediately?: boolean;
-      includeProxyReloads?: boolean;
-      isTTY?: boolean;
       extraScripts?: Array<string>;
       extraElmWatchStuffJson?: ElmWatchStuffJsonWritable["targets"];
-      bin?: string;
     }): {
       replace: (f: (fileContent: string) => string) => void;
       write: (n: number) => void;
@@ -3730,11 +3726,8 @@ describe("hot", () => {
             fixture,
             args: [name],
             scripts: [`${name}.js`, ...extraScripts],
-            isTTY,
             keepElmStuffJson: true,
-            expandUiImmediately,
-            includeProxyReloads,
-            bin,
+            ...sharedOptions,
             init:
               init ??
               ((node) => {
