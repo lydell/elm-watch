@@ -65,6 +65,37 @@ export function prependPATH(folder: string): string {
   return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
 }
 
+export async function waitOneFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve();
+    });
+  });
+}
+
+export async function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+}
+
+export function touch(filePath: string): void {
+  const now = new Date();
+  fs.utimesSync(filePath, now, now);
+}
+
+export function rm(filePath: string): void {
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch {
+      fs.rmdirSync(filePath);
+    }
+  }
+}
+
 export class FailReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 

@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+const childProcess = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
+const child = childProcess.spawn("elm", process.argv.slice(2), {
+  env: {
+    ...process.env,
+    PATH: process.env.PATH.split(path.delimiter)
+      .filter((part) => !part.includes("bad-bin"))
+      .join(path.delimiter),
+  },
+  stdio: "inherit",
+});
+
+child.on("exit", (exitCode) => {
+  setTimeout(() => {
+    process.exit(exitCode);
+  }, 100);
+});

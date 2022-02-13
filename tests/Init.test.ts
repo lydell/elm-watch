@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
-import { toError } from "../src/Helpers";
 import {
   assertExitCode,
   clean,
@@ -10,6 +9,7 @@ import {
   logDebug,
   MemoryWriteStream,
   readFile,
+  rm,
   stringSnapshotSerializer,
 } from "./Helpers";
 
@@ -20,14 +20,7 @@ async function initSuccessHelper(
 ): Promise<{ stdout: string; json: string }> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const elmWatchJsonPath = path.join(dir, "elm-watch.json");
-  try {
-    fs.unlinkSync(elmWatchJsonPath);
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    if (error.code !== "ENOENT") {
-      throw error;
-    }
-  }
+  rm(elmWatchJsonPath);
 
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();

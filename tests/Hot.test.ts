@@ -22,8 +22,12 @@ import {
   FailReadStream,
   logDebug,
   MemoryWriteStream,
+  rm,
   stringSnapshotSerializer,
   TEST_ENV,
+  touch,
+  wait,
+  waitOneFrame,
 } from "./Helpers";
 
 const CONTAINER_ID = "elm-watch";
@@ -450,37 +454,6 @@ function click(element: HTMLElement, selector: string): void {
         target === null ? "not found" : target.nodeName
       }`
     );
-  }
-}
-
-async function waitOneFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
-}
-
-async function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, ms);
-  });
-}
-
-function touch(filePath: string): void {
-  const now = new Date();
-  fs.utimesSync(filePath, now, now);
-}
-
-function rm(filePath: string): void {
-  if (fs.existsSync(filePath)) {
-    try {
-      fs.unlinkSync(filePath);
-    } catch {
-      fs.rmdirSync(filePath);
-    }
   }
 }
 

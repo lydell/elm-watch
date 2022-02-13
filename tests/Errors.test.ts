@@ -22,8 +22,11 @@ import {
   logDebug,
   MemoryWriteStream,
   prependPATH,
+  rm,
   stringSnapshotSerializer,
   TEST_ENV,
+  touch,
+  wait,
 } from "./Helpers";
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
@@ -116,9 +119,7 @@ async function runWithBadElmBinAndExpectedJson(
     `elm-watch-ElmMakeJsonParseError-${Errors.sha256(expectedWrittenJson)}.json`
   );
 
-  if (fs.existsSync(jsonPath)) {
-    fs.unlinkSync(jsonPath);
-  }
+  rm(jsonPath);
 
   const output = await runAbsolute(dir, ["make", "app"], {
     env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
@@ -1126,16 +1127,12 @@ describe("errors", () => {
       const dummy = path.join(os.tmpdir(), "ElmWatchDummy.elm");
 
       beforeEach(() => {
-        if (fs.existsSync(dummy)) {
-          fs.unlinkSync(dummy);
-        }
+        rm(dummy);
         fs.mkdirSync(dummy);
       });
 
       afterEach(() => {
-        if (fs.existsSync(dummy) && fs.statSync(dummy).isDirectory()) {
-          fs.rmdirSync(dummy);
-        }
+        rm(dummy);
       });
 
       test("is directory", async () => {
@@ -1720,6 +1717,77 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
 
         🚨 Compilation finished in ⧙123⧘ ms.
+      `);
+    });
+
+    test("interrupt typecheck with compilation error", async () => {
+      const fixture = "interrupt-typecheck";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const src = path.join(dir, "src");
+      const mainFile = path.join(src, "Main.elm");
+      const mainFileTemplate = path.join(src, "Main1.elm");
+      const mainFileString = fs
+        .readFileSync(mainFileTemplate, "utf8")
+        .replace("Main1", "Main");
+      fs.writeFileSync(mainFile, mainFileString);
+
+      const [output] = await Promise.all([
+        run(fixture, ["hot"], {
+          isTTY: false,
+          env: {
+            ...badElmBinEnv(path.join(dir, "bad-bin")),
+            [__ELM_WATCH_EXIT_ON_ERROR]: "",
+          },
+        }),
+        (async () => {
+          await wait(500);
+          touch(mainFile);
+          await wait(20);
+          fs.writeFileSync(mainFile, mainFileString.slice(0, -5));
+        })(),
+      ]);
+
+      expect(output).toMatchInlineSnapshot(`
+        ⏳ Main: elm make (typecheck only)
+        ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ⏳ Main: elm make (typecheck only)
+        ⏳ Main: interrupted
+        ⏳ Main: elm make (typecheck only)
+        🚨 Main
+
+        ⧙-- ENDLESS STRING --------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm:7:17
+
+        I got to the end of the line without seeing the closing double quote:
+
+        7|     Html.text "M
+                           ⧙^⧘
+        Strings look like ⧙"this"⧘ with double quotes on each end. Is the closing double
+        quote missing in your code?
+
+        ⧙Note⧘: For a string that spans multiple lines, you can use the multi-line string
+        syntax like this:
+
+        ⧙    """
+            # Multi-line Strings
+            
+            - start with triple double quotes
+            - write whatever you want
+            - no need to escape newlines or double quotes
+            - end with triple double quotes
+            """⧘
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm
+        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       `);
     });
   });
@@ -2744,9 +2812,7 @@ describe("errors", () => {
     const appPath = path.join(FIXTURES_DIR, "ci", "build", "app.js");
 
     test("CI scenario", async () => {
-      if (fs.existsSync(appPath)) {
-        fs.unlinkSync(appPath);
-      }
+      rm(appPath);
 
       // Note: Postprocess is skipped when there are `elm make` errors.
       expect(await run("ci", ["make"], { isTTY: false }))
@@ -2826,9 +2892,7 @@ describe("errors", () => {
     });
 
     test("CI scenario – no color", async () => {
-      if (fs.existsSync(appPath)) {
-        fs.unlinkSync(appPath);
-      }
+      rm(appPath);
 
       // Note: Postprocess is skipped when there are `elm make` errors.
       expect(
