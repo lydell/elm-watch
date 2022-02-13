@@ -26,6 +26,7 @@ declare global {
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
     __ELM_WATCH_EXIT: () => void;
     __ELM_WATCH_KILL_MATCHING: (targetName: RegExp) => Promise<void>;
+    __ELM_WATCH_DISCONNECT: (targetName: RegExp) => void;
     __ELM_WATCH_LOG_DEBUG: typeof console.debug;
   }
 }
@@ -114,6 +115,8 @@ window.__ELM_WATCH_EXIT ??= () => {
 };
 
 window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
+
+window.__ELM_WATCH_DISCONNECT ??= (): Promise<void> => Promise.resolve();
 
 window.__ELM_WATCH_LOG_DEBUG ??=
   // eslint-disable-next-line no-console
@@ -474,6 +477,18 @@ const initMutable =
           originalKillMatching(targetName).then(resolve).catch(reject);
         }
       });
+
+    const originalDisconnect = window.__ELM_WATCH_DISCONNECT;
+    window.__ELM_WATCH_DISCONNECT = (targetName) => {
+      if (
+        targetName.test(TARGET_NAME) &&
+        mutable.webSocket.readyState !== WebSocket.CLOSED
+      ) {
+        mutable.webSocket.close();
+      } else {
+        originalDisconnect(targetName);
+      }
+    };
 
     return mutable;
   };

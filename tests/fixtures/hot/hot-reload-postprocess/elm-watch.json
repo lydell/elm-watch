@@ -6,6 +6,12 @@
                 "src/ChangedRecordFields.elm"
             ],
             "output": "build/ChangedRecordFields.js"
+        },
+        "SlowPostprocess": {
+            "inputs": [
+                "src/SlowPostprocess.elm"
+            ],
+            "output": "build/SlowPostprocess.js"
         }
     }
 }

@@ -1988,12 +1988,14 @@ function onWebSocketConnected(
         case "ElmMakeTypecheckOnly":
           return recompileNeeded();
 
+        // istanbul ignore next
         case "ElmMake":
         case "Postprocess":
         case "Interrupted":
         case "QueuedForElmMake":
         case "QueuedForPostprocess":
           switch (model.hotState.tag) {
+            // istanbul ignore next
             case "Idle":
               return recompileNeeded();
 
