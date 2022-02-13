@@ -5588,6 +5588,62 @@ describe("hot", () => {
       }
     });
 
+    test("Restart while `elm make` is running", async () => {
+      const elmJsonPath = path.join(FIXTURES_DIR, "hot-reload", "elm.json");
+
+      const { replace, go } = runHotReload({
+        name: "InterruptElm",
+        programType: "Html",
+        compilationMode: "standard",
+        isTTY: false,
+        bin: "delay",
+      });
+
+      const { terminal } = await go(async ({ idle }) => {
+        switch (idle) {
+          case 1:
+            replace((content) => content.replace("1", "2"));
+            await wait(60);
+            touch(elmJsonPath);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ⏳ InterruptElm: elm make (typecheck only)
+        ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ⏳ InterruptElm: elm make
+        ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InterruptElm⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: InterruptElm
+        ℹ️ 13:10:05 Web socket connected for: InterruptElm⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+        ⏳ InterruptElm: elm make
+        ⏳ InterruptElm: interrupted
+        ⏳ InterruptElm: elm make
+        ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/InterruptElm.elm
+        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      `);
+    });
+
     test("Changed record fields in optimize with postprocess", async () => {
       const { replace, go } = runHotReload({
         fixture: "hot-reload-postprocess",
