@@ -2069,6 +2069,7 @@ function onWebSocketRecompileNeeded(
 
 function compileNextAction(nextAction: NextAction): NextAction {
   switch (nextAction.tag) {
+    // istanbul ignore next
     case "Restart":
     case "Compile":
       return nextAction;

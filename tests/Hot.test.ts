@@ -2780,6 +2780,92 @@ describe("hot", () => {
     }
   });
 
+  test("two changes at the same time", async () => {
+    const fixture = "basic";
+    const src = path.join(FIXTURES_DIR, fixture, "src");
+    const inputFile1 = path.join(src, "HtmlMain.elm");
+    const inputFile2 = path.join(src, "Worker.elm");
+
+    const { terminal, renders } = await run({
+      fixture,
+      args: ["Html", "Worker"],
+      scripts: ["Html.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            touch(inputFile1);
+            touch(inputFile2);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Html: elm make (typecheck only)
+      ⏳ Worker: elm make (typecheck only)
+      ✅ Html⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ⏳ Html: elm make
+      ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Html⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
+      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      ⏳ Html: elm make
+      ⚪️ Worker: queued
+      ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ⏳ Worker: elm make (typecheck only)
+      ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/HtmlMain.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/Worker.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ✅ 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ✅ 13:10:05 Html
+    `);
+  });
+
   test("typecheck-only should not break because of duplicate inputs", async () => {
     const { terminal, renders } = await run({
       fixture: "typecheck-only-unique",
