@@ -1279,73 +1279,83 @@ async function typecheck({
       allRelatedElmFilePathsResult
     );
 
-    switch (combinedResult.tag) {
-      case "elm make success + walker success": {
-        const duration: Duration = {
-          tag: "ElmMakeTypecheckOnly",
-          elmDurationMs: combinedResult.elmDurationMs,
-          walkerDurationMs: combinedResult.walkerDurationMs,
-        };
+    const tryWriteProxyFile = (durations: Array<Duration>): void => {
+      const result = needsToWriteProxyFile(
+        outputPath.theOutputPath,
+        Buffer.from(Inject.versionedIdentifier(webSocketPort))
+      );
 
-        const result = needsToWriteProxyFile(
-          outputPath.theOutputPath,
-          Buffer.from(Inject.versionedIdentifier(webSocketPort))
-        );
-
-        switch (result.tag) {
-          case "Needed":
-            try {
-              fs.mkdirSync(
-                absoluteDirname(outputPath.theOutputPath).absolutePath,
-                { recursive: true }
-              );
-              fs.writeFileSync(
-                outputPath.theOutputPath.absolutePath,
-                Inject.proxyFile(
-                  outputPath,
-                  getNow().getTime(),
-                  webSocketPort,
-                  logger.config.debug
-                )
-              );
-              // The proxy file doesn’t count as writing to disk…
-              outputState.status = {
-                tag: "NotWrittenToDisk",
-                durations: appendDuration(outputState, [duration]),
-              };
-            } catch (unknownError) {
-              const error = toError(unknownError);
-              outputState.status = { tag: "WriteProxyOutputError", error };
-            }
-            break;
-
-          case "NotNeeded":
+      switch (result.tag) {
+        case "Needed":
+          try {
+            fs.mkdirSync(
+              absoluteDirname(outputPath.theOutputPath).absolutePath,
+              {
+                recursive: true,
+              }
+            );
+            fs.writeFileSync(
+              outputPath.theOutputPath.absolutePath,
+              Inject.proxyFile(
+                outputPath,
+                getNow().getTime(),
+                webSocketPort,
+                logger.config.debug
+              )
+            );
+            // The proxy file doesn’t count as writing to disk…
             outputState.status = {
               tag: "NotWrittenToDisk",
-              durations: appendDuration(outputState, [duration]),
+              durations: appendDuration(outputState, durations),
             };
-            break;
+          } catch (unknownError) {
+            const error = toError(unknownError);
+            outputState.status = { tag: "WriteProxyOutputError", error };
+          }
+          break;
 
-          case "ReadError":
-            outputState.status = {
-              tag: "ReadOutputError",
-              error: result.error,
-            };
-            break;
-        }
+        case "NotNeeded":
+          outputState.status = {
+            tag: "NotWrittenToDisk",
+            durations: appendDuration(outputState, durations),
+          };
+          break;
 
-        break;
+        case "ReadError":
+          outputState.status = {
+            tag: "ReadOutputError",
+            error: result.error,
+          };
+          break;
       }
+    };
 
+    switch (combinedResult.tag) {
+      case "elm make success + walker success":
+        tryWriteProxyFile([
+          {
+            tag: "ElmMakeTypecheckOnly",
+            elmDurationMs: combinedResult.elmDurationMs,
+            walkerDurationMs: combinedResult.walkerDurationMs,
+          },
+        ]);
+        break;
+
+      // In all of the remaining cases, `elm make` and
+      // `getAllRelatedElmFilePaths` errors are more important than proxy file
+      // errors.
       case "elm make success + walker failure":
+        tryWriteProxyFile([]);
         outputState.status = combinedResult.walkerError;
         break;
 
       case "elm make failure + walker success":
+        tryWriteProxyFile([]);
         outputState.status = combinedResult.elmMakeError;
         break;
 
       case "elm make failure + walker failure":
+        tryWriteProxyFile([]);
         // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
         outputState.status = combinedResult.elmMakeError;
         break;

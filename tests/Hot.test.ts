@@ -2837,6 +2837,64 @@ describe("hot", () => {
     `);
   });
 
+  test("elm compilation errors from the start", async () => {
+    const { terminal, renders } = await run({
+      fixture: "compile-error",
+      args: [],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: () => {
+        // Do nothing
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make (typecheck only)
+      🚨 Main
+
+      ⧙-- WEIRD DECLARATION -----------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/compile-error/src/Main.elm:1:1
+
+      I am trying to parse a declaration, but I am getting stuck here:
+
+      1| 
+         ⧙^⧘
+      When a line has no spaces at the beginning, I expect it to be a declaration like
+      one of these:
+
+          greet : String -> String
+          greet name =
+            ⧙"Hello "⧘ ++ name ++ ⧙"!"⧘
+          
+          ⧙type⧘ User = Anonymous | LoggedIn String
+
+      Try to make your declaration look like one of those? Or if this is not supposed
+      to be a declaration, try adding some spaces before it?
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      🚨 ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🚨 13:10:05 Main
+    `);
+  });
+
   test("kill postprocess", async () => {
     const fixture = "kill-postprocess";
     const input = path.join(FIXTURES_DIR, fixture, "src", "Main.elm");
