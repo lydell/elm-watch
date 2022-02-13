@@ -715,7 +715,11 @@ function update(
             case "Error":
               return [
                 { ...model, hotState: { tag: "Idle" } },
-                [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
+                [
+                  exitOnError
+                    ? { tag: "ExitOnIdle" }
+                    : /* istanbul ignore next */ { tag: "NoCmd" },
+                ],
               ];
 
             case "Success": {
