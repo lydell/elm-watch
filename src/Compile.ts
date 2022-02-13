@@ -1027,7 +1027,7 @@ async function postprocessHelper({
                 startTimestamp - outputState.status.elmCompiledTimestamp,
             },
           ]
-        : []
+        : /* istanbul ignore next */ []
     ),
   };
   updateStatusLineHelper();
@@ -1945,9 +1945,13 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           case "NotWrittenToDisk":
             return [];
 
+          // istanbul ignore next
           case "ElmMake":
+          // istanbul ignore next
           case "ElmMakeTypecheckOnly":
+          // istanbul ignore next
           case "Postprocess":
+          // istanbul ignore next
           case "Interrupted":
           case "QueuedForElmMake":
             return Errors.stuckInProgressState(outputPath, status.tag);
