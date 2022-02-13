@@ -96,6 +96,16 @@ export function rm(filePath: string): void {
   }
 }
 
+export function rmSymlink(symlink: string): void {
+  // Can’t use the `rm` function here, since `fs.existsSync(symlink)` returns
+  // `false` if `symlink` is an existing symlink but points to a non-existing file.
+  try {
+    fs.unlinkSync(symlink);
+  } catch {
+    // Does not exist.
+  }
+}
+
 export class FailReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 

@@ -23,6 +23,7 @@ import {
   logDebug,
   MemoryWriteStream,
   rm,
+  rmSymlink,
   stringSnapshotSerializer,
   TEST_ENV,
   touch,
@@ -143,8 +144,8 @@ async function run({
         delete (window as unknown as Record<string, unknown>)[key];
       }
 
-      Promise.all(
-        absoluteScripts.map((script) => {
+      (async () => {
+        for (const script of absoluteScripts) {
           // Copying the script does a couple of things:
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
@@ -161,9 +162,9 @@ async function run({
               `$1 = document.documentElement.children[${bodyIndex}];`
             );
           fs.writeFileSync(newScript, content);
-          return import(newScript);
-        })
-      )
+          await import(newScript);
+        }
+      })()
         .then(() => {
           if (expandUiImmediately) {
             expandUi();
@@ -460,9 +461,12 @@ function click(element: HTMLElement, selector: string): void {
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     document.getElementById(CONTAINER_ID)?.remove();
     window.history.replaceState(null, "", "/");
+    // Letting the computer breathe a little between tests seems to somehow make
+    // full test runs more reliable.
+    await wait(100);
   });
 
   test("successful connect (collapsed)", async () => {
@@ -1610,7 +1614,7 @@ describe("hot", () => {
         ◯ Optimize
         ▲ ✅ 13:10:05 Reconnect
       `);
-    });
+    }, 9000); // This test sometimes reaches the default 5000 limit.
   });
 
   test("changes to elm-watch.json", async () => {
@@ -3465,13 +3469,7 @@ describe("hot", () => {
     const main2 = path.join(dir, "src", "Main2.elm");
     const symlink = path.join(dir, "src", "Symlink.elm");
 
-    // Can’t use the `rm` function here, since `fs.existsSync(symlink)` returns
-    // `false` if `symlink` is an existing symlink but points to a non-existing file.
-    try {
-      fs.unlinkSync(symlink);
-    } catch {
-      // Does not exist.
-    }
+    rmSymlink(symlink);
     fs.symlinkSync(main2, symlink);
 
     const { terminal, renders } = await run({
@@ -3490,9 +3488,11 @@ describe("hot", () => {
           case 1:
             assert(div);
             fs.unlinkSync(symlink);
-            fs.symlinkSync(main, symlink);
             return "KeepGoing";
           case 2:
+            fs.symlinkSync(main, symlink);
+            return "KeepGoing";
+          case 3:
             touch(elmJsonPath);
             touch(main);
             return "KeepGoing";
@@ -3528,6 +3528,25 @@ describe("hot", () => {
       ✅ ⧙13:10:05⧘ Everything up to date.
       🚨 Main
 
+      ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+      ⧙Target: Main⧘
+
+      You asked me to compile these inputs:
+
+      src/Symlink.elm ⧙(/Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm)⧘
+
+      ⧙But they don't exist!⧘
+
+      Is something misspelled? Or do you need to create them?
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 Main
+
       ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
       ⧙Target: Main⧘
 
@@ -3545,7 +3564,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
+      ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       🚨 Main
 
@@ -3587,6 +3606,8 @@ describe("hot", () => {
       ▼ ✅ 13:10:05 Main
       ================================================================================
       ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🚨 13:10:05 Main
       ================================================================================
       ▼ 🚨 13:10:05 Main
       ================================================================================
@@ -5062,7 +5083,7 @@ describe("hot", () => {
         },
       });
 
-      const { terminal, renders, browserConsole } = await go(({ idle }) => {
+      const { renders, browserConsole } = await go(({ idle }) => {
         switch (idle) {
           case 1:
             return "KeepGoing"; // First script has loaded.
@@ -5076,16 +5097,16 @@ describe("hot", () => {
         }
       });
 
-      expect(terminal).toMatchInlineSnapshot(`
-        ✅ MultipleTargets⧙                       1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-        ✅ MultipleTargetsOther1⧙                 1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      expect(browserConsole).toMatchInlineSnapshot(`
+        Proxy file reload!
 
-        📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
+        elm-watch: I did a full page reload because:
 
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: MultipleTargetsOther1
-           (2 more events)
-        ℹ️ 13:10:05 Web socket connected for: MultipleTargetsOther1⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
+        MultipleTargets
+        - the message type in \`Elm.MultipleTargets\` changed in debug mode ("debug metadata" changed).
+
+        MultipleTargetsOther1
+        - the message type in \`Elm.MultipleTargetsOther1\` changed in debug mode ("debug metadata" changed).
       `);
 
       expect(renders).toMatchInlineSnapshot(`
@@ -5501,18 +5522,6 @@ describe("hot", () => {
         --------------------------------------------------------------------------------
         ▼ 🐛 ✅ 13:10:05 MultipleTargetsOther1
       `);
-
-      expect(browserConsole).toMatchInlineSnapshot(`
-        Proxy file reload!
-
-        elm-watch: I did a full page reload because:
-
-        MultipleTargets
-        - the message type in \`Elm.MultipleTargets\` changed in debug mode ("debug metadata" changed).
-
-        MultipleTargetsOther1
-        - the message type in \`Elm.MultipleTargetsOther1\` changed in debug mode ("debug metadata" changed).
-      `);
     });
 
     test("Change Elm file while `elm make` is running", async () => {
@@ -5529,7 +5538,7 @@ describe("hot", () => {
           case 1:
             assertInit(div);
             replace((content) => content.replace("1", "2"));
-            await wait(20);
+            await wait(60);
             replace((content) => content.replace("2", "3"));
             return "KeepGoing";
           default:

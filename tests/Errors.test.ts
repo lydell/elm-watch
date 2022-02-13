@@ -23,6 +23,7 @@ import {
   MemoryWriteStream,
   prependPATH,
   rm,
+  rmSymlink,
   stringSnapshotSerializer,
   TEST_ENV,
   touch,
@@ -710,84 +711,106 @@ describe("errors", () => {
       `);
     });
 
-    test("symlink loop", async () => {
-      expect(await run("symlink-loop", ["make"])).toMatchInlineSnapshot(`
-        🚨 main
+    describe("symlink loop", () => {
+      const fixture = "symlink-loop";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const symlink1 = path.join(dir, "Main.elm");
+      const symlink2 = path.join(dir, "Other.elm");
 
-        ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
-        ⧙Target: main⧘
+      function deleteSymlinks(): void {
+        rmSymlink(symlink1);
+        rmSymlink(symlink2);
+      }
 
-        I start by checking if the inputs you give me exist,
-        but doing so resulted in errors!
+      beforeEach(() => {
+        deleteSymlinks();
+        fs.symlinkSync(symlink1, symlink2);
+        fs.symlinkSync(symlink2, symlink1);
+      });
 
-        Main.elm:
-        ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+      // The symlink loop is deleted when done to avoid this error sometimes happening in other tests:
+      // ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Other.elm'
+      afterEach(deleteSymlinks);
 
-        ⧙That's all I know, unfortunately!⧘
+      test("make", async () => {
+        expect(await run(fixture, ["make"])).toMatchInlineSnapshot(`
+          🚨 main
 
-        🚨 ⧙1⧘ error found
+          ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
+          ⧙Target: main⧘
 
-        🚨 Compilation finished in ⧙123⧘ ms.
-      `);
-    });
+          I start by checking if the inputs you give me exist,
+          but doing so resulted in errors!
 
-    test("symlink loop – hot", async () => {
-      expect(await run("symlink-loop", ["hot"])).toMatchInlineSnapshot(`
-        🚨 main
+          Main.elm:
+          ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
 
-        ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
-        ⧙Target: main⧘
+          ⧙That's all I know, unfortunately!⧘
 
-        I start by checking if the inputs you give me exist,
-        but doing so resulted in errors!
+          🚨 ⧙1⧘ error found
 
-        Main.elm:
-        ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+          🚨 Compilation finished in ⧙123⧘ ms.
+        `);
+      });
 
-        ⧙That's all I know, unfortunately!⧘
+      test("hot", async () => {
+        expect(await run(fixture, ["hot"])).toMatchInlineSnapshot(`
+          🚨 main
 
-        🚨 ⧙1⧘ error found
+          ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
+          ⧙Target: main⧘
 
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+          I start by checking if the inputs you give me exist,
+          but doing so resulted in errors!
 
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
-        ⧙-- WATCHER ERROR ---------------------------------------------------------------⧘
+          Main.elm:
+          ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
 
-        The file watcher encountered an error, which means that it cannot continue.
-        elm-watch is powered by its file watcher, so I have to exit at this point.
+          ⧙That's all I know, unfortunately!⧘
 
-        See if this is something you can solve by maybe removing some problematic files
-        or something!
+          🚨 ⧙1⧘ error found
 
-        This is the error message I got:
+          📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
-      `);
+          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+          ⧙-- WATCHER ERROR ---------------------------------------------------------------⧘
+
+          The file watcher encountered an error, which means that it cannot continue.
+          elm-watch is powered by its file watcher, so I have to exit at this point.
+
+          See if this is something you can solve by maybe removing some problematic files
+          or something!
+
+          This is the error message I got:
+
+          ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+        `);
+      });
     });
 
     test("hot failure to read previous output file", async () => {
       expect(await run("output-is-folder", ["hot"], { exitHotOnError: true }))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Main
+          ✅ Dependencies
+          🚨 Main
 
-        ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
-        ⧙Target: Main⧘
+          ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+          ⧙Target: Main⧘
 
-        I managed to compile your code. Then I tried to read the output:
+          I managed to compile your code. Then I tried to read the output:
 
-        /Users/you/project/tests/fixtures/errors/output-is-folder/output/Main.js
+          /Users/you/project/tests/fixtures/errors/output-is-folder/output/Main.js
 
-        Doing so I encountered this error:
+          Doing so I encountered this error:
 
-        EISDIR: illegal operation on a directory, read
+          EISDIR: illegal operation on a directory, read
 
-        🚨 ⧙1⧘ error found
+          🚨 ⧙1⧘ error found
 
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+          📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
-      `);
+          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        `);
     });
 
     test("duplicate inputs", async () => {
@@ -1742,7 +1765,7 @@ describe("errors", () => {
         (async () => {
           await wait(500);
           touch(mainFile);
-          await wait(20);
+          await wait(60);
           fs.writeFileSync(mainFile, mainFileString.slice(0, -5));
         })(),
       ]);
