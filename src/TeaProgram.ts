@@ -55,6 +55,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
             reject(error);
           }
         );
+        // istanbul ignore next
         if (killed) {
           break;
         }

@@ -704,7 +704,7 @@ function update(
         case "Restarting":
           return outputActions.numExecuting === 0
             ? [model, [{ tag: "Restart", restartReasons: model.latestEvents }]]
-            : [model, []];
+            : /* istanbul ignore next */ [model, []];
       }
     }
 
@@ -1058,6 +1058,7 @@ function runNextAction(
           return [{ ...model, hotState: { tag: "Restarting" } }, []];
         }
 
+        // istanbul ignore next
         case "Restarting":
           return [model, []];
       }
@@ -1092,7 +1093,9 @@ function runNextAction(
             ],
           ];
 
+        // istanbul ignore next
         case "Dependencies":
+        // istanbul ignore next
         case "Restarting":
           return [model, []];
       }
@@ -1598,6 +1601,7 @@ function makePrioritizedOutputs(
   const map = new HashMap<OutputPath, number>();
   for (const { outputPath, priority } of webSocketConnections) {
     if (outputPath.tag !== "OutputPathError") {
+      // istanbul ignore next
       const previous = map.get(outputPath) ?? 0;
       map.set(outputPath, Math.max(priority, previous));
     }
@@ -1954,7 +1958,9 @@ function onWebSocketConnected(
   };
 
   switch (model.hotState.tag) {
+    // istanbul ignore next
     case "Restarting":
+    // istanbul ignore next
     case "Dependencies":
       return [model, event, []];
 
@@ -2033,7 +2039,9 @@ function onChangedCompilationMode(
   outputState: OutputState
 ): [Model, Array<Cmd>] {
   switch (model.hotState.tag) {
+    // istanbul ignore next
     case "Restarting":
+    // istanbul ignore next
     case "Dependencies":
       return [model, []];
 
@@ -2049,6 +2057,7 @@ function onWebSocketRecompileNeeded(
   outputState: OutputState
 ): [Model, Array<Cmd>] {
   switch (model.nextAction.tag) {
+    // istanbul ignore next
     case "Restart":
       return [model, []];
 
