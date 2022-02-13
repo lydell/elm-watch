@@ -1615,6 +1615,52 @@ describe("hot", () => {
         ▲ ✅ 13:10:05 Reconnect
       `);
     }, 9000); // This test sometimes reaches the default 5000 limit.
+
+    test("outdated timestamp", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("elmCompiledTimestamp", "0");
+      });
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["Html"],
+        scripts: ["Html.js"],
+        init: (node) => {
+          window.Elm?.HtmlMain?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
+        ℹ️ 13:10:05 Web socket connected needing compilation of: Html⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ 🔌 13:10:05 Html
+        ================================================================================
+        ▼ 🔌 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ✅ 13:10:05 Html
+      `);
+    });
   });
 
   test("changes to elm-watch.json", async () => {
