@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         # os: [ubuntu-latest, macOS-latest, windows-latest]
-        os: [ubuntu-latest]
+        os: [macOS-latest]
         node-version: [12.x, 14.x, 16.x]
 
     steps:
@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.elm
-          key: elm-${{ hashFiles('elm-tooling.json', 'example/elm.json', 'example/elm-tooling.json') }}
+          key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json') }}
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
