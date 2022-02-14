@@ -61,7 +61,9 @@ jobs:
         run: npx --no-install elm-tooling install
 
       - name: elm-watch make
-        run: npx --no-install elm-watch make --optimize
+        run: |
+          ls -lah node_modules/.bin
+          npx --no-install elm-watch make --optimize
 
       - name: esbuild
         run: npm run esbuild -- --minify
