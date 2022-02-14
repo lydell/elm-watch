@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
           node-version: 16.x
 
@@ -47,7 +47,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.elm
-          key: elm-${{ hashFiles('elm-tooling.json', 'example-minimal/elm.json', 'example-minimal/elm-tooling.json', 'example-minimal/legacy/elm.json') }}
+          key: elm-${{ hashFiles('example-minimal/elm.json', 'example-minimal/elm-tooling.json') }}
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'

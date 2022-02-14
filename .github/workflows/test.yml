@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.elm
-          key: elm-${{ hashFiles('elm-tooling.json', 'example/elm.json', 'example/elm-tooling.json', 'example/legacy/elm.json') }}
+          key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json') }}
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'

@@ -16,8 +16,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
           node-version: 16.x
 
@@ -47,7 +49,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.elm
-          key: elm-${{ hashFiles('elm-tooling.json', 'example/elm.json', 'example/elm-tooling.json', 'example/legacy/elm.json') }}
+          key: elm-${{ hashFiles('example/elm.json', 'example/elm-tooling.json') }}
 
       - name: npm ci
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
@@ -65,4 +67,4 @@ jobs:
         run: npm run esbuild -- --minify
 
       - name: elm-format
-        run: npx --no-install elm-format --validate src legacy
+        run: npx --no-install elm-format --validate src
