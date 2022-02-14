@@ -60,6 +60,8 @@ jobs:
       - name: elm-tooling install
         run: npx --no-install elm-tooling install
 
+      - run: ls -lah node_modules/.bin
+
       - name: elm-watch make
         run: |
           ls -lah node_modules/.bin
