@@ -8,7 +8,7 @@
     "build": "elm-watch make --optimize"
   },
   "devDependencies": {
-    "elm-tooling": "1.6.0",
+    "elm-tooling": "1.7.0",
     "elm-watch": "file:../build"
   }
 }
