@@ -1,4 +1,4 @@
-name: Example
+name: Example minimal
 
 on:
   push:
@@ -40,8 +40,8 @@ jobs:
         id: cache-node_modules
         uses: actions/cache@v2
         with:
-          path: example/node_modules
-          key: node_modules-${{ hashFiles('example/package.json', 'example-minimal/package-lock.json') }}
+          path: example-minimal/node_modules
+          key: node_modules-${{ hashFiles('example-minimal/package.json', 'example-minimal/package-lock.json') }}
 
       - name: Cache ~/.elm
         uses: actions/cache@v2
