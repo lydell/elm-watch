@@ -6,7 +6,7 @@ async function wait(ms) {
   });
 }
 
-module.exports = async ([code, targetName]) => {
+module.exports = async ([code]) => {
   // This helps with test flakiness.
   await wait(50);
   return code;
