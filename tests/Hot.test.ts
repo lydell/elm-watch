@@ -3508,8 +3508,8 @@ describe("hot", () => {
       ⏳ Main3: elm make
       🟢 Main3: elm make done
       ⏳ Main3: postprocess
-      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
@@ -3532,14 +3532,14 @@ describe("hot", () => {
       🟢 Main4: elm make done
       ⏳ Main4: postprocess
       ⏳ Main3: elm make
-      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       🟢 Main3: elm make done
       ⏳ Main3: postprocess
+      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       ⏳ Main1: elm make (typecheck only)
       ⏳ Main2: elm make (typecheck only)
-      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       ✅ Main1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
       ✅ Main2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
