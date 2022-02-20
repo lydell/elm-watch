@@ -8,6 +8,7 @@ import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_MAX_PARALLEL,
+  __ELM_WATCH_TMP_DIR,
   Env,
   NO_COLOR,
 } from "../src/Env";
@@ -1146,31 +1147,24 @@ describe("errors", () => {
   });
 
   describe("elm install errors", () => {
-    describe("dummy file creation error", () => {
-      const dummy = path.join(os.tmpdir(), "ElmWatchDummy.elm");
+    test("dummy file creation error", async () => {
+      const fixture = "valid";
+      const tmpDir = path.join(FIXTURES_DIR, fixture, "tmp");
+      expect(
+        await run(fixture, ["make", "app"], {
+          env: { [__ELM_WATCH_TMP_DIR]: tmpDir },
+        })
+      ).toMatchInlineSnapshot(`
+        🚨 Dependencies
 
-      beforeEach(() => {
-        rm(dummy);
-        fs.mkdirSync(dummy);
-      });
+        ⧙-- FILE SYSTEM TROUBLE ---------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/valid/elm.json
 
-      afterEach(() => {
-        rm(dummy);
-      });
+        I tried to make sure that all packages are installed. To do that, I need to
+        create a temporary dummy .elm file but that failed:
 
-      test("is directory", async () => {
-        expect(await run("valid", ["make", "app"])).toMatchInlineSnapshot(`
-          🚨 Dependencies
-
-          ⧙-- FILE SYSTEM TROUBLE ---------------------------------------------------------⧘
-          /Users/you/project/tests/fixtures/errors/valid/elm.json
-
-          I tried to make sure that all packages are installed. To do that, I need to
-          create a temporary dummy .elm file but that failed:
-
-          EISDIR: illegal operation on a directory, open '/tmp/fake/ElmWatchDummy.elm'
-        `);
-      });
+        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/tmp/fake/ElmWatchDummy.elm'
+      `);
     });
 
     test("elm install error", async () => {

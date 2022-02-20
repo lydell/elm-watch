@@ -95,9 +95,14 @@ export function spawnKillable(command: Command): {
           };
           stdinWriteError = {
             result,
-            timeoutId: setTimeout(() => {
-              resolve(result);
-            }, 500),
+            timeoutId: setTimeout(
+              // This is covered on macOS, but not on Linux.
+              // istanbul ignore next
+              () => {
+                resolve(result);
+              },
+              500
+            ),
           };
         } else {
           resolve({ tag: "OtherSpawnError", error, command });

@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "elm-tooling install",
     "pretest": "tsc && prettier --check . && eslint . --report-unused-disable-directives",
-    "test": "jest --coverage --runInBand",
+    "test": "jest --coverage",
     "posttest": "npm run build",
     "build": "ts-eager scripts/Build.ts"
   },

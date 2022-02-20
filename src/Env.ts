@@ -37,3 +37,6 @@ export const __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS =
 // more than that.
 // Type: Number.
 export const __ELM_WATCH_MAX_PARALLEL = "__ELM_WATCH_MAX_PARALLEL";
+
+// Used to test ElmWatchDummy.elm errors without affecting other tests.
+export const __ELM_WATCH_TMP_DIR = "__ELM_WATCH_TMP_DIR";

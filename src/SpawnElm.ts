@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { Env } from "./Env";
+import { __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
 import { JsonError, toError, toJsonError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
@@ -227,7 +227,10 @@ export async function install({
   env: Env;
 }): Promise<ElmInstallResult> {
   const dummy = absolutePathFromString(
-    { tag: "AbsolutePath", absolutePath: os.tmpdir() },
+    {
+      tag: "AbsolutePath",
+      absolutePath: env[__ELM_WATCH_TMP_DIR] ?? os.tmpdir(),
+    },
     "ElmWatchDummy.elm"
   );
 
