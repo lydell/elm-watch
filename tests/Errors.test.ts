@@ -1149,7 +1149,7 @@ describe("errors", () => {
   describe("elm install errors", () => {
     test("dummy file creation error", async () => {
       const fixture = "valid";
-      const tmpDir = path.join(FIXTURES_DIR, fixture, "tmp");
+      const tmpDir = path.join(FIXTURES_DIR, fixture, "bad-tmp");
       expect(
         await run(fixture, ["make", "app"], {
           env: { [__ELM_WATCH_TMP_DIR]: tmpDir },
@@ -1163,7 +1163,7 @@ describe("errors", () => {
         I tried to make sure that all packages are installed. To do that, I need to
         create a temporary dummy .elm file but that failed:
 
-        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/tmp/fake/ElmWatchDummy.elm'
+        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/bad-tmp/ElmWatchDummy.elm'
       `);
     });
 
