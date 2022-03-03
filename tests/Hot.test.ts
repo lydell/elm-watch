@@ -3197,8 +3197,12 @@ describe("hot", () => {
   });
 
   test("limit postprocess workers", async () => {
+    const fixture = "limit-postprocess-workers";
+    const lock = path.join(FIXTURES_DIR, fixture, "lock");
+    rm(lock);
+
     const { terminal } = await run({
-      fixture: "limit-postprocess-workers",
+      fixture,
       args: [],
       scripts: ["One.js", "Two.js"],
       isTTY: false,
@@ -3243,8 +3247,8 @@ describe("hot", () => {
       ⏳ One: elm make
       🟢 One: elm make done
       ⏳ One: postprocess
-      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
       ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
+      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘

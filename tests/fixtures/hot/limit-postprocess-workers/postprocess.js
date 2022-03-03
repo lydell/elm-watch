@@ -1,3 +1,8 @@
+const fs = require("fs");
+const path = require("path");
+
+const lock = path.join(__dirname, "lock");
+
 async function wait(ms) {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -7,7 +12,13 @@ async function wait(ms) {
 }
 
 module.exports = async ([code]) => {
-  // This helps with test flakiness.
-  await wait(50);
+  if (fs.existsSync(lock)) {
+    fs.unlinkSync(lock);
+  } else {
+    fs.writeFileSync(lock, "");
+    while (fs.existsSync(lock)) {
+      await wait(100);
+    }
+  }
   return code;
 };
