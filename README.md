@@ -145,7 +145,7 @@ Example:
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| [postprocess](#postprocess) | `NonEmptyArray<string>` | x | A command to run after each `elm make` to transform Elm’s JavaScript output. |
+| [postprocess](#postprocess) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
 | port | `number` | An arbitrary available port. | In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]]. |
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
 
