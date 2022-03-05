@@ -3216,7 +3216,7 @@ describe("hot", () => {
           case 1:
             return "KeepGoing"; // First script has loaded.
           default:
-            await window.__ELM_WATCH_KILL_MATCHING(/^Two$/);
+            await window.__ELM_WATCH_KILL_MATCHING(/^/);
             return "KeepGoing" as const;
         }
       },
@@ -3260,13 +3260,14 @@ describe("hot", () => {
       ✅ ⧙13:10:05⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Two⧘
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Two
+      ℹ️ 13:10:05 Web socket disconnected for: One⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
 
       📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Terminated 1 superfluous worker⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
