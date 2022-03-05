@@ -34,7 +34,11 @@ import {
   toJsonError,
 } from "./Helpers";
 import type { Logger, LoggerConfig } from "./Logger";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import {
+  isNonEmptyArray,
+  mapNonEmptyArray,
+  NonEmptyArray,
+} from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
@@ -2303,7 +2307,7 @@ function printMessageWithTimeAndEmoji({
 }): string {
   const newDate = loggerConfig.mockedTimings
     ? new Date("2022-02-05T13:10:05Z")
-    : /* istanbul ignore next */ date;
+    : date;
   return Compile.printStatusLine({
     maxWidth: Infinity,
     fancy: loggerConfig.fancy,
@@ -2338,7 +2342,7 @@ function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
   );
 }
 
-function printTimeline(
+export function printTimeline(
   loggerConfig: LoggerConfig,
   events: Array<LatestEvent>
 ): string | undefined {
@@ -2346,17 +2350,29 @@ function printTimeline(
     return undefined;
   }
 
-  const first = events[0];
-  const last = events.length >= 2 ? events[events.length - 1] : undefined;
-  const numMoreEvents = events.length - 2;
+  const base = 2;
+
+  if (events.length <= 2 * base + 1) {
+    return dim(
+      join(
+        mapNonEmptyArray(events, (event) => printEvent(loggerConfig, event)),
+        "\n"
+      )
+    );
+  }
+
+  const start = events.slice(0, base);
+  const end = events.slice(-base);
+
+  const numMoreEvents = events.length - 2 * base;
 
   return dim(
     join(
       [
-        printEvent(loggerConfig, first),
-        printNumMoreEvents(loggerConfig, numMoreEvents),
-        last === undefined ? undefined : printEvent(loggerConfig, last),
-      ].flatMap((part) => (part === undefined ? [] : part)),
+        ...start.map((event) => printEvent(loggerConfig, event)),
+        `${loggerConfig.fancy ? "   " : ""}(${numMoreEvents} more events)`,
+        ...end.map((event) => printEvent(loggerConfig, event)),
+      ],
       "\n"
     )
   );
@@ -2405,18 +2421,6 @@ function printEventMessage(event: LatestEvent): string {
           : /* istanbul ignore next */ "workers"
       }`;
   }
-}
-
-function printNumMoreEvents(
-  loggerConfig: LoggerConfig,
-  numMoreEvents: number
-): string | undefined {
-  const indent = loggerConfig.fancy ? "   " : "";
-  return numMoreEvents <= 0
-    ? undefined
-    : numMoreEvents === 1
-    ? /* istanbul ignore next */ `${indent}(1 more event)`
-    : `${indent}(${numMoreEvents} more events)`;
 }
 
 function compileFinishedMessage(

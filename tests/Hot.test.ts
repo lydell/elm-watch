@@ -18,7 +18,8 @@ import {
   Env,
   NO_COLOR,
 } from "../src/Env";
-import { makeLogger } from "../src/Logger";
+import { LatestEvent, printTimeline } from "../src/Hot";
+import { LoggerConfig, makeLogger } from "../src/Logger";
 import { CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
@@ -3255,7 +3256,8 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket disconnected for: Two
-         (2 more events)
+      ℹ️ 13:10:05 Web socket disconnected for: One
+      ℹ️ 13:10:05 Web socket connected for: One
       ℹ️ 13:10:05 Web socket connected for: Two⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
 
@@ -3514,7 +3516,8 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket disconnected for: Main4
-         (2 more events)
+      ℹ️ 13:10:05 Web socket disconnected for: Main3
+      ℹ️ 13:10:05 Web socket connected for: Main3
       ℹ️ 13:10:05 Web socket connected for: Main4⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Main4: elm make
@@ -3610,7 +3613,8 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket disconnected for: Two
-         (2 more events)
+      ℹ️ 13:10:05 Web socket disconnected for: One
+      ℹ️ 13:10:05 Web socket connected for: One
       ℹ️ 13:10:05 Web socket connected for: Two⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Two: elm make
@@ -5956,7 +5960,7 @@ describe("hot", () => {
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Changed compilation mode to "optimize" of: SlowPostprocess
-           (1 more event)
+        ℹ️ 13:10:05 Web socket disconnected for: SlowPostprocess
         ℹ️ 13:10:05 Web socket connected needing compilation of: SlowPostprocess⧘
         ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
 
@@ -5971,6 +5975,136 @@ describe("hot", () => {
       expect(browserConsole).toMatchInlineSnapshot(`
         elm-watch: I did a full page reload because compilation mode changed from standard to optimize.
         (target: SlowPostprocess)
+      `);
+    });
+  });
+
+  describe("printTimeline", () => {
+    function print(
+      events: Array<LatestEvent>,
+      loggerConfig?: Partial<LoggerConfig>
+    ): string | undefined {
+      const result = printTimeline(
+        {
+          debug: false,
+          fancy: true,
+          isTTY: true,
+          mockedTimings: false,
+          columns: 80,
+          ...loggerConfig,
+        },
+        events
+      );
+      return result === undefined
+        ? undefined
+        : clean(result).replace(/\x1B\[3G/g, "");
+    }
+
+    const events: Array<LatestEvent> = [
+      {
+        tag: "WatcherEvent",
+        date: new Date("2022-03-05T23:59:05Z"),
+        eventName: "changed",
+        file: { tag: "AbsolutePath", absolutePath: "/One.elm" },
+        affectsAnyTarget: true,
+      },
+      {
+        tag: "WebSocketConnectedNeedingCompilation",
+        date: new Date("2022-03-06T00:00:11Z"),
+        outputPath: {
+          tag: "OutputPath",
+          theOutputPath: { tag: "AbsolutePath", absolutePath: "/build/One.js" },
+          originalString: "build/One.js",
+          targetName: "One",
+        },
+      },
+      {
+        tag: "WatcherEvent",
+        date: new Date("2022-03-06T00:01:23Z"),
+        eventName: "removed",
+        file: { tag: "AbsolutePath", absolutePath: "/Two.elm" },
+        affectsAnyTarget: true,
+      },
+      {
+        tag: "WatcherEvent",
+        date: new Date("2022-03-06T00:01:24Z"),
+        eventName: "added",
+        file: { tag: "AbsolutePath", absolutePath: "/Three.elm" },
+        affectsAnyTarget: true,
+      },
+      {
+        tag: "WebSocketClosed",
+        date: new Date("2022-03-06T00:02:00Z"),
+        outputPath: { tag: "OutputPathError" },
+      },
+      {
+        tag: "WebSocketConnectedWithErrors",
+        date: new Date("2022-03-06T00:02:59Z"),
+      },
+    ];
+
+    test("0 events", () => {
+      expect(print([])).toMatchInlineSnapshot(`undefined`);
+    });
+
+    test("1 event", () => {
+      expect(print(events.slice(0, 1))).toMatchInlineSnapshot(
+        `⧙ℹ️ 23:59:05 Changed /One.elm⧘`
+      );
+    });
+
+    test("2 events", () => {
+      expect(print(events.slice(0, 2))).toMatchInlineSnapshot(`
+        ⧙ℹ️ 23:59:05 Changed /One.elm
+        ℹ️ 00:00:11 Web socket connected needing compilation of: One⧘
+      `);
+    });
+
+    test("3 events", () => {
+      expect(print(events.slice(0, 3))).toMatchInlineSnapshot(`
+        ⧙ℹ️ 23:59:05 Changed /One.elm
+        ℹ️ 00:00:11 Web socket connected needing compilation of: One
+        ℹ️ 00:01:23 Removed /Two.elm⧘
+      `);
+    });
+
+    test("4 events", () => {
+      expect(print(events.slice(0, 4))).toMatchInlineSnapshot(`
+        ⧙ℹ️ 23:59:05 Changed /One.elm
+        ℹ️ 00:00:11 Web socket connected needing compilation of: One
+        ℹ️ 00:01:23 Removed /Two.elm
+        ℹ️ 00:01:24 Added /Three.elm⧘
+      `);
+    });
+
+    test("5 events", () => {
+      expect(print(events.slice(0, 5))).toMatchInlineSnapshot(`
+        ⧙ℹ️ 23:59:05 Changed /One.elm
+        ℹ️ 00:00:11 Web socket connected needing compilation of: One
+        ℹ️ 00:01:23 Removed /Two.elm
+        ℹ️ 00:01:24 Added /Three.elm
+        ℹ️ 00:02:00 Web socket disconnected for: (no matching target)⧘
+      `);
+    });
+
+    test("6 events", () => {
+      expect(print(events.slice(0, 6))).toMatchInlineSnapshot(`
+        ⧙ℹ️ 23:59:05 Changed /One.elm
+        ℹ️ 00:00:11 Web socket connected needing compilation of: One
+           (2 more events)
+        ℹ️ 00:02:00 Web socket disconnected for: (no matching target)
+        ℹ️ 00:02:59 Web socket connected with errors (see the browser for details)⧘
+      `);
+    });
+
+    test("6 events, non-fancy", () => {
+      expect(print(events.slice(0, 6), { fancy: false }))
+        .toMatchInlineSnapshot(`
+        ⧙23:59:05 Changed /One.elm
+        00:00:11 Web socket connected needing compilation of: One
+        (2 more events)
+        00:02:00 Web socket disconnected for: (no matching target)
+        00:02:59 Web socket connected with errors (see the browser for details)⧘
       `);
     });
   });
