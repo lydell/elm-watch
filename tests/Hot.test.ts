@@ -12,7 +12,12 @@ import {
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
-import { __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS, Env, NO_COLOR } from "../src/Env";
+import {
+  __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
+  __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  Env,
+  NO_COLOR,
+} from "../src/Env";
 import { makeLogger } from "../src/Logger";
 import { CompilationMode } from "../src/Types";
 import {
@@ -3197,6 +3202,7 @@ describe("hot", () => {
       isTTY: false,
       env: {
         [__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS]: "150",
+        [__ELM_WATCH_EXIT_ON_WORKER_LIMIT]: "",
       },
       init: (node) => {
         const node1 = document.createElement("div");
@@ -3211,8 +3217,7 @@ describe("hot", () => {
             return "KeepGoing"; // First script has loaded.
           default:
             await window.__ELM_WATCH_KILL_MATCHING(/^Two$/);
-            await wait(1000); // Wait for the worker to be killed.
-            return "Stop";
+            return "KeepGoing" as const;
         }
       },
     });

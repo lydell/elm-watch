@@ -32,6 +32,11 @@ export const __ELM_WATCH_LOADING_MESSAGE_DELAY =
 export const __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS =
   "__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS";
 
+// Used in tests to exit on first worker limit (instead of continuing watching).
+// Type: Check if defined and ignore value.
+export const __ELM_WATCH_EXIT_ON_WORKER_LIMIT =
+  "__ELM_WATCH_EXIT_ON_WORKER_LIMIT";
+
 // Used to make tests work on multiple computers. CI and other developers’
 // computers should have at least 2 cores/threads, while some might have many
 // more than that.

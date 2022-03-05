@@ -14,6 +14,7 @@ import * as Compile from "./Compile";
 import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
+  __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
   Env,
 } from "./Env";
@@ -1285,6 +1286,18 @@ const runCmd =
         // keyboard shortcuts below the cursor text again.
         logger.clearScreenDown();
         mutable.lastInfoMessage = fullMessage;
+        if (
+          __ELM_WATCH_EXIT_ON_WORKER_LIMIT in env &&
+          cmd.events.some(
+            (event) => event.tag === "WorkersLimitedAfterWebSocketClosed"
+          )
+        ) {
+          closeAll(mutable)
+            .then(() => {
+              resolvePromise({ tag: "ExitOnIdle" });
+            })
+            .catch(rejectPromise);
+        }
         return;
       }
 
