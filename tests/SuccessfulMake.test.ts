@@ -25,11 +25,7 @@ async function run(
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
 
-  if (fs.rmSync !== undefined) {
-    fs.rmSync(build, { recursive: true, force: true });
-  } else if (fs.existsSync(build)) {
-    fs.rmdirSync(build, { recursive: true });
-  }
+  fs.rmSync(build, { recursive: true, force: true });
 
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();

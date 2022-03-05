@@ -94,11 +94,7 @@ async function runWithBadElmBin(
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
   const BUILD = path.join(dir, "build");
-  if (fs.rmSync !== undefined) {
-    fs.rmSync(BUILD, { recursive: true, force: true });
-  } else if (fs.existsSync(BUILD)) {
-    fs.rmdirSync(BUILD, { recursive: true });
-  }
+  fs.rmSync(BUILD, { recursive: true, force: true });
   return runAbsolute(
     postprocess ? path.join(dir, "postprocess") : dir,
     [exitHotOnError ? "hot" : "make", "app"],

@@ -94,11 +94,7 @@ async function run({
   const elmStuff = path.join(dir, "elm-stuff");
   const elmWatchStuff = path.join(elmStuff, "elm-watch-stuff.json");
 
-  if (fs.rmSync !== undefined) {
-    fs.rmSync(build, { recursive: true, force: true });
-  } else if (fs.existsSync(build)) {
-    fs.rmdirSync(build, { recursive: true });
-  }
+  fs.rmSync(build, { recursive: true, force: true });
   fs.mkdirSync(build, { recursive: true });
 
   if (!keepElmStuffJson) {
@@ -106,11 +102,7 @@ async function run({
   }
 
   if (clearElmStuff) {
-    if (fs.rmSync !== undefined) {
-      fs.rmSync(elmStuff, { recursive: true, force: true });
-    } else if (fs.existsSync(elmStuff)) {
-      fs.rmdirSync(elmStuff, { recursive: true });
-    }
+    fs.rmSync(elmStuff, { recursive: true, force: true });
   }
 
   const stdout = new CursorWriteStream();
