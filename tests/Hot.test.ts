@@ -3219,7 +3219,7 @@ describe("hot", () => {
             return "KeepGoing"; // First script has loaded.
           default:
             await window.__ELM_WATCH_KILL_MATCHING(/^Two$/);
-            await wait(200); // Wait for the worker to be killed.
+            await wait(1000); // Wait for the worker to be killed.
             return "Stop";
         }
       },
