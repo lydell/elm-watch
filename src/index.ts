@@ -102,6 +102,7 @@ export async function elmWatchCli(
 
 // istanbul ignore if
 if (require.main === module) {
+  process.title = "elm-watch";
   elmWatchCli(process.argv.slice(2), {
     cwd: process.cwd(),
     env: process.env,
