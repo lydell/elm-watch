@@ -116,7 +116,9 @@ window.__ELM_WATCH_EXIT ??= () => {
 
 window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
 
-window.__ELM_WATCH_DISCONNECT ??= (): Promise<void> => Promise.resolve();
+window.__ELM_WATCH_DISCONNECT ??= (): void => {
+  // Do nothing.
+};
 
 window.__ELM_WATCH_LOG_DEBUG ??=
   // eslint-disable-next-line no-console
