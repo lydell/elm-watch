@@ -20,29 +20,15 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures");
 async function run(
   fixture: string,
   args: Array<string>,
-  {
-    isTTY = true,
-    clearElmStuff = false,
-    bin,
-    env,
-  }: { isTTY?: boolean; clearElmStuff?: boolean; bin?: string; env?: Env } = {}
+  { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {}
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
-  const elmStuff = path.join(dir, "elm-stuff");
 
   if (fs.rmSync !== undefined) {
     fs.rmSync(build, { recursive: true, force: true });
   } else if (fs.existsSync(build)) {
     fs.rmdirSync(build, { recursive: true });
-  }
-
-  if (clearElmStuff) {
-    if (fs.rmSync !== undefined) {
-      fs.rmSync(elmStuff, { recursive: true, force: true });
-    } else if (fs.existsSync(elmStuff)) {
-      fs.rmdirSync(elmStuff, { recursive: true });
-    }
   }
 
   const stdout = new CursorWriteStream();
@@ -212,38 +198,11 @@ describe("successful make", () => {
   });
 
   test("multiple elm-watch-node, with queued postprocess", async () => {
-    expect(
-      await run("multiple-elm-watch-node", ["make"], {
-        isTTY: false,
-        // The timings between the 3 inputs change when elm-stuff is present.
-        clearElmStuff: true,
-      })
-    ).toMatchInlineSnapshot(`
-      ⏳ Dependencies
-      ✅ Dependencies
-      ⏳ main: elm make
-      ⚪️ second: queued
-      ⚪️ third: queued
-      🟢 main: elm make done
-      ⏳ second: elm make
-      ⏳ main: postprocess
-      ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      🟢 second: elm make done
-      ⏳ third: elm make
-      ⏳ second: postprocess
-      ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      🟢 third: elm make done
-      ⏳ third: postprocess
-      ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-
-      ✅ Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
-    `);
-
-    expect(
-      await run("multiple-elm-watch-node", ["make"], {
-        isTTY: false,
-      })
-    ).toMatchInlineSnapshot(`
+    const fixture = "multiple-elm-watch-node";
+    const lock = path.join(FIXTURES_DIR, fixture, "lock");
+    fs.writeFileSync(lock, "");
+    expect(await run(fixture, ["make"], { isTTY: false, bin: "test-bin" }))
+      .toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ main: elm make
@@ -258,8 +217,8 @@ describe("successful make", () => {
       ⏳ second: postprocess
       ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       ⏳ third: postprocess
-      ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
       ✅ Compilation finished in ⧙123⧘ ms⧙ (using 2 elm-watch-node workers).⧘
     `);
