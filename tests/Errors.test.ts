@@ -1925,15 +1925,12 @@ describe("errors", () => {
     });
 
     test("command not found", async () => {
-      expect(
-        await run("postprocess/variants/command-not-found", ["make"], {
-          env: {
-            ...process.env,
-            ...TEST_ENV,
-            PATH: path.join(path.dirname(__dirname), "node_modules", ".bin"),
-          },
-        })
-      ).toMatchInlineSnapshot(`
+      const output = await run("postprocess/variants/command-not-found", [
+        "make",
+      ]);
+
+      expect(output.replace(/(PATH.*:\n\n)(.+\n)+/, "$1/some/fake/bin/path\n"))
+        .toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
 
@@ -1944,7 +1941,7 @@ describe("errors", () => {
 
         This is what the PATH environment variable looks like:
 
-        /Users/you/project/node_modules/.bin
+        /some/fake/bin/path
 
         Is ⧙nope⧘ installed?
 
