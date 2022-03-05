@@ -281,7 +281,7 @@ export const WORKER_TERMINATED = new Error(
 );
 
 class PostprocessWorker {
-  private worker = new Worker(path.join(__dirname, "PostprocessWorker"), {
+  private worker = new Worker(path.join(__dirname, "PostprocessWorker.js"), {
     stdout: true,
     stderr: true,
   });
