@@ -1219,15 +1219,6 @@ async function typecheck({
     ),
   ]);
 
-  // istanbul ignore next
-  const isAmbiguousError =
-    outputs.length > 1 &&
-    elmMakeResult.tag === "ElmMakeError" &&
-    elmMakeResult.error.tag === "GeneralError" &&
-    elmMakeResult.error.path.tag === "NoPath";
-
-  const promises: Array<Promise<void>> = [];
-
   for (const {
     index,
     outputPath,
@@ -1244,26 +1235,6 @@ async function typecheck({
         index,
         total,
       });
-      continue;
-    }
-
-    // If we don’t know which targets the error is for, we need to re-run the
-    // typechecking individually. This is rare.
-    // In fact, when writing tests I couldn’t figure out when it could happen.
-    // istanbul ignore if
-    if (isAmbiguousError) {
-      promises.push(
-        typecheck({
-          env,
-          logger,
-          getNow,
-          runMode,
-          elmJsonPath,
-          outputs: [{ index, outputPath, outputState }],
-          total,
-          webSocketPort,
-        })
-      );
       continue;
     }
 
@@ -1371,8 +1342,6 @@ async function typecheck({
       total,
     });
   }
-
-  await Promise.all(promises);
 }
 
 function onlyElmMakeErrorsRelatedToOutput(
@@ -1385,6 +1354,15 @@ function onlyElmMakeErrorsRelatedToOutput(
       elmMakeResult.error.tag === "CompileErrors"
     )
   ) {
+    // Note: In this case we don’t know which targets the error is for. In
+    // theory, just one target might be the culprit for this error. We used to
+    // have code that re-ran typecheck-only with one target at a time to know
+    // for sure. However, when writing tests I couldn’t figure out when it could
+    // happen. The only time that code path I could find was triggered was when
+    // installing dependencies failed due to no Internet connection, but then we
+    // _do_ know that it wasn’t target specific. So KISS: Show these errors for
+    // all targets. Worst case one error is shown too many times. Not the end of
+    // the world.
     return elmMakeResult;
   }
 
