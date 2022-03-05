@@ -1221,6 +1221,7 @@ async function typecheck({
 
   // istanbul ignore next
   const isAmbiguousError =
+    outputs.length > 1 &&
     elmMakeResult.tag === "ElmMakeError" &&
     elmMakeResult.error.tag === "GeneralError" &&
     elmMakeResult.error.path.tag === "NoPath";
