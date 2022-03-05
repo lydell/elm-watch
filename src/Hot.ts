@@ -1011,7 +1011,7 @@ function onElmFileWatcherEvent(
     outputState: OutputState;
   }> = [];
 
-  for (const [, outputs] of project.elmJsons) {
+  for (const [elmJsonPath, outputs] of project.elmJsons) {
     for (const [outputPath, outputState] of outputs) {
       if (event.eventName === "removed") {
         for (const inputPath of outputState.inputs) {
@@ -1020,6 +1020,7 @@ function onElmFileWatcherEvent(
           }
         }
       }
+      Compile.ensureAllRelatedElmFilePaths(elmJsonPath, outputState);
       if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
         dirtyOutputs.push({ outputPath, outputState });
       }

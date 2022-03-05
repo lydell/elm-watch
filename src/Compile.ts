@@ -2152,6 +2152,26 @@ function allRelatedElmFilePathsWithFallback(
   }
 }
 
+// Every target is supposed to have a non-empty set of related Elm file path (at
+// least the inputs for the target are related). If we have an empty set, a file
+// might have changed while installing dependencies or running the first
+// compilation. Or the installation failed. In such situations, find the related
+// paths on demand.
+// This ignores any errors from the walker. They are supposed to be reported
+// from the regular code paths. We’re already in an edge case.
+export function ensureAllRelatedElmFilePaths(
+  elmJsonPath: ElmJsonPath,
+  outputState: OutputState
+): void {
+  if (outputState.allRelatedElmFilePaths.size === 0) {
+    const result = getAllRelatedElmFilePaths(elmJsonPath, outputState.inputs);
+    outputState.allRelatedElmFilePaths = allRelatedElmFilePathsWithFallback(
+      result,
+      outputState
+    );
+  }
+}
+
 function appendDuration(
   outputState: OutputState,
   durations: Array<Duration>

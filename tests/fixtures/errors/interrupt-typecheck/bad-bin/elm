@@ -3,7 +3,19 @@ const childProcess = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const child = childProcess.spawn("elm", process.argv.slice(2), {
+const argv = process.argv.slice(2);
+const lock = path.join(__dirname, "..", "lock");
+const isMain = argv.some((arg) => arg.includes("Main"));
+
+function canExit() {
+  return fs.readFileSync(lock, "utf8") === "typecheck-only-ok-to-exit";
+}
+
+if (isMain && !canExit()) {
+  fs.writeFileSync(lock, "typecheck-only-started");
+}
+
+const child = childProcess.spawn("elm", argv, {
   env: {
     ...process.env,
     PATH: process.env.PATH.split(path.delimiter)
@@ -14,7 +26,15 @@ const child = childProcess.spawn("elm", process.argv.slice(2), {
 });
 
 child.on("exit", (exitCode) => {
-  setTimeout(() => {
+  if (isMain) {
+    (function rec() {
+      if (canExit()) {
+        process.exit(exitCode);
+      } else {
+        setTimeout(rec, 100);
+      }
+    })();
+  } else {
     process.exit(exitCode);
-  }, 100);
+  }
 });

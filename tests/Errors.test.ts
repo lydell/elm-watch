@@ -26,7 +26,6 @@ import {
   rmSymlink,
   stringSnapshotSerializer,
   TEST_ENV,
-  touch,
   wait,
 } from "./Helpers";
 
@@ -1764,12 +1763,14 @@ describe("errors", () => {
       const fixture = "interrupt-typecheck";
       const dir = path.join(FIXTURES_DIR, fixture);
       const src = path.join(dir, "src");
+      const lock = path.join(dir, "lock");
       const mainFile = path.join(src, "Main.elm");
       const mainFileTemplate = path.join(src, "Main1.elm");
       const mainFileString = fs
         .readFileSync(mainFileTemplate, "utf8")
         .replace("Main1", "Main");
       fs.writeFileSync(mainFile, mainFileString);
+      fs.writeFileSync(lock, "");
 
       const [output] = await Promise.all([
         run(fixture, ["hot"], {
@@ -1780,20 +1781,16 @@ describe("errors", () => {
           },
         }),
         (async () => {
-          await wait(500);
-          touch(mainFile);
-          await wait(60);
+          while (fs.readFileSync(lock, "utf8") !== "typecheck-only-started") {
+            await wait(100);
+          }
           fs.writeFileSync(mainFile, mainFileString.slice(0, -5));
+          await wait(100);
+          fs.writeFileSync(lock, "typecheck-only-ok-to-exit");
         })(),
       ]);
 
       expect(output).toMatchInlineSnapshot(`
-        ⏳ Main: elm make (typecheck only)
-        ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
         ⏳ Main: elm make (typecheck only)
         ⏳ Main: interrupted
         ⏳ Main: elm make (typecheck only)
@@ -1825,8 +1822,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm
-        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
         🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
       `);
     });
