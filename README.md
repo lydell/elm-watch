@@ -67,13 +67,13 @@ npx elm-watch --help
 Remember the first time you ran `elm make`? It’s super fast, and has beautiful output. And it’s really stable! If the majority of your code is Elm, why complicate things with extra layers where things can go wrong? elm-watch tries to stay as close as that ideal as possible.
 
 - **Maximum speed.** elm-watch tries to do as little as possible besides running `elm make` for you. Doing less work is always faster!
-- [**Hot reloading.**][#hot-reloading] elm-watch tries to reimagine the level of quality of hot reloading. The goal is to never leave you wondering if it worked at all.
+- [**Hot reloading.**](#hot-reloading) elm-watch tries to reimagine the level of quality of hot reloading. The goal is to never leave you wondering if it worked at all.
 - **Beautiful colors.** Elm’s error messages are lovely and colorful. elm-watch takes care to preserve them.
 - **Focused output.** elm-watch shows you only what you need, while also letting you know what’s going on at all times! A balancing act.
 - **Browser UI.** elm-watch always shows you the latest status in the browser. Switching to `--debug` mode – or even `--optimize` mode – is only a click away.
 - **Cache free.** Elm already has a cache – the `elm-stuff/` folder – which is really stable and all you need. Famously one of the hardest things in programming, elm-watch has no extra caching to worry about.
 - **Elm centric.** elm-watch puts Elm at the heart. Let’s take advantage of Elm’s unique capabilities, like `elm make --output /dev/null` for super fast type checking of apps you’re not currently focusing on!
-- [**Reasonably hackable.**][#postprocess] Ever wanted to adjust Elm’s compiled JS? That’s just a `String -> String` function away for both development and production builds.
+- [**Reasonably hackable.**](#postprocess) Ever wanted to adjust Elm’s compiled JS? That’s just a `String -> String` function away for both development and production builds.
 
 ## What elm-watch is _not_
 
@@ -145,9 +145,9 @@ Example:
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| [postprocess][#postprocess] | `NonEmptyArray<string>` | x | A command to run after each `elm make` to transform Elm’s JavaScript output. |
+| [postprocess](#postprocess) | `NonEmptyArray<string>` | x | A command to run after each `elm make` to transform Elm’s JavaScript output. |
 | port | `number` | An arbitrary available port. | In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]]. |
-| [targets][#targets] | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
+| [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
 
 ### postprocess
 
