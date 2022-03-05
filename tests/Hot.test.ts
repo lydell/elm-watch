@@ -462,12 +462,9 @@ function click(element: HTMLElement, selector: string): void {
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     document.getElementById(CONTAINER_ID)?.remove();
     window.history.replaceState(null, "", "/");
-    // Letting the computer breathe a little between tests seems to somehow make
-    // full test runs more reliable.
-    await wait(100);
   });
 
   test("successful connect (collapsed)", async () => {
