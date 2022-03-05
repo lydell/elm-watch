@@ -1586,6 +1586,7 @@ function handleOutputActionResultToCmd(
 }
 
 async function closeAll(mutable: Mutable): Promise<void> {
+  // istanbul ignore if
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
   }
