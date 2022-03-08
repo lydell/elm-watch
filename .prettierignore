@@ -6,3 +6,4 @@ elm-stuff
 *.json
 _config.yml
 submodules
+tests/fixtures/hot/changes-to-postprocess/src/postprocess.js
