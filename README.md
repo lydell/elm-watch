@@ -62,6 +62,14 @@ That’s pretty much it! For the remaining details:
 npx elm-watch --help
 ```
 
+elm-watch is only responsible for turning your Elm files into JS files. Like running `elm make src/Main.elm --output build/main.js` yourself. So that’s the mindset you need to have.
+
+**You are responsible for** creating an HTML file, link to the built JS and serve files.
+
+- If you’re just getting started, you can create an HTML file with a relative link to the built JS and double-click it to open it in a browser.
+- …except if you use `Browser.application`. It doesn’t work on the `file://` protocol. There are plenty of quick little “please serve this directory on localhost” tools, though.
+- If you need TypeScript and CSS compilation, you need to set up another build tool alongside elm-watch.
+
 - 👉 [Example](./example)
 - 👉 [Minimal example](./example)
 
@@ -106,9 +114,41 @@ Some more notes:
 - **Debug redux.** Apart from the standard `--debug` mode, also offer the [Redux DevTools] just one click away. Like [elm-monitor] and [elm-remotedev] but with no extra setup.
 - **Rust rewrite.** While I’ve kept the dependencies to a bare minimum, it would be super nice with a lean, super resource efficient, stand-alone binary. Most of elm-watch’s tests are written at a very high level, so they should be reusable with an implementation written in any language with too much work.
 
+## Terminal UI
+
+elm-watch displays the status of each target in elm-watch.json, some timings, stats, recent events (like files that have changed) and compilation errors (if any). It should be pretty self explanatory. Use `elm-watch --help` if you wonder what some status emoji or symbol means.
+
+## Browser UI
+
+When using `elm-watch hot`, you’ll see a little box in the bottom-left corner of the browser window, looking something like this:
+
+```
+▼ ✅ 13:10:05
+```
+
+It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful to know when the last hot reload was applied.
+
+You can click the box to expand it.
+
+- You’ll see some extra information which can be handy from time to time.
+- You’ll find radio buttons to switch between “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
+
+Here are some more icons you might see (they’re also explained when you expand the box):
+
+- 🔌: Connecting
+- ⏳: Waiting for compilation
+- 🚨: Compilation error
+- ⛔️: Eval error
+- ❌: Unexpected error
+
+Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Many build tools put an overlay across the entire browser window in this case, showing the compilation error. I find that very annoying:
+
+- I prefer seeing the errors in the terminal, in the place they were designed to be displayed.
+- I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Some error overlays prevent you from doing that, or require you to repeatedly close it.
+
 ## elm-watch.json
 
-An `elm-watch.json` is required to be able to use `elm-watch`.
+An `elm-watch.json` is required to be able to use `elm-watch`. There’s not much to it.
 
 It looks like this:
 
@@ -141,6 +181,13 @@ Example:
                 "src/Main.elm"
             ],
             "output": "build/main.js"
+        },
+        "My other target 😎": {
+            "inputs": [
+                "src/One.elm",
+                "src/Two.elm"
+            ],
+            "output": "build/other/dist.js"
         }
     }
 }
@@ -230,7 +277,7 @@ Use `module.exports = async function() {}` (CJS) or `export default function() {
 
 There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
 
-- inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input, but multiple is supported (since `elm make` does).
+- inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input, but multiple is supported (since `elm make` supports that).
 - output: `string`. A `.js` file, relative to `elm-watch.json`. Unlike `elm make`, only `.js` is supported (and `.html` isn’t). Once you reach for elm-watch, you’re ready to be in charge of your own HTML file.
 
 ## Hot reloading
@@ -256,6 +303,8 @@ Hot reloading is essentially a hack. But a pretty good one. As long as hot reloa
 - You need a recent enough elm/core version. Otherwise some regexes don’t match. Perfect time to update!
 
 In case you’re wondering, elm-watch has its own hot reloading implementation, built with Elm’s needs at the core. In other words, elm-watch is _not_ using the common [elm-hot] package (which is more focused on fitting into the hot reloading systems of webpack and Parcel).
+
+elm-watch’s hot reloading works by injecting an extra little program into your built JavaScript files (when running `elm-watch hot` only, not `elm-watch make`). It renders the browser UI in the bottom-left corner, and connects to elm-watch’s Web Socket server. You’re not supposed to really notice or have to think any of that, but it can help to know how the “magic” works when debugging things. Or just for fun.
 
 ## HTTPS
 
