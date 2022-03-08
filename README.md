@@ -62,6 +62,9 @@ That’s pretty much it! For the remaining details:
 npx elm-watch --help
 ```
 
+- 👉 [Example](./example)
+- 👉 [Minimal example](./example)
+
 ## What elm-watch _is_
 
 Remember the first time you ran `elm make`? It’s super fast, and has beautiful output. And it’s really stable! If the majority of your code is Elm, why complicate things with extra layers where things can go wrong? elm-watch tries to stay as close as that ideal as possible.
