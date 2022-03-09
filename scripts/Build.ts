@@ -29,6 +29,7 @@ type FileToCopy = {
 
 const FILES_TO_COPY: Array<FileToCopy> = [
   { src: "LICENSE" },
+  { src: "elm-watch-node.d.ts" },
   {
     src: "README.md",
     transform: (content) => content.replace(/^##[^]*/m, READ_MORE),

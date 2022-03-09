@@ -1,6 +1,10 @@
+// @ts-check
 import * as esbuild from "esbuild";
 import * as UglifyJS from "uglify-js";
 
+/**
+ * @type {import("elm-watch/elm-watch-node").Postprocess}
+ */
 export default async function postprocess({
   code,
   targetName,

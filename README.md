@@ -251,26 +251,50 @@ Here are the differences compared to `node`.
 
 - Instead of using stdin, stdout, process arguments and exit codes you just provide a good old function (see below).
 
-The function must look like so:
+The function must look like so (elm-watch ships with this as a TypeScript definition you can import):
 
 ```ts
-(
-    args: [
-        code: string,
-        ...extraArgs: string[],
-        targetName: string,
-        compilationMode: "debug" | "standard" | "optimize",
-        runMode: "make" | "hot"
-    ]
-) => string | Promise<string>
+type Postprocess = (options: {
+  code: string;
+  targetName: string;
+  compilationMode: "debug" | "standard" | "optimize";
+  runMode: "hot" | "make";
+  argv: Array<string>;
+}) => string | Promise<string>;
 ```
 
 Use `module.exports = async function() {}` (CJS) or `export default function() {}` (MJS). Note: It’s up to you to configure Node.js to accept CJS or MJS like any Node.js project. elm-watch simply `import()`s your script, so that’s the interface you have to work with.
 
-- Instead of looking at `process.argv`, look at the single `args` array passed to your function.
-- Instead of reading `process.stdin`, look at the 0th elements of `args`.
+- Instead of looking at `process.argv`, look at the single `options` object passed to your function. Note: `options.argv` isn’t that useful, but exists for completeness sake. If you have `"postprocess": ["elm-watch-node", "postprocess.js", "one", "two"]` it will be `["elm-watch-node", "/path/to/postprocess.js", "one", "two"]`, mimicing `process.argv` for `node posprocess.js one two`.
+- Instead of reading `process.stdin`, look at `options.code`.
 - Instead of writing to `process.stdout`, return a string. (Or a `Promise<string>`.)
-- Instead of using `process.exitCode = code` or `process.exit(code)`, return a number (`return code`).
+- Instead of using `process.exitCode = code` or `process.exit(code)`, return normally on success and throw an error on failure.
+
+Example:
+
+```js
+// @ts-check
+import minify from "some-minifier";
+
+/**
+ * @type {import("elm-watch/elm-watch-node").Postprocess}
+ */
+export default function postprocess({ code, compilationMode }) {
+  switch (compilationMode) {
+    case "standard":
+    case "debug":
+      return code;
+
+    case "optimize":
+      return minify(code);
+
+    default:
+      throw new Error(
+        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`
+      );
+  }
+}
+```
 
 > Note: `elm-watch-node` is only available because elm-watch happens to be written in Node.js. An implementation written in another language is not expected to embed a JavaScript runtime just to implement `elm-watch-node`. In such a case you will have to make do with some other faster scripting language (like `bash`), or pay the penalty of starting `node` every time.
 
