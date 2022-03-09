@@ -9,7 +9,7 @@ async function wait(ms) {
   });
 }
 
-module.exports = async function run([code]) {
+module.exports = async function run({ code }) {
   const tmp = path.join(__dirname, "postprocess.tmp");
   const n = Number(fs.readFileSync(tmp, "utf8"));
   fs.writeFileSync(tmp, (n + 1).toString());

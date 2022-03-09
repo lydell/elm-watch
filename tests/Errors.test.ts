@@ -2518,7 +2518,16 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
+        const result = await imported.default({
+          "code": "(function(...;}(this));",
+          "targetName": "main",
+          "compilationMode": "standard",
+          "runMode": "make",
+          "argv": [
+            "elm-watch-node",
+            "/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js"
+          ]
+        })
 
         But that resulted in this error:
 
@@ -2548,7 +2557,16 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
+        const result = await imported.default({
+          "code": "(function(...;}(this));",
+          "targetName": "main",
+          "compilationMode": "standard",
+          "runMode": "make",
+          "argv": [
+            "elm-watch-node",
+            "/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js"
+          ]
+        })
 
         But that resulted in this error:
 
@@ -2572,7 +2590,16 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
+        const result = await imported.default({
+          "code": "(function(...;}(this));",
+          "targetName": "main",
+          "compilationMode": "standard",
+          "runMode": "make",
+          "argv": [
+            "elm-watch-node",
+            "/Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js"
+          ]
+        })
 
         But that resulted in this error:
 
@@ -2596,7 +2623,16 @@ describe("errors", () => {
         I ran your postprocess command:
 
         const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js")
-        const result = await imported.default(["(function(...;}(this));","main","standard","make"])
+        const result = await imported.default({
+          "code": "(function(...;}(this));",
+          "targetName": "main",
+          "compilationMode": "standard",
+          "runMode": "make",
+          "argv": [
+            "elm-watch-node",
+            "/Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js"
+          ]
+        })
 
         I expected ⧙result⧘ to be a string, but it is:
 

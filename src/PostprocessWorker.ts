@@ -4,8 +4,10 @@ import { MessagePort, parentPort } from "worker_threads";
 import { unknownErrorToString } from "./Helpers";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { absolutePathFromString } from "./PathHelpers";
-import type {
-  ElmWatchNodeArgs,
+import {
+  ELM_WATCH_NODE,
+  ElmWatchNodeInternalArgs,
+  ElmWatchNodePublicArgs,
   MessageFromWorker,
   MessageToWorker,
   PostprocessResult,
@@ -54,10 +56,12 @@ function main(port: PortWrapper): void {
 
 async function elmWatchNode({
   cwd,
-  userArgs,
-  extraArgs,
   code,
-}: ElmWatchNodeArgs): Promise<PostprocessResult<string>> {
+  targetName,
+  compilationMode,
+  runMode,
+  userArgs,
+}: ElmWatchNodeInternalArgs): Promise<PostprocessResult<string>> {
   if (!isNonEmptyArray(userArgs)) {
     return { tag: "ElmWatchNodeMissingScript" };
   }
@@ -95,7 +99,18 @@ async function elmWatchNode({
     };
   }
 
-  const args = [code, ...userArgs.slice(1), ...extraArgs];
+  const args: ElmWatchNodePublicArgs = {
+    code,
+    targetName,
+    compilationMode,
+    runMode,
+    // Mimic `process.argv`: ["node", "/absolute/path/to/script", "arg1", "arg2", "..."].
+    argv: [
+      ELM_WATCH_NODE,
+      scriptPath.theElmWatchNodeScriptPath.absolutePath,
+      ...userArgs.slice(1),
+    ],
+  };
 
   let returnValue: unknown;
   try {

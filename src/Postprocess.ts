@@ -41,7 +41,7 @@ export type PostprocessError =
   | {
       tag: "ElmWatchNodeBadReturnValue";
       scriptPath: ElmWatchNodeScriptPath;
-      args: Array<string>;
+      args: ElmWatchNodePublicArgs;
       returnValue: UnknownValueAsString;
       stdout: string;
       stderr: string;
@@ -67,7 +67,7 @@ export type PostprocessError =
   | {
       tag: "ElmWatchNodeRunError";
       scriptPath: ElmWatchNodeScriptPath;
-      args: Array<string>;
+      args: ElmWatchNodePublicArgs;
       error: UnknownValueAsString;
       stdout: string;
       stderr: string;
@@ -120,7 +120,6 @@ export function runPostprocess({
 }): { promise: Promise<PostprocessResult>; kill: () => Promise<void> } {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
-  const extraArgs = [output.targetName, compilationMode, runMode];
   const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
 
   if (commandName === ELM_WATCH_NODE) {
@@ -128,9 +127,11 @@ export function runPostprocess({
     return {
       promise: worker.postprocess({
         cwd,
-        userArgs,
-        extraArgs,
         code: code.toString("utf8"),
+        targetName: output.targetName,
+        compilationMode,
+        runMode,
+        userArgs,
       }),
       kill: () => worker.terminate(),
     };
@@ -138,7 +139,7 @@ export function runPostprocess({
 
   const command: Command = {
     command: commandName,
-    args: [...userArgs, ...extraArgs],
+    args: [...userArgs, output.targetName, compilationMode, runMode],
     options: { cwd, env },
     stdin: code,
   };
@@ -244,11 +245,21 @@ export class PostprocessWorkerPool {
   }
 }
 
-export type ElmWatchNodeArgs = {
+export type ElmWatchNodeInternalArgs = {
   cwd: AbsolutePath;
-  userArgs: Array<string>;
-  extraArgs: Array<string>;
   code: string;
+  targetName: string;
+  compilationMode: CompilationMode;
+  runMode: RunMode;
+  userArgs: Array<string>;
+};
+
+export type ElmWatchNodePublicArgs = {
+  code: string;
+  targetName: string;
+  compilationMode: CompilationMode;
+  runMode: RunMode;
+  argv: Array<string>;
 };
 
 type PostprocessWorkerStatus =
@@ -266,7 +277,7 @@ type PostprocessWorkerStatus =
 
 export type MessageToWorker = {
   tag: "StartPostprocess";
-  args: ElmWatchNodeArgs;
+  args: ElmWatchNodeInternalArgs;
 };
 
 export type MessageFromWorker = {
@@ -397,7 +408,9 @@ class PostprocessWorker {
     return this.status.tag === "Idle";
   }
 
-  async postprocess(args: ElmWatchNodeArgs): Promise<PostprocessResult> {
+  async postprocess(
+    args: ElmWatchNodeInternalArgs
+  ): Promise<PostprocessResult> {
     switch (this.status.tag) {
       case "Idle":
         return new Promise((resolve, reject) => {

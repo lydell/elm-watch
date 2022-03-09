@@ -14,7 +14,11 @@ import {
 } from "./NonEmptyArray";
 import { absolutePathFromString } from "./PathHelpers";
 import { Port } from "./Port";
-import { ELM_WATCH_NODE, UnknownValueAsString } from "./Postprocess";
+import {
+  ELM_WATCH_NODE,
+  ElmWatchNodePublicArgs,
+  UnknownValueAsString,
+} from "./Postprocess";
 import { Command, ExitReason } from "./Spawn";
 import {
   AbsolutePath,
@@ -615,7 +619,7 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 
 export function elmWatchNodeRunError(
   scriptPath: ElmWatchNodeScriptPath,
-  args: Array<string>,
+  args: ElmWatchNodePublicArgs,
   error: UnknownValueAsString,
   stdout: string,
   stderr: string
@@ -636,7 +640,7 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 
 export function elmWatchNodeBadReturnValue(
   scriptPath: ElmWatchNodeScriptPath,
-  args: Array<string>,
+  args: ElmWatchNodePublicArgs,
   returnValue: UnknownValueAsString,
   stdout: string,
   stderr: string
@@ -1302,11 +1306,16 @@ function printElmWatchNodeImportCommand(
   return `const imported = await import(${JSON.stringify(scriptPathString)})`;
 }
 
-function printElmWatchNodeRunCommand(args: Array<string>): string {
-  const truncated = args.map((arg, index) =>
-    index === 0 ? truncate(arg) : arg
-  );
-  return `const result = await imported.default(${JSON.stringify(truncated)})`;
+function printElmWatchNodeRunCommand(args: ElmWatchNodePublicArgs): string {
+  const truncated = {
+    ...args,
+    code: truncate(args.code),
+  };
+  return `const result = await imported.default(${JSON.stringify(
+    truncated,
+    null,
+    2
+  )})`;
 }
 
 function truncate(string: string): string {

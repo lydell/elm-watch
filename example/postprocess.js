@@ -1,7 +1,11 @@
 import * as esbuild from "esbuild";
 import * as UglifyJS from "uglify-js";
 
-export default async function postprocess([code, targetName, compilationMode]) {
+export default async function postprocess({
+  code,
+  targetName,
+  compilationMode,
+}) {
   switch (compilationMode) {
     case "standard":
     case "debug":

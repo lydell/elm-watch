@@ -11,7 +11,7 @@ async function wait(ms) {
   });
 }
 
-module.exports = async ([code, targetName]) => {
+module.exports = async ({ code, targetName }) => {
   switch (targetName) {
     case "main":
       while (fs.readFileSync(lock, "utf8") !== "third-elm-done") {

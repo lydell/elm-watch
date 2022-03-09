@@ -1,4 +1,4 @@
-module.exports = ([code, targetName, compilationMode]) => {
+module.exports = ({ code, targetName, compilationMode }) => {
   switch (targetName) {
     case "SlowPostprocess":
       switch (compilationMode) {

@@ -11,7 +11,7 @@ async function wait(ms) {
   });
 }
 
-module.exports = async ([code]) => {
+module.exports = async ({ code }) => {
   if (fs.existsSync(lock)) {
     fs.unlinkSync(lock);
   } else {
