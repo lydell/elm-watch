@@ -321,6 +321,7 @@ Some exciting elm-watch hot reloading features:
 - **Scroll position.** Hot reloading is just like another regular Elm rerender in elm-watch. Scroll position (and other subtle DOM state) is kept.
 - **Full reloads.** When not possible to hot reload, elm-watch reloads the full page for you. It also tells you why in the browser console.
 - **Complete coverage.** Whatever Elm `Program` type you choose or what change you make, the hot reloading always does the right thing.
+- **Clever prioritization.** Working on three Elm apps simultaneously? elm-watch compiles the one you interacted with most recently first. Apps that you don’t work on aren’t compiled at all – just type checked, which is much faster!
 
 That said, hot reloading is essentially a hack. But a pretty good one. As long as hot reloading isn’t built into Elm itself, it’s always going to be a hack and not 100 % perfect:
 
