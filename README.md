@@ -2,15 +2,10 @@
 
 > `elm make` in watch mode. Fast and reliable.
 
-`elm-watch hot` recompiles whenever your Elm files change and reloads the compiled JS in the browser.
+elm-watch recompiles whenever your Elm files change and reloads the compiled JS in the browser.
 
-If you’ve ever:
-
-- restarted a watcher because it felt like it stopped working
-- been annoyed by bad hot reloading
-- gotten tired of waiting for slow compilation
-
-… elm-watch _might_ be for you.
+- 👉 [Getting started](https://github.com/lydell/elm-watch#getting-started)
+- 👉 [What elm-watch is](https://github.com/lydell/elm-watch#what-elm-watch-is)
 
 Note that elm-watch is all about Elm. Not HTML, not CSS, not JavaScript, not TypeScript and not serving files or proxying requests. That’s a strength in my opinion, but also something to be aware of. You can’t just replace for example Parcel with elm-watch and expect everything to be taken care of.
 
@@ -80,7 +75,6 @@ Remember the first time you ran `elm make`? It’s super fast, and has beautiful
 - **Maximum speed.** elm-watch tries to do as little as possible besides running `elm make` for you. Doing less work is always faster!
 - [**Hot reloading.**](#hot-reloading) elm-watch tries to reimagine the level of quality of hot reloading. The goal is to never leave you wondering if it worked at all.
 - **Beautiful colors.** Elm’s error messages are lovely and colorful. elm-watch takes care to preserve them.
-- **Focused output.** elm-watch shows you only what you need, while also letting you know what’s going on at all times! A balancing act.
 - **Browser UI.** elm-watch always shows you the latest status in the browser. Switching to `--debug` mode – or even `--optimize` mode – is only a click away.
 - **Cache free.** Elm already has a cache – the `elm-stuff/` folder – which is really stable and all you need. Famously one of the hardest things in programming, elm-watch has no extra caching to worry about.
 - **Elm centric.** elm-watch puts Elm at the heart. Let’s take advantage of Elm’s unique capabilities, like `elm make --output /dev/null` for super fast type checking of apps you’re not currently focusing on!
@@ -95,7 +89,7 @@ Remember the first time you ran `elm make`? It’s super fast, and has beautiful
 - A code generator.
 - A test runner.
 
-It is tempting to put in simple versions of the above so that you can just run `elm-watch` and get going just like with [Parcel]. But it’s always gonna suck in the end. While it is convenient for small toy projects, you’ll eventually grow out of it. That’ll result in endless feature requests, or you having to set up your own stuff for non-Elm things anyway.
+It is tempting to put in simple versions of the above so that you can just run `elm-watch` and get going just like with [Parcel]. While that’s convenient for small toy projects, you’ll eventually grow out of it. That’ll result in endless feature requests – taking time from the core misson of elm-watch – or you having to set up your own stuff for non-Elm things anyway.
 
 So I like to think of elm-watch more of a “professional” tool. Let elm-watch excel at compiling Elm quickly and reliably, and own the rest of the stack yourself. Have your own development server, your own TypeScript compiler and your own CSS setup or whatever you need.
 
@@ -105,9 +99,8 @@ But if you’re looking for a out-of-the-box setup, try [Parcel] or some other t
 
 Some more notes:
 
-- Tests. Can elm-watch check your test files for compilation errors? Not currently. I think `elm-test --watch` might be a better alternative.
-- Packages. You can use elm-watch for examples in your package, and that might be enough to typecheck all your package files. Relying on type checking in your editor and occasionally running just `elm make` in the terminal might be enough.
-- Output format. elm-watch is basically just `elm-watch make`, so the output format is that you use `window.Elm` to access your Elm programs. It might feel ugly and old-school compared to something like `import Elm from "./elm.js"`, but I think it’s fine. It’s just going to affect one line of your code. It lets you decouple your Elm completely from all JavaScript.
+- **Applications only.** Do you need a watcher for developing packages? Relying on type checking in your editor and occasionally running `elm make` (without arguments) in the terminal might be enough. What about type checking tests? `elm-test --watch` might be a better alternative (you want to see the tests pass as well, right?). At least for now, elm-watch is focused on Elm applications.
+- **window.Elm** elm-watch is basically just `elm-watch make`, so the output format is that you use `window.Elm` to access your Elm programs. It might feel ugly and old-school compared to something like `import Elm from "./elm.js"`, but I think it’s fine. It’s just going to affect one line of your code. It lets you decouple your Elm completely from all other JavaScript, and makes hot reloading easier.
 
 ## Ideas for the future
 
@@ -117,7 +110,7 @@ Some more notes:
 
 ## Terminal UI
 
-elm-watch displays the status of each target in elm-watch.json, some timings, stats, recent events (like files that have changed) and compilation errors (if any). It should be pretty self explanatory. Use `elm-watch --help` if you wonder what some status emoji or symbol means.
+elm-watch displays the status of each target in `elm-watch.json`, some timings, stats, recent events (like files that have changed) and – of course – Elm compilation errors (if any). It should be pretty self explanatory. Use `elm-watch --help` if you wonder what some status emoji or symbol means.
 
 ## Browser UI
 
@@ -127,12 +120,9 @@ When using `elm-watch hot`, you’ll see a little box in the bottom-left corner 
 ▼ ✅ 13:10:05
 ```
 
-It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful to know when the last hot reload was applied.
+It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful for knowing when the last hot reload was applied. No more wondering “did the hot reload stop working? Or did I edit the wrong piece of code?”
 
-You can click the box to expand it.
-
-- You’ll see some extra information which can be handy from time to time.
-- You’ll find radio buttons to switch between “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
+Clicking the box expands it, letting switch between “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
 
 Here are some more icons you might see (they’re also explained when you expand the box):
 
@@ -151,7 +141,7 @@ Pay extra attention to 🚨 (compilation error). If you see it, the latest chang
 
 An `elm-watch.json` is required to be able to use `elm-watch`. There’s not much to it.
 
-It looks like this:
+It looks like this (TypeScript definition):
 
 ```ts
 type NonEmptyArray<T> = [T, ...Array<T>];
@@ -159,13 +149,12 @@ type NonEmptyArray<T> = [T, ...Array<T>];
 type ElmWatchJson = {
   postprocess?: NonEmptyArray<string>;
   port?: number;
-  targets: Record<
-    string,
-    {
+  targets: {
+    [name: string]: {
       inputs: NonEmptyArray<string>;
       output: string;
-    }
-  >;
+    };
+  };
 };
 ```
 
@@ -196,9 +185,20 @@ Example:
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| [postprocess](#postprocess) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
-| port | `number` | An arbitrary available port. | In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]]. |
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
+| [postprocess](#postprocess) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
+| port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | Web Socket port for hot reloading. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
+
+### targets
+
+There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
+
+It’s an object. They keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess] script. You can also filter by target substring: `elm make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
+
+For each target, provide the following:
+
+- inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input. If you’ve every used `elm make` with multiple inputs – you can do that with elm-watch as well.
+- output: `string`. A `.js` file, relative to `elm-watch.json`. Unlike `elm make`, only `.js` is supported (and `.html` isn’t). Once you reach for elm-watch, you’re ready to be in charge of your own HTML file.
 
 ### postprocess
 
@@ -207,11 +207,11 @@ This lets you change Elm’s JavaScript output. There are two use cases for this
 - Patch the JS during development as well as in production.
 - Minify the JS in production.
 
-The `"postprocess"` field is a non-empty array, describing a command to run. The first item is the name of the command to spawn: It’s looked up in `PATH`, falling back to being relative to `elm-watch.json`. The remaining items are simply arguments to pass to the spawned command. Note: The arguments are just strings, not `bash` code or something like that. The command is run with CWD set to the `elm-watch.json` directory.
+The `"postprocess"` field is a non-empty array, describing a command to run. The first item of the array is the name of the command to spawn: It’s looked up in `PATH`, falling back to being relative to `elm-watch.json`. The remaining items are simply arguments to pass to the spawned command. Note: The arguments are just strings, not `bash` code or something like that. The command is run with CWD set to the `elm-watch.json` directory.
 
 Apart from the specified arguments, elm-watch appends some more, in this order:
 
-1. Target name. One of the keys of the `"targets"` object. This let’s you apply more time consuming minification for a customer facing app than for an internal one, for example.
+1. Target name. One of the keys of the `"targets"` object in `elm-watch.json`. This let’s you apply more time consuming minification for a customer facing app than for an internal one, for example.
 2. Compilation mode. Either `"debug"`, `"standard"` or `"optimize"`. This lets you only minify in `--optimize` mode, for example.
 3. Run mode. Either `"make"` or `"hot"`. I recommend doing the same work for both modes, but in case that’s not feasible you have the possibility.
 
@@ -230,30 +230,45 @@ You might wonder why minifying for production is a concern for elm-watch, which 
 - elm-watch needs parallel postprocessing anyway for patching during development.
 - I think it’s nice to be able to easily test your minified code. With elm-watch, it’s one click away.
 
-> Apart from minifying, you might be tempted to also cache-bust the JS files by putting a hash of their content in the file name. For example: `main.js` ➡️ `main.50f612.js`. That’s not a good idea, though. While you might get away with creating the files, but you also want to keep track of them all in one place and update HTML files pointing to them. Since all postprocess commands run in parallel, that can be tricky to do correctly. Unlike minifying, hashing and updating HTML files should be fast, so I suggest doing that as a separate step afterwards. elm-watch assumes that your command is pure, so if you do things that makes that assumption not hold you’re on your own.
+> Apart from minifying, you might be tempted to also cache-bust the JS files by putting a hash of their content in the file name. For example: `main.js` ➡️ `main.50f612.js`. It’s not a good idea to do that _in the postprocess script,_ though. While you might get away with creating the files as a side effect in your postprocess script, you also want to keep track of them all in one place and update HTML files pointing to them. Since all postprocess commands run in parallel, that can be tricky to do correctly. Unlike minifying, hashing and updating HTML files should be fast, so I suggest doing that as a separate step afterwards. elm-watch assumes that your command is pure, so if you do things that makes that assumption not hold you’re on your own.
 
 #### elm-watch-node
 
-It might be tempting to write your postprocessing in Node.js:
+Node.js might feel nice to write postprocess scripts in:
 
 - You already have it installed since elm-watch is built on it.
-- It might be easier to write than for example `bash`.
+- It may be easier to write than for example `bash`.
 - It’s cross platform.
 - You might want to call an `npm` package in your postprocessing.
 
 However, **it’s slow to boot.** Around 100 ms of penalty even for the simplest of scripts. It might not sound like much, but it’s not nice for hot reloading. Compare that to `bash` which runs in more like 1 ms.
 
-To avoid the slowness, elm-watch has a trick up its sleeve: `elm-watch-node`. In your `elm-watch.json`, you can change `"postprocess": ["node", "postprocess.js"]` to `"postprocess": ["elm-watch-node", "postprocess.js"]` and it’s basically the same but faster. The difference is that `elm-watch-node` runs in a [worker thread] instead of as a separate process. Workers are faster to spawn (around 50 ms), but it’s a one time cost. Once started, they can be reused infinitely, resulting in almost no overhead at all.
+To avoid the slowness, elm-watch has a trick up its sleeve: `elm-watch-node`. In your `elm-watch.json`, make this change:
+
+```diff
+-"postprocess": ["node", "postprocess.js"]
++"postprocess": ["elm-watch-node", "postprocess.js"]
+```
+
+It’s basically the same but faster. The difference is that `elm-watch-node` runs in a [worker thread] instead of as a separate process. Workers are faster to spawn (around 50 ms) – and it’s a one time cost. Once started, they can be reused infinitely, resulting in almost no overhead at all.
 
 Here are the differences compared to `node`.
 
-- The first argument _has_ to be the file to run. No other flags or arguments to `node` are supported.
+- The first argument after `elm-watch-node` _has_ to be the file to run. No other flags or arguments to `node` are supported.
+- Your code runs in the same process (but on a thread) as elm-watch, so you don’t get an isolated environment.
+- Instead of using stdin, stdout, process arguments and exit codes you just provide a good old pure function (see below).
 
-- Your code runs in the same process (but on a thread) as elm-watch, so you don’t get an isolated environment. No shenanigans!
+The function must look like so (elm-watch ships with this as a TypeScript definition you can import): `elm-watch-node` scripts must export a function:
 
-- Instead of using stdin, stdout, process arguments and exit codes you just provide a good old function (see below).
+```js
+// CJS
+module.exports = function postprocess() {};
 
-The function must look like so (elm-watch ships with this as a TypeScript definition you can import):
+// MJS
+export default function postprocess() {}
+```
+
+Type definition (shipped in the npm package, importable from `"elm-watch/elm-watch-node"`):
 
 ```ts
 type Postprocess = (options: {
@@ -261,16 +276,15 @@ type Postprocess = (options: {
   targetName: string;
   compilationMode: "debug" | "standard" | "optimize";
   runMode: "hot" | "make";
-  argv: Array<string>;
+  argv: Array<string>; // Mimics process.argv
 }) => string | Promise<string>;
 ```
 
-Use `module.exports = async function() {}` (CJS) or `export default function() {}` (MJS). Note: It’s up to you to configure Node.js to accept CJS or MJS like any Node.js project. elm-watch simply `import()`s your script, so that’s the interface you have to work with.
-
-- Instead of looking at `process.argv`, look at the single `options` object passed to your function. Note: `options.argv` isn’t that useful, but exists for completeness sake. If you have `"postprocess": ["elm-watch-node", "postprocess.js", "one", "two"]` it will be `["elm-watch-node", "/path/to/postprocess.js", "one", "two"]`, mimicing `process.argv` for `node posprocess.js one two`.
-- Instead of reading `process.stdin`, look at `options.code`.
+- Instead of looking at `process.argv`, look at the single `options` object passed to your function.
+- Instead of reading `process.stdin`, look at `options.code` (it’s a string).
 - Instead of writing to `process.stdout`, return a string. (Or a `Promise<string>`.)
 - Instead of using `process.exitCode = code` or `process.exit(code)`, return normally on success and throw an error on failure.
+- Note: It’s up to you to configure Node.js to accept CJS or MJS like any Node.js project. elm-watch simply `import()`s your script, so that’s the interface you have to work with. If you’re unsure, go with `module.exports`. If you’re hipster, choose `export default`.
 
 Example:
 
@@ -300,22 +314,15 @@ export default function postprocess({ code, compilationMode }) {
 
 > Note: `elm-watch-node` is only available because elm-watch happens to be written in Node.js. An implementation written in another language is not expected to embed a JavaScript runtime just to implement `elm-watch-node`. In such a case you will have to make do with some other faster scripting language (like `bash`), or pay the penalty of starting `node` every time.
 
-### targets
-
-There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
-
-- inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input, but multiple is supported (since `elm make` supports that).
-- output: `string`. A `.js` file, relative to `elm-watch.json`. Unlike `elm make`, only `.js` is supported (and `.html` isn’t). Once you reach for elm-watch, you’re ready to be in charge of your own HTML file.
-
 ## Hot reloading
 
-Some exciting features:
+Some exciting elm-watch hot reloading features:
 
 - **Scroll position.** Hot reloading is just like another regular Elm rerender in elm-watch. Scroll position (and other subtle DOM state) is kept.
 - **Full reloads.** When not possible to hot reload, elm-watch reloads the full page for you. It also tells you why in the browser console.
 - **Complete coverage.** Whatever Elm `Program` type you choose or what change you make, the hot reloading always does the right thing.
 
-Hot reloading is essentially a hack. But a pretty good one. As long as hot reloading isn’t built into Elm itself, it’s always going to be a hack and not 100 % perfect:
+That said, hot reloading is essentially a hack. But a pretty good one. As long as hot reloading isn’t built into Elm itself, it’s always going to be a hack and not 100 % perfect:
 
 - Changes to `Model`. Hot reloading is all about running new code with the previous state. That only works if the previous state is compatible – otherwise your `update` and `view` might throw errors. Elm actually has a way to tell if `Msg` has changed, as part of the Import/Export feature in the debugger. If hot reloading were built into Elm, the same could be used to diff the `Model`. elm-watch instead tries to detect that by running the updated `init` function. If it returns something different than last time it can mean:
 
@@ -325,9 +332,9 @@ Hot reloading is essentially a hack. But a pretty good one. As long as hot reloa
   - That you changed a type from for example `Int` to `String`. elm-watch can detect it.
   - That you changed things with a custom type. This is where it gets tricky. Let’s say you changed from `Maybe Int` to `Maybe String`, but in `init` you always start with `Nothing`. elm-watch will have no clue about the change! However, if your `view` function immediately throws an error due to trying to use a number as a string, elm-watch catches that and reloads the page for you so you don’t waste time in a broken environment. This is where a full `Model` type-wise diff would be needed.
 
-- Code complexity. If hot reloading was built into Elm, the generated JavaScript could be altered to be easier to hot reload. elm-watch has to bend over backwards a bit to adjust the generated JavaScript after it has been generated instead. It’s a bit of regex replacements, as well as replacements for whole functions. Regex might sound brittle, but luckily Elm’s generated JavaScript is very predictable. While it’s impossible to do safe replacements on input that can be _any_ JavaScript (written by a human), it’s actually 100% safe on Elm’s machine written JavaScript. There are no tricky comments that can fool the regexes, and no multiline strings. (`"""` strings are compiled to single lines with `\n`s in them.) And all your functions and variables are prefixed, so they can’t be confused with core functions. By anchoring all regexes to beginnings of lines – and having heaps of tests – elm-watch can ensure it never messes with _your_ code. That’s great because regex is _fast._ Hot reloading isn’t hot if it’s slow.
+- Code complexity. If hot reloading was built into Elm, the generated JavaScript could be altered to be easier to hot reload. elm-watch has to bend over backwards a bit to adjust the generated JavaScript after it has been generated. It’s a bit of regex replacements, as well as replacements for whole functions. Regex might sound brittle, but luckily Elm’s generated JavaScript is very predictable. While it’s impossible to do safe replacements on input that can be _any_ JavaScript (written by a human), it’s actually 100% safe on Elm’s machine written JavaScript. There are no tricky comments that can fool the regexes, and no multiline strings. (`"""` strings are compiled to single lines with `\n`s in them.) And all your functions and variables are prefixed, so they can’t be confused with core functions. By anchoring all regexes to beginnings of lines – and having heaps of tests – elm-watch can ensure it never messes with _your_ code. That’s great because regex is _fast._ Hot reloading isn’t hot if it’s slow.
 
-- You need a recent enough elm/core version. Otherwise some regexes don’t match. Perfect time to update!
+- You need a recent enough elm/core version. Otherwise some regexes don’t match. Perfect time to update, though!
 
 In case you’re wondering, elm-watch has its own hot reloading implementation, built with Elm’s needs at the core. In other words, elm-watch is _not_ using the common [elm-hot] package (which is more focused on fitting into the hot reloading systems of webpack and Parcel).
 
@@ -342,12 +349,12 @@ I’d say it’s the most common to use plain old `http://` when working on `loc
 With elm-watch HTTPS causes a new complexity. elm-watch uses Web Sockets for hot reloading. So now there’s the question of `ws://` vs `wss://`. Here are my findings last time I dove into this:
 
 - `ws://` works fine on `https://localhost` in both Chrome and Firefox these days.
-- However, Safari Desktop requires `wss://`.
+- However, Safari Desktop requires `wss://` on `https://` pages (even localhost).
 - You can use a self-signed certificate (but get security prompts in the browser). If you set up your `https://` and `wss://` with the same certificate, it works seamlessly.
 - …except that Firefox requires you to separately visit the `wss://` origin and accept the unsafe certificate, which is very non-intuitive.
-- Safari for iOS does not seem to allow self-signed certificates for websocket at all.
+- Safari for iOS does not seem to allow self-signed certificates for Web Sockets at all.
 
-In short, you _can_ use a simple `ws://` together with `https://` in _some_ cases. But to get things working all the time, you would have to create a certificate and add it to your computer OS and phone OS so it becomes trusted for real. Which is a bit annoying. If you are doing that and would like to be able to configure elm-watch to use that certificate as well (with `wss://`), please let me know!
+In short, you _can_ use a simple `ws://` together with `https://` in _some_ cases. But to get things working all the time, you would have to create a certificate and add it to your computer OS and phone OS so it becomes trusted for real. Which is a bit annoying. If you are doing that and would like to be able to configure elm-watch to use that certificate as well (with `wss://`), please let me know! Until then, elm-watch keeps things simple and _always_ uses `ws://`.
 
 [elm-hot]: https://github.com/klazuka/elm-hot
 [elm-monitor]: https://github.com/layflags/elm-monitor
