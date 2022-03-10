@@ -27,6 +27,7 @@ See [example.yml] for an example GitHub Actions workflow.
 See also the [minimal elm-watch example][example-minimal].
 
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli
+[esbuild]: https://esbuild.github.io/
 [example-minimal]: https://github.com/lydell/elm-watch/tree/main/example-minimal
 [example.yml]: https://github.com/lydell/elm-watch/blob/main/.github/workflows/example.yml
 [run-pty]: https://github.com/lydell/run-pty/

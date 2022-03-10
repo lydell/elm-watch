@@ -194,7 +194,7 @@ Example:
 
 There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
 
-It’s an object. They keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess] script. You can also filter by target substring: `elm make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
+It’s an object. They keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](#postprocess) script. You can also filter by target substring: `elm make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
 
 For each target, provide the following:
 
