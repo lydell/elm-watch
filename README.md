@@ -29,7 +29,7 @@ npx elm-watch init
 ```json
 {
     "targets": {
-        "MyTargetName": {
+        "My target name": {
             "inputs": [
                 "src/Main.elm"
             ],
@@ -166,7 +166,7 @@ Example:
     "postprocess": ["elm-watch-node", "postprocess.js"],
     "port": 9876,
     "targets": {
-        "MyTargetName": {
+        "My target name": {
             "inputs": [
                 "src/Main.elm"
             ],
@@ -215,7 +215,7 @@ Apart from the specified arguments, elm-watch appends some more, in this order:
 2. Compilation mode. Either `"debug"`, `"standard"` or `"optimize"`. This lets you only minify in `--optimize` mode, for example.
 3. Run mode. Either `"make"` or `"hot"`. I recommend doing the same work for both modes, but in case that’s not feasible you have the possibility.
 
-For example, if you have `"postprocess": ["bash", "postprocess.bash", "one", "two"]` your script might receive these arguments: `one two MyTargetName standard hot`.
+For example, if you have `"postprocess": ["bash", "postprocess.bash", "one", "two"]` your script might receive these arguments: `one two "My target name" standard hot`.
 
 The command is expected to:
 

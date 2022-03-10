@@ -120,7 +120,7 @@ describe("init", () => {
     expect(json).toMatchInlineSnapshot(`
       {
           "targets": {
-              "MyTargetName": {
+              "My target name": {
                   "inputs": [
                       "src/Main.elm"
                   ],

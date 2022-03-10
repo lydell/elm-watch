@@ -1809,7 +1809,7 @@ describe("hot", () => {
 
       {
           "targets": {
-              "MyTargetName": {
+              "My target name": {
                   "inputs": [
                       "src/Main.elm"
                   ],

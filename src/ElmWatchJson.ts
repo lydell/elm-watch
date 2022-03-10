@@ -167,7 +167,7 @@ export function example(
 
   const json: Config = {
     targets: {
-      MyTargetName: {
+      "My target name": {
         inputs: isNonEmptyArray(elmFiles)
           ? mapNonEmptyArray(elmFiles, (file) =>
               path.relative(

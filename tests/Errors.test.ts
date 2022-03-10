@@ -430,7 +430,7 @@ describe("errors", () => {
 
       {
           "targets": {
-              "MyTargetName": {
+              "My target name": {
                   "inputs": [
                       "src/Main.elm"
                   ],
@@ -460,7 +460,7 @@ describe("errors", () => {
 
       {
           "targets": {
-              "MyTargetName": {
+              "My target name": {
                   "inputs": [
                       "src/Game.elm"
                   ],
@@ -502,7 +502,7 @@ describe("errors", () => {
 
         {
             "targets": {
-                "MyTargetName": {
+                "My target name": {
                     "inputs": [
                         "src/App.elm",
                         "src/Admin.elm"
@@ -559,7 +559,7 @@ describe("errors", () => {
 
         {
             "targets": {
-                "MyTargetName": {
+                "My target name": {
                     "inputs": [
                         "src/src/App.elm",
                         "lib/Admin.elm"
