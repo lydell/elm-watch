@@ -80,6 +80,7 @@ Remember the first time you ran `elm make`? It’s super fast, and has beautiful
 - **Elm centric.** elm-watch puts Elm at the heart. Let’s take advantage of Elm’s unique capabilities, like `elm make --output /dev/null` for super fast type checking of apps you’re not currently focusing on!
 - [**Reasonably hackable.**](#postprocess) Ever wanted to adjust Elm’s compiled JS? That’s just a `String -> String` function away for both development and production builds.
 - **Well tested.** elm-watch has 100 % test coverage, save for a few ignore coverage comments. elm-watch is serious about stability.
+- **Super scalable.** elm-watch can handle many Elm apps without getting slow. Only the apps you work on get compiled – in most recently used order. The rest are only type checked, which is faster.
 
 ## What elm-watch is _not_
 
@@ -356,6 +357,24 @@ With elm-watch HTTPS causes a new complexity. elm-watch uses Web Sockets for hot
 - Safari for iOS does not seem to allow self-signed certificates for Web Sockets at all.
 
 In short, you _can_ use a simple `ws://` together with `https://` in _some_ cases. But to get things working all the time, you would have to create a certificate and add it to your computer OS and phone OS so it becomes trusted for real. Which is a bit annoying. If you are doing that and would like to be able to configure elm-watch to use that certificate as well (with `wss://`), please let me know! Until then, elm-watch keeps things simple and _always_ uses `ws://`.
+
+## elm-watch vs generic watcher tools
+
+There are many CLI programs that let you watch for file changes and then run a given command. So you could listen for changes to `.elm` files (as well as `elm.json`) and have `elm make src/Main.elm --output build/main.js` as the command to run. Can’t get much simpler, right? What does elm-watch bring to the table then? Here are some interesting points to better understand what value elm-watch can bring:
+
+- **Timing control.** What happens when files change faster than `elm make` runs? Like, if you happen to save a lot in the editor, refactor across files or switch git branches? Maybe the `elm make` calls queue up – and take a lot of extra time to complete – or maybe some events are dropped and you end up with out-of-date compilation error messages. elm-watch waits a couple of milliseconds after each file change event to let things settle before compiling. And if even more files change while compiling, _one_ new compilation is triggered.
+
+- **Multiple targets.** Your project grows bigger, and suddenly don’t have just `src/Main.elm` but also `src/Admin.elm` and maybe some other apps. Do you just update the command to `elm make src/Main.elm --output build/main.js; elm make src/Admin.elm --output build/main.js`? Now you have many problems:
+
+  - **Wasteful compilation.** If you change `src/AdminHelpers.elm`, `src/Main.elm` will be compiled first even though it most likely does not depend on `AdminHelpers`. elm-watch parses the `import`s of your Elm files to know which files affects which targets, and only recompile what’s needed.
+  - **Unfortunate ordering.** When you change `src/Shared.elm` (which is used by both targets), you have to wait for `src/Main.elm` to finish compiling before seeing changes to `src/Admin.elm`. The Elm compiler is fast, but the more targets you have the more it adds up. elm-watch compiles the app you interacted with most recently first.
+  - **Error overload.** Running many `elm make` commands in sequence means you might see the same error over and over for shared code. An alternative is to stop on the first failing `elm make`, but then you don’t get to see errors at all for later targets until earlier are solved. elm-watch deduplicates compilation errors, so you don’t see the exact same one twice.
+
+- **Build duplication.** You need to maintain your watcher command, and a separate build command for every target. With elm-watch, your targets are defined in `elm-watch.json` so you can both watch and build for production easily.
+
+- **Hot reloading.** That’s just not doable with an ad-hoc command. Sure, you might find some smooth Web Socket CLI, but you still need to do the code injection in Elm’s compiled JS.
+
+- **Mode switching.** elm-watch makes it super easy to toggle Elm’s debugger, directly from the browser. An ad-hoc command probably means stopping the watcher and restarting with some flag or environment variable set.
 
 [elm-hot]: https://github.com/klazuka/elm-hot
 [elm-monitor]: https://github.com/layflags/elm-monitor
