@@ -82,7 +82,7 @@ describe("successful make", () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙   87.5 KiB → 0.00 KiB (0.0%)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ main⧙   87.5 KiB → 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 …⧘
 
       ✅ Compilation finished in ⧙123⧘ ms.
     `);
@@ -117,7 +117,7 @@ describe("successful make", () => {
       ⏳ main: elm make --optimize
       🟢 main: elm make done
       ⏳ main: postprocess
-      ✅ main⧙   87.5 KiB → 0.00 KiB (0.0%)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ main⧙   87.5 KiB → 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
       ✅ Compilation finished in ⧙123⧘ ms.
     `);
@@ -135,7 +135,7 @@ describe("successful make", () => {
       main: elm make --optimize
       main: elm make done
       main: postprocess
-      main: success   87.5 KiB -> 0.00 KiB (0.0%)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P
+      main: success   87.5 KiB -> 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P
 
       Compilation finished in 123 ms.
     `);

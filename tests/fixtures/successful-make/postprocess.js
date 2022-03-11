@@ -97,11 +97,14 @@ async function run(args) {
       console.error(`Unknown run mode: ${JSON.stringify(compilationMode)}`);
       return 1;
   }
+
+  process.stdout.write(output.replace(/ {2,}/g, " "));
+  return 0;
 }
 
 run(process.argv.slice(2)).then(
   (exitCode) => {
-    process.exit(exitCode);
+    process.exitCode = exitCode;
   },
   (error) => {
     console.error("Uncaught error:", error);

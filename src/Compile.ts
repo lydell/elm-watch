@@ -1791,7 +1791,7 @@ function maybePrintFileSize({
               } ${printFileSize(postprocessFileSize)} (${(
                 (postprocessFileSize / elmFileSize) *
                 100
-              ).toFixed(1)}%)`;
+              ).toFixed(1)} %)`;
       }
 
     case "hot":
