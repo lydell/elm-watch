@@ -4,3 +4,6 @@
 [submodule "example/public/submodules/codebase-ui"]
 	path = example/public/submodules/codebase-ui
 	url = git@github.com:lydell/codebase-ui.git
+[submodule "example/public/submodules/concourse"]
+	path = example/public/submodules/concourse
+	url = git@github.com:lydell/concourse.git

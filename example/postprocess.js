@@ -20,7 +20,7 @@ export default async function postprocess({
         minimal: [
           "ApplicationMain",
           "ElmSpaExample",
-          "Ucm",
+          "Concourse",
           "UnisonShare",
         ].includes(targetName),
       });

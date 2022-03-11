@@ -57,11 +57,11 @@
             ],
             "output": "public/submodules/elm-spa-example/elm.js"
         },
-        "Ucm": {
+        "Concourse": {
             "inputs": [
-                "public/submodules/codebase-ui/src/Ucm.elm"
+                "public/submodules/concourse/web/elm/src/Main.elm"
             ],
-            "output": "public/submodules/codebase-ui/dist/Ucm.js"
+            "output": "public/submodules/concourse/web/public/elm.min.js"
         },
         "UnisonShare": {
             "inputs": [

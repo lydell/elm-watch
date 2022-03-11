@@ -28,21 +28,34 @@ const servers = [
   },
   {
     port: 8003,
-    subdomain: "ucm",
+    subdomain: "concourse",
     handler: (req, res, log) => {
-      serveUnison(req, res, log, "/submodules/codebase-ui/src/ucm.html");
+      if (req.url.startsWith("/api/")) {
+        proxyToWeb(req, res, log, "ci.concourse-ci.org");
+      } else {
+        serveWithEsbuild(
+          req,
+          res,
+          log,
+          "/submodules/concourse/web/public/index.html"
+        );
+      }
     },
   },
   {
     port: 8004,
     subdomain: "unison.share",
     handler: (req, res, log) => {
-      serveUnison(
-        req,
-        res,
-        log,
-        "/submodules/codebase-ui/src/unisonShare.html"
-      );
+      if (req.url.startsWith("/api/")) {
+        proxyToWeb(req, res, log, "share.unison-lang.org");
+      } else {
+        serveWithEsbuild(
+          req,
+          res,
+          log,
+          "/submodules/codebase-ui/src/unisonShare.html"
+        );
+      }
     },
   },
 ];
@@ -50,14 +63,6 @@ const servers = [
 function serveWithEsbuild(req, res, log, newUrl) {
   req.url = newUrl;
   proxyToEsbuild(req, res, (...args) => log(`-> ${newUrl}`, ...args));
-}
-
-function serveUnison(req, res, log, newUrl) {
-  if (req.url.startsWith("/api/")) {
-    proxyToWeb(req, res, log, "share.unison-lang.org");
-  } else {
-    serveWithEsbuild(req, res, log, newUrl);
-  }
 }
 
 function shouldProxyToEsbuild(req) {
