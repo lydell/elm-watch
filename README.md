@@ -100,7 +100,7 @@ But if you’re looking for a out-of-the-box setup, try [Parcel] or some other t
 
 Some more notes:
 
-- **Applications only.** Do you need a watcher for developing packages? Relying on type checking in your editor and occasionally running `elm make` (without arguments) in the terminal might be enough. What about type checking tests? `elm-test --watch` might be a better alternative (you want to see the tests pass as well, right?). At least for now, elm-watch is focused on Elm applications.
+- **Applications only.** Do you need a watcher for developing packages? Relying on type checking in your editor and occasionally running `elm make` (without arguments) in the terminal might be enough. What about type checking tests? `elm-test --watch` might be a better alternative (you want to see the tests pass as well, right?). For a package, running the tests likely type checks the whole package as well. So at least for now, elm-watch is focused on Elm applications.
 - **window.Elm** elm-watch is basically just `elm-watch make`, so the output format is that you use `window.Elm` to access your Elm programs. It might feel ugly and old-school compared to something like `import Elm from "./elm.js"`, but I think it’s fine. It’s just going to affect one line of your code. It lets you decouple your Elm completely from all other JavaScript, and makes hot reloading easier.
 
 ## Ideas for the future
