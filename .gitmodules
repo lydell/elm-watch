@@ -7,3 +7,6 @@
 [submodule "example/public/submodules/concourse"]
 	path = example/public/submodules/concourse
 	url = git@github.com:lydell/concourse.git
+[submodule "example/public/submodules/kite"]
+	path = example/public/submodules/kite
+	url = git@github.com:lydell/kite.git

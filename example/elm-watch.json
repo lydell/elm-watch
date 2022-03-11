@@ -4,24 +4,6 @@
         "postprocess.js"
     ],
     "targets": {
-        "Application": {
-            "inputs": [
-                "src/ApplicationMain.elm"
-            ],
-            "output": "public/build/ApplicationMain.js"
-        },
-        "Document": {
-            "inputs": [
-                "src/DocumentMain.elm"
-            ],
-            "output": "public/build/DocumentMain.js"
-        },
-        "Element": {
-            "inputs": [
-                "src/ElementMain.elm"
-            ],
-            "output": "public/build/ElementMain.js"
-        },
         "Html": {
             "inputs": [
                 "src/HtmlMain.elm"
@@ -33,6 +15,24 @@
                 "src/SandboxMain.elm"
             ],
             "output": "public/build/SandboxMain.js"
+        },
+        "Element": {
+            "inputs": [
+                "src/ElementMain.elm"
+            ],
+            "output": "public/build/ElementMain.js"
+        },
+        "Document": {
+            "inputs": [
+                "src/DocumentMain.elm"
+            ],
+            "output": "public/build/DocumentMain.js"
+        },
+        "Application": {
+            "inputs": [
+                "src/ApplicationMain.elm"
+            ],
+            "output": "public/build/ApplicationMain.js"
         },
         "Worker": {
             "inputs": [
@@ -51,19 +51,25 @@
             ],
             "output": "public/build/Frankenstein.js"
         },
-        "ElmSpaExample": {
-            "inputs": [
-                "public/submodules/elm-spa-example/src/Main.elm"
-            ],
-            "output": "public/submodules/elm-spa-example/elm.js"
-        },
         "Concourse": {
             "inputs": [
                 "public/submodules/concourse/web/elm/src/Main.elm"
             ],
             "output": "public/submodules/concourse/web/public/elm.min.js"
         },
-        "UnisonShare": {
+        "Elm SPA Example": {
+            "inputs": [
+                "public/submodules/elm-spa-example/src/Main.elm"
+            ],
+            "output": "public/submodules/elm-spa-example/elm.js"
+        },
+        "Kite": {
+            "inputs": [
+                "public/submodules/kite/src/Main.elm"
+            ],
+            "output": "public/submodules/kite/dist/elm.js"
+        },
+        "Unison Share": {
             "inputs": [
                 "public/submodules/codebase-ui/src/UnisonShare.elm"
             ],

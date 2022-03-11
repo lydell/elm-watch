@@ -21,13 +21,6 @@ const servers = [
   },
   {
     port: 8002,
-    subdomain: "elm-spa-example",
-    handler: (req, res, log) => {
-      serveWithEsbuild(req, res, log, "/submodules/elm-spa-example/index.html");
-    },
-  },
-  {
-    port: 8003,
     subdomain: "concourse",
     handler: (req, res, log) => {
       if (req.url.startsWith("/api/")) {
@@ -43,7 +36,21 @@ const servers = [
     },
   },
   {
+    port: 8003,
+    subdomain: "elm-spa-example",
+    handler: (req, res, log) => {
+      serveWithEsbuild(req, res, log, "/submodules/elm-spa-example/index.html");
+    },
+  },
+  {
     port: 8004,
+    subdomain: "kite",
+    handler: (req, res, log) => {
+      serveWithEsbuild(req, res, log, "/submodules/kite/src/index.html");
+    },
+  },
+  {
+    port: 8005,
     subdomain: "unison.share",
     handler: (req, res, log) => {
       if (req.url.startsWith("/api/")) {

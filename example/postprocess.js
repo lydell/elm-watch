@@ -17,12 +17,9 @@ export default async function postprocess({
 
     case "optimize":
       return minify(code, {
-        minimal: [
-          "ApplicationMain",
-          "ElmSpaExample",
-          "Concourse",
-          "UnisonShare",
-        ].includes(targetName),
+        minimal: !["Html", "Sandbox", "Element", "Document", "Worker"].includes(
+          targetName
+        ),
       });
 
     default:
