@@ -54,7 +54,7 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
 Created a minimal ${elmWatchJson} in the current directory to get you started.
 Go check it out!
 
-Documentation: https://github.com/lydell/elm-watch/#readme
+Documentation: https://github.com/lydell/elm-watch#elm-watchjson
   `.trim()
   );
   return 0;

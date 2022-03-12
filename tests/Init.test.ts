@@ -113,7 +113,7 @@ describe("init", () => {
       Created a minimal ⧙elm-watch.json⧘ in the current directory to get you started.
       Go check it out!
 
-      Documentation: https://github.com/lydell/elm-watch/#readme
+      Documentation: https://github.com/lydell/elm-watch#elm-watchjson
 
     `);
 

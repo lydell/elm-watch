@@ -60,7 +60,7 @@ ${bold("Environment variables:")}
         Disable colored output
 
 ${bold("Documentation:")}
-    https://github.com/lydell/elm-watch/#readme
+    https://github.com/lydell/elm-watch#readme
 
 ${bold("Version:")}
     %VERSION%

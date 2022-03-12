@@ -86,7 +86,7 @@ describe("help", () => {
               Disable colored output
 
       ⧙Documentation:⧘
-          https://github.com/lydell/elm-watch/#readme
+          https://github.com/lydell/elm-watch#readme
 
       ⧙Version:⧘
           %VERSION%
@@ -141,7 +141,7 @@ describe("help", () => {
               Disable colored output
 
       Documentation:
-          https://github.com/lydell/elm-watch/#readme
+          https://github.com/lydell/elm-watch#readme
 
       Version:
           %VERSION%
