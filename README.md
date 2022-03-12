@@ -75,12 +75,14 @@ Remember the first time you ran `elm make`? It’s super fast, and has beautiful
 - **Maximum speed.** elm-watch tries to do as little as possible besides running `elm make` for you. Doing less work is always faster!
 - [**Hot reloading.**](#hot-reloading) elm-watch tries to reimagine the level of quality of hot reloading. The goal is to never leave you wondering if it worked at all.
 - **Beautiful colors.** Elm’s error messages are lovely and colorful. elm-watch takes care to preserve them.
-- **Browser UI.** elm-watch always shows you the latest status in the browser. Switching to `--debug` mode – or even `--optimize` mode – is only a click away.
+- [**Browser UI.**](#browser-ui) elm-watch always shows you the latest status in the browser. Switching to `--debug` mode – or even `--optimize` mode – is only a click away.
 - **Cache free.** Elm already has a cache – the `elm-stuff/` folder – which is really stable and all you need. Famously one of the hardest things in programming, elm-watch has no extra caching to worry about.
 - **Elm centric.** elm-watch puts Elm at the heart. Let’s take advantage of Elm’s unique capabilities, like `elm make --output /dev/null` for super fast type checking of apps you’re not currently focusing on!
 - [**Reasonably hackable.**](#postprocess) Ever wanted to adjust Elm’s compiled JS? That’s just a `String -> String` function away for both development and production builds.
 - **Well tested.** elm-watch has 100 % test coverage, save for a few ignore coverage comments. elm-watch is serious about stability.
 - **Super scalable.** elm-watch can handle many Elm apps without getting slow. Only the apps you work on get compiled – in most recently used order. The rest are only type checked, which is faster.
+
+👉 See also [Comparison to other tools](#comparison-to-other-tools).
 
 ## What elm-watch is _not_
 
@@ -96,22 +98,30 @@ So I like to think of elm-watch more of a “professional” tool. Let elm-watch
 
 That being said, it’s not super difficult to set elm-watch up together with other tools. See the [example/](./example) folder for a lean and sweet setup with [esbuild], and [run-pty] for easily starting `elm-watch`, `esbuild` and a dev server in one go.
 
-But if you’re looking for a out-of-the-box setup, try [Parcel] or some other tool with the same goals. Choose your trade-offs.
+But if you’re looking for a out-of-the-box setup, try [Parcel], [elm-go] or some other tool with the same goals. Choose your trade-offs.
 
 Some more notes:
 
-- **Applications only.** Do you need a watcher for developing packages? Relying on type checking in your editor and occasionally running `elm make` (without arguments) in the terminal might be enough. What about type checking tests? `elm-test --watch` might be a better alternative (you want to see the tests pass as well, right?). For a package, running the tests likely type checks the whole package as well. So at least for now, elm-watch is focused on Elm applications.
-- **window.Elm** elm-watch is basically just `elm-watch make`, so the output format is that you use `window.Elm` to access your Elm programs. It might feel ugly and old-school compared to something like `import Elm from "./elm.js"`, but I think it’s fine. It’s just going to affect one line of your code. It lets you decouple your Elm completely from all other JavaScript, and makes hot reloading easier.
+- **Applications only.** At least for now, elm-watch is focused on Elm applications. I can think of two other use cases:
+
+  - Type checking packages.
+  - Type checking tests.
+
+  In both cases, `elm-test --watch` might be a better alternative. You get to see if your tests pass, too!
+
+  For a package, it doesn’t take many tests to reach the point where if the tests compile, the package compiles too. Other than that, relying on type checking in your editor and occasionally running `elm make` (without arguments) in the terminal might be enough.
+
+- **`window.Elm`.** elm-watch is basically just `elm-watch make`, so the output format is using the good old `window.Elm` global. It might feel ugly and old-school compared to something like `import Elm from "./elm.js"`, but I think it’s fine. It’s just going to affect one line of your code. It lets you decouple your Elm completely from all other JavaScript, makes hot reloading easier and might even be good for browser caching! Your Elm code might change very often, but some JavaScript code (perhaps using an npm package) might be very stable and can then be cached independently from the compiled Elm code.
 
 ## Ideas for the future
 
 - **Interactive errors.** Filter by target or Elm file. Collapse long code snippets (`case` expressions).
 - **Debug redux.** Apart from the standard `--debug` mode, also offer the [Redux DevTools] just one click away. Like [elm-monitor] and [elm-remotedev] but with no extra setup.
-- **Rust rewrite.** While I’ve kept the dependencies to a bare minimum, it would be super nice with a lean, super resource efficient, stand-alone binary. Most of elm-watch’s tests are written at a very high level, so they should be reusable with an implementation written in any language with too much work.
+- **Rust rewrite.** While I’ve kept the npm dependencies for elm-watch to a bare minimum, it would be super nice with a lean, super resource efficient, stand-alone binary. Most of elm-watch’s tests are written at a very high level, so they should be reusable with an implementation written in any language with too much work.
 
 ## Terminal UI
 
-elm-watch displays the status of each target in `elm-watch.json`, some timings, stats, recent events (like files that have changed) and – of course – Elm compilation errors (if any). It should be pretty self explanatory. Use `elm-watch --help` if you wonder what some status emoji or symbol means.
+elm-watch displays the status of each target in `elm-watch.json`, as well as some timings, stats, recent events (like files that have changed) and – of course – Elm compilation errors. It should be pretty self explanatory. Use `elm-watch --help` if you wonder what some status emoji or symbol means.
 
 ## Browser UI
 
@@ -121,9 +131,9 @@ When using `elm-watch hot`, you’ll see a little box in the bottom-left corner 
 ▼ ✅ 13:10:05
 ```
 
-It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful for knowing when the last hot reload was applied. No more wondering “did the hot reload stop working? Or did I edit the wrong piece of code?”
+It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful for knowing when the last hot reload was applied. No more wondering “did the hot reload stop working? Or did I edit the wrong piece of code?” If the time has updated, so has the running code.
 
-Clicking the box expands it, letting switch between “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
+Clicking the box expands it, letting you switch between the “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
 
 Here are some more icons you might see (they’re also explained when you expand the box):
 
@@ -136,13 +146,15 @@ Here are some more icons you might see (they’re also explained when you expand
 Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Many build tools put an overlay across the entire browser window in this case, showing the compilation error. I find that very annoying:
 
 - I prefer seeing the errors in the terminal, in the place they were designed to be displayed.
-- I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Some error overlays prevent you from doing that, or require you to repeatedly close it.
+- I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Some error overlays prevent you from doing that, or require you to repeatedly close it. It’s nice having a runnable version of your app locally as much of the time as possible, even if the code is currently messy, in my opinion.
 
 ## elm-watch.json
 
-An `elm-watch.json` is required to be able to use `elm-watch`. There’s not much to it.
+An `elm-watch.json` file is required to be able to use `elm-watch`. There’s not that much to know about it.
 
-It looks like this (TypeScript definition):
+You can place it anywhere, basically. elm-watch uses the closest `elm-watch.json` file it finds up the directory tree. You can have a single `elm-watch.json` for several apps with different `elm.json` if you want.
+
+The contents of `elm-watch.json` looks like this (TypeScript definition):
 
 ```ts
 type NonEmptyArray<T> = [T, ...Array<T>];
@@ -198,7 +210,7 @@ It’s an object. They keys can be whatever you want, basically. They’re displ
 
 For each target, provide the following:
 
-- inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input. If you’ve every used `elm make` with multiple inputs – you can do that with elm-watch as well.
+- inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input, but if you’ve ever used `elm make` with multiple inputs – you can do that with elm-watch as well.
 - output: `string`. A `.js` file, relative to `elm-watch.json`. Unlike `elm make`, only `.js` is supported (and `.html` isn’t). Once you reach for elm-watch, you’re ready to be in charge of your own HTML file.
 
 ### postprocess
@@ -259,7 +271,7 @@ Here are the differences compared to `node`.
 - Your code runs in the same process (but on a thread) as elm-watch, so you don’t get an isolated environment.
 - Instead of using stdin, stdout, process arguments and exit codes you just provide a good old pure function (see below).
 
-The function must look like so (elm-watch ships with this as a TypeScript definition you can import): `elm-watch-node` scripts must export a function:
+`elm-watch-node` scripts must export a function:
 
 ```js
 // CJS
@@ -269,7 +281,7 @@ module.exports = function postprocess() {};
 export default function postprocess() {}
 ```
 
-Type definition (shipped in the npm package, importable from `"elm-watch/elm-watch-node"`):
+Type definition (importable from `"elm-watch/elm-watch-node"` if you want):
 
 ```ts
 type Postprocess = (options: {
@@ -321,7 +333,7 @@ Some exciting elm-watch hot reloading features:
 
 - **Scroll position.** Hot reloading is just like another regular Elm rerender in elm-watch. Scroll position (and other subtle DOM state) is kept.
 - **Full reloads.** When not possible to hot reload, elm-watch reloads the full page for you. It also tells you why in the browser console.
-- **Complete coverage.** Whatever Elm `Program` type you choose or what change you make, the hot reloading always does the right thing.
+- **Complete coverage.** No matter what Elm `Program` type you choose or what change you make, the hot reloading always does the right thing.
 - **Clever prioritization.** Working on three Elm apps simultaneously? elm-watch compiles the one you interacted with most recently first. Apps that you don’t work on aren’t compiled at all – just type checked, which is much faster!
 
 That said, hot reloading is essentially a hack. But a pretty good one. As long as hot reloading isn’t built into Elm itself, it’s always going to be a hack and not 100 % perfect:
@@ -338,7 +350,7 @@ That said, hot reloading is essentially a hack. But a pretty good one. As long a
 
 - You need a recent enough elm/core version. Otherwise some regexes don’t match. Perfect time to update, though!
 
-In case you’re wondering, elm-watch has its own hot reloading implementation, built with Elm’s needs at the core. In other words, elm-watch is _not_ using the common [elm-hot] package (which is more focused on fitting into the hot reloading systems of webpack and Parcel).
+In case you’re wondering, elm-watch has its own hot reloading implementation, built with Elm’s needs at the core. In other words, elm-watch is _not_ using the common [elm-hot] package (which is more focused on fitting into the hot reloading systems of [webpack] and [Parcel]).
 
 elm-watch’s hot reloading works by injecting an extra little program into your built JavaScript files (when running `elm-watch hot` only, not `elm-watch make`). It renders the browser UI in the bottom-left corner, and connects to elm-watch’s Web Socket server. You’re not supposed to really notice or have to think any of that, but it can help to know how the “magic” works when debugging things. Or just for fun.
 
@@ -358,13 +370,15 @@ With elm-watch HTTPS causes a new complexity. elm-watch uses Web Sockets for hot
 
 In short, you _can_ use a simple `ws://` together with `https://` in _some_ cases. But to get things working all the time, you would have to create a certificate and add it to your computer OS and phone OS so it becomes trusted for real. Which is a bit annoying. If you are doing that and would like to be able to configure elm-watch to use that certificate as well (with `wss://`), please let me know! Until then, elm-watch keeps things simple and _always_ uses `ws://`.
 
-## elm-watch vs generic watcher tools
+### Comparison to other tools
+
+### elm-watch vs generic watcher tools
 
 There are many CLI programs that let you watch for file changes and then run a given command. So you could listen for changes to `.elm` files (as well as `elm.json`) and have `elm make src/Main.elm --output build/main.js` as the command to run. Can’t get much simpler, right? What does elm-watch bring to the table then? Here are some interesting points to better understand what value elm-watch can bring:
 
 - **Timing control.** What happens when files change faster than `elm make` runs? Like, if you happen to save a lot in the editor, refactor across files or switch git branches? Maybe the `elm make` calls queue up – and take a lot of extra time to complete – or maybe some events are dropped and you end up with out-of-date compilation error messages. elm-watch waits a couple of milliseconds after each file change event to let things settle before compiling. And if even more files change while compiling, _one_ new compilation is triggered.
 
-- **Multiple targets.** Your project grows bigger, and suddenly don’t have just `src/Main.elm` but also `src/Admin.elm` and maybe some other apps. Do you just update the command to `elm make src/Main.elm --output build/main.js; elm make src/Admin.elm --output build/main.js`? Now you have many problems:
+- **Multiple targets.** Your project grows bigger, and suddenly you don’t have just `src/Main.elm` but also `src/Admin.elm` and maybe some other apps. Do you just update the command to `elm make src/Main.elm --output build/main.js; elm make src/Admin.elm --output build/main.js`? Now you have many problems:
 
   - **Wasteful compilation.** If you change `src/AdminHelpers.elm`, `src/Main.elm` will be compiled first even though it most likely does not depend on `AdminHelpers`. elm-watch parses the `import`s of your Elm files to know which files affects which targets, and only recompile what’s needed.
   - **Unfortunate ordering.** When you change `src/Shared.elm` (which is used by both targets), you have to wait for `src/Main.elm` to finish compiling before seeing changes to `src/Admin.elm`. The Elm compiler is fast, but the more targets you have the more it adds up. elm-watch compiles the app you interacted with most recently first.
@@ -376,7 +390,19 @@ There are many CLI programs that let you watch for file changes and then run a g
 
 - **Mode switching.** elm-watch makes it super easy to toggle Elm’s debugger, directly from the browser. An ad-hoc command probably means stopping the watcher and restarting with some flag or environment variable set.
 
+### elm-watch vs build tools with Elm support
+
+elm-watch grew out of my frustration with [Parcel], and also [webpack]. Support for other languages than JavaScript and TypeScript always feels a bit like an afterthought in such tools.
+
+[elm-live] and [elm-go] are really cool. Built for Elm and works out of the box so you can get started in no time. I’ve had trouble with bugs, though, and also outgrown them in bigger projects.
+
+[esbuild] has an Elm plugin, but not with hot reloading.
+
+I’ve heard [Vite] is really fast and reliable, including the Elm plugin. But I don’t even feel like trying it at this point. JavaScript build tools come and go. It’s nice not having to change your Elm setup because you switched tooling for JavaScript.
+
+[elm-go]: https://github.com/lucamug/elm-go
 [elm-hot]: https://github.com/klazuka/elm-hot
+[elm-live]: https://github.com/wking-io/elm-live
 [elm-monitor]: https://github.com/layflags/elm-monitor
 [elm-remotedev]: https://github.com/utkarshkukreti/elm-remotedev
 [esbuild]: https://esbuild.github.io/
@@ -384,4 +410,6 @@ There are many CLI programs that let you watch for file changes and then run a g
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
 [redux devtools]: https://github.com/reduxjs/redux-devtools
 [run-pty]: https://github.com/lydell/run-pty/
+[vite]: https://vitejs.dev/
+[webpack]: https://webpack.js.org/
 [worker thread]: https://nodejs.org/api/worker_threads.html
