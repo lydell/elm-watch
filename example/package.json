@@ -3,12 +3,12 @@
   "type": "module",
   "name": "example",
   "scripts": {
-    "postinstall": "elm-tooling install",
+    "postinstall": "npm --prefix public/submodules/seeds-game ci && elm-tooling install",
     "start": "run-pty % elm-watch hot % npm run esbuild -- --serve=9000 --servedir=public % node proxy.js 9000",
     "start-advanced": "run-pty run-pty.json",
     "start-production": "run-pty % esbuild --serve=9000 --servedir=public % node proxy.js 9000",
     "build": "elm-watch make --optimize && npm run esbuild -- --minify",
-    "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/unisonShare.js --bundle --outdir=public/build --public-path=/build/ --loader:.svg=file --loader:.woff2=file"
+    "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/unisonShare.js public/submodules/seeds-game/src/index.ts --bundle --outdir=public/build --public-path=/build/ --loader:.svg=file --loader:.woff2=file --loader:.mp3=file"
   },
   "devDependencies": {
     "elm-tooling": "1.7.0",

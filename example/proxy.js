@@ -86,6 +86,27 @@ const servers = [
   },
   {
     port: 8006,
+    subdomain: "seeds",
+    handler: (req, res, log) => {
+      serveWithEsbuild(
+        req,
+        res,
+        log,
+        req.url.startsWith("/build/")
+          ? req.url
+          : req.url.startsWith("/esbuild/")
+          ? `/build/public/submodules/seeds-game/src/${req.url.replace(
+              "/esbuild/",
+              ""
+            )}`
+          : looksLikeFile(req.url)
+          ? `/submodules/seeds-game${req.url}`
+          : "/submodules/seeds-game/src/index.html"
+      );
+    },
+  },
+  {
+    port: 8007,
     subdomain: "unison.share",
     handler: (req, res, log) => {
       if (req.url.startsWith("/api/")) {
@@ -95,15 +116,15 @@ const servers = [
           req,
           res,
           log,
-          looksLikeFile(req.url)
-            ? req.url.startsWith("/build/")
-              ? req.url
-              : req.url.startsWith("/esbuild/")
-              ? `/build/public/submodules/codebase-ui/src/${req.url.replace(
-                  "/esbuild/",
-                  ""
-                )}`
-              : `/submodules/codebase-ui${req.url}`
+          req.url.startsWith("/build/")
+            ? req.url
+            : req.url.startsWith("/esbuild/")
+            ? `/build/public/submodules/codebase-ui/src/${req.url.replace(
+                "/esbuild/",
+                ""
+              )}`
+            : looksLikeFile(req.url)
+            ? `/submodules/codebase-ui${req.url}`
             : "/submodules/codebase-ui/src/unisonShare.html"
         );
       }

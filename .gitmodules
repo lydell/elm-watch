@@ -13,3 +13,6 @@
 [submodule "example/public/submodules/azimutt"]
 	path = example/public/submodules/azimutt
 	url = git@github.com:lydell/azimutt.git
+[submodule "example/public/submodules/seeds-game"]
+	path = example/public/submodules/seeds-game
+	url = git@github.com:lydell/seeds-game.git

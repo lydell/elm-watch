@@ -75,6 +75,12 @@
             ],
             "output": "public/submodules/kite/dist/elm.js"
         },
+        "Seeds Game": {
+            "inputs": [
+                "public/submodules/seeds-game/src/elm/Main.elm"
+            ],
+            "output": "public/submodules/seeds-game/dist/Main.js"
+        },
         "Unison Share": {
             "inputs": [
                 "public/submodules/codebase-ui/src/UnisonShare.elm"
