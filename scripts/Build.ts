@@ -7,7 +7,7 @@ const BUILD = path.join(DIR, "build");
 const CLIENT_DIR = path.join(DIR, "client");
 
 const READ_MORE =
-  "**[➡️ Full readme](https://github.com/lydell/elm-watch/#readme)**";
+  "**[➡️ Full readme](https://github.com/lydell/elm-watch#readme)**";
 
 type Package = {
   version: string;
