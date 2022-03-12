@@ -19,7 +19,7 @@ npm install --save-dev elm-watch
 
 ## Getting started
 
-Create a file called `elm-watch.json`:
+Create a file called [elm-watch.json](#elm-watchjson):
 
 ```
 npx elm-watch init
@@ -121,7 +121,7 @@ Some more notes:
 
 ## Terminal UI
 
-elm-watch displays the status of each target in `elm-watch.json`, as well as some timings, stats, recent events (like files that have changed) and – of course – Elm compilation errors. It should be pretty self explanatory. Use `elm-watch --help` if you wonder what some status emoji or symbol means.
+elm-watch displays the status of each target in [elm-watch.json](#elm-watchjson), as well as some timings, stats, recent events (like files that have changed) and – of course – Elm compilation errors. It should be pretty self explanatory. Use `elm-watch --help` if you wonder what some status emoji or symbol means.
 
 ## Browser UI
 
@@ -384,7 +384,7 @@ There are many CLI programs that let you watch for file changes and then run a g
   - **Unfortunate ordering.** When you change `src/Shared.elm` (which is used by both targets), you have to wait for `src/Main.elm` to finish compiling before seeing changes to `src/Admin.elm`. The Elm compiler is fast, but the more targets you have the more it adds up. elm-watch compiles the app you interacted with most recently first.
   - **Error overload.** Running many `elm make` commands in sequence means you might see the same error over and over for shared code. An alternative is to stop on the first failing `elm make`, but then you don’t get to see errors at all for later targets until earlier are solved. elm-watch deduplicates compilation errors, so you don’t see the exact same one twice.
 
-- **Build duplication.** You need to maintain your watcher command, and a separate build command for every target. With elm-watch, your targets are defined in `elm-watch.json` so you can both watch and build for production easily.
+- **Build duplication.** You need to maintain your watcher command, and a separate build command for every target. With elm-watch, your targets are defined in [elm-watch.json](#elm-watchjson) so you can both watch and build for production easily.
 
 - **Hot reloading.** That’s just not doable with an ad-hoc command. Sure, you might find some smooth Web Socket CLI, but you still need to do the code injection in Elm’s compiled JS.
 
