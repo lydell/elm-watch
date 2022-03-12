@@ -13,7 +13,7 @@
     "command": ["npm", "run", "esbuild", "--", "--serve=9000", "--servedir=public"],
     "title": "esbuild",
     "status": {
-      "503": ["🚨", "E"],
+      "ERROR": ["🚨", "E"],
       "200": null
     }
   },
