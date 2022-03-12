@@ -140,6 +140,10 @@ describe("Helpers", () => {
     `);
   });
 
+  test("printDurationMs 9999", () => {
+    expect(printDurationMs(9999)).toBe("10.0 s");
+  });
+
   describe("unknownErrorToString", () => {
     test("Error with stack", () => {
       const error = new Error("Some error message");

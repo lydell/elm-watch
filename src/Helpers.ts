@@ -71,9 +71,7 @@ const MiB = KiB ** 2;
 export function printFileSize(fileSize: number): string {
   const [divided, unit] =
     fileSize >= MiB ? [fileSize / MiB, "MiB"] : [fileSize / KiB, "KiB"];
-  const string = divided
-    .toFixed(divided < 10 ? 2 : divided < 100 ? 1 : 0)
-    .padStart(4, " ");
+  const string = toFixed(divided).padStart(4, " ");
   return `${string} ${unit}`;
 }
 
@@ -84,8 +82,22 @@ export function printDurationMs(durationMs: number): string {
   const [string, unit] =
     durationMs < SECOND
       ? [durationMs.toString(), "ms"]
-      : [divided.toFixed(divided < 10 ? 2 : divided < 100 ? 1 : 0), "s"];
+      : [toFixed(divided), "s"];
   return `${string} ${unit}`.padStart(6, " ");
+}
+
+function toFixed(n: number): string {
+  const s1 = n.toFixed(2);
+  if (s1.length <= 4) {
+    return s1;
+  }
+
+  const s2 = n.toFixed(1);
+  if (s2.length <= 4) {
+    return s2;
+  }
+
+  return n.toFixed(0);
 }
 
 export function capitalize(string: string): string {
