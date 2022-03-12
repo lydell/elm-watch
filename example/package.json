@@ -7,7 +7,7 @@
     "start": "run-pty % elm-watch hot % npm run esbuild -- --serve=9000 --servedir=public % node proxy.js 9000",
     "start-advanced": "run-pty run-pty.json",
     "build": "elm-watch make --optimize && npm run esbuild -- --minify",
-    "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/unisonShare.js --bundle --outdir=public/build --loader:.svg=file --loader:.woff2=file"
+    "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/unisonShare.js --bundle --outdir=public/build --public-path=/build/ --loader:.svg=file --loader:.woff2=file"
   },
   "devDependencies": {
     "elm-tooling": "1.7.0",

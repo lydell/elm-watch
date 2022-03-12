@@ -16,11 +16,30 @@ const servers = [
     port: 8001,
     subdomain: "application",
     handler: (req, res, log) => {
-      serveWithEsbuild(req, res, log, "/ApplicationMain.html");
+      serveWithEsbuild(
+        req,
+        res,
+        log,
+        looksLikeFile(req.url) ? req.url : "/ApplicationMain.html"
+      );
     },
   },
   {
     port: 8002,
+    subdomain: "azimutt",
+    handler: (req, res, log) => {
+      serveWithEsbuild(
+        req,
+        res,
+        log,
+        looksLikeFile(req.url)
+          ? `/submodules/azimutt/public${req.url}`
+          : "/submodules/azimutt/public/index.html"
+      );
+    },
+  },
+  {
+    port: 8003,
     subdomain: "concourse",
     handler: (req, res, log) => {
       if (req.url.startsWith("/api/")) {
@@ -30,27 +49,43 @@ const servers = [
           req,
           res,
           log,
-          "/submodules/concourse/web/public/index.html"
+          looksLikeFile(req.url)
+            ? `/submodules/concourse/web${req.url}`
+            : "/submodules/concourse/web/public/index.html"
         );
       }
     },
   },
   {
-    port: 8003,
+    port: 8004,
     subdomain: "elm-spa-example",
     handler: (req, res, log) => {
-      serveWithEsbuild(req, res, log, "/submodules/elm-spa-example/index.html");
-    },
-  },
-  {
-    port: 8004,
-    subdomain: "kite",
-    handler: (req, res, log) => {
-      serveWithEsbuild(req, res, log, "/submodules/kite/src/index.html");
+      serveWithEsbuild(
+        req,
+        res,
+        log,
+        looksLikeFile(req.url)
+          ? `/submodules/elm-spa-example${req.url}`
+          : "/submodules/elm-spa-example/index.html"
+      );
     },
   },
   {
     port: 8005,
+    subdomain: "kite",
+    handler: (req, res, log) => {
+      serveWithEsbuild(
+        req,
+        res,
+        log,
+        looksLikeFile(req.url)
+          ? `/submodules/kite${req.url}`
+          : "/submodules/kite/src/index.html"
+      );
+    },
+  },
+  {
+    port: 8006,
     subdomain: "unison.share",
     handler: (req, res, log) => {
       if (req.url.startsWith("/api/")) {
@@ -60,7 +95,16 @@ const servers = [
           req,
           res,
           log,
-          "/submodules/codebase-ui/src/unisonShare.html"
+          looksLikeFile(req.url)
+            ? req.url.startsWith("/build/")
+              ? req.url
+              : req.url.startsWith("/esbuild/")
+              ? `/build/public/submodules/codebase-ui/src/${req.url.replace(
+                  "/esbuild/",
+                  ""
+                )}`
+              : `/submodules/codebase-ui${req.url}`
+            : "/submodules/codebase-ui/src/unisonShare.html"
         );
       }
     },
@@ -68,12 +112,16 @@ const servers = [
 ];
 
 function serveWithEsbuild(req, res, log, newUrl) {
-  req.url = newUrl;
-  proxyToEsbuild(req, res, (...args) => log(`-> ${newUrl}`, ...args));
+  if (req.url === newUrl) {
+    proxyToEsbuild(req, res, log);
+  } else {
+    req.url = newUrl;
+    proxyToEsbuild(req, res, (...args) => log(`-> ${newUrl}`, ...args));
+  }
 }
 
-function shouldProxyToEsbuild(req) {
-  return /\.\w+$/.test(req.url);
+function looksLikeFile(url) {
+  return /\.\w+$/.test(url);
 }
 
 function proxyToEsbuild(req, res, log) {
@@ -182,7 +230,7 @@ function escapeHtml(string) {
 
 function makeLog(req) {
   const startTime = new Date();
-  const originalRequest = `${req.method} ${req.url}`;
+  const originalRequest = `${req.method} ${req.headers.host} ${req.url}`;
   return (...args) => {
     console.info(
       formatTime(startTime),
@@ -203,12 +251,7 @@ function formatTime(date) {
 
 for (const serverConfig of servers) {
   const server = http.createServer((req, res) => {
-    const log = makeLog(req);
-    if (shouldProxyToEsbuild(req)) {
-      proxyToEsbuild(req, res, log);
-    } else {
-      serverConfig.handler(req, res, log);
-    }
+    serverConfig.handler(req, res, makeLog(req));
   });
   server.listen(serverConfig.port);
 }
@@ -217,20 +260,16 @@ const proxyServer = http.createServer((req, res) => {
   const { host } = req.headers;
   const log = makeLog(req);
 
-  if (shouldProxyToEsbuild(req)) {
-    proxyToEsbuild(req, res, log);
+  const serverConfig = servers.find(
+    (serverConfig) =>
+      host === `${serverConfig.subdomain}.localhost:${PROXY_PORT}`
+  );
+  if (serverConfig === undefined) {
+    log(404);
+    res.writeHead(404);
+    res.end(indexPage(host, req.url));
   } else {
-    const serverConfig = servers.find(
-      (serverConfig) =>
-        host === `${serverConfig.subdomain}.localhost:${PROXY_PORT}`
-    );
-    if (serverConfig === undefined) {
-      log(404);
-      res.writeHead(404);
-      res.end(indexPage(host, req.url));
-    } else {
-      serverConfig.handler(req, res, log);
-    }
+    serverConfig.handler(req, res, log);
   }
 });
 

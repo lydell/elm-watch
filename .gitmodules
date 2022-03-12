@@ -10,3 +10,6 @@
 [submodule "example/public/submodules/kite"]
 	path = example/public/submodules/kite
 	url = git@github.com:lydell/kite.git
+[submodule "example/public/submodules/azimutt"]
+	path = example/public/submodules/azimutt
+	url = git@github.com:lydell/azimutt.git

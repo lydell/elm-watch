@@ -51,6 +51,12 @@
             ],
             "output": "public/build/Frankenstein.js"
         },
+        "Azimutt": {
+            "inputs": [
+                "public/submodules/azimutt/.elm-spa/defaults/Main.elm"
+            ],
+            "output": "public/submodules/azimutt/public/dist/elm.js"
+        },
         "Concourse": {
             "inputs": [
                 "public/submodules/concourse/web/elm/src/Main.elm"
