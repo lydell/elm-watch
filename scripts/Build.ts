@@ -6,9 +6,6 @@ const DIR = path.dirname(__dirname);
 const BUILD = path.join(DIR, "build");
 const CLIENT_DIR = path.join(DIR, "client");
 
-const READ_MORE =
-  "**[➡️ Full readme](https://github.com/lydell/elm-watch#readme)**";
-
 type Package = {
   version: string;
   dependencies: Record<string, string>;
@@ -32,7 +29,7 @@ const FILES_TO_COPY: Array<FileToCopy> = [
   { src: "elm-watch-node.d.ts" },
   {
     src: "README.md",
-    transform: (content) => content.replace(/^##[^]*/m, READ_MORE),
+    transform: (content) => content.replace(/^##[^]*/m, "").trim(),
   },
 ];
 
