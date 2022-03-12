@@ -20,5 +20,8 @@
       "DOM",
       "DOM.Iterable"
     ],
-  }
+  },
+  "exclude": [
+    "example"
+  ]
 }
