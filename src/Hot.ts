@@ -29,6 +29,7 @@ import {
   formatTime,
   join,
   JsonError,
+  printDurationMs,
   silentlyReadIntEnvValue,
   toError,
   toJsonError,
@@ -2428,10 +2429,10 @@ function compileFinishedMessage(
   duration: number
 ): string {
   return `Compilation finished in ${bold(
-    loggerConfig.mockedTimings
-      ? "123"
-      : /* istanbul ignore next */ duration.toString()
-  )} ms.`;
+    printDurationMs(
+      loggerConfig.mockedTimings ? 123 : /* istanbul ignore next */ duration
+    ).trim()
+  )}.`;
 }
 
 function printEventsMessage(

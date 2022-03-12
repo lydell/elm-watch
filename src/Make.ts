@@ -1,6 +1,6 @@
 import * as Compile from "./Compile";
 import { Env } from "./Env";
-import { bold, dim } from "./Helpers";
+import { bold, dim, printDurationMs } from "./Helpers";
 import type { Logger, LoggerConfig } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
@@ -147,9 +147,9 @@ function compileFinishedMessage({
     isTTY: loggerConfig.isTTY,
     emojiName: hasErrors ? "Error" : "Success",
     string: `Compilation finished in ${bold(
-      loggerConfig.mockedTimings
-        ? "123"
-        : /* istanbul ignore next */ duration.toString()
-    )} ms${workersString}`,
+      printDurationMs(
+        loggerConfig.mockedTimings ? 123 : /* istanbul ignore next */ duration
+      ).trim()
+    )}${workersString}`,
   });
 }

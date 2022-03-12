@@ -64,7 +64,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -74,7 +74,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -84,7 +84,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ main⧙   87.5 KiB → 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 …⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -104,7 +104,7 @@ describe("successful make", () => {
          ● elm/core 1.0.5
       ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -119,7 +119,7 @@ describe("successful make", () => {
       ⏳ main: postprocess
       ✅ main⧙   87.5 KiB → 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -147,7 +147,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -157,7 +157,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -167,7 +167,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -177,7 +177,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
@@ -189,7 +189,7 @@ describe("successful make", () => {
       ✅ app⧙                                   1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       ✅ admin⧙                                 1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -216,7 +216,7 @@ describe("successful make", () => {
       ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms⧙ (using 2 elm-watch-node workers).⧘
+      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 2 elm-watch-node workers).⧘
     `);
   });
 
@@ -226,7 +226,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ 💣 Mine Sweeper Clone⧙                                       1 ms Q | 1.23 s E⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -236,7 +236,7 @@ describe("successful make", () => {
       ✅ Dependencies
       ✅ 💣 Mine Sweeper Clone⧙                          87.5 KiB     1 ms Q | 1.23 s E⧘
 
-      ✅ Compilation finished in ⧙123⧘ ms.
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
   });
 });

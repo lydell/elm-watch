@@ -702,7 +702,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -744,7 +744,7 @@ describe("errors", () => {
 
           🚨 ⧙1⧘ error found
 
-          🚨 Compilation finished in ⧙123⧘ ms.
+          🚨 Compilation finished in ⧙123 ms⧘.
         `);
       });
 
@@ -767,7 +767,7 @@ describe("errors", () => {
 
           📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
           ⧙-- WATCHER ERROR ---------------------------------------------------------------⧘
 
           The file watcher encountered an error, which means that it cannot continue.
@@ -804,7 +804,7 @@ describe("errors", () => {
 
           📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         `);
     });
 
@@ -825,7 +825,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -854,7 +854,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -876,7 +876,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -936,7 +936,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -967,7 +967,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -998,7 +998,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1031,7 +1031,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -1310,7 +1310,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1344,7 +1344,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1376,7 +1376,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -1405,7 +1405,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1432,7 +1432,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1459,7 +1459,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1494,7 +1494,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1520,7 +1520,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1552,7 +1552,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -1577,7 +1577,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1603,7 +1603,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1631,7 +1631,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1659,7 +1659,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1682,7 +1682,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1714,7 +1714,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1751,7 +1751,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1819,7 +1819,7 @@ describe("errors", () => {
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -1841,7 +1841,7 @@ describe("errors", () => {
 
       🚨 ⧙1⧘ error found
 
-      🚨 Compilation finished in ⧙123⧘ ms.
+      🚨 Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -1864,7 +1864,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1888,7 +1888,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1916,7 +1916,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1943,7 +1943,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2068,7 +2068,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2194,7 +2194,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2223,7 +2223,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2257,7 +2257,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2282,7 +2282,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2311,7 +2311,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -2336,7 +2336,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2359,7 +2359,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2383,7 +2383,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2412,7 +2412,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2441,7 +2441,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2468,7 +2468,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2502,7 +2502,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2541,7 +2541,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2574,7 +2574,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2607,7 +2607,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2646,7 +2646,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms⧙ (using 1 elm-watch-node worker).⧘
+        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
   });
@@ -2743,7 +2743,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -2773,7 +2773,7 @@ describe("errors", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -2869,7 +2869,7 @@ describe("errors", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -2919,7 +2919,7 @@ describe("errors", () => {
 
         🚨 ⧙2⧘ errors found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
 
       expect(fs.existsSync(appPath)).toBe(true);
@@ -2952,7 +2952,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        🚨 Compilation finished in ⧙123⧘ ms.
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -3082,7 +3082,7 @@ describe("errors", () => {
 
       🚨 ⧙2⧘ errors found
 
-      🚨 Compilation finished in ⧙123⧘ ms.
+      🚨 Compilation finished in ⧙123 ms⧘.
     `);
   });
 

@@ -526,14 +526,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Worker: elm make
       ✅ Worker⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Worker⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -764,7 +764,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Removed⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -819,7 +819,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Readonly⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -874,7 +874,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InjectError⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -1634,7 +1634,7 @@ describe("hot", () => {
 
         ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
         ℹ️ 13:10:05 Web socket connected needing compilation of: Html⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
@@ -1727,7 +1727,7 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -1737,7 +1737,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
@@ -1763,14 +1763,14 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json
 
@@ -1791,14 +1791,14 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -1939,14 +1939,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -1990,7 +1990,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ HtmlMain: elm make
@@ -1999,7 +1999,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 HtmlMain
 
       ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
@@ -2023,7 +2023,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 HtmlMain
 
       ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
@@ -2047,7 +2047,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/OtherMain.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 HtmlMain
 
       ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
@@ -2071,7 +2071,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 HtmlMain
 
       ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
@@ -2095,7 +2095,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/HtmlMain.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 HtmlMain
 
       ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
@@ -2119,7 +2119,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/OtherMain.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 HtmlMain
 
       ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
@@ -2137,7 +2137,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -2223,14 +2223,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -2277,7 +2277,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -2338,7 +2338,7 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -2348,7 +2348,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
@@ -2382,7 +2382,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -2392,7 +2392,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -2415,7 +2415,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       🟢 HtmlMain: elm make done
       ⏳ HtmlMain: postprocess
@@ -2425,7 +2425,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -2518,14 +2518,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -2551,14 +2551,14 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       🚨 HtmlMain
 
@@ -2581,14 +2581,14 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/Html.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -2663,14 +2663,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain1: elm make
       ✅ HtmlMain1⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain1⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -2734,14 +2734,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ HtmlMain: elm make
       ✅ HtmlMain⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: HtmlMain⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -2812,14 +2812,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Html: elm make
       ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Html⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -2836,7 +2836,7 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/HtmlMain.elm
       ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/Worker.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -2886,14 +2886,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Target1: elm make
       ✅ Target1⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Target1⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -2960,7 +2960,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -3013,7 +3013,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
@@ -3022,7 +3022,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -3042,7 +3042,7 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm
       ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -3119,7 +3119,7 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main: elm make
       🟢 Main: elm make done
       ⏳ Main: postprocess
@@ -3129,7 +3129,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
@@ -3151,7 +3151,7 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm
       ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -3234,7 +3234,7 @@ describe("hot", () => {
       📊 ⧙elm-watch-node workers:⧘ 1
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Two: elm make
       ⚪️ One: queued
       🟢 Two: elm make done
@@ -3250,7 +3250,7 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: One
       ℹ️ 13:10:05 Web socket connected needing compilation of: Two⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙elm-watch-node workers:⧘ 2
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
@@ -3500,7 +3500,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main4: elm make
       ⚪️ Main3: queued
       ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
@@ -3511,7 +3511,7 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main3
       ℹ️ 13:10:05 Web socket connected needing compilation of: Main4⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -3535,14 +3535,14 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main4: elm make
       ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Main4.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -3597,7 +3597,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Two: elm make
       ⚪️ One: queued
       ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
@@ -3608,7 +3608,7 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: One
       ℹ️ 13:10:05 Web socket connected needing compilation of: Two⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -3626,7 +3626,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/prioritization/src/Shared.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ One: elm make
       ⚪️ Two: queued
       ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
@@ -3636,7 +3636,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/prioritization/src/Shared.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -3691,14 +3691,14 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main: elm make
       ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -3723,7 +3723,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 Main
 
       ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
@@ -3744,7 +3744,7 @@ describe("hot", () => {
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       🚨 Main
 
       ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
@@ -3766,7 +3766,7 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Main.elm
       ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/duplicate-inputs/src/Symlink.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -4454,14 +4454,14 @@ describe("hot", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         ⏳ RemoveInput: elm make
         ✅ RemoveInput⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: RemoveInput⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -4486,7 +4486,7 @@ describe("hot", () => {
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         ⏳ Dependencies
         ✅ Dependencies
         ⏳ RemoveInput: elm make
@@ -4495,7 +4495,7 @@ describe("hot", () => {
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
 
       async function assert1(div: HTMLDivElement): Promise<void> {
@@ -5732,14 +5732,14 @@ describe("hot", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         ⏳ InterruptElm: elm make
         ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InterruptElm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -5755,7 +5755,7 @@ describe("hot", () => {
 
         ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/InterruptElm.elm
         ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/InterruptElm.elm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
 
       function assertInit(div: HTMLDivElement): void {
@@ -5796,14 +5796,14 @@ describe("hot", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         ⏳ InterruptElm: elm make
         ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InterruptElm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -5819,7 +5819,7 @@ describe("hot", () => {
 
         ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/InterruptElm.elm
         ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -5849,14 +5849,14 @@ describe("hot", () => {
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         ⏳ InterruptElm: elm make
         ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InterruptElm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
@@ -5933,7 +5933,7 @@ describe("hot", () => {
         📊 ⧙elm-watch-node workers:⧘ 1
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         ⏳ SlowPostprocess: elm make
         🟢 SlowPostprocess: elm make done
         ⏳ SlowPostprocess: postprocess
@@ -5943,7 +5943,7 @@ describe("hot", () => {
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: SlowPostprocess⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
         📊 ⧙elm-watch-node workers:⧘ 1
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
@@ -5962,7 +5962,7 @@ describe("hot", () => {
         ⧙ℹ️ 13:10:05 Changed compilation mode to "optimize" of: SlowPostprocess
         ℹ️ 13:10:05 Web socket disconnected for: SlowPostprocess
         ℹ️ 13:10:05 Web socket connected needing compilation of: SlowPostprocess⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123⧘ ms.
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
         📊 ⧙elm-watch-node workers:⧘ 1
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
