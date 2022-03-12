@@ -42,8 +42,10 @@ jobs:
         id: cache-node_modules
         uses: actions/cache@v2
         with:
-          path: example/node_modules
-          key: node_modules-${{ hashFiles('example/package.json', 'example/package-lock.json') }}
+          path: |
+            example/node_modules
+            example/public/submodules/seeds-game/node_modules
+          key: node_modules-${{ hashFiles('example/package.json', 'example/package-lock.json', 'example/public/submodules/seeds-game/package.json',  'example/public/submodules/seeds-game/package-lock.json') }}
 
       - name: Cache ~/.elm
         uses: actions/cache@v2
