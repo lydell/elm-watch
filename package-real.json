@@ -1,6 +1,6 @@
 {
   "name": "elm-watch",
-  "version": "0.1.0",
+  "version": "1.0.0-beta.1",
   "author": "Simon Lydell",
   "license": "MIT",
   "description": "`elm make` in watch mode. Fast and reliable.",
