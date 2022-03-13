@@ -129,7 +129,13 @@ const TARGET_NAME = "%TARGET_NAME%";
 const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
   "%INITIAL_ELM_COMPILED_TIMESTAMP%"
 );
-const COMPILATION_MODE = "%COMPILATION_MODE%" as CompilationModeWithProxy;
+// Note: The JS code running is compiled in `ORIGINAL_COMPILATION_MODE`. But
+// that does not necessarily match the selected compilation mode for the target.
+// If you have a `Debug.log` and switch to optimize mode it won’t be possible to
+// compile, because `Debug.log` isn’t allowed in optimize mode. Therefore we
+// have the selected compilation mode in the `Model` and the running mode here.
+const ORIGINAL_COMPILATION_MODE =
+  "%ORIGINAL_COMPILATION_MODE%" as CompilationModeWithProxy;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
@@ -201,6 +207,7 @@ type UiMsg =
 
 type Model = {
   status: Status;
+  compilationMode: CompilationModeWithProxy;
   elmCompiledTimestamp: number;
   uiExpanded: boolean;
 };
@@ -243,11 +250,11 @@ type Status =
   | {
       tag: "Busy";
       date: Date;
-      compilationMode?: CompilationMode;
     }
   | {
       tag: "CompileError";
       date: Date;
+      sendKey: SendKey;
     }
   | {
       tag: "Connecting";
@@ -545,6 +552,7 @@ function initWebSocket(
 const init = (date: Date): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
+    compilationMode: ORIGINAL_COMPILATION_MODE,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
   };
@@ -676,7 +684,8 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
       return [
         {
           ...model,
-          status: { tag: "Busy", date, compilationMode: msg.compilationMode },
+          status: { tag: "Busy", date },
+          compilationMode: msg.compilationMode,
         },
         [
           {
@@ -708,7 +717,7 @@ function onWebSocketToClientMessage(
       return statusChanged(date, msg, model);
 
     case "SuccessfullyCompiled":
-      return msg.compilationMode !== COMPILATION_MODE
+      return msg.compilationMode !== ORIGINAL_COMPILATION_MODE
         ? [
             {
               ...model,
@@ -716,18 +725,20 @@ function onWebSocketToClientMessage(
                 tag: "WaitingForReload",
                 date,
                 reasons:
-                  COMPILATION_MODE === "proxy"
+                  ORIGINAL_COMPILATION_MODE === "proxy"
                     ? []
                     : [
-                        `compilation mode changed from ${COMPILATION_MODE} to ${msg.compilationMode}.`,
+                        `compilation mode changed from ${ORIGINAL_COMPILATION_MODE} to ${msg.compilationMode}.`,
                       ],
               },
+              compilationMode: msg.compilationMode,
             },
             [],
           ]
         : [
             {
               ...model,
+              compilationMode: msg.compilationMode,
               elmCompiledTimestamp: msg.elmCompiledTimestamp,
             },
             [{ tag: "Eval", code: msg.code }],
@@ -765,6 +776,7 @@ function statusChanged(
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
+          compilationMode: status.compilationMode,
         },
         [
           {
@@ -781,8 +793,8 @@ function statusChanged(
           status: {
             tag: "Busy",
             date,
-            compilationMode: status.compilationMode,
           },
+          compilationMode: status.compilationMode,
         },
         [],
       ];
@@ -806,7 +818,12 @@ function statusChanged(
       return [
         {
           ...model,
-          status: { tag: "CompileError", date },
+          status: {
+            tag: "CompileError",
+            date,
+            sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+          },
+          compilationMode: status.compilationMode,
         },
         [
           {
@@ -910,7 +927,7 @@ const runCmd =
             version: VERSION,
             webSocketUrl: mutable.webSocket.url,
             targetName: TARGET_NAME,
-            compilationMode: COMPILATION_MODE,
+            originalCompilationMode: ORIGINAL_COMPILATION_MODE,
             initializedElmAppsStatus: checkInitializedElmAppsStatus(),
           },
           cmd.manageFocus
@@ -1014,25 +1031,28 @@ const ElmModule: Decode.Decoder<Array<ProgramType>> = Decode.chain(
 const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
+  // If this target is a proxy, or if another one is, it’s not safe to touch
+  // `window.Elm` since it can throw errors by design, but not errors that
+  // we want to show with a different icon. In this case, we don’t know if
+  // it will be possible to switch to debug mode, so don’t allow that yet.
+  if (window.Elm !== undefined && "__elmWatchProxy" in window.Elm) {
+    return {
+      tag: "DebuggerModeStatus",
+      status: {
+        tag: "Disabled",
+        reason: noDebuggerYetReason,
+      },
+    };
+  }
+
   let programTypes;
   try {
-    if (window.Elm !== undefined && "__elmWatchProxy" in window.Elm) {
-      return {
-        tag: "DebuggerModeStatus",
-        status: { tag: "Enabled" },
-      };
-    }
     programTypes = ProgramTypes(window);
   } catch (unknownError) {
-    return COMPILATION_MODE === "proxy"
-      ? {
-          tag: "DebuggerModeStatus",
-          status: { tag: "Enabled" },
-        }
-      : {
-          tag: "DecodeError",
-          message: possiblyDecodeErrorToString(unknownError),
-        };
+    return {
+      tag: "DecodeError",
+      message: possiblyDecodeErrorToString(unknownError),
+    };
   }
 
   if (programTypes.length === 0) {
@@ -1157,7 +1177,7 @@ type Info = {
   version: string;
   webSocketUrl: string;
   targetName: string;
-  compilationMode: CompilationModeWithProxy;
+  originalCompilationMode: CompilationModeWithProxy;
   initializedElmAppsStatus: InitializedElmAppsStatus;
 };
 
@@ -1352,7 +1372,12 @@ function view(
         },
       }
     : passedModel;
-  const statusData = viewStatus(dispatch, model.status, info);
+  const statusData = viewStatus(
+    dispatch,
+    model.status,
+    model.compilationMode,
+    info
+  );
 
   return h(
     HTMLDivElement,
@@ -1380,7 +1405,7 @@ function view(
           model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch"
         )
       ),
-      compilationModeIcon(info.compilationMode),
+      compilationModeIcon(model.compilationMode),
       icon(statusData.icon, statusData.status),
       h(
         HTMLTimeElement,
@@ -1460,6 +1485,7 @@ type StatusData = {
 function viewStatus(
   dispatch: (msg: UiMsg) => void,
   status: Status,
+  compilationMode: CompilationModeWithProxy,
   info: Info
 ): StatusData {
   switch (status.tag) {
@@ -1471,9 +1497,10 @@ function viewStatus(
         content: viewCompilationModeChooser({
           dispatch,
           sendKey: undefined,
-          compilationMode: status.compilationMode ?? info.compilationMode,
-          initializedElmAppsStatus: info.initializedElmAppsStatus,
-          targetName: info.targetName,
+          compilationMode,
+          // Avoid the warning flashing by when switching modes (which is usually very fast).
+          warnAboutCompilationModeMismatch: false,
+          info,
         }),
       };
 
@@ -1483,7 +1510,22 @@ function viewStatus(
         status: "Compilation error",
         dl: [],
         content: [
-          h(HTMLParagraphElement, {}, "Check the terminal to see errors!"),
+          ...viewCompilationModeChooser({
+            dispatch,
+            sendKey: status.sendKey,
+            compilationMode,
+            warnAboutCompilationModeMismatch: true,
+            info,
+          }),
+          h(
+            HTMLParagraphElement,
+            {},
+            h(
+              HTMLElement,
+              { localName: "strong" },
+              "Check the terminal to see errors!"
+            )
+          ),
         ],
       };
 
@@ -1522,9 +1564,9 @@ function viewStatus(
         content: viewCompilationModeChooser({
           dispatch,
           sendKey: status.sendKey,
-          compilationMode: info.compilationMode,
-          initializedElmAppsStatus: info.initializedElmAppsStatus,
-          targetName: info.targetName,
+          compilationMode,
+          warnAboutCompilationModeMismatch: true,
+          info,
         }),
       };
 
@@ -1636,6 +1678,8 @@ type Toggled =
       tag: "Enabled";
     };
 
+const noDebuggerYetReason = "The Elm debugger isn't available at this point.";
+
 function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
   return `The Elm debugger isn't supported by ${humanList(
     Array.from(noDebuggerProgramTypes, (programType) => `\`${programType}\``),
@@ -1658,16 +1702,16 @@ function viewCompilationModeChooser({
   dispatch,
   sendKey,
   compilationMode: selectedMode,
-  initializedElmAppsStatus,
-  targetName,
+  warnAboutCompilationModeMismatch,
+  info,
 }: {
   dispatch: (msg: UiMsg) => void;
   sendKey: SendKey | undefined;
   compilationMode: CompilationModeWithProxy;
-  initializedElmAppsStatus: InitializedElmAppsStatus;
-  targetName: string;
+  warnAboutCompilationModeMismatch: boolean;
+  info: Info;
 }): Array<HTMLElement> {
-  switch (initializedElmAppsStatus.tag) {
+  switch (info.initializedElmAppsStatus.tag) {
     case "DecodeError":
       return [
         h(
@@ -1675,7 +1719,7 @@ function viewCompilationModeChooser({
           {},
           "window.Elm does not look like expected! This is the error message:"
         ),
-        h(HTMLPreElement, {}, initializedElmAppsStatus.message),
+        h(HTMLPreElement, {}, info.initializedElmAppsStatus.message),
       ];
 
     case "NoProgramsAtAll":
@@ -1692,7 +1736,7 @@ function viewCompilationModeChooser({
         {
           mode: "debug",
           name: "Debug",
-          status: initializedElmAppsStatus.status,
+          status: info.initializedElmAppsStatus.status,
         },
         { mode: "standard", name: "Standard", status: { tag: "Enabled" } },
         { mode: "optimize", name: "Optimize", status: { tag: "Enabled" } },
@@ -1716,7 +1760,7 @@ function viewCompilationModeChooser({
               { className: status.tag },
               h(HTMLInputElement, {
                 type: "radio",
-                name: `CompilationMode-${targetName}`,
+                name: `CompilationMode-${info.targetName}`,
                 value: mode,
                 checked: mode === selectedMode,
                 disabled: sendKey === undefined || status.tag === "Disabled",
@@ -1732,7 +1776,19 @@ function viewCompilationModeChooser({
                       },
               }),
               ...(status.tag === "Enabled"
-                ? [nameWithIcon]
+                ? [
+                    nameWithIcon,
+                    warnAboutCompilationModeMismatch &&
+                    mode === selectedMode &&
+                    selectedMode !== info.originalCompilationMode &&
+                    info.originalCompilationMode !== "proxy"
+                      ? h(
+                          HTMLElement,
+                          { localName: "small" },
+                          `Note: The code currently running is in ${ORIGINAL_COMPILATION_MODE} mode.`
+                        )
+                      : undefined,
+                  ]
                 : [
                     nameWithIcon,
                     h(HTMLElement, { localName: "small" }, status.reason),
@@ -1751,7 +1807,7 @@ function renderMockStatuses(getNow: GetNow, root: Element): void {
   const info: Omit<Info, "targetName"> = {
     version: VERSION,
     webSocketUrl: "ws://localhost:53167",
-    compilationMode: "standard",
+    originalCompilationMode: "standard",
     initializedElmAppsStatus: {
       tag: "DebuggerModeStatus",
       status: { tag: "Enabled" },
@@ -1760,7 +1816,10 @@ function renderMockStatuses(getNow: GetNow, root: Element): void {
 
   const mockStatuses: Record<
     string,
-    Status & { info?: Omit<Info, "targetName"> }
+    Status & {
+      info?: Omit<Info, "targetName">;
+      compilationMode?: CompilationMode;
+    }
   > = {
     Busy: {
       tag: "Busy",
@@ -1775,6 +1834,23 @@ function renderMockStatuses(getNow: GetNow, root: Element): void {
       tag: "Idle",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+    },
+    NoDebuggerYetWithDebugLogOptimizeError: {
+      tag: "CompileError",
+      date,
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      info: {
+        ...info,
+        originalCompilationMode: "standard",
+        initializedElmAppsStatus: {
+          tag: "DebuggerModeStatus",
+          status: {
+            tag: "Disabled",
+            reason: noDebuggerYetReason,
+          },
+        },
+      },
+      compilationMode: "optimize",
     },
     DisabledDebugger1: {
       tag: "Idle",
@@ -1836,6 +1912,7 @@ function renderMockStatuses(getNow: GetNow, root: Element): void {
     CompileError: {
       tag: "CompileError",
       date,
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
     },
     Connecting: {
       tag: "Connecting",
@@ -1887,6 +1964,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     const targetRoot = createTargetRoot(targetName);
     const model: Model = {
       status,
+      compilationMode: status.compilationMode ?? "standard",
       elmCompiledTimestamp: 0,
       uiExpanded: true,
     };

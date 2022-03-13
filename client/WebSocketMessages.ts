@@ -8,6 +8,7 @@ const StatusChanged = Decode.fieldsAuto({
   status: Decode.fieldsUnion("tag", {
     AlreadyUpToDate: Decode.fieldsAuto({
       tag: () => "AlreadyUpToDate" as const,
+      compilationMode: CompilationMode,
     }),
     Busy: Decode.fieldsAuto({
       tag: () => "Busy" as const,
@@ -15,6 +16,7 @@ const StatusChanged = Decode.fieldsAuto({
     }),
     CompileError: Decode.fieldsAuto({
       tag: () => "CompileError" as const,
+      compilationMode: CompilationMode,
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,

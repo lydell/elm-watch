@@ -561,7 +561,7 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
-      ◯ (disabled) Debug
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◯ (disabled) Standard
       ◯ (disabled) Optimize
       ▲ ⏳ 13:10:05 Worker
@@ -572,7 +572,7 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
-      ◯ (disabled) Debug
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       ▲ ⏳ 13:10:05 Worker
@@ -781,6 +781,10 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Compilation error
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ Standard
+      ◯ Optimize
       Check the terminal to see errors!
       ▲ 🚨 13:10:05 Removed
     `);
@@ -836,6 +840,10 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Compilation error
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ Standard
+      ◯ Optimize
       Check the terminal to see errors!
       ▲ 🚨 13:10:05 Readonly
     `);
@@ -891,6 +899,10 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Compilation error
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ Standard
+      ◯ Optimize
       Check the terminal to see errors!
       ▲ 🚨 13:10:05 InjectError
     `);
@@ -1109,7 +1121,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◯ (disabled) Debug
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 ParamsDecodeError
@@ -1442,7 +1454,7 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
         ◉ (disabled) Optimize 🚀
-        ▲ ⏳ 13:10:05 SendBadJson
+        ▲ 🚀 ⏳ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
         elm-watch %VERSION%
@@ -1457,7 +1469,7 @@ describe("hot", () => {
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        ▲ ❌ 13:10:05 SendBadJson
+        ▲ 🚀 ❌ 13:10:05 SendBadJson
       `);
     });
 
@@ -1550,7 +1562,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◯ (disabled) Debug
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 Reconnect
@@ -1561,7 +1573,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◯ (disabled) Debug
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 Reconnect
@@ -3306,7 +3318,7 @@ describe("hot", () => {
       ================================================================================
       ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 13:10:05 Main
+      ▼ 🐛 ⏳ 13:10:05 Main
       ================================================================================
       ▼ 🐛 🔌 13:10:05 Main
       ================================================================================
@@ -3355,7 +3367,7 @@ describe("hot", () => {
       ================================================================================
       ▼ ⏳ 13:10:05 Main
       ================================================================================
-      ▼ ⏳ 13:10:05 Main
+      ▼ 🐛 ⏳ 13:10:05 Main
       ================================================================================
       ▼ 🐛 🔌 13:10:05 Main
       ================================================================================
@@ -4022,7 +4034,7 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
         ◉ (disabled) Optimize 🚀
-        ▲ ⏳ 13:10:05 HtmlMain
+        ▲ 🚀 ⏳ 13:10:05 HtmlMain
         ================================================================================
         target HtmlMain
         elm-watch %VERSION%
@@ -4033,7 +4045,7 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
         ◉ (disabled) Optimize 🚀
-        ▲ ⏳ 13:10:05 HtmlMain
+        ▲ 🚀 ⏳ 13:10:05 HtmlMain
         ================================================================================
         ▼ 🚀 🔌 13:10:05 HtmlMain
         ================================================================================
@@ -5114,7 +5126,7 @@ describe("hot", () => {
           updated 2022-02-05 13:10:05
           status Waiting for compilation
           Compilation mode
-          ◯ (disabled) Debug
+          ◯ (disabled) Debug The Elm debugger isn't available at this point.
           ◯ (disabled) Standard
           ◯ (disabled) Optimize
           ▲ ⏳ 13:10:05 HtmlMain
@@ -5125,7 +5137,7 @@ describe("hot", () => {
           updated 2022-02-05 13:10:05
           status Waiting for compilation
           Compilation mode
-          ◯ (disabled) Debug
+          ◯ (disabled) Debug The Elm debugger isn't available at this point.
           ◉ (disabled) Standard
           ◯ (disabled) Optimize
           ▲ ⏳ 13:10:05 HtmlMain
@@ -5313,7 +5325,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◯ (disabled) Debug
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         ▲ ⏳ 13:10:05 MultipleTargets
@@ -5326,10 +5338,10 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug 🐛
+        ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
         ▼ 🔌 13:10:05 MultipleTargetsOther1
         ================================================================================
@@ -5339,10 +5351,10 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug 🐛
+        ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
         ▼ ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
@@ -5352,12 +5364,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug 🐛
+        ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5365,12 +5377,12 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
-        ◉ (disabled) Debug 🐛
+        ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ▲ ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 MultipleTargetsOther1
+        ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
         ================================================================================
         target MultipleTargets
         elm-watch %VERSION%
@@ -5378,7 +5390,7 @@ describe("hot", () => {
         updated 2022-02-05 13:10:05
         status Waiting for reload
         Waiting for other targets to finish compiling…
-        ▲ ⏳ 13:10:05 MultipleTargets
+        ▲ 🐛 ⏳ 13:10:05 MultipleTargets
         ================================================================================
         ▼ 🐛 🔌 13:10:05 MultipleTargets
         ================================================================================
@@ -5866,7 +5878,7 @@ describe("hot", () => {
       `);
     });
 
-    test.only("Switching to optimize mode with Debug.log and switching back", async () => {
+    test("Switching to optimize mode with Debug.log and switching back", async () => {
       const { go } = runHotReload({
         name: "DebugLog",
         programType: "Html",
@@ -5887,9 +5899,174 @@ describe("hot", () => {
         }
       });
 
-      expect(terminal).toMatchInlineSnapshot();
+      expect(terminal).toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ DebugLog: elm make (typecheck only)
+        ✅ DebugLog⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      expect(renders).toMatchInlineSnapshot();
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ⏳ DebugLog: elm make
+        ✅ DebugLog⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: DebugLog⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: DebugLog
+        ℹ️ 13:10:05 Web socket connected for: DebugLog⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+        ⏳ DebugLog: elm make --optimize
+        🚨 DebugLog
+
+        ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
+        ⧙Target: DebugLog⧘
+
+        There are uses of the \`Debug\` module in the following modules:
+
+            ⧙DebugLog⧘
+
+        But the --optimize flag only works if all \`Debug\` functions are removed!
+
+        ⧙Note⧘: The issue is that --optimize strips out info needed by \`Debug\` functions.
+        Here are two examples:
+
+            (1) It shortens record field names. This makes the generated JavaScript is
+            smaller, but \`Debug.toString\` cannot know the real field names anymore.
+
+            (2) Values like \`type Height = Height Float\` are unboxed. This reduces
+            allocation, but it also means that \`Debug.toString\` cannot tell if it is
+            looking at a \`Height\` or \`Float\` value.
+
+        There are a few other cases like that, and it will be much worse once we start
+        inlining code. That optimization could move \`Debug.log\` and \`Debug.todo\` calls,
+        resulting in unpredictable behavior. I hope that clarifies why this restriction
+        exists!
+
+        🚨 ⧙1⧘ error found
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Changed compilation mode to "optimize" of: DebugLog⧘
+        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ⏳ DebugLog: elm make
+        ✅ DebugLog⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Changed compilation mode to "standard" of: DebugLog⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 DebugLog
+        ================================================================================
+        ▼ ⏳ 13:10:05 DebugLog
+        ================================================================================
+        ▼ ⏳ 13:10:05 DebugLog
+        ================================================================================
+        ▼ 🔌 13:10:05 DebugLog
+        ================================================================================
+        ▼ 🔌 13:10:05 DebugLog
+        ================================================================================
+        ▼ ⏳ 13:10:05 DebugLog
+        ================================================================================
+        ▼ ✅ 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize 🚀
+        ▲ 🚀 ⏳ 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize 🚀
+        ▲ 🚀 ⏳ 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ Standard
+        ◉ Optimize 🚀 Note: The code currently running is in standard mode.
+        Check the terminal to see errors!
+        ▲ 🚀 🚨 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ▲ ⏳ 13:10:05 DebugLog
+        ================================================================================
+        target DebugLog
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ▲ ✅ 13:10:05 DebugLog
+      `);
     });
 
     test("Changed record fields in optimize with postprocess", async () => {

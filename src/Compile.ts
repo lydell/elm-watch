@@ -491,6 +491,7 @@ export type HandleOutputActionResult =
   | {
       tag: "CompileError";
       outputPath: OutputPath;
+      compilationMode: CompilationMode;
     }
   | {
       tag: "FullyCompiledJS";
@@ -731,18 +732,30 @@ async function compileOneOutput({
     case "elm make success + walker failure":
       outputState.status = combinedResult.walkerError;
       updateStatusLineHelper();
-      return { tag: "CompileError", outputPath };
+      return {
+        tag: "CompileError",
+        outputPath,
+        compilationMode: outputState.compilationMode,
+      };
 
     case "elm make failure + walker success":
       outputState.status = combinedResult.elmMakeError;
       updateStatusLineHelper();
-      return { tag: "CompileError", outputPath };
+      return {
+        tag: "CompileError",
+        outputPath,
+        compilationMode: outputState.compilationMode,
+      };
 
     case "elm make failure + walker failure":
       // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
       outputState.status = combinedResult.elmMakeError;
       updateStatusLineHelper();
-      return { tag: "CompileError", outputPath };
+      return {
+        tag: "CompileError",
+        outputPath,
+        compilationMode: outputState.compilationMode,
+      };
   }
 }
 
@@ -769,7 +782,11 @@ function onCompileSuccess(
             const error = toError(unknownError);
             outputState.status = { tag: "ReadOutputError", error };
             updateStatusLineHelper();
-            return { tag: "CompileError", outputPath };
+            return {
+              tag: "CompileError",
+              outputPath,
+              compilationMode: outputState.compilationMode,
+            };
           }
           outputState.status = {
             tag: "Success",
@@ -790,7 +807,11 @@ function onCompileSuccess(
             const error = toError(unknownError);
             outputState.status = { tag: "ReadOutputError", error };
             updateStatusLineHelper();
-            return { tag: "CompileError", outputPath };
+            return {
+              tag: "CompileError",
+              outputPath,
+              compilationMode: outputState.compilationMode,
+            };
           }
           outputState.status = {
             tag: "QueuedForPostprocess",
@@ -813,7 +834,11 @@ function onCompileSuccess(
         const error = toError(unknownError);
         outputState.status = { tag: "ReadOutputError", error };
         updateStatusLineHelper();
-        return { tag: "CompileError", outputPath };
+        return {
+          tag: "CompileError",
+          outputPath,
+          compilationMode: outputState.compilationMode,
+        };
       }
 
       const recordFields = Inject.getRecordFields(
@@ -831,7 +856,11 @@ function onCompileSuccess(
         case "InjectSearchAndReplaceNotFound":
           outputState.status = result;
           updateStatusLineHelper();
-          return { tag: "CompileError", outputPath };
+          return {
+            tag: "CompileError",
+            outputPath,
+            compilationMode: outputState.compilationMode,
+          };
 
         case "Success":
           switch (postprocess.tag) {
@@ -869,7 +898,11 @@ function onCompileSuccess(
                   reasonForWriting: "InjectWebSocketClient",
                 };
                 updateStatusLineHelper();
-                return { tag: "CompileError", outputPath };
+                return {
+                  tag: "CompileError",
+                  outputPath,
+                  compilationMode: outputState.compilationMode,
+                };
               }
               const recordFieldsChanged = Inject.recordFieldsChanged(
                 outputState.recordFields,
@@ -1087,7 +1120,11 @@ async function postprocessHelper({
         reasonForWriting: "Postprocess",
       };
       updateStatusLineHelper();
-      return { tag: "CompileError", outputPath };
+      return {
+        tag: "CompileError",
+        outputPath,
+        compilationMode: outputState.compilationMode,
+      };
     }
     const recordFieldsChanged = Inject.recordFieldsChanged(
       outputState.recordFields,
@@ -1123,7 +1160,11 @@ async function postprocessHelper({
 
   outputState.status = postprocessResult;
   updateStatusLineHelper();
-  return { tag: "CompileError", outputPath };
+  return {
+    tag: "CompileError",
+    outputPath,
+    compilationMode: outputState.compilationMode,
+  };
 }
 
 async function typecheck({

@@ -43,7 +43,13 @@ import {
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
-import { getFlatOutputs, OutputError, OutputState, Project } from "./Project";
+import {
+  ElmJsonErrorWithMetadata,
+  getFlatOutputs,
+  OutputError,
+  OutputState,
+  Project,
+} from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import {
   AbsolutePath,
@@ -328,11 +334,7 @@ export async function run(
       project,
       portChoice
     ),
-    init: init(
-      getNow(),
-      restartReasons,
-      project.elmJsonsErrors.map(({ outputPath }) => outputPath)
-    ),
+    init: init(getNow(), restartReasons, project.elmJsonsErrors),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(
         logger.config,
@@ -564,7 +566,7 @@ function watcherOnAll(
 const init = (
   now: Date,
   restartReasons: Array<LatestEvent>,
-  elmJsonsErrorsOutputPaths: Array<OutputPath>
+  elmJsonsErrors: Array<ElmJsonErrorWithMetadata>
 ): [Model, Array<Cmd>] => [
   {
     nextAction: { tag: "NoAction" },
@@ -577,11 +579,17 @@ const init = (
   [
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
-    ...elmJsonsErrorsOutputPaths.map(
-      (outputPath): Cmd => ({
+    ...elmJsonsErrors.map(
+      ({ outputPath, compilationMode }): Cmd => ({
         tag: "WebSocketSendToOutput",
         outputPath,
-        message: { tag: "StatusChanged", status: { tag: "CompileError" } },
+        message: {
+          tag: "StatusChanged",
+          status: {
+            tag: "CompileError",
+            compilationMode,
+          },
+        },
       })
     ),
   ],
@@ -1575,7 +1583,10 @@ function handleOutputActionResultToCmd(
         outputPath: handleOutputActionResult.outputPath,
         message: {
           tag: "StatusChanged",
-          status: { tag: "CompileError" },
+          status: {
+            tag: "CompileError",
+            compilationMode: handleOutputActionResult.compilationMode,
+          },
         },
       };
 
@@ -2003,7 +2014,10 @@ function onWebSocketConnected(
                     outputPath,
                     message: {
                       tag: "StatusChanged",
-                      status: { tag: "AlreadyUpToDate" },
+                      status: {
+                        tag: "AlreadyUpToDate",
+                        compilationMode: outputState.compilationMode,
+                      },
                     },
                   },
                 ],
@@ -2042,7 +2056,10 @@ function onWebSocketConnected(
                 outputPath,
                 message: {
                   tag: "StatusChanged",
-                  status: { tag: "CompileError" },
+                  status: {
+                    tag: "CompileError",
+                    compilationMode: outputState.compilationMode,
+                  },
                 },
               },
             ],

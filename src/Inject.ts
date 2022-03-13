@@ -616,7 +616,7 @@ export function clientCode(
         /%INITIAL_ELM_COMPILED_TIMESTAMP%/g,
         elmCompiledTimestamp.toString()
       )
-      .replace(/%COMPILATION_MODE%/g, compilationMode)
+      .replace(/%ORIGINAL_COMPILATION_MODE%/g, compilationMode)
       .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString())
       .replace(/%DEBUG%/g, debug.toString())
   );

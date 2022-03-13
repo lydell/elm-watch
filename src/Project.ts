@@ -41,10 +41,7 @@ export type Project = {
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: HashSet<OutputPath>;
-  elmJsonsErrors: Array<{
-    outputPath: OutputPath;
-    error: ElmJsonError;
-  }>;
+  elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   maxParallel: number;
   postprocess: Postprocess;
@@ -165,6 +162,12 @@ type ElmJsonError =
       }>;
     };
 
+export type ElmJsonErrorWithMetadata = {
+  outputPath: OutputPath;
+  compilationMode: CompilationMode;
+  error: ElmJsonError;
+};
+
 export type Duration =
   | {
       tag: "ElmMake";
@@ -228,8 +231,7 @@ export function initProject({
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
   const disabledOutputs = new HashSet<OutputPath>();
-  const elmJsonsErrors: Array<{ outputPath: OutputPath; error: ElmJsonError }> =
-    [];
+  const elmJsonsErrors: Array<ElmJsonErrorWithMetadata> = [];
   const elmJsons = new HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>();
   const potentialOutputDuplicates = new HashMap<
     AbsolutePath,
@@ -268,18 +270,18 @@ export function initProject({
         target.inputs
       );
 
+      const persisted = elmWatchStuffJson?.targets[targetName];
+      const thisCompilationMode: CompilationMode =
+        persisted === undefined ? compilationMode : persisted.compilationMode;
+
       switch (resolveElmJsonResult.tag) {
         case "Success": {
           const previous =
             elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
             new HashMap<OutputPath, OutputState>();
-          const persisted = elmWatchStuffJson?.targets[targetName];
           previous.set(outputPath, {
             inputs: resolveElmJsonResult.inputs,
-            compilationMode:
-              persisted === undefined
-                ? compilationMode
-                : persisted.compilationMode,
+            compilationMode: thisCompilationMode,
             status: { tag: "NotWrittenToDisk", durations: [] },
             allRelatedElmFilePaths: new Set(),
             recordFields: undefined,
@@ -290,7 +292,11 @@ export function initProject({
         }
 
         default:
-          elmJsonsErrors.push({ outputPath, error: resolveElmJsonResult });
+          elmJsonsErrors.push({
+            outputPath,
+            compilationMode: thisCompilationMode,
+            error: resolveElmJsonResult,
+          });
           break;
       }
     } else {
