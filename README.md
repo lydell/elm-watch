@@ -15,6 +15,8 @@ Note that elm-watch is all about Elm. Not HTML, not CSS, not JavaScript, not Typ
 npm install --save-dev elm-watch
 ```
 
+> ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [elm-tooling]).
+
 > ⚠️ Windows is currently not supported. elm-watch was built with Windows in mind from day 1, but since it wasn’t developed on Windows it of course didn’t work on the first try.
 
 ## Getting started
@@ -405,7 +407,10 @@ I’ve heard [Vite] is really fast and reliable, including the Elm plugin. But I
 [elm-live]: https://github.com/wking-io/elm-live
 [elm-monitor]: https://github.com/layflags/elm-monitor
 [elm-remotedev]: https://github.com/utkarshkukreti/elm-remotedev
+[elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
 [esbuild]: https://esbuild.github.io/
+[elm-guide-install]: https://guide.elm-lang.org/install/elm.html
+[elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm
 [parcel]: https://parceljs.org/
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
 [redux devtools]: https://github.com/reduxjs/redux-devtools
