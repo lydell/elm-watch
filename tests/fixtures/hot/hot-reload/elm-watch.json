@@ -119,6 +119,12 @@
                 "src/InterruptElm.elm"
             ],
             "output": "build/InterruptElm.js"
+        },
+        "DebugLog": {
+            "inputs": [
+                "src/DebugLog.elm"
+            ],
+            "output": "build/DebugLog.js"
         }
     }
 }

@@ -5866,6 +5866,32 @@ describe("hot", () => {
       `);
     });
 
+    test.only("Switching to optimize mode with Debug.log and switching back", async () => {
+      const { go } = runHotReload({
+        name: "DebugLog",
+        programType: "Html",
+        compilationMode: "standard",
+        isTTY: false,
+      });
+
+      const { terminal, renders } = await go(({ idle }) => {
+        switch (idle) {
+          case 1:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 2:
+            switchCompilationMode("standard");
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      });
+
+      expect(terminal).toMatchInlineSnapshot();
+
+      expect(renders).toMatchInlineSnapshot();
+    });
+
     test("Changed record fields in optimize with postprocess", async () => {
       const { replace, go } = runHotReload({
         fixture: "hot-reload-postprocess",
