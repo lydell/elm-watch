@@ -875,7 +875,7 @@ describe("hot", () => {
 
       I wrote that to this file so you can inspect it:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-1cef2ae8d6462de725789672822191e1c18ea8413009cbb627ff3b754a82a1df.txt
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-5c65a5a70b4d38adb18aba4f980bb2acca2aa08f41dbd9298a4400a8cfd44022.txt
 
       🚨 ⧙1⧘ error found
 
@@ -4876,10 +4876,7 @@ describe("hot", () => {
       });
 
       // This should not list any reloads. (It’s tricky because Elm mutates Tasks.)
-      expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because \`Elm.InitFocus.init\` returned something different than last time. Let's start fresh!
-        (target: InitFocus)
-      `);
+      expect(browserConsole).toMatchInlineSnapshot(``);
 
       async function assert1(div: HTMLDivElement): Promise<void> {
         const button = div.querySelector("button");
@@ -4904,7 +4901,7 @@ describe("hot", () => {
         }
         expect(document.activeElement).toBe(button);
         expect(button.outerHTML).toMatchInlineSnapshot(
-          `<button id="id">Hot count: 0</button>`
+          `<button id="id">Hot count: 1</button>`
         );
       }
     });

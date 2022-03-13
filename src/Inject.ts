@@ -163,6 +163,18 @@ function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack) {
     return true;
   }
 
+  // This is needed because Elm mutates Tasks:
+  //     proc.__root.__kill = proc.__root.__callback(function(newRoot) {
+  // Some tasks are cancelable so .__kill is set to a function. Some are not,
+  // and then .__kill seems to be set to undefined. But the initial value is
+  // null! Later, there's just a truthiness check on .__kill so both null and
+  // undefined works. I can't think of any case where treating null and
+  // undefined the same would give the wrong result. As far as I can tell the
+  // compiler never uses both with different meaning on purpose.
+  if ((x === null && y === undefined) || (x === undefined && y === null)) {
+    return true;
+  }
+
   var xType = _Utils_typeof_elmWatchInternal(x);
   var yType = _Utils_typeof_elmWatchInternal(y);
 
