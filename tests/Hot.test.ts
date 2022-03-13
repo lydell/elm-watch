@@ -4856,6 +4856,59 @@ describe("hot", () => {
       }
     });
 
+    test("Init with Task", async () => {
+      const { replace, go } = runHotReload({
+        name: "InitFocus",
+        programType: "Element",
+        compilationMode: "standard",
+      });
+
+      const { browserConsole } = await go(async ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            await assert1(div);
+            replace((content) => content.replace("Count:", "Hot count:"));
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      });
+
+      // This should not list any reloads. (It’s tricky because Elm mutates Tasks.)
+      expect(browserConsole).toMatchInlineSnapshot(`
+        elm-watch: I did a full page reload because \`Elm.InitFocus.init\` returned something different than last time. Let's start fresh!
+        (target: InitFocus)
+      `);
+
+      async function assert1(div: HTMLDivElement): Promise<void> {
+        const button = div.querySelector("button");
+        if (button === null) {
+          throw new Error("Could not find button!");
+        }
+        expect(document.activeElement).toBe(button);
+        expect(button.outerHTML).toMatchInlineSnapshot(
+          `<button id="id">Count: 0</button>`
+        );
+        button.click();
+        await waitOneFrame();
+        expect(button.outerHTML).toMatchInlineSnapshot(
+          `<button id="id">Count: 1</button>`
+        );
+      }
+
+      function assert2(div: HTMLDivElement): void {
+        const button = div.querySelector("button");
+        if (button === null) {
+          throw new Error("Could not find button!");
+        }
+        expect(document.activeElement).toBe(button);
+        expect(button.outerHTML).toMatchInlineSnapshot(
+          `<button id="id">Hot count: 0</button>`
+        );
+      }
+    });
+
     describe("Html.Lazy", () => {
       // eslint-disable-next-line no-console
       const originalConsoleLog = console.log;

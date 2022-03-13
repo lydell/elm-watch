@@ -78,6 +78,12 @@
             ],
             "output": "build/ViewFailsAfterHotReload.js"
         },
+        "InitFocus": {
+            "inputs": [
+                "src/InitFocus.elm"
+            ],
+            "output": "build/InitFocus.js"
+        },
         "Lazy": {
             "inputs": [
                 "src/Lazy.elm"
