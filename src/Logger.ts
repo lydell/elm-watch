@@ -46,18 +46,25 @@ export function makeLogger({
   stderr: WriteStream;
   logDebug: (message: string) => void;
 }): Logger {
-  const debug = __ELM_WATCH_DEBUG in env;
-
   const noColor = NO_COLOR in env;
   const handleColor = (string: string): string =>
     noColor ? removeColor(string) : string;
 
-  // `.columns` is `undefined` if not a TTY.
-  const columns = stdout.columns ?? 80;
-  const isTTY =
-    __ELM_WATCH_NOT_TTY in env
-      ? /* istanbul ignore next */ false
-      : stdout.isTTY;
+  const config: LoggerConfig = {
+    debug: __ELM_WATCH_DEBUG in env,
+    fancy: !IS_WINDOWS && !noColor,
+    isTTY:
+      __ELM_WATCH_NOT_TTY in env
+        ? /* istanbul ignore next */ false
+        : stdout.isTTY,
+    mockedTimings: __ELM_WATCHED_MOCKED_TIMINGS in env,
+    get columns() {
+      // `.columns` is `undefined` if not a TTY.
+      // This is a getter because it can change over time, if the user resizes
+      // the terminal.
+      return stdout.columns ?? 80;
+    },
+  };
 
   return {
     write(message) {
@@ -67,11 +74,11 @@ export function makeLogger({
       stderr.write(`${handleColor(message)}\n`);
     },
     errorTemplate(template) {
-      stdout.write(`${handleColor(template(columns))}\n`);
+      stdout.write(`${handleColor(template(config.columns))}\n`);
     },
     // istanbul ignore next
     debug(...args) {
-      if (debug) {
+      if (config.debug) {
         logDebug(
           join(
             args.map((arg, index) =>
@@ -89,31 +96,25 @@ export function makeLogger({
       }
     },
     clearScreen(): void {
-      if (isTTY) {
+      if (config.isTTY) {
         stdout.write(CLEAR);
       }
     },
     clearScreenDown(): void {
-      if (isTTY) {
+      if (config.isTTY) {
         readline.clearScreenDown(stdout);
       }
     },
     clearLine(dir: readline.Direction) {
-      if (isTTY) {
+      if (config.isTTY) {
         readline.clearLine(stdout, dir);
       }
     },
     moveCursor(dx: number, dy: number) {
-      if (isTTY) {
+      if (config.isTTY) {
         readline.moveCursor(stdout, dx, dy);
       }
     },
-    config: {
-      debug,
-      fancy: !IS_WINDOWS && !noColor,
-      isTTY,
-      mockedTimings: __ELM_WATCHED_MOCKED_TIMINGS in env,
-      columns,
-    },
+    config,
   };
 }
