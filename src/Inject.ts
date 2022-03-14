@@ -163,18 +163,6 @@ function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack) {
     return true;
   }
 
-  // This is needed because Elm mutates Tasks:
-  //     proc.__root.__kill = proc.__root.__callback(function(newRoot) {
-  // Some tasks are cancelable so .__kill is set to a function. Some are not,
-  // and then .__kill seems to be set to undefined. But the initial value is
-  // null! Later, there's just a truthiness check on .__kill so both null and
-  // undefined works. I can't think of any case where treating null and
-  // undefined the same would give the wrong result. As far as I can tell the
-  // compiler never uses both with different meaning on purpose.
-  if ((x === null && y === undefined) || (x === undefined && y === null)) {
-    return true;
-  }
-
   var xType = _Utils_typeof_elmWatchInternal(x);
   var yType = _Utils_typeof_elmWatchInternal(y);
 
@@ -449,6 +437,40 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
       {
         search: /^([^'"\n]* )view\(/gm,
         replace: `$1impl.%view%(`,
+      },
+    ],
+  },
+
+  // ### _Scheduler_binding, _Scheduler_step
+  // This is needed because Elm mutates `Task`s in `_Scheduler_step`:
+  //
+  //     proc.__root.__kill = proc.__root.__callback(function(newRoot) {
+  //
+  // Some tasks are cancelable so `.__kill` is set to a function. Some are not,
+  // and then `.__kill` seems to be set to `undefined`. But the initial value is
+  // `null`! Later, there's just a truthiness check on `.__kill` so both `null` and
+  // `undefined` works. However, this means that the “did `init` return the same
+  // thing as last time?” check fails:
+  //
+  // - Either because of `null` vs `undefined`.
+  // - Or because of `null` vs `function`.
+  //
+  // To solve this, make sure that `.__kill` (called `.c` in what we have to
+  // work with below) is _always_ set to a function – a dummy one for
+  // non-cancelable tasks (`Function.prototype` is a no-op function).
+  // `_Utils_eq_elmWatchInternal` considers all functions to be equal.
+  {
+    probe: /^function _Scheduler_binding\(/m,
+    replacements: [
+      {
+        search:
+          /^(function _Scheduler_binding\(callback\)\s*\{\s*return \{\s*\$: 2,\s*b: callback,\s*)c: null(\s*\};\s*\})/gm,
+        replace: `$1c: Function.prototype$2`,
+      },
+      {
+        search:
+          /^(\s*proc\.f\.c = proc\.f\.b\(function\(newRoot\) \{\s*proc\.f = newRoot;\s*_Scheduler_enqueue\(proc\);\s*\}\));/gm,
+        replace: `$1 || Function.prototype;`,
       },
     ],
   },
