@@ -265,7 +265,7 @@ To avoid the slowness, elm-watch has a trick up its sleeve: `elm-watch-node`. In
 +"postprocess": ["elm-watch-node", "postprocess.js"]
 ```
 
-It’s basically the same but faster. The difference is that `elm-watch-node` runs in a [worker thread] instead of as a separate process. Workers are faster to spawn (around 50 ms) – and it’s a one time cost. Once started, they can be reused infinitely, resulting in almost no overhead at all.
+It’s basically the same but faster. The difference is that `elm-watch-node` runs in a [worker thread] instead of as a separate process (it’s not a real command you can run on your own). Workers are faster to spawn (around 50 ms) – and it’s a one time cost. Once started, they can be reused infinitely, resulting in almost no overhead at all.
 
 Here are the differences compared to `node`.
 
