@@ -84,6 +84,12 @@
             ],
             "output": "build/InitFocus.js"
         },
+        "InitHttp": {
+            "inputs": [
+                "src/InitHttp.elm"
+            ],
+            "output": "build/InitHttp.js"
+        },
         "Lazy": {
             "inputs": [
                 "src/Lazy.elm"

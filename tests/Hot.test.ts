@@ -4856,7 +4856,7 @@ describe("hot", () => {
       }
     });
 
-    test("Init with Task", async () => {
+    test("Init with non-cancelable Task", async () => {
       const { replace, go } = runHotReload({
         name: "InitFocus",
         programType: "Element",
@@ -4904,6 +4904,71 @@ describe("hot", () => {
           `<button id="id">Hot count: 1</button>`
         );
       }
+    });
+
+    describe("Init with cancelable Task", () => {
+      // eslint-disable-next-line no-console
+      const originalConsoleError = console.error;
+
+      afterEach(() => {
+        // eslint-disable-next-line no-console
+        console.error = originalConsoleError;
+      });
+
+      test("Init with cancelable Task", async () => {
+        const mockConsoleError = jest.fn();
+        // eslint-disable-next-line no-console
+        console.error = mockConsoleError;
+
+        const { replace, go } = runHotReload({
+          name: "InitHttp",
+          programType: "Element",
+          compilationMode: "standard",
+        });
+
+        const { browserConsole } = await go(async ({ idle, div }) => {
+          switch (idle) {
+            case 1:
+              await assert1(div);
+              replace((content) => content.replace("Count:", "Hot count:"));
+              return "KeepGoing";
+            default:
+              assert2(div);
+              return "Stop";
+          }
+        });
+
+        // This should not list any reloads. (It’s tricky because Elm mutates Tasks.)
+        expect(browserConsole).toMatchInlineSnapshot(``);
+
+        async function assert1(div: HTMLDivElement): Promise<void> {
+          const button = div.querySelector("button");
+          if (button === null) {
+            throw new Error("Could not find button!");
+          }
+          expect(button.outerHTML).toMatchInlineSnapshot(
+            `<button>Count: 0</button>`
+          );
+          button.click();
+          await waitOneFrame();
+          expect(button.outerHTML).toMatchInlineSnapshot(
+            `<button>Count: 1</button>`
+          );
+        }
+
+        function assert2(div: HTMLDivElement): void {
+          const button = div.querySelector("button");
+          if (button === null) {
+            throw new Error("Could not find button!");
+          }
+          expect(button.outerHTML).toMatchInlineSnapshot(
+            `<button>Hot count: 1</button>`
+          );
+
+          // The HTTP request made in the test fails, and jsdom logs that using `console.error`.
+          expect(mockConsoleError).toHaveBeenCalled();
+        }
+      });
     });
 
     describe("Html.Lazy", () => {
