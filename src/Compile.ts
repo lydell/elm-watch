@@ -1246,16 +1246,19 @@ async function typecheck({
           outputPath: OutputPath;
           outputState: OutputState;
           allRelatedElmFilePathsResult: WithDuration<GetAllRelatedElmFilePathsResult>;
-        } => ({
-          ...output,
-          allRelatedElmFilePathsResult: {
-            ...getAllRelatedElmFilePaths(
-              elmJsonPath,
-              output.outputState.inputs
-            ),
-            durationMs: getNow().getTime() - startTimestamp,
-          },
-        })
+        } => {
+          const thisStartTimestamp = getNow().getTime();
+          return {
+            ...output,
+            allRelatedElmFilePathsResult: {
+              ...getAllRelatedElmFilePaths(
+                elmJsonPath,
+                output.outputState.inputs
+              ),
+              durationMs: getNow().getTime() - thisStartTimestamp,
+            },
+          };
+        }
       )
     ),
   ]);
