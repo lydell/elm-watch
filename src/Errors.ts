@@ -67,7 +67,7 @@ export const fancyError =
     ).trim();
 
     const prefix = `-- ${title} `;
-    const line = "-".repeat(width - prefix.length);
+    const line = "-".repeat(Math.max(0, width - prefix.length));
     const titleWithSeparator = bold(`${prefix}${line}`);
     const maybeLocation = fancyErrorLocation(location);
 

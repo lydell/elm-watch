@@ -53,6 +53,7 @@ type OnIdle = (params: {
   main: HTMLElement;
   body: HTMLBodyElement;
   reason: ReachedIdleStateReason;
+  stdout: CursorWriteStream;
 }) => OnIdleResult | Promise<OnIdleResult>;
 
 type OnIdleResult = "KeepGoing" | "Stop";
@@ -264,7 +265,7 @@ async function run({
       // anyway, so this wait is just a drop in the ocean.
       wait(100)
         .then(() =>
-          onIdle({ idle: localIdle, div: outerDiv, main, body, reason })
+          onIdle({ idle: localIdle, div: outerDiv, main, body, reason, stdout })
         )
         .then((result) => {
           switch (result) {
@@ -2931,7 +2932,7 @@ describe("hot", () => {
     `);
   });
 
-  test("elm compilation errors from the start", async () => {
+  test("elm compilation errors from the start, with terminal resize", async () => {
     const { terminal, renders } = await run({
       fixture: "compile-error",
       args: [],
@@ -2940,7 +2941,15 @@ describe("hot", () => {
       init: () => {
         // Do nothing
       },
-      onIdle: () => "Stop",
+      onIdle: ({ idle, stdout }) => {
+        switch (idle) {
+          case 1:
+            stdout.resize(60);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
     });
 
     expect(terminal).toMatchInlineSnapshot(`
@@ -2978,12 +2987,44 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
       🚨 ⧙13:10:05⧘ Everything up to date.
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make
+      🚨 Main
+
+      ⧙-- WEIRD DECLARATION ---------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/compile-error/src/Main.elm:1:1
+
+      I am trying to parse a declaration, but I am getting stuck here:
+
+      1| 
+         ⧙^⧘
+      When a line has no spaces at the beginning, I expect it to be a declaration like
+      one of these:
+
+          greet : String -> String
+          greet name =
+            ⧙"Hello "⧘ ++ name ++ ⧙"!"⧘
+          
+          ⧙type⧘ User = Anonymous | LoggedIn String
+
+      Try to make your declaration look like one of those? Or if this is not supposed
+      to be a declaration, try adding some spaces before it?
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Terminal resized⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     expect(renders).toMatchInlineSnapshot(`
       ▼ 🔌 13:10:05 Main
       ================================================================================
       ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🚨 13:10:05 Main
       ================================================================================
       ▼ 🚨 13:10:05 Main
     `);

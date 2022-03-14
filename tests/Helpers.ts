@@ -429,6 +429,11 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
       "$1 "
     );
   }
+
+  resize(columns: number): void {
+    this.columns = columns;
+    this.emit("resize");
+  }
 }
 
 export function clean(string: string): string {

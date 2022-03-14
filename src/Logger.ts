@@ -25,6 +25,8 @@ export type Logger = {
   clearScreenDown: () => void;
   clearLine: (dir: readline.Direction) => void;
   moveCursor: (dx: number, dy: number) => void;
+  onResize: (listener: () => void) => void;
+  removeResizeListeners: () => void;
 };
 
 export type LoggerConfig = {
@@ -62,6 +64,7 @@ export function makeLogger({
       // `.columns` is `undefined` if not a TTY.
       // This is a getter because it can change over time, if the user resizes
       // the terminal.
+      // istanbul ignore next
       return stdout.columns ?? 80;
     },
   };
@@ -114,6 +117,12 @@ export function makeLogger({
       if (config.isTTY) {
         readline.moveCursor(stdout, dx, dy);
       }
+    },
+    onResize: (listener) => {
+      stdout.on("resize", listener);
+    },
+    removeResizeListeners: () => {
+      stdout.removeAllListeners();
     },
     config,
   };

@@ -104,6 +104,7 @@ type WebSocketRelatedEvent =
 
 export type LatestEvent =
   | WebSocketRelatedEvent
+  | { tag: "TerminalResized"; date: Date }
   | (WatcherEvent & { affectsAnyTarget: boolean });
 
 type Mutable = {
@@ -154,6 +155,10 @@ type Msg =
     }
   | {
       tag: "SleepBeforeNextActionDone";
+      date: Date;
+    }
+  | {
+      tag: "TerminalResized";
       date: Date;
     }
   | {
@@ -328,6 +333,7 @@ export async function run(
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
       env,
+      logger,
       getNow,
       postprocessWorkerPool,
       webSocketState,
@@ -395,6 +401,7 @@ export async function watchElmWatchJsonOnce(
 const initMutable =
   (
     env: Env,
+    logger: Logger,
     getNow: GetNow,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
@@ -425,7 +432,7 @@ const initMutable =
     watcherOnAll(
       watcher,
       (error) => {
-        closeAll(mutable)
+        closeAll(logger, mutable)
           .then(() => {
             resolvePromise({
               tag: "ExitOnHandledFatalError",
@@ -465,6 +472,7 @@ const initMutable =
     webSocketServer.setDispatch((msg) => {
       onWebSocketServerMsg(
         getNow(),
+        logger,
         mutable,
         dispatch,
         resolvePromise,
@@ -490,6 +498,10 @@ const initMutable =
         writeElmWatchStuffJson(mutable);
       })
       .catch(rejectPromise);
+
+    logger.onResize(() => {
+      dispatch({ tag: "TerminalResized", date: getNow() });
+    });
 
     return mutable;
   };
@@ -638,6 +650,24 @@ function update(
         cmds,
       ];
     }
+
+    case "TerminalResized":
+      // Ideally we’d just re-render here, but that turned out to be very difficult.
+      // Restarting is much easier. A bit weird though. But better than not doing anything.
+      return [
+        {
+          ...model,
+          nextAction: { tag: "Restart" },
+          latestEvents: [
+            ...model.latestEvents,
+            {
+              tag: "TerminalResized",
+              date: msg.date,
+            },
+          ],
+        },
+        [],
+      ];
 
     case "CompilationPartDone": {
       const includeInterrupted = model.nextAction.tag !== "Compile";
@@ -1246,7 +1276,7 @@ const runCmd =
             );
             // istanbul ignore else
             if (exitOnError) {
-              closeAll(mutable)
+              closeAll(logger, mutable)
                 .then(() => {
                   resolvePromise({ tag: "ExitOnIdle" });
                 })
@@ -1305,7 +1335,7 @@ const runCmd =
             (event) => event.tag === "WorkersLimitedAfterWebSocketClosed"
           )
         ) {
-          closeAll(mutable)
+          closeAll(logger, mutable)
             .then(() => {
               resolvePromise({ tag: "ExitOnIdle" });
             })
@@ -1354,6 +1384,7 @@ const runCmd =
               return false;
           }
         });
+        logger.removeResizeListeners();
         mutable.webSocketServer.unsetDispatch();
         Promise.all([
           mutable.watcher.close(),
@@ -1389,7 +1420,7 @@ const runCmd =
         return;
 
       case "ExitOnIdle":
-        closeAll(mutable)
+        closeAll(logger, mutable)
           .then(() => {
             resolvePromise({ tag: "ExitOnIdle" });
           })
@@ -1435,6 +1466,7 @@ const runCmd =
 
 function onWebSocketServerMsg(
   now: Date,
+  logger: Logger,
   mutable: Mutable,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
@@ -1526,7 +1558,7 @@ function onWebSocketServerMsg(
       switch (msg.error.tag) {
         case "PortConflict": {
           const { portChoice } = msg.error;
-          closeAll(mutable)
+          closeAll(logger, mutable)
             .then(() => {
               resolvePromise({
                 tag: "ExitOnHandledFatalError",
@@ -1614,7 +1646,8 @@ function handleOutputActionResultToCmd(
   }
 }
 
-async function closeAll(mutable: Mutable): Promise<void> {
+async function closeAll(logger: Logger, mutable: Mutable): Promise<void> {
+  logger.removeResizeListeners();
   // istanbul ignore if
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
@@ -2265,6 +2298,10 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     // change feels more immediate.
     case "WebSocketChangedCompilationMode":
       return 10;
+
+    // Wait for the user to stop dragging the edge of the window.
+    case "TerminalResized":
+      return 10;
   }
 }
 
@@ -2438,6 +2475,9 @@ function printEventMessage(event: LatestEvent): string {
           ? "worker"
           : /* istanbul ignore next */ "workers"
       }`;
+
+    case "TerminalResized":
+      return "Terminal resized";
   }
 }
 
