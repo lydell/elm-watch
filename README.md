@@ -372,7 +372,7 @@ With elm-watch HTTPS causes a new complexity. elm-watch uses Web Sockets for hot
 
 In short, you _can_ use a simple `ws://` together with `https://` in _some_ cases. But to get things working all the time, you would have to create a certificate and add it to your computer OS and phone OS so it becomes trusted for real. Which is a bit annoying. If you are doing that and would like to be able to configure elm-watch to use that certificate as well (with `wss://`), please let me know! Until then, elm-watch keeps things simple and _always_ uses `ws://`.
 
-### Comparison to other tools
+## Comparison to other tools
 
 ### elm-watch vs generic watcher tools
 
