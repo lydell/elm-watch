@@ -9,7 +9,7 @@ import type { Logger } from "./Logger";
 import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
-import { initProject } from "./Project";
+import { initProject, projectToDebug } from "./Project";
 import { CliArg, Cwd, ElmWatchJsonPath, GetNow, RunMode } from "./Types";
 
 type RunResult =
@@ -198,6 +198,8 @@ export async function run(
 
                 case "Project": {
                   const { project } = initProjectResult;
+
+                  logger.debug("Project", projectToDebug(project));
 
                   switch (project.postprocess.tag) {
                     case "NoPostprocess":

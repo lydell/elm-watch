@@ -514,3 +514,47 @@ export function getFlatOutputs(project: Project): Array<{
     }))
   );
 }
+
+export function projectToDebug(project: Project): unknown {
+  return {
+    watchRoot: project.watchRoot.absolutePath,
+    elmWatchJson: project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
+    elmWatchStuffJson:
+      project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,
+    maxParallel: project.maxParallel,
+    postprocess: project.postprocess,
+    enabledTargets: Array.from(project.elmJsons.entries()).flatMap(
+      ([elmJsonPath, outputs]) =>
+        Array.from(outputs.entries(), ([outputPath, outputState]) => ({
+          ...outputPathToDebug(outputPath),
+          compilationMode: outputState.compilationMode,
+          elmJson: elmJsonPath.theElmJsonPath.absolutePath,
+          inputs: outputState.inputs.map(inputPathToDebug),
+        }))
+    ),
+    disabledTargets: Array.from(project.disabledOutputs, outputPathToDebug),
+    erroredTargets: project.elmJsonsErrors.map(
+      ({ outputPath, compilationMode, error }) => ({
+        error: error.tag,
+        ...outputPathToDebug(outputPath),
+        compilationMode,
+      })
+    ),
+  };
+}
+
+function outputPathToDebug(outputPath: OutputPath): Record<string, unknown> {
+  return {
+    targetName: outputPath.targetName,
+    output: outputPath.theOutputPath.absolutePath,
+    originalString: outputPath.originalString,
+  };
+}
+
+function inputPathToDebug(inputPath: InputPath): Record<string, unknown> {
+  return {
+    input: inputPath.theInputPath.absolutePath,
+    realpath: inputPath.realpath.absolutePath,
+    originalString: inputPath.originalString,
+  };
+}
