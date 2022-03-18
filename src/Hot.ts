@@ -104,7 +104,6 @@ type WebSocketRelatedEvent =
 
 export type LatestEvent =
   | WebSocketRelatedEvent
-  | { tag: "TerminalResized"; date: Date }
   | (WatcherEvent & { affectsAnyTarget: boolean });
 
 type Mutable = {
@@ -155,10 +154,6 @@ type Msg =
     }
   | {
       tag: "SleepBeforeNextActionDone";
-      date: Date;
-    }
-  | {
-      tag: "TerminalResized";
       date: Date;
     }
   | {
@@ -432,7 +427,7 @@ const initMutable =
     watcherOnAll(
       watcher,
       (error) => {
-        closeAll(logger, mutable)
+        closeAll(mutable)
           .then(() => {
             resolvePromise({
               tag: "ExitOnHandledFatalError",
@@ -498,10 +493,6 @@ const initMutable =
         writeElmWatchStuffJson(mutable);
       })
       .catch(rejectPromise);
-
-    logger.onResize(() => {
-      dispatch({ tag: "TerminalResized", date: getNow() });
-    });
 
     return mutable;
   };
@@ -650,24 +641,6 @@ function update(
         cmds,
       ];
     }
-
-    case "TerminalResized":
-      // Ideally we’d just re-render here, but that turned out to be very difficult.
-      // Restarting is much easier. A bit weird though. But better than not doing anything.
-      return [
-        {
-          ...model,
-          nextAction: { tag: "Restart" },
-          latestEvents: [
-            ...model.latestEvents,
-            {
-              tag: "TerminalResized",
-              date: msg.date,
-            },
-          ],
-        },
-        [],
-      ];
 
     case "CompilationPartDone": {
       const includeInterrupted = model.nextAction.tag !== "Compile";
@@ -1276,7 +1249,7 @@ const runCmd =
             );
             // istanbul ignore else
             if (exitOnError) {
-              closeAll(logger, mutable)
+              closeAll(mutable)
                 .then(() => {
                   resolvePromise({ tag: "ExitOnIdle" });
                 })
@@ -1335,7 +1308,7 @@ const runCmd =
             (event) => event.tag === "WorkersLimitedAfterWebSocketClosed"
           )
         ) {
-          closeAll(logger, mutable)
+          closeAll(mutable)
             .then(() => {
               resolvePromise({ tag: "ExitOnIdle" });
             })
@@ -1384,7 +1357,6 @@ const runCmd =
               return false;
           }
         });
-        logger.removeResizeListeners();
         mutable.webSocketServer.unsetDispatch();
         Promise.all([
           mutable.watcher.close(),
@@ -1420,7 +1392,7 @@ const runCmd =
         return;
 
       case "ExitOnIdle":
-        closeAll(logger, mutable)
+        closeAll(mutable)
           .then(() => {
             resolvePromise({ tag: "ExitOnIdle" });
           })
@@ -1558,7 +1530,7 @@ function onWebSocketServerMsg(
       switch (msg.error.tag) {
         case "PortConflict": {
           const { portChoice } = msg.error;
-          closeAll(logger, mutable)
+          closeAll(mutable)
             .then(() => {
               resolvePromise({
                 tag: "ExitOnHandledFatalError",
@@ -1646,8 +1618,7 @@ function handleOutputActionResultToCmd(
   }
 }
 
-async function closeAll(logger: Logger, mutable: Mutable): Promise<void> {
-  logger.removeResizeListeners();
+async function closeAll(mutable: Mutable): Promise<void> {
   // istanbul ignore if
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
@@ -2298,10 +2269,6 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     // change feels more immediate.
     case "WebSocketChangedCompilationMode":
       return 10;
-
-    // Wait for the user to stop dragging the edge of the window.
-    case "TerminalResized":
-      return 10;
   }
 }
 
@@ -2475,9 +2442,6 @@ function printEventMessage(event: LatestEvent): string {
           ? "worker"
           : /* istanbul ignore next */ "workers"
       }`;
-
-    case "TerminalResized":
-      return "Terminal resized";
   }
 }
 

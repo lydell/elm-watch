@@ -2933,8 +2933,12 @@ describe("hot", () => {
   });
 
   test("elm compilation errors from the start, with terminal resize", async () => {
+    const fixture = "compile-error";
+
+    const main = path.join(FIXTURES_DIR, fixture, "src", "Main.elm");
+
     const { terminal, renders } = await run({
-      fixture: "compile-error",
+      fixture,
       args: [],
       scripts: ["Main.js"],
       isTTY: false,
@@ -2945,6 +2949,7 @@ describe("hot", () => {
         switch (idle) {
           case 1:
             stdout.resize(60);
+            touch(main);
             return "KeepGoing";
           default:
             return "Stop";
@@ -2987,8 +2992,6 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
       🚨 ⧙13:10:05⧘ Everything up to date.
-      ⏳ Dependencies
-      ✅ Dependencies
       ⏳ Main: elm make
       🚨 Main
 
@@ -3015,7 +3018,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Terminal resized⧘
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/compile-error/src/Main.elm⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
@@ -3025,6 +3028,8 @@ describe("hot", () => {
       ▼ ⏳ 13:10:05 Main
       ================================================================================
       ▼ 🚨 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
       ================================================================================
       ▼ 🚨 13:10:05 Main
     `);
