@@ -66,7 +66,7 @@ export function formatTime(date: Date): string {
 }
 
 const KiB = 1024;
-const MiB = KiB ** 2;
+const MiB = 1048576;
 
 export function printFileSize(fileSize: number): string {
   const [divided, unit] =
@@ -111,17 +111,17 @@ export function silentlyReadIntEnvValue(
   return /^\d+$/.test(value ?? "") ? Number(value) : defaultValue;
 }
 
-export function toError(arg: unknown): NodeJS.ErrnoException {
-  return toError.jestWorkaround(arg);
-}
-
-// Workaround for https://github.com/facebook/jest/issues/2549
-// In the tests we overwrite this.
-// We could have used the jest-environment-node-single-context npm package,
-// but it only works for the `node` environment, not `jsdom`.
-// istanbul ignore next
-toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException =>
-  arg instanceof Error
+export const toError: ((arg: unknown) => NodeJS.ErrnoException) & {
+  jestWorkaround?: (arg: unknown) => NodeJS.ErrnoException;
+} = (arg) =>
+  // Workaround for https://github.com/facebook/jest/issues/2549
+  // In the tests we overwrite this.
+  // We could have used the jest-environment-node-single-context npm package,
+  // but it only works for the `node` environment, not `jsdom`.
+  // istanbul ignore next
+  toError.jestWorkaround !== undefined
+    ? toError.jestWorkaround(arg)
+    : arg instanceof Error
     ? arg
     : new Error(
         `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
@@ -129,14 +129,15 @@ toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException =>
 
 export type JsonError = DecoderError | SyntaxError;
 
-export function toJsonError(arg: unknown): JsonError {
-  return arg instanceof DecoderError ? arg : toJsonError.jestWorkaround(arg);
-}
-
-// See `toError.jestWorkaround`.
-// istanbul ignore next
-toJsonError.jestWorkaround = (arg: unknown): JsonError =>
-  arg instanceof SyntaxError
+export const toJsonError: ((arg: unknown) => JsonError) & {
+  jestWorkaround?: (arg: unknown) => JsonError;
+} = (arg) =>
+  // istanbul ignore next
+  arg instanceof DecoderError
+    ? arg
+    : toError.jestWorkaround !== undefined // See `toError.jestWorkaround`.
+    ? toError.jestWorkaround(arg)
+    : arg instanceof SyntaxError
     ? arg
     : new SyntaxError(
         `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
