@@ -93,14 +93,14 @@ view model =
             viewPage "Home"
                 model.maybePage
                 (Html.p []
-                    [ Html.text "This the home page!" ]
+                    [ Html.text "This is the home page!" ]
                 )
 
         Page About ->
             viewPage "About"
                 model.maybePage
                 (Html.p []
-                    [ Html.text "This the about us page!" ]
+                    [ Html.text "This is the about us page!" ]
                 )
 
         NotFound ->
