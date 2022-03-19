@@ -2383,11 +2383,8 @@ describe("hot", () => {
 
       But that resulted in this error:
 
-      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js:2
-        code.replace("The text!", (match) => match.toUppe
-                                                   ^^^^^^
-
-      SyntaxError: missing ) after argument list
+      Error: Transform failed with 1 error:
+      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js:2:51: ERROR: Expected ")" but found end of file
 
       🚨 ⧙1⧘ error found
 

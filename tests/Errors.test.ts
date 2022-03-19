@@ -2416,35 +2416,6 @@ describe("errors", () => {
       `);
     });
 
-    test("throw null at import, with console.error", async () => {
-      expect(await run("postprocess/variants/throw-null-at-import", ["make"]))
-        .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
-        ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null-at-import/postprocess.js
-
-        I tried to import your postprocess file:
-
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null-at-import/postprocess.js")
-
-        But that resulted in this error:
-
-        null
-
-        STDOUT:
-
-
-        STDERR:
-        { test: 1, items: [ 'one', 'two' ] }
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
-      `);
-    });
-
     test("empty file", async () => {
       expect(await run("postprocess/variants/empty-file", ["make"]))
         .toMatchInlineSnapshot(`
