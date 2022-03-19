@@ -65,6 +65,15 @@ export function badElmBinEnv(dir: string): Env {
 }
 
 export function prependPATH(folder: string): string {
+  // On Windows, create an `elm.cmd` next to fake `elm` binaries. Files without
+  // extensions aren’t executable, but .cmd files are. The `elm.cmd` files
+  // execute the `elm` file next to them using `node`.
+  if (IS_WINDOWS && fs.existsSync(path.join(folder, "elm"))) {
+    fs.writeFileSync(
+      path.join(folder, "elm.cmd"),
+      `@echo off\r\nnode "%~dp0\\elm" %*`
+    );
+  }
   return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
 }
 

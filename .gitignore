@@ -6,3 +6,4 @@ elm-stuff
 node_modules
 elm-watch-*.json
 lock
+elm.cmd
