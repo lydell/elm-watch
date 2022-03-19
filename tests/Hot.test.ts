@@ -876,7 +876,7 @@ describe("hot", () => {
 
       I wrote that to this file so you can inspect it:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-1cef2ae8d6462de725789672822191e1c18ea8413009cbb627ff3b754a82a1df.txt
+      /Users/you/project/tests/fixtures/hot/basic/build/elm-watch-InjectSearchAndReplaceNotFound-9cd09d4897c5a34405e7758468ba097e176337638bca00ed864f2be981ab83fa.txt
 
       🚨 ⧙1⧘ error found
 

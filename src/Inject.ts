@@ -60,7 +60,7 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
   var flagResult = A2(_Json_run, flagDecoder, flags);
   $elm$core$Result$isOk(flagResult) || _Debug_crash(2 /**/, _Json_errorToString(flagResult.a) /**/);
   var managers = {};
-  var initUrl = typeof _Browser_getUrl === "undefined" ? undefined : _Browser_getUrl();
+  var initUrl = programType === "Browser.application" ? _Browser_getUrl() : undefined;
   window.__ELM_WATCH_INIT_URL = initUrl;
   var initPair = init(flagResult.a);
   var model = initPair.a;
