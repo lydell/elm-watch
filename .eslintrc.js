@@ -221,6 +221,12 @@ module.exports = {
     {
       files: "tests/**/*.ts",
       extends: ["plugin:jest/recommended", "plugin:jest/style"],
+      rules: {
+        "jest/no-standalone-expect": [
+          "error",
+          { additionalTestBlockFunctions: ["testExceptWindows"] },
+        ],
+      },
     },
     {
       files: "example/**/*.js",

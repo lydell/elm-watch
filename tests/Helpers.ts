@@ -19,6 +19,7 @@ import {
   toJsonError,
   WriteStream,
 } from "../src/Helpers";
+import { IS_WINDOWS } from "../src/IsWindows";
 
 toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
 toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
@@ -482,3 +483,6 @@ export const stringSnapshotSerializer = {
   test: (value: unknown): boolean => typeof value === "string",
   print: String,
 };
+
+// For things like symlinks and readonly files/folders that aren’t really a thing on Windows.
+export const testExceptWindows = IS_WINDOWS ? test.skip : test;

@@ -4,7 +4,7 @@ import { walkImports } from "../src/ImportWalker";
 import { mapNonEmptyArray, NonEmptyArray } from "../src/NonEmptyArray";
 import { absolutePathFromString, absoluteRealpath } from "../src/PathHelpers";
 import { AbsolutePath, InputPath, SourceDirectory } from "../src/Types";
-import { clean, stringSnapshotSerializer } from "./Helpers";
+import { clean, stringSnapshotSerializer, testExceptWindows } from "./Helpers";
 
 const FIXTURES_DIR: AbsolutePath = {
   tag: "AbsolutePath",
@@ -195,7 +195,7 @@ describe("WalkImports", () => {
     `);
   });
 
-  test("symlinks", () => {
+  testExceptWindows("symlinks", () => {
     // To match `elm make`:
     // - For inputs, store the _realpath._
     // - For imported files, store the original (symlink) path.

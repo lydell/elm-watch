@@ -11,6 +11,7 @@ import {
   readFile,
   rm,
   stringSnapshotSerializer,
+  testExceptWindows,
 } from "./Helpers";
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "init");
@@ -93,7 +94,7 @@ describe("init", () => {
     `);
   });
 
-  test("fail to write", async () => {
+  testExceptWindows("fail to write", async () => {
     fs.mkdirSync(path.join(FIXTURES_DIR, "readonly"), {
       recursive: true,
       mode: "0444", // readonly
