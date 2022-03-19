@@ -449,7 +449,11 @@ export function clean(string: string): string {
     .join(path.join(root, "tmp", "fake"))
     .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
-    .replace(/\x1B\[0?m/g, "⧘");
+    .replace(/\x1B\[0?m/g, "⧘")
+    .replace(
+      /(')?[A-Z]:\\(.+)\1/g,
+      (_match, _quote, rest: string) => `/${rest.replace(/\\/g, "/")}`
+    );
 }
 
 export function assertExitCode(

@@ -12,7 +12,7 @@ import {
   NO_COLOR,
 } from "../src/Env";
 import * as Errors from "../src/Errors";
-import { toError } from "../src/Helpers";
+import { removeColor, toError } from "../src/Helpers";
 import {
   assertExitCode,
   badElmBinEnv,
@@ -3060,21 +3060,21 @@ describe("errors", () => {
   describe("hard to test errors", () => {
     test("noCommonRoot", () => {
       expect(
-        printError(
+        removeColor(
           Errors.noCommonRoot([
             { tag: "AbsolutePath", absolutePath: "C:\\project\\elm.json" },
             { tag: "AbsolutePath", absolutePath: "D:\\stuff\\elm\\elm.json" },
-          ])
+          ])(80)
         )
       ).toMatchInlineSnapshot(`
-        ⧙-- NO COMMON ROOT --------------------------------------------------------------⧘
+        -- NO COMMON ROOT --------------------------------------------------------------
 
         I could not find a common ancestor for these paths:
 
         C:\\project\\elm.json
         D:\\stuff\\elm\\elm.json
 
-        ⧙Compiling files on different drives is not supported.⧘
+        Compiling files on different drives is not supported.
       `);
     });
 
