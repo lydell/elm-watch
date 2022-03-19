@@ -17,7 +17,7 @@ npm install --save-dev elm-watch
 
 > ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [elm-tooling]).
 
-> ⚠️ Windows is currently not supported. elm-watch was built with Windows in mind from day 1, but since it wasn’t developed on Windows it of course didn’t work on the first try.
+> ⚠️ Windows is currently not _fully_ supported. You might run into problems. See the [Windows support issue](https://github.com/lydell/elm-watch/issues/4).
 
 ## Getting started
 
