@@ -14,6 +14,10 @@ export const __ELM_WATCH_DEBUG = "__ELM_WATCH_DEBUG";
 // See `__ELM_WATCH_DEBUG`.
 export const __ELM_WATCH_NOT_TTY = "__ELM_WATCH_NOT_TTY";
 
+// Used to print emojis even on Windows to be able to use the same test snapshots.
+export const __ELM_WATCH_FANCY_EVEN_ON_WINDOWS =
+  "__ELM_WATCH_FANCY_EVEN_ON_WINDOWS";
+
 // Used in tests to print hardcoded durations and timings, for snapshots.
 // Type: Check if defined and ignore value.
 export const __ELM_WATCHED_MOCKED_TIMINGS = "__ELM_WATCHED_MOCKED_TIMINGS";

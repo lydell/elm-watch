@@ -3,6 +3,7 @@ import * as util from "util";
 
 import {
   __ELM_WATCH_DEBUG,
+  __ELM_WATCH_FANCY_EVEN_ON_WINDOWS,
   __ELM_WATCH_NOT_TTY,
   __ELM_WATCHED_MOCKED_TIMINGS,
   Env,
@@ -52,7 +53,9 @@ export function makeLogger({
 
   const config: LoggerConfig = {
     debug: __ELM_WATCH_DEBUG in env,
-    fancy: !IS_WINDOWS && !noColor,
+    fancy:
+      // istanbul ignore next
+      (!IS_WINDOWS || __ELM_WATCH_FANCY_EVEN_ON_WINDOWS in env) && !noColor,
     isTTY:
       __ELM_WATCH_NOT_TTY in env
         ? /* istanbul ignore next */ false

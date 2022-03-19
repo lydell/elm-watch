@@ -5,6 +5,7 @@ import * as stream from "stream";
 
 import { EMOJI } from "../src/Compile";
 import {
+  __ELM_WATCH_FANCY_EVEN_ON_WINDOWS,
   __ELM_WATCH_LOADING_MESSAGE_DELAY,
   __ELM_WATCH_MAX_PARALLEL,
   __ELM_WATCHED_MOCKED_TIMINGS,
@@ -47,6 +48,7 @@ export const TEST_ENV = {
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
   [__ELM_WATCHED_MOCKED_TIMINGS]: "",
+  [__ELM_WATCH_FANCY_EVEN_ON_WINDOWS]: "",
 };
 
 export function badElmBinEnv(dir: string): Env {
