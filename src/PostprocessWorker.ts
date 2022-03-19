@@ -1,9 +1,10 @@
+import * as path from "path";
 import { repr } from "tiny-decoders";
+import * as url from "url";
 import { MessagePort, parentPort } from "worker_threads";
 
 import { unknownErrorToString } from "./Helpers";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { absolutePathFromString } from "./PathHelpers";
 import {
   ELM_WATCH_NODE,
   ElmWatchNodeInternalArgs,
@@ -68,13 +69,15 @@ async function elmWatchNode({
 
   const scriptPath: ElmWatchNodeScriptPath = {
     tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptPath: absolutePathFromString(cwd, userArgs[0]),
+    theElmWatchNodeScriptFileUrl: url
+      .pathToFileURL(path.resolve(cwd.absolutePath, userArgs[0]))
+      .toString(),
   };
 
   let imported;
   try {
     imported = (await import(
-      scriptPath.theElmWatchNodeScriptPath.absolutePath
+      scriptPath.theElmWatchNodeScriptFileUrl
     )) as Record<string, unknown>;
   } catch (unknownError) {
     return {
@@ -107,7 +110,7 @@ async function elmWatchNode({
     // Mimic `process.argv`: ["node", "/absolute/path/to/script", "arg1", "arg2", "..."].
     argv: [
       ELM_WATCH_NODE,
-      scriptPath.theElmWatchNodeScriptPath.absolutePath,
+      url.fileURLToPath(scriptPath.theElmWatchNodeScriptFileUrl),
       ...userArgs.slice(1),
     ],
   };

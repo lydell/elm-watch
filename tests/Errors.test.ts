@@ -2351,7 +2351,7 @@ describe("errors", () => {
 
         I tried to import your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js")
 
         But that resulted in this error:
 
@@ -2374,7 +2374,7 @@ describe("errors", () => {
 
         I tried to import your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-at-import/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/throw-at-import/postprocess.js")
 
         But that resulted in this error:
 
@@ -2399,7 +2399,7 @@ describe("errors", () => {
 
         I tried to import your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-non-error-at-import/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/throw-non-error-at-import/postprocess.js")
 
         But that resulted in this error:
 
@@ -2427,7 +2427,7 @@ describe("errors", () => {
 
         I imported your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js")
 
         I expected ⧙imported.default⧘ to be a function, but it isn't!
 
@@ -2454,7 +2454,7 @@ describe("errors", () => {
 
         I imported your postprocess file:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.js")
 
         I expected ⧙imported.default⧘ to be a function, but it isn't!
 
@@ -2488,7 +2488,7 @@ describe("errors", () => {
 
         I tried to run your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js")
         const result = await imported.default({
           "code": "(function(...;}(this));",
           "targetName": "main",
@@ -2527,7 +2527,7 @@ describe("errors", () => {
 
         I tried to run your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js")
         const result = await imported.default({
           "code": "(function(...;}(this));",
           "targetName": "main",
@@ -2560,7 +2560,7 @@ describe("errors", () => {
 
         I tried to run your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js")
         const result = await imported.default({
           "code": "(function(...;}(this));",
           "targetName": "main",
@@ -2593,7 +2593,7 @@ describe("errors", () => {
 
         I ran your postprocess command:
 
-        const imported = await import("/Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js")
         const result = await imported.default({
           "code": "(function(...;}(this));",
           "targetName": "main",

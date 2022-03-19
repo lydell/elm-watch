@@ -2,6 +2,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { DecoderError } from "tiny-decoders";
+import * as url from "url";
 
 import * as ElmWatchJson from "./ElmWatchJson";
 import { Env } from "./Env";
@@ -93,7 +94,7 @@ function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
     case "OutputPath":
       return dim(`Target: ${location.targetName}`);
     case "ElmWatchNodeScriptPath":
-      return location.theElmWatchNodeScriptPath.absolutePath;
+      return url.fileURLToPath(location.theElmWatchNodeScriptFileUrl);
     case "Custom":
       return location.location;
     case "NoLocation":
@@ -1301,9 +1302,9 @@ function printUnknownValueAsString(value: UnknownValueAsString): string {
 function printElmWatchNodeImportCommand(
   scriptPath: ElmWatchNodeScriptPath
 ): string {
-  const scriptPathString: string =
-    scriptPath.theElmWatchNodeScriptPath.absolutePath;
-  return `const imported = await import(${JSON.stringify(scriptPathString)})`;
+  return `const imported = await import(${JSON.stringify(
+    scriptPath.theElmWatchNodeScriptFileUrl
+  )})`;
 }
 
 function printElmWatchNodeRunCommand(args: ElmWatchNodePublicArgs): string {

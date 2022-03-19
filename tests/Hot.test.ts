@@ -2379,7 +2379,7 @@ describe("hot", () => {
 
       I tried to import your postprocess file:
 
-      const imported = await import("/Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
+      const imported = await import("file:///Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
 
       But that resulted in this error:
 
@@ -2413,7 +2413,7 @@ describe("hot", () => {
 
       I tried to import your postprocess file:
 
-      const imported = await import("/Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
+      const imported = await import("file:///Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
 
       But that resulted in this error:
 
