@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
+import * as url from "url";
 
 import { EMOJI } from "../src/Compile";
 import {
@@ -451,12 +452,25 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
 export function clean(string: string): string {
   const { root } = path.parse(__dirname);
 
+  const project = path.join(root, "Users", "you", "project");
+
   // Replace start of absolute paths with hardcoded stuff so the tests pass on
   // more than one computer. Replace automatic port numbers with a fixed one.
-  // Replace colors for snapshots.
+  // Replace colors for snapshots. Replace backslashes with slashes for Windows
+  // That can be extra ticky since we sometimes prints JSON strings where the
+  // backslashes end up escaped with another backslash.
   return string
     .split(path.dirname(__dirname))
-    .join(path.join(root, "Users", "you", "project"))
+    .join(project)
+    .split(path.dirname(__dirname).replace(/\\\\/g, "\\\\"))
+    .join(project)
+    .split(url.pathToFileURL(path.dirname(__dirname)).toString())
+    .join(
+      url
+        .pathToFileURL(project)
+        .toString()
+        .replace(/[A-Z]:\//g, "")
+    )
     .split(os.tmpdir())
     .join(path.join(root, "tmp", "fake"))
     .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
@@ -464,7 +478,8 @@ export function clean(string: string): string {
     .replace(/\x1B\[0?m/g, "⧘")
     .replace(
       /(')?[A-Z]:\\(.+)\1/g,
-      (_match, _quote, rest: string) => `/${rest.replace(/\\/g, "/")}`
+      (_match, _quote, rest: string) =>
+        `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`
     );
 }
 
