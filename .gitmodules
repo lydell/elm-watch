@@ -1,18 +1,18 @@
 [submodule "example/public/submodules/elm-spa-example"]
 	path = example/public/submodules/elm-spa-example
-	url = git@github.com:lydell/elm-spa-example.git
+	url = ../elm-spa-example.git
 [submodule "example/public/submodules/codebase-ui"]
 	path = example/public/submodules/codebase-ui
-	url = git@github.com:lydell/codebase-ui.git
+	url = ../codebase-ui.git
 [submodule "example/public/submodules/concourse"]
 	path = example/public/submodules/concourse
-	url = git@github.com:lydell/concourse.git
+	url = ../concourse.git
 [submodule "example/public/submodules/kite"]
 	path = example/public/submodules/kite
-	url = git@github.com:lydell/kite.git
+	url = ../kite.git
 [submodule "example/public/submodules/azimutt"]
 	path = example/public/submodules/azimutt
-	url = git@github.com:lydell/azimutt.git
+	url = ../azimutt.git
 [submodule "example/public/submodules/seeds-game"]
 	path = example/public/submodules/seeds-game
-	url = git@github.com:lydell/seeds-game.git
+	url = ../seeds-game.git
