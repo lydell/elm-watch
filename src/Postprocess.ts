@@ -5,17 +5,20 @@ import { Env } from "./Env";
 import { toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
-import { Command, ExitReason, spawnKillable, SpawnResult } from "./Spawn";
 import {
-  AbsolutePath,
+  ELM_WATCH_NODE,
+  ElmWatchNodeInternalArgs,
+  MessageFromWorker,
+  MessageToWorker,
+  PostprocessResult,
+} from "./PostprocessShared";
+import { Command, spawnKillable, SpawnResult } from "./Spawn";
+import {
   CompilationMode,
   ElmWatchJsonPath,
-  ElmWatchNodeScriptPath,
   OutputPath,
   RunMode,
 } from "./Types";
-
-export const ELM_WATCH_NODE = "elm-watch-node";
 
 export type Postprocess =
   | {
@@ -25,79 +28,6 @@ export type Postprocess =
       tag: "Postprocess";
       postprocessArray: NonEmptyArray<string>;
     };
-
-export type PostprocessResult<Code = Buffer> =
-  | PostprocessError
-  | {
-      tag: "Success";
-      code: Code;
-    };
-
-export type PostprocessError =
-  | {
-      tag: "CommandNotFoundError";
-      command: Command;
-    }
-  | {
-      tag: "ElmWatchNodeBadReturnValue";
-      scriptPath: ElmWatchNodeScriptPath;
-      args: ElmWatchNodePublicArgs;
-      returnValue: UnknownValueAsString;
-      stdout: string;
-      stderr: string;
-    }
-  | {
-      tag: "ElmWatchNodeDefaultExportNotFunction";
-      scriptPath: ElmWatchNodeScriptPath;
-      imported: UnknownValueAsString;
-      typeofDefault: string;
-      stdout: string;
-      stderr: string;
-    }
-  | {
-      tag: "ElmWatchNodeImportError";
-      scriptPath: ElmWatchNodeScriptPath;
-      error: UnknownValueAsString;
-      stdout: string;
-      stderr: string;
-    }
-  | {
-      tag: "ElmWatchNodeMissingScript";
-    }
-  | {
-      tag: "ElmWatchNodeRunError";
-      scriptPath: ElmWatchNodeScriptPath;
-      args: ElmWatchNodePublicArgs;
-      error: UnknownValueAsString;
-      stdout: string;
-      stderr: string;
-    }
-  | {
-      tag: "OtherSpawnError";
-      error: Error;
-      command: Command;
-    }
-  | {
-      tag: "PostprocessNonZeroExit";
-      exitReason: ExitReason;
-      stdout: string;
-      stderr: string;
-      command: Command;
-    }
-  | {
-      tag: "PostprocessStdinWriteError";
-      error: Error;
-      command: Command;
-    };
-
-// It’s not possible to send any value between workers and the main thread. We
-// just show unknown values (such as caught errors and return values) in error
-// messages, so we can seralize them in the worker instead. This type helps
-// making sure we remember to do that correctly.
-export type UnknownValueAsString = {
-  tag: "UnknownValueAsString";
-  value: string;
-};
 
 export function runPostprocess({
   env,
@@ -245,23 +175,6 @@ export class PostprocessWorkerPool {
   }
 }
 
-export type ElmWatchNodeInternalArgs = {
-  cwd: AbsolutePath;
-  code: string;
-  targetName: string;
-  compilationMode: CompilationMode;
-  runMode: RunMode;
-  userArgs: Array<string>;
-};
-
-export type ElmWatchNodePublicArgs = {
-  code: string;
-  targetName: string;
-  compilationMode: CompilationMode;
-  runMode: RunMode;
-  argv: Array<string>;
-};
-
 type PostprocessWorkerStatus =
   | {
       tag: "Busy";
@@ -274,18 +187,6 @@ type PostprocessWorkerStatus =
   | {
       tag: "Terminated";
     };
-
-export type MessageToWorker = {
-  tag: "StartPostprocess";
-  args: ElmWatchNodeInternalArgs;
-};
-
-export type MessageFromWorker = {
-  tag: "PostprocessDone";
-  result:
-    | { tag: "Reject"; error: unknown }
-    | { tag: "Resolve"; value: PostprocessResult<string> };
-};
 
 export const WORKER_TERMINATED = new Error(
   "`PostprocessWorker` has a `terminate` method. That was called! This error is supposed to be caught."

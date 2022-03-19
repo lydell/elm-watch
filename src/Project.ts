@@ -21,7 +21,8 @@ import {
   findClosest,
   longestCommonAncestorPath,
 } from "./PathHelpers";
-import { Postprocess, PostprocessError } from "./Postprocess";
+import { Postprocess } from "./Postprocess";
+import { PostprocessError } from "./PostprocessShared";
 import { RunElmMakeError } from "./SpawnElm";
 import type {
   AbsolutePath,

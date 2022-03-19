@@ -13,7 +13,7 @@ import {
   MessageToWorker,
   PostprocessResult,
   UnknownValueAsString,
-} from "./Postprocess";
+} from "./PostprocessShared";
 import type { ElmWatchNodeScriptPath } from "./Types";
 
 // Many errors are typed to always have `stdout` and `stderr`. They are captured

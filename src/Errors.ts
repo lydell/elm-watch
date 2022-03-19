@@ -19,7 +19,7 @@ import {
   ELM_WATCH_NODE,
   ElmWatchNodePublicArgs,
   UnknownValueAsString,
-} from "./Postprocess";
+} from "./PostprocessShared";
 import { Command, ExitReason } from "./Spawn";
 import {
   AbsolutePath,

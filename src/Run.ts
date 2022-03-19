@@ -8,7 +8,8 @@ import * as Hot from "./Hot";
 import type { Logger } from "./Logger";
 import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
+import { PostprocessWorkerPool } from "./Postprocess";
+import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
 import { CliArg, Cwd, ElmWatchJsonPath, GetNow, RunMode } from "./Types";
 

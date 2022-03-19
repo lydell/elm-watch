@@ -3,7 +3,8 @@ import { Env } from "./Env";
 import { bold, dim, printDurationMs } from "./Helpers";
 import type { Logger, LoggerConfig } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
+import { PostprocessWorkerPool } from "./Postprocess";
+import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { Project } from "./Project";
 import { GetNow } from "./Types";
 

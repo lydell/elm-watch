@@ -42,7 +42,8 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PortChoice } from "./Port";
-import { ELM_WATCH_NODE, PostprocessWorkerPool } from "./Postprocess";
+import { PostprocessWorkerPool } from "./Postprocess";
+import { ELM_WATCH_NODE } from "./PostprocessShared";
 import {
   ElmJsonErrorWithMetadata,
   getFlatOutputs,
