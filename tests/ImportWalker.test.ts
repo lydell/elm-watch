@@ -63,7 +63,10 @@ function printRelatedElmFilePaths(relatedElmFilePaths: Set<string>): string {
     filePath.startsWith(FIXTURES_DIR.absolutePath)
       ? filePath.slice(FIXTURES_DIR.absolutePath.length)
       : filePath
-  ).join("\n");
+  )
+    .join("\n")
+    .split(path.sep)
+    .join(path.posix.sep);
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
