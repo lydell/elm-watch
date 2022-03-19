@@ -3,6 +3,7 @@ import * as path from "path";
 import * as Decode from "tiny-decoders";
 
 import { JsonError, toError, toJsonError } from "./Helpers";
+import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -170,9 +171,15 @@ export function example(
       "My target name": {
         inputs: isNonEmptyArray(elmFiles)
           ? mapNonEmptyArray(elmFiles, (file) =>
-              path.relative(
-                path.dirname(elmWatchJsonPath.theElmWatchJsonPath.absolutePath),
-                path.resolve(cwd.path.absolutePath, file)
+              // Use slashes in all paths since they work everywhere (including
+              // Windows), while backslashes only work on Windows.
+              toUnixPath(
+                path.relative(
+                  path.dirname(
+                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath
+                  ),
+                  path.resolve(cwd.path.absolutePath, file)
+                )
               )
             )
           : ["src/Main.elm"],
@@ -182,6 +189,12 @@ export function example(
   };
 
   return JSON.stringify(json, null, 4);
+}
+
+function toUnixPath(filePath: string): string {
+  return IS_WINDOWS
+    ? /* istanbul ignore next */ filePath.split(path.sep).join(path.posix.sep)
+    : filePath;
 }
 
 type ElmMakeParsed = {
