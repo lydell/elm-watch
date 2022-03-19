@@ -8,6 +8,7 @@ import {
   logDebug,
   MemoryWriteStream,
   stringSnapshotSerializer,
+  TEST_ENV,
 } from "./Helpers";
 
 async function helpHelper(
@@ -19,7 +20,10 @@ async function helpHelper(
 
   const exitCode = await elmWatchCli(args, {
     cwd: __dirname,
-    env,
+    env: {
+      ...TEST_ENV,
+      ...env,
+    },
     stdin: new FailReadStream(),
     stdout,
     stderr,
