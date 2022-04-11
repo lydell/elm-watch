@@ -17,6 +17,8 @@ npm install --save-dev elm-watch
 
 > ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [elm-tooling]).
 
+> ℹ️ Node.js 14 or newer is required as elm-watch makes use of ES2020 language features.
+
 > ⚠️ Windows is currently not _fully_ supported. You might run into problems. See the [Windows support issue](https://github.com/lydell/elm-watch/issues/4).
 
 ## Getting started
