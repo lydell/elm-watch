@@ -8,7 +8,6 @@ import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
-import { InjectError } from "./Inject";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -107,7 +106,6 @@ type OutputStatus =
 
 export type OutputError =
   | ElmJson.ParseError
-  | InjectError
   | OutputFsError
   | PostprocessError
   | RunElmMakeError

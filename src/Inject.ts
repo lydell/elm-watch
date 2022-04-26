@@ -1,445 +1,623 @@
 import * as ClientCode from "./ClientCode";
-import * as Errors from "./Errors";
-import { absoluteDirname } from "./PathHelpers";
 import { Port } from "./Port";
-import {
-  AbsolutePath,
-  CompilationMode,
-  CompilationModeWithProxy,
-  OutputPath,
-} from "./Types";
+import { CompilationMode, CompilationModeWithProxy, OutputPath } from "./Types";
 
-type Replacement = {
-  // The `probe` is a simpler regex that determines if `replacements` should be
-  // run. All the `replacements` are required to make a change.
-  probe: RegExp;
-  replacements: Array<{
-    search: RegExp;
-    replace: string;
-  }>;
-};
-
-type InjectResult =
-  | InjectError
-  | {
-      tag: "Success";
-      code: string;
-    };
-
-export type InjectError = {
-  tag: "InjectSearchAndReplaceNotFound";
-  errorFilePath: Errors.ErrorFilePath;
-};
-
-// All regexes are anchored to the beginning of lines, which should make it
+// This matches full functions, declared either with `function name(` or `var name =`.
+// NOTE: All function names in the regex must also be mentioned in the
+// `replacements` object, and vice versa!
+// The regex is anchored to the beginning of lines, which should make it
 // impossible to match within strings in the user’s program.
+const REPLACEMENT_REGEX =
+  /^(?:function (F|_Platform_initialize|_Platform_export|_Browser_application|_Scheduler_binding|_Scheduler_step)\(|var (_VirtualDom_init|\$elm\$browser\$Browser\$sandbox|_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =).*\r?\n?\{(?:.*\r?\n)*?\}\)?;?$/gm;
+
 // The replacements should make the Elm JS stay strictly ES5 so that minifying
 // with esbuild in ES5 works.
-const mainReplacements: Array<Replacement> = [
+// Some object properties are marked with `/*%*/`. They need to be replaced with
+// shorter names in `optimize` mode.
+const REPLACEMENTS: Record<string, string> = {
   // ### _Platform_initialize (main : Program flags model msg)
-  // New implementation (copy-paste with some changes and additions).
-  {
-    probe: /^function _Platform_initialize\(/m,
-    replacements: [
-      {
-        search: /^\s*(['"])use strict\1;/m,
-        // Make sure these are always defined for easier code in `_Platform_initialize`.
-        replace: `$&\nvar _Platform_effectManagers = {}, _Scheduler_enqueue;`,
-      },
-      {
-        search:
-          /^function _Platform_initialize\(flagDecoder, args, init, update, subscriptions, stepperBuilder\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
-        replace: `
+  // New implementation.
+  _Platform_initialize: `
+// This whole function was changed by elm-watch.
 function _Platform_initialize(programType, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
-  if (args === "__elmWatchReturnData") {
-    return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType };
-  }
+	if (args === "__elmWatchReturnData") {
+		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType };
+	}
 
-  var flags = _Json_wrap(args ? args['flags'] : undefined);
-  var flagResult = A2(_Json_run, flagDecoder, flags);
-  $elm$core$Result$isOk(flagResult) || _Debug_crash(2 /**/, _Json_errorToString(flagResult.a) /**/);
-  var managers = {};
-  var initUrl = programType === "Browser.application" ? _Browser_getUrl() : undefined;
-  window.__ELM_WATCH_INIT_URL = initUrl;
-  var initPair = init(flagResult.a);
-  var model = initPair.a;
-  var stepper = stepperBuilder(sendToApp, model);
-  var ports = _Platform_setupEffects(managers, sendToApp);
-  var update;
-  var subscriptions;
+	var flags = _Json_wrap(args ? args['flags'] : undefined);
+	var flagResult = A2(_Json_run, flagDecoder, flags);
+	$elm$core$Result$isOk(flagResult) || _Debug_crash(2 /**/, _Json_errorToString(flagResult.a) /**/);
+	var managers = {};
+	var initUrl = programType === "Browser.application" ? _Browser_getUrl() : undefined;
+	window.__ELM_WATCH_INIT_URL = initUrl;
+	var initPair = init(flagResult.a);
+	var model = initPair.a;
+	var stepper = stepperBuilder(sendToApp, model);
+	var ports = _Platform_setupEffects(managers, sendToApp);
+	var update;
+	var subscriptions;
 
-  function setUpdateAndSubscriptions() {
-    update = impl.%update% || impl._impl.%update%;
-    subscriptions = impl.%subscriptions% || impl._impl.%subscriptions%;
-    if (typeof $elm$browser$Debugger$Main$wrapUpdate !== "undefined") {
-      update = $elm$browser$Debugger$Main$wrapUpdate(update);
-      subscriptions = $elm$browser$Debugger$Main$wrapSubs(subscriptions);
-    }
-  }
+	function setUpdateAndSubscriptions() {
+		update = impl./*%*/update/*%*/ || impl._impl./*%*/update/*%*/;
+		subscriptions = impl./*%*/subscriptions/*%*/ || impl._impl./*%*/subscriptions/*%*/;
+		if (typeof $elm$browser$Debugger$Main$wrapUpdate !== "undefined") {
+			update = $elm$browser$Debugger$Main$wrapUpdate(update);
+			subscriptions = $elm$browser$Debugger$Main$wrapSubs(subscriptions);
+		}
+	}
 
-  function sendToApp(msg, viewMetadata) {
-    var pair = A2(update, msg, model);
-    stepper(model = pair.a, viewMetadata);
-    _Platform_enqueueEffects(managers, pair.b, subscriptions(model));
-  }
+	function sendToApp(msg, viewMetadata) {
+		var pair = A2(update, msg, model);
+		stepper(model = pair.a, viewMetadata);
+		_Platform_enqueueEffects(managers, pair.b, subscriptions(model));
+	}
 
-  setUpdateAndSubscriptions();
-  _Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
+	setUpdateAndSubscriptions();
+	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-  function __elmWatchHotReload(newData, new_Platform_effectManagers, new_Scheduler_enqueue, moduleName) {
-    _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
-    _Scheduler_enqueue = new_Scheduler_enqueue;
+	function __elmWatchHotReload(newData, new_Platform_effectManagers, new_Scheduler_enqueue, moduleName) {
+		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
+		_Scheduler_enqueue = new_Scheduler_enqueue;
 
-    for (var key in new_Platform_effectManagers) {
-      var manager = new_Platform_effectManagers[key];
-      if (!(key in _Platform_effectManagers)) {
-        _Platform_effectManagers[key] = manager;
-        managers[key] = _Platform_instantiateManager(manager, sendToApp);
-        if (manager.a) {
-          console.info("elm-watch: A new port '" + key + "' was added. You might want to reload the page!");
-          manager.a(key, sendToApp)
-        }
-      }
-    }
+		for (var key in new_Platform_effectManagers) {
+			var manager = new_Platform_effectManagers[key];
+			if (!(key in _Platform_effectManagers)) {
+				_Platform_effectManagers[key] = manager;
+				managers[key] = _Platform_instantiateManager(manager, sendToApp);
+				if (manager.a) {
+					console.info("elm-watch: A new port '" + key + "' was added. You might want to reload the page!");
+					manager.a(key, sendToApp)
+				}
+			}
+		}
 
-    for (var key in newData.impl) {
-      if (key === "_impl" && impl._impl) {
-        for (var subKey in newData.impl[key]) {
-          impl._impl[subKey] = newData.impl[key][subKey];
-        }
-      } else {
-        impl[key] = newData.impl[key];
-      }
-    }
+		for (var key in newData.impl) {
+			if (key === "_impl" && impl._impl) {
+				for (var subKey in newData.impl[key]) {
+					impl._impl[subKey] = newData.impl[key][subKey];
+				}
+			} else {
+				impl[key] = newData.impl[key];
+			}
+		}
 
-    var newFlagResult = A2(_Json_run, newData.flagDecoder, flags);
-    if (!$elm$core$Result$isOk(newFlagResult)) {
-      return { tag: "ReloadPage", reason: "the flags type in \`" + moduleName + "\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\\nThis is the error:\\n" + _Json_errorToString(newFlagResult.a) };
-    }
-    if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
-      return { tag: "ReloadPage", reason: "the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).' };
-    }
-    init = impl.%init% || impl._impl.%init%;
-    if (typeof $elm$browser$Debugger$Main$wrapInit !== "undefined") {
-      init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
-    }
-    window.__ELM_WATCH_INIT_URL = initUrl;
-    var newInitPair = init(newFlagResult.a);
-    if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
-      return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!" };
-    }
+		var newFlagResult = A2(_Json_run, newData.flagDecoder, flags);
+		if (!$elm$core$Result$isOk(newFlagResult)) {
+			return { tag: "ReloadPage", reason: "the flags type in \`" + moduleName + "\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\\nThis is the error:\\n" + _Json_errorToString(newFlagResult.a) };
+		}
+		if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
+			return { tag: "ReloadPage", reason: "the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).' };
+		}
+		init = impl./*%*/init/*%*/ || impl._impl./*%*/init/*%*/;
+		if (typeof $elm$browser$Debugger$Main$wrapInit !== "undefined") {
+			init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
+		}
+		window.__ELM_WATCH_INIT_URL = initUrl;
+		var newInitPair = init(newFlagResult.a);
+		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
+			return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!" };
+		}
 
-    setUpdateAndSubscriptions();
-    stepper(model, true /* isSync */);
-    _Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
-    return { tag: "Success" };
-  }
+		setUpdateAndSubscriptions();
+		stepper(model, true /* isSync */);
+		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
+		return { tag: "Success" };
+	}
 
-  return Object.defineProperties(
-    ports ? { ports: ports } : {},
-    {
-      __elmWatchHotReload: { value: __elmWatchHotReload },
-      __elmWatchProgramType: { value: programType },
-    }
-  );
+	return Object.defineProperties(
+		ports ? { ports: ports } : {},
+		{
+			__elmWatchHotReload: { value: __elmWatchHotReload },
+			__elmWatchProgramType: { value: programType },
+		}
+	);
 }
 
+// This whole function was added by elm-watch.
 // Copy-paste of _Utils_eq but does not assume that x and y have the same type,
 // and considers functions to always be equal.
-function _Utils_eq_elmWatchInternal(x, y) {
-  for (
-    var pair, stack = [], isEqual = _Utils_eqHelp_elmWatchInternal(x, y, 0, stack);
-    isEqual && (pair = stack.pop());
-    isEqual = _Utils_eqHelp_elmWatchInternal(pair.a, pair.b, 0, stack)
-    )
-  {}
+function _Utils_eq_elmWatchInternal(x, y)
+{
+	for (
+		var pair, stack = [], isEqual = _Utils_eqHelp_elmWatchInternal(x, y, 0, stack);
+		isEqual && (pair = stack.pop());
+		isEqual = _Utils_eqHelp_elmWatchInternal(pair.a, pair.b, 0, stack)
+		)
+	{}
 
-  return isEqual;
+	return isEqual;
 }
 
-function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack) {
-  if (x === y) {
-    return true;
-  }
+// This whole function was added by elm-watch.
+function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack)
+{
+	if (x === y) {
+		return true;
+	}
 
-  var xType = _Utils_typeof_elmWatchInternal(x);
-  var yType = _Utils_typeof_elmWatchInternal(y);
+	var xType = _Utils_typeof_elmWatchInternal(x);
+	var yType = _Utils_typeof_elmWatchInternal(y);
 
-  if (xType !== yType) {
-    return false;
-  }
+	if (xType !== yType) {
+		return false;
+	}
 
-  switch (xType) {
-    case "primitive":
-      return false;
-    case "function":
-      return true;
-  }
+	switch (xType) {
+		case "primitive":
+			return false;
+		case "function":
+			return true;
+	}
 
-  if (x.$ !== y.$) {
-    return false;
-  }
+	if (x.$ !== y.$) {
+		return false;
+	}
 
-  if (x.$ === 'Set_elm_builtin') {
-    x = $elm$core$Set$toList(x);
-    y = $elm$core$Set$toList(y);
-  } else if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin' || x.$ < 0) {
-    x = $elm$core$Dict$toList(x);
-    y = $elm$core$Dict$toList(y);
-  }
+	if (x.$ === 'Set_elm_builtin') {
+		x = $elm$core$Set$toList(x);
+		y = $elm$core$Set$toList(y);
+	} else if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin' || x.$ < 0) {
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	}
 
-  if (Object.keys(x).length !== Object.keys(y).length) {
-    return false;
-  }
+	if (Object.keys(x).length !== Object.keys(y).length) {
+		return false;
+	}
 
-  if (depth > 100) {
-    stack.push(_Utils_Tuple2(x, y));
-    return true;
-  }
+	if (depth > 100) {
+		stack.push(_Utils_Tuple2(x, y));
+		return true;
+	}
 
-  for (var key in x) {
-    if (!_Utils_eqHelp_elmWatchInternal(x[key], y[key], depth + 1, stack)) {
-      return false;
-    }
-  }
-  return true;
+	for (var key in x) {
+		if (!_Utils_eqHelp_elmWatchInternal(x[key], y[key], depth + 1, stack)) {
+			return false;
+		}
+	}
+	return true;
 }
 
-function _Utils_typeof_elmWatchInternal(x) {
-  var type = typeof x;
-  return type === "function"
-    ? "function"
-    : type !== "object" || type === null
-    ? "primitive"
-    : "objectOrArray";
+// This whole function was added by elm-watch.
+function _Utils_typeof_elmWatchInternal(x)
+{
+	var type = typeof x;
+	return type === "function"
+		? "function"
+		: type !== "object" || type === null
+		? "primitive"
+		: "objectOrArray";
 }
-        `.trim(),
-      },
-    ],
-  },
+				`.trim(),
+
+  // Make sure these are always defined for easier code in `_Platform_initialize`.
+  // We don’t actually do anything with the `F` function – it’s just a way to get
+  // these definitions near the top of the file.
+  F: `
+var _Platform_effectManagers = {}, _Scheduler_enqueue; // added by elm-watch
+
+function F(arity, fun, wrapper) {
+  wrapper.a = arity;
+  wrapper.f = fun;
+  return wrapper;
+}
+  `.trim(),
 
   // ### _VirtualDom_init (main : Html msg)
-  // New implementation (copy-paste with some changes and additions).
-  {
-    probe: /^var _VirtualDom_init =/m,
-    replacements: [
-      {
-        search:
-          /^var _VirtualDom_init = F4\(function\(virtualNode, flagDecoder, debugMetadata, args\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}\);/m,
-        replace: `
-var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args) {
-  var programType = "Html";
+  // New implementation.
+  _VirtualDom_init: `
+// This whole function was changed by elm-watch.
+var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args)
+{
+	var programType = "Html";
 
-  if (args === "__elmWatchReturnData") {
-    return { virtualNode: virtualNode, programType: programType };
-  }
+	if (args === "__elmWatchReturnData") {
+		return { virtualNode: virtualNode, programType: programType };
+	}
 
-  var node = args && args['node'] ? args['node'] : _Debug_crash(0);
-  var nextNode = _VirtualDom_render(virtualNode, function() {});
-  node.parentNode.replaceChild(nextNode, node);
-  node = nextNode;
-  var sendToApp = function() {};
+	/**_UNUSED/ // always UNUSED with elm-watch
+	var node = args['node'];
+	//*/
+	/**/
+	var node = args && args['node'] ? args['node'] : _Debug_crash(0);
+	//*/
 
-  function __elmWatchHotReload(newData) {
-    var patches = _VirtualDom_diff(virtualNode, newData.virtualNode);
-    node = _VirtualDom_applyPatches(node, virtualNode, patches, sendToApp);
-    virtualNode = newData.virtualNode;
-    return { tag: "Success" };
-  }
+	var nextNode = _VirtualDom_render(virtualNode, function() {});
+	node.parentNode.replaceChild(nextNode, node);
+	node = nextNode;
+	var sendToApp = function() {};
 
-  return Object.defineProperties(
-    {},
-    {
-      __elmWatchHotReload: { value: __elmWatchHotReload },
-      __elmWatchProgramType: { value: programType },
-    }
-  );
+	function __elmWatchHotReload(newData) {
+		var patches = _VirtualDom_diff(virtualNode, newData.virtualNode);
+		node = _VirtualDom_applyPatches(node, virtualNode, patches, sendToApp);
+		virtualNode = newData.virtualNode;
+		return { tag: "Success" };
+	}
+
+	return Object.defineProperties(
+		{},
+		{
+			__elmWatchHotReload: { value: __elmWatchHotReload },
+			__elmWatchProgramType: { value: programType },
+		}
+	);
 });
-        `.trim(),
-      },
-    ],
-  },
+				`.trim(),
 
   // ### _Platform_export
   // New implementation (inspired by the original).
-  {
-    probe: /^function _Platform_export\(/m,
-    replacements: [
-      {
-        search:
-          /^function _Platform_export\(exports\)\r?\n\{(?:\r?\n(?:[\t ][^\n]+)?)+\r?\n\}/m,
-        replace: `
-function _Platform_export(exports) {
-  var reloadReasons = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
-  if (reloadReasons.length > 0) {
-    throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(reloadReasons))).join("\\n\\n---\\n\\n"));
-  }
+  _Platform_export: `
+// This whole function was changed by elm-watch.
+function _Platform_export(exports)
+{
+	var reloadReasons = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
+	if (reloadReasons.length > 0) {
+		throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(reloadReasons))).join("\\n\\n---\\n\\n"));
+	}
 }
 
-function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
-  var reloadReasons = [];
-  for (var name in exports) {
-    if (name === "init") {
-      if ("init" in obj) {
-        if ("__elmWatchApps" in obj) {
-          var data = exports.init("__elmWatchReturnData");
-          for (var index = 0; index < obj.__elmWatchApps.length; index++) {
-            var app = obj.__elmWatchApps[index];
-            if (app.__elmWatchProgramType !== data.programType) {
-              reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + data.programType + "\`.");
-            } else {
-              var result;
-              try {
-                result = app.__elmWatchHotReload(data, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
-                switch (result.tag) {
-                  case "Success":
-                    break;
-                  case "ReloadPage":
-                    reloadReasons.push(result.reason);
-                    break;
-                }
-              } catch (error) {
-                reloadReasons.push("hot reload for \`" + moduleName + "\` failed, probably because of incompatible model changes.\\nThis is the error:\\n" + error + "\\n" + (error ? error.stack : ""));
-              }
-            }
-          }
-        } else {
-          throw new Error("elm-watch: I'm trying to create \`" + moduleName + ".init\`, but it already exists and wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally?");
-        }
-      } else {
-        obj.__elmWatchApps = [];
-        obj.init = function() {
-          var app = exports.init.apply(exports, arguments);
-          obj.__elmWatchApps.push(app);
-          window.__ELM_WATCH_ON_INIT();
-          return app;
-        };
-      }
-    } else {
-      var innerReasons = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
-      reloadReasons = reloadReasons.concat(innerReasons);
-    }
-  }
-  return reloadReasons;
+// This whole function was added by elm-watch.
+function _Platform_mergeExportsElmWatch(moduleName, obj, exports)
+{
+	var reloadReasons = [];
+	for (var name in exports) {
+		if (name === "init") {
+			if ("init" in obj) {
+				if ("__elmWatchApps" in obj) {
+					var data = exports.init("__elmWatchReturnData");
+					for (var index = 0; index < obj.__elmWatchApps.length; index++) {
+						var app = obj.__elmWatchApps[index];
+						if (app.__elmWatchProgramType !== data.programType) {
+							reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + data.programType + "\`.");
+						} else {
+							var result;
+							try {
+								result = app.__elmWatchHotReload(data, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
+								switch (result.tag) {
+									case "Success":
+										break;
+									case "ReloadPage":
+										reloadReasons.push(result.reason);
+										break;
+								}
+							} catch (error) {
+								reloadReasons.push("hot reload for \`" + moduleName + "\` failed, probably because of incompatible model changes.\\nThis is the error:\\n" + error + "\\n" + (error ? error.stack : ""));
+							}
+						}
+					}
+				} else {
+					throw new Error("elm-watch: I'm trying to create \`" + moduleName + ".init\`, but it already exists and wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally?");
+				}
+			} else {
+				obj.__elmWatchApps = [];
+				obj.init = function() {
+					var app = exports.init.apply(exports, arguments);
+					obj.__elmWatchApps.push(app);
+					window.__ELM_WATCH_ON_INIT();
+					return app;
+				};
+			}
+		} else {
+			var innerReasons = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
+			reloadReasons = reloadReasons.concat(innerReasons);
+		}
+	}
+	return reloadReasons;
 }
-        `.trim(),
-      },
-    ],
-  },
+				`.trim(),
 
   // ### _Browser_application
   // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`. Init
   // with URL given from `_Platform_initialize` (via `window.__ELM_WATCH_INIT_URL`).
-  {
-    probe: /^function _Browser_application\(/m,
-    replacements: [
-      {
-        search: /^(\s*)var onUrlChange = impl\.%onUrlChange%;/m,
-        replace: ``,
-      },
-      {
-        search: /^\s*var onUrlRequest = impl\.%onUrlRequest%;/m,
-        replace: ``,
-      },
-      {
-        search:
-          /^(\s*)var key = function\(\) \{ key\.a\(onUrlChange\(_Browser_getUrl\(\)\)\); \};/m,
-        replace: `$1var key = function() { key.a(impl.%onUrlChange%(_Browser_getUrl())); };`,
-      },
-      {
-        search: /^(\s*)sendToApp\(onUrlRequest\(/m,
-        replace: `$1sendToApp(impl.%onUrlRequest%(`,
-      },
-      {
-        search:
-          /^(\s*)return A3\(impl\.%init%, flags, _Browser_getUrl\(\), key\);/m,
-        replace: `$1return A3(impl.%init%, flags, window.__ELM_WATCH_INIT_URL, key);`,
-      },
-      {
-        search:
-          /^(\s*)%view%: impl\.%view%,\s*%update%: impl\.%update%,\s*%subscriptions%: impl.%subscriptions%$/m,
-        replace: `$1%view%: function(model) { return impl.%view%(model); },\n$1_impl: impl`,
-      },
-    ],
-  },
+  _Browser_application: `
+// This function was slightly modified by elm-watch.
+function _Browser_application(impl)
+{
+	// var onUrlChange = impl.onUrlChange; // commented out by elm-watch
+	// var onUrlRequest = impl.onUrlRequest; // commented out by elm-watch
+	// var key = function() { key.a(onUrlChange(_Browser_getUrl())); }; // commented out by elm-watch
+	var key = function() { key.a(impl./*%*/onUrlChange/*%*/(_Browser_getUrl())); }; // added by elm-watch
+
+	return _Browser_document({
+		/*%*/setup/*%*/: function(sendToApp)
+		{
+			key.a = sendToApp;
+			_Browser_window.addEventListener('popstate', key);
+			_Browser_window.navigator.userAgent.indexOf('Trident') < 0 || _Browser_window.addEventListener('hashchange', key);
+
+			return F2(function(domNode, event)
+			{
+				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target && !domNode.hasAttribute('download'))
+				{
+					event.preventDefault();
+					var href = domNode.href;
+					var curr = _Browser_getUrl();
+					var next = $elm$url$Url$fromString(href).a;
+					sendToApp(impl./*%*/onUrlRequest/*%*/(
+						(next
+							&& curr./*%*/protocol/*%*/ === next./*%*/protocol/*%*/
+							&& curr./*%*/host/*%*/ === next./*%*/host/*%*/
+							&& curr./*%*/port_/*%*/.a === next./*%*/port_/*%*/.a
+						)
+							? $elm$browser$Browser$Internal(next)
+							: $elm$browser$Browser$External(href)
+					));
+				}
+			});
+		},
+		/*%*/init/*%*/: function(flags)
+		{
+			// return A3(impl.init, flags, _Browser_getUrl(), key); // commented out by elm-watch
+			return A3(impl./*%*/init/*%*/, flags, window.__ELM_WATCH_INIT_URL, key); // added by elm-watch
+		},
+		// view: impl.view, // commented out by elm-watch
+		// update: impl.update, // commented out by elm-watch
+		// subscriptions: impl.subscriptions // commented out by elm-watch
+		/*%*/view/*%*/: function(model) { return impl./*%*/view/*%*/(model); }, // added by elm-watch
+		_impl: impl // added by elm-watch
+	});
+}
+  `.trim(),
 
   // ### $elm$browser$Browser$sandbox
   // Don’t pluck `view` from `impl`. Pass `impl` to `_Browser_element`.
-  {
-    probe: /^var \$elm\$browser\$Browser\$sandbox =/m,
-    replacements: [
-      {
-        search: /^(\s*)%view%: impl\.%view%$/m,
-        replace: `$1%view%: function(model) { return impl.%view%(model); },\n$1_impl: impl`,
-      },
-    ],
-  },
+  $elm$browser$Browser$sandbox: `
+// This function was slightly modified by elm-watch.
+var $elm$browser$Browser$sandbox = function (impl) {
+	return _Browser_element(
+		{
+			/*%*/init/*%*/: function (_v0) {
+				return _Utils_Tuple2(impl./*%*/init/*%*/, $elm$core$Platform$Cmd$none);
+			},
+			/*%*/subscriptions/*%*/: function (_v1) {
+				return $elm$core$Platform$Sub$none;
+			},
+			/*%*/update/*%*/: F2(
+				function (msg, model) {
+					return _Utils_Tuple2(
+						A2(impl./*%*/update/*%*/, msg, model),
+						$elm$core$Platform$Cmd$none);
+				}),
+			// view: impl.view // commented out by elm-watch
+			/*%*/view/*%*/: function(model) { return impl./*%*/view/*%*/(model); }, // added by elm-watch
+			_impl: impl // added by elm-watch
+		});
+};
+  `.trim(),
 
   // ### _Platform_worker, _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
   // Update call to `_Platform_initialize` to match our implementation.
   // `_Browser_application` calls `_Browser_document`/`_Debugger_document`.
   // `$elm$browser$Browser$sandbox` calls `_Browser_element`/`_Debugger_element`.
   // In those cases we need `impl._impl`.
-  // Also pass the type of program and the `debugMetadata` to `_Platform_initialize`.
-  {
-    probe:
-      /^var (?:_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =/m,
-    replacements: [
-      {
-        search:
-          /^(\s*)impl\.%update%,\s*impl\.%subscriptions%,|\$elm\$browser\$Debugger\$Main\$wrapUpdate\(impl\.%update%\),\s*\$elm\$browser\$Debugger\$Main\$wrapSubs\(impl\.%subscriptions%\),/gm,
-        replace: `$1impl,`,
-      },
-    ],
-  },
-  {
-    probe: /^var _Platform_worker =/m,
-    replacements: [
-      {
-        search:
-          /^var _Platform_worker =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&"Platform.worker", debugMetadata,`,
-      },
-    ],
-  },
-  {
-    probe: /^var (?:_Browser_element|_Debugger_element) =/m,
-    replacements: [
-      {
-        search:
-          /^var (?:_Browser_element|_Debugger_element) =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&impl._impl ? "Browser.sandbox" : "Browser.element", debugMetadata,`,
-      },
-    ],
-  },
-  {
-    probe: /^var (?:_Browser_document|_Debugger_document) =/m,
-    replacements: [
-      {
-        search:
-          /^var (?:_Browser_document|_Debugger_document) =.+\s*\{\s*return _Platform_initialize\(/gm,
-        replace: `$&impl._impl ? "Browser.application" : "Browser.document", debugMetadata,`,
-      },
-    ],
-  },
-
-  // ### _Browser_element, _Browser_document, _Debugger_element, _Debugger_document
   // Don’t pluck `view` from `impl`.
-  {
-    probe:
-      /^var (?:_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =/m,
-    replacements: [
-      {
-        search: /^\s*var view = impl\.%view%;/gm,
-        replace: ``,
-      },
-      {
-        search: /^([^'"\n]* )view\(/gm,
-        replace: `$1impl.%view%(`,
-      },
-    ],
-  },
+  // Also pass the type of program and the `debugMetadata` to `_Platform_initialize`.
+  _Platform_worker: `
+// This function was slightly modified by elm-watch.
+var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
+{
+	return _Platform_initialize(
+		"Platform.worker", // added by elm-watch
+		debugMetadata, // added by elm-watch
+		flagDecoder,
+		args,
+		impl./*%*/init/*%*/,
+		// impl.update, // commented out by elm-watch
+		// impl.subscriptions, // commented out by elm-watch
+		impl, // added by elm-watch
+		function() { return function() {} }
+	);
+});
+  `.trim(),
+
+  _Browser_element: `
+// This function was slightly modified by elm-watch.
+var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debugMetadata, args)
+{
+	return _Platform_initialize(
+		impl._impl ? "Browser.sandbox" : "Browser.element", // added by elm-watch
+		debugMetadata, // added by elm-watch
+		flagDecoder,
+		args,
+		impl./*%*/init/*%*/,
+		// impl.update, // commented out by elm-watch
+		// impl.subscriptions, // commented out by elm-watch
+		impl, // added by elm-watch
+		function(sendToApp, initialModel) {
+			// var view = impl.view; // commented out by elm-watch
+			/**_UNUSED/ // always UNUSED with elm-watch
+			var domNode = args['node'];
+			//*/
+			/**/
+			var domNode = args && args['node'] ? args['node'] : _Debug_crash(0);
+			//*/
+			var currNode = _VirtualDom_virtualize(domNode);
+
+			return _Browser_makeAnimator(initialModel, function(model)
+			{
+				// var nextNode = view(model); // commented out by elm-watch
+				var nextNode = impl./*%*/view/*%*/(model); // added by elm-watch
+				var patches = _VirtualDom_diff(currNode, nextNode);
+				domNode = _VirtualDom_applyPatches(domNode, currNode, patches, sendToApp);
+				currNode = nextNode;
+			});
+		}
+	);
+});
+  `.trim(),
+
+  _Browser_document: `
+// This function was slightly modified by elm-watch.
+var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, debugMetadata, args)
+{
+	return _Platform_initialize(
+		impl._impl ? "Browser.application" : "Browser.document", // added by elm-watch
+		debugMetadata, // added by elm-watch
+		flagDecoder,
+		args,
+		impl./*%*/init/*%*/,
+		// impl.update, // commented out by elm-watch
+		// impl.subscriptions, // commented out by elm-watch
+		impl, // added by elm-watch
+		function(sendToApp, initialModel) {
+			var divertHrefToApp = impl./*%*/setup/*%*/ && impl./*%*/setup/*%*/(sendToApp)
+			// var view = impl.view; // commented out by elm-watch
+			var title = _VirtualDom_doc.title;
+			var bodyNode = _VirtualDom_doc.body;
+			var currNode = _VirtualDom_virtualize(bodyNode);
+			return _Browser_makeAnimator(initialModel, function(model)
+			{
+				_VirtualDom_divertHrefToApp = divertHrefToApp;
+				// var doc = view(model); // commented out by elm-watch
+				var doc = impl./*%*/view/*%*/(model); // added by elm-watch
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc./*%*/body/*%*/);
+				var patches = _VirtualDom_diff(currNode, nextNode);
+				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
+				currNode = nextNode;
+				_VirtualDom_divertHrefToApp = 0;
+				(title !== doc./*%*/title/*%*/) && (_VirtualDom_doc.title = title = doc./*%*/title/*%*/);
+			});
+		}
+	);
+});
+  `.trim(),
+
+  // Note: Debugger code does not need to worry about optimize mode shortened record fields.
+  _Debugger_element: `
+// This function was slightly modified by elm-watch.
+var _Debugger_element = F4(function(impl, flagDecoder, debugMetadata, args)
+{
+	return _Platform_initialize(
+		impl._impl ? "Browser.sandbox" : "Browser.element", // added by elm-watch
+		debugMetadata, // added by elm-watch
+		flagDecoder,
+		args,
+		A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(debugMetadata), _Debugger_popout(), impl.init),
+		// $elm$browser$Debugger$Main$wrapUpdate(impl.update), // commented out by elm-watch
+		// $elm$browser$Debugger$Main$wrapSubs(impl.subscriptions), // commented out by elm-watch
+		impl, // added by elm-watch
+		function(sendToApp, initialModel)
+		{
+			// var view = impl.view; // commented out by elm-watch
+			var title = _VirtualDom_doc.title;
+			var domNode = args && args['node'] ? args['node'] : _Debug_crash(0);
+			var currNode = _VirtualDom_virtualize(domNode);
+			var currBlocker = $elm$browser$Debugger$Main$toBlockerType(initialModel);
+			var currPopout;
+
+			var cornerNode = _VirtualDom_doc.createElement('div');
+			domNode.parentNode.insertBefore(cornerNode, domNode.nextSibling);
+			var cornerCurr = _VirtualDom_virtualize(cornerNode);
+
+			initialModel.popout.a = sendToApp;
+
+			return _Browser_makeAnimator(initialModel, function(model)
+			{
+				// var nextNode = A2(_VirtualDom_map, $elm$browser$Debugger$Main$UserMsg, view($elm$browser$Debugger$Main$getUserModel(model))); // commented out by elm-watch
+				var nextNode = A2(_VirtualDom_map, $elm$browser$Debugger$Main$UserMsg, impl.view($elm$browser$Debugger$Main$getUserModel(model))); // added by elm-watch
+				var patches = _VirtualDom_diff(currNode, nextNode);
+				domNode = _VirtualDom_applyPatches(domNode, currNode, patches, sendToApp);
+				currNode = nextNode;
+
+				// update blocker
+
+				var nextBlocker = $elm$browser$Debugger$Main$toBlockerType(model);
+				_Debugger_updateBlocker(currBlocker, nextBlocker);
+				currBlocker = nextBlocker;
+
+				// view corner
+
+				var cornerNext = $elm$browser$Debugger$Main$cornerView(model);
+				var cornerPatches = _VirtualDom_diff(cornerCurr, cornerNext);
+				cornerNode = _VirtualDom_applyPatches(cornerNode, cornerCurr, cornerPatches, sendToApp);
+				cornerCurr = cornerNext;
+
+				if (!model.popout.b)
+				{
+					currPopout = undefined;
+					return;
+				}
+
+				// view popout
+
+				_VirtualDom_doc = model.popout.b; // SWITCH TO POPOUT DOC
+				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b));
+				var nextPopout = $elm$browser$Debugger$Main$popoutView(model);
+				var popoutPatches = _VirtualDom_diff(currPopout, nextPopout);
+				_VirtualDom_applyPatches(model.popout.b.body, currPopout, popoutPatches, sendToApp);
+				currPopout = nextPopout;
+				_VirtualDom_doc = document; // SWITCH BACK TO NORMAL DOC
+			});
+		}
+	);
+});
+  `.trim(),
+
+  _Debugger_document: `
+// This function was slightly modified by elm-watch.
+var _Debugger_document = F4(function(impl, flagDecoder, debugMetadata, args)
+{
+	return _Platform_initialize(
+		impl._impl ? "Browser.application" : "Browser.document", // added by elm-watch
+		debugMetadata, // added by elm-watch
+		flagDecoder,
+		args,
+		A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(debugMetadata), _Debugger_popout(), impl.init),
+		// $elm$browser$Debugger$Main$wrapUpdate(impl.update), // commented out by elm-watch
+		// $elm$browser$Debugger$Main$wrapSubs(impl.subscriptions), // commented out by elm-watch
+		impl, // added by elm-watch
+		function(sendToApp, initialModel)
+		{
+			var divertHrefToApp = impl.setup && impl.setup(function(x) { return sendToApp($elm$browser$Debugger$Main$UserMsg(x)); });
+			// var view = impl.view; // commented out by elm-watch
+			var title = _VirtualDom_doc.title;
+			var bodyNode = _VirtualDom_doc.body;
+			var currNode = _VirtualDom_virtualize(bodyNode);
+			var currBlocker = $elm$browser$Debugger$Main$toBlockerType(initialModel);
+			var currPopout;
+
+			initialModel.popout.a = sendToApp;
+
+			return _Browser_makeAnimator(initialModel, function(model)
+			{
+				_VirtualDom_divertHrefToApp = divertHrefToApp;
+				// var doc = view($elm$browser$Debugger$Main$getUserModel(model)); // commented out by elm-watch
+				var doc = impl.view($elm$browser$Debugger$Main$getUserModel(model)); // added by elm-watch
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(
+					_Utils_ap(
+						A2($elm$core$List$map, _VirtualDom_map($elm$browser$Debugger$Main$UserMsg), doc.body),
+						_List_Cons($elm$browser$Debugger$Main$cornerView(model), _List_Nil)
+					)
+				);
+				var patches = _VirtualDom_diff(currNode, nextNode);
+				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
+				currNode = nextNode;
+				_VirtualDom_divertHrefToApp = 0;
+				(title !== doc.title) && (_VirtualDom_doc.title = title = doc.title);
+
+				// update blocker
+
+				var nextBlocker = $elm$browser$Debugger$Main$toBlockerType(model);
+				_Debugger_updateBlocker(currBlocker, nextBlocker);
+				currBlocker = nextBlocker;
+
+				// view popout
+
+				if (!model.popout.b) { currPopout = undefined; return; }
+
+				_VirtualDom_doc = model.popout.b; // SWITCH TO POPOUT DOC
+				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b));
+				var nextPopout = $elm$browser$Debugger$Main$popoutView(model);
+				var popoutPatches = _VirtualDom_diff(currPopout, nextPopout);
+				_VirtualDom_applyPatches(model.popout.b.body, currPopout, popoutPatches, sendToApp);
+				currPopout = nextPopout;
+				_VirtualDom_doc = document; // SWITCH BACK TO NORMAL DOC
+			});
+		}
+	);
+});
+  `.trim(),
 
   // ### _Scheduler_binding, _Scheduler_step
   // This is needed because Elm mutates `Task`s in `_Scheduler_step`:
@@ -459,59 +637,112 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports) {
   // work with below) is _always_ set to a function – a dummy one for
   // non-cancelable tasks (`Function.prototype` is a no-op function).
   // `_Utils_eq_elmWatchInternal` considers all functions to be equal.
-  {
-    probe: /^function _Scheduler_binding\(/m,
-    replacements: [
-      {
-        search:
-          /^(function _Scheduler_binding\(callback\)\s*\{\s*return \{\s*\$: 2,\s*b: callback,\s*)c: null(\s*\};\s*\})/gm,
-        replace: `$1c: Function.prototype$2`,
-      },
-      {
-        search:
-          /^(\s*proc\.f\.c = proc\.f\.b\(function\(newRoot\) \{\s*proc\.f = newRoot;\s*_Scheduler_enqueue\(proc\);\s*\}\));/gm,
-        replace: `$1 || Function.prototype;`,
-      },
-    ],
-  },
-];
+  _Scheduler_binding: `
+// This function was slightly modified by elm-watch.
+function _Scheduler_binding(callback)
+{
+	return {
+		$: 2,
+		b: callback,
+		// c: null // commented out by elm-watch
+		c: Function.prototype // added by elm-watch
+	};
+}
+  `.trim(),
 
-export function inject(outputPath: OutputPath, code: string): InjectResult {
-  const recordNames = getRecordNames(code);
+  _Scheduler_step: `
+function _Scheduler_step(proc)
+{
+	while (proc.f)
+	{
+		var rootTag = proc.f.$;
+		if (rootTag === 0 || rootTag === 1)
+		{
+			while (proc.g && proc.g.$ !== rootTag)
+			{
+				proc.g = proc.g.i;
+			}
+			if (!proc.g)
+			{
+				return;
+			}
+			proc.f = proc.g.b(proc.f.a);
+			proc.g = proc.g.i;
+		}
+		else if (rootTag === 2)
+		{
+			proc.f.c = proc.f.b(function(newRoot) {
+				proc.f = newRoot;
+				_Scheduler_enqueue(proc);
+			// }); // commented out by elm-watch
+			}) || Function.prototype; // added by elm-watch
+			return;
+		}
+		else if (rootTag === 5)
+		{
+			if (proc.h.length === 0)
+			{
+				return;
+			}
+			proc.f = proc.f.b(proc.h.shift());
+		}
+		else // if (rootTag === 3 || rootTag === 4)
+		{
+			proc.g = {
+				$: rootTag === 3 ? 0 : 1,
+				b: proc.f.b,
+				i: proc.g
+			};
+			proc.f = proc.f.d;
+		}
+	}
+}
+  `.trim(),
+};
 
-  try {
-    const newCode = mainReplacements
-      .map((replacement) => updateRecordNames(recordNames, replacement))
-      .reduce(
-        (accCode, replacement) =>
-          strictReplace(
-            absoluteDirname(outputPath.theOutputPath),
-            accCode,
-            replacement
-          ),
-        code
-      );
-    return {
-      tag: "Success",
-      code: newCode,
-    };
-  } catch (unknownError) {
-    // istanbul ignore else
-    if (unknownError instanceof StrictReplaceError) {
-      return unknownError.error;
-    }
-    // istanbul ignore next
-    throw unknownError;
+export function inject(
+  outputPath: OutputPath,
+  compilationMode: CompilationMode,
+  code: string
+): string {
+  const replacements = getReplacements(compilationMode, code);
+
+  return code.replace(
+    REPLACEMENT_REGEX,
+    (match, name1: string, name: string = name1) =>
+      replacements[name] ??
+      `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
+  );
+}
+
+function getReplacements(
+  compilationMode: CompilationMode,
+  code: string
+): Record<string, string> {
+  switch (compilationMode) {
+    case "debug":
+    case "standard":
+      return REPLACEMENTS;
+
+    case "optimize":
+      return updateReplacements(getOptimizeModeRecordNames(code), REPLACEMENTS);
   }
 }
 
-function getRecordNames(code: string): Record<string, string> {
-  const match = /^\s*impl\.(\w+),\s*impl\.(\w+),\s*impl\.(\w+),/m.exec(code);
-
-  // istanbul ignore if
-  if (match === null) {
-    return {};
-  }
+// `.init` might be called `.G` in optimize mode. This figures out the shortened
+// names needed for hot reloading.
+function getOptimizeModeRecordNames(code: string): Record<string, string> {
+  const match1 = /^\s*impl\.(\w+),\s*impl\.(\w+),\s*impl\.(\w+),/m.exec(code);
+  const match2 = /^\s*var divertHrefToApp = impl\.(\w+)/m.exec(code);
+  const match3 =
+    /^\s*var nextNode = _VirtualDom_node\('body'\)\(_List_Nil\)\(doc\.(\w+)\);/m.exec(
+      code
+    );
+  const match4 = /^\s*\(title !== doc\.(\w+)\)/m.exec(code);
+  const match5 =
+    /^\s*&& curr\.(\w+) .*\s*&& curr\.(\w+) .*\s*&& curr\.(\w+)\..*/m.exec(
+      code
+    );
 
   // istanbul ignore next
   const [
@@ -519,7 +750,24 @@ function getRecordNames(code: string): Record<string, string> {
     init = "init_missing",
     update = "update_missing",
     subscriptions = "subscriptions_missing",
-  ] = match;
+  ] = match1 ?? [];
+
+  // istanbul ignore next
+  const [, setup = "setup_missing"] = match2 ?? [];
+
+  // istanbul ignore next
+  const [, body = "body_missing"] = match3 ?? [];
+
+  // istanbul ignore next
+  const [, title = "title_missing"] = match4 ?? [];
+
+  // istanbul ignore next
+  const [
+    ,
+    protocol = "protocol_missing",
+    host = "host_missing",
+    port_ = "port__missing",
+  ] = match5 ?? [];
 
   const extra = Object.fromEntries(
     Array.from(
@@ -534,90 +782,35 @@ function getRecordNames(code: string): Record<string, string> {
     init,
     update,
     subscriptions,
+    setup,
+    body,
+    title,
+    protocol,
+    host,
+    port_,
   };
 }
 
-function updateRecordNames(
-  recordNames: Record<string, string>,
-  replacement: Replacement
-): Replacement {
-  return {
-    probe: updateRegex(recordNames, replacement.probe),
-    replacements: replacement.replacements.map(({ search, replace }) => ({
-      search: updateRegex(recordNames, search),
-      replace: updateString(recordNames, replace),
-    })),
-  };
-}
-
-function updateRegex(
-  recordNames: Record<string, string>,
-  regex: RegExp
-): RegExp {
-  return RegExp(updateString(recordNames, regex.source), regex.flags);
-}
-
-function updateString(
-  recordNames: Record<string, string>,
-  string: string
-): string {
-  return Object.entries(recordNames).reduce(
-    (acc, [from, to]) => acc.split(`%${from}%`).join(to),
-    string
+function updateReplacements(
+  optimizeModeRecordNames: Record<string, string>,
+  replacements: Record<string, string>
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(replacements).map(([key, value]) => [
+      key,
+      updateString(optimizeModeRecordNames, value),
+    ])
   );
 }
 
-class StrictReplaceError extends Error {
-  constructor(public error: InjectError) {
-    super();
-  }
-}
-
-function strictReplace(
-  cwd: AbsolutePath,
-  code: string,
-  { probe, replacements }: Replacement
+function updateString(
+  optimizeModeRecordNames: Record<string, string>,
+  string: string
 ): string {
-  return probe.test(code)
-    ? replacements.reduce((accCode, { search, replace }) => {
-        const newCode = accCode.replace(search, replace);
-        if (newCode === accCode) {
-          throw new StrictReplaceError({
-            tag: "InjectSearchAndReplaceNotFound",
-            errorFilePath: Errors.tryWriteErrorFile(
-              cwd,
-              "InjectSearchAndReplaceNotFound",
-              "txt",
-              replaceErrorContent(probe, search, replace, accCode)
-            ),
-          });
-        }
-        return newCode;
-      }, code)
-    : code;
-}
-
-function replaceErrorContent(
-  probe: RegExp,
-  search: RegExp,
-  replace: string,
-  code: string
-): string {
-  return `
-Modifying Elm's JS output for hot reloading failed!
-
-### Probe (found):
-${probe.toString()}
-
-### Regex to replace (not found!):
-${search.toString()}
-
-### Replacement:
-${replace}
-
-### Code running replacements on:
-${code}
-`.trimStart();
+  return Object.entries(optimizeModeRecordNames).reduce(
+    (acc, [from, to]) => acc.split(`/*%*/${from}/*%*/`).join(to),
+    string
+  );
 }
 
 export function proxyFile(

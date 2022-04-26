@@ -884,20 +884,6 @@ ${error.message}
 `;
 }
 
-export function injectSearchAndReplaceNotFound(
-  outputPath: OutputPath,
-  errorFilePath: ErrorFilePath
-): ErrorTemplate {
-  return fancyError("TROUBLE INJECTING HOT RELOAD", outputPath)`
-I tried to do some search and replace on Elm's JS output to inject
-code for hot reloading, but that didn't work out as expected!
-
-I tried to replace some specific code, but couldn't find it!
-
-${printErrorFilePath(errorFilePath)}
-`;
-}
-
 export function portConflictForNoPort(error: Error): ErrorTemplate {
   return fancyError("PORT CONFLICT", { tag: "NoLocation" })`
 I ask the operating system for an arbitrary available port for the
