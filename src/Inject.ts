@@ -11,10 +11,12 @@ import { CompilationMode, CompilationModeWithProxy, OutputPath } from "./Types";
 const REPLACEMENT_REGEX =
   /^(?:function (F|_Platform_initialize|_Platform_export|_Browser_application|_Scheduler_binding|_Scheduler_step)\(|var (_VirtualDom_init|\$elm\$browser\$Browser\$sandbox|_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =).*\r?\n?\{(?:.*\r?\n)*?\}\)?;?$/gm;
 
+// Some object properties are marked with `%`, like `%prop%`. They need to be
+// replaced with shorter names in `optimize` mode.
+const PLACEHOLDER_REGEX = /%(\w+)%/g;
+
 // The replacements should make the Elm JS stay strictly ES5 so that minifying
 // with esbuild in ES5 works.
-// Some object properties are marked with `/*%*/`. They need to be replaced with
-// shorter names in `optimize` mode.
 const REPLACEMENTS: Record<string, string> = {
   // ### _Platform_initialize (main : Program flags model msg)
   // New implementation.
@@ -40,8 +42,8 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
 	var subscriptions;
 
 	function setUpdateAndSubscriptions() {
-		update = impl./*%*/update/*%*/ || impl._impl./*%*/update/*%*/;
-		subscriptions = impl./*%*/subscriptions/*%*/ || impl._impl./*%*/subscriptions/*%*/;
+		update = impl.%update% || impl._impl.%update%;
+		subscriptions = impl.%subscriptions% || impl._impl.%subscriptions%;
 		if (typeof $elm$browser$Debugger$Main$wrapUpdate !== "undefined") {
 			update = $elm$browser$Debugger$Main$wrapUpdate(update);
 			subscriptions = $elm$browser$Debugger$Main$wrapSubs(subscriptions);
@@ -90,7 +92,7 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
 		if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
 			return { tag: "ReloadPage", reason: "the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).' };
 		}
-		init = impl./*%*/init/*%*/ || impl._impl./*%*/init/*%*/;
+		init = impl.%init% || impl._impl.%init%;
 		if (typeof $elm$browser$Debugger$Main$wrapInit !== "undefined") {
 			init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
 		}
@@ -318,10 +320,10 @@ function _Browser_application(impl)
 	// var onUrlChange = impl.onUrlChange; // commented out by elm-watch
 	// var onUrlRequest = impl.onUrlRequest; // commented out by elm-watch
 	// var key = function() { key.a(onUrlChange(_Browser_getUrl())); }; // commented out by elm-watch
-	var key = function() { key.a(impl./*%*/onUrlChange/*%*/(_Browser_getUrl())); }; // added by elm-watch
+	var key = function() { key.a(impl.%onUrlChange%(_Browser_getUrl())); }; // added by elm-watch
 
 	return _Browser_document({
-		/*%*/setup/*%*/: function(sendToApp)
+		%setup%: function(sendToApp)
 		{
 			key.a = sendToApp;
 			_Browser_window.addEventListener('popstate', key);
@@ -335,11 +337,11 @@ function _Browser_application(impl)
 					var href = domNode.href;
 					var curr = _Browser_getUrl();
 					var next = $elm$url$Url$fromString(href).a;
-					sendToApp(impl./*%*/onUrlRequest/*%*/(
+					sendToApp(impl.%onUrlRequest%(
 						(next
-							&& curr./*%*/protocol/*%*/ === next./*%*/protocol/*%*/
-							&& curr./*%*/host/*%*/ === next./*%*/host/*%*/
-							&& curr./*%*/port_/*%*/.a === next./*%*/port_/*%*/.a
+							&& curr.%protocol% === next.%protocol%
+							&& curr.%host% === next.%host%
+							&& curr.%port_%.a === next.%port_%.a
 						)
 							? $elm$browser$Browser$Internal(next)
 							: $elm$browser$Browser$External(href)
@@ -347,15 +349,15 @@ function _Browser_application(impl)
 				}
 			});
 		},
-		/*%*/init/*%*/: function(flags)
+		%init%: function(flags)
 		{
 			// return A3(impl.init, flags, _Browser_getUrl(), key); // commented out by elm-watch
-			return A3(impl./*%*/init/*%*/, flags, window.__ELM_WATCH_INIT_URL, key); // added by elm-watch
+			return A3(impl.%init%, flags, window.__ELM_WATCH_INIT_URL, key); // added by elm-watch
 		},
 		// view: impl.view, // commented out by elm-watch
 		// update: impl.update, // commented out by elm-watch
 		// subscriptions: impl.subscriptions // commented out by elm-watch
-		/*%*/view/*%*/: function(model) { return impl./*%*/view/*%*/(model); }, // added by elm-watch
+		%view%: function(model) { return impl.%view%(model); }, // added by elm-watch
 		_impl: impl // added by elm-watch
 	});
 }
@@ -368,20 +370,20 @@ function _Browser_application(impl)
 var $elm$browser$Browser$sandbox = function (impl) {
 	return _Browser_element(
 		{
-			/*%*/init/*%*/: function (_v0) {
-				return _Utils_Tuple2(impl./*%*/init/*%*/, $elm$core$Platform$Cmd$none);
+			%init%: function (_v0) {
+				return _Utils_Tuple2(impl.%init%, $elm$core$Platform$Cmd$none);
 			},
-			/*%*/subscriptions/*%*/: function (_v1) {
+			%subscriptions%: function (_v1) {
 				return $elm$core$Platform$Sub$none;
 			},
-			/*%*/update/*%*/: F2(
+			%update%: F2(
 				function (msg, model) {
 					return _Utils_Tuple2(
-						A2(impl./*%*/update/*%*/, msg, model),
+						A2(impl.%update%, msg, model),
 						$elm$core$Platform$Cmd$none);
 				}),
 			// view: impl.view // commented out by elm-watch
-			/*%*/view/*%*/: function(model) { return impl./*%*/view/*%*/(model); }, // added by elm-watch
+			%view%: function(model) { return impl.%view%(model); }, // added by elm-watch
 			_impl: impl // added by elm-watch
 		});
 };
@@ -403,7 +405,7 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
-		impl./*%*/init/*%*/,
+		impl.%init%,
 		// impl.update, // commented out by elm-watch
 		// impl.subscriptions, // commented out by elm-watch
 		impl, // added by elm-watch
@@ -421,7 +423,7 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
-		impl./*%*/init/*%*/,
+		impl.%init%,
 		// impl.update, // commented out by elm-watch
 		// impl.subscriptions, // commented out by elm-watch
 		impl, // added by elm-watch
@@ -438,7 +440,7 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 			return _Browser_makeAnimator(initialModel, function(model)
 			{
 				// var nextNode = view(model); // commented out by elm-watch
-				var nextNode = impl./*%*/view/*%*/(model); // added by elm-watch
+				var nextNode = impl.%view%(model); // added by elm-watch
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				domNode = _VirtualDom_applyPatches(domNode, currNode, patches, sendToApp);
 				currNode = nextNode;
@@ -457,12 +459,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
-		impl./*%*/init/*%*/,
+		impl.%init%,
 		// impl.update, // commented out by elm-watch
 		// impl.subscriptions, // commented out by elm-watch
 		impl, // added by elm-watch
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl./*%*/setup/*%*/ && impl./*%*/setup/*%*/(sendToApp)
+			var divertHrefToApp = impl.%setup% && impl.%setup%(sendToApp)
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
@@ -471,13 +473,13 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				// var doc = view(model); // commented out by elm-watch
-				var doc = impl./*%*/view/*%*/(model); // added by elm-watch
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc./*%*/body/*%*/);
+				var doc = impl.%view%(model); // added by elm-watch
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.%body%);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
 				_VirtualDom_divertHrefToApp = 0;
-				(title !== doc./*%*/title/*%*/) && (_VirtualDom_doc.title = title = doc./*%*/title/*%*/);
+				(title !== doc.%title%) && (_VirtualDom_doc.title = title = doc.%title%);
 			});
 		}
 	);
@@ -701,6 +703,8 @@ function _Scheduler_step(proc)
   `.trim(),
 };
 
+const REPLACEMENTS_WITHOUT_PLACEHOLDERS = updateReplacements({}, REPLACEMENTS);
+
 export function inject(
   outputPath: OutputPath,
   compilationMode: CompilationMode,
@@ -723,7 +727,7 @@ function getReplacements(
   switch (compilationMode) {
     case "debug":
     case "standard":
-      return REPLACEMENTS;
+      return REPLACEMENTS_WITHOUT_PLACEHOLDERS;
 
     case "optimize":
       return updateReplacements(getOptimizeModeRecordNames(code), REPLACEMENTS);
@@ -808,9 +812,9 @@ function updateString(
   optimizeModeRecordNames: Record<string, string>,
   string: string
 ): string {
-  return Object.entries(optimizeModeRecordNames).reduce(
-    (acc, [from, to]) => acc.split(`/*%*/${from}/*%*/`).join(to),
-    string
+  return string.replace(
+    PLACEHOLDER_REGEX,
+    (_, name: string) => optimizeModeRecordNames[name] ?? name
   );
 }
 
