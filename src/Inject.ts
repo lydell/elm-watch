@@ -1,4 +1,5 @@
 import * as ClientCode from "./ClientCode";
+import { join } from "./Helpers";
 import { Port } from "./Port";
 import { CompilationMode, CompilationModeWithProxy, OutputPath } from "./Types";
 
@@ -835,17 +836,19 @@ export function clientCode(
   webSocketPort: Port,
   debug: boolean
 ): string {
+  const replacements: Record<string, string> = {
+    TARGET_NAME: outputPath.targetName,
+    INITIAL_ELM_COMPILED_TIMESTAMP: elmCompiledTimestamp.toString(),
+    ORIGINAL_COMPILATION_MODE: compilationMode,
+    WEBSOCKET_PORT: webSocketPort.thePort.toString(),
+    DEBUG: debug.toString(),
+  };
   return (
     versionedIdentifier(webSocketPort) +
-    ClientCode.client
-      .replace(/%TARGET_NAME%/g, outputPath.targetName)
-      .replace(
-        /%INITIAL_ELM_COMPILED_TIMESTAMP%/g,
-        elmCompiledTimestamp.toString()
-      )
-      .replace(/%ORIGINAL_COMPILATION_MODE%/g, compilationMode)
-      .replace(/%WEBSOCKET_PORT%/g, webSocketPort.thePort.toString())
-      .replace(/%DEBUG%/g, debug.toString())
+    ClientCode.client.replace(
+      new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
+      (match: string, name: string) => replacements[name] ?? match
+    )
   );
 }
 
