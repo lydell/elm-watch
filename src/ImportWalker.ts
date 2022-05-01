@@ -1,6 +1,7 @@
 /* eslint-disable no-labels */
 import * as fs from "fs";
 import * as path from "path";
+import * as util from "util";
 
 import { toError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -33,6 +34,16 @@ export function walkImports(
       initialRelatedElmFilePaths(sourceDirectories, inputPath)
     )
   );
+
+  // Workaround for: https://github.com/nodejs/node/issues/42933
+  // These sets can get super long in projects with many files.
+  (
+    allRelatedElmFilePaths as Set<string> & {
+      [util.inspect.custom]: () => unknown;
+    }
+  )[util.inspect.custom] =
+    // istanbul ignore next
+    () => Array.from(allRelatedElmFilePaths);
 
   // To avoid reading the same file twice, and to handle circular imports.
   const visitedModules = new Set<string>();
