@@ -715,6 +715,7 @@ export function inject(
   return code.replace(
     REPLACEMENT_REGEX,
     (match, name1: string, name: string = name1) =>
+      // istanbul ignore next
       replacements[name] ??
       `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
   );
@@ -851,7 +852,9 @@ export function clientCode(
     versionedIdentifier(webSocketPort) +
     ClientCode.client.replace(
       new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
-      (match: string, name: string) => replacements[name] ?? match
+      (match: string, name: string) =>
+        // istanbul ignore next
+        replacements[name] ?? match
     )
   );
 }
