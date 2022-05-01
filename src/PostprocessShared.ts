@@ -103,7 +103,7 @@ export type PostprocessError =
 
 // It’s not possible to send any value between workers and the main thread. We
 // just show unknown values (such as caught errors and return values) in error
-// messages, so we can seralize them in the worker instead. This type helps
+// messages, so we can serialize them in the worker instead. This type helps
 // making sure we remember to do that correctly.
 export type UnknownValueAsString = {
   tag: "UnknownValueAsString";
