@@ -11,10 +11,10 @@
     "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/unisonShare.js public/submodules/seeds-game/src/index.ts --bundle --outdir=public/build --public-path=/build/ --loader:.svg=file --loader:.woff2=file --loader:.mp3=file"
   },
   "devDependencies": {
-    "elm-tooling": "1.7.0",
+    "elm-tooling": "1.8.0",
     "elm-watch": "file:../build",
-    "esbuild": "0.14.27",
+    "esbuild": "0.14.38",
     "run-pty": "3.0.0",
-    "uglify-js": "3.15.3"
+    "uglify-js": "3.15.4"
   }
 }
