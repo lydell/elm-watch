@@ -1,7 +1,10 @@
 import { HashMap } from "../src/HashMap";
 import { HashSet } from "../src/HashSet";
-import { Project, projectToDebug } from "../src/Project";
+import { OutputState, Project, projectToDebug } from "../src/Project";
+import { GetNow } from "../src/Types";
 import { stringSnapshotSerializer } from "./Helpers";
+
+const getNow: GetNow = () => new Date();
 
 const project: Project = {
   watchRoot: {
@@ -95,8 +98,8 @@ const project: Project = {
               absolutePath: "/Users/you/project/public/build/ElementMain.js",
             },
           },
-          {
-            inputs: [
+          new OutputState(
+            [
               {
                 tag: "InputPath",
                 theInputPath: {
@@ -110,12 +113,9 @@ const project: Project = {
                 },
               },
             ],
-            compilationMode: "optimize",
-            status: { tag: "NotWrittenToDisk", durations: [] },
-            allRelatedElmFilePaths: new Set(),
-            recordFields: undefined,
-            dirty: true,
-          },
+            "optimize",
+            getNow
+          ),
         ],
         [
           {
@@ -127,8 +127,8 @@ const project: Project = {
               absolutePath: "/Users/you/project/public/build/Frankenstein.js",
             },
           },
-          {
-            inputs: [
+          new OutputState(
+            [
               {
                 tag: "InputPath",
                 theInputPath: {
@@ -154,12 +154,9 @@ const project: Project = {
                 },
               },
             ],
-            compilationMode: "standard",
-            status: { tag: "NotWrittenToDisk", durations: [] },
-            allRelatedElmFilePaths: new Set(),
-            recordFields: undefined,
-            dirty: true,
-          },
+            "standard",
+            getNow
+          ),
         ],
       ]),
     ],
@@ -184,8 +181,8 @@ const project: Project = {
                 "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
             },
           },
-          {
-            inputs: [
+          new OutputState(
+            [
               {
                 tag: "InputPath",
                 theInputPath: {
@@ -201,12 +198,9 @@ const project: Project = {
                 },
               },
             ],
-            compilationMode: "optimize",
-            status: { tag: "NotWrittenToDisk", durations: [] },
-            allRelatedElmFilePaths: new Set(),
-            recordFields: undefined,
-            dirty: true,
-          },
+            "optimize",
+            getNow
+          ),
         ],
       ]),
     ],

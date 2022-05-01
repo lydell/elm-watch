@@ -162,6 +162,7 @@ export async function run(
 
               const initProjectResult = initProject({
                 env,
+                getNow,
                 compilationMode: parseArgsResult.compilationMode,
                 elmWatchJsonPath: parseResult.elmWatchJsonPath,
                 config: parseResult.config,

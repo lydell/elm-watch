@@ -38,7 +38,13 @@ import {
   runPostprocess,
   WORKER_TERMINATED,
 } from "./Postprocess";
-import { Duration, OutputError, OutputState, Project } from "./Project";
+import {
+  Duration,
+  OutputError,
+  OutputState,
+  OutputStatus,
+  Project,
+} from "./Project";
 import { SPAWN_KILLED } from "./Spawn";
 import * as SpawnElm from "./SpawnElm";
 import {
@@ -51,8 +57,6 @@ import {
   OutputPath,
   RunMode,
 } from "./Types";
-
-type WithDuration<T> = T & { durationMs: number };
 
 export type InstallDependenciesResult = { tag: "Error" } | { tag: "Success" };
 
@@ -580,7 +584,6 @@ export async function handleOutputAction({
       return postprocessHelper({
         env,
         logger,
-        getNow,
         runMode,
         elmWatchJsonPath,
         total,
@@ -593,10 +596,7 @@ export async function handleOutputAction({
       });
 
     case "QueueForElmMake":
-      action.output.outputState.status = {
-        tag: "QueuedForElmMake",
-        startTimestamp: getNow().getTime(),
-      };
+      action.output.outputState.setStatus({ tag: "QueuedForElmMake" });
       updateStatusLine({
         logger,
         runMode: runMode.tag,
@@ -646,20 +646,19 @@ async function compileOneOutput({
   // Watcher events that happen while waiting for `elm make` and
   // postprocessing can flip `dirty` back to `true`.
   outputState.dirty = false;
-  outputState.status = {
+
+  const outputStatus: Extract<OutputStatus, { tag: "ElmMake" }> = {
     tag: "ElmMake",
     compilationMode: outputState.compilationMode,
-    durations:
-      outputState.status.tag === "QueuedForElmMake"
-        ? [
-            {
-              tag: "QueuedForElmMake",
-              durationMs: startTimestamp - outputState.status.startTimestamp,
-            },
-          ]
-        : [],
+    // These are updated as we go.
+    elmDurationMs: -1,
+    walkerDurationMs: -1,
+    injectDurationMs: -1,
   };
+
+  outputState.setStatus(outputStatus);
   updateStatusLineHelper();
+
   const [elmMakeResult, allRelatedElmFilePathsResult] = await Promise.all([
     SpawnElm.make({
       elmJsonPath,
@@ -667,37 +666,35 @@ async function compileOneOutput({
       inputs: outputState.inputs,
       outputPath,
       env,
-    }).then(
-      (result): WithDuration<SpawnElm.RunElmMakeResult> => ({
-        ...result,
-        durationMs: getNow().getTime() - startTimestamp,
-      })
-    ),
-    Promise.resolve().then(
-      (): WithDuration<GetAllRelatedElmFilePathsResult> => {
-        switch (runMode.tag) {
-          case "make":
-            return {
-              tag: "Success",
-              allRelatedElmFilePaths: outputState.allRelatedElmFilePaths,
-              durationMs: -1,
-            };
-          case "hot":
-            // Note: It doesn’t matter if a file changes before we’ve had
-            // chance to compute this the first time (during packages
-            // installation or `elm make` above). Everything is marked as
-            // dirty by default anyway and will get compiled.
-            return {
-              ...getAllRelatedElmFilePaths(elmJsonPath, outputState.inputs),
-              durationMs: getNow().getTime() - startTimestamp,
-            };
+    }).then((result) => {
+      outputStatus.elmDurationMs = getNow().getTime() - startTimestamp;
+      return result;
+    }),
+    Promise.resolve().then((): GetAllRelatedElmFilePathsResult => {
+      switch (runMode.tag) {
+        case "make":
+          return {
+            tag: "Success",
+            allRelatedElmFilePaths: outputState.allRelatedElmFilePaths,
+          };
+        case "hot": {
+          // Note: It doesn’t matter if a file changes before we’ve had
+          // chance to compute this the first time (during packages
+          // installation or `elm make` above). Everything is marked as
+          // dirty by default anyway and will get compiled.
+          const result = getAllRelatedElmFilePaths(
+            elmJsonPath,
+            outputState.inputs
+          );
+          outputStatus.walkerDurationMs = getNow().getTime() - startTimestamp;
+          return result;
         }
       }
-    ),
+    }),
   ]);
 
   if (outputState.dirty) {
-    outputState.status = { tag: "Interrupted" };
+    outputState.setStatus({ tag: "Interrupted" });
     updateStatusLineHelper();
     return { tag: "Nothing" };
   }
@@ -721,16 +718,12 @@ async function compileOneOutput({
         runMode,
         outputPath,
         outputState,
-        {
-          tag: "ElmMake",
-          elmDurationMs: combinedResult.elmDurationMs,
-          walkerDurationMs: combinedResult.walkerDurationMs,
-        },
+        outputStatus,
         postprocess
       );
 
     case "elm make success + walker failure":
-      outputState.status = combinedResult.walkerError;
+      outputState.setStatus(combinedResult.walkerError);
       updateStatusLineHelper();
       return {
         tag: "CompileError",
@@ -739,7 +732,7 @@ async function compileOneOutput({
       };
 
     case "elm make failure + walker success":
-      outputState.status = combinedResult.elmMakeError;
+      outputState.setStatus(combinedResult.elmMakeError);
       updateStatusLineHelper();
       return {
         tag: "CompileError",
@@ -749,7 +742,7 @@ async function compileOneOutput({
 
     case "elm make failure + walker failure":
       // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
-      outputState.status = combinedResult.elmMakeError;
+      outputState.setStatus(combinedResult.elmMakeError);
       updateStatusLineHelper();
       return {
         tag: "CompileError",
@@ -766,7 +759,7 @@ function onCompileSuccess(
   runMode: RunModeWithExtraData,
   outputPath: OutputPath,
   outputState: OutputState,
-  duration: Duration,
+  outputStatus: Extract<OutputStatus, { tag: "ElmMake" }>,
   postprocess: Postprocess
 ): HandleOutputActionResult {
   const elmCompiledTimestamp = getNow().getTime();
@@ -780,7 +773,7 @@ function onCompileSuccess(
             fileSize = fs.statSync(outputPath.theOutputPath.absolutePath).size;
           } catch (unknownError) {
             const error = toError(unknownError);
-            outputState.status = { tag: "ReadOutputError", error };
+            outputState.setStatus({ tag: "ReadOutputError", error });
             updateStatusLineHelper();
             return {
               tag: "CompileError",
@@ -788,13 +781,12 @@ function onCompileSuccess(
               compilationMode: outputState.compilationMode,
             };
           }
-          outputState.status = {
+          outputState.setStatus({
             tag: "Success",
             elmFileSize: fileSize,
             postprocessFileSize: fileSize,
             elmCompiledTimestamp,
-            durations: appendDuration(outputState, [duration]),
-          };
+          });
           updateStatusLineHelper();
           return { tag: "Nothing" };
         }
@@ -805,7 +797,7 @@ function onCompileSuccess(
             buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
           } catch (unknownError) {
             const error = toError(unknownError);
-            outputState.status = { tag: "ReadOutputError", error };
+            outputState.setStatus({ tag: "ReadOutputError", error });
             updateStatusLineHelper();
             return {
               tag: "CompileError",
@@ -813,14 +805,13 @@ function onCompileSuccess(
               compilationMode: outputState.compilationMode,
             };
           }
-          outputState.status = {
+          outputState.setStatus({
             tag: "QueuedForPostprocess",
             postprocessArray: postprocess.postprocessArray,
             code: buffer,
             elmCompiledTimestamp,
             recordFields: undefined,
-            durations: appendDuration(outputState, [duration]),
-          };
+          });
           updateStatusLineHelper();
           return { tag: "Nothing" };
         }
@@ -832,7 +823,7 @@ function onCompileSuccess(
         code = fs.readFileSync(outputPath.theOutputPath.absolutePath, "utf8");
       } catch (unknownError) {
         const error = toError(unknownError);
-        outputState.status = { tag: "ReadOutputError", error };
+        outputState.setStatus({ tag: "ReadOutputError", error });
         updateStatusLineHelper();
         return {
           tag: "CompileError",
@@ -851,10 +842,7 @@ function onCompileSuccess(
         code
       );
 
-      const injectDuration: Duration = {
-        tag: "Inject",
-        durationMs: getNow().getTime() - elmCompiledTimestamp,
-      };
+      outputStatus.injectDurationMs = getNow().getTime() - elmCompiledTimestamp;
 
       switch (postprocess.tag) {
         case "NoPostprocess": {
@@ -885,11 +873,11 @@ function onCompileSuccess(
             );
           } catch (unknownError) {
             const error = toError(unknownError);
-            outputState.status = {
+            outputState.setStatus({
               tag: "WriteOutputError",
               error,
               reasonForWriting: "InjectWebSocketClient",
-            };
+            });
             updateStatusLineHelper();
             return {
               tag: "CompileError",
@@ -902,13 +890,12 @@ function onCompileSuccess(
             recordFields
           );
           outputState.recordFields = recordFields;
-          outputState.status = {
+          outputState.setStatus({
             tag: "Success",
             elmFileSize: newBuffer.byteLength,
             postprocessFileSize: newBuffer.byteLength,
             elmCompiledTimestamp,
-            durations: appendDuration(outputState, [duration, injectDuration]),
-          };
+          });
           updateStatusLineHelper();
           return recordFieldsChanged
             ? {
@@ -925,14 +912,13 @@ function onCompileSuccess(
         }
 
         case "Postprocess": {
-          outputState.status = {
+          outputState.setStatus({
             tag: "QueuedForPostprocess",
             postprocessArray: postprocess.postprocessArray,
             code: newCode,
             elmCompiledTimestamp,
             recordFields,
-            durations: appendDuration(outputState, [duration, injectDuration]),
-          };
+          });
           updateStatusLineHelper();
           return { tag: "Nothing" };
         }
@@ -981,7 +967,6 @@ function needsToWriteProxyFile(
 async function postprocessHelper({
   env,
   logger,
-  getNow,
   runMode,
   elmWatchJsonPath,
   outputPath,
@@ -996,7 +981,6 @@ async function postprocessHelper({
 }: {
   env: Env;
   logger: Logger;
-  getNow: GetNow;
   runMode: RunModeWithExtraData;
   elmWatchJsonPath: ElmWatchJsonPath;
   outputPath: OutputPath;
@@ -1009,8 +993,6 @@ async function postprocessHelper({
   elmCompiledTimestamp: number;
   recordFields: Set<string> | undefined;
 }): Promise<HandleOutputActionResult> {
-  const startTimestamp = getNow().getTime();
-
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
       logger,
@@ -1033,22 +1015,7 @@ async function postprocessHelper({
     code,
   });
 
-  outputState.status = {
-    tag: "Postprocess",
-    kill,
-    durations: appendDuration(
-      outputState,
-      outputState.status.tag === "QueuedForPostprocess"
-        ? [
-            {
-              tag: "QueuedForPostprocess",
-              durationMs:
-                startTimestamp - outputState.status.elmCompiledTimestamp,
-            },
-          ]
-        : /* istanbul ignore next */ []
-    ),
-  };
+  outputState.setStatus({ tag: "Postprocess", kill });
   updateStatusLineHelper();
 
   let postprocessResult;
@@ -1059,7 +1026,7 @@ async function postprocessHelper({
     // istanbul ignore else
     if (unknownError === SPAWN_KILLED || unknownError === WORKER_TERMINATED) {
       outputState.dirty = true;
-      outputState.status = { tag: "Interrupted" };
+      outputState.setStatus({ tag: "Interrupted" });
       updateStatusLineHelper();
       return { tag: "Nothing" };
     }
@@ -1100,11 +1067,11 @@ async function postprocessHelper({
       }
     } catch (unknownError) {
       const error = toError(unknownError);
-      outputState.status = {
+      outputState.setStatus({
         tag: "WriteOutputError",
         error,
         reasonForWriting: "Postprocess",
-      };
+      });
       updateStatusLineHelper();
       return {
         tag: "CompileError",
@@ -1117,18 +1084,12 @@ async function postprocessHelper({
       recordFields
     );
     outputState.recordFields = recordFields;
-    outputState.status = {
+    outputState.setStatus({
       tag: "Success",
       elmFileSize: Buffer.byteLength(code),
       postprocessFileSize: postprocessResult.code.byteLength,
       elmCompiledTimestamp,
-      durations: appendDuration(outputState, [
-        {
-          tag: "Postprocess",
-          durationMs: getNow().getTime() - startTimestamp,
-        },
-      ]),
-    };
+    });
     updateStatusLineHelper();
     return recordFieldsChanged
       ? {
@@ -1144,7 +1105,7 @@ async function postprocessHelper({
         };
   }
 
-  outputState.status = postprocessResult;
+  outputState.setStatus(postprocessResult);
   updateStatusLineHelper();
   return {
     tag: "CompileError",
@@ -1177,27 +1138,28 @@ async function typecheck({
   webSocketPort: Port;
 }): Promise<void> {
   const startTimestamp = getNow().getTime();
+  const outputsWithStatus: Array<{
+    index: number;
+    outputPath: OutputPath;
+    outputState: OutputState;
+    outputStatus: Extract<OutputStatus, { tag: "ElmMakeTypecheckOnly" }>;
+  }> = [];
 
-  for (const { index, outputPath, outputState } of outputs) {
-    outputState.dirty = false;
-    outputState.status = {
+  for (const output of outputs) {
+    const outputStatus = {
       tag: "ElmMakeTypecheckOnly",
-      durations:
-        outputState.status.tag === "QueuedForElmMake"
-          ? [
-              {
-                tag: "QueuedForElmMake",
-                durationMs: startTimestamp - outputState.status.startTimestamp,
-              },
-            ]
-          : [],
-    };
+      elmDurationMs: -1,
+      walkerDurationMs: -1,
+    } as const;
+    outputsWithStatus.push({ ...output, outputStatus });
+    output.outputState.dirty = false;
+    output.outputState.setStatus(outputStatus);
     updateStatusLine({
       logger,
       runMode,
-      outputPath,
-      outputState,
-      index,
+      outputPath: output.outputPath,
+      outputState: output.outputState,
+      index: output.index,
       total,
     });
   }
@@ -1216,33 +1178,33 @@ async function typecheck({
       ),
       outputPath: { tag: "NullOutputPath" },
       env,
-    }).then(
-      (result): WithDuration<SpawnElm.RunElmMakeResult> => ({
-        ...result,
-        durationMs: getNow().getTime() - startTimestamp,
-      })
-    ),
+    }).then((result) => {
+      const durationMs = getNow().getTime() - startTimestamp;
+      for (const output of outputsWithStatus) {
+        output.outputStatus.elmDurationMs = durationMs;
+      }
+      return result;
+    }),
     Promise.resolve().then(() =>
-      mapNonEmptyArray(
-        outputs,
+      outputsWithStatus.map(
         (
           output
         ): {
           index: number;
           outputPath: OutputPath;
           outputState: OutputState;
-          allRelatedElmFilePathsResult: WithDuration<GetAllRelatedElmFilePathsResult>;
+          allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult;
         } => {
           const thisStartTimestamp = getNow().getTime();
+          const allRelatedElmFilePathsResult = getAllRelatedElmFilePaths(
+            elmJsonPath,
+            output.outputState.inputs
+          );
+          output.outputStatus.walkerDurationMs =
+            getNow().getTime() - thisStartTimestamp;
           return {
             ...output,
-            allRelatedElmFilePathsResult: {
-              ...getAllRelatedElmFilePaths(
-                elmJsonPath,
-                output.outputState.inputs
-              ),
-              durationMs: getNow().getTime() - thisStartTimestamp,
-            },
+            allRelatedElmFilePathsResult,
           };
         }
       )
@@ -1256,7 +1218,7 @@ async function typecheck({
     allRelatedElmFilePathsResult,
   } of allRelatedElmFilePathsResults) {
     if (outputState.dirty) {
-      outputState.status = { tag: "Interrupted" };
+      outputState.setStatus({ tag: "Interrupted" });
       updateStatusLine({
         logger,
         runMode,
@@ -1274,92 +1236,68 @@ async function typecheck({
     );
 
     const combinedResult = combineResults(
-      {
-        ...onlyElmMakeErrorsRelatedToOutput(outputState, elmMakeResult),
-        durationMs: elmMakeResult.durationMs,
-      },
+      onlyElmMakeErrorsRelatedToOutput(outputState, elmMakeResult),
       allRelatedElmFilePathsResult
     );
 
-    const tryWriteProxyFile = (durations: Array<Duration>): void => {
-      const result = needsToWriteProxyFile(
-        outputPath.theOutputPath,
-        Buffer.from(Inject.versionedIdentifier(webSocketPort))
-      );
+    const proxyFileResult = needsToWriteProxyFile(
+      outputPath.theOutputPath,
+      Buffer.from(Inject.versionedIdentifier(webSocketPort))
+    );
 
-      switch (result.tag) {
-        case "Needed":
-          try {
-            fs.mkdirSync(
-              absoluteDirname(outputPath.theOutputPath).absolutePath,
-              {
-                recursive: true,
-              }
-            );
-            fs.writeFileSync(
-              outputPath.theOutputPath.absolutePath,
-              Inject.proxyFile(
-                outputPath,
-                getNow().getTime(),
-                webSocketPort,
-                logger.config.debug
-              )
-            );
-            // The proxy file doesn’t count as writing to disk…
-            outputState.status = {
-              tag: "NotWrittenToDisk",
-              durations: appendDuration(outputState, durations),
-            };
-          } catch (unknownError) {
-            const error = toError(unknownError);
-            outputState.status = { tag: "WriteProxyOutputError", error };
-          }
-          break;
+    switch (proxyFileResult.tag) {
+      case "Needed":
+        try {
+          fs.mkdirSync(absoluteDirname(outputPath.theOutputPath).absolutePath, {
+            recursive: true,
+          });
+          fs.writeFileSync(
+            outputPath.theOutputPath.absolutePath,
+            Inject.proxyFile(
+              outputPath,
+              getNow().getTime(),
+              webSocketPort,
+              logger.config.debug
+            )
+          );
+          // The proxy file doesn’t count as writing to disk…
+          outputState.setStatus({ tag: "NotWrittenToDisk" });
+        } catch (unknownError) {
+          const error = toError(unknownError);
+          outputState.setStatus({ tag: "WriteProxyOutputError", error });
+        }
+        break;
 
-        case "NotNeeded":
-          outputState.status = {
-            tag: "NotWrittenToDisk",
-            durations: appendDuration(outputState, durations),
-          };
-          break;
+      case "NotNeeded":
+        outputState.setStatus({ tag: "NotWrittenToDisk" });
+        break;
 
-        case "ReadError":
-          outputState.status = {
-            tag: "ReadOutputError",
-            error: result.error,
-          };
-          break;
-      }
-    };
+      case "ReadError":
+        outputState.setStatus({
+          tag: "ReadOutputError",
+          error: proxyFileResult.error,
+        });
+        break;
+    }
 
     switch (combinedResult.tag) {
       case "elm make success + walker success":
-        tryWriteProxyFile([
-          {
-            tag: "ElmMakeTypecheckOnly",
-            elmDurationMs: combinedResult.elmDurationMs,
-            walkerDurationMs: combinedResult.walkerDurationMs,
-          },
-        ]);
         break;
 
       // In all of the remaining cases, `elm make` and
       // `getAllRelatedElmFilePaths` errors are more important than proxy file
       // errors.
       case "elm make success + walker failure":
-        tryWriteProxyFile([]);
-        outputState.status = combinedResult.walkerError;
+        outputState.setStatus(combinedResult.walkerError);
         break;
 
       case "elm make failure + walker success":
-        tryWriteProxyFile([]);
-        outputState.status = combinedResult.elmMakeError;
+        outputState.setStatus(combinedResult.elmMakeError);
         break;
 
       case "elm make failure + walker failure":
-        tryWriteProxyFile([]);
         // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
-        outputState.status = combinedResult.elmMakeError;
+        outputState.setStatus(combinedResult.elmMakeError);
         break;
     }
 
@@ -1423,13 +1361,11 @@ type CombinedResult =
   | {
       tag: "elm make success + walker success";
       allRelatedElmFilePaths: Set<string>;
-      elmDurationMs: number;
-      walkerDurationMs: number;
     };
 
 function combineResults(
-  elmMakeResult: WithDuration<SpawnElm.RunElmMakeResult>,
-  allRelatedElmFilePathsResult: WithDuration<GetAllRelatedElmFilePathsResult>
+  elmMakeResult: SpawnElm.RunElmMakeResult,
+  allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult
 ): CombinedResult {
   switch (elmMakeResult.tag) {
     case "Success":
@@ -1439,8 +1375,6 @@ function combineResults(
             tag: "elm make success + walker success",
             allRelatedElmFilePaths:
               allRelatedElmFilePathsResult.allRelatedElmFilePaths,
-            elmDurationMs: elmMakeResult.durationMs,
-            walkerDurationMs: allRelatedElmFilePathsResult.durationMs,
           };
 
         default:
@@ -1680,7 +1614,7 @@ function statusLine(
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
-        [maybePrintDurations(loggerConfig, status.durations)],
+        [maybePrintDurations(loggerConfig, outputState.durations)],
         "Success",
         loggerConfig.fancy ? targetName : `${targetName}: success`
       );
@@ -1696,7 +1630,7 @@ function statusLine(
             postprocessFileSize: status.postprocessFileSize,
             fancy: loggerConfig.fancy,
           }),
-          maybePrintDurations(loggerConfig, status.durations),
+          maybePrintDurations(loggerConfig, outputState.durations),
         ],
         "Success",
         loggerConfig.fancy ? targetName : `${targetName}: success`
@@ -2172,15 +2106,4 @@ export function ensureAllRelatedElmFilePaths(
       outputState
     );
   }
-}
-
-function appendDuration(
-  outputState: OutputState,
-  durations: Array<Duration>
-): Array<Duration> {
-  const previousDurations =
-    "durations" in outputState.status
-      ? outputState.status.durations
-      : /* istanbul ignore next */ [];
-  return [...previousDurations, ...durations];
 }

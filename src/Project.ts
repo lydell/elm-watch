@@ -29,6 +29,7 @@ import type {
   ElmJsonPath,
   ElmWatchJsonPath,
   ElmWatchStuffJsonPath,
+  GetNow,
   InputPath,
   OutputPath,
   UncheckedInputPath,
@@ -48,45 +49,118 @@ export type Project = {
 };
 
 // The code base leans towards pure functions, but this data structure is going
-// to be mutated a lot. The properties without `readonly` are the ones that are
-// mutated.
-export type OutputState = {
+// to be mutated a lot.
+export class OutputState {
+  // Inputs never change.
   readonly inputs: NonEmptyArray<InputPath>;
+
+  // This one has a method for mutating, for measuring how long time is spent in
+  // different statuses.
+  private _status: OutputStatus = { tag: "NotWrittenToDisk" };
+
+  private _durations: Array<Duration> = [];
+
+  private _lastStartTimestamp = 0;
+
+  // The remaining properties are mutated from outside the class.
+
   compilationMode: CompilationMode;
-  status: OutputStatus;
-  allRelatedElmFilePaths: Set<string>;
+
+  allRelatedElmFilePaths = new Set<string>();
+
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
   // makes that more clear.
-  recordFields: Set<string> | undefined;
-  dirty: boolean;
-};
+  recordFields: Set<string> | undefined = undefined;
 
-type OutputStatus =
+  dirty = true;
+
+  constructor(
+    inputs: NonEmptyArray<InputPath>,
+    compilationMode: CompilationMode,
+    private getNow: GetNow
+  ) {
+    this.inputs = inputs;
+    this.compilationMode = compilationMode;
+  }
+
+  get durations(): Array<Duration> {
+    return this._durations;
+  }
+
+  get status(): OutputStatus {
+    return this._status;
+  }
+
+  setStatus(status: OutputStatus): void {
+    const lastStartTimestamp = this._lastStartTimestamp;
+    this._lastStartTimestamp = this.getNow().getTime();
+
+    switch (this._status.tag) {
+      case "ElmMake":
+        this._durations.push({
+          tag: "ElmMake",
+          elmDurationMs: this._status.elmDurationMs,
+          walkerDurationMs: this._status.walkerDurationMs,
+        });
+        if (this._status.injectDurationMs !== -1) {
+          this._durations.push({
+            tag: "Inject",
+            durationMs: this._status.injectDurationMs,
+          });
+        }
+        break;
+
+      case "ElmMakeTypecheckOnly":
+        this._durations.push({
+          tag: "ElmMakeTypecheckOnly",
+          elmDurationMs: this._status.elmDurationMs,
+          walkerDurationMs: this._status.walkerDurationMs,
+        });
+        break;
+
+      case "Postprocess":
+      case "QueuedForElmMake":
+      case "QueuedForPostprocess":
+        this._durations.push({
+          tag: this._status.tag,
+          durationMs: this._lastStartTimestamp - lastStartTimestamp,
+        });
+        break;
+
+      default:
+        this._durations.length = 0;
+    }
+
+    this._status = status;
+  }
+}
+
+export type OutputStatus =
   | OutputError
   | {
       tag: "ElmMake";
       compilationMode: CompilationMode;
-      durations: Array<Duration>;
+      elmDurationMs: number;
+      walkerDurationMs: number;
+      injectDurationMs: number;
     }
   | {
       tag: "ElmMakeTypecheckOnly";
-      durations: Array<Duration>;
+      elmDurationMs: number;
+      walkerDurationMs: number;
     }
   | {
       tag: "Interrupted";
     }
   | {
       tag: "NotWrittenToDisk";
-      durations: Array<Duration>;
     }
   | {
       tag: "Postprocess";
       kill: () => Promise<void>;
-      durations: Array<Duration>;
     }
   | {
       tag: "QueuedForElmMake";
-      startTimestamp: number;
     }
   | {
       tag: "QueuedForPostprocess";
@@ -94,14 +168,12 @@ type OutputStatus =
       code: Buffer | string;
       elmCompiledTimestamp: number;
       recordFields: Set<string> | undefined;
-      durations: Array<Duration>;
     }
   | {
       tag: "Success";
       elmFileSize: number;
       postprocessFileSize: number;
       elmCompiledTimestamp: number;
-      durations: Array<Duration>;
     };
 
 export type OutputError =
@@ -214,6 +286,7 @@ type InitProjectResult =
 
 export function initProject({
   env,
+  getNow,
   compilationMode,
   elmWatchJsonPath,
   config,
@@ -222,6 +295,7 @@ export function initProject({
   elmWatchStuffJson,
 }: {
   env: Env;
+  getNow: GetNow;
   compilationMode: CompilationMode;
   elmWatchJsonPath: ElmWatchJsonPath;
   config: ElmWatchJson.Config;
@@ -278,14 +352,14 @@ export function initProject({
           const previous =
             elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
             new HashMap<OutputPath, OutputState>();
-          previous.set(outputPath, {
-            inputs: resolveElmJsonResult.inputs,
-            compilationMode: thisCompilationMode,
-            status: { tag: "NotWrittenToDisk", durations: [] },
-            allRelatedElmFilePaths: new Set(),
-            recordFields: undefined,
-            dirty: true,
-          });
+          previous.set(
+            outputPath,
+            new OutputState(
+              resolveElmJsonResult.inputs,
+              thisCompilationMode,
+              getNow
+            )
+          );
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
           break;
         }
