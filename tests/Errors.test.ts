@@ -142,7 +142,7 @@ async function runWithBadElmBinAndWrittenError(
     );
   }
 
-  return { output, writtenError };
+  return { output, writtenError: clean(writtenError) };
 }
 
 function printError(errorTemplate: Errors.ErrorTemplate): string {
@@ -1331,8 +1331,8 @@ describe("errors", () => {
 
         I ran the following commands:
 
-        cd /Users/lydell/src/elm-watch/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/lydell/src/elm-watch/tests/fixtures/errors/valid/build/app.js /Users/lydell/src/elm-watch/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -1384,8 +1384,8 @@ describe("errors", () => {
 
         I ran the following commands:
 
-        cd /Users/lydell/src/elm-watch/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/lydell/src/elm-watch/tests/fixtures/errors/valid/build/app.js /Users/lydell/src/elm-watch/tests/fixtures/errors/valid/src/App.elm
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
