@@ -105,34 +105,44 @@ async function runWithBadElmBin(
   );
 }
 
-async function runWithBadElmBinAndExpectedJson(
-  fixture: string,
-  expectedWrittenJson: string
-): Promise<string> {
+async function runWithBadElmBinAndWrittenError(
+  fixture: string
+): Promise<{ output: string; writtenError: string }> {
   const dir = path.join(FIXTURES_DIR, "valid");
-  const jsonPath = path.join(
-    dir,
-    `elm-watch-ElmMakeJsonParseError-${Errors.sha256(expectedWrittenJson)}.json`
-  );
 
-  rm(jsonPath);
+  const readErrorPaths = (): Array<string> =>
+    fs
+      .readdirSync(dir)
+      .filter((item) =>
+        /^elm-watch-ElmMakeJsonParseError-[^.]+\.txt$/.test(item)
+      )
+      .map((item) => path.join(dir, item))
+      .filter((item) => fs.statSync(item).isFile());
+
+  for (const errorPath of readErrorPaths()) {
+    rm(errorPath);
+  }
 
   const output = await runAbsolute(dir, ["make", "app"], {
     env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
   });
 
-  let writtenJson;
+  const errorPaths = readErrorPaths();
+
+  expect(errorPaths).toHaveLength(1);
+  const errorPath = errorPaths[0] ?? "impossible";
+
+  let writtenError;
   try {
-    writtenJson = fs.readFileSync(jsonPath, "utf8");
+    writtenError = fs.readFileSync(errorPath, "utf8");
   } catch (unknownError) {
     const error = toError(unknownError);
     throw new Error(
-      `Expected ${jsonPath} to exist.\n\n${error.message}\n\n${output}`
+      `Expected ${errorPath} to exist.\n\n${error.message}\n\n${output}`
     );
   }
-  expect(writtenJson).toBe(expectedWrittenJson);
 
-  return output;
+  return { output, writtenError };
 }
 
 function printError(errorTemplate: Errors.ErrorTemplate): string {
@@ -1287,8 +1297,11 @@ describe("errors", () => {
 
   describe("elm make json errors", () => {
     test("syntax error", async () => {
-      expect(await runWithBadElmBinAndExpectedJson("json-syntax-error", "{"))
-        .toMatchInlineSnapshot(`
+      const { output, writtenError } = await runWithBadElmBinAndWrittenError(
+        "json-syntax-error"
+      );
+
+      expect(output).toMatchInlineSnapshot(`
         🚨 app
 
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
@@ -1306,21 +1319,40 @@ describe("errors", () => {
 
         I wrote that to this file so you can inspect it:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-dd8d662149e1a9bb041bf9efebe517b3465d54ad2e6c1e3c959179dd21e21c1c.txt
 
         🚨 ⧙1⧘ error found
 
         🚨 Compilation finished in ⧙123 ms⧘.
       `);
+
+      expect(writtenError).toMatchInlineSnapshot(`
+        -- TROUBLE WITH JSON REPORT ----------------------------------------------------
+
+        I ran the following commands:
+
+        cd /Users/lydell/src/elm-watch/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/lydell/src/elm-watch/tests/fixtures/errors/valid/build/app.js /Users/lydell/src/elm-watch/tests/fixtures/errors/valid/src/App.elm
+
+        I seem to have gotten some JSON back as expected,
+        but I ran into an error when decoding it:
+
+        Unexpected end of JSON input
+
+        I wrote this error to a file so you can inspect and possibly report it more easily.
+
+        This is the data that caused the error:
+
+        {
+      `);
     });
 
     test("decode error", async () => {
-      expect(
-        await runWithBadElmBinAndExpectedJson(
-          "json-decode-error",
-          JSON.stringify({ type: "laser-error" }, null, 2)
-        )
-      ).toMatchInlineSnapshot(`
+      const { output, writtenError } = await runWithBadElmBinAndWrittenError(
+        "json-decode-error"
+      );
+
+      expect(output).toMatchInlineSnapshot(`
         🚨 app
 
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
@@ -1340,11 +1372,35 @@ describe("errors", () => {
 
         I wrote that to this file so you can inspect it:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fe311e7464d5d116f8fa1ddccbc22767d9b6c74bfdd28d0719fb55ef7c1037a6.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-663e3f0e5a63fc549d6afa168dca559a60cec556acec55ee2a5e3bab9c52a200.txt
 
         🚨 ⧙1⧘ error found
 
         🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+
+      expect(writtenError).toMatchInlineSnapshot(`
+        -- TROUBLE WITH JSON REPORT ----------------------------------------------------
+
+        I ran the following commands:
+
+        cd /Users/lydell/src/elm-watch/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/lydell/src/elm-watch/tests/fixtures/errors/valid/build/app.js /Users/lydell/src/elm-watch/tests/fixtures/errors/valid/src/App.elm
+
+        I seem to have gotten some JSON back as expected,
+        but I ran into an error when decoding it:
+
+        At root["type"]:
+        Expected one of these tags: "error", "compile-errors"
+        Got: "laser-error"
+
+        I wrote this error to a file so you can inspect and possibly report it more easily.
+
+        This is the data that caused the error:
+
+        {
+          "type": "laser-error"
+        }
       `);
     });
 
@@ -1368,11 +1424,11 @@ describe("errors", () => {
 
         I tried to write that to this file:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-712f13c12cda1fd54774f424748bd3625aab225683e7ce3e6e3c88712450cc81.txt
 
         ⧙But that failed too:⧘
 
-        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.json'
+        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-712f13c12cda1fd54774f424748bd3625aab225683e7ce3e6e3c88712450cc81.txt'
 
         🚨 ⧙1⧘ error found
 

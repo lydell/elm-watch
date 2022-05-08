@@ -6,8 +6,9 @@ import * as url from "url";
 
 import * as ElmWatchJson from "./ElmWatchJson";
 import { Env } from "./Env";
-import { bold, dim, join, JsonError, toError } from "./Helpers";
+import { bold, dim, join, JsonError, removeColor, toError } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
+import { DEFAULT_COLUMNS } from "./Logger";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -82,6 +83,10 @@ export const fancyError =
       "\n"
     );
   };
+
+export function toPlainString(errorTemplate: ErrorTemplate): string {
+  return removeColor(errorTemplate(DEFAULT_COLUMNS));
+}
 
 function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
   switch (location.tag) {
@@ -661,7 +666,7 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 }
 
 export function elmMakeJsonParseError(
-  outputPath: OutputPath,
+  outputPath: OutputPath | { tag: "NoLocation" },
   error: JsonError,
   errorFilePath: ErrorFilePath,
   command: Command
@@ -1275,6 +1280,15 @@ ${bold("But that failed too:")}
 
 ${errorFilePath.error.message}
       `.trim();
+
+    case "ErrorFileBadContent":
+      return `
+I wrote this error to a file so you can inspect and possibly report it more easily.
+
+This is the data that caused the error:
+
+${errorFilePath.content}
+      `.trim();
   }
 }
 
@@ -1321,6 +1335,10 @@ function printJsonError(error: JsonError): string {
 export type ErrorFilePath =
   | AbsolutePath
   | {
+      tag: "ErrorFileBadContent";
+      content: string;
+    }
+  | {
       tag: "WritingErrorFileFailed";
       error: Error;
       attemptedPath: AbsolutePath;
@@ -1329,12 +1347,11 @@ export type ErrorFilePath =
 export function tryWriteErrorFile(
   cwd: AbsolutePath,
   name: string,
-  fileExtension: "json" | "txt",
   content: string
 ): ErrorFilePath {
   const jsonPath = absolutePathFromString(
     cwd,
-    `elm-watch-${name}-${sha256(content)}.${fileExtension}`
+    `elm-watch-${name}-${sha256(content)}.txt`
   );
   try {
     fs.writeFileSync(jsonPath.absolutePath, content);
@@ -1349,6 +1366,6 @@ export function tryWriteErrorFile(
   }
 }
 
-export function sha256(string: string): string {
+function sha256(string: string): string {
   return crypto.createHash("sha256").update(string).digest("hex");
 }

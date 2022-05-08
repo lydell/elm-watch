@@ -7,3 +7,4 @@ elm-stuff
 _config.yml
 submodules
 tests/fixtures/hot/changes-to-postprocess/src/postprocess.js
+**/*.txt/*.md

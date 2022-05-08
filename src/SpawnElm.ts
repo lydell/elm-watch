@@ -157,8 +157,14 @@ function parseElmMakeJson(
       errorFilePath: Errors.tryWriteErrorFile(
         command.options.cwd,
         "ElmMakeJsonParseError",
-        "json",
-        jsonString
+        Errors.toPlainString(
+          Errors.elmMakeJsonParseError(
+            { tag: "NoLocation" },
+            error,
+            { tag: "ErrorFileBadContent", content: jsonString },
+            command
+          )
+        )
       ),
       command,
     };
@@ -177,8 +183,17 @@ function parseElmMakeJson(
       errorFilePath: Errors.tryWriteErrorFile(
         command.options.cwd,
         "ElmMakeJsonParseError",
-        "json",
-        JSON.stringify(json, null, 2)
+        Errors.toPlainString(
+          Errors.elmMakeJsonParseError(
+            { tag: "NoLocation" },
+            error,
+            {
+              tag: "ErrorFileBadContent",
+              content: JSON.stringify(json, null, 2),
+            },
+            command
+          )
+        )
       ),
       command,
     };

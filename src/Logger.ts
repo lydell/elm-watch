@@ -13,6 +13,8 @@ import { ErrorTemplate } from "./Errors";
 import { bold, CLEAR, join, removeColor, WriteStream } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 
+export const DEFAULT_COLUMNS = 80;
+
 export type Logger = {
   config: LoggerConfig;
   // The default is to write to `stdout`. `stderr` is used for debug logging.
@@ -66,7 +68,7 @@ export function makeLogger({
       // This is a getter because it can change over time, if the user resizes
       // the terminal.
       // istanbul ignore next
-      return stdout.columns ?? 80;
+      return stdout.columns ?? DEFAULT_COLUMNS;
     },
   };
 
