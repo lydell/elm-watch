@@ -1319,7 +1319,7 @@ describe("errors", () => {
 
         I wrote that to this file so you can inspect it:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-dd8d662149e1a9bb041bf9efebe517b3465d54ad2e6c1e3c959179dd21e21c1c.txt
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.txt
 
         🚨 ⧙1⧘ error found
 
@@ -1372,7 +1372,7 @@ describe("errors", () => {
 
         I wrote that to this file so you can inspect it:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-663e3f0e5a63fc549d6afa168dca559a60cec556acec55ee2a5e3bab9c52a200.txt
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-9e9d3029b9417772915e06e1add0feb00f6b8db2f9bc1ce17979df8b8db666c5.txt
 
         🚨 ⧙1⧘ error found
 
@@ -1424,11 +1424,11 @@ describe("errors", () => {
 
         I tried to write that to this file:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-712f13c12cda1fd54774f424748bd3625aab225683e7ce3e6e3c88712450cc81.txt
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.txt
 
         ⧙But that failed too:⧘
 
-        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-712f13c12cda1fd54774f424748bd3625aab225683e7ce3e6e3c88712450cc81.txt'
+        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.txt'
 
         🚨 ⧙1⧘ error found
 

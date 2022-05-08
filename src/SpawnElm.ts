@@ -155,18 +155,19 @@ function parseElmMakeJson(
     return {
       tag: "ElmMakeJsonParseError",
       error,
-      errorFilePath: Errors.tryWriteErrorFile(
-        command.options.cwd,
-        "ElmMakeJsonParseError",
-        Errors.toPlainString(
+      errorFilePath: Errors.tryWriteErrorFile({
+        cwd: command.options.cwd,
+        name: "ElmMakeJsonParseError",
+        content: Errors.toPlainString(
           Errors.elmMakeJsonParseError(
             { tag: "NoLocation" },
             error,
             { tag: "ErrorFileBadContent", content: jsonString },
             command
           )
-        )
-      ),
+        ),
+        hash: jsonString,
+      }),
       command,
     };
   }
@@ -181,10 +182,10 @@ function parseElmMakeJson(
     return {
       tag: "ElmMakeJsonParseError",
       error,
-      errorFilePath: Errors.tryWriteErrorFile(
-        command.options.cwd,
-        "ElmMakeJsonParseError",
-        Errors.toPlainString(
+      errorFilePath: Errors.tryWriteErrorFile({
+        cwd: command.options.cwd,
+        name: "ElmMakeJsonParseError",
+        content: Errors.toPlainString(
           Errors.elmMakeJsonParseError(
             { tag: "NoLocation" },
             error,
@@ -194,8 +195,9 @@ function parseElmMakeJson(
             },
             command
           )
-        )
-      ),
+        ),
+        hash: jsonString,
+      }),
       command,
     };
   }

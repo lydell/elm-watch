@@ -1344,14 +1344,22 @@ export type ErrorFilePath =
       attemptedPath: AbsolutePath;
     };
 
-export function tryWriteErrorFile(
-  cwd: AbsolutePath,
-  name: string,
-  content: string
-): ErrorFilePath {
+export function tryWriteErrorFile({
+  cwd,
+  name,
+  content,
+  hash,
+}: {
+  cwd: AbsolutePath;
+  name: string;
+  content: string;
+  hash: string;
+}): ErrorFilePath {
+  // The SHA256 is only based on the `hash` string, not the entire error message
+  // `content`. This makes the tests easier to update when tweaking the error message.
   const jsonPath = absolutePathFromString(
     cwd,
-    `elm-watch-${name}-${sha256(content)}.txt`
+    `elm-watch-${name}-${sha256(hash)}.txt`
   );
   try {
     fs.writeFileSync(jsonPath.absolutePath, content);
