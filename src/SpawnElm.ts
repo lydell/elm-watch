@@ -148,7 +148,8 @@ function parseElmMakeJson(
   let json: unknown;
 
   try {
-    json = JSON.parse(jsonString);
+    // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
+    json = JSON.parse(jsonString.replace(/\t/g, "\\t"));
   } catch (unknownError) {
     const error = toJsonError(unknownError);
     return {

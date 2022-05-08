@@ -1691,6 +1691,27 @@ describe("errors", () => {
       `);
     });
 
+    test("Elm syntax error – tabs", async () => {
+      expect(await run("compilation-errors", ["make", "Tabs"]))
+        .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 Tabs
+
+        ⧙-- NO TABS ---------------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/compilation-errors/src/Tabs.elm:6:1
+
+        I ran into a tab, but tabs are not allowed in Elm files.
+
+        6| 	Html.text "Hello"
+           ⧙^⧘
+        Replace the tab with spaces.
+
+        🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
     test("module name and file name mismatch", async () => {
       expect(await run("compilation-errors", ["make", "ModuleNameMismatch"]))
         .toMatchInlineSnapshot(`

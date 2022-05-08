@@ -8,6 +8,10 @@
       "inputs": ["src/SyntaxError.elm"],
       "output": "SyntaxError.js"
     },
+    "Tabs": {
+      "inputs": ["src/Tabs.elm"],
+      "output": "Tabs.js"
+    },
     "ModuleNameMismatch": {
       "inputs": ["src/ModuleNameMismatch.elm"],
       "output": "ModuleNameMismatch.js"
