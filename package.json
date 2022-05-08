@@ -11,15 +11,15 @@
   },
   "devDependencies": {
     "@types/cross-spawn": "6.0.2",
-    "@types/jest": "27.4.1",
+    "@types/jest": "27.5.0",
     "@types/node": "16.11.26",
     "@types/ws": "8.5.3",
-    "@typescript-eslint/eslint-plugin": "5.21.0",
-    "@typescript-eslint/parser": "5.21.0",
+    "@typescript-eslint/eslint-plugin": "5.22.0",
+    "@typescript-eslint/parser": "5.22.0",
     "elm-tooling": "1.8.0",
     "esbuild": "0.14.38",
     "esbuild-register": "3.3.2",
-    "eslint": "8.14.0",
+    "eslint": "8.15.0",
     "eslint-plugin-jest": "26.1.5",
     "eslint-plugin-simple-import-sort": "7.0.0",
     "globals": "13.13.0",
@@ -32,6 +32,6 @@
     "chokidar": "^3.5.3",
     "cross-spawn": "^7.0.3",
     "tiny-decoders": "^7.0.0",
-    "ws": "^8.5.0"
+    "ws": "^8.6.0"
   }
 }
