@@ -51,37 +51,37 @@
             ],
             "output": "public/build/Frankenstein.js"
         },
-        "Azimutt": {
+        "🇫🇷 Azimutt": {
             "inputs": [
                 "public/submodules/azimutt/.elm-spa/defaults/Main.elm"
             ],
             "output": "public/submodules/azimutt/public/dist/elm.js"
         },
-        "Concourse": {
+        "🇨🇦 Concourse": {
             "inputs": [
                 "public/submodules/concourse/web/elm/src/Main.elm"
             ],
             "output": "public/submodules/concourse/web/public/elm.min.js"
         },
-        "Elm SPA Example": {
+        "🧖🏼 Elm SPA Example": {
             "inputs": [
                 "public/submodules/elm-spa-example/src/Main.elm"
             ],
             "output": "public/submodules/elm-spa-example/elm.js"
         },
-        "Kite": {
+        "🇩🇪 Kite": {
             "inputs": [
                 "public/submodules/kite/src/Main.elm"
             ],
             "output": "public/submodules/kite/dist/elm.js"
         },
-        "Seeds Game": {
+        "🇬🇧 Seeds Game": {
             "inputs": [
                 "public/submodules/seeds-game/src/elm/Main.elm"
             ],
             "output": "public/submodules/seeds-game/dist/Main.js"
         },
-        "Unison Share": {
+        "✂️ Unison Share": {
             "inputs": [
                 "public/submodules/codebase-ui/src/UnisonShare.elm"
             ],

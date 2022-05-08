@@ -224,7 +224,7 @@ describe("successful make", () => {
     expect(await run("successful-make-no-postprocess", ["make"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ 💣 Mine Sweeper Clone⧙                                       1 ms Q | 1.23 s E⧘
+      ✅ 💣  Mine Sweeper Clone⧙                                       1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -234,7 +234,77 @@ describe("successful make", () => {
     expect(await run("successful-make-no-postprocess", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ 💣 Mine Sweeper Clone⧙                          87.5 KiB     1 ms Q | 1.23 s E⧘
+      ✅ 💣  Mine Sweeper Clone⧙                          87.5 KiB     1 ms Q | 1.23 s E⧘
+
+      ✅ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
+  test("alignment and truncation and emoji", async () => {
+    // Note: It’s really difficult to tell how these align in the editor:
+    // - It depends on how your editor renders the emoji: 1, 1.5 or 2 columns?
+    // - It depends on how the ad-hoc test terminal escape interpreter handles characters of length 2.
+    expect(await run("emoji", ["make"])).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ No emoji⧙                                                    1 ms Q | 1.23 s E⧘
+      ✅ No emoji but really long target name that needs to be cut off to fit in the …
+      ✅ 😎  Cool emoji⧙                                               1 ms Q | 1.23 s E⧘
+      ✅ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in…
+      ✅ 👋🏻 Skin tone⧙                                                1 ms Q | 1.23 s E⧘
+      ✅ ↪  Non-emoji symbol⧙                                         1 ms Q | 1.23 s E⧘
+      ✅ ↪️  Emoji version of symbol⧙                                  1 ms Q | 1.23 s E⧘
+
+      ✅ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
+  test("alignment and truncation and emoji – non-fancy", async () => {
+    expect(
+      await run("emoji", ["make"], {
+        env: { [NO_COLOR]: "" },
+      })
+    ).toMatchInlineSnapshot(`
+      Dependencies: success
+      No emoji: success                                              1 ms Q | 1.23 s E
+      No emoji but really long target name that needs to be cut off to fit in the t...
+      Cool emoji: success                                            1 ms Q | 1.23 s E
+      Flag emoji and really long target name that needs to be cut off to fit in the...
+      Skin tone: success                                             1 ms Q | 1.23 s E
+      Non-emoji symbol: success                                      1 ms Q | 1.23 s E
+      Emoji version of symbol: success                               1 ms Q | 1.23 s E
+
+      Compilation finished in 123 ms.
+    `);
+  });
+
+  test("alignment and truncation and emoji – non-TTY", async () => {
+    expect(
+      await run("emoji", ["make"], {
+        isTTY: false,
+      })
+    ).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ No emoji: elm make
+      ⚪️ No emoji but really long target name that needs to be cut off to fit in the terminal: queued
+      ⚪️ 😎 Cool emoji: queued
+      ⚪️ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in the terminal: queued
+      ⚪️ 👋🏻 Skin tone: queued
+      ⚪️ ↪ Non-emoji symbol: queued
+      ⚪️ ↪️ Emoji version of symbol: queued
+      ✅ No emoji⧙     1 ms Q | 1.23 s E⧘
+      ⏳ No emoji but really long target name that needs to be cut off to fit in the terminal: elm make
+      ✅ No emoji but really long target name that needs to be cut off to fit in the terminal⧙     1 ms Q | 1.23 s E⧘
+      ⏳ 😎 Cool emoji: elm make
+      ✅ 😎 Cool emoji⧙     1 ms Q | 1.23 s E⧘
+      ⏳ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in the terminal: elm make
+      ✅ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in the terminal⧙     1 ms Q | 1.23 s E⧘
+      ⏳ 👋🏻 Skin tone: elm make
+      ✅ 👋🏻 Skin tone⧙     1 ms Q | 1.23 s E⧘
+      ⏳ ↪ Non-emoji symbol: elm make
+      ✅ ↪ Non-emoji symbol⧙     1 ms Q | 1.23 s E⧘
+      ⏳ ↪️ Emoji version of symbol: elm make
+      ✅ ↪️ Emoji version of symbol⧙     1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
