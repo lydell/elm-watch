@@ -189,7 +189,7 @@ Example:
             ],
             "output": "build/main.js"
         },
-        "My other target 😎": {
+        "😎 My other target": {
             "inputs": [
                 "src/One.elm",
                 "src/Two.elm"
