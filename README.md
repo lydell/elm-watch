@@ -121,7 +121,7 @@ Some more notes:
 
 - **Interactive errors.** Filter by target or Elm file. Collapse long code snippets (`case` expressions).
 - **Debug redux.** Apart from the standard `--debug` mode, also offer the [Redux DevTools] just one click away. Like [elm-monitor] and [elm-remotedev] but with no extra setup.
-- **Rust rewrite.** While I’ve kept the npm dependencies for elm-watch to a bare minimum, it would be super nice with a lean, super resource efficient, stand-alone binary. Most of elm-watch’s tests are written at a very high level, so they should be reusable with an implementation written in any language with too much work.
+- **Stand-alone binary.** While I’ve kept the npm dependencies for elm-watch to a bare minimum, it would be nice with a lean, super resource efficient, stand-alone binary. Most of elm-watch’s tests are written at a very high level, so they should be reusable with an implementation written in any language with too much work. I’ve been thinking about writing it in Rust, or forking the Elm compiler and building the watcher straight into it (while making no other changes) – which would unlock even more potential, since I can access internals.
 
 ## Terminal UI
 
