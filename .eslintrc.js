@@ -119,7 +119,6 @@ module.exports = {
         "@typescript-eslint/no-base-to-string": error,
         "@typescript-eslint/no-confusing-void-expression": error,
         "@typescript-eslint/no-dupe-class-members": error,
-        "@typescript-eslint/no-duplicate-imports": warn,
         "@typescript-eslint/no-empty-function": warn,
         "@typescript-eslint/no-empty-interface": warn,
         "@typescript-eslint/no-explicit-any": warn,
