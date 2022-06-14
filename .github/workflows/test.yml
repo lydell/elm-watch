@@ -13,12 +13,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest] # TODO: Add `windows-latest` when Windows issues are fixed.
-        node-version: [14.x, 16.x]
+        node-version: [14, 16, 18]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: "${{ matrix.node-version }}"
 
@@ -29,13 +29,13 @@ jobs:
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: node_modules
           key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package.json', 'package-lock.json') }}
 
       - name: Cache ~/.elm
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.elm
           key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json') }}
@@ -47,14 +47,14 @@ jobs:
           NO_ELM_TOOLING_INSTALL: 1
 
       - name: elm-tooling install
-        run: npx --no-install elm-tooling install
+        run: npx elm-tooling install
 
       # The idea is that this will install all packages mentioned in test
       # fixtures, so that nothing needs to be downloaded while the tests
       # run, which could result in flaky tests.
       - name: fill ELM_HOME with packages
-        run: npx --no-install elm make Main.elm --output=/dev/null
+        run: npx elm make Main.elm --output=/dev/null
         working-directory: tests/install-packages
 
       - name: Jest
-        run: npx --no-install jest --coverage
+        run: npx jest --coverage

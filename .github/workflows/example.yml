@@ -15,24 +15,24 @@ jobs:
         working-directory: example
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18
 
       # Build elm-watch so we can use it in this example repo.
       - name: Internal cache node_modules
         id: internal-cache-node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: node_modules
-          key: internal-node_modules-ubuntu-latest-16.x-${{ hashFiles('package.json', 'package-lock.json') }}
+          key: internal-node_modules-ubuntu-latest-18-${{ hashFiles('package.json', 'package-lock.json') }}
       - name: Internal npm ci
         if: steps.internal-cache-node_modules.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --no-audit
         working-directory: .
       - name: Internal build
         run: npm run build
@@ -40,7 +40,7 @@ jobs:
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             example/node_modules
@@ -48,7 +48,7 @@ jobs:
           key: node_modules-${{ hashFiles('example/package.json', 'example/package-lock.json', 'example/public/submodules/seeds-game/package.json',  'example/public/submodules/seeds-game/package-lock.json') }}
 
       - name: Cache ~/.elm
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.elm
           key: elm-${{ hashFiles('example/elm.json', 'example/elm-tooling.json') }}
@@ -57,16 +57,16 @@ jobs:
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
         env:
           NO_ELM_TOOLING_INSTALL: 1
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: elm-tooling install
-        run: npx --no-install elm-tooling install
+        run: npx elm-tooling install
 
       - name: elm-watch make
-        run: npx --no-install elm-watch make --optimize
+        run: npx elm-watch make --optimize
 
       - name: esbuild
         run: npm run esbuild -- --minify
 
       - name: elm-format
-        run: npx --no-install elm-format --validate src
+        run: npx elm-format --validate src
