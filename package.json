@@ -11,28 +11,28 @@
   },
   "devDependencies": {
     "@types/cross-spawn": "6.0.2",
-    "@types/jest": "27.5.1",
+    "@types/jest": "28.1.1",
     "@types/node": "16.11.26",
     "@types/ws": "8.5.3",
-    "@typescript-eslint/eslint-plugin": "5.25.0",
-    "@typescript-eslint/parser": "5.25.0",
+    "@typescript-eslint/eslint-plugin": "5.28.0",
+    "@typescript-eslint/parser": "5.28.0",
     "elm-tooling": "1.8.0",
-    "esbuild": "0.14.39",
-    "esbuild-register": "3.3.2",
-    "eslint": "8.15.0",
-    "eslint-plugin-jest": "26.2.2",
+    "esbuild": "0.14.43",
+    "esbuild-register": "3.3.3",
+    "eslint": "8.17.0",
+    "eslint-plugin-jest": "26.5.3",
     "eslint-plugin-simple-import-sort": "7.0.0",
     "globals": "13.15.0",
-    "jest": "28.1.0",
-    "jest-environment-jsdom": "28.1.0",
-    "prettier": "2.6.2",
-    "ts-jest": "28.0.2",
-    "typescript": "4.6.4"
+    "jest": "28.1.1",
+    "jest-environment-jsdom": "28.1.1",
+    "prettier": "2.7.0",
+    "ts-jest": "28.0.5",
+    "typescript": "4.7.3"
   },
   "dependencies": {
     "chokidar": "^3.5.3",
     "cross-spawn": "^7.0.3",
     "tiny-decoders": "^7.0.0",
-    "ws": "^8.6.0"
+    "ws": "^8.8.0"
   }
 }
