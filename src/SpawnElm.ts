@@ -16,6 +16,7 @@ export type RunElmMakeError =
   | {
       tag: "ElmMakeError";
       error: ElmMakeError;
+      extraError: string | undefined;
     }
   | {
       tag: "ElmMakeJsonParseError";
@@ -92,6 +93,17 @@ export async function make({
       const stdout = spawnResult.stdout.toString("utf8");
       const stderr = spawnResult.stderr.toString("utf8");
 
+      // This is a workaround for: https://github.com/elm/compiler/issues/2264
+      // Elm can print a “box” of plain text information before the JSON when
+      // it fails to read certain files in elm-stuff/:
+      // https://github.com/elm/compiler/blob/9f1bbb558095d81edba5796099fee9981eac255a/builder/src/File.hs#L85-L94
+      const match = elmStuffErrorMessagePrefixRegex.exec(stderr);
+      const elmStuffError = match?.[0];
+      const potentialJson =
+        elmStuffError === undefined
+          ? stderr
+          : stderr.slice(elmStuffError.length);
+
       return exitReason.tag === "ExitCode" &&
         exitReason.exitCode === 0 &&
         stdout === "" &&
@@ -100,8 +112,8 @@ export async function make({
         : exitReason.tag === "ExitCode" &&
           exitReason.exitCode === 1 &&
           stdout === "" &&
-          stderr.startsWith("{")
-        ? parseElmMakeJson(command, stderr)
+          potentialJson.startsWith("{")
+        ? parseElmMakeJson(command, potentialJson, elmStuffError?.trim())
         : {
             tag: "UnexpectedElmMakeOutput",
             exitReason,
@@ -143,7 +155,8 @@ function maybeToArray<T>(arg: T | undefined): Array<T> {
 
 function parseElmMakeJson(
   command: Command,
-  jsonString: string
+  jsonString: string,
+  extraError: string | undefined
 ): RunElmMakeResult {
   let json: unknown;
 
@@ -176,6 +189,7 @@ function parseElmMakeJson(
     return {
       tag: "ElmMakeError",
       error: ElmMakeError(json),
+      extraError,
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);
@@ -233,9 +247,13 @@ type ElmInstallResult =
       stderr: string;
       command: Command;
     }
-  | { tag: "ElmJsonError" };
+  | { tag: "ElmJsonError" }
+  | { tag: "ElmStuffError" };
 
-const elmErrorMessageRegex = /^-- (.+) -+( elm\.json)?\r?\n([^]+)$/;
+const elmJsonErrorMessageRegex = /^-- (.+) -+( elm\.json)?\r?\n([^]+)$/;
+
+const elmStuffErrorMessagePrefixRegex =
+  /^\+-+\r?\n(?:\|.*\r?\n)+\+-+\r?\n\r?\n/;
 
 export async function install({
   elmJsonPath,
@@ -315,7 +333,11 @@ export async function install({
         };
       }
 
-      const match = elmErrorMessageRegex.exec(stderr);
+      if (elmStuffErrorMessagePrefixRegex.test(stderr)) {
+        return { tag: "ElmStuffError" };
+      }
+
+      const match = elmJsonErrorMessageRegex.exec(stderr);
 
       if (
         exitReason.tag === "ExitCode" &&

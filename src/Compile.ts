@@ -132,9 +132,11 @@ export async function installDependencies(
     clearTimeout(timeoutId);
 
     switch (result.tag) {
-      // If the elm.json is invalid we can just ignore that and let the “real”
-      // compilation later catch it. This way we get colored error messages.
+      // If the elm.json is invalid or elm-stuff/ is corrupted we can just
+      // ignore that and let the “real” compilation later catch it. This way we
+      // get colored error messages.
       case "ElmJsonError":
+      case "ElmStuffError":
         if (didWriteLoadingMessage) {
           clearLoadingMessage();
           logger.write(printStatusLineHelper("Skipped", message, "skipped"));
@@ -1339,7 +1341,11 @@ function onlyElmMakeErrorsRelatedToOutput(
   );
 
   return isNonEmptyArray(errors)
-    ? { tag: "ElmMakeError", error: { tag: "CompileErrors", errors } }
+    ? {
+        tag: "ElmMakeError",
+        error: { tag: "CompileErrors", errors },
+        extraError: elmMakeResult.extraError,
+      }
     : { tag: "Success" };
 }
 
@@ -2081,13 +2087,18 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
                 return ElmMakeError.renderGeneralError(
                   outputPath,
                   elmJsonPath,
-                  status.error
+                  status.error,
+                  status.extraError
                 );
 
               case "CompileErrors":
                 return status.error.errors.flatMap((error) =>
                   error.problems.map((problem) =>
-                    ElmMakeError.renderProblem(error.path, problem)
+                    ElmMakeError.renderProblem(
+                      error.path,
+                      problem,
+                      status.extraError
+                    )
                   )
                 );
             }

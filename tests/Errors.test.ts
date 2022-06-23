@@ -1859,27 +1859,12 @@ describe("errors", () => {
       }
       fs.writeFileSync(iDat, fs.readFileSync(iDat).slice(0, 128));
       expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
-        🚨 Dependencies
+        ⛔️ Dependencies
+        🚨 Main
 
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/not-enough-bytes/elm.json
+        ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
+        ⧙Target: Main⧘
 
-        I tried to make sure all packages are installed by running the following commands:
-
-        cd /Users/you/project/tests/fixtures/errors/not-enough-bytes
-        elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
-
-        I expected it to either exit 0 with no output (success),
-        or exit 1 with an error I can recognize (using regex) on stderr.
-
-        ⧙But it exited like this:⧘
-
-        exit 1
-        STDOUT:
-        Compiling ...
-        Detected a problem.
-
-        STDERR:
         +-------------------------------------------------------------------------------
         |  Corrupt File: /Users/you/project/tests/fixtures/errors/not-enough-bytes/elm-stuff/0.19.1/i.dat
         |   Byte Offset: 127
@@ -1889,15 +1874,17 @@ describe("errors", () => {
         | Trying to continue anyway.
         +-------------------------------------------------------------------------------
 
-        -- CORRUPT CACHE ---------------------------------------------------------------
-
         It looks like some of the information cached in elm-stuff/ has been corrupted.
 
         Try deleting your elm-stuff/ directory to get unstuck.
 
-        Note: This almost certainly means that a 3rd party tool (or editor plugin) is
+        ⧙Note⧘: This almost certainly means that a 3rd party tool (or editor plugin) is
         causing problems your the elm-stuff/ directory. Try disabling 3rd party tools
         one by one until you figure out which it is!
+
+        🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 

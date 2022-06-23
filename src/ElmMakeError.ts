@@ -113,12 +113,15 @@ export const ElmMakeError = Decode.fieldsUnion("type", {
 export function renderGeneralError(
   outputPath: OutputPath,
   elmJsonPath: ElmJsonPath,
-  error: GeneralError
+  error: GeneralError,
+  extraError: string | undefined
 ): ErrorTemplate {
   return fancyError(
     error.title,
     generalErrorPath(outputPath, elmJsonPath, error.path)
   )`
+${extraError ?? ""}
+
 ${join(error.message.map(renderMessageChunk), "")}
   `;
 }
@@ -138,7 +141,8 @@ function generalErrorPath(
 
 export function renderProblem(
   filePath: AbsolutePath,
-  problem: Problem
+  problem: Problem,
+  extraError: string | undefined
 ): ErrorTemplate {
   const location = join(
     [
@@ -149,6 +153,8 @@ export function renderProblem(
     ":"
   );
   return fancyError(problem.title, { tag: "Custom", location })`
+${extraError ?? ""}
+
 ${join(problem.message.map(renderMessageChunk), "")}
 `;
 }
