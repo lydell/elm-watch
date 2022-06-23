@@ -1,3 +1,4 @@
+import spawn from "cross-spawn";
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
@@ -1829,6 +1830,74 @@ describe("errors", () => {
         🚨 ⧙1⧘ error found
 
         🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
+    test("not enough bytes error", async () => {
+      const fixture = "not-enough-bytes";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const elmStuff = path.join(dir, "elm-stuff");
+      const iDat = path.join(elmStuff, "0.19.1", "i.dat");
+      fs.rmSync(elmStuff, { recursive: true, force: true });
+      const result = spawn.sync(
+        "elm",
+        ["make", "--output=/dev/null", "src/Main.elm"],
+        {
+          cwd: dir,
+          encoding: "utf8",
+        }
+      );
+      if (!(result.error === undefined || result.error === null)) {
+        throw result.error;
+      }
+      if (result.status !== 0) {
+        throw new Error(
+          `elm make failed with status ${result.status ?? "null"}.\n\n${
+            result.stdout
+          }\n\n${result.stderr}`
+        );
+      }
+      fs.writeFileSync(iDat, fs.readFileSync(iDat).slice(0, 128));
+      expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
+        🚨 Dependencies
+
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/not-enough-bytes/elm.json
+
+        I tried to make sure all packages are installed by running the following commands:
+
+        cd /Users/you/project/tests/fixtures/errors/not-enough-bytes
+        elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
+
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with an error I can recognize (using regex) on stderr.
+
+        ⧙But it exited like this:⧘
+
+        exit 1
+        STDOUT:
+        Compiling ...
+        Detected a problem.
+
+        STDERR:
+        +-------------------------------------------------------------------------------
+        |  Corrupt File: /Users/you/project/tests/fixtures/errors/not-enough-bytes/elm-stuff/0.19.1/i.dat
+        |   Byte Offset: 127
+        |       Message: not enough bytes
+        |
+        | Please report this to https://github.com/elm/compiler/issues
+        | Trying to continue anyway.
+        +-------------------------------------------------------------------------------
+
+        -- CORRUPT CACHE ---------------------------------------------------------------
+
+        It looks like some of the information cached in elm-stuff/ has been corrupted.
+
+        Try deleting your elm-stuff/ directory to get unstuck.
+
+        Note: This almost certainly means that a 3rd party tool (or editor plugin) is
+        causing problems your the elm-stuff/ directory. Try disabling 3rd party tools
+        one by one until you figure out which it is!
       `);
     });
 
