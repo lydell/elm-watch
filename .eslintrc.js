@@ -22,6 +22,7 @@ module.exports = {
     "no-case-declarations": error,
     "no-compare-neg-zero": error,
     "no-console": warn,
+    "no-constant-binary-expression": error,
     "no-constant-condition": error,
     "no-debugger": warn,
     "no-dupe-else-if": error,
