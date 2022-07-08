@@ -514,4 +514,5 @@ export const stringSnapshotSerializer = {
 };
 
 // For things like symlinks and readonly files/folders that aren’t really a thing on Windows.
+export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;

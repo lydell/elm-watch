@@ -19,6 +19,7 @@ import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
+  describeExceptWindows,
   FailReadStream,
   logDebug,
   MemoryWriteStream,
@@ -26,6 +27,7 @@ import {
   rm,
   rmSymlink,
   stringSnapshotSerializer,
+  testExceptWindows,
   TEST_ENV,
   wait,
 } from "./Helpers";
@@ -717,7 +719,7 @@ describe("errors", () => {
       `);
     });
 
-    describe("symlink loop", () => {
+    describeExceptWindows("symlink loop", () => {
       const fixture = "symlink-loop";
       const dir = path.join(FIXTURES_DIR, fixture);
       const symlink1 = path.join(dir, "Main.elm");
@@ -840,7 +842,7 @@ describe("errors", () => {
       `);
     });
 
-    test("duplicate inputs with symlinks", async () => {
+    testExceptWindows("duplicate inputs with symlinks", async () => {
       expect(await run("duplicate-inputs-with-symlinks", ["make"]))
         .toMatchInlineSnapshot(`
         🚨 main
@@ -1080,7 +1082,8 @@ describe("errors", () => {
       `);
     });
 
-    test("undefined PATH", async () => {
+    // On Windows, this causes `elm` to be found after all, but fail with `openBinaryFile: permission denied`.
+    testExceptWindows("undefined PATH", async () => {
       expect(await run("valid", ["make", "app"], { env: {} }))
         .toMatchInlineSnapshot(`
           🚨 Dependencies
