@@ -2347,62 +2347,65 @@ describe("hot", () => {
     `);
   });
 
-  test("typecheck-only should not break because of duplicate inputs", async () => {
-    const { terminal, renders } = await run({
-      fixture: "typecheck-only-unique",
-      args: [],
-      scripts: ["Main.js"],
-      isTTY: false,
-      init: (node) => {
-        window.Elm?.Main?.init({ node });
-      },
-      onIdle: () => "Stop",
-    });
+  testExceptWindows(
+    "typecheck-only should not break because of duplicate inputs",
+    async () => {
+      const { terminal, renders } = await run({
+        fixture: "typecheck-only-unique",
+        args: [],
+        scripts: ["Main.js"],
+        isTTY: false,
+        init: (node) => {
+          window.Elm?.Main?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
 
-    expect(terminal).toMatchInlineSnapshot(`
-      ⏳ Dependencies
-      ✅ Dependencies
-      ⏳ Target1: elm make (typecheck only)
-      ⏳ Target2: elm make (typecheck only)
-      ⏳ Target3: elm make (typecheck only)
-      ✅ Target1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Target2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Target3⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      expect(terminal).toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ Target1: elm make (typecheck only)
+        ⏳ Target2: elm make (typecheck only)
+        ⏳ Target3: elm make (typecheck only)
+        ✅ Target1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+        ✅ Target2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+        ✅ Target3⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      ⏳ Target1: elm make
-      ✅ Target1⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ⏳ Target1: elm make
+        ✅ Target1⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Target1⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Target1⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Target1
-      ℹ️ 13:10:05 Web socket connected for: Target1⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
-    `);
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: Target1
+        ℹ️ 13:10:05 Web socket connected for: Target1⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+      `);
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Target1
-      ================================================================================
-      ▼ ⏳ 13:10:05 Target1
-      ================================================================================
-      ▼ ⏳ 13:10:05 Target1
-      ================================================================================
-      ▼ 🔌 13:10:05 Target1
-      ================================================================================
-      ▼ 🔌 13:10:05 Target1
-      ================================================================================
-      ▼ ⏳ 13:10:05 Target1
-      ================================================================================
-      ▼ ✅ 13:10:05 Target1
-    `);
-  });
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Target1
+        ================================================================================
+        ▼ ⏳ 13:10:05 Target1
+        ================================================================================
+        ▼ ⏳ 13:10:05 Target1
+        ================================================================================
+        ▼ 🔌 13:10:05 Target1
+        ================================================================================
+        ▼ 🔌 13:10:05 Target1
+        ================================================================================
+        ▼ ⏳ 13:10:05 Target1
+        ================================================================================
+        ▼ ✅ 13:10:05 Target1
+      `);
+    }
+  );
 
   test("elm compilation errors from the start, with terminal resize", async () => {
     const fixture = "compile-error";
