@@ -67,7 +67,7 @@
             "inputs": [
                 "public/submodules/elm-spa-example/src/Main.elm"
             ],
-            "output": "public/submodules/elm-spa-example/elm.js"
+            "output": "public/submodules/elm-spa-example/elm-output.js"
         },
         "🇩🇪 Kite": {
             "inputs": [
