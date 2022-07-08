@@ -1054,7 +1054,6 @@ describe("errors", () => {
       expect(
         await run("valid", ["make"], {
           env: {
-            ...process.env,
             ...TEST_ENV,
             PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
               path.delimiter
@@ -2065,8 +2064,9 @@ describe("errors", () => {
         "make",
       ]);
 
-      expect(output.replace(/(PATH.*:\n\n)(.+\n)+/, "$1/some/fake/bin/path\n"))
-        .toMatchInlineSnapshot(`
+      expect(
+        output.replace(/PATH(.*:\n\n)(.+\n)+/i, "PATH$1/some/fake/bin/path\n")
+      ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
 
