@@ -2132,7 +2132,7 @@ describe("hot", () => {
       onIdle: async ({ div }) => {
         assert(div);
         for (const filePath of fs.readdirSync(unusedFolder)) {
-          await wait(8);
+          await wait(1);
           touch(path.join(unusedFolder, filePath));
         }
         await wait(100);
