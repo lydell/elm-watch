@@ -458,7 +458,8 @@ export function clean(string: string): string {
   // more than one computer. Replace automatic port numbers with a fixed one.
   // Replace colors for snapshots. Replace backslashes with slashes for Windows
   // That can be extra ticky since we sometimes prints JSON strings where the
-  // backslashes end up escaped with another backslash.
+  // backslashes end up escaped with another backslash. Normalize some error
+  // messages between Windows and others.
   return string
     .split(path.dirname(__dirname))
     .join(project)
@@ -477,10 +478,11 @@ export function clean(string: string): string {
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘")
     .replace(
-      /(')?[A-Z]:\\(.+)\1/g,
-      (_match, _quote, rest: string) =>
+      /[A-Z]:\\(\S+)/g,
+      (_match, rest: string) =>
         `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`
-    );
+    )
+    .replace(/EPERM: operation not permitted/g, "EACCES: permission denied");
 }
 
 export function assertExitCode(

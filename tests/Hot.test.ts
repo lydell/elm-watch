@@ -17,6 +17,7 @@ import {
   rm,
   rmSymlink,
   stringSnapshotSerializer,
+  testExceptWindows,
   touch,
   wait,
 } from "./Helpers";
@@ -3169,7 +3170,7 @@ describe("hot", () => {
     `);
   });
 
-  test("duplicate inputs", async () => {
+  testExceptWindows("duplicate inputs", async () => {
     const fixture = "duplicate-inputs";
     const dir = path.join(FIXTURES_DIR, fixture);
     const elmJsonPath = path.join(dir, "elm.json");
