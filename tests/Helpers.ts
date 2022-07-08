@@ -482,6 +482,7 @@ export function clean(string: string): string {
       (_match, rest: string) =>
         `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`
     )
+    .replace(/\bcd '([^'\s]+)'/, "cd $1")
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied");
 }
 
