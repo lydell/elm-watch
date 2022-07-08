@@ -463,7 +463,7 @@ export function clean(string: string): string {
   return string
     .split(path.dirname(__dirname))
     .join(project)
-    .split(path.dirname(__dirname).replace(/\\\\/g, "\\\\"))
+    .split(path.dirname(__dirname).replace(/\\/g, "\\\\"))
     .join(project)
     .split(url.pathToFileURL(path.dirname(__dirname)).toString())
     .join(
