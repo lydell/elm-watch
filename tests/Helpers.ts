@@ -483,7 +483,8 @@ export function clean(string: string): string {
         `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`
     )
     .replace(/\bcd '([^'\s]+)'/, "cd $1")
-    .replace(/EPERM: operation not permitted/g, "EACCES: permission denied");
+    .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
+    .replace(/EOF/g, "EPIPE");
 }
 
 export function assertExitCode(
