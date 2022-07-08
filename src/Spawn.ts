@@ -49,15 +49,23 @@ export function spawnKillable(command: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
 } {
+  let killed = false;
+
   // istanbul ignore next
   let kill = (): void => {
-    throw new Error("spawnKillable: `kill` was never reassigned!");
+    killed = true;
   };
 
   const promise = (
     actualSpawn: typeof childProcess.spawn
   ): Promise<SpawnResult> =>
     new Promise((resolve, reject) => {
+      // istanbul ignore if
+      if (killed) {
+        reject(SPAWN_KILLED);
+        return;
+      }
+
       const child = actualSpawn(command.command, command.args, {
         ...command.options,
         cwd: command.options.cwd.absolutePath,
@@ -65,7 +73,6 @@ export function spawnKillable(command: Command): {
 
       const stdout: Array<Buffer> = [];
       const stderr: Array<Buffer> = [];
-      let killed = false;
 
       child.on("error", (error: Error & { code?: string }) => {
         resolve(
@@ -163,7 +170,9 @@ export function spawnKillable(command: Command): {
     promise: IS_WINDOWS
       ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
       : promise(childProcess.spawn),
-    kill,
+    kill: () => {
+      kill();
+    },
   };
 }
 
