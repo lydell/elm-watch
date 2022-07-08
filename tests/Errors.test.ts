@@ -1157,7 +1157,11 @@ describe("errors", () => {
       const tmpDir = path.join(FIXTURES_DIR, fixture, "bad-tmp");
       expect(
         await run(fixture, ["make", "app"], {
-          env: { [__ELM_WATCH_TMP_DIR]: tmpDir },
+          env: {
+            ...process.env,
+            ...TEST_ENV,
+            [__ELM_WATCH_TMP_DIR]: tmpDir,
+          },
         })
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
