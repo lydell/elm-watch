@@ -458,11 +458,12 @@ export function clean(string: string): string {
   // more than one computer. Replace automatic port numbers with a fixed one.
   // Replace colors for snapshots. Replace backslashes with slashes for Windows
   // That can be extra ticky since we sometimes prints JSON strings where the
-  // backslashes end up escaped with another backslash.
+  // backslashes end up escaped with another backslash. Normalize some error
+  // messages between Windows and others.
   return string
     .split(path.dirname(__dirname))
     .join(project)
-    .split(path.dirname(__dirname).replace(/\\\\/g, "\\\\"))
+    .split(path.dirname(__dirname).replace(/\\/g, "\\\\"))
     .join(project)
     .split(url.pathToFileURL(path.dirname(__dirname)).toString())
     .join(
@@ -477,10 +478,14 @@ export function clean(string: string): string {
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘")
     .replace(
-      /(')?[A-Z]:\\(.+)\1/g,
-      (_match, _quote, rest: string) =>
+      /[A-Z]:\\(\S+)/g,
+      (_match, rest: string) =>
         `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`
-    );
+    )
+    .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
+    .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
+    .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
+    .replace(/EOF/g, "EPIPE");
 }
 
 export function assertExitCode(
@@ -509,4 +514,5 @@ export const stringSnapshotSerializer = {
 };
 
 // For things like symlinks and readonly files/folders that aren’t really a thing on Windows.
+export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;

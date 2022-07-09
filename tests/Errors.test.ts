@@ -19,6 +19,7 @@ import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
+  describeExceptWindows,
   FailReadStream,
   logDebug,
   MemoryWriteStream,
@@ -27,6 +28,7 @@ import {
   rmSymlink,
   stringSnapshotSerializer,
   TEST_ENV,
+  testExceptWindows,
   wait,
 } from "./Helpers";
 
@@ -717,7 +719,7 @@ describe("errors", () => {
       `);
     });
 
-    describe("symlink loop", () => {
+    describeExceptWindows("symlink loop", () => {
       const fixture = "symlink-loop";
       const dir = path.join(FIXTURES_DIR, fixture);
       const symlink1 = path.join(dir, "Main.elm");
@@ -840,7 +842,7 @@ describe("errors", () => {
       `);
     });
 
-    test("duplicate inputs with symlinks", async () => {
+    testExceptWindows("duplicate inputs with symlinks", async () => {
       expect(await run("duplicate-inputs-with-symlinks", ["make"]))
         .toMatchInlineSnapshot(`
         🚨 main
@@ -1052,7 +1054,6 @@ describe("errors", () => {
       expect(
         await run("valid", ["make"], {
           env: {
-            ...process.env,
             ...TEST_ENV,
             PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
               path.delimiter
@@ -1080,7 +1081,8 @@ describe("errors", () => {
       `);
     });
 
-    test("undefined PATH", async () => {
+    // On Windows, this causes `elm` to be found after all, but fail with `openBinaryFile: permission denied`.
+    testExceptWindows("undefined PATH", async () => {
       expect(await run("valid", ["make", "app"], { env: {} }))
         .toMatchInlineSnapshot(`
           🚨 Dependencies
@@ -1157,7 +1159,11 @@ describe("errors", () => {
       const tmpDir = path.join(FIXTURES_DIR, fixture, "bad-tmp");
       expect(
         await run(fixture, ["make", "app"], {
-          env: { [__ELM_WATCH_TMP_DIR]: tmpDir },
+          env: {
+            ...process.env,
+            ...TEST_ENV,
+            [__ELM_WATCH_TMP_DIR]: tmpDir,
+          },
         })
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
@@ -1857,7 +1863,7 @@ describe("errors", () => {
           }\n\n${result.stderr}`
         );
       }
-      fs.writeFileSync(iDat, fs.readFileSync(iDat).slice(0, 128));
+      fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
       expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
         ⛔️ Dependencies
         🚨 Main
@@ -1897,6 +1903,7 @@ describe("errors", () => {
       const mainFileTemplate = path.join(src, "Main1.elm");
       const mainFileString = fs
         .readFileSync(mainFileTemplate, "utf8")
+        .replace(/\r\n/g, "\n")
         .replace("Main1", "Main");
       fs.writeFileSync(mainFile, mainFileString);
       fs.writeFileSync(lock, "");
@@ -2058,8 +2065,9 @@ describe("errors", () => {
         "make",
       ]);
 
-      expect(output.replace(/(PATH.*:\n\n)(.+\n)+/, "$1/some/fake/bin/path\n"))
-        .toMatchInlineSnapshot(`
+      expect(
+        output.replace(/PATH(.*:\n\n)(.+\n)+/i, "PATH$1/some/fake/bin/path\n")
+      ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
 
@@ -2431,7 +2439,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/no-stdin-read
-        printf '(function(...;}(this));' | true main standard make
+        printf '(function(...;}(this));' | node -e '' main standard make
 
         Trying to write to its ⧙stdin⧘, I got an error!
         ⧙Did you forget to read stdin, maybe?⧘

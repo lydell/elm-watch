@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-const childProcess = require("child_process");
+const spawn = require("cross-spawn");
 const fs = require("fs");
 const path = require("path");
 
-const child = childProcess.spawn("elm", process.argv.slice(2), {
+const child = spawn("elm", process.argv.slice(2), {
   env: {
     ...process.env,
     PATH: process.env.PATH.split(path.delimiter)

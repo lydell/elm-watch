@@ -5,6 +5,14 @@ const requireCoverage = {
   statements: 100,
 };
 
+// Some things like symlinks can’t be tested on Windows.
+const windowsCoverage = {
+  branches: 98,
+  functions: 98,
+  lines: 98,
+  statements: 98,
+};
+
 const ignoreCoverage = {
   branches: 0,
   functions: 0,
@@ -17,7 +25,7 @@ module.exports = {
   testEnvironment: "node",
   collectCoverageFrom: ["src/**/*.ts"],
   coverageThreshold: {
-    global: requireCoverage,
+    global: process.platform === "win32" ? windowsCoverage : requireCoverage,
     // Jest reports 0% coverage for this file, while in reality it should be 100%.
     "./src/PostprocessWorker.ts": ignoreCoverage,
   },

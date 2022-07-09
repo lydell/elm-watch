@@ -11,8 +11,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest] # TODO: Add `windows-latest` when Windows issues are fixed.
+        os: [ubuntu-latest, macOS-latest, windows-latest]
         node-version: [14, 16, 18]
 
     steps:

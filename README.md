@@ -19,8 +19,6 @@ npm install --save-dev elm-watch
 
 > ℹ️ Node.js 14 or newer is required.
 
-> ⚠️ Windows is currently not _fully_ supported. You might run into problems. See the [Windows support issue](https://github.com/lydell/elm-watch/issues/4).
-
 ## Getting started
 
 Create a file called [elm-watch.json](#elm-watchjson):
