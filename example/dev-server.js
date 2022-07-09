@@ -8,14 +8,14 @@ if (process.argv.length !== 3) {
   process.exit(1);
 }
 
-const PROXY_PORT = 8000;
+const DEV_SERVER_PORT = 8000;
 const ESBUILD_PORT = process.argv[2];
 
 const servers = [
   {
     port: 8001,
     subdomain: "application",
-    handler: (req, res, log) => {
+    serve: (req, res, log) => {
       serveWithEsbuild(
         req,
         res,
@@ -27,7 +27,7 @@ const servers = [
   {
     port: 8002,
     subdomain: "azimutt",
-    handler: (req, res, log) => {
+    serve: (req, res, log) => {
       serveWithEsbuild(
         req,
         res,
@@ -41,7 +41,7 @@ const servers = [
   {
     port: 8003,
     subdomain: "concourse",
-    handler: (req, res, log) => {
+    serve: (req, res, log) => {
       if (req.url.startsWith("/api/")) {
         proxyToWeb(req, res, log, "ci.concourse-ci.org");
       } else {
@@ -59,7 +59,7 @@ const servers = [
   {
     port: 8004,
     subdomain: "elm-spa-example",
-    handler: (req, res, log) => {
+    serve: (req, res, log) => {
       serveWithEsbuild(
         req,
         res,
@@ -73,7 +73,7 @@ const servers = [
   {
     port: 8005,
     subdomain: "kite",
-    handler: (req, res, log) => {
+    serve: (req, res, log) => {
       serveWithEsbuild(
         req,
         res,
@@ -87,7 +87,7 @@ const servers = [
   {
     port: 8006,
     subdomain: "seeds",
-    handler: (req, res, log) => {
+    serve: (req, res, log) => {
       serveWithEsbuild(
         req,
         res,
@@ -108,7 +108,7 @@ const servers = [
   {
     port: 8007,
     subdomain: "unison.share",
-    handler: (req, res, log) => {
+    serve: (req, res, log) => {
       if (req.url.startsWith("/api/")) {
         proxyToWeb(req, res, log, "share.unison-lang.org");
       } else {
@@ -142,12 +142,14 @@ function serveWithEsbuild(req, res, log, newUrl) {
 }
 
 function looksLikeFile(url) {
-  return /\.\w+$/.test(url);
+  return /\.\w+(\?.*)?$/.test(url);
 }
 
 function proxyToEsbuild(req, res, log) {
   const options = {
-    hostname: "localhost",
+    // Using 127.0.0.1 rather than localhost because of:
+    // https://github.com/nodejs/node/issues/40702#issuecomment-1103623246
+    hostname: "127.0.0.1",
     port: ESBUILD_PORT,
     path: req.url,
     method: req.method,
@@ -159,6 +161,14 @@ function proxyToEsbuild(req, res, log) {
     log(`-> esbuild`, statusCode === 503 ? "ERROR" : statusCode);
     res.writeHead(statusCode, proxyRes.headers);
     proxyRes.pipe(res, { end: true });
+  });
+
+  proxyReq.on("error", (error) => {
+    log(503);
+    res.writeHead(503);
+    res.end(
+      `Failed to proxy to esbuild on port ${ESBUILD_PORT}. Is it not running?\n\n${error.stack}`
+    );
   });
 
   req.pipe(proxyReq, { end: true });
@@ -179,12 +189,23 @@ function proxyToWeb(req, res, log, hostname) {
     proxyRes.pipe(res, { end: true });
   });
 
+  proxyReq.on("error", (error) => {
+    log(503);
+    res.writeHead(503);
+    res.end(`Failed to proxy to ${hostname}. Is it down?\n\n${error.stack}`);
+  });
+
   req.pipe(proxyReq, { end: true });
 }
 
 const LOOKS_LIKE_IP_ADDRESS = /^(\d+\.\d+\.\d+\.\d+):\d+$/;
 
 function indexPage(host = "", url = "/") {
+  // On mobile you go to http://192.168.x.x instead of http://localhost.
+  // There, link to the different ports since subdomains cannot be used
+  // with IP addresses.
+  const match = LOOKS_LIKE_IP_ADDRESS.exec(host);
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -204,14 +225,13 @@ function indexPage(host = "", url = "/") {
     <ul>
       ${servers
         .map((serverConfig) => {
-          const match = LOOKS_LIKE_IP_ADDRESS.exec(host);
           const [href, title] =
             match === null
               ? [
                   `http://${
                     serverConfig.subdomain
-                  }.localhost:${PROXY_PORT}${escapeHtml(url)}`,
-                  `${serverConfig.subdomain}.localhost:${PROXY_PORT}`,
+                  }.localhost:${DEV_SERVER_PORT}${escapeHtml(url)}`,
+                  `${serverConfig.subdomain}.localhost:${DEV_SERVER_PORT}`,
                 ]
               : [
                   `http://${match[1]}:${serverConfig.port}${escapeHtml(url)}`,
@@ -270,40 +290,34 @@ function formatTime(date) {
     .join(":");
 }
 
+// These servers are needed when testing on mobile: You can’t use localhost
+// there, so you need to type in your IP address. Then it’s not possible to
+// have subdomains, so we need servers on different ports.
 for (const serverConfig of servers) {
   const server = http.createServer((req, res) => {
-    serverConfig.handler(req, res, makeLog(req));
+    serverConfig.serve(req, res, makeLog(req));
   });
   server.listen(serverConfig.port);
 }
 
-const proxyServer = http.createServer((req, res) => {
+// This server lets you access all apps from one place.
+const convenienceServer = http.createServer((req, res) => {
   const { host } = req.headers;
   const log = makeLog(req);
 
   const serverConfig = servers.find(
     (serverConfig) =>
-      host === `${serverConfig.subdomain}.localhost:${PROXY_PORT}`
+      host === `${serverConfig.subdomain}.localhost:${DEV_SERVER_PORT}`
   );
   if (serverConfig === undefined) {
     log(404);
     res.writeHead(404);
     res.end(indexPage(host, req.url));
   } else {
-    serverConfig.handler(req, res, log);
+    serverConfig.serve(req, res, log);
   }
 });
 
-proxyServer.listen(PROXY_PORT, () => {
-  console.log("esbuild should be on:", `http://localhost:${ESBUILD_PORT}`);
-  for (const serverConfig of servers) {
-    console.log(
-      `${serverConfig.subdomain}:`,
-      `http://localhost:${serverConfig.port}`
-    );
-  }
-  console.log(
-    `Convenience dev-server for the above:`,
-    `http://localhost:${PROXY_PORT}`
-  );
+convenienceServer.listen(DEV_SERVER_PORT, () => {
+  console.log(`Server ready at: http://localhost:${DEV_SERVER_PORT}`);
 });
