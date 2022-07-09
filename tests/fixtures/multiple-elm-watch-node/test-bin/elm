@@ -16,7 +16,7 @@ const child = spawn("elm", argv, {
 });
 
 child.on("exit", (exitCode) => {
-  if (argv.some((arg) => arg.includes("third"))) {
+  if (argv.some((arg) => arg.includes("2.js"))) {
     fs.writeFileSync(path.join(__dirname, "..", "lock"), "third-elm-done");
   }
   process.exit(exitCode);
