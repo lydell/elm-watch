@@ -18,7 +18,7 @@
     }
   },
   {
-    "command": ["node", "proxy.js", "9000"],
-    "title": "proxy"
+    "command": ["node", "dev-server.js", "9000"],
+    "title": "dev-server"
   }
 ]

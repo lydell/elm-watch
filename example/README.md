@@ -5,7 +5,7 @@ This is an example that uses:
 - elm-watch for Elm compilation
 - [esbuild] for TypeScript compilation, and for minification
 - [UglifyJS] for extra minification (`postprocess.js`)
-- A little Node.js dev server for routing and proxying, with no dependencies (`proxy.js`)
+- A little Node.js dev server for routing and proxying, with no dependencies (`dev-server.js`)
 - [run-pty] to run the above with just one command
 - [elm-tooling] to install Elm and elm-format
 
@@ -25,7 +25,7 @@ This is an example that uses:
 This example has many Elm apps (many targets in `elm-watch.json`):
 
 - Some simpler demo/test apps in `src/` just need an HTML file served to work. Visit http://localhost:9000 – which is just esbuild’s static file server – to get links to them.
-- There are also some real world apps in `public/submodules/`. They use `Browser.application`, so they need a proper server to work fully – that’s where `proxy.js` comes into play. Visit http://localhost:8000 to get links to them.
+- There are also some real world apps in `public/submodules/`. They use `Browser.application`, so they need a proper server to work fully – that’s where `dev-server.js` comes into play. Visit http://localhost:8000 to get links to them.
 
 See [example.yml] for an example GitHub Actions workflow.
 

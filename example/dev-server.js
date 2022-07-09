@@ -303,7 +303,7 @@ proxyServer.listen(PROXY_PORT, () => {
     );
   }
   console.log(
-    `Convenience proxy for the above:`,
+    `Convenience dev-server for the above:`,
     `http://localhost:${PROXY_PORT}`
   );
 });
