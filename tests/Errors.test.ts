@@ -1863,7 +1863,7 @@ describe("errors", () => {
           }\n\n${result.stderr}`
         );
       }
-      fs.writeFileSync(iDat, fs.readFileSync(iDat).slice(0, 128));
+      fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
       expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
         ⛔️ Dependencies
         🚨 Main
@@ -1903,6 +1903,7 @@ describe("errors", () => {
       const mainFileTemplate = path.join(src, "Main1.elm");
       const mainFileString = fs
         .readFileSync(mainFileTemplate, "utf8")
+        .replace(/\r\n/g, "\n")
         .replace("Main1", "Main");
       fs.writeFileSync(mainFile, mainFileString);
       fs.writeFileSync(lock, "");

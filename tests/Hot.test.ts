@@ -1154,10 +1154,9 @@ describe("hot", () => {
     const elmWatchJsonPath2 = path.join(dir, "src", "elm-watch.json");
     const elmWatchJsonTemplatePath = path.join(dir, "elm-watch.template.json");
     const roguePath = path.join(dir, "rogue", "elm-watch.json");
-    const elmWatchJsonString = fs.readFileSync(
-      elmWatchJsonTemplatePath,
-      "utf8"
-    );
+    const elmWatchJsonString = fs
+      .readFileSync(elmWatchJsonTemplatePath, "utf8")
+      .replace(/\r\n/g, "\n");
     fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
     rm(elmWatchJsonPath2);
@@ -1371,7 +1370,9 @@ describe("hot", () => {
     const roguePath = path.join(dir, "rogue", "elm.json");
     const inputPath = path.join(dir, "src", "HtmlMain.elm");
     const otherInputPath = path.join(dir, "src", "Sub", "OtherMain.elm");
-    const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
+    const elmJsonString = fs
+      .readFileSync(elmJsonTemplatePath, "utf8")
+      .replace(/\r\n/g, "\n");
     fs.writeFileSync(elmJsonPath, elmJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
     rm(elmJsonPathSub);
@@ -1678,7 +1679,9 @@ describe("hot", () => {
     const dir = path.join(FIXTURES_DIR, fixture);
     const elmJsonPath = path.join(dir, "elm.json");
     const elmJsonTemplatePath = path.join(dir, "elm.template.json");
-    const elmJsonString = fs.readFileSync(elmJsonTemplatePath, "utf8");
+    const elmJsonString = fs
+      .readFileSync(elmJsonTemplatePath, "utf8")
+      .replace(/\r\n/g, "\n");
     fs.writeFileSync(elmJsonPath, elmJsonString);
 
     const { terminal } = await run({
@@ -1778,7 +1781,9 @@ describe("hot", () => {
       "postprocess.template.js"
     );
     const roguePath = path.join(FIXTURES_DIR, fixture, "src", "postprocess.js");
-    const postprocessString = fs.readFileSync(postprocessTemplatePath, "utf8");
+    const postprocessString = fs
+      .readFileSync(postprocessTemplatePath, "utf8")
+      .replace(/\r\n/g, "\n");
     fs.writeFileSync(postprocessPath, postprocessString);
     fs.writeFileSync(roguePath, "ROGUE");
 
