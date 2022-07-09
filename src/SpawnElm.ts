@@ -164,6 +164,10 @@ function outputPathToAbsoluteString(
 ): string {
   switch (outputPath.tag) {
     case "OutputPath":
+      // We usually write to a temporary directory, to make the compilation atomic.
+      // If postprocessing fails, we don’t want to end up with a plain Elm file with
+      // no hot reloading or web socket client. The only time we can write directly
+      // to the output is when in "make" mode with no postprocessing.
       return outputPath.writeToTemporaryDir
         ? outputPath.temporaryOutputPath.absolutePath
         : outputPath.theOutputPath.absolutePath;
