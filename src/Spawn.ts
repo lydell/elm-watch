@@ -90,7 +90,10 @@ export function spawnKillable(command: Command): {
       child.stdin.on("error", (error: Error & { code?: string }) => {
         // EPIPE on Windows and macOS, EOF on Windows.
         // istanbul ignore else
-        if (error.code === "EPIPE" || error.code === "EOF") {
+        if (
+          error.code === "EPIPE" ||
+          /* istanbul ignore next */ error.code === "EOF"
+        ) {
           // The postprocess program can exit before we have managed to write all
           // the stdin. The stdin write error happens before the "exit" event.
           // It’s more important to get to know the exit code and stdout/stderr
