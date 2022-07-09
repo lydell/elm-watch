@@ -1,12 +1,11 @@
 /* eslint-disable no-console */
 
 import * as fs from "fs";
-import * as path from "path";
 import * as Decode from "tiny-decoders";
 
 import { inject } from "../src/Inject";
 import { absolutePathFromString } from "../src/PathHelpers";
-import { CompilationMode, Cwd, OutputPath } from "../src/Types";
+import { CompilationMode, Cwd } from "../src/Types";
 
 class KnownError extends Error {}
 
@@ -29,22 +28,8 @@ function run(args: Array<string>): void {
   const elmFile = absolutePathFromString(cwd.path, elmFileRaw);
   const code = fs.readFileSync(elmFile.absolutePath, "utf8");
 
-  const outputPath: OutputPath = {
-    tag: "OutputPath",
-    targetName: "BenchmarkInject",
-    originalString: "BenchmarkInject.js",
-    theOutputPath: {
-      tag: "AbsolutePath",
-      absolutePath: path.join(__dirname, "BenchmarkInject.js"),
-    },
-    temporaryOutputPath: {
-      tag: "AbsolutePath",
-      absolutePath: path.join(__dirname, "elm-stuff", "elm-watch", "1.js"),
-    },
-  };
-
   console.time("Run");
-  const newCode = inject(outputPath, compilationMode, code);
+  const newCode = inject(compilationMode, code);
   console.timeEnd("Run");
 
   console.log(

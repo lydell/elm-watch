@@ -860,11 +860,7 @@ function onCompileSuccess(
         outputState.compilationMode,
         code
       );
-      const newCode = Inject.inject(
-        outputPath,
-        outputState.compilationMode,
-        code
-      );
+      const newCode = Inject.inject(outputState.compilationMode, code);
 
       outputStatus.injectDurationMs = getNow().getTime() - elmCompiledTimestamp;
 
