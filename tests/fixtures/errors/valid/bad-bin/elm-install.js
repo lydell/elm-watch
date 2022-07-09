@@ -1,8 +1,8 @@
-const childProcess = require("child_process");
+const spawn = require("cross-spawn");
 const path = require("path");
 
 if (process.argv.some((arg) => arg.includes("ElmWatchDummy"))) {
-  childProcess.spawn("elm", process.argv.slice(2), {
+  spawn("elm", process.argv.slice(2), {
     env: {
       ...process.env,
       PATH: process.env.PATH.split(path.delimiter)

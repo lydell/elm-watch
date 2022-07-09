@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const childProcess = require("child_process");
+const spawn = require("cross-spawn");
 const fs = require("fs");
 const path = require("path");
 
@@ -15,7 +15,7 @@ if (isMain && !canExit()) {
   fs.writeFileSync(lock, "typecheck-only-started");
 }
 
-const child = childProcess.spawn("elm", argv, {
+const child = spawn("elm", argv, {
   env: {
     ...process.env,
     PATH: process.env.PATH.split(path.delimiter)
