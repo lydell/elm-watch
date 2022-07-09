@@ -2439,7 +2439,7 @@ describe("errors", () => {
         I tried to run your postprocess command:
 
         cd /Users/you/project/tests/fixtures/errors/postprocess/variants/no-stdin-read
-        printf '(function(...;}(this));' | node -e '' main standard make
+        printf '(function(...;}(this));' | echo main standard make
 
         Trying to write to its ⧙stdin⧘, I got an error!
         ⧙Did you forget to read stdin, maybe?⧘

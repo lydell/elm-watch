@@ -1,5 +1,5 @@
 {
-  "postprocess": ["node", "-e", ""],
+  "postprocess": ["echo"],
   "targets": {
     "main": {
       "inputs": ["../../src/Main.elm"],
