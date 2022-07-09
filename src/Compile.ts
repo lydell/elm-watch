@@ -872,6 +872,10 @@ function onCompileSuccess(
         case "NoPostprocess": {
           const newBuffer = Buffer.from(newCode);
           try {
+            fs.mkdirSync(
+              absoluteDirname(outputPath.theOutputPath).absolutePath,
+              { recursive: true }
+            );
             fs.writeFileSync(
               outputPath.theOutputPath.absolutePath,
               Buffer.concat([
@@ -1064,6 +1068,9 @@ async function postprocessHelper({
 
   if (postprocessResult.tag === "Success") {
     try {
+      fs.mkdirSync(absoluteDirname(outputPath.theOutputPath).absolutePath, {
+        recursive: true,
+      });
       switch (runMode.tag) {
         case "make":
           fs.writeFileSync(
