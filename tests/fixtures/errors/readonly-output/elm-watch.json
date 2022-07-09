@@ -1,0 +1,11 @@
+{
+    "postprocess": ["node", "-e", "process.stdin.pipe(process.stdout)"],
+    "targets": {
+        "Main": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "readonly.js"
+        }
+    }
+}

@@ -37,6 +37,10 @@ function run(args: Array<string>): void {
       tag: "AbsolutePath",
       absolutePath: path.join(__dirname, "BenchmarkInject.js"),
     },
+    temporaryOutputPath: {
+      tag: "AbsolutePath",
+      absolutePath: path.join(__dirname, "elm-stuff", "elm-watch", "1.js"),
+    },
   };
 
   console.time("Run");

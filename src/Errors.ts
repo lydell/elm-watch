@@ -826,12 +826,13 @@ and "postprocess" was not run.)
 
 export function readOutputError(
   outputPath: OutputPath,
-  error: Error
+  error: Error,
+  triedPath: AbsolutePath
 ): ErrorTemplate {
   return fancyError("TROUBLE READING OUTPUT", outputPath)`
 I managed to compile your code. Then I tried to read the output:
 
-${outputPath.theOutputPath.absolutePath}
+${triedPath.absolutePath}
 
 Doing so I encountered this error:
 
@@ -847,9 +848,13 @@ export function writeOutputError(
   return fancyError("TROUBLE WRITING OUTPUT", outputPath)`
 I managed to compile your code and read the generated file:
 
-${outputPath.theOutputPath.absolutePath}
+${outputPath.temporaryOutputPath.absolutePath}
 
 ${printWriteOutputErrorReasonForWriting(reasonForWriting)}
+
+${outputPath.theOutputPath.absolutePath}
+
+But I encountered this error:
 
 ${error.message}
 `;
@@ -860,16 +865,10 @@ function printWriteOutputErrorReasonForWriting(
 ): string {
   switch (reasonForWriting) {
     case "InjectWebSocketClient":
-      return `
-I injected code for hot reloading, and then tried to write that back to the file
-but I encountered this error:
-      `;
+      return "I injected code for hot reloading, and then tried to write that to the output path:";
 
     case "Postprocess":
-      return `
-After running your postprocess command, I tried to write the result of that
-back to the file but I encountered this error:
-      `;
+      return "After running your postprocess command, I tried to write the result of that to the output path:";
   }
 }
 

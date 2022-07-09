@@ -33,6 +33,12 @@ export type ElmWatchStuffJsonPath = {
   theElmWatchStuffJsonPath: AbsolutePath;
 };
 
+// elm-stuff/elm-watch/
+export type ElmWatchStuffDir = {
+  tag: "ElmWatchStuffDir";
+  theElmWatchStuffDir: AbsolutePath;
+};
+
 // applications: "source-directories": [...]
 // packages: src
 export type SourceDirectory = {
@@ -60,6 +66,7 @@ export type UncheckedInputPath = {
 export type OutputPath = {
   tag: "OutputPath";
   theOutputPath: AbsolutePath;
+  temporaryOutputPath: AbsolutePath;
   originalString: string;
   targetName: string;
 };

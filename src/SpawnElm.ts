@@ -8,7 +8,14 @@ import { JsonError, toError, toJsonError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn } from "./Spawn";
-import { CompilationMode, ElmJsonPath, InputPath, OutputPath } from "./Types";
+import {
+  CompilationMode,
+  ElmJsonPath,
+  ElmWatchJsonPath,
+  ElmWatchStuffDir,
+  InputPath,
+  OutputPath,
+} from "./Types";
 
 export type RunElmMakeResult = RunElmMakeError | { tag: "Success" };
 
@@ -53,7 +60,7 @@ export async function make({
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   inputs: NonEmptyArray<InputPath>;
-  outputPath: NullOutputPath | OutputPath;
+  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean });
   env: Env;
 }): Promise<RunElmMakeResult> {
   const command: Command = {
@@ -138,12 +145,28 @@ export function compilationModeToArg(
   }
 }
 
+export function getTemporaryOutputDir(
+  elmWatchJsonPath: ElmWatchJsonPath
+): ElmWatchStuffDir {
+  const elmStuff = absolutePathFromString(
+    absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+    "elm-stuff"
+  );
+
+  return {
+    tag: "ElmWatchStuffDir",
+    theElmWatchStuffDir: absolutePathFromString(elmStuff, "elm-watch"),
+  };
+}
+
 function outputPathToAbsoluteString(
-  outputPath: NullOutputPath | OutputPath
+  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean })
 ): string {
   switch (outputPath.tag) {
     case "OutputPath":
-      return outputPath.theOutputPath.absolutePath;
+      return outputPath.writeToTemporaryDir
+        ? outputPath.temporaryOutputPath.absolutePath
+        : outputPath.theOutputPath.absolutePath;
     case "NullOutputPath":
       return "/dev/null";
   }

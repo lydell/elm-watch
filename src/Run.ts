@@ -11,6 +11,7 @@ import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
+import * as SpawnElm from "./SpawnElm";
 import { CliArg, Cwd, ElmWatchJsonPath, GetNow, RunMode } from "./Types";
 
 type RunResult =
@@ -124,6 +125,10 @@ export async function run(
             return { tag: "Exit", exitCode: 1 };
           }
 
+          const elmWatchStuffDir = SpawnElm.getTemporaryOutputDir(
+            parseResult.elmWatchJsonPath
+          );
+
           const elmWatchStuffJsonPath = ElmWatchStuffJson.getPath(
             parseResult.elmWatchJsonPath
           );
@@ -171,6 +176,7 @@ export async function run(
                 )
                   ? parseArgsResult.targetsSubstrings
                   : knownTargets,
+                elmWatchStuffDir,
                 elmWatchStuffJsonPath,
                 elmWatchStuffJson,
               });

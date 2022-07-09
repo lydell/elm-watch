@@ -666,7 +666,12 @@ async function compileOneOutput({
       elmJsonPath,
       compilationMode: outputState.compilationMode,
       inputs: outputState.inputs,
-      outputPath,
+      outputPath: {
+        ...outputPath,
+        writeToTemporaryDir: !(
+          runMode.tag === "make" && postprocess.tag === "NoPostprocess"
+        ),
+      },
       env,
     }).then((result) => {
       outputStatus.elmDurationMs = getNow().getTime() - startTimestamp;
@@ -775,7 +780,11 @@ function onCompileSuccess(
             fileSize = fs.statSync(outputPath.theOutputPath.absolutePath).size;
           } catch (unknownError) {
             const error = toError(unknownError);
-            outputState.setStatus({ tag: "ReadOutputError", error });
+            outputState.setStatus({
+              tag: "ReadOutputError",
+              error,
+              triedPath: outputPath.theOutputPath,
+            });
             updateStatusLineHelper();
             return {
               tag: "CompileError",
@@ -796,10 +805,16 @@ function onCompileSuccess(
         case "Postprocess": {
           let buffer;
           try {
-            buffer = fs.readFileSync(outputPath.theOutputPath.absolutePath);
+            buffer = fs.readFileSync(
+              outputPath.temporaryOutputPath.absolutePath
+            );
           } catch (unknownError) {
             const error = toError(unknownError);
-            outputState.setStatus({ tag: "ReadOutputError", error });
+            outputState.setStatus({
+              tag: "ReadOutputError",
+              error,
+              triedPath: outputPath.temporaryOutputPath,
+            });
             updateStatusLineHelper();
             return {
               tag: "CompileError",
@@ -822,10 +837,17 @@ function onCompileSuccess(
     case "hot": {
       let code;
       try {
-        code = fs.readFileSync(outputPath.theOutputPath.absolutePath, "utf8");
+        code = fs.readFileSync(
+          outputPath.temporaryOutputPath.absolutePath,
+          "utf8"
+        );
       } catch (unknownError) {
         const error = toError(unknownError);
-        outputState.setStatus({ tag: "ReadOutputError", error });
+        outputState.setStatus({
+          tag: "ReadOutputError",
+          error,
+          triedPath: outputPath.temporaryOutputPath,
+        });
         updateStatusLineHelper();
         return {
           tag: "CompileError",
@@ -1278,6 +1300,7 @@ async function typecheck({
         outputState.setStatus({
           tag: "ReadOutputError",
           error: proxyFileResult.error,
+          triedPath: outputPath.theOutputPath,
         });
         break;
     }
@@ -2113,7 +2136,11 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
             return Errors.importWalkerFileSystemError(outputPath, status.error);
 
           case "ReadOutputError":
-            return Errors.readOutputError(outputPath, status.error);
+            return Errors.readOutputError(
+              outputPath,
+              status.error,
+              status.triedPath
+            );
 
           case "WriteOutputError":
             return Errors.writeOutputError(

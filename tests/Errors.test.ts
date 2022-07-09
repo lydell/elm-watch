@@ -1996,11 +1996,11 @@ describe("errors", () => {
 
         I managed to compile your code. Then I tried to read the output:
 
-        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+        /Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js
 
         Doing so I encountered this error:
 
-        ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+        ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js'
 
         🚨 ⧙1⧘ error found
 
@@ -2008,23 +2008,25 @@ describe("errors", () => {
       `);
     });
 
-    test("fail to overwrite Elm’s output after postprocess", async () => {
-      expect(
-        await runWithBadElmBin("exit-0-write-readonly", { postprocess: true })
-      ).toMatchInlineSnapshot(`
-        🚨 app
+    test("fail to write output after postprocess", async () => {
+      expect(await run("readonly-output", ["make"])).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 Main
 
         ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
-        ⧙Target: app⧘
+        ⧙Target: Main⧘
 
         I managed to compile your code and read the generated file:
 
-        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+        /Users/you/project/tests/fixtures/errors/readonly-output/elm-stuff/elm-watch/0.js
 
-        After running your postprocess command, I tried to write the result of that
-        back to the file but I encountered this error:
+        After running your postprocess command, I tried to write the result of that to the output path:
 
-        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+        /Users/you/project/tests/fixtures/errors/readonly-output/readonly.js
+
+        But I encountered this error:
+
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/readonly-output/readonly.js'
 
         🚨 ⧙1⧘ error found
 
@@ -2034,23 +2036,24 @@ describe("errors", () => {
 
     test("fail to write dummy output", async () => {
       expect(
-        await runWithBadElmBin("exit-0-write-readonly", {
+        await run("readonly-output", ["hot"], {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
-        🚨 app
+        ✅ Dependencies
+        🚨 Main
 
         ⧙-- TROUBLE WRITING DUMMY OUTPUT ------------------------------------------------⧘
-        ⧙Target: app⧘
+        ⧙Target: Main⧘
 
         There are no websocket connections for this target, so I only typecheck the
         code. That went well. Then I tried to write a dummy output file here:
 
-        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+        /Users/you/project/tests/fixtures/errors/readonly-output/readonly.js
 
         Doing so I encountered this error:
 
-        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/readonly-output/readonly.js'
 
         🚨 ⧙1⧘ error found
 
@@ -3034,7 +3037,8 @@ describe("errors", () => {
         🚨 Compilation finished in ⧙123 ms⧘.
       `);
 
-      expect(fs.existsSync(appPath)).toBe(true);
+      // Not written since postprocess was skipped – full compilation is atomic.
+      expect(fs.existsSync(appPath)).toBe(false);
 
       // Postprocess error.
       expect(
@@ -3122,7 +3126,8 @@ describe("errors", () => {
         Compilation finished in 123 ms.
       `);
 
-      expect(fs.existsSync(appPath)).toBe(true);
+      // Not written since postprocess was skipped – full compilation is atomic.
+      expect(fs.existsSync(appPath)).toBe(false);
 
       // Postprocess error.
       expect(
@@ -3269,7 +3274,10 @@ describe("errors", () => {
                 tag: "AbsolutePath",
                 absolutePath: "/build/main.js",
               },
-
+              temporaryOutputPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/elm-stuff/elm-watch/1.js",
+              },
               originalString: "main.js",
               targetName: "main",
             },
@@ -3315,7 +3323,10 @@ describe("errors", () => {
                 tag: "AbsolutePath",
                 absolutePath: "/build/main.js",
               },
-
+              temporaryOutputPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/elm-stuff/elm-watch/1.js",
+              },
               originalString: "main.js",
               targetName: "main",
             },

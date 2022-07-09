@@ -39,6 +39,10 @@ const project: Project = {
         tag: "AbsolutePath",
         absolutePath: "/Users/you/project/public/build/HtmlMain.js",
       },
+      temporaryOutputPath: {
+        tag: "AbsolutePath",
+        absolutePath: "/Users/you/project/elm-stuff/elm-watch/1.js",
+      },
     },
     {
       originalString: "public/submodules/azimutt/public/dist/elm.js",
@@ -49,6 +53,10 @@ const project: Project = {
         absolutePath:
           "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
       },
+      temporaryOutputPath: {
+        tag: "AbsolutePath",
+        absolutePath: "/Users/you/project/elm-stuff/elm-watch/2.js",
+      },
     },
   ]),
   elmJsonsErrors: [
@@ -58,6 +66,10 @@ const project: Project = {
         theOutputPath: {
           tag: "AbsolutePath",
           absolutePath: "/Users/you/project/public/build/SandboxMain.js",
+        },
+        temporaryOutputPath: {
+          tag: "AbsolutePath",
+          absolutePath: "/Users/you/project/elm-stuff/elm-watch/3.js",
         },
         originalString: "public/build/SandboxMain.js",
         targetName: "Sandbox",
@@ -97,6 +109,10 @@ const project: Project = {
               tag: "AbsolutePath",
               absolutePath: "/Users/you/project/public/build/ElementMain.js",
             },
+            temporaryOutputPath: {
+              tag: "AbsolutePath",
+              absolutePath: "/Users/you/project/elm-stuff/elm-watch/4.js",
+            },
           },
           new OutputState(
             [
@@ -125,6 +141,10 @@ const project: Project = {
             theOutputPath: {
               tag: "AbsolutePath",
               absolutePath: "/Users/you/project/public/build/Frankenstein.js",
+            },
+            temporaryOutputPath: {
+              tag: "AbsolutePath",
+              absolutePath: "/Users/you/project/elm-stuff/elm-watch/5.js",
             },
           },
           new OutputState(
@@ -180,6 +200,10 @@ const project: Project = {
               absolutePath:
                 "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
             },
+            temporaryOutputPath: {
+              tag: "AbsolutePath",
+              absolutePath: "/Users/you/project/elm-stuff/elm-watch/6.js",
+            },
           },
           new OutputState(
             [
@@ -229,6 +253,7 @@ describe("Project", () => {
           {
             "targetName": "Element",
             "output": "/Users/you/project/public/build/ElementMain.js",
+            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/4.js",
             "originalString": "public/build/ElementMain.js",
             "compilationMode": "optimize",
             "elmJson": "/Users/you/project/elm.json",
@@ -243,6 +268,7 @@ describe("Project", () => {
           {
             "targetName": "Frankenstein",
             "output": "/Users/you/project/public/build/Frankenstein.js",
+            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/5.js",
             "originalString": "public/build/Frankenstein.js",
             "compilationMode": "standard",
             "elmJson": "/Users/you/project/elm.json",
@@ -262,6 +288,7 @@ describe("Project", () => {
           {
             "targetName": "Concourse",
             "output": "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
+            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/6.js",
             "originalString": "public/submodules/concourse/web/public/elm.min.js",
             "compilationMode": "optimize",
             "elmJson": "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
@@ -278,11 +305,13 @@ describe("Project", () => {
           {
             "targetName": "Html",
             "output": "/Users/you/project/public/build/HtmlMain.js",
+            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/1.js",
             "originalString": "public/build/HtmlMain.js"
           },
           {
             "targetName": "Azimutt",
             "output": "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
+            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/2.js",
             "originalString": "public/submodules/azimutt/public/dist/elm.js"
           }
         ],
@@ -291,6 +320,7 @@ describe("Project", () => {
             "error": "InputsNotFound",
             "targetName": "Sandbox",
             "output": "/Users/you/project/public/build/SandboxMain.js",
+            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/3.js",
             "originalString": "public/build/SandboxMain.js",
             "compilationMode": "standard"
           }

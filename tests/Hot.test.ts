@@ -3371,6 +3371,10 @@ describe("hot", () => {
         outputPath: {
           tag: "OutputPath",
           theOutputPath: { tag: "AbsolutePath", absolutePath: "/build/One.js" },
+          temporaryOutputPath: {
+            tag: "AbsolutePath",
+            absolutePath: "/elm-stuff/elm-watch/1.js",
+          },
           originalString: "build/One.js",
           targetName: "One",
         },
