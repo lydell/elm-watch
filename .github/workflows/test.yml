@@ -8,6 +8,8 @@ on:
 
 jobs:
   main:
+    timeout-minutes: 5
+
     runs-on: ${{ matrix.os }}
 
     strategy:
