@@ -386,9 +386,15 @@ export function runHotReload({
     sendToElm,
     lastValueFromElm,
     go: (onIdle: OnIdle) => {
-      fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
+      const elmWatchStuffJsonPath = path.join(
+        dir,
+        "elm-stuff",
+        "elm-watch",
+        "stuff.json"
+      );
+      fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), { recursive: true });
       fs.writeFileSync(
-        path.join(dir, "elm-stuff", "elm-watch", "stuff.json"),
+        elmWatchStuffJsonPath,
         JSON.stringify(elmWatchStuffJson)
       );
       write(1);

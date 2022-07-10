@@ -2826,10 +2826,19 @@ describe("errors", () => {
         port: 59999,
         targets: {},
       };
-      fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
+      const elmWatchStuffJsonPath = path.join(
+        dir,
+        "elm-stuff",
+        "elm-watch",
+        "stuff.json"
+      );
+      fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), {
+        recursive: true,
+      });
       try {
+        rm(elmWatchStuffJsonPath);
         fs.writeFileSync(
-          path.join(dir, "elm-stuff", "elm-watch", "stuff.json"),
+          elmWatchStuffJsonPath,
           JSON.stringify(elmWatchStuffJson),
           { mode: "0444" } // readonly
         );
