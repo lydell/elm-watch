@@ -324,11 +324,11 @@ describe("hot", () => {
 
       I managed to compile your code. Then I tried to read the output:
 
-      /Users/you/project/tests/fixtures/hot/basic/build/Removed.js
+      /Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js
 
       Doing so I encountered this error:
 
-      ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/build/Removed.js'
+      ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js'
 
       🚨 ⧙1⧘ error found
 
@@ -361,7 +361,7 @@ describe("hot", () => {
     `);
   });
 
-  test("fail to overwrite Elm’s output with hot injection (no postprocess)", async () => {
+  test("fail to write output with hot injection (no postprocess)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",
       args: ["Readonly"],
@@ -382,10 +382,13 @@ describe("hot", () => {
 
       I managed to compile your code and read the generated file:
 
+      /Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/3.js
+
+      I injected code for hot reloading, and then tried to write that to the output path:
+
       /Users/you/project/tests/fixtures/hot/basic/build/Readonly.js
 
-      I injected code for hot reloading, and then tried to write that back to the file
-      but I encountered this error:
+      But I encountered this error:
 
       EACCES: permission denied, open '/Users/you/project/tests/fixtures/hot/basic/build/Readonly.js'
 
@@ -2858,7 +2861,7 @@ describe("hot", () => {
 
   test("persisted debug mode for Html", async () => {
     // You can set "compilationMode": "debug" for Html and Worker programs in
-    // elm-watch-stuff.json. The only thing that happens is that the disabled
+    // elm-stuff/elm-watch/stuff.json. The only thing that happens is that the disabled
     // "debug" radio button is checked.
     const { terminal, renders } = await run({
       fixture: "persisted-debug-mode-for-html",
@@ -3371,6 +3374,10 @@ describe("hot", () => {
         outputPath: {
           tag: "OutputPath",
           theOutputPath: { tag: "AbsolutePath", absolutePath: "/build/One.js" },
+          temporaryOutputPath: {
+            tag: "AbsolutePath",
+            absolutePath: "/elm-stuff/elm-watch/1.js",
+          },
           originalString: "build/One.js",
           targetName: "One",
         },

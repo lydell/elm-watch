@@ -8,10 +8,19 @@ import * as Hot from "./Hot";
 import type { Logger } from "./Logger";
 import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
-import { CliArg, Cwd, ElmWatchJsonPath, GetNow, RunMode } from "./Types";
+import {
+  CliArg,
+  Cwd,
+  ElmWatchJsonPath,
+  ElmWatchStuffDir,
+  ElmWatchStuffJsonPath,
+  GetNow,
+  RunMode,
+} from "./Types";
 
 type RunResult =
   | {
@@ -124,9 +133,22 @@ export async function run(
             return { tag: "Exit", exitCode: 1 };
           }
 
-          const elmWatchStuffJsonPath = ElmWatchStuffJson.getPath(
-            parseResult.elmWatchJsonPath
-          );
+          const elmWatchStuffDir: ElmWatchStuffDir = {
+            tag: "ElmWatchStuffDir",
+            theElmWatchStuffDir: absolutePathFromString(
+              absoluteDirname(parseResult.elmWatchJsonPath.theElmWatchJsonPath),
+              "elm-stuff",
+              "elm-watch"
+            ),
+          };
+
+          const elmWatchStuffJsonPath: ElmWatchStuffJsonPath = {
+            tag: "ElmWatchStuffJsonPath",
+            theElmWatchStuffJsonPath: absolutePathFromString(
+              elmWatchStuffDir.theElmWatchStuffDir,
+              "stuff.json"
+            ),
+          };
 
           const elmWatchStuffJsonParseResult =
             runMode === "hot"
@@ -171,6 +193,7 @@ export async function run(
                 )
                   ? parseArgsResult.targetsSubstrings
                   : knownTargets,
+                elmWatchStuffDir,
                 elmWatchStuffJsonPath,
                 elmWatchStuffJson,
               });

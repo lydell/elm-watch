@@ -28,6 +28,7 @@ import type {
   CompilationMode,
   ElmJsonPath,
   ElmWatchJsonPath,
+  ElmWatchStuffDir,
   ElmWatchStuffJsonPath,
   GetNow,
   InputPath,
@@ -187,6 +188,7 @@ type OutputFsError =
   | {
       tag: "ReadOutputError";
       error: Error;
+      triedPath: AbsolutePath;
     }
   | {
       tag: "WriteOutputError";
@@ -291,6 +293,7 @@ export function initProject({
   elmWatchJsonPath,
   config,
   enabledTargetsSubstrings,
+  elmWatchStuffDir,
   elmWatchStuffJsonPath,
   elmWatchStuffJson,
 }: {
@@ -300,6 +303,7 @@ export function initProject({
   elmWatchJsonPath: ElmWatchJsonPath;
   config: ElmWatchJson.Config;
   enabledTargetsSubstrings: NonEmptyArray<string>;
+  elmWatchStuffDir: ElmWatchStuffDir;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
@@ -311,12 +315,18 @@ export function initProject({
     NonEmptyArray<string>
   >();
 
-  for (const [targetName, target] of Object.entries(config.targets)) {
+  for (const [index, [targetName, target]] of Object.entries(
+    config.targets
+  ).entries()) {
     const outputPath: OutputPath = {
       tag: "OutputPath",
       theOutputPath: absolutePathFromString(
         absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
         target.output
+      ),
+      temporaryOutputPath: absolutePathFromString(
+        elmWatchStuffDir.theElmWatchStuffDir,
+        `${index}.js`
       ),
       originalString: target.output,
       targetName,
@@ -620,6 +630,7 @@ function outputPathToDebug(outputPath: OutputPath): Record<string, unknown> {
   return {
     targetName: outputPath.targetName,
     output: outputPath.theOutputPath.absolutePath,
+    temporaryOutput: outputPath.temporaryOutputPath.absolutePath,
     originalString: outputPath.originalString,
   };
 }

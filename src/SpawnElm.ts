@@ -53,7 +53,7 @@ export async function make({
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   inputs: NonEmptyArray<InputPath>;
-  outputPath: NullOutputPath | OutputPath;
+  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean });
   env: Env;
 }): Promise<RunElmMakeResult> {
   const command: Command = {
@@ -139,11 +139,17 @@ export function compilationModeToArg(
 }
 
 function outputPathToAbsoluteString(
-  outputPath: NullOutputPath | OutputPath
+  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean })
 ): string {
   switch (outputPath.tag) {
     case "OutputPath":
-      return outputPath.theOutputPath.absolutePath;
+      // We usually write to a temporary directory, to make the compilation atomic.
+      // If postprocessing fails, we don’t want to end up with a plain Elm file with
+      // no hot reloading or web socket client. The only time we can write directly
+      // to the output is when in "make" mode with no postprocessing.
+      return outputPath.writeToTemporaryDir
+        ? outputPath.temporaryOutputPath.absolutePath
+        : outputPath.theOutputPath.absolutePath;
     case "NullOutputPath":
       return "/dev/null";
   }

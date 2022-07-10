@@ -39,7 +39,7 @@ import {
 
 const elmJson = bold("elm.json");
 const elmWatchJson = bold("elm-watch.json");
-const elmWatchStuffJson = bold("elm-stuff/elm-watch-stuff.json");
+const elmWatchStuffJson = bold("elm-stuff/elm-watch/stuff.json");
 
 type FancyErrorLocation =
   | ElmJsonPath
@@ -758,7 +758,7 @@ export function readElmWatchStuffJsonAsJson(
   error: Error
 ): ErrorTemplate {
   return fancyError(
-    "TROUBLE READING elm-stuff/elm-watch-stuff.json",
+    "TROUBLE READING elm-stuff/elm-watch/stuff.json",
     elmWatchStuffJsonPath
   )`
 I read stuff from ${elmWatchStuffJson} to remember some things between runs.
@@ -777,7 +777,7 @@ export function decodeElmWatchStuffJson(
   error: JsonError
 ): ErrorTemplate {
   return fancyError(
-    "INVALID elm-stuff/elm-watch-stuff.json FORMAT",
+    "INVALID elm-stuff/elm-watch/stuff.json FORMAT",
     elmWatchStuffJsonPath
   )`
 I read stuff from ${elmWatchStuffJson} to remember some things between runs.
@@ -796,7 +796,7 @@ export function elmWatchStuffJsonWriteError(
   error: Error
 ): ErrorTemplate {
   return fancyError(
-    "TROUBLE WRITING elm-stuff/elm-watch-stuff.json",
+    "TROUBLE WRITING elm-stuff/elm-watch/stuff.json",
     elmWatchStuffJsonPath
   )`
 I write stuff to ${elmWatchStuffJson} to remember some things between runs.
@@ -826,12 +826,13 @@ and "postprocess" was not run.)
 
 export function readOutputError(
   outputPath: OutputPath,
-  error: Error
+  error: Error,
+  triedPath: AbsolutePath
 ): ErrorTemplate {
   return fancyError("TROUBLE READING OUTPUT", outputPath)`
 I managed to compile your code. Then I tried to read the output:
 
-${outputPath.theOutputPath.absolutePath}
+${triedPath.absolutePath}
 
 Doing so I encountered this error:
 
@@ -847,9 +848,13 @@ export function writeOutputError(
   return fancyError("TROUBLE WRITING OUTPUT", outputPath)`
 I managed to compile your code and read the generated file:
 
-${outputPath.theOutputPath.absolutePath}
+${outputPath.temporaryOutputPath.absolutePath}
 
 ${printWriteOutputErrorReasonForWriting(reasonForWriting)}
+
+${outputPath.theOutputPath.absolutePath}
+
+But I encountered this error:
 
 ${error.message}
 `;
@@ -860,16 +865,10 @@ function printWriteOutputErrorReasonForWriting(
 ): string {
   switch (reasonForWriting) {
     case "InjectWebSocketClient":
-      return `
-I injected code for hot reloading, and then tried to write that back to the file
-but I encountered this error:
-      `;
+      return "I injected code for hot reloading, and then tried to write that to the output path:";
 
     case "Postprocess":
-      return `
-After running your postprocess command, I tried to write the result of that
-back to the file but I encountered this error:
-      `;
+      return "After running your postprocess command, I tried to write the result of that to the output path:";
   }
 }
 

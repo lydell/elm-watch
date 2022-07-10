@@ -329,7 +329,6 @@ export async function run(
   return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
       env,
-      logger,
       getNow,
       postprocessWorkerPool,
       webSocketState,
@@ -397,7 +396,6 @@ export async function watchElmWatchJsonOnce(
 const initMutable =
   (
     env: Env,
-    logger: Logger,
     getNow: GetNow,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
@@ -468,7 +466,6 @@ const initMutable =
     webSocketServer.setDispatch((msg) => {
       onWebSocketServerMsg(
         getNow(),
-        logger,
         mutable,
         dispatch,
         resolvePromise,
@@ -1439,7 +1436,6 @@ const runCmd =
 
 function onWebSocketServerMsg(
   now: Date,
-  logger: Logger,
   mutable: Mutable,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
@@ -2075,7 +2071,6 @@ function onWebSocketConnected(
 }
 
 function onChangedCompilationMode(
-  date: Date,
   model: Model,
   outputPath: OutputPath,
   outputState: OutputState
@@ -2147,7 +2142,6 @@ function onWebSocketToServerMessage(
 
         case "Output": {
           const [newModel, cmds] = onChangedCompilationMode(
-            date,
             model,
             output.outputPath,
             output.outputState

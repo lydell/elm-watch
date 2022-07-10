@@ -11,11 +11,11 @@ import { AbsolutePath } from "./Types";
 
 export function absolutePathFromString(
   from: AbsolutePath,
-  pathString: string
+  ...pathStrings: NonEmptyArray<string>
 ): AbsolutePath {
   return {
     tag: "AbsolutePath",
-    absolutePath: path.resolve(from.absolutePath, pathString),
+    absolutePath: path.resolve(from.absolutePath, ...pathStrings),
   };
 }
 

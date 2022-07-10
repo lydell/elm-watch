@@ -152,7 +152,10 @@ module.exports = {
         "@typescript-eslint/no-unsafe-member-access": error,
         "@typescript-eslint/no-unsafe-return": error,
         "@typescript-eslint/no-unused-expressions": error,
-        "@typescript-eslint/no-unused-vars": error,
+        "@typescript-eslint/no-unused-vars": [
+          error,
+          { args: "all", argsIgnorePattern: "^_", caughtErrors: "all" },
+        ],
         "@typescript-eslint/no-useless-empty-export": warn,
         "@typescript-eslint/no-var-requires": error,
         "@typescript-eslint/prefer-as-const": warn,

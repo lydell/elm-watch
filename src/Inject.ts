@@ -705,11 +705,7 @@ function _Scheduler_step(proc)
 
 const REPLACEMENTS_WITHOUT_PLACEHOLDERS = updateReplacements({}, REPLACEMENTS);
 
-export function inject(
-  outputPath: OutputPath,
-  compilationMode: CompilationMode,
-  code: string
-): string {
+export function inject(compilationMode: CompilationMode, code: string): string {
   const replacements = getReplacements(compilationMode, code);
 
   return code.replace(

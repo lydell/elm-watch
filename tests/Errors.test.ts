@@ -1996,11 +1996,11 @@ describe("errors", () => {
 
         I managed to compile your code. Then I tried to read the output:
 
-        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+        /Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js
 
         Doing so I encountered this error:
 
-        ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+        ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js'
 
         🚨 ⧙1⧘ error found
 
@@ -2008,23 +2008,30 @@ describe("errors", () => {
       `);
     });
 
-    test("fail to overwrite Elm’s output after postprocess", async () => {
-      expect(
-        await runWithBadElmBin("exit-0-write-readonly", { postprocess: true })
-      ).toMatchInlineSnapshot(`
-        🚨 app
+    test("fail to write output after postprocess", async () => {
+      const fixture = "readonly-output";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const readonlyFile = path.join(dir, "readonly.js");
+      rm(readonlyFile);
+      fs.writeFileSync(readonlyFile, "", { mode: "0444" }); // readonly
+      expect(await run(fixture, ["make"])).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 Main
 
         ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
-        ⧙Target: app⧘
+        ⧙Target: Main⧘
 
         I managed to compile your code and read the generated file:
 
-        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+        /Users/you/project/tests/fixtures/errors/readonly-output/elm-stuff/elm-watch/0.js
 
-        After running your postprocess command, I tried to write the result of that
-        back to the file but I encountered this error:
+        After running your postprocess command, I tried to write the result of that to the output path:
 
-        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+        /Users/you/project/tests/fixtures/errors/readonly-output/readonly.js
+
+        But I encountered this error:
+
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/readonly-output/readonly.js'
 
         🚨 ⧙1⧘ error found
 
@@ -2033,24 +2040,30 @@ describe("errors", () => {
     });
 
     test("fail to write dummy output", async () => {
+      const fixture = "readonly-output";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const readonlyFile = path.join(dir, "readonly.js");
+      rm(readonlyFile);
+      fs.writeFileSync(readonlyFile, "", { mode: "0444" }); // readonly
       expect(
-        await runWithBadElmBin("exit-0-write-readonly", {
+        await run(fixture, ["hot"], {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
-        🚨 app
+        ✅ Dependencies
+        🚨 Main
 
         ⧙-- TROUBLE WRITING DUMMY OUTPUT ------------------------------------------------⧘
-        ⧙Target: app⧘
+        ⧙Target: Main⧘
 
         There are no websocket connections for this target, so I only typecheck the
         code. That went well. Then I tried to write a dummy output file here:
 
-        /Users/you/project/tests/fixtures/errors/valid/build/app.js
+        /Users/you/project/tests/fixtures/errors/readonly-output/readonly.js
 
         Doing so I encountered this error:
 
-        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/readonly-output/readonly.js'
 
         🚨 ⧙1⧘ error found
 
@@ -2763,14 +2776,14 @@ describe("errors", () => {
     });
   });
 
-  describe("elm-watch-stuff.json errors", () => {
+  describe("elm-stuff/elm-watch/stuff.json errors", () => {
     test("is a folder", async () => {
       expect(await run("elm-watch-stuff-json-is-folder", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING elm-stuff/elm-watch-stuff.json ------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-is-folder/elm-stuff/elm-watch-stuff.json
+        ⧙-- TROUBLE READING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-is-folder/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble reading it as JSON:⧘
 
@@ -2784,10 +2797,10 @@ describe("errors", () => {
     test("bad json", async () => {
       expect(await run("elm-watch-stuff-json-bad-json", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING elm-stuff/elm-watch-stuff.json ------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch-stuff.json
+        ⧙-- TROUBLE READING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble reading it as JSON:⧘
 
@@ -2801,10 +2814,10 @@ describe("errors", () => {
     test("bad compilation mode", async () => {
       expect(await run("elm-watch-stuff-json-bad-compilation-mode", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-stuff/elm-watch-stuff.json FORMAT -------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-compilation-mode/elm-stuff/elm-watch-stuff.json
+        ⧙-- INVALID elm-stuff/elm-watch/stuff.json FORMAT -------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-compilation-mode/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -2823,10 +2836,19 @@ describe("errors", () => {
         port: 59999,
         targets: {},
       };
-      fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
+      const elmWatchStuffJsonPath = path.join(
+        dir,
+        "elm-stuff",
+        "elm-watch",
+        "stuff.json"
+      );
+      fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), {
+        recursive: true,
+      });
       try {
+        rm(elmWatchStuffJsonPath);
         fs.writeFileSync(
-          path.join(dir, "elm-stuff", "elm-watch-stuff.json"),
+          elmWatchStuffJsonPath,
           JSON.stringify(elmWatchStuffJson),
           { mode: "0444" } // readonly
         );
@@ -2842,14 +2864,14 @@ describe("errors", () => {
         ✅ Dependencies
         ✅ Main⧙                                             1 ms Q | 765 ms T ¦  50 ms W⧘
 
-        ⧙-- TROUBLE WRITING elm-stuff/elm-watch-stuff.json ------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch-stuff.json
+        ⧙-- TROUBLE WRITING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch/stuff.json
 
-        I write stuff to ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I write stuff to ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble writing that file:⧘
 
-        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch-stuff.json'
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch/stuff.json'
 
         The file contains nothing essential, but something weird is going on.
 
@@ -2909,12 +2931,12 @@ describe("errors", () => {
         })
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch-stuff.json
+        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch/stuff.json
 
         I ask the operating system for an arbitrary available port for the
         web socket server.
 
-        I then save the port I got to ⧙elm-stuff/elm-watch-stuff.json⧘. Otherwise I would
+        I then save the port I got to ⧙elm-stuff/elm-watch/stuff.json⧘. Otherwise I would
         get a new port number on each restart, which means that if you had tabs
         open in the browser they would try to connect to the old port number.
 
@@ -2926,9 +2948,9 @@ describe("errors", () => {
 
         If not, something else could have started using port 9123
         (though it's not very likely.) Then you can either try to find what that is,
-        or remove ⧙elm-stuff/elm-watch-stuff.json⧘ here:
+        or remove ⧙elm-stuff/elm-watch/stuff.json⧘ here:
 
-        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch-stuff.json
+        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch/stuff.json
 
         Then I will ask the operating system for a new arbitrary available port.
       `);
@@ -3034,7 +3056,8 @@ describe("errors", () => {
         🚨 Compilation finished in ⧙123 ms⧘.
       `);
 
-      expect(fs.existsSync(appPath)).toBe(true);
+      // Not written since postprocess was skipped – full compilation is atomic.
+      expect(fs.existsSync(appPath)).toBe(false);
 
       // Postprocess error.
       expect(
@@ -3122,7 +3145,8 @@ describe("errors", () => {
         Compilation finished in 123 ms.
       `);
 
-      expect(fs.existsSync(appPath)).toBe(true);
+      // Not written since postprocess was skipped – full compilation is atomic.
+      expect(fs.existsSync(appPath)).toBe(false);
 
       // Postprocess error.
       expect(
@@ -3269,7 +3293,10 @@ describe("errors", () => {
                 tag: "AbsolutePath",
                 absolutePath: "/build/main.js",
               },
-
+              temporaryOutputPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/elm-stuff/elm-watch/1.js",
+              },
               originalString: "main.js",
               targetName: "main",
             },
@@ -3315,7 +3342,10 @@ describe("errors", () => {
                 tag: "AbsolutePath",
                 absolutePath: "/build/main.js",
               },
-
+              temporaryOutputPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/elm-stuff/elm-watch/1.js",
+              },
               originalString: "main.js",
               targetName: "main",
             },

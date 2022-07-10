@@ -27,7 +27,13 @@ export type ElmJsonPath = {
   theElmJsonPath: AbsolutePath;
 };
 
-// elm-stuff/elm-watch-stuff.json
+// elm-stuff/elm-watch/
+export type ElmWatchStuffDir = {
+  tag: "ElmWatchStuffDir";
+  theElmWatchStuffDir: AbsolutePath;
+};
+
+// elm-stuff/elm-watch/stuff.json
 export type ElmWatchStuffJsonPath = {
   tag: "ElmWatchStuffJsonPath";
   theElmWatchStuffJsonPath: AbsolutePath;
@@ -60,6 +66,7 @@ export type UncheckedInputPath = {
 export type OutputPath = {
   tag: "OutputPath";
   theOutputPath: AbsolutePath;
+  temporaryOutputPath: AbsolutePath;
   originalString: string;
   targetName: string;
 };
