@@ -59,5 +59,7 @@ jobs:
         run: npx elm make Main.elm --output=/dev/null
         working-directory: tests/install-packages
 
+      # Use `--forceExit` to avoid test runs “hanging” when tests are failing
+      # so that elm-watch isn’t shut down properly.
       - name: Jest
-        run: npx jest --coverage
+        run: npx jest --coverage --forceExit
