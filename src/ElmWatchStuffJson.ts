@@ -2,9 +2,8 @@ import * as fs from "fs";
 import * as Decode from "tiny-decoders";
 
 import { JsonError, toError, toJsonError } from "./Helpers";
-import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Port } from "./Port";
-import { ElmWatchStuffDir, ElmWatchStuffJsonPath } from "./Types";
+import { ElmWatchStuffJsonPath } from "./Types";
 
 // elm-stuff/elm-watch/stuff.json stores things between runs.
 // Configuration is stored in elm-watch.json.
@@ -31,20 +30,6 @@ export const ElmWatchStuffJson = Decode.fieldsAuto({
 export type ElmWatchStuffJsonWritable = Omit<ElmWatchStuffJson, "port"> & {
   port: number;
 };
-
-export function getPath(
-  elmWatchStuffDir: ElmWatchStuffDir
-): ElmWatchStuffJsonPath {
-  const elmStuff = absolutePathFromString(
-    absoluteDirname(elmWatchStuffDir.theElmWatchStuffDir),
-    "elm-stuff"
-  );
-
-  return {
-    tag: "ElmWatchStuffJsonPath",
-    theElmWatchStuffJsonPath: absolutePathFromString(elmStuff, "stuff.json"),
-  };
-}
 
 type ParseResult =
   | ParseError
