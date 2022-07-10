@@ -27,16 +27,16 @@ export type ElmJsonPath = {
   theElmJsonPath: AbsolutePath;
 };
 
-// elm-stuff/elm-watch-stuff.json
-export type ElmWatchStuffJsonPath = {
-  tag: "ElmWatchStuffJsonPath";
-  theElmWatchStuffJsonPath: AbsolutePath;
-};
-
 // elm-stuff/elm-watch/
 export type ElmWatchStuffDir = {
   tag: "ElmWatchStuffDir";
   theElmWatchStuffDir: AbsolutePath;
+};
+
+// elm-stuff/elm-watch/stuff.json
+export type ElmWatchStuffJsonPath = {
+  tag: "ElmWatchStuffJsonPath";
+  theElmWatchStuffJsonPath: AbsolutePath;
 };
 
 // applications: "source-directories": [...]

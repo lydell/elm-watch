@@ -22,7 +22,7 @@ const project: Project = {
     tag: "ElmWatchStuffJsonPath",
     theElmWatchStuffJsonPath: {
       tag: "AbsolutePath",
-      absolutePath: "/Users/you/project/elm-stuff/elm-watch-stuff.json",
+      absolutePath: "/Users/you/project/elm-stuff/elm-watch/stuff.json",
     },
   },
   maxParallel: 12,
@@ -240,7 +240,7 @@ describe("Project", () => {
       {
         "watchRoot": "/Users/you/project",
         "elmWatchJson": "/Users/you/project/elm-watch.json",
-        "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch-stuff.json",
+        "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch/stuff.json",
         "maxParallel": 12,
         "postprocess": {
           "tag": "Postprocess",

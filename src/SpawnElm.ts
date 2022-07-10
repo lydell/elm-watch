@@ -8,14 +8,7 @@ import { JsonError, toError, toJsonError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn } from "./Spawn";
-import {
-  CompilationMode,
-  ElmJsonPath,
-  ElmWatchJsonPath,
-  ElmWatchStuffDir,
-  InputPath,
-  OutputPath,
-} from "./Types";
+import { CompilationMode, ElmJsonPath, InputPath, OutputPath } from "./Types";
 
 export type RunElmMakeResult = RunElmMakeError | { tag: "Success" };
 
@@ -143,20 +136,6 @@ export function compilationModeToArg(
     case "optimize":
       return "--optimize";
   }
-}
-
-export function getTemporaryOutputDir(
-  elmWatchJsonPath: ElmWatchJsonPath
-): ElmWatchStuffDir {
-  const elmStuff = absolutePathFromString(
-    absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-    "elm-stuff"
-  );
-
-  return {
-    tag: "ElmWatchStuffDir",
-    theElmWatchStuffDir: absolutePathFromString(elmStuff, "elm-watch"),
-  };
 }
 
 function outputPathToAbsoluteString(

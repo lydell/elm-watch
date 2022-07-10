@@ -89,7 +89,7 @@ export async function run({
   const build = path.join(dir, "build");
   const absoluteScripts = scripts.map((script) => path.join(build, script));
   const elmStuff = path.join(dir, "elm-stuff");
-  const elmWatchStuff = path.join(elmStuff, "elm-watch-stuff.json");
+  const elmWatchStuff = path.join(elmStuff, "elm-watch", "stuff.json");
 
   fs.rmSync(build, { recursive: true, force: true });
   fs.mkdirSync(build, { recursive: true });
@@ -388,7 +388,7 @@ export function runHotReload({
     go: (onIdle: OnIdle) => {
       fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
       fs.writeFileSync(
-        path.join(dir, "elm-stuff", "elm-watch-stuff.json"),
+        path.join(dir, "elm-stuff", "elm-watch", "stuff.json"),
         JSON.stringify(elmWatchStuffJson)
       );
       write(1);

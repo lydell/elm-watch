@@ -2861,7 +2861,7 @@ describe("hot", () => {
 
   test("persisted debug mode for Html", async () => {
     // You can set "compilationMode": "debug" for Html and Worker programs in
-    // elm-watch-stuff.json. The only thing that happens is that the disabled
+    // elm-stuff/elm-watch/stuff.json. The only thing that happens is that the disabled
     // "debug" radio button is checked.
     const { terminal, renders } = await run({
       fixture: "persisted-debug-mode-for-html",

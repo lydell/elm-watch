@@ -39,7 +39,7 @@ import {
 
 const elmJson = bold("elm.json");
 const elmWatchJson = bold("elm-watch.json");
-const elmWatchStuffJson = bold("elm-stuff/elm-watch-stuff.json");
+const elmWatchStuffJson = bold("elm-stuff/elm-watch/stuff.json");
 
 type FancyErrorLocation =
   | ElmJsonPath
@@ -758,7 +758,7 @@ export function readElmWatchStuffJsonAsJson(
   error: Error
 ): ErrorTemplate {
   return fancyError(
-    "TROUBLE READING elm-stuff/elm-watch-stuff.json",
+    "TROUBLE READING elm-stuff/elm-watch/stuff.json",
     elmWatchStuffJsonPath
   )`
 I read stuff from ${elmWatchStuffJson} to remember some things between runs.
@@ -777,7 +777,7 @@ export function decodeElmWatchStuffJson(
   error: JsonError
 ): ErrorTemplate {
   return fancyError(
-    "INVALID elm-stuff/elm-watch-stuff.json FORMAT",
+    "INVALID elm-stuff/elm-watch/stuff.json FORMAT",
     elmWatchStuffJsonPath
   )`
 I read stuff from ${elmWatchStuffJson} to remember some things between runs.
@@ -796,7 +796,7 @@ export function elmWatchStuffJsonWriteError(
   error: Error
 ): ErrorTemplate {
   return fancyError(
-    "TROUBLE WRITING elm-stuff/elm-watch-stuff.json",
+    "TROUBLE WRITING elm-stuff/elm-watch/stuff.json",
     elmWatchStuffJsonPath
   )`
 I write stuff to ${elmWatchStuffJson} to remember some things between runs.

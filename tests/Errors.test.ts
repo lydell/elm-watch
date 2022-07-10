@@ -2766,14 +2766,14 @@ describe("errors", () => {
     });
   });
 
-  describe("elm-watch-stuff.json errors", () => {
+  describe("elm-stuff/elm-watch/stuff.json errors", () => {
     test("is a folder", async () => {
       expect(await run("elm-watch-stuff-json-is-folder", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING elm-stuff/elm-watch-stuff.json ------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-is-folder/elm-stuff/elm-watch-stuff.json
+        ⧙-- TROUBLE READING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-is-folder/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble reading it as JSON:⧘
 
@@ -2787,10 +2787,10 @@ describe("errors", () => {
     test("bad json", async () => {
       expect(await run("elm-watch-stuff-json-bad-json", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING elm-stuff/elm-watch-stuff.json ------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch-stuff.json
+        ⧙-- TROUBLE READING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble reading it as JSON:⧘
 
@@ -2804,10 +2804,10 @@ describe("errors", () => {
     test("bad compilation mode", async () => {
       expect(await run("elm-watch-stuff-json-bad-compilation-mode", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-stuff/elm-watch-stuff.json FORMAT -------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-compilation-mode/elm-stuff/elm-watch-stuff.json
+        ⧙-- INVALID elm-stuff/elm-watch/stuff.json FORMAT -------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-compilation-mode/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble with the JSON inside:⧘
 
@@ -2829,7 +2829,7 @@ describe("errors", () => {
       fs.mkdirSync(path.join(dir, "elm-stuff"), { recursive: true });
       try {
         fs.writeFileSync(
-          path.join(dir, "elm-stuff", "elm-watch-stuff.json"),
+          path.join(dir, "elm-stuff", "elm-watch", "stuff.json"),
           JSON.stringify(elmWatchStuffJson),
           { mode: "0444" } // readonly
         );
@@ -2845,14 +2845,14 @@ describe("errors", () => {
         ✅ Dependencies
         ✅ Main⧙                                             1 ms Q | 765 ms T ¦  50 ms W⧘
 
-        ⧙-- TROUBLE WRITING elm-stuff/elm-watch-stuff.json ------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch-stuff.json
+        ⧙-- TROUBLE WRITING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch/stuff.json
 
-        I write stuff to ⧙elm-stuff/elm-watch-stuff.json⧘ to remember some things between runs.
+        I write stuff to ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
         ⧙I had trouble writing that file:⧘
 
-        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch-stuff.json'
+        EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch/stuff.json'
 
         The file contains nothing essential, but something weird is going on.
 
@@ -2912,12 +2912,12 @@ describe("errors", () => {
         })
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch-stuff.json
+        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch/stuff.json
 
         I ask the operating system for an arbitrary available port for the
         web socket server.
 
-        I then save the port I got to ⧙elm-stuff/elm-watch-stuff.json⧘. Otherwise I would
+        I then save the port I got to ⧙elm-stuff/elm-watch/stuff.json⧘. Otherwise I would
         get a new port number on each restart, which means that if you had tabs
         open in the browser they would try to connect to the old port number.
 
@@ -2929,9 +2929,9 @@ describe("errors", () => {
 
         If not, something else could have started using port 9123
         (though it's not very likely.) Then you can either try to find what that is,
-        or remove ⧙elm-stuff/elm-watch-stuff.json⧘ here:
+        or remove ⧙elm-stuff/elm-watch/stuff.json⧘ here:
 
-        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch-stuff.json
+        /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch/stuff.json
 
         Then I will ask the operating system for a new arbitrary available port.
       `);
