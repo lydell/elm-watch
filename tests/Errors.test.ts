@@ -2009,7 +2009,12 @@ describe("errors", () => {
     });
 
     test("fail to write output after postprocess", async () => {
-      expect(await run("readonly-output", ["make"])).toMatchInlineSnapshot(`
+      const fixture = "readonly-output";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const readonlyFile = path.join(dir, "readonly.js");
+      rm(readonlyFile);
+      fs.writeFileSync(readonlyFile, "", { mode: "0444" }); // readonly
+      expect(await run(fixture, ["make"])).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 Main
 
@@ -2035,8 +2040,13 @@ describe("errors", () => {
     });
 
     test("fail to write dummy output", async () => {
+      const fixture = "readonly-output";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const readonlyFile = path.join(dir, "readonly.js");
+      rm(readonlyFile);
+      fs.writeFileSync(readonlyFile, "", { mode: "0444" }); // readonly
       expect(
-        await run("readonly-output", ["hot"], {
+        await run(fixture, ["hot"], {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
