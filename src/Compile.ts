@@ -1720,7 +1720,7 @@ function statusLine(
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
-        [maybePrintDurations(loggerConfig, outputState.durations)],
+        [maybePrintDurations(loggerConfig, outputState.flushDurations())],
         "Success",
         loggerConfig.fancy ? targetName : `${targetName}: success`
       );
@@ -1736,7 +1736,7 @@ function statusLine(
             postprocessFileSize: status.postprocessFileSize,
             fancy: loggerConfig.fancy,
           }),
-          maybePrintDurations(loggerConfig, outputState.durations),
+          maybePrintDurations(loggerConfig, outputState.flushDurations()),
         ],
         "Success",
         loggerConfig.fancy ? targetName : `${targetName}: success`
@@ -1872,7 +1872,6 @@ function maybePrintDurations(
   loggerConfig: LoggerConfig,
   durations: Array<Duration>
 ): string | undefined {
-  // istanbul ignore if
   if (!isNonEmptyArray(durations)) {
     return undefined;
   }

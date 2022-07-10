@@ -1436,15 +1436,15 @@ describe("hot reloading", () => {
     const { terminal } = await go(() => "Stop");
 
     expect(terminal).toMatchInlineSnapshot(`
-        ✅ OutputsWithoutAction⧙                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-        ✅ OutputsWithoutActionOther1⧙                       1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ OutputsWithoutAction⧙                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ OutputsWithoutActionOther1
 
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: OutputsWithoutAction
-        ℹ️ 13:10:05 Web socket connected for: OutputsWithoutAction⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
-      `);
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: OutputsWithoutAction
+      ℹ️ 13:10:05 Web socket connected for: OutputsWithoutAction⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
   });
 
   test("Multiple targets with batched reload messages", async () => {
