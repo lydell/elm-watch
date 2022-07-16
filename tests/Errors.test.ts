@@ -2440,7 +2440,7 @@ describe("errors", () => {
       `);
     });
 
-    test.only("forgot to read stdin", async () => {
+    test("forgot to read stdin", async () => {
       const fixture = "postprocess/variants/no-stdin-read";
       const dir = path.join(FIXTURES_DIR, fixture);
       const elmWatchJson = fs.readFileSync(
