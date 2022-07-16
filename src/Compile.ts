@@ -502,7 +502,7 @@ export type HandleOutputActionResult =
   | {
       tag: "FullyCompiledJS";
       outputPath: OutputPath;
-      code: Buffer;
+      code: Buffer | string;
       elmCompiledTimestamp: number;
       compilationMode: CompilationMode;
     }
@@ -866,7 +866,6 @@ function onCompileSuccess(
 
       switch (postprocess.tag) {
         case "NoPostprocess": {
-          const newBuffer = Buffer.from(newCode);
           try {
             fs.mkdirSync(
               absoluteDirname(outputPath.theOutputPath).absolutePath,
@@ -874,26 +873,21 @@ function onCompileSuccess(
             );
             fs.writeFileSync(
               outputPath.theOutputPath.absolutePath,
-              Buffer.concat([
-                Buffer.from(
-                  // This will inject `elmCompiledTimestamp` into the built
-                  // code, which is later used to detect if recompiles are
-                  // needed or not. Note: This needs to be the timestamp of
-                  // when Elm finished compiling, not when postprocessing
-                  // finished. That’s because we haven’t done the
-                  // postprocessing yet, but have to inject before that. So
-                  // we’re storing the timestamp when Elm finished rather
-                  // than when the entire process was finished.
-                  Inject.clientCode(
-                    outputPath,
-                    elmCompiledTimestamp,
-                    outputState.compilationMode,
-                    runMode.webSocketPort,
-                    loggerConfig.debug
-                  )
-                ),
-                newBuffer,
-              ])
+              // This will inject `elmCompiledTimestamp` into the built
+              // code, which is later used to detect if recompiles are
+              // needed or not. Note: This needs to be the timestamp of
+              // when Elm finished compiling, not when postprocessing
+              // finished. That’s because we haven’t done the
+              // postprocessing yet, but have to inject before that. So
+              // we’re storing the timestamp when Elm finished rather
+              // than when the entire process was finished.
+              Inject.clientCode(
+                outputPath,
+                elmCompiledTimestamp,
+                outputState.compilationMode,
+                runMode.webSocketPort,
+                loggerConfig.debug
+              ) + newCode
             );
           } catch (unknownError) {
             const error = toError(unknownError);
@@ -913,11 +907,12 @@ function onCompileSuccess(
             outputState.recordFields,
             recordFields
           );
+          const fileSize = Buffer.byteLength(newCode);
           outputState.recordFields = recordFields;
           outputState.setStatus({
             tag: "Success",
-            elmFileSize: newBuffer.byteLength,
-            postprocessFileSize: newBuffer.byteLength,
+            elmFileSize: fileSize,
+            postprocessFileSize: fileSize,
             elmCompiledTimestamp,
           });
           updateStatusLineHelper();
@@ -929,7 +924,7 @@ function onCompileSuccess(
             : {
                 tag: "FullyCompiledJS",
                 outputPath,
-                code: newBuffer,
+                code: newCode,
                 elmCompiledTimestamp,
                 compilationMode: outputState.compilationMode,
               };
@@ -1074,23 +1069,22 @@ async function postprocessHelper({
             postprocessResult.code
           );
           break;
-        case "hot":
+        case "hot": {
+          const clientCode = Inject.clientCode(
+            outputPath,
+            elmCompiledTimestamp,
+            outputState.compilationMode,
+            runMode.webSocketPort,
+            logger.config.debug
+          );
           fs.writeFileSync(
             outputPath.theOutputPath.absolutePath,
-            Buffer.concat([
-              Buffer.from(
-                Inject.clientCode(
-                  outputPath,
-                  elmCompiledTimestamp,
-                  outputState.compilationMode,
-                  runMode.webSocketPort,
-                  logger.config.debug
-                )
-              ),
-              postprocessResult.code,
-            ])
+            typeof postprocessResult.code === "string"
+              ? clientCode + postprocessResult.code
+              : Buffer.concat([Buffer.from(clientCode), postprocessResult.code])
           );
           break;
+        }
       }
     } catch (unknownError) {
       const error = toError(unknownError);
@@ -1114,7 +1108,7 @@ async function postprocessHelper({
     outputState.setStatus({
       tag: "Success",
       elmFileSize: Buffer.byteLength(code),
-      postprocessFileSize: postprocessResult.code.byteLength,
+      postprocessFileSize: Buffer.byteLength(postprocessResult.code),
       elmCompiledTimestamp,
     });
     updateStatusLineHelper();

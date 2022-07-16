@@ -62,7 +62,7 @@ async function elmWatchNode({
   compilationMode,
   runMode,
   userArgs,
-}: ElmWatchNodeInternalArgs): Promise<PostprocessResult<string>> {
+}: ElmWatchNodeInternalArgs): Promise<PostprocessResult> {
   if (!isNonEmptyArray(userArgs)) {
     return { tag: "ElmWatchNodeMissingScript" };
   }

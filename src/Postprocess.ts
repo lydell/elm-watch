@@ -268,9 +268,7 @@ class PostprocessWorker {
                 case "Resolve": {
                   const result = message.result.value;
                   this.status.resolve(
-                    result.tag === "Success"
-                      ? { ...result, code: Buffer.from(result.code) }
-                      : "stdout" in result
+                    "stdout" in result
                       ? {
                           ...result,
                           stdout: Buffer.concat(stdout).toString("utf8"),

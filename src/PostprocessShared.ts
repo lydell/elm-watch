@@ -34,14 +34,14 @@ export type MessageFromWorker = {
   tag: "PostprocessDone";
   result:
     | { tag: "Reject"; error: unknown }
-    | { tag: "Resolve"; value: PostprocessResult<string> };
+    | { tag: "Resolve"; value: PostprocessResult };
 };
 
-export type PostprocessResult<Code = Buffer> =
+export type PostprocessResult =
   | PostprocessError
   | {
       tag: "Success";
-      code: Code;
+      code: Buffer | string;
     };
 
 export type PostprocessError =
