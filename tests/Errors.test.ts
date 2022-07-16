@@ -2447,6 +2447,11 @@ describe("errors", () => {
         path.join(dir, "elm-watch.template.json"),
         "utf8"
       );
+      // `echo` works for the test on all platforms, except on Linux it
+      // _sometimes_ does not trigger the stdin error. `true` works on Linux and
+      // macOS, but not Windows. I also tried `node -e ''` but that never seems
+      // to trigger the stdin error on Linux. Solution: Use `true` on Linux and
+      // `echo` otherwise.
       const newElmWatchJson =
         process.platform === "linux"
           ? elmWatchJson.replace("echo", "true")
