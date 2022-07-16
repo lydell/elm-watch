@@ -2440,9 +2440,20 @@ describe("errors", () => {
       `);
     });
 
-    test("forgot to read stdin", async () => {
-      expect(await run("postprocess/variants/no-stdin-read", ["make"]))
-        .toMatchInlineSnapshot(`
+    test.only("forgot to read stdin", async () => {
+      const fixture = "postprocess/variants/no-stdin-read";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const elmWatchJson = fs.readFileSync(
+        path.join(dir, "elm-watch.template.json"),
+        "utf8"
+      );
+      const newElmWatchJson =
+        process.platform === "linux"
+          ? elmWatchJson.replace("echo", "true")
+          : elmWatchJson;
+      fs.writeFileSync(path.join(dir, "elm-watch.json"), newElmWatchJson);
+      const output = (await run(fixture, ["make"])).replace("true", "echo");
+      expect(output).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
 
