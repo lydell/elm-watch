@@ -2441,8 +2441,24 @@ describe("errors", () => {
     });
 
     test("forgot to read stdin", async () => {
-      expect(await run("postprocess/variants/no-stdin-read", ["make"]))
-        .toMatchInlineSnapshot(`
+      const fixture = "postprocess/variants/no-stdin-read";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const elmWatchJson = fs.readFileSync(
+        path.join(dir, "elm-watch.template.json"),
+        "utf8"
+      );
+      // `echo` works for the test on all platforms, except on Linux it
+      // _sometimes_ does not trigger the stdin error. `true` works on Linux and
+      // macOS, but not Windows. I also tried `node -e ''` but that never seems
+      // to trigger the stdin error on Linux. Solution: Use `true` on Linux and
+      // `echo` otherwise.
+      const newElmWatchJson =
+        process.platform === "linux"
+          ? elmWatchJson.replace("echo", "true")
+          : elmWatchJson;
+      fs.writeFileSync(path.join(dir, "elm-watch.json"), newElmWatchJson);
+      const output = (await run(fixture, ["make"])).replace("true", "echo");
+      expect(output).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
 
