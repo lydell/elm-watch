@@ -32,6 +32,8 @@ import {
   wait,
 } from "./Helpers";
 
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
+
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 
 async function run(
