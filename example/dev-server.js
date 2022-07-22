@@ -200,11 +200,19 @@ function proxyToWeb(req, res, log, hostname) {
 
 const LOOKS_LIKE_IP_ADDRESS = /^(\d+\.\d+\.\d+\.\d+):\d+$/;
 
-function indexPage(host = "", url = "/") {
+function indexPage(host = "", userAgent = "", url = "/") {
   // On mobile you go to http://192.168.x.x instead of http://localhost.
   // There, link to the different ports since subdomains cannot be used
   // with IP addresses.
+  // Also do that in Safari because it does not support subdomains on localhost:
+  // https://bugs.webkit.org/show_bug.cgi?id=160504
   const match = LOOKS_LIKE_IP_ADDRESS.exec(host);
+  const isSafari =
+    userAgent !== undefined &&
+    userAgent.includes("Safari") &&
+    !userAgent.includes("Chrome");
+  const boringHost =
+    match !== null ? match[1] : isSafari ? "localhost" : undefined;
 
   return `
 <!DOCTYPE html>
@@ -226,7 +234,7 @@ function indexPage(host = "", url = "/") {
       ${servers
         .map((serverConfig) => {
           const [href, title] =
-            match === null
+            boringHost === undefined
               ? [
                   `http://${
                     serverConfig.subdomain
@@ -234,8 +242,8 @@ function indexPage(host = "", url = "/") {
                   `${serverConfig.subdomain}.localhost:${DEV_SERVER_PORT}`,
                 ]
               : [
-                  `http://${match[1]}:${serverConfig.port}${escapeHtml(url)}`,
-                  `${serverConfig.subdomain}: ${match[1]}:${serverConfig.port}`,
+                  `http://${boringHost}:${serverConfig.port}${escapeHtml(url)}`,
+                  `${serverConfig.subdomain}: ${boringHost}:${serverConfig.port}`,
                 ];
           return `
             <li>
@@ -312,7 +320,7 @@ const convenienceServer = http.createServer((req, res) => {
   if (serverConfig === undefined) {
     log(404);
     res.writeHead(404);
-    res.end(indexPage(host, req.url));
+    res.end(indexPage(host, req.headers["user-agent"], req.url));
   } else {
     serverConfig.serve(req, res, log);
   }
