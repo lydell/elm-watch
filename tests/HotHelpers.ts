@@ -26,13 +26,14 @@ import {
 const CONTAINER_ID = "elm-watch";
 export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 
-export function cleanupBeforeEachTest(): void {
+export async function cleanupBeforeEachTest(): Promise<void> {
   // eslint-disable-next-line no-console
   console.warn = () => {
     // Disable Elm’s “Compiled in DEV mode” logs.
   };
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
+  await wait(100);
 }
 
 let bodyCounter = 0;
