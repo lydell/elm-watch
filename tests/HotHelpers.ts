@@ -26,13 +26,19 @@ import {
 const CONTAINER_ID = "elm-watch";
 export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 
-export function cleanupBeforeEachTest(): void {
+export async function cleanupBeforeEachTest(): Promise<void> {
   // eslint-disable-next-line no-console
   console.warn = () => {
     // Disable Elm’s “Compiled in DEV mode” logs.
   };
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
+
+  // The tests on Windows CI pass more often if we wait a little bit between each test.
+  // I figured we could just as well wait on all operating systems.
+  if ("CI" in process.env) {
+    await wait(100);
+  }
 }
 
 let bodyCounter = 0;
