@@ -90,7 +90,7 @@ describe("successful make", () => {
     `);
   });
 
-  test.only("installed packages output", async () => {
+  test("installed packages output", async () => {
     expect(
       await run("successful-make", ["make"], {
         bin: "installed-packages-output-bin",

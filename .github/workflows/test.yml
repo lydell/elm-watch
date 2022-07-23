@@ -65,5 +65,4 @@ jobs:
       # Use `--forceExit` to avoid test runs “hanging” when tests are failing
       # so that elm-watch isn’t shut down properly.
       - name: Jest
-        # run: npx jest --coverage --forceExit tests/SuccessfulMake.test.ts
-        run: echo Jest
+        run: npx jest --coverage --forceExit tests/SuccessfulMake.test.ts
