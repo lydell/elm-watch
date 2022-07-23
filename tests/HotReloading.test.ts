@@ -1053,7 +1053,7 @@ describe("hot reloading", () => {
     });
   });
 
-  describe("Html.Lazy", () => {
+  describe.only("Html.Lazy", () => {
     // eslint-disable-next-line no-console
     const originalConsoleLog = console.log;
 
