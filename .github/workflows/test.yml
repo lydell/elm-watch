@@ -68,6 +68,6 @@ jobs:
       # The `CI` env var enables a short wait between each test, which is also
       # good for tests to pass on Windows.
       - name: Jest
-        run: npx jest --coverage --forceExit --runInBand
+        run: npx jest --coverage --forceExit --runInBand --bail
         env:
           CI: ""
