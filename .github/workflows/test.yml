@@ -18,6 +18,9 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         node-version: [14, 16, 18]
 
+    env:
+      ELM_HOME: "${{ github.workspace }}/elm-stuff/elm-home"
+
     steps:
       - uses: actions/checkout@v3
 
@@ -37,10 +40,10 @@ jobs:
           path: node_modules
           key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package.json', 'package-lock.json') }}
 
-      - name: Cache ~/.elm
+      - name: Cache ELM_HOME
         uses: actions/cache@v3
         with:
-          path: ~/.elm
+          path: "${{ env.ELM_HOME }}"
           key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json') }}
 
       - name: npm ci
