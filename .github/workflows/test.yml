@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
-        node-version: [18]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        node-version: [14, 16, 18]
 
     env:
       ELM_HOME: "${{ github.workspace }}/elm-stuff/elm-home"
