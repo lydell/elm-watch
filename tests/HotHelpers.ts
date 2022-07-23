@@ -33,7 +33,12 @@ export async function cleanupBeforeEachTest(): Promise<void> {
   };
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
-  await wait(100);
+
+  // The tests on Windows CI pass more often if we wait a little bit between each test.
+  // I figured we could just as well wait on all operating systems.
+  if ("CI" in process.env) {
+    await wait(100);
+  }
 }
 
 let bodyCounter = 0;

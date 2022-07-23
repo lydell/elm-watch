@@ -64,5 +64,10 @@ jobs:
 
       # Use `--forceExit` to avoid test runs “hanging” when tests are failing
       # so that elm-watch isn’t shut down properly.
+      # The tests on Windows CI pass more often with `--runInBand`.
+      # The `CI` env var enables a short wait between each test, which is also
+      # good for tests to pass on Windows.
       - name: Jest
         run: npx jest --coverage --forceExit --runInBand
+        env:
+          CI: ""
