@@ -37,7 +37,7 @@ export async function cleanupBeforeEachTest(): Promise<void> {
   // The tests on Windows CI pass more often if we wait a little bit between each test.
   // I figured we could just as well wait on all operating systems.
   if ("CI" in process.env) {
-    await wait(1000);
+    await wait(100);
   }
 }
 
