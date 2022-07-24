@@ -186,7 +186,7 @@ export async function run({
       }
     }
 
-    window.__ELM_WATCHED_MOCKED_TIMINGS = true;
+    window.__ELM_WATCH_MOCKED_TIMINGS = true;
 
     window.__ELM_WATCH_RELOAD_PAGE = (message) => {
       if (message !== undefined) {

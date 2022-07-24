@@ -5,7 +5,7 @@ import {
   __ELM_WATCH_DEBUG,
   __ELM_WATCH_FANCY_EVEN_ON_WINDOWS,
   __ELM_WATCH_NOT_TTY,
-  __ELM_WATCHED_MOCKED_TIMINGS,
+  __ELM_WATCH_MOCKED_TIMINGS,
   Env,
   NO_COLOR,
 } from "./Env";
@@ -62,7 +62,7 @@ export function makeLogger({
       __ELM_WATCH_NOT_TTY in env
         ? /* istanbul ignore next */ false
         : stdout.isTTY,
-    mockedTimings: __ELM_WATCHED_MOCKED_TIMINGS in env,
+    mockedTimings: __ELM_WATCH_MOCKED_TIMINGS in env,
     get columns() {
       // `.columns` is `undefined` if not a TTY.
       // This is a getter because it can change over time, if the user resizes

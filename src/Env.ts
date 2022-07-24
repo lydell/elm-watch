@@ -20,7 +20,7 @@ export const __ELM_WATCH_FANCY_EVEN_ON_WINDOWS =
 
 // Used in tests to print hardcoded durations and timings, for snapshots.
 // Type: Check if defined and ignore value.
-export const __ELM_WATCHED_MOCKED_TIMINGS = "__ELM_WATCHED_MOCKED_TIMINGS";
+export const __ELM_WATCH_MOCKED_TIMINGS = "__ELM_WATCH_MOCKED_TIMINGS";
 
 // Used in tests to exit on error (instead of continuing watching).
 // Type: Check if defined and ignore value.

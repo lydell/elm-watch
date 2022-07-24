@@ -18,7 +18,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
-    __ELM_WATCHED_MOCKED_TIMINGS: boolean;
+    __ELM_WATCH_MOCKED_TIMINGS: boolean;
     __ELM_WATCH_RELOAD_STATUSES: Record<string, ReloadStatus>;
     __ELM_WATCH_RELOAD_PAGE: (message: string | undefined) => void;
     __ELM_WATCH_ON_INIT: () => void;
@@ -81,7 +81,7 @@ type ReloadStatus =
       reasons: Array<string>;
     };
 
-window.__ELM_WATCHED_MOCKED_TIMINGS ??= false;
+window.__ELM_WATCH_MOCKED_TIMINGS ??= false;
 
 window.__ELM_WATCH_ON_INIT ??= () => {
   // Do nothing.
@@ -1363,7 +1363,7 @@ function view(
   passedModel: Model,
   info: Info
 ): HTMLElement {
-  const model: Model = window.__ELM_WATCHED_MOCKED_TIMINGS
+  const model: Model = window.__ELM_WATCH_MOCKED_TIMINGS
     ? {
         ...passedModel,
         status: {

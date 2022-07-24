@@ -9,7 +9,7 @@ import {
   __ELM_WATCH_FANCY_EVEN_ON_WINDOWS,
   __ELM_WATCH_LOADING_MESSAGE_DELAY,
   __ELM_WATCH_MAX_PARALLEL,
-  __ELM_WATCHED_MOCKED_TIMINGS,
+  __ELM_WATCH_MOCKED_TIMINGS,
   Env,
 } from "../src/Env";
 import { printStdio } from "../src/Errors";
@@ -49,7 +49,7 @@ export function readFile(filePath: string): string {
 export const TEST_ENV = {
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
-  [__ELM_WATCHED_MOCKED_TIMINGS]: "",
+  [__ELM_WATCH_MOCKED_TIMINGS]: "",
   [__ELM_WATCH_FANCY_EVEN_ON_WINDOWS]: "",
 };
 
