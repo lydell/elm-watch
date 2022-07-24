@@ -4,8 +4,8 @@ import * as util from "util";
 import {
   __ELM_WATCH_DEBUG,
   __ELM_WATCH_FANCY_EVEN_ON_WINDOWS,
-  __ELM_WATCH_NOT_TTY,
   __ELM_WATCH_MOCKED_TIMINGS,
+  __ELM_WATCH_NOT_TTY,
   Env,
   NO_COLOR,
 } from "./Env";
