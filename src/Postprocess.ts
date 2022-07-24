@@ -324,7 +324,7 @@ class PostprocessWorker {
         throw new Error(
           `Cannot call PostprocessWorker#postprocess because \`this.status === ${JSON.stringify(
             this.status
-          )}\` instead of the expected ${JSON.stringify(this.status)}.`
+          )}\` instead of the expected "Idle".`
         );
     }
   }
