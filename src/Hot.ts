@@ -2203,7 +2203,7 @@ function onWebSocketToServerMessage(
               {
                 tag: "Throw",
                 error: new Error(
-                  `Got ExitRequested. Expected nextAction to be NoAction or PrintEvents but it is: ${model.nextAction.tag}`
+                  `Got ExitRequested. Expected nextAction to be NoAction but it is: ${model.nextAction.tag}`
                 ),
               },
             ],
