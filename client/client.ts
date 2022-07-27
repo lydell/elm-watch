@@ -465,6 +465,8 @@ const initMutable =
       resolvePromise(undefined);
       const message: WebSocketToServerMessage = { tag: "ExitRequested" };
       mutable.webSocket.send(JSON.stringify(message));
+      mutable.removeListeners();
+      targetRoot.remove();
       originalExit();
     };
 
@@ -478,8 +480,8 @@ const initMutable =
           mutable.webSocket.addEventListener("close", () => {
             originalKillMatching(targetName).then(resolve).catch(reject);
           });
-          mutable.removeListeners();
           mutable.webSocket.close();
+          mutable.removeListeners();
           targetRoot.remove();
           resolvePromise(undefined);
         } else {

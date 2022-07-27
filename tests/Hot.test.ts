@@ -1366,7 +1366,7 @@ describe("hot", () => {
     }
   });
 
-  test("changes to elm.json", async () => {
+  test.skip("changes to elm.json", async () => {
     const fixture = "changes-to-elm-json";
     const dir = path.join(FIXTURES_DIR, fixture);
     const elmJsonPath = path.join(dir, "elm.json");
@@ -1679,7 +1679,7 @@ describe("hot", () => {
     }
   });
 
-  test("changes to elm.json – typecheck only", async () => {
+  test.skip("changes to elm.json – typecheck only", async () => {
     const fixture = "changes-to-elm-json";
     const dir = path.join(FIXTURES_DIR, fixture);
     const elmJsonPath = path.join(dir, "elm.json");
