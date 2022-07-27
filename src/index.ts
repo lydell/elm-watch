@@ -1,6 +1,7 @@
 import { Env } from "./Env";
 import * as Help from "./Help";
 import { ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
+import { HotKillManager } from "./Hot";
 import { init } from "./Init";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString } from "./PathHelpers";
@@ -15,6 +16,7 @@ type Options = {
   stdout: WriteStream;
   stderr: WriteStream;
   logDebug: (message: string) => void;
+  hotKillManager?: HotKillManager;
 };
 
 export async function elmWatchCli(
@@ -26,6 +28,7 @@ export async function elmWatchCli(
     stdout,
     stderr,
     logDebug,
+    hotKillManager = { kill: undefined },
   }: Options
 ): Promise<number> {
   const getNow: GetNow = () => new Date();
@@ -82,7 +85,8 @@ export async function elmWatchCli(
               result === undefined
                 ? new PostprocessWorkerPool(reject)
                 : result.postprocessWorkerPool,
-              result === undefined ? undefined : result.webSocketState
+              result === undefined ? undefined : result.webSocketState,
+              hotKillManager
             );
           } while (result.tag === "Restart");
           switch (result.tag) {

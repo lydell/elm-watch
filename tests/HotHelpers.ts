@@ -9,6 +9,7 @@ import {
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
+import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
 import { CompilationMode } from "../src/Types";
 import {
@@ -27,8 +28,14 @@ const CONTAINER_ID = "elm-watch";
 export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 
 let watcher: fs.FSWatcher | undefined = undefined;
+const hotKillManager: HotKillManager = { kill: undefined };
 
-export function cleanupBeforeEachTest(): void {
+export async function cleanupBeforeEachTest(): Promise<void> {
+  if (window.__ELM_WATCH_KILL_MATCHING !== undefined) {
+    // TODO: Do we want some logging here?
+    await window.__ELM_WATCH_KILL_MATCHING(/^/);
+  }
+
   if (watcher !== undefined) {
     // eslint-disable-next-line no-console
     console.error(
@@ -36,6 +43,12 @@ export function cleanupBeforeEachTest(): void {
     );
     watcher.close();
     watcher = undefined;
+  }
+
+  if (hotKillManager.kill !== undefined) {
+    // eslint-disable-next-line no-console
+    console.error("cleanupBeforeEachTest: elm-watch never finished – killing.");
+    await hotKillManager.kill();
   }
 
   // eslint-disable-next-line no-console
@@ -273,8 +286,12 @@ export async function run({
             case "KeepGoing":
               return;
             case "Stop":
-              window.__ELM_WATCH_EXIT();
-              return;
+              return Promise.all([
+                window.__ELM_WATCH_KILL_MATCHING(/^/),
+                hotKillManager.kill === undefined
+                  ? undefined
+                  : hotKillManager.kill(),
+              ]);
           }
         })
         .catch(reject);
@@ -297,6 +314,7 @@ export async function run({
       stdout,
       stderr,
       logDebug,
+      hotKillManager,
     })
       .then(resolve)
       .catch(reject);
