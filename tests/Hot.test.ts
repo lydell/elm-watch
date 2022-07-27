@@ -23,7 +23,7 @@ import {
 } from "./Helpers";
 import {
   assertDebugger,
-  cleanupBeforeEachTest,
+  cleanupAfterEachTest,
   expandUi,
   failInit,
   FIXTURES_DIR,
@@ -36,7 +36,7 @@ jest.retryTimes(2, { logErrorsBeforeRetry: true });
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot", () => {
-  beforeEach(cleanupBeforeEachTest);
+  afterEach(cleanupAfterEachTest);
 
   test("successful connect (collapsed)", async () => {
     const { terminal, renders, div } = await run({

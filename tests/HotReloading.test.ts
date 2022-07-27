@@ -8,7 +8,7 @@ import {
   assertCompilationMode,
   assertDebugDisabled,
   assertDebugger,
-  cleanupBeforeEachTest,
+  cleanupAfterEachTest,
   click,
   FIXTURES_DIR,
   runHotReload,
@@ -22,7 +22,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
 // That results in a much better debugging experience (fewer timeouts).
 describe("hot reloading", () => {
-  beforeEach(cleanupBeforeEachTest);
+  afterEach(cleanupAfterEachTest);
 
   test("Html", async () => {
     const { replace, go } = runHotReload({

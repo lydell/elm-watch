@@ -30,7 +30,7 @@ export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 let watcher: fs.FSWatcher | undefined = undefined;
 const hotKillManager: HotKillManager = { kill: undefined };
 
-export async function cleanupBeforeEachTest(): Promise<void> {
+export async function cleanupAfterEachTest(): Promise<void> {
   if (window.__ELM_WATCH_KILL_MATCHING !== undefined) {
     // TODO: Do we want some logging here?
     await window.__ELM_WATCH_KILL_MATCHING(/^/);
@@ -39,7 +39,7 @@ export async function cleanupBeforeEachTest(): Promise<void> {
   if (watcher !== undefined) {
     // eslint-disable-next-line no-console
     console.error(
-      "cleanupBeforeEachTest: watcher never closed by itself – closing now."
+      "cleanupAfterEachTest: watcher never closed by itself – closing now."
     );
     watcher.close();
     watcher = undefined;
@@ -47,14 +47,10 @@ export async function cleanupBeforeEachTest(): Promise<void> {
 
   if (hotKillManager.kill !== undefined) {
     // eslint-disable-next-line no-console
-    console.error("cleanupBeforeEachTest: elm-watch never finished – killing.");
+    console.error("cleanupAfterEachTest: elm-watch never finished – killing.");
     await hotKillManager.kill();
   }
 
-  // eslint-disable-next-line no-console
-  console.warn = () => {
-    // Disable Elm’s “Compiled in DEV mode” logs.
-  };
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
 
@@ -115,6 +111,11 @@ export async function run({
   renders: string;
   div: HTMLDivElement;
 }> {
+  // eslint-disable-next-line no-console
+  console.warn = () => {
+    // Disable Elm’s “Compiled in DEV mode” logs.
+  };
+
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
   const absoluteScripts = scripts.map((script) => path.join(build, script));
