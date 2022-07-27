@@ -513,6 +513,7 @@ const initMutable =
     hotKillManager.kill = async () => {
       dispatch({ tag: "ExitRequested", date: getNow() });
 
+      // istanbul ignore next
       try {
         await Promise.all(
           getFlatOutputs(project).map(({ outputState }) =>
@@ -526,6 +527,7 @@ const initMutable =
         rejectPromise(toError(error));
       }
 
+      // istanbul ignore next
       try {
         await closeAll(mutable);
       } catch (unknownError) {
