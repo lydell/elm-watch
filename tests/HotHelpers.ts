@@ -26,7 +26,18 @@ import {
 const CONTAINER_ID = "elm-watch";
 export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 
+let watcher: fs.FSWatcher | undefined = undefined;
+
 export function cleanupBeforeEachTest(): void {
+  if (watcher !== undefined) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "cleanupBeforeEachTest: watcher never closed by itself – closing now."
+    );
+    watcher.close();
+    watcher = undefined;
+  }
+
   // eslint-disable-next-line no-console
   console.warn = () => {
     // Disable Elm’s “Compiled in DEV mode” logs.
@@ -269,9 +280,10 @@ export async function run({
         .catch(reject);
     };
 
-    const watcher = fs.watch(build, () => {
+    watcher = fs.watch(build, () => {
       if (absoluteScripts.every(fs.existsSync)) {
-        watcher.close();
+        watcher?.close();
+        watcher = undefined;
         loadBuiltFiles(false);
       }
     });
