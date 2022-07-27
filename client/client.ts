@@ -345,7 +345,7 @@ function run(): void {
 
   const getNow: GetNow = () => new Date();
 
-  void runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
+  runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, targetRoot),
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
@@ -362,6 +362,9 @@ function run(): void {
       return [newModel, allCmds];
     },
     runCmd: runCmd(getNow, targetRoot),
+  }).catch((error) => {
+    // eslint-disable-next-line no-console
+    console.error("elm-watch: Unexpectedly exited with error:", error);
   });
 
   // This is great when working on the styling of all statuses.
