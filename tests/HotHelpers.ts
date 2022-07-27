@@ -33,6 +33,12 @@ export function cleanupBeforeEachTest(): void {
   };
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
+
+  for (const key of Object.keys(window)) {
+    if (key.startsWith("__ELM_WATCH")) {
+      delete (window as unknown as Record<string, unknown>)[key];
+    }
+  }
 }
 
 let bodyCounter = 0;
@@ -179,12 +185,6 @@ export async function run({
         })
         .catch(reject);
     };
-
-    for (const key of Object.keys(window)) {
-      if (key.startsWith("__ELM_WATCH")) {
-        delete (window as unknown as Record<string, unknown>)[key];
-      }
-    }
 
     window.__ELM_WATCH_MOCKED_TIMINGS = true;
 
