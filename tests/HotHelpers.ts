@@ -32,7 +32,8 @@ const hotKillManager: HotKillManager = { kill: undefined };
 
 export async function cleanupAfterEachTest(): Promise<void> {
   if (window.__ELM_WATCH_KILL_MATCHING !== undefined) {
-    // TODO: Do we want some logging here?
+    // The idea is that we need no logging here – it’ll just result in double
+    // logging since there will most likely be a running server as well.
     await window.__ELM_WATCH_KILL_MATCHING(/^/);
   }
 
