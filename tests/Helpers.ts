@@ -25,6 +25,11 @@ import { IS_WINDOWS } from "../src/IsWindows";
 toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
 toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
 
+const { JEST_RETRIES } = process.env;
+if (JEST_RETRIES !== undefined) {
+  jest.retryTimes(Number(JEST_RETRIES), { logErrorsBeforeRetry: true });
+}
+
 // Print date and time in UTC in snapshots.
 /* eslint-disable @typescript-eslint/unbound-method */
 Date.prototype.getFullYear = Date.prototype.getUTCFullYear;
