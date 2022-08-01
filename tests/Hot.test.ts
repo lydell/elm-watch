@@ -638,12 +638,15 @@ describe("hot", () => {
         args: ["WrongVersion"],
         scripts: ["WrongVersion.js"],
         init: failInit,
-        onIdle: () => {
+        onIdle: async () => {
           send({
             tag: "ChangedCompilationMode",
             compilationMode: "optimize",
           });
-          return "Stop";
+          // Wait for the above message to be processed before stopping (needed
+          // for code coverage).
+          await wait(100);
+          return "Stop" as const;
         },
       });
 
