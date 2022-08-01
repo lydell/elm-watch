@@ -11,6 +11,7 @@ import {
   logDebug,
   MemoryWriteStream,
   prependPATH,
+  rimraf,
   stringSnapshotSerializer,
   TEST_ENV,
 } from "./Helpers";
@@ -25,7 +26,7 @@ async function run(
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
 
-  fs.rmSync(build, { recursive: true, force: true });
+  rimraf(build);
 
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();
