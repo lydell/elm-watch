@@ -9,6 +9,7 @@ import {
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
+import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
 import { CompilationMode } from "../src/Types";
 import {
@@ -26,13 +27,45 @@ import {
 const CONTAINER_ID = "elm-watch";
 export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 
-export function cleanupBeforeEachTest(): void {
-  // eslint-disable-next-line no-console
-  console.warn = () => {
-    // Disable Elm’s “Compiled in DEV mode” logs.
-  };
+let watcher: fs.FSWatcher | undefined = undefined;
+const hotKillManager: HotKillManager = { kill: undefined };
+
+export async function cleanupAfterEachTest(): Promise<void> {
+  const { currentTestName } = expect.getState();
+
+  if (window.__ELM_WATCH_KILL_MATCHING !== undefined) {
+    // The idea is that we need no logging here – it’ll just result in double
+    // logging since there will most likely be a running server as well.
+    await window.__ELM_WATCH_KILL_MATCHING(/^/);
+  }
+
+  if (watcher !== undefined) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "cleanupAfterEachTest: watcher never closed by itself – closing now. Test:",
+      currentTestName
+    );
+    watcher.close();
+    watcher = undefined;
+  }
+
+  if (hotKillManager.kill !== undefined) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "cleanupAfterEachTest: elm-watch never finished – killing. Test:",
+      currentTestName
+    );
+    await hotKillManager.kill();
+  }
+
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
+
+  for (const key of Object.keys(window)) {
+    if (key.startsWith("__ELM_WATCH")) {
+      delete (window as unknown as Record<string, unknown>)[key];
+    }
+  }
 }
 
 let bodyCounter = 0;
@@ -85,6 +118,11 @@ export async function run({
   renders: string;
   div: HTMLDivElement;
 }> {
+  // eslint-disable-next-line no-console
+  console.warn = () => {
+    // Disable Elm’s “Compiled in DEV mode” logs.
+  };
+
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
   const absoluteScripts = scripts.map((script) => path.join(build, script));
@@ -180,12 +218,6 @@ export async function run({
         .catch(reject);
     };
 
-    for (const key of Object.keys(window)) {
-      if (key.startsWith("__ELM_WATCH")) {
-        delete (window as unknown as Record<string, unknown>)[key];
-      }
-    }
-
     window.__ELM_WATCH_MOCKED_TIMINGS = true;
 
     window.__ELM_WATCH_RELOAD_PAGE = (message) => {
@@ -262,16 +294,21 @@ export async function run({
             case "KeepGoing":
               return;
             case "Stop":
-              window.__ELM_WATCH_EXIT();
-              return;
+              return Promise.all([
+                window.__ELM_WATCH_KILL_MATCHING(/^/),
+                hotKillManager.kill === undefined
+                  ? undefined
+                  : hotKillManager.kill(),
+              ]);
           }
         })
         .catch(reject);
     };
 
-    const watcher = fs.watch(build, () => {
+    watcher = fs.watch(build, () => {
       if (absoluteScripts.every(fs.existsSync)) {
-        watcher.close();
+        watcher?.close();
+        watcher = undefined;
         loadBuiltFiles(false);
       }
     });
@@ -285,6 +322,7 @@ export async function run({
       stdout,
       stderr,
       logDebug,
+      hotKillManager,
     })
       .then(resolve)
       .catch(reject);

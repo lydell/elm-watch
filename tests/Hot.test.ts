@@ -23,7 +23,7 @@ import {
 } from "./Helpers";
 import {
   assertDebugger,
-  cleanupBeforeEachTest,
+  cleanupAfterEachTest,
   expandUi,
   failInit,
   FIXTURES_DIR,
@@ -36,7 +36,7 @@ jest.retryTimes(2, { logErrorsBeforeRetry: true });
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot", () => {
-  beforeEach(cleanupBeforeEachTest);
+  afterEach(cleanupAfterEachTest);
 
   test("successful connect (collapsed)", async () => {
     const { terminal, renders, div } = await run({
@@ -638,12 +638,15 @@ describe("hot", () => {
         args: ["WrongVersion"],
         scripts: ["WrongVersion.js"],
         init: failInit,
-        onIdle: () => {
+        onIdle: async () => {
           send({
             tag: "ChangedCompilationMode",
             compilationMode: "optimize",
           });
-          return "Stop";
+          // Wait for the above message to be processed before stopping (needed
+          // for code coverage).
+          await wait(100);
+          return "Stop" as const;
         },
       });
 
@@ -946,7 +949,7 @@ describe("hot", () => {
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
-        Expected one of these tags: "ChangedCompilationMode", "FocusedTab", "ExitRequested"
+        Expected one of these tags: "ChangedCompilationMode", "FocusedTab"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
@@ -1208,7 +1211,7 @@ describe("hot", () => {
       },
     });
 
-    window.__ELM_WATCH_EXIT();
+    await window.__ELM_WATCH_KILL_MATCHING(/^/);
 
     expect(terminal).toMatchInlineSnapshot(`
       ⏳ Dependencies

@@ -144,6 +144,10 @@ type Msg =
       handleOutputActionResult: Compile.HandleOutputActionResult;
     }
   | {
+      tag: "ExitRequested";
+      date: Date;
+    }
+  | {
       tag: "GotWatcherEvent";
       date: Date;
       eventName: WatcherEventName;
@@ -312,6 +316,14 @@ export type WebSocketState = {
   webSocketConnections: Array<WebSocketConnection>;
 };
 
+export type HotKillManager = {
+  // You are supposed to pass `undefined` initially. While running, this is
+  // mutated to the function. Once successfully run, it is set back to
+  // `undefined` again.
+  // This is only used in tests, to clean up between each test.
+  kill: (() => Promise<void>) | undefined;
+};
+
 // This uses something inspired by The Elm Architecture, since it’s all about
 // keeping state (model) and reacting to events (messages).
 export async function run(
@@ -322,18 +334,20 @@ export async function run(
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
   project: Project,
-  portChoice: PortChoice
+  portChoice: PortChoice,
+  hotKillManager: HotKillManager
 ): Promise<HotRunResult> {
   const exitOnError = __ELM_WATCH_EXIT_ON_ERROR in env;
 
-  return runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
+  const result = await runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
       env,
       getNow,
       postprocessWorkerPool,
       webSocketState,
       project,
-      portChoice
+      portChoice,
+      hotKillManager
     ),
     init: init(getNow(), restartReasons, project.elmJsonsErrors),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
@@ -358,6 +372,10 @@ export async function run(
     },
     runCmd: runCmd(env, logger, getNow, exitOnError),
   });
+
+  delete hotKillManager.kill;
+
+  return result;
 }
 
 export async function watchElmWatchJsonOnce(
@@ -400,7 +418,8 @@ const initMutable =
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
     project: Project,
-    portChoice: PortChoice
+    portChoice: PortChoice,
+    hotKillManager: HotKillManager
   ) =>
   (
     dispatch: (msg: Msg) => void,
@@ -491,6 +510,35 @@ const initMutable =
         writeElmWatchStuffJson(mutable);
       })
       .catch(rejectPromise);
+
+    hotKillManager.kill = async () => {
+      dispatch({ tag: "ExitRequested", date: getNow() });
+
+      // istanbul ignore next
+      try {
+        await Promise.all(
+          getFlatOutputs(project).map(({ outputState }) =>
+            outputState.status.tag === "Postprocess"
+              ? outputState.status.kill()
+              : Promise.resolve()
+          )
+        );
+      } catch (unknownError) {
+        const error = toError(unknownError);
+        rejectPromise(toError(error));
+      }
+
+      // istanbul ignore next
+      try {
+        await closeAll(mutable);
+      } catch (unknownError) {
+        const error = toError(unknownError);
+        rejectPromise(toError(error));
+      }
+
+      delete hotKillManager.kill;
+      resolvePromise({ tag: "ExitOnIdle" });
+    };
 
     return mutable;
   };
@@ -628,6 +676,43 @@ function update(
         cmds,
       ];
     }
+
+    case "ExitRequested":
+      // istanbul ignore if
+      if (model.hotState.tag !== "Idle") {
+        return [
+          model,
+          [
+            {
+              tag: "Throw",
+              error: new Error(
+                `Got ExitRequested. Expected hotState to be Idle but it is: ${model.hotState.tag}`
+              ),
+            },
+          ],
+        ];
+      }
+
+      switch (model.nextAction.tag) {
+        // istanbul ignore next
+        case "Restart":
+        // istanbul ignore next
+        case "Compile":
+          return [
+            model,
+            [
+              {
+                tag: "Throw",
+                error: new Error(
+                  `Got ExitRequested. Expected nextAction to be NoAction but it is: ${model.nextAction.tag}`
+                ),
+              },
+            ],
+          ];
+
+        case "NoAction":
+          return runNextAction(msg.date, project, model);
+      }
 
     case "SleepBeforeNextActionDone": {
       const [newModel, cmds] = runNextAction(msg.date, project, model);
@@ -853,7 +938,6 @@ function update(
       switch (result.tag) {
         case "Success":
           return onWebSocketToServerMessage(
-            project,
             model,
             msg.date,
             msg.output,
@@ -2127,7 +2211,6 @@ function compileNextAction(nextAction: NextAction): NextAction {
 }
 
 function onWebSocketToServerMessage(
-  project: Project,
   model: Model,
   date: Date,
   output: WebSocketMessageReceivedOutput,
@@ -2175,45 +2258,6 @@ function onWebSocketToServerMessage(
 
     case "FocusedTab":
       return [model, [{ tag: "WebSocketUpdatePriority", webSocket }]];
-
-    case "ExitRequested":
-      // istanbul ignore if
-      if (model.hotState.tag !== "Idle") {
-        return [
-          model,
-          [
-            {
-              tag: "Throw",
-              error: new Error(
-                `Got ExitRequested. Expected hotState to be Idle but it is: ${model.hotState.tag}`
-              ),
-            },
-          ],
-        ];
-      }
-
-      switch (model.nextAction.tag) {
-        // istanbul ignore next
-        case "Restart":
-        // istanbul ignore next
-        case "Compile":
-          return [
-            model,
-            [
-              {
-                tag: "Throw",
-                error: new Error(
-                  `Got ExitRequested. Expected nextAction to be NoAction but it is: ${model.nextAction.tag}`
-                ),
-              },
-            ],
-          ];
-
-        case "NoAction": {
-          const [newModel, cmds] = runNextAction(date, project, model);
-          return [newModel, [...cmds, { tag: "ExitOnIdle" }]];
-        }
-      }
   }
 }
 

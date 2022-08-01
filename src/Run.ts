@@ -43,7 +43,8 @@ export async function run(
   args: Array<CliArg>,
   restartReasons: Array<Hot.LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
-  webSocketState: Hot.WebSocketState | undefined
+  webSocketState: Hot.WebSocketState | undefined,
+  hotKillManager: Hot.HotKillManager
 ): Promise<RunResult> {
   const parseResult = ElmWatchJson.findReadAndParse(cwd);
 
@@ -274,7 +275,8 @@ export async function run(
                               tag: "PersistedPort",
                               port: elmWatchStuffJson.port,
                             }
-                          : { tag: "NoPort" }
+                          : { tag: "NoPort" },
+                        hotKillManager
                       );
                       switch (result.tag) {
                         case "ExitOnHandledFatalError":

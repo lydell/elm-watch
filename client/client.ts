@@ -24,7 +24,6 @@ declare global {
     __ELM_WATCH_ON_INIT: () => void;
     __ELM_WATCH_ON_RENDER: (targetName: string) => void;
     __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
-    __ELM_WATCH_EXIT: () => void;
     __ELM_WATCH_KILL_MATCHING: (targetName: RegExp) => Promise<void>;
     __ELM_WATCH_DISCONNECT: (targetName: RegExp) => void;
     __ELM_WATCH_LOG_DEBUG: typeof console.debug;
@@ -108,10 +107,6 @@ window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
     }
   }
   window.location.reload();
-};
-
-window.__ELM_WATCH_EXIT ??= () => {
-  // Do nothing.
 };
 
 window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
@@ -345,7 +340,7 @@ function run(): void {
 
   const getNow: GetNow = () => new Date();
 
-  void runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
+  runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, targetRoot),
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
@@ -362,6 +357,9 @@ function run(): void {
       return [newModel, allCmds];
     },
     runCmd: runCmd(getNow, targetRoot),
+  }).catch((error) => {
+    // eslint-disable-next-line no-console
+    console.error("elm-watch: Unexpectedly exited with error:", error);
   });
 
   // This is great when working on the styling of all statuses.
@@ -458,14 +456,6 @@ const initMutable =
     window.__ELM_WATCH_ON_INIT = () => {
       dispatch({ tag: "AppInit" });
       originalOnInit();
-    };
-
-    const originalExit = window.__ELM_WATCH_EXIT;
-    window.__ELM_WATCH_EXIT = () => {
-      resolvePromise(undefined);
-      const message: WebSocketToServerMessage = { tag: "ExitRequested" };
-      mutable.webSocket.send(JSON.stringify(message));
-      originalExit();
     };
 
     const originalKillMatching = window.__ELM_WATCH_KILL_MATCHING;
