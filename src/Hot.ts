@@ -535,6 +535,7 @@ const initMutable =
         rejectPromise(toError(error));
       }
 
+      delete hotKillManager.kill;
       resolvePromise({ tag: "ExitOnIdle" });
     };
 
