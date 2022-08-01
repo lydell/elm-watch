@@ -25,7 +25,7 @@ import { IS_WINDOWS } from "../src/IsWindows";
 toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
 toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
 
-jest.setTimeout(10000);
+// jest.setTimeout(10000);
 
 const { JEST_RETRIES } = process.env;
 if (JEST_RETRIES !== undefined) {
