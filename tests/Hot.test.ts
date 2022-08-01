@@ -31,8 +31,6 @@ import {
   switchCompilationMode,
 } from "./HotHelpers";
 
-jest.retryTimes(2, { logErrorsBeforeRetry: true });
-
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot", () => {

@@ -15,8 +15,6 @@ import {
   switchCompilationMode,
 } from "./HotHelpers";
 
-jest.retryTimes(2, { logErrorsBeforeRetry: true });
-
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 // Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
