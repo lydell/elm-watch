@@ -27,12 +27,11 @@ import {
 const CONTAINER_ID = "elm-watch";
 export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
 
-let cleanupCounter = 0;
 let watcher: fs.FSWatcher | undefined = undefined;
 const hotKillManager: HotKillManager = { kill: undefined };
 
 export async function cleanupAfterEachTest(): Promise<void> {
-  cleanupCounter++;
+  const { currentTestName } = expect.getState();
 
   if (window.__ELM_WATCH_KILL_MATCHING !== undefined) {
     // The idea is that we need no logging here – it’ll just result in double
@@ -43,8 +42,8 @@ export async function cleanupAfterEachTest(): Promise<void> {
   if (watcher !== undefined) {
     // eslint-disable-next-line no-console
     console.error(
-      "cleanupAfterEachTest: watcher never closed by itself – closing now.",
-      cleanupCounter
+      "cleanupAfterEachTest: watcher never closed by itself – closing now. Test:",
+      currentTestName
     );
     watcher.close();
     watcher = undefined;
@@ -53,8 +52,8 @@ export async function cleanupAfterEachTest(): Promise<void> {
   if (hotKillManager.kill !== undefined) {
     // eslint-disable-next-line no-console
     console.error(
-      "cleanupAfterEachTest: elm-watch never finished – killing.",
-      cleanupCounter
+      "cleanupAfterEachTest: elm-watch never finished – killing. Test:",
+      currentTestName
     );
     await hotKillManager.kill();
   }
