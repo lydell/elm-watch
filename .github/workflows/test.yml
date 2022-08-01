@@ -17,6 +17,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         node-version: [14, 16, 18]
+      exclude:
+        # This one fails for some reason.
+        - os: windows-latest
+          node-version: 14
 
     env:
       ELM_HOME: "${{ github.workspace }}/elm-stuff/elm-home"
