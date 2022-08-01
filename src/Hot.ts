@@ -320,6 +320,7 @@ export type HotKillManager = {
   // You are supposed to pass `undefined` initially. While running, this is
   // mutated to the function. Once successfully run, it is set back to
   // `undefined` again.
+  // This is only used in tests, to clean up between each test.
   kill: (() => Promise<void>) | undefined;
 };
 

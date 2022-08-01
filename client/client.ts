@@ -468,8 +468,8 @@ const initMutable =
           mutable.webSocket.addEventListener("close", () => {
             originalKillMatching(targetName).then(resolve).catch(reject);
           });
-          mutable.webSocket.close();
           mutable.removeListeners();
+          mutable.webSocket.close();
           targetRoot.remove();
           resolvePromise(undefined);
         } else {
