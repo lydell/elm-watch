@@ -66,6 +66,6 @@ jobs:
       # so that elm-watch isn’t shut down properly.
       # Retry failing tests, as a stopgap while fixing flaky tests.
       - name: Jest
-        run: npx jest --coverage --forceExit
+        run: npx jest --coverage --forceExit --runInBand
         env:
           JEST_RETRIES: 2
