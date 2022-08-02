@@ -455,6 +455,7 @@ const initMutable =
           .catch(rejectPromise);
       },
       (eventName: WatcherEventName, absolutePathString: string): void => {
+        console.log(eventName, absolutePathString);
         dispatch({
           tag: "GotWatcherEvent",
           date: getNow(),
