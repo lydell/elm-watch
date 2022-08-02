@@ -26,7 +26,7 @@ async function run(
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
 
-  rimraf(build);
+  await rimraf(build);
 
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();

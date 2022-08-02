@@ -116,14 +116,8 @@ export function rm(filePath: string): void {
   }
 }
 
-export function rimraf(filePath: string): void {
-  // try {
-  fs.rmSync(filePath, { recursive: true, force: true });
-  // } catch (error) {
-  //   // eslint-disable-next-line no-console
-  //   console.error("fs.rmSync failed. Trying again.", error);
-  //   fs.rmSync(filePath, { recursive: true, force: true });
-  // }
+export async function rimraf(filePath: string): Promise<void> {
+  await fs.promises.rm(filePath, { recursive: true, force: true });
 }
 
 export function rmSymlink(symlink: string): void {

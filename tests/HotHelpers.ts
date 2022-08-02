@@ -130,7 +130,7 @@ export async function run({
   const elmStuff = path.join(dir, "elm-stuff");
   const elmWatchStuff = path.join(elmStuff, "elm-watch", "stuff.json");
 
-  rimraf(build);
+  await rimraf(build);
   fs.mkdirSync(build, { recursive: true });
 
   if (!keepElmStuffJson) {
@@ -138,7 +138,7 @@ export async function run({
   }
 
   if (clearElmStuff) {
-    rimraf(elmStuff);
+    await rimraf(elmStuff);
   }
 
   const stdout = new CursorWriteStream();

@@ -98,7 +98,7 @@ async function runWithBadElmBin(
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
   const BUILD = path.join(dir, "build");
-  rimraf(BUILD);
+  await rimraf(BUILD);
   return runAbsolute(
     postprocess ? path.join(dir, "postprocess") : dir,
     [exitHotOnError ? "hot" : "make", "app"],
@@ -1845,7 +1845,7 @@ describe("errors", () => {
       const dir = path.join(FIXTURES_DIR, fixture);
       const elmStuff = path.join(dir, "elm-stuff");
       const iDat = path.join(elmStuff, "0.19.1", "i.dat");
-      rimraf(elmStuff);
+      await rimraf(elmStuff);
       const result = spawn.sync(
         "elm",
         ["make", "--output=/dev/null", "src/Main.elm"],
