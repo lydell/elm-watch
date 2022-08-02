@@ -118,6 +118,7 @@ type Mutable = {
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
+  killInstallDependencies: (() => void) | undefined;
 };
 
 type WebSocketConnection = {
@@ -155,6 +156,7 @@ type Msg =
     }
   | {
       tag: "InstallDependenciesDone";
+      date: Date;
       installResult: Compile.InstallDependenciesResult;
     }
   | {
@@ -480,6 +482,7 @@ const initMutable =
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
       elmWatchStuffJsonWriteError: undefined,
+      killInstallDependencies: undefined,
     };
 
     webSocketServer.setDispatch((msg) => {
@@ -516,20 +519,16 @@ const initMutable =
 
       // istanbul ignore next
       try {
+        if (mutable.killInstallDependencies !== undefined) {
+          mutable.killInstallDependencies();
+        }
         await Promise.all(
           getFlatOutputs(project).map(({ outputState }) =>
-            outputState.status.tag === "Postprocess"
+            "kill" in outputState.status
               ? outputState.status.kill()
               : Promise.resolve()
           )
         );
-      } catch (unknownError) {
-        const error = toError(unknownError);
-        rejectPromise(toError(error));
-      }
-
-      // istanbul ignore next
-      try {
         await closeAll(mutable);
       } catch (unknownError) {
         const error = toError(unknownError);
@@ -821,6 +820,9 @@ function update(
                     : /* istanbul ignore next */ { tag: "NoCmd" },
                 ],
               ];
+
+            case "Killed":
+              return init(msg.date, model.latestEvents, []);
 
             case "Success": {
               return [
@@ -1341,15 +1343,35 @@ const runCmd =
         }
         return;
 
-      case "InstallDependencies":
+      case "InstallDependencies": {
         // If the web socket server fails to boot, don’t even bother with anything else.
         mutable.webSocketServer.listening
-          .then(() => Compile.installDependencies(env, logger, mutable.project))
+          .then(() => {
+            const { promise, kill } = Compile.installDependencies(
+              env,
+              logger,
+              getNow,
+              mutable.project
+            );
+            mutable.killInstallDependencies = () => {
+              kill();
+              mutable.killInstallDependencies = undefined;
+            };
+            return promise;
+          })
+          .finally(() => {
+            mutable.killInstallDependencies = undefined;
+          })
           .then((installResult) => {
-            dispatch({ tag: "InstallDependenciesDone", installResult });
+            dispatch({
+              tag: "InstallDependenciesDone",
+              date: getNow(),
+              installResult,
+            });
           })
           .catch(rejectPromise);
         return;
+      }
 
       case "LimitWorkers":
         mutable.postprocessWorkerPool
@@ -1400,10 +1422,13 @@ const runCmd =
       }
 
       case "MarkAsDirty":
+        if (mutable.killInstallDependencies !== undefined) {
+          mutable.killInstallDependencies();
+        }
         for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;
-          if (outputState.status.tag === "Postprocess") {
-            outputState.status.kill().catch(rejectPromise);
+          if ("kill" in outputState.status) {
+            Promise.resolve(outputState.status.kill()).catch(rejectPromise);
           }
           webSocketSendToOutput(
             outputPath,

@@ -49,3 +49,9 @@ export const __ELM_WATCH_MAX_PARALLEL = "__ELM_WATCH_MAX_PARALLEL";
 
 // Used to test ElmWatchDummy.elm errors without affecting other tests.
 export const __ELM_WATCH_TMP_DIR = "__ELM_WATCH_TMP_DIR";
+
+// When killing `elm`, we don’t do it right away. Instead, we give it a chance
+// to finish. The thinking is that this can reduce corruption of elm-stuff.
+// Used in tests by not having to wait for so long.
+// Type: Number.
+export const __ELM_WATCH_ELM_TIMEOUT = "__ELM_WATCH_ELM_TIMEOUT";

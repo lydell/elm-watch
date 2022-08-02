@@ -17,6 +17,10 @@ export type SpawnResult =
       command: Command;
     }
   | {
+      tag: "Killed";
+      command: Command;
+    }
+  | {
       tag: "OtherSpawnError";
       error: Error;
       command: Command;
@@ -37,15 +41,7 @@ export type Command = {
   stdin?: Buffer | string;
 };
 
-export const SPAWN_KILLED = new Error(
-  "`spawnKillable` returns a `kill` function. That was called! This error is supposed to be caught."
-);
-
-export async function spawn(command: Command): Promise<SpawnResult> {
-  return spawnKillable(command).promise;
-}
-
-export function spawnKillable(command: Command): {
+export function spawn(command: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
 } {
@@ -59,10 +55,10 @@ export function spawnKillable(command: Command): {
   const promise = (
     actualSpawn: typeof childProcess.spawn
   ): Promise<SpawnResult> =>
-    new Promise((resolve, reject) => {
+    new Promise((resolve) => {
       // istanbul ignore if
       if (killed) {
-        reject(SPAWN_KILLED);
+        resolve({ tag: "Killed", command });
         return;
       }
 
@@ -159,7 +155,7 @@ export function spawnKillable(command: Command): {
         // istanbul ignore else
         if (!killed) {
           child.kill();
-          reject(SPAWN_KILLED);
+          resolve({ tag: "Killed", command });
           killed = true;
         }
       };
