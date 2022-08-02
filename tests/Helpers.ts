@@ -114,6 +114,14 @@ export function rm(filePath: string): void {
   }
 }
 
+// This is async because of Windows. `fs.rmSync` seems to sometimes fail with
+// “permission denied” `lstat` errors. The async version does not seem to have
+// that issue, possibly because all the filesystem calls get a little bit more
+// spread out.
+export async function rimraf(filePath: string): Promise<void> {
+  await fs.promises.rm(filePath, { recursive: true, force: true });
+}
+
 export function rmSymlink(symlink: string): void {
   // Can’t use the `rm` function here, since `fs.existsSync(symlink)` returns
   // `false` if `symlink` is an existing symlink but points to a non-existing file.

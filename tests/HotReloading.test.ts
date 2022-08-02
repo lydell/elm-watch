@@ -996,9 +996,11 @@ describe("hot reloading", () => {
     });
 
     test("Init with cancelable Task", async () => {
-      const mockConsoleError = jest.fn();
+      // The HTTP request made in the test fails, and jsdom logs that using `console.error`.
       // eslint-disable-next-line no-console
-      console.error = mockConsoleError;
+      console.error = () => {
+        // Do nothing.
+      };
 
       const { replace, go } = runHotReload({
         name: "InitHttp",
@@ -1044,9 +1046,6 @@ describe("hot reloading", () => {
         expect(button.outerHTML).toMatchInlineSnapshot(
           `<button>Hot count: 1</button>`
         );
-
-        // The HTTP request made in the test fails, and jsdom logs that using `console.error`.
-        expect(mockConsoleError).toHaveBeenCalled();
       }
     });
   });

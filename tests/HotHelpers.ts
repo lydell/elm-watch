@@ -19,6 +19,7 @@ import {
   FailReadStream,
   logDebug,
   MemoryWriteStream,
+  rimraf,
   rm,
   TEST_ENV,
   wait,
@@ -129,7 +130,7 @@ export async function run({
   const elmStuff = path.join(dir, "elm-stuff");
   const elmWatchStuff = path.join(elmStuff, "elm-watch", "stuff.json");
 
-  fs.rmSync(build, { recursive: true, force: true });
+  await rimraf(build);
   fs.mkdirSync(build, { recursive: true });
 
   if (!keepElmStuffJson) {
@@ -137,7 +138,7 @@ export async function run({
   }
 
   if (clearElmStuff) {
-    fs.rmSync(elmStuff, { recursive: true, force: true });
+    await rimraf(elmStuff);
   }
 
   const stdout = new CursorWriteStream();
