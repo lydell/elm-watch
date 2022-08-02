@@ -438,7 +438,7 @@ const initMutable =
 
     const watcher = chokidar.watch(project.watchRoot.absolutePath, {
       ignoreInitial: true,
-      ignored: ["**/elm-stuff/**", "**/node_modules/**"],
+      ignored: /\/(elm-stuff|node_modules)\//,
       disableGlobbing: true,
     });
 
