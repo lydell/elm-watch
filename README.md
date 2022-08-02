@@ -17,7 +17,7 @@ npm install --save-dev elm-watch
 
 > ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [elm-tooling]).
 
-> ℹ️ Node.js 14 or newer is required.
+> ℹ️ Node.js 14 or newer is required. On Windows, only Node.js 16 or later is officially supported.
 
 ## Getting started
 

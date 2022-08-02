@@ -18,7 +18,8 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         node-version: [14, 16, 18]
         exclude:
-          # This one fails for some reason.
+          # Some tests fail on Node.js 14 on Windows, both locally and in CI.
+          # I think it’s not worth it trying to fix that.
           - os: windows-latest
             node-version: 14
 
