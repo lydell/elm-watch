@@ -438,6 +438,10 @@ const initMutable =
 
     const watcher = chokidar.watch(project.watchRoot.absolutePath, {
       ignoreInitial: true,
+      // Note: Forward slashes must be used here even on Windows. (Using
+      // backslashes on Windows never matches.) The trailing slash is important:
+      // It makes it possible to get notifications of a removed elm-stuff
+      // folder, while ignoring everything that happens _inside_ that folder.
       ignored: /\/(elm-stuff|node_modules)\//,
       disableGlobbing: true,
     });
@@ -1051,6 +1055,20 @@ function onWatcherEvent(
               project
             );
           }
+          return undefined;
+      }
+
+    // Some compiler error messages suggest removing elm-stuff to fix the error.
+    // Restart when that happens.
+    case "elm-stuff":
+      switch (eventName) {
+        case "removed":
+          return makeRestartNextAction(
+            makeWatcherEvent(eventName, absolutePathString, now),
+            project
+          );
+
+        default:
           return undefined;
       }
 
