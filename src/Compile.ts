@@ -155,9 +155,7 @@ export function installDependencies(
         case "Killed":
           if (didWriteLoadingMessage) {
             clearLoadingMessage();
-            logger.write(
-              printStatusLineHelper("Skipped", message, "interrupted")
-            );
+            logger.write(printStatusLineHelper("Busy", message, "interrupted"));
           }
           return { tag: "Killed" };
 
@@ -732,7 +730,7 @@ async function compileOneOutput({
     }),
   ]);
 
-  if (outputState.dirty) {
+  if (outputState.dirty || elmMakeResult.tag === "Killed") {
     outputState.setStatus({ tag: "Interrupted" });
     updateStatusLineHelper();
     return { tag: "Nothing" };
@@ -749,7 +747,6 @@ async function compileOneOutput({
   );
 
   switch (combinedResult.tag) {
-    case "killed":
     case "elm make success + walker success":
       return onCompileSuccess(
         logger.config,
@@ -1273,7 +1270,7 @@ async function typecheck({
     outputState,
     allRelatedElmFilePathsResult,
   } of allRelatedElmFilePathsResults) {
-    if (outputState.dirty) {
+    if (outputState.dirty || elmMakeResult.tag === "Killed") {
       outputState.setStatus({ tag: "Interrupted" });
       updateStatusLine({
         logger,
@@ -1338,7 +1335,6 @@ async function typecheck({
     }
 
     switch (combinedResult.tag) {
-      case "killed":
       case "elm make success + walker success":
         break;
 
@@ -1372,8 +1368,8 @@ async function typecheck({
 
 function onlyElmMakeErrorsRelatedToOutput(
   outputState: OutputState,
-  elmMakeResult: SpawnElm.RunElmMakeResult
-): SpawnElm.RunElmMakeResult {
+  elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>
+): Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }> {
   if (
     !(
       elmMakeResult.tag === "ElmMakeError" &&
@@ -1423,19 +1419,13 @@ type CombinedResult =
   | {
       tag: "elm make success + walker success";
       allRelatedElmFilePaths: Set<string>;
-    }
-  | {
-      tag: "killed";
     };
 
 function combineResults(
-  elmMakeResult: SpawnElm.RunElmMakeResult,
+  elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>,
   allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult
 ): CombinedResult {
   switch (elmMakeResult.tag) {
-    case "Killed":
-      return { tag: "killed" };
-
     case "Success":
       switch (allRelatedElmFilePathsResult.tag) {
         case "Success":

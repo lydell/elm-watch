@@ -6,6 +6,7 @@ import * as path from "path";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
+  __ELM_WATCH_ELM_TIMEOUT,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
   NO_COLOR,
@@ -17,6 +18,7 @@ import {
   rm,
   rmSymlink,
   stringSnapshotSerializer,
+  TEST_ENV,
   testExceptWindows,
   touch,
   wait,
@@ -2518,6 +2520,139 @@ describe("hot", () => {
       ▼ ⏳ 13:10:05 Main
       ================================================================================
       ▼ 🚨 13:10:05 Main
+    `);
+  });
+
+  test("kill Elm", async () => {
+    const fixture = "kill-elm";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const input = path.join(dir, "src", "Main.elm");
+    const lock = path.join(dir, "lock");
+    const timeout = 100;
+
+    // Hang on installing dependencies.
+    fs.writeFileSync(lock, "LockAll");
+    setTimeout(() => {
+      // Let install succeed, but hang on typecheck only.
+      // Once install is done, the “bad elm” bin changes to NoLock and touches
+      // `input` so that typecheck only succeeds.
+      fs.writeFileSync(lock, "LockExceptInstall");
+      touch(input);
+    }, timeout);
+
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      isTTY: false,
+      bin: "compile-forever",
+      env: {
+        ...TEST_ENV,
+        [__ELM_WATCH_ELM_TIMEOUT]: "0",
+      },
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            // Hang on compile.
+            fs.writeFileSync(lock, "LockExceptInstall");
+            touch(input);
+            setTimeout(() => {
+              // Let compile succeed.
+              fs.writeFileSync(lock, "NoLock");
+              touch(input);
+            }, timeout);
+            return "KeepGoing";
+
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    // The middle “Dependencies” line is when it’s interrupted.
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ⏳ Dependencies
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make (typecheck only)
+      ⏳ Main: interrupted
+      ⏳ Main: elm make (typecheck only)
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      ⏳ Main: elm make
+      ⏳ Main: interrupted
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
+  test("kill Elm while installing dependencies in TTY mode", async () => {
+    const fixture = "kill-elm";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const input = path.join(dir, "src", "Main.elm");
+    const lock = path.join(dir, "lock");
+    const timeout = 100;
+
+    // Hang on installing dependencies.
+    fs.writeFileSync(lock, "LockAll");
+    setTimeout(() => {
+      // Let install succeed.
+      fs.writeFileSync(lock, "NoLock");
+      touch(input);
+    }, timeout);
+
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      isTTY: true,
+      bin: "compile-forever",
+      env: {
+        ...TEST_ENV,
+        [__ELM_WATCH_ELM_TIMEOUT]: "0",
+      },
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
     `);
   });
 

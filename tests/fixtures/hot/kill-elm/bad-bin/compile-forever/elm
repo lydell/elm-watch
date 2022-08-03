@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+const spawn = require("cross-spawn");
+const path = require("path");
+const fs = require("fs");
+
+const inputPath = path.join(__dirname, "..", "..", "src", "Main.elm");
+const lockPath = path.join(__dirname, "..", "..", "lock");
+const lockFile = fs.readFileSync(lockPath, "utf8");
+
+const isInstall = process.argv.some((arg) => arg.includes("ElmWatchDummy"));
+
+if (
+  lockFile === "LockAll" ||
+  (lockFile === "LockExceptInstall" && !isInstall)
+) {
+  process.stdin.resume();
+} else {
+  const child = spawn("elm", process.argv.slice(2), {
+    env: {
+      ...process.env,
+      PATH: process.env.PATH.split(path.delimiter)
+        .filter((part) => !part.includes("bad-bin"))
+        .join(path.delimiter),
+    },
+    stdio: "inherit",
+  });
+
+  child.on("exit", (exitCode) => {
+    if (isInstall) {
+      fs.writeFileSync(lockPath, "NoLock");
+      const now = new Date();
+      fs.utimesSync(inputPath, now, now);
+    }
+    process.exit(exitCode);
+  });
+}

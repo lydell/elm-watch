@@ -331,9 +331,11 @@ export function install({
         tag: "CreatingDummyFailed",
         error,
       }),
-      kill: () => {
-        // Do nothing.
-      },
+      kill:
+        // istanbul ignore next
+        () => {
+          // Do nothing.
+        },
     };
   }
 
