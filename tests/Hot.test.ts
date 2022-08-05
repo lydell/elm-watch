@@ -14,6 +14,7 @@ import { LatestEvent, printTimeline } from "../src/Hot";
 import { LoggerConfig } from "../src/Logger";
 import {
   clean,
+  rimraf,
   rm,
   rmSymlink,
   stringSnapshotSerializer,
@@ -1775,6 +1776,101 @@ describe("hot", () => {
 
       ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
+  test("delete elm-stuff", async () => {
+    const fixture = "delete-elm-stuff";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const elmStuff = path.join(dir, "elm-stuff");
+    const elmStuff2 = path.join(dir, "src", "elm-stuff");
+    const iDat = path.join(elmStuff, "0.19.1", "i.dat");
+    const main = path.join(dir, "src", "Main.elm");
+    rm(elmStuff2);
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1:
+            fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
+            touch(main);
+            fs.mkdirSync(elmStuff2);
+            return "KeepGoing";
+          case 2:
+            await rimraf(elmStuff);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make (typecheck only)
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      ⏳ Main: elm make
+      🚨 Main
+
+      ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
+      ⧙Target: Main⧘
+
+      +-------------------------------------------------------------------------------
+      |  Corrupt File: /Users/you/project/tests/fixtures/hot/delete-elm-stuff/elm-stuff/0.19.1/i.dat
+      |   Byte Offset: 127
+      |       Message: not enough bytes
+      |
+      | Please report this to https://github.com/elm/compiler/issues
+      | Trying to continue anyway.
+      +-------------------------------------------------------------------------------
+
+      It looks like some of the information cached in elm-stuff/ has been corrupted.
+
+      Try deleting your elm-stuff/ directory to get unstuck.
+
+      ⧙Note⧘: This almost certainly means that a 3rd party tool (or editor plugin) is
+      causing problems your the elm-stuff/ directory. Try disabling 3rd party tools
+      one by one until you figure out which it is!
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/src/Main.elm⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/elm-stuff⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
