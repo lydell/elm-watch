@@ -149,11 +149,13 @@ export type OutputStatus =
       elmDurationMs: number;
       walkerDurationMs: number;
       injectDurationMs: number;
+      kill: () => void;
     }
   | {
       tag: "ElmMakeTypecheckOnly";
       elmDurationMs: number;
       walkerDurationMs: number;
+      kill: () => void;
     }
   | {
       tag: "Interrupted";
@@ -163,7 +165,7 @@ export type OutputStatus =
     }
   | {
       tag: "Postprocess";
-      kill: () => Promise<void>;
+      kill: () => Promise<void> | void;
     }
   | {
       tag: "QueuedForElmMake";

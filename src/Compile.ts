@@ -36,7 +36,6 @@ import {
   Postprocess,
   PostprocessWorkerPool,
   runPostprocess,
-  WORKER_TERMINATED,
 } from "./Postprocess";
 import {
   Duration,
@@ -45,7 +44,6 @@ import {
   OutputStatus,
   Project,
 } from "./Project";
-import { SPAWN_KILLED } from "./Spawn";
 import * as SpawnElm from "./SpawnElm";
 import {
   AbsolutePath,
@@ -58,7 +56,10 @@ import {
   RunMode,
 } from "./Types";
 
-export type InstallDependenciesResult = { tag: "Error" } | { tag: "Success" };
+export type InstallDependenciesResult =
+  | { tag: "Error" }
+  | { tag: "Killed" }
+  | { tag: "Success" };
 
 // Make sure all dependencies are installed. Otherwise compilation sometimes
 // fails when you’ve got multiple outputs for the same elm.json. The error is
@@ -66,11 +67,14 @@ export type InstallDependenciesResult = { tag: "Error" } | { tag: "Success" };
 // This is done in sequence, in an attempt to avoid:
 // - Downloading the same package twice.
 // - Two Elm processes writing to `~/.elm` at the same time.
-export async function installDependencies(
+export function installDependencies(
   env: Env,
   logger: Logger,
+  getNow: GetNow,
   project: Project
-): Promise<InstallDependenciesResult> {
+): { promise: Promise<InstallDependenciesResult>; kill: () => void } {
+  let currentKill: (() => void) | undefined = undefined;
+
   const loadingMessageDelay = silentlyReadIntEnvValue(
     env[__ELM_WATCH_LOADING_MESSAGE_DELAY],
     100
@@ -89,103 +93,125 @@ export async function installDependencies(
       string: logger.config.fancy ? message : `${message}: ${nonFancy}`,
     });
 
-  const elmJsonsArray = Array.from(project.elmJsons);
+  const continuation = async (): Promise<InstallDependenciesResult> => {
+    const elmJsonsArray = Array.from(project.elmJsons);
 
-  for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
-    // Don’t print `(x/y)` the first time, because chances are all packages are
-    // downloaded via the first elm.json and that looks nicer.
-    const message = `Dependencies${
-      index === 0 ? "" : ` (${index + 1}/${elmJsonsArray.length})`
-    }`;
+    for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
+      // Don’t print `(x/y)` the first time, because chances are all packages are
+      // downloaded via the first elm.json and that looks nicer.
+      const message = `Dependencies${
+        index === 0 ? "" : ` (${index + 1}/${elmJsonsArray.length})`
+      }`;
 
-    const loadingMessage = printStatusLineHelper(
-      "Busy",
-      message,
-      "in progress"
-    );
+      const loadingMessage = printStatusLineHelper(
+        "Busy",
+        message,
+        "in progress"
+      );
 
-    // Avoid printing `loadingMessage` if there’s nothing to download.
-    let didWriteLoadingMessage = false;
-    const timeoutId = setTimeout(() => {
-      logger.write(loadingMessage);
-      didWriteLoadingMessage = true;
-    }, loadingMessageDelay);
+      // Avoid printing `loadingMessage` if there’s nothing to download.
+      let didWriteLoadingMessage = false;
+      const timeoutId = setTimeout(() => {
+        logger.write(loadingMessage);
+        didWriteLoadingMessage = true;
+      }, loadingMessageDelay);
 
-    const clearLoadingMessage = (): void => {
-      if (didWriteLoadingMessage) {
-        logger.moveCursor(0, -1);
-        logger.clearLine(0);
-      }
-    };
-
-    const onError = (
-      error: Errors.ErrorTemplate
-    ): InstallDependenciesResult => {
-      clearLoadingMessage();
-      logger.write(printStatusLineHelper("Error", message, "error"));
-      logger.write("");
-      logger.errorTemplate(error);
-      return { tag: "Error" };
-    };
-
-    const result = await SpawnElm.install({ elmJsonPath, env });
-    clearTimeout(timeoutId);
-
-    switch (result.tag) {
-      // If the elm.json is invalid or elm-stuff/ is corrupted we can just
-      // ignore that and let the “real” compilation later catch it. This way we
-      // get colored error messages.
-      case "ElmJsonError":
-      case "ElmStuffError":
+      const clearLoadingMessage = (): void => {
         if (didWriteLoadingMessage) {
-          clearLoadingMessage();
-          logger.write(printStatusLineHelper("Skipped", message, "skipped"));
+          logger.moveCursor(0, -1);
+          logger.clearLine(0);
         }
-        break;
+      };
 
-      case "Success": {
-        const gotOutput = result.elmInstallOutput !== "";
-        if (didWriteLoadingMessage || gotOutput) {
-          clearLoadingMessage();
-          logger.write(printStatusLineHelper("Success", message, "success"));
+      const onError = (
+        error: Errors.ErrorTemplate
+      ): InstallDependenciesResult => {
+        clearLoadingMessage();
+        logger.write(printStatusLineHelper("Error", message, "error"));
+        logger.write("");
+        logger.errorTemplate(error);
+        return { tag: "Error" };
+      };
+
+      const { promise, kill } = SpawnElm.install({ elmJsonPath, env, getNow });
+      currentKill = kill;
+      const result = await promise.finally(() => {
+        currentKill = undefined;
+      });
+      clearTimeout(timeoutId);
+
+      switch (result.tag) {
+        // If the elm.json is invalid or elm-stuff/ is corrupted we can just
+        // ignore that and let the “real” compilation later catch it. This way we
+        // get colored error messages.
+        case "ElmJsonError":
+        case "ElmStuffError":
+          if (didWriteLoadingMessage) {
+            clearLoadingMessage();
+            logger.write(printStatusLineHelper("Skipped", message, "skipped"));
+          }
+          break;
+
+        case "Killed":
+          if (didWriteLoadingMessage) {
+            clearLoadingMessage();
+            logger.write(printStatusLineHelper("Busy", message, "interrupted"));
+          }
+          return { tag: "Killed" };
+
+        case "Success": {
+          const gotOutput = result.elmInstallOutput !== "";
+          if (didWriteLoadingMessage || gotOutput) {
+            clearLoadingMessage();
+            logger.write(printStatusLineHelper("Success", message, "success"));
+          }
+          if (gotOutput) {
+            logger.write(result.elmInstallOutput);
+          }
+          break;
         }
-        if (gotOutput) {
-          logger.write(result.elmInstallOutput);
-        }
-        break;
+
+        case "CreatingDummyFailed":
+          return onError(Errors.creatingDummyFailed(elmJsonPath, result.error));
+
+        case "ElmNotFoundError":
+          return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
+
+        // istanbul ignore next
+        case "OtherSpawnError":
+          return onError(
+            Errors.otherSpawnError(elmJsonPath, result.error, result.command)
+          );
+
+        case "ElmInstallError":
+          return onError(
+            Errors.elmInstallError(elmJsonPath, result.title, result.message)
+          );
+
+        case "UnexpectedElmInstallOutput":
+          return onError(
+            Errors.unexpectedElmInstallOutput(
+              elmJsonPath,
+              result.exitReason,
+              result.stdout,
+              result.stderr,
+              result.command
+            )
+          );
       }
-
-      case "CreatingDummyFailed":
-        return onError(Errors.creatingDummyFailed(elmJsonPath, result.error));
-
-      case "ElmNotFoundError":
-        return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
-
-      // istanbul ignore next
-      case "OtherSpawnError":
-        return onError(
-          Errors.otherSpawnError(elmJsonPath, result.error, result.command)
-        );
-
-      case "ElmInstallError":
-        return onError(
-          Errors.elmInstallError(elmJsonPath, result.title, result.message)
-        );
-
-      case "UnexpectedElmInstallOutput":
-        return onError(
-          Errors.unexpectedElmInstallOutput(
-            elmJsonPath,
-            result.exitReason,
-            result.stdout,
-            result.stderr,
-            result.command
-          )
-        );
     }
-  }
 
-  return { tag: "Success" };
+    return { tag: "Success" };
+  };
+
+  return {
+    promise: continuation(),
+    kill: () => {
+      if (currentKill !== undefined) {
+        currentKill();
+      }
+    },
+  };
 }
 
 type IndexedOutput = {
@@ -649,6 +675,20 @@ async function compileOneOutput({
   // postprocessing can flip `dirty` back to `true`.
   outputState.dirty = false;
 
+  const { promise, kill } = SpawnElm.make({
+    elmJsonPath,
+    compilationMode: outputState.compilationMode,
+    inputs: outputState.inputs,
+    outputPath: {
+      ...outputPath,
+      writeToTemporaryDir: !(
+        runMode.tag === "make" && postprocess.tag === "NoPostprocess"
+      ),
+    },
+    env,
+    getNow,
+  });
+
   const outputStatus: Extract<OutputStatus, { tag: "ElmMake" }> = {
     tag: "ElmMake",
     compilationMode: outputState.compilationMode,
@@ -656,24 +696,14 @@ async function compileOneOutput({
     elmDurationMs: -1,
     walkerDurationMs: -1,
     injectDurationMs: -1,
+    kill,
   };
 
   outputState.setStatus(outputStatus);
   updateStatusLineHelper();
 
   const [elmMakeResult, allRelatedElmFilePathsResult] = await Promise.all([
-    SpawnElm.make({
-      elmJsonPath,
-      compilationMode: outputState.compilationMode,
-      inputs: outputState.inputs,
-      outputPath: {
-        ...outputPath,
-        writeToTemporaryDir: !(
-          runMode.tag === "make" && postprocess.tag === "NoPostprocess"
-        ),
-      },
-      env,
-    }).then((result) => {
+    promise.then((result) => {
       outputStatus.elmDurationMs = getNow().getTime() - startTimestamp;
       return result;
     }),
@@ -700,7 +730,7 @@ async function compileOneOutput({
     }),
   ]);
 
-  if (outputState.dirty) {
+  if (outputState.dirty || elmMakeResult.tag === "Killed") {
     outputState.setStatus({ tag: "Interrupted" });
     updateStatusLineHelper();
     return { tag: "Nothing" };
@@ -1037,102 +1067,100 @@ async function postprocessHelper({
   outputState.setStatus({ tag: "Postprocess", kill });
   updateStatusLineHelper();
 
-  let postprocessResult;
+  const postprocessResult = await promise;
 
-  try {
-    postprocessResult = await promise;
-  } catch (unknownError) {
-    // istanbul ignore else
-    if (unknownError === SPAWN_KILLED || unknownError === WORKER_TERMINATED) {
+  // There’s no need doing the usual `if (outputState.dirty)` check here, since
+  // we always `.kill()` running postprocessing when marking as dirty (which is
+  // handled below).
+
+  switch (postprocessResult.tag) {
+    case "Killed":
       outputState.dirty = true;
       outputState.setStatus({ tag: "Interrupted" });
       updateStatusLineHelper();
       return { tag: "Nothing" };
-    }
-    // istanbul ignore next
-    throw unknownError;
-  }
 
-  // There’s no need doing the usual `if (outputState.dirty)` check here, since
-  // we always `.kill()` running postprocessing when marking as dirty (which is
-  // handled above).
-
-  if (postprocessResult.tag === "Success") {
-    try {
-      fs.mkdirSync(absoluteDirname(outputPath.theOutputPath).absolutePath, {
-        recursive: true,
-      });
-      switch (runMode.tag) {
-        case "make":
-          fs.writeFileSync(
-            outputPath.theOutputPath.absolutePath,
-            postprocessResult.code
-          );
-          break;
-        case "hot": {
-          const clientCode = Inject.clientCode(
-            outputPath,
-            elmCompiledTimestamp,
-            outputState.compilationMode,
-            runMode.webSocketPort,
-            logger.config.debug
-          );
-          fs.writeFileSync(
-            outputPath.theOutputPath.absolutePath,
-            typeof postprocessResult.code === "string"
-              ? clientCode + postprocessResult.code
-              : Buffer.concat([Buffer.from(clientCode), postprocessResult.code])
-          );
-          break;
+    case "Success": {
+      try {
+        fs.mkdirSync(absoluteDirname(outputPath.theOutputPath).absolutePath, {
+          recursive: true,
+        });
+        switch (runMode.tag) {
+          case "make":
+            fs.writeFileSync(
+              outputPath.theOutputPath.absolutePath,
+              postprocessResult.code
+            );
+            break;
+          case "hot": {
+            const clientCode = Inject.clientCode(
+              outputPath,
+              elmCompiledTimestamp,
+              outputState.compilationMode,
+              runMode.webSocketPort,
+              logger.config.debug
+            );
+            fs.writeFileSync(
+              outputPath.theOutputPath.absolutePath,
+              typeof postprocessResult.code === "string"
+                ? clientCode + postprocessResult.code
+                : Buffer.concat([
+                    Buffer.from(clientCode),
+                    postprocessResult.code,
+                  ])
+            );
+            break;
+          }
         }
+      } catch (unknownError) {
+        const error = toError(unknownError);
+        outputState.setStatus({
+          tag: "WriteOutputError",
+          error,
+          reasonForWriting: "Postprocess",
+        });
+        updateStatusLineHelper();
+        return {
+          tag: "CompileError",
+          outputPath,
+          compilationMode: outputState.compilationMode,
+        };
       }
-    } catch (unknownError) {
-      const error = toError(unknownError);
+      const recordFieldsChanged = Inject.recordFieldsChanged(
+        outputState.recordFields,
+        recordFields
+      );
+      outputState.recordFields = recordFields;
       outputState.setStatus({
-        tag: "WriteOutputError",
-        error,
-        reasonForWriting: "Postprocess",
+        tag: "Success",
+        elmFileSize: Buffer.byteLength(code),
+        postprocessFileSize: Buffer.byteLength(postprocessResult.code),
+        elmCompiledTimestamp,
       });
+      updateStatusLineHelper();
+      return recordFieldsChanged
+        ? {
+            tag: "FullyCompiledJSButRecordFieldsChanged",
+            outputPath,
+          }
+        : {
+            tag: "FullyCompiledJS",
+            outputPath,
+            code: postprocessResult.code,
+            elmCompiledTimestamp,
+            compilationMode: outputState.compilationMode,
+          };
+    }
+
+    default:
+      outputState.setStatus(postprocessResult);
       updateStatusLineHelper();
       return {
         tag: "CompileError",
         outputPath,
         compilationMode: outputState.compilationMode,
       };
-    }
-    const recordFieldsChanged = Inject.recordFieldsChanged(
-      outputState.recordFields,
-      recordFields
-    );
-    outputState.recordFields = recordFields;
-    outputState.setStatus({
-      tag: "Success",
-      elmFileSize: Buffer.byteLength(code),
-      postprocessFileSize: Buffer.byteLength(postprocessResult.code),
-      elmCompiledTimestamp,
-    });
-    updateStatusLineHelper();
-    return recordFieldsChanged
-      ? {
-          tag: "FullyCompiledJSButRecordFieldsChanged",
-          outputPath,
-        }
-      : {
-          tag: "FullyCompiledJS",
-          outputPath,
-          code: postprocessResult.code,
-          elmCompiledTimestamp,
-          compilationMode: outputState.compilationMode,
-        };
   }
-
-  outputState.setStatus(postprocessResult);
-  updateStatusLineHelper();
-  return {
-    tag: "CompileError",
-    outputPath,
-    compilationMode: outputState.compilationMode,
-  };
 }
 
 async function typecheck({
@@ -1166,11 +1194,28 @@ async function typecheck({
     outputStatus: Extract<OutputStatus, { tag: "ElmMakeTypecheckOnly" }>;
   }> = [];
 
+  const { promise, kill } = SpawnElm.make({
+    elmJsonPath,
+    compilationMode: "standard",
+    // Mentioning the same input twice is an error according to `elm make`.
+    // It even resolves symlinks when checking if two inputs are the same!
+    inputs: nonEmptyArrayUniqueBy(
+      (inputPath) => inputPath.realpath.absolutePath,
+      flattenNonEmptyArray(
+        mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs)
+      )
+    ),
+    outputPath: { tag: "NullOutputPath" },
+    env,
+    getNow,
+  });
+
   for (const output of outputs) {
     const outputStatus = {
       tag: "ElmMakeTypecheckOnly",
       elmDurationMs: -1,
       walkerDurationMs: -1,
+      kill,
     } as const;
     outputsWithStatus.push({ ...output, outputStatus });
     output.outputState.dirty = false;
@@ -1186,20 +1231,7 @@ async function typecheck({
   }
 
   const [elmMakeResult, allRelatedElmFilePathsResults] = await Promise.all([
-    SpawnElm.make({
-      elmJsonPath,
-      compilationMode: "standard",
-      // Mentioning the same input twice is an error according to `elm make`.
-      // It even resolves symlinks when checking if two inputs are the same!
-      inputs: nonEmptyArrayUniqueBy(
-        (inputPath) => inputPath.realpath.absolutePath,
-        flattenNonEmptyArray(
-          mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs)
-        )
-      ),
-      outputPath: { tag: "NullOutputPath" },
-      env,
-    }).then((result) => {
+    promise.then((result) => {
       const durationMs = getNow().getTime() - startTimestamp;
       for (const output of outputsWithStatus) {
         output.outputStatus.elmDurationMs = durationMs;
@@ -1238,7 +1270,7 @@ async function typecheck({
     outputState,
     allRelatedElmFilePathsResult,
   } of allRelatedElmFilePathsResults) {
-    if (outputState.dirty) {
+    if (outputState.dirty || elmMakeResult.tag === "Killed") {
       outputState.setStatus({ tag: "Interrupted" });
       updateStatusLine({
         logger,
@@ -1336,8 +1368,8 @@ async function typecheck({
 
 function onlyElmMakeErrorsRelatedToOutput(
   outputState: OutputState,
-  elmMakeResult: SpawnElm.RunElmMakeResult
-): SpawnElm.RunElmMakeResult {
+  elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>
+): Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }> {
   if (
     !(
       elmMakeResult.tag === "ElmMakeError" &&
@@ -1390,7 +1422,7 @@ type CombinedResult =
     };
 
 function combineResults(
-  elmMakeResult: SpawnElm.RunElmMakeResult,
+  elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>,
   allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult
 ): CombinedResult {
   switch (elmMakeResult.tag) {

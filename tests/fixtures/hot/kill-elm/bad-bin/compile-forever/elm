@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+const spawn = require("cross-spawn");
+const path = require("path");
+const fs = require("fs");
+
+const elmJsonPath = path.join(__dirname, "..", "..", "elm.json");
+const inputPath = path.join(__dirname, "..", "..", "src", "Main.elm");
+const lockPath = path.join(__dirname, "..", "..", "lock");
+const lockFile = fs.readFileSync(lockPath, "utf8");
+
+const isInstall = process.argv.some((arg) => arg.includes("ElmWatchDummy"));
+
+function touch(filePath) {
+  const now = new Date();
+  fs.utimesSync(filePath, now, now);
+}
+
+if (lockFile === "LockAll") {
+  // Hang on install. Switch to hanging on compile or typecheck only.
+  fs.writeFileSync(lockPath, "LockExceptInstall");
+  touch(elmJsonPath);
+  process.stdin.resume();
+} else if (lockFile === "LockExceptInstall" && !isInstall) {
+  // Hang on compile or typecheck only. Switch to succeeding.
+  fs.writeFileSync(lockPath, "NoLock");
+  touch(inputPath);
+  process.stdin.resume();
+} else {
+  const child = spawn("elm", process.argv.slice(2), {
+    env: {
+      ...process.env,
+      PATH: process.env.PATH.split(path.delimiter)
+        .filter((part) => !part.includes("bad-bin"))
+        .join(path.delimiter),
+    },
+    stdio: "inherit",
+  });
+
+  child.on("exit", (exitCode) => {
+    process.exit(exitCode);
+  });
+}

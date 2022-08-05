@@ -19,10 +19,16 @@ export async function run(
 ): Promise<MakeResult> {
   const startTimestamp = getNow().getTime();
 
-  const installResult = await Compile.installDependencies(env, logger, project);
+  const installResult = await Compile.installDependencies(
+    env,
+    logger,
+    getNow,
+    project
+  ).promise;
 
   switch (installResult.tag) {
     case "Error":
+    case "Killed":
       return { tag: "Error" };
 
     case "Success":

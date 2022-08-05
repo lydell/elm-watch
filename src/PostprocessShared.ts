@@ -40,6 +40,9 @@ export type MessageFromWorker = {
 export type PostprocessResult =
   | PostprocessError
   | {
+      tag: "Killed";
+    }
+  | {
       tag: "Success";
       code: Buffer | string;
     };

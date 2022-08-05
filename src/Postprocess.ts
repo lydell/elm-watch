@@ -12,7 +12,7 @@ import {
   MessageToWorker,
   PostprocessResult,
 } from "./PostprocessShared";
-import { Command, spawnKillable, SpawnResult } from "./Spawn";
+import { Command, spawn, SpawnResult } from "./Spawn";
 import {
   CompilationMode,
   ElmWatchJsonPath,
@@ -74,7 +74,7 @@ export function runPostprocess({
     stdin: code,
   };
 
-  const { promise, kill } = spawnKillable(command);
+  const { promise, kill } = spawn(command);
 
   const handleSpawnResult = (spawnResult: SpawnResult): PostprocessResult => {
     switch (spawnResult.tag) {
@@ -88,6 +88,9 @@ export function runPostprocess({
           error: spawnResult.error,
           command: spawnResult.command,
         };
+
+      case "Killed":
+        return { tag: "Killed" };
 
       case "Exit": {
         const { exitReason } = spawnResult;
@@ -187,10 +190,6 @@ type PostprocessWorkerStatus =
   | {
       tag: "Terminated";
     };
-
-export const WORKER_TERMINATED = new Error(
-  "`PostprocessWorker` has a `terminate` method. That was called! This error is supposed to be caught."
-);
 
 class PostprocessWorker {
   private worker = new Worker(path.join(__dirname, "PostprocessWorker.js"), {
@@ -338,11 +337,11 @@ class PostprocessWorker {
         break;
 
       case "Busy": {
-        const { reject } = this.status;
+        const { resolve } = this.status;
         this.status = { tag: "Terminated" };
         this.onTerminated(this);
         await this.worker.terminate();
-        reject(WORKER_TERMINATED);
+        resolve({ tag: "Killed" });
         break;
       }
 

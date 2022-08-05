@@ -2,15 +2,29 @@ import * as fs from "fs";
 import * as os from "os";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { __ELM_WATCH_TMP_DIR, Env } from "./Env";
+import { __ELM_WATCH_ELM_TIMEOUT, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
-import { JsonError, toError, toJsonError } from "./Helpers";
+import {
+  JsonError,
+  silentlyReadIntEnvValue,
+  toError,
+  toJsonError,
+} from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
-import { Command, ExitReason, spawn } from "./Spawn";
-import { CompilationMode, ElmJsonPath, InputPath, OutputPath } from "./Types";
+import { Command, ExitReason, spawn, SpawnResult } from "./Spawn";
+import {
+  CompilationMode,
+  ElmJsonPath,
+  GetNow,
+  InputPath,
+  OutputPath,
+} from "./Types";
 
-export type RunElmMakeResult = RunElmMakeError | { tag: "Success" };
+export type RunElmMakeResult =
+  | RunElmMakeError
+  | { tag: "Killed" }
+  | { tag: "Success" };
 
 export type RunElmMakeError =
   | {
@@ -43,19 +57,21 @@ export type RunElmMakeError =
 
 type NullOutputPath = { tag: "NullOutputPath" };
 
-export async function make({
+export function make({
   elmJsonPath,
   compilationMode,
   inputs,
   outputPath,
   env,
+  getNow,
 }: {
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   inputs: NonEmptyArray<InputPath>;
   outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean });
   env: Env;
-}): Promise<RunElmMakeResult> {
+  getNow: GetNow;
+}): { promise: Promise<RunElmMakeResult>; kill: () => void } {
   const command: Command = {
     command: "elm",
     args: [
@@ -71,58 +87,83 @@ export async function make({
     },
   };
 
-  const spawnResult = await spawn(command);
+  const { promise, kill } = spawn(command);
 
-  switch (spawnResult.tag) {
-    // istanbul ignore next
-    case "CommandNotFoundError":
-      return { tag: "ElmNotFoundError", command };
+  const handleSpawnResult = (spawnResult: SpawnResult): RunElmMakeResult => {
+    switch (spawnResult.tag) {
+      // istanbul ignore next
+      case "CommandNotFoundError":
+        return { tag: "ElmNotFoundError", command };
 
-    // istanbul ignore next
-    case "OtherSpawnError":
-    // istanbul ignore next
-    case "StdinWriteError": // We never write to stdin.
-      return {
-        tag: "OtherSpawnError",
-        error: spawnResult.error,
-        command: spawnResult.command,
-      };
+      // istanbul ignore next
+      case "OtherSpawnError":
+      // istanbul ignore next
+      case "StdinWriteError": // We never write to stdin.
+        return {
+          tag: "OtherSpawnError",
+          error: spawnResult.error,
+          command: spawnResult.command,
+        };
 
-    case "Exit": {
-      const { exitReason } = spawnResult;
-      const stdout = spawnResult.stdout.toString("utf8");
-      const stderr = spawnResult.stderr.toString("utf8");
+      case "Killed":
+        return { tag: "Killed" };
 
-      // This is a workaround for: https://github.com/elm/compiler/issues/2264
-      // Elm can print a “box” of plain text information before the JSON when
-      // it fails to read certain files in elm-stuff/:
-      // https://github.com/elm/compiler/blob/9f1bbb558095d81edba5796099fee9981eac255a/builder/src/File.hs#L85-L94
-      const match = elmStuffErrorMessagePrefixRegex.exec(stderr);
-      const elmStuffError = match?.[0];
-      const potentialJson =
-        elmStuffError === undefined
-          ? stderr
-          : stderr.slice(elmStuffError.length);
+      case "Exit": {
+        const { exitReason } = spawnResult;
+        const stdout = spawnResult.stdout.toString("utf8");
+        const stderr = spawnResult.stderr.toString("utf8");
 
-      return exitReason.tag === "ExitCode" &&
-        exitReason.exitCode === 0 &&
-        stdout === "" &&
-        stderr === ""
-        ? { tag: "Success" }
-        : exitReason.tag === "ExitCode" &&
-          exitReason.exitCode === 1 &&
+        // This is a workaround for: https://github.com/elm/compiler/issues/2264
+        // Elm can print a “box” of plain text information before the JSON when
+        // it fails to read certain files in elm-stuff/:
+        // https://github.com/elm/compiler/blob/9f1bbb558095d81edba5796099fee9981eac255a/builder/src/File.hs#L85-L94
+        const match = elmStuffErrorMessagePrefixRegex.exec(stderr);
+        const elmStuffError = match?.[0];
+        const potentialJson =
+          elmStuffError === undefined
+            ? stderr
+            : stderr.slice(elmStuffError.length);
+
+        return exitReason.tag === "ExitCode" &&
+          exitReason.exitCode === 0 &&
           stdout === "" &&
-          potentialJson.startsWith("{")
-        ? parseElmMakeJson(command, potentialJson, elmStuffError?.trim())
-        : {
-            tag: "UnexpectedElmMakeOutput",
-            exitReason,
-            stdout,
-            stderr,
-            command,
-          };
+          stderr === ""
+          ? { tag: "Success" }
+          : exitReason.tag === "ExitCode" &&
+            exitReason.exitCode === 1 &&
+            stdout === "" &&
+            potentialJson.startsWith("{")
+          ? parseElmMakeJson(command, potentialJson, elmStuffError?.trim())
+          : {
+              tag: "UnexpectedElmMakeOutput",
+              exitReason,
+              stdout,
+              stderr,
+              command,
+            };
+      }
     }
-  }
+  };
+
+  const startTime = getNow().getTime();
+
+  return {
+    promise: promise.then(handleSpawnResult),
+    kill: () => {
+      delayKill(startTime, getNow, env, kill);
+    },
+  };
+}
+
+function delayKill(
+  startTime: number,
+  getNow: GetNow,
+  env: Env,
+  kill: () => void
+): void {
+  const timeout = silentlyReadIntEnvValue(env[__ELM_WATCH_ELM_TIMEOUT], 10000);
+  const elapsed = getNow().getTime() - startTime;
+  setTimeout(kill, Math.max(0, timeout - elapsed));
 }
 
 export function compilationModeToArg(
@@ -238,6 +279,9 @@ type ElmInstallResult =
       command: Command;
     }
   | {
+      tag: "Killed";
+    }
+  | {
       tag: "OtherSpawnError";
       error: Error;
       command: Command;
@@ -261,13 +305,15 @@ const elmJsonErrorMessageRegex = /^-- (.+) -+( elm\.json)?\r?\n([^]+)$/;
 const elmStuffErrorMessagePrefixRegex =
   /^\+-+\r?\n(?:\|.*\r?\n)+\+-+\r?\n\r?\n/;
 
-export async function install({
+export function install({
   elmJsonPath,
   env,
+  getNow,
 }: {
   elmJsonPath: ElmJsonPath;
   env: Env;
-}): Promise<ElmInstallResult> {
+  getNow: GetNow;
+}): { promise: Promise<ElmInstallResult>; kill: () => void } {
   const dummy = absolutePathFromString(
     {
       tag: "AbsolutePath",
@@ -281,8 +327,15 @@ export async function install({
   } catch (unknownError) {
     const error = toError(unknownError);
     return {
-      tag: "CreatingDummyFailed",
-      error,
+      promise: Promise.resolve({
+        tag: "CreatingDummyFailed",
+        error,
+      }),
+      kill:
+        // istanbul ignore next
+        () => {
+          // Do nothing.
+        },
     };
   }
 
@@ -298,85 +351,99 @@ export async function install({
     },
   };
 
-  const spawnResult = await spawn(command);
+  const { promise, kill } = spawn(command);
 
-  switch (spawnResult.tag) {
-    case "CommandNotFoundError":
-      return { tag: "ElmNotFoundError", command };
+  const handleSpawnResult = (spawnResult: SpawnResult): ElmInstallResult => {
+    switch (spawnResult.tag) {
+      case "CommandNotFoundError":
+        return { tag: "ElmNotFoundError", command };
 
-    // istanbul ignore next
-    case "OtherSpawnError":
-    // istanbul ignore next
-    case "StdinWriteError": // We never write to stdin.
-      return {
-        tag: "OtherSpawnError",
-        error: spawnResult.error,
-        command: spawnResult.command,
-      };
-
-    case "Exit": {
-      const { exitReason } = spawnResult;
-      const stdout = spawnResult.stdout.toString("utf8");
-      const stderr = spawnResult.stderr.toString("utf8");
-
-      if (
-        exitReason.tag === "ExitCode" &&
-        exitReason.exitCode === 0 &&
-        stderr === ""
-      ) {
+      // istanbul ignore next
+      case "OtherSpawnError":
+      // istanbul ignore next
+      case "StdinWriteError": // We never write to stdin.
         return {
-          tag: "Success",
-          elmInstallOutput: stdout
-            // Elm uses `\r` to overwrite the same line multiple times.
-            .split(/\r?\n|\r/)
-            // Only include lines like `● elm/core 1.0.5` (they are indented).
-            // Ignore stuff like "Starting downloads..." and "Verifying dependencies (4/7)".
-            .filter((line) => line.startsWith("  "))
-            // One more space looks nicer in our output.
-            .map((line) => ` ${line}`)
-            .join("\n")
-            .trimEnd(),
+          tag: "OtherSpawnError",
+          error: spawnResult.error,
+          command: spawnResult.command,
         };
-      }
 
-      if (elmStuffErrorMessagePrefixRegex.test(stderr)) {
-        return { tag: "ElmStuffError" };
-      }
+      case "Killed":
+        return { tag: "Killed" };
 
-      const match = elmJsonErrorMessageRegex.exec(stderr);
+      case "Exit": {
+        const { exitReason } = spawnResult;
+        const stdout = spawnResult.stdout.toString("utf8");
+        const stderr = spawnResult.stderr.toString("utf8");
 
-      if (
-        exitReason.tag === "ExitCode" &&
-        exitReason.exitCode === 1 &&
-        // Don’t bother checking stdout. Elm likes to print
-        // "Dependencies ready!" even on failure.
-        match !== null
-      ) {
-        const [, title, elmJson, message] = match;
-
-        if (elmJson !== undefined) {
-          return { tag: "ElmJsonError" };
-        }
-
-        // istanbul ignore else
-        if (title !== undefined && message !== undefined) {
+        if (
+          exitReason.tag === "ExitCode" &&
+          exitReason.exitCode === 0 &&
+          stderr === ""
+        ) {
           return {
-            tag: "ElmInstallError",
-            title,
-            message,
+            tag: "Success",
+            elmInstallOutput: stdout
+              // Elm uses `\r` to overwrite the same line multiple times.
+              .split(/\r?\n|\r/)
+              // Only include lines like `● elm/core 1.0.5` (they are indented).
+              // Ignore stuff like "Starting downloads..." and "Verifying dependencies (4/7)".
+              .filter((line) => line.startsWith("  "))
+              // One more space looks nicer in our output.
+              .map((line) => ` ${line}`)
+              .join("\n")
+              .trimEnd(),
           };
         }
-      }
 
-      return {
-        tag: "UnexpectedElmInstallOutput",
-        exitReason,
-        stdout,
-        stderr,
-        command,
-      };
+        if (elmStuffErrorMessagePrefixRegex.test(stderr)) {
+          return { tag: "ElmStuffError" };
+        }
+
+        const match = elmJsonErrorMessageRegex.exec(stderr);
+
+        if (
+          exitReason.tag === "ExitCode" &&
+          exitReason.exitCode === 1 &&
+          // Don’t bother checking stdout. Elm likes to print
+          // "Dependencies ready!" even on failure.
+          match !== null
+        ) {
+          const [, title, elmJson, message] = match;
+
+          if (elmJson !== undefined) {
+            return { tag: "ElmJsonError" };
+          }
+
+          // istanbul ignore else
+          if (title !== undefined && message !== undefined) {
+            return {
+              tag: "ElmInstallError",
+              title,
+              message,
+            };
+          }
+        }
+
+        return {
+          tag: "UnexpectedElmInstallOutput",
+          exitReason,
+          stdout,
+          stderr,
+          command,
+        };
+      }
     }
-  }
+  };
+
+  const startTime = getNow().getTime();
+
+  return {
+    promise: promise.then(handleSpawnResult),
+    kill: () => {
+      delayKill(startTime, getNow, env, kill);
+    },
+  };
 }
 
 function elmWatchDummy(): string {
