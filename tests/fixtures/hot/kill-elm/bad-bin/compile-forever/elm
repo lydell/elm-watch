@@ -3,16 +3,25 @@ const spawn = require("cross-spawn");
 const path = require("path");
 const fs = require("fs");
 
+const elmJsonPath = path.join(__dirname, "..", "..", "elm.json");
 const inputPath = path.join(__dirname, "..", "..", "src", "Main.elm");
 const lockPath = path.join(__dirname, "..", "..", "lock");
 const lockFile = fs.readFileSync(lockPath, "utf8");
 
 const isInstall = process.argv.some((arg) => arg.includes("ElmWatchDummy"));
 
-if (
-  lockFile === "LockAll" ||
-  (lockFile === "LockExceptInstall" && !isInstall)
-) {
+function touch(filePath) {
+  const now = new Date();
+  fs.utimesSync(filePath, now, now);
+}
+
+if (lockFile === "LockAll") {
+  fs.writeFileSync(lockPath, "LockExceptInstall");
+  touch(elmJsonPath);
+  process.stdin.resume();
+} else if (lockFile === "LockExceptInstall" && !isInstall) {
+  fs.writeFileSync(lockPath, "NoLock");
+  touch(inputPath);
   process.stdin.resume();
 } else {
   const child = spawn("elm", process.argv.slice(2), {
@@ -26,11 +35,6 @@ if (
   });
 
   child.on("exit", (exitCode) => {
-    if (isInstall) {
-      fs.writeFileSync(lockPath, "NoLock");
-      const now = new Date();
-      fs.utimesSync(inputPath, now, now);
-    }
     process.exit(exitCode);
   });
 }

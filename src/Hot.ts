@@ -260,6 +260,7 @@ type Cmd =
         outputPath: OutputPath;
         outputState: OutputState;
       }>;
+      killInstallDependencies: boolean;
     }
   | {
       tag: "NoCmd";
@@ -821,8 +822,10 @@ function update(
                 ],
               ];
 
+            // We only kill installing dependencies when a restart is needed.
+            // Wait for the restart to happen.
             case "Killed":
-              return init(msg.date, model.latestEvents, []);
+              return [{ ...model, hotState: { tag: "Idle" } }, []];
 
             case "Success": {
               return [
@@ -1080,6 +1083,7 @@ function onWatcherEvent(
                   {
                     tag: "MarkAsDirty",
                     outputs: getFlatOutputs(project),
+                    killInstallDependencies: false,
                   },
                   { tag: "RestartWorkers" },
                 ],
@@ -1132,7 +1136,13 @@ function onElmFileWatcherEvent(
     ? [
         compileNextAction(nextAction),
         { ...event, affectsAnyTarget: true },
-        [{ tag: "MarkAsDirty", outputs: dirtyOutputs }],
+        [
+          {
+            tag: "MarkAsDirty",
+            outputs: dirtyOutputs,
+            killInstallDependencies: false,
+          },
+        ],
       ]
     : [nextAction, { ...event, affectsAnyTarget: false }, []];
 }
@@ -1422,7 +1432,10 @@ const runCmd =
       }
 
       case "MarkAsDirty":
-        if (mutable.killInstallDependencies !== undefined) {
+        if (
+          cmd.killInstallDependencies &&
+          mutable.killInstallDependencies !== undefined
+        ) {
           mutable.killInstallDependencies();
         }
         for (const { outputPath, outputState } of cmd.outputs) {
@@ -1778,6 +1791,7 @@ function makeRestartNextAction(
         // Interrupt all compilation.
         tag: "MarkAsDirty",
         outputs: getFlatOutputs(project),
+        killInstallDependencies: true,
       },
     ],
   ];
@@ -2218,6 +2232,7 @@ function onWebSocketRecompileNeeded(
           {
             tag: "MarkAsDirty",
             outputs: [{ outputPath, outputState }],
+            killInstallDependencies: false,
           },
         ],
       ];

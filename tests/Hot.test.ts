@@ -2523,22 +2523,23 @@ describe("hot", () => {
     `);
   });
 
-  test("kill Elm", async () => {
+  test.only("kill Elm", async () => {
     const fixture = "kill-elm";
     const dir = path.join(FIXTURES_DIR, fixture);
+    // const elmJson = path.join(dir, "elm.json");
     const input = path.join(dir, "src", "Main.elm");
     const lock = path.join(dir, "lock");
-    const timeout = 100;
+    // const timeout = 100;
 
     // Hang on installing dependencies.
     fs.writeFileSync(lock, "LockAll");
-    setTimeout(() => {
-      // Let install succeed, but hang on typecheck only.
-      // Once install is done, the “bad elm” bin changes to NoLock and touches
-      // `input` so that typecheck only succeeds.
-      fs.writeFileSync(lock, "LockExceptInstall");
-      touch(input);
-    }, timeout);
+    // setTimeout(() => {
+    //   // Let install succeed, but hang on typecheck only.
+    //   // Once install is done, the “bad elm” bin changes to NoLock and touches
+    //   // `input` so that typecheck only succeeds.
+    //   fs.writeFileSync(lock, "LockExceptInstall");
+    //   touch(elmJson);
+    // }, timeout);
 
     const { terminal } = await run({
       fixture,
@@ -2559,11 +2560,11 @@ describe("hot", () => {
             // Hang on compile.
             fs.writeFileSync(lock, "LockExceptInstall");
             touch(input);
-            setTimeout(() => {
-              // Let compile succeed.
-              fs.writeFileSync(lock, "NoLock");
-              touch(input);
-            }, timeout);
+            // setTimeout(() => {
+            //   // Let compile succeed.
+            //   fs.writeFileSync(lock, "NoLock");
+            //   touch(input);
+            // }, timeout);
             return "KeepGoing";
 
           default:
@@ -2617,7 +2618,7 @@ describe("hot", () => {
   test("kill Elm while installing dependencies in TTY mode", async () => {
     const fixture = "kill-elm";
     const dir = path.join(FIXTURES_DIR, fixture);
-    const input = path.join(dir, "src", "Main.elm");
+    const elmJson = path.join(dir, "elm.json");
     const lock = path.join(dir, "lock");
     const timeout = 100;
 
@@ -2626,7 +2627,7 @@ describe("hot", () => {
     setTimeout(() => {
       // Let install succeed.
       fs.writeFileSync(lock, "NoLock");
-      touch(input);
+      touch(elmJson);
     }, timeout);
 
     const { terminal } = await run({
