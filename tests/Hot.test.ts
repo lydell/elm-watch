@@ -2523,28 +2523,21 @@ describe("hot", () => {
     `);
   });
 
-  test.only("kill Elm", async () => {
+  test("kill Elm", async () => {
     const fixture = "kill-elm";
     const dir = path.join(FIXTURES_DIR, fixture);
-    // const elmJson = path.join(dir, "elm.json");
     const input = path.join(dir, "src", "Main.elm");
     const lock = path.join(dir, "lock");
-    // const timeout = 100;
 
     // Hang on installing dependencies.
+    // `bad-bin/compile-forever/elm` then updates `lock` to hang on typecheck
+    // only, and then succeed.
     fs.writeFileSync(lock, "LockAll");
-    // setTimeout(() => {
-    //   // Let install succeed, but hang on typecheck only.
-    //   // Once install is done, the “bad elm” bin changes to NoLock and touches
-    //   // `input` so that typecheck only succeeds.
-    //   fs.writeFileSync(lock, "LockExceptInstall");
-    //   touch(elmJson);
-    // }, timeout);
 
     const { terminal } = await run({
       fixture,
       args: [],
-      scripts: ["Main.js"],
+      scripts: ["main.js"],
       isTTY: false,
       bin: "compile-forever",
       env: {
@@ -2558,13 +2551,9 @@ describe("hot", () => {
         switch (idle) {
           case 1:
             // Hang on compile.
+            // `bad-bin/compile-forever/elm` then updates `lock` to succeed.
             fs.writeFileSync(lock, "LockExceptInstall");
             touch(input);
-            // setTimeout(() => {
-            //   // Let compile succeed.
-            //   fs.writeFileSync(lock, "NoLock");
-            //   touch(input);
-            // }, timeout);
             return "KeepGoing";
 
           default:
@@ -2586,7 +2575,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/elm.json
       ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main: elm make
@@ -2618,22 +2607,15 @@ describe("hot", () => {
   test("kill Elm while installing dependencies in TTY mode", async () => {
     const fixture = "kill-elm";
     const dir = path.join(FIXTURES_DIR, fixture);
-    const elmJson = path.join(dir, "elm.json");
     const lock = path.join(dir, "lock");
-    const timeout = 100;
 
     // Hang on installing dependencies.
     fs.writeFileSync(lock, "LockAll");
-    setTimeout(() => {
-      // Let install succeed.
-      fs.writeFileSync(lock, "NoLock");
-      touch(elmJson);
-    }, timeout);
 
     const { terminal } = await run({
       fixture,
       args: [],
-      scripts: ["Main.js"],
+      scripts: ["main.js"],
       isTTY: true,
       bin: "compile-forever",
       env: {

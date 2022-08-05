@@ -16,10 +16,12 @@ function touch(filePath) {
 }
 
 if (lockFile === "LockAll") {
+  // Hang on install. Switch to hanging on compile or typecheck only.
   fs.writeFileSync(lockPath, "LockExceptInstall");
   touch(elmJsonPath);
   process.stdin.resume();
 } else if (lockFile === "LockExceptInstall" && !isInstall) {
+  // Hang on compile or typecheck only. Switch to succeeding.
   fs.writeFileSync(lockPath, "NoLock");
   touch(inputPath);
   process.stdin.resume();
