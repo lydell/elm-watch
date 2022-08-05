@@ -83,7 +83,7 @@ describe("successful make", () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙   87.5 KiB → 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 …⧘
+      ✅ main⧙   88.5 KiB → 88.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 …⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -98,7 +98,7 @@ describe("successful make", () => {
       ✅ Dependencies
          ● elm/html 1.0.0
          ● elm/browser 1.0.2
-         ● elm/virtual-dom 1.0.2
+         ● elm/virtual-dom 1.0.3
          ● elm/time 1.0.0
          ● elm/json 1.1.3
          ● elm/url 1.0.0
@@ -118,7 +118,7 @@ describe("successful make", () => {
       ⏳ main: elm make --optimize
       🟢 main: elm make done
       ⏳ main: postprocess
-      ✅ main⧙   87.5 KiB → 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ main⧙   88.5 KiB → 88.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -136,7 +136,7 @@ describe("successful make", () => {
       main: elm make --optimize
       main: elm make done
       main: postprocess
-      main: success   87.5 KiB -> 87.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P
+      main: success   88.5 KiB -> 88.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P
 
       Compilation finished in 123 ms.
     `);
@@ -235,7 +235,7 @@ describe("successful make", () => {
     expect(await run("successful-make-no-postprocess", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ 💣  Mine Sweeper Clone⧙                          87.5 KiB     1 ms Q | 1.23 s E⧘
+      ✅ 💣  Mine Sweeper Clone⧙                          88.5 KiB     1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);

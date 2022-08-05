@@ -14,7 +14,7 @@
         },
         "indirect": {
             "elm/time": "1.0.0",
-            "elm/virtual-dom": "1.0.2"
+            "elm/virtual-dom": "1.0.3"
         }
     },
     "test-dependencies": {
