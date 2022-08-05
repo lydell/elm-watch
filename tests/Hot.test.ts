@@ -1783,8 +1783,10 @@ describe("hot", () => {
     const fixture = "delete-elm-stuff";
     const dir = path.join(FIXTURES_DIR, fixture);
     const elmStuff = path.join(dir, "elm-stuff");
+    const elmStuff2 = path.join(dir, "src", "elm-stuff");
     const iDat = path.join(elmStuff, "0.19.1", "i.dat");
     const main = path.join(dir, "src", "Main.elm");
+    rm(elmStuff2);
     const { terminal } = await run({
       fixture,
       args: [],
@@ -1798,7 +1800,7 @@ describe("hot", () => {
           case 1:
             fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
             touch(main);
-            touch(elmStuff);
+            fs.mkdirSync(elmStuff2);
             return "KeepGoing";
           case 2:
             await rimraf(elmStuff);
