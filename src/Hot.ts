@@ -1059,7 +1059,9 @@ function onWatcherEvent(
       }
 
     // Some compiler error messages suggest removing elm-stuff to fix the error.
-    // Restart when that happens.
+    // Restart when that happens. Note: This could be a totally unrelated
+    // elm-stuff directory, but I don’t think it’s worth the trouble trying to
+    // check if it affects the project, and possibly logging if it isn’t.
     case "elm-stuff":
       switch (eventName) {
         case "removed":
