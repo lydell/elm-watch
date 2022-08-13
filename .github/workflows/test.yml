@@ -64,7 +64,7 @@ jobs:
       # fixtures, so that nothing needs to be downloaded while the tests
       # run, which could result in flaky tests.
       - name: fill ELM_HOME with packages
-        run: node -r esbuild-register scripts/EnsureTestDependencies.ts && npx elm make Main.elm --output=/dev/null
+        run: npx elm make Main.elm --output=/dev/null
         working-directory: tests/install-packages
 
       # Use `--forceExit` to avoid test runs “hanging” when tests are failing
