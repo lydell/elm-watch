@@ -43,3 +43,6 @@ jobs:
 
       - name: Prettier
         run: npx prettier --check .
+
+      - name: ensure filling ELM_HOME with packages installs ALL needed packages
+        run: node -r esbuild-register scripts/EnsureTestDependencies.ts
