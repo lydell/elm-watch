@@ -3,11 +3,11 @@ import * as util from "util";
 
 import {
   __ELM_WATCH_DEBUG,
-  __ELM_WATCH_FANCY_EVEN_ON_WINDOWS,
   __ELM_WATCH_MOCKED_TIMINGS,
   __ELM_WATCH_NOT_TTY,
   Env,
   NO_COLOR,
+  WT_SESSION,
 } from "./Env";
 import { ErrorTemplate } from "./Errors";
 import { bold, CLEAR, join, removeColor, WriteStream } from "./Helpers";
@@ -57,7 +57,7 @@ export function makeLogger({
     debug: __ELM_WATCH_DEBUG in env,
     fancy:
       // istanbul ignore next
-      (!IS_WINDOWS || __ELM_WATCH_FANCY_EVEN_ON_WINDOWS in env) && !noColor,
+      (!IS_WINDOWS || WT_SESSION in env) && !noColor,
     isTTY:
       __ELM_WATCH_NOT_TTY in env
         ? /* istanbul ignore next */ false

@@ -14,9 +14,10 @@ export const __ELM_WATCH_DEBUG = "__ELM_WATCH_DEBUG";
 // See `__ELM_WATCH_DEBUG`.
 export const __ELM_WATCH_NOT_TTY = "__ELM_WATCH_NOT_TTY";
 
-// Used to print emojis even on Windows to be able to use the same test snapshots.
-export const __ELM_WATCH_FANCY_EVEN_ON_WINDOWS =
-  "__ELM_WATCH_FANCY_EVEN_ON_WINDOWS";
+// _Windows Terminal_ supports emojis, but cmd.exe and the old PowerShell terminal do not.
+// This detects Windows Terminal so they get fancy output: https://github.com/microsoft/terminal/issues/1040
+// Also used to print emojis even on Windows to be able to use the same test snapshots.
+export const WT_SESSION = "WT_SESSION";
 
 // Used in tests to print hardcoded durations and timings, for snapshots.
 // Type: Check if defined and ignore value.
