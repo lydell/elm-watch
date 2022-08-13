@@ -6,11 +6,11 @@ import * as url from "url";
 
 import { EMOJI } from "../src/Compile";
 import {
-  __ELM_WATCH_FANCY_EVEN_ON_WINDOWS,
   __ELM_WATCH_LOADING_MESSAGE_DELAY,
   __ELM_WATCH_MAX_PARALLEL,
   __ELM_WATCH_MOCKED_TIMINGS,
   Env,
+  WT_SESSION,
 } from "../src/Env";
 import { printStdio } from "../src/Errors";
 import {
@@ -55,7 +55,7 @@ export const TEST_ENV = {
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
   [__ELM_WATCH_MOCKED_TIMINGS]: "",
-  [__ELM_WATCH_FANCY_EVEN_ON_WINDOWS]: "",
+  [WT_SESSION]: "",
 };
 
 export function badElmBinEnv(dir: string): Env {
