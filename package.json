@@ -4,7 +4,7 @@
   "type": "commonjs",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "pretest": "tsc && prettier --check . && eslint . --report-unused-disable-directives",
+    "pretest": "tsc && prettier --check . && eslint . --report-unused-disable-directives && node -r esbuild-register scripts/EnsureTestDependencies.ts",
     "test": "jest --coverage",
     "posttest": "npm run build",
     "build": "node -r esbuild-register scripts/Build.ts"
