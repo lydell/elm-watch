@@ -397,8 +397,8 @@ function getOrCreateContainer(): HTMLElement {
   container.style.all = "unset";
   container.style.position = "fixed";
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
-  container.style.left = "0";
-  container.style.bottom = "0";
+  container.style.left = "-1px";
+  container.style.bottom = "-1px";
 
   const shadowRoot = container.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS));
@@ -1179,6 +1179,11 @@ function render(
   info: Info,
   manageFocus: boolean
 ): void {
+  targetRoot.classList.toggle(
+    CLASS.targetRootBottomHalf,
+    getIsPositionedInBottomHalf(targetRoot)
+  );
+
   targetRoot.replaceChildren(
     view(
       (msg) => {
@@ -1197,6 +1202,11 @@ function render(
   window.__ELM_WATCH_ON_RENDER(TARGET_NAME);
 }
 
+function getIsPositionedInBottomHalf(targetRoot: HTMLElement): boolean {
+  const { top, height } = targetRoot.getBoundingClientRect();
+  return top + height / 2 > window.innerHeight / 2;
+}
+
 const CLASS = {
   chevronButton: "chevronButton",
   compilationModeWithIcon: "compilationModeWithIcon",
@@ -1206,6 +1216,7 @@ const CLASS = {
   debugModeIcon: "debugModeIcon",
   targetName: "targetName",
   targetRoot: "targetRoot",
+  targetRootBottomHalf: "targetRootBottomHalf",
   root: "root",
 };
 
@@ -1273,12 +1284,20 @@ time::after {
 .${CLASS.root} {
   --grey: #767676;
   display: flex;
-  align-items: end;
+  align-items: start;
   overflow: auto;
   max-height: 100vh;
   max-width: 100vw;
   color: black;
   font-family: system-ui;
+}
+
+.${CLASS.targetRootBottomHalf} {
+  align-self: end;
+}
+
+.${CLASS.targetRoot} + .${CLASS.targetRoot} {
+  margin-left: -1px;
 }
 
 .${CLASS.targetRoot}:only-of-type .${CLASS.debugModeIcon},
@@ -1287,16 +1306,21 @@ time::after {
 }
 
 .${CLASS.container} {
+  display: flex;
+  flex-direction: column-reverse;
   background-color: white;
   border: 1px solid var(--grey);
-  border-bottom: none;
-  margin-left: -1px;
+}
+
+.${CLASS.targetRootBottomHalf} .${CLASS.container} {
+  flex-direction: column;
 }
 
 .${CLASS.expandedUiContainer} {
   padding: 0.75em 1em;
   display: grid;
   gap: 0.75em;
+  outline: none;
 }
 
 .${CLASS.expandedUiContainer}:is(.length0, .length1) {
