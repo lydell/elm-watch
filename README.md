@@ -68,7 +68,7 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
 - If you need TypeScript and CSS compilation, you need to set up another build tool alongside elm-watch.
 
 - 👉 [Example](./example)
-- 👉 [Minimal example](./example)
+- 👉 [Minimal example](./example-minimal)
 
 ## What elm-watch _is_
 
