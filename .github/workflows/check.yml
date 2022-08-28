@@ -35,14 +35,5 @@ jobs:
         env:
           NO_ELM_TOOLING_INSTALL: 1
 
-      - name: TypeScript
-        run: npx tsc
-
-      - name: ESLint
-        run: npx eslint --report-unused-disable-directives .
-
-      - name: Prettier
-        run: npx prettier --check .
-
-      - name: ensure filling ELM_HOME with packages installs ALL needed packages
-        run: node -r esbuild-register scripts/EnsureTestDependencies.ts
+      - name: npm run pretest
+        run: npm run pretest
