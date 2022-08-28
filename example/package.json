@@ -14,7 +14,7 @@
     "elm-tooling": "1.8.0",
     "elm-watch": "file:../build",
     "esbuild": "0.15.5",
-    "run-pty": "3.0.0",
+    "run-pty": "4.0.0",
     "uglify-js": "3.17.0"
   }
 }
