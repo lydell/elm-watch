@@ -1190,7 +1190,8 @@ function render(
         dispatch({ tag: "UiMsg", date: getNow(), msg });
       },
       model,
-      info
+      info,
+      manageFocus
     )
   );
 
@@ -1362,6 +1363,43 @@ time::after {
   gap: 0.25em;
 }
 
+.${CLASS.shortStatusContainer}::before {
+  content: "";
+  position: absolute;
+  --top: 50%;
+  --left: 50%;
+  transform: translateX(-50%) scale(0);
+  width: 100vmin;
+  height: 100vmin;
+  border-radius: 50%;
+  animation-duration: 1s;
+  animation-timing-function: ease-out;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+  pointer-events: none;
+  display: none;
+}
+
+.${CLASS.shortStatusContainer}.Error::before {
+  display: block;
+  animation-name: fade;
+  background-color: #eb0000;
+  #00b600
+}
+
+.${CLASS.shortStatusContainer}.Success::before {
+  display: block;
+  animation-name: fade;
+  background-color: #00b600;
+}
+
+@keyframes fade {
+  to {
+    transform: translateX(-50%) scale(1);
+    opacity: 0;
+  }
+}
+
 .${CLASS.chevronButton} {
   appearance: none;
   border: none;
@@ -1372,10 +1410,13 @@ time::after {
 }
 `;
 
+let previousStatus: StatusType = "Nothing";
+
 function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
-  info: Info
+  info: Info,
+  manageFocus: boolean
 ): HTMLElement {
   const model: Model = window.__ELM_WATCH_MOCKED_TIMINGS
     ? {
@@ -1393,6 +1434,18 @@ function view(
     info
   );
 
+  const statusTypeChanged = statusData.statusType !== previousStatus;
+  previousStatus = statusData.statusType;
+
+  const statusClass: StatusType =
+    statusData.statusType === "Success"
+      ? statusTypeChanged
+        ? "Success"
+        : "Nothing"
+      : model.uiExpanded || manageFocus
+      ? "Nothing"
+      : statusData.statusType;
+
   return h(
     HTMLDivElement,
     { className: CLASS.container },
@@ -1402,7 +1455,7 @@ function view(
     h(
       HTMLDivElement,
       {
-        className: CLASS.shortStatusContainer,
+        className: `${CLASS.shortStatusContainer} ${statusClass}`,
         // Placed on the span to increase clickable area.
         onclick: () => {
           dispatch({ tag: "PressedChevron" });
@@ -1492,9 +1545,12 @@ function viewExpandedUi(
 type StatusData = {
   icon: string;
   status: string;
+  statusType: StatusType;
   dl: Array<[string, string]>;
   content: Array<HTMLElement>;
 };
+
+type StatusType = "Error" | "Nothing" | "Success";
 
 function viewStatus(
   dispatch: (msg: UiMsg) => void,
@@ -1507,6 +1563,7 @@ function viewStatus(
       return {
         icon: "⏳",
         status: "Waiting for compilation",
+        statusType: "Nothing",
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1522,6 +1579,7 @@ function viewStatus(
       return {
         icon: "🚨",
         status: "Compilation error",
+        statusType: "Error",
         dl: [],
         content: [
           ...viewCompilationModeChooser({
@@ -1547,6 +1605,7 @@ function viewStatus(
       return {
         icon: "🔌",
         status: "Connecting",
+        statusType: "Nothing",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1560,6 +1619,7 @@ function viewStatus(
       return {
         icon: "⛔️",
         status: "Eval error",
+        statusType: "Error",
         dl: [],
         content: [
           h(
@@ -1574,6 +1634,7 @@ function viewStatus(
       return {
         icon: idleIcon(info.initializedElmAppsStatus),
         status: "Successfully compiled",
+        statusType: "Success",
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1588,6 +1649,7 @@ function viewStatus(
       return {
         icon: "🔌",
         status: "Sleeping",
+        statusType: "Nothing",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1609,6 +1671,7 @@ function viewStatus(
       return {
         icon: "❌",
         status: "Unexpected error",
+        statusType: "Error",
         dl: [],
         content: [
           h(
@@ -1624,6 +1687,7 @@ function viewStatus(
       return {
         icon: "⏳",
         status: "Waiting for reload",
+        statusType: "Nothing",
         dl: [],
         content: [
           h(
