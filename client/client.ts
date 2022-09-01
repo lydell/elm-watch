@@ -346,18 +346,27 @@ function run(): void {
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [updatedModel, cmds] = update(msg, model);
-      const newModel: Model = {
-        ...updatedModel,
-        previousStatusTag: model.status.tag,
-      };
-      const allCmds: Array<Cmd> = [
-        ...cmds,
-        {
-          tag: "UpdateGlobalStatus",
-          reloadStatus: statusToReloadStatus(newModel.status),
-        },
-        { tag: "Render", model: newModel, manageFocus: msg.tag === "UiMsg" },
-      ];
+      const modelChanged = updatedModel !== model;
+      const newModel: Model = modelChanged
+        ? {
+            ...updatedModel,
+            previousStatusTag: model.status.tag,
+          }
+        : model;
+      const allCmds: Array<Cmd> = modelChanged
+        ? [
+            ...cmds,
+            {
+              tag: "UpdateGlobalStatus",
+              reloadStatus: statusToReloadStatus(newModel.status),
+            },
+            {
+              tag: "Render",
+              model: newModel,
+              manageFocus: msg.tag === "UiMsg",
+            },
+          ]
+        : [];
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
@@ -579,8 +588,9 @@ const init = (date: Date): [Model, Array<Cmd>] => {
 function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "AppInit":
-      // Just cause a re-render, so the status icon can update.
-      return [model, []];
+      // Force a re-render, so the status icon can update. Need to create a new
+      // model to trump the `===` check used to avoid re-renders.
+      return [{ ...model }, []];
 
     case "EvalErrored":
       return [
@@ -631,7 +641,8 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "FocusedTab":
       return [
-        model,
+        // Force a re-render for the “Error” status type, so that the animation plays again.
+        statusToStatusType(model.status.tag) === "Error" ? { ...model } : model,
         model.status.tag === "Idle"
           ? [
               {
