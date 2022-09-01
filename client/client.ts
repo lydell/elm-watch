@@ -1428,35 +1428,50 @@ time::after {
   position: absolute;
   margin-top: 0.5em;
   margin-left: 0.5em;
-  transform: translate(-50%, -50%) scale(0);
   width: 100vmin;
   height: 100vmin;
   border-radius: 50%;
-  animation-duration: 1s;
-  animation-timing-function: ease-out;
-  animation-iteration-count: 1;
-  animation-fill-mode: forwards;
+  animation: flash 1s ease-out forwards;
   pointer-events: none;
-  display: none;
 }
 
 .${CLASS.flashError}::before {
-  display: block;
-  animation-name: fade;
   background-color: #eb0000;
-  #00b600
 }
 
 .${CLASS.flashSuccess}::before {
-  display: block;
-  animation-name: fade;
   background-color: #00b600;
 }
 
-@keyframes fade {
+@keyframes flash {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.9;
+  }
+
   to {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0;
+  }
+}
+
+@keyframes nudge {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .${CLASS.flashError}::before,
+  .${CLASS.flashSuccess}::before {
+    transform: translate(-50%, -50%);
+    width: 2em;
+    height: 2em;
+    animation: nudge 0.25s ease-in-out 4 alternate forwards;
   }
 }
 
