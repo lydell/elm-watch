@@ -202,6 +202,7 @@ type UiMsg =
 
 type Model = {
   status: Status;
+  previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
   elmCompiledTimestamp: number;
   uiExpanded: boolean;
@@ -344,7 +345,11 @@ function run(): void {
     initMutable: initMutable(getNow, targetRoot),
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
-      const [newModel, cmds] = update(msg, model);
+      const [updatedModel, cmds] = update(msg, model);
+      const newModel: Model = {
+        ...updatedModel,
+        previousStatusTag: model.status.tag,
+      };
       const allCmds: Array<Cmd> = [
         ...cmds,
         {
@@ -383,6 +388,26 @@ function statusToReloadStatus(status: Status): ReloadStatus {
 
     case "WaitingForReload":
       return { tag: "ReloadRequested", reasons: status.reasons };
+  }
+}
+
+type StatusType = "Error" | "Success" | "Waiting";
+
+function statusToStatusType(statusTag: Status["tag"]): StatusType {
+  switch (statusTag) {
+    case "Idle":
+      return "Success";
+
+    case "Busy":
+    case "Connecting":
+    case "SleepingBeforeReconnect":
+    case "WaitingForReload":
+      return "Waiting";
+
+    case "CompileError":
+    case "EvalError":
+    case "UnexpectedError":
+      return "Error";
   }
 }
 
@@ -540,8 +565,10 @@ function initWebSocket(
 }
 
 const init = (date: Date): [Model, Array<Cmd>] => {
+  const status: Status = { tag: "Connecting", date, attemptNumber: 1 };
   const model: Model = {
-    status: { tag: "Connecting", date, attemptNumber: 1 },
+    status,
+    previousStatusTag: status.tag,
     compilationMode: ORIGINAL_COMPILATION_MODE,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
@@ -1223,6 +1250,25 @@ const CLASS = {
   targetRootBottomHalf: "targetRootBottomHalf",
 };
 
+function getStatusClass({
+  statusType,
+  statusTypeChanged,
+  uiRelatedUpdate,
+}: {
+  statusType: StatusType;
+  statusTypeChanged: boolean;
+  uiRelatedUpdate: boolean;
+}): string | undefined {
+  switch (statusType) {
+    case "Success":
+      return statusTypeChanged ? CLASS.flashSuccess : undefined;
+    case "Error":
+      return uiRelatedUpdate ? undefined : CLASS.flashError;
+    case "Waiting":
+      return undefined;
+  }
+}
+
 const CSS = `
 pre {
   margin: 0;
@@ -1413,8 +1459,6 @@ time::after {
 }
 `;
 
-let previousStatus: StatusType = "Nothing";
-
 function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
@@ -1430,6 +1474,7 @@ function view(
         },
       }
     : passedModel;
+
   const statusData = viewStatus(
     dispatch,
     model.status,
@@ -1437,19 +1482,15 @@ function view(
     info
   );
 
-  const statusTypeChanged = statusData.statusType !== previousStatus;
-  previousStatus = statusData.statusType;
+  const statusType = statusToStatusType(model.status.tag);
+  const statusTypeChanged =
+    statusType !== statusToStatusType(model.previousStatusTag);
 
-  const statusClass =
-    statusData.statusType === "Success"
-      ? statusTypeChanged
-        ? CLASS.flashSuccess
-        : undefined
-      : model.uiExpanded || manageFocus
-      ? undefined
-      : statusData.statusType === "Error"
-      ? CLASS.flashError
-      : undefined;
+  const statusClass = getStatusClass({
+    statusType,
+    statusTypeChanged,
+    uiRelatedUpdate: manageFocus,
+  });
 
   return h(
     HTMLDivElement,
@@ -1554,12 +1595,9 @@ function viewExpandedUi(
 type StatusData = {
   icon: string;
   status: string;
-  statusType: StatusType;
   dl: Array<[string, string]>;
   content: Array<HTMLElement>;
 };
-
-type StatusType = "Error" | "Nothing" | "Success";
 
 function viewStatus(
   dispatch: (msg: UiMsg) => void,
@@ -1572,7 +1610,6 @@ function viewStatus(
       return {
         icon: "⏳",
         status: "Waiting for compilation",
-        statusType: "Nothing",
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1588,7 +1625,6 @@ function viewStatus(
       return {
         icon: "🚨",
         status: "Compilation error",
-        statusType: "Error",
         dl: [],
         content: [
           ...viewCompilationModeChooser({
@@ -1614,7 +1650,6 @@ function viewStatus(
       return {
         icon: "🔌",
         status: "Connecting",
-        statusType: "Nothing",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1628,7 +1663,6 @@ function viewStatus(
       return {
         icon: "⛔️",
         status: "Eval error",
-        statusType: "Error",
         dl: [],
         content: [
           h(
@@ -1643,7 +1677,6 @@ function viewStatus(
       return {
         icon: idleIcon(info.initializedElmAppsStatus),
         status: "Successfully compiled",
-        statusType: "Success",
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1658,7 +1691,6 @@ function viewStatus(
       return {
         icon: "🔌",
         status: "Sleeping",
-        statusType: "Nothing",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1680,7 +1712,6 @@ function viewStatus(
       return {
         icon: "❌",
         status: "Unexpected error",
-        statusType: "Error",
         dl: [],
         content: [
           h(
@@ -1696,7 +1727,6 @@ function viewStatus(
       return {
         icon: "⏳",
         status: "Waiting for reload",
-        statusType: "Nothing",
         dl: [],
         content: [
           h(
@@ -2052,6 +2082,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     root.append(targetRoot);
     const model: Model = {
       status,
+      previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
       elmCompiledTimestamp: 0,
       uiExpanded: true,
