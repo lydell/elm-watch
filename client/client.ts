@@ -1212,13 +1212,15 @@ const CLASS = {
   chevronButton: "chevronButton",
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
-  expandedUiContainer: "expandedUiContainer",
-  shortStatusContainer: "shortStatusContainer",
   debugModeIcon: "debugModeIcon",
+  expandedUiContainer: "expandedUiContainer",
+  flashError: "flashError",
+  flashSuccess: "flashSuccess",
+  root: "root",
+  shortStatusContainer: "shortStatusContainer",
   targetName: "targetName",
   targetRoot: "targetRoot",
   targetRootBottomHalf: "targetRootBottomHalf",
-  root: "root",
 };
 
 const CSS = `
@@ -1363,12 +1365,13 @@ time::after {
   gap: 0.25em;
 }
 
-.${CLASS.shortStatusContainer}::before {
+.${CLASS.flashError}::before,
+.${CLASS.flashSuccess}::before {
   content: "";
   position: absolute;
-  --top: 50%;
-  --left: 50%;
-  transform: translateX(-50%) scale(0);
+  margin-top: 0.5em;
+  margin-left: 0.5em;
+  transform: translate(-50%, -50%) scale(0);
   width: 100vmin;
   height: 100vmin;
   border-radius: 50%;
@@ -1380,14 +1383,14 @@ time::after {
   display: none;
 }
 
-.${CLASS.shortStatusContainer}.Error::before {
+.${CLASS.flashError}::before {
   display: block;
   animation-name: fade;
   background-color: #eb0000;
   #00b600
 }
 
-.${CLASS.shortStatusContainer}.Success::before {
+.${CLASS.flashSuccess}::before {
   display: block;
   animation-name: fade;
   background-color: #00b600;
@@ -1395,7 +1398,7 @@ time::after {
 
 @keyframes fade {
   to {
-    transform: translateX(-50%) scale(1);
+    transform: translate(-50%, -50%) scale(1);
     opacity: 0;
   }
 }
@@ -1437,14 +1440,16 @@ function view(
   const statusTypeChanged = statusData.statusType !== previousStatus;
   previousStatus = statusData.statusType;
 
-  const statusClass: StatusType =
+  const statusClass =
     statusData.statusType === "Success"
       ? statusTypeChanged
-        ? "Success"
-        : "Nothing"
+        ? CLASS.flashSuccess
+        : undefined
       : model.uiExpanded || manageFocus
-      ? "Nothing"
-      : statusData.statusType;
+      ? undefined
+      : statusData.statusType === "Error"
+      ? CLASS.flashError
+      : undefined;
 
   return h(
     HTMLDivElement,
@@ -1455,7 +1460,7 @@ function view(
     h(
       HTMLDivElement,
       {
-        className: `${CLASS.shortStatusContainer} ${statusClass}`,
+        className: CLASS.shortStatusContainer,
         // Placed on the span to increase clickable area.
         onclick: () => {
           dispatch({ tag: "PressedChevron" });
@@ -1473,7 +1478,11 @@ function view(
         )
       ),
       compilationModeIcon(model.compilationMode),
-      icon(statusData.icon, statusData.status),
+      icon(
+        statusData.icon,
+        statusData.status,
+        statusClass === undefined ? {} : { className: statusClass }
+      ),
       h(
         HTMLTimeElement,
         { dateTime: model.status.date.toISOString() },
