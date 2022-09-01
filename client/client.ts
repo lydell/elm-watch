@@ -1976,6 +1976,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 
   for (const [targetName, status] of Object.entries(mockStatuses)) {
     const targetRoot = createTargetRoot(targetName);
+    root.append(targetRoot);
     const model: Model = {
       status,
       compilationMode: status.compilationMode ?? "standard",
@@ -1992,7 +1993,6 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       { ...(status.info ?? info), targetName },
       false
     );
-    root.append(targetRoot);
   }
 }
 
