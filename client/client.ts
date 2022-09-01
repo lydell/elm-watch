@@ -1431,7 +1431,7 @@ time::after {
   width: 100vmin;
   height: 100vmin;
   border-radius: 50%;
-  animation: flash 1s ease-out forwards;
+  animation: flash 0.8s ease-out forwards;
   pointer-events: none;
 }
 
