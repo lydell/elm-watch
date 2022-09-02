@@ -1428,10 +1428,10 @@ time::after {
   position: absolute;
   margin-top: 0.5em;
   margin-left: 0.5em;
-  width: 100vmin;
-  height: 100vmin;
+  width: 80vmin;
+  height: 80vmin;
   border-radius: 50%;
-  animation: flash 0.8s ease-out forwards;
+  animation: flash 0.7s 0.05s ease-out both;
   pointer-events: none;
 }
 
