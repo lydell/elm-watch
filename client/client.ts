@@ -1264,15 +1264,19 @@ const CLASS = {
 function getStatusClass({
   statusType,
   statusTypeChanged,
+  hasReceivedHotReload,
   uiRelatedUpdate,
 }: {
   statusType: StatusType;
   statusTypeChanged: boolean;
+  hasReceivedHotReload: boolean;
   uiRelatedUpdate: boolean;
 }): string | undefined {
   switch (statusType) {
     case "Success":
-      return statusTypeChanged ? CLASS.flashSuccess : undefined;
+      return statusTypeChanged && hasReceivedHotReload
+        ? CLASS.flashSuccess
+        : undefined;
     case "Error":
       return uiRelatedUpdate ? undefined : CLASS.flashError;
     case "Waiting":
@@ -1515,6 +1519,8 @@ function view(
   const statusClass = getStatusClass({
     statusType,
     statusTypeChanged,
+    hasReceivedHotReload:
+      model.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
     uiRelatedUpdate: manageFocus,
   });
 
