@@ -366,7 +366,7 @@ function run(): void {
               manageFocus: msg.tag === "UiMsg",
             },
           ]
-        : [];
+        : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
