@@ -202,6 +202,7 @@ type UiMsg =
 
 type Model = {
   status: Status;
+  previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
   elmCompiledTimestamp: number;
   uiExpanded: boolean;
@@ -344,15 +345,28 @@ function run(): void {
     initMutable: initMutable(getNow, targetRoot),
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
-      const [newModel, cmds] = update(msg, model);
-      const allCmds: Array<Cmd> = [
-        ...cmds,
-        {
-          tag: "UpdateGlobalStatus",
-          reloadStatus: statusToReloadStatus(newModel.status),
-        },
-        { tag: "Render", model: newModel, manageFocus: msg.tag === "UiMsg" },
-      ];
+      const [updatedModel, cmds] = update(msg, model);
+      const modelChanged = updatedModel !== model;
+      const newModel: Model = modelChanged
+        ? {
+            ...updatedModel,
+            previousStatusTag: model.status.tag,
+          }
+        : model;
+      const allCmds: Array<Cmd> = modelChanged
+        ? [
+            ...cmds,
+            {
+              tag: "UpdateGlobalStatus",
+              reloadStatus: statusToReloadStatus(newModel.status),
+            },
+            {
+              tag: "Render",
+              model: newModel,
+              manageFocus: msg.tag === "UiMsg",
+            },
+          ]
+        : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
@@ -383,6 +397,26 @@ function statusToReloadStatus(status: Status): ReloadStatus {
 
     case "WaitingForReload":
       return { tag: "ReloadRequested", reasons: status.reasons };
+  }
+}
+
+type StatusType = "Error" | "Success" | "Waiting";
+
+function statusToStatusType(statusTag: Status["tag"]): StatusType {
+  switch (statusTag) {
+    case "Idle":
+      return "Success";
+
+    case "Busy":
+    case "Connecting":
+    case "SleepingBeforeReconnect":
+    case "WaitingForReload":
+      return "Waiting";
+
+    case "CompileError":
+    case "EvalError":
+    case "UnexpectedError":
+      return "Error";
   }
 }
 
@@ -540,8 +574,10 @@ function initWebSocket(
 }
 
 const init = (date: Date): [Model, Array<Cmd>] => {
+  const status: Status = { tag: "Connecting", date, attemptNumber: 1 };
   const model: Model = {
-    status: { tag: "Connecting", date, attemptNumber: 1 },
+    status,
+    previousStatusTag: status.tag,
     compilationMode: ORIGINAL_COMPILATION_MODE,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
@@ -552,8 +588,9 @@ const init = (date: Date): [Model, Array<Cmd>] => {
 function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "AppInit":
-      // Just cause a re-render, so the status icon can update.
-      return [model, []];
+      // Force a re-render, so the status icon can update. Need to create a new
+      // model to trump the `===` check used to avoid re-renders.
+      return [{ ...model }, []];
 
     case "EvalErrored":
       return [
@@ -604,7 +641,8 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "FocusedTab":
       return [
-        model,
+        // Force a re-render for the “Error” status type, so that the animation plays again.
+        statusToStatusType(model.status.tag) === "Error" ? { ...model } : model,
         model.status.tag === "Idle"
           ? [
               {
@@ -1190,7 +1228,8 @@ function render(
         dispatch({ tag: "UiMsg", date: getNow(), msg });
       },
       model,
-      info
+      info,
+      manageFocus
     )
   );
 
@@ -1211,14 +1250,39 @@ const CLASS = {
   chevronButton: "chevronButton",
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
-  expandedUiContainer: "expandedUiContainer",
-  shortStatusContainer: "shortStatusContainer",
   debugModeIcon: "debugModeIcon",
+  expandedUiContainer: "expandedUiContainer",
+  flashError: "flashError",
+  flashSuccess: "flashSuccess",
+  root: "root",
+  shortStatusContainer: "shortStatusContainer",
   targetName: "targetName",
   targetRoot: "targetRoot",
   targetRootBottomHalf: "targetRootBottomHalf",
-  root: "root",
 };
+
+function getStatusClass({
+  statusType,
+  statusTypeChanged,
+  hasReceivedHotReload,
+  uiRelatedUpdate,
+}: {
+  statusType: StatusType;
+  statusTypeChanged: boolean;
+  hasReceivedHotReload: boolean;
+  uiRelatedUpdate: boolean;
+}): string | undefined {
+  switch (statusType) {
+    case "Success":
+      return statusTypeChanged && hasReceivedHotReload
+        ? CLASS.flashSuccess
+        : undefined;
+    case "Error":
+      return uiRelatedUpdate ? undefined : CLASS.flashError;
+    case "Waiting":
+      return undefined;
+  }
+}
 
 const CSS = `
 pre {
@@ -1362,6 +1426,60 @@ time::after {
   gap: 0.25em;
 }
 
+.${CLASS.flashError}::before,
+.${CLASS.flashSuccess}::before {
+  content: "";
+  position: absolute;
+  margin-top: 0.5em;
+  margin-left: 0.5em;
+  --size: min(500px, 100vmin);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  animation: flash 0.7s 0.05s ease-out both;
+  pointer-events: none;
+}
+
+.${CLASS.flashError}::before {
+  background-color: #eb0000;
+}
+
+.${CLASS.flashSuccess}::before {
+  background-color: #00b600;
+}
+
+@keyframes flash {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.9;
+  }
+
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes nudge {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .${CLASS.flashError}::before,
+  .${CLASS.flashSuccess}::before {
+    transform: translate(-50%, -50%);
+    width: 2em;
+    height: 2em;
+    animation: nudge 0.25s ease-in-out 4 alternate forwards;
+  }
+}
+
 .${CLASS.chevronButton} {
   appearance: none;
   border: none;
@@ -1375,7 +1493,8 @@ time::after {
 function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
-  info: Info
+  info: Info,
+  manageFocus: boolean
 ): HTMLElement {
   const model: Model = window.__ELM_WATCH_MOCKED_TIMINGS
     ? {
@@ -1386,12 +1505,25 @@ function view(
         },
       }
     : passedModel;
+
   const statusData = viewStatus(
     dispatch,
     model.status,
     model.compilationMode,
     info
   );
+
+  const statusType = statusToStatusType(model.status.tag);
+  const statusTypeChanged =
+    statusType !== statusToStatusType(model.previousStatusTag);
+
+  const statusClass = getStatusClass({
+    statusType,
+    statusTypeChanged,
+    hasReceivedHotReload:
+      model.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
+    uiRelatedUpdate: manageFocus,
+  });
 
   return h(
     HTMLDivElement,
@@ -1420,7 +1552,24 @@ function view(
         )
       ),
       compilationModeIcon(model.compilationMode),
-      icon(statusData.icon, statusData.status),
+      icon(
+        statusData.icon,
+        statusData.status,
+        statusClass === undefined
+          ? {}
+          : {
+              className: statusClass,
+              onanimationend: (event) => {
+                // The animations are designed to work even without this (they
+                // stay on the last frame). We also have `pointer-events: none`.
+                // But remove the absolutely positioned animation element just
+                // in case.
+                if (event.currentTarget instanceof HTMLElement) {
+                  event.currentTarget.classList.remove(statusClass);
+                }
+              },
+            }
+      ),
       h(
         HTMLTimeElement,
         { dateTime: model.status.date.toISOString() },
@@ -1979,6 +2128,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     root.append(targetRoot);
     const model: Model = {
       status,
+      previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
       elmCompiledTimestamp: 0,
       uiExpanded: true,
