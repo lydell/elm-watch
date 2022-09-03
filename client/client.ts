@@ -1222,15 +1222,6 @@ function render(
     getIsPositionedInBottomHalf(targetRoot)
   );
 
-  const screenSize = Math.min(window.screen.width, window.screen.height);
-  const windowSize = Math.min(window.innerWidth, window.innerHeight);
-  const size = Math.min(screenSize, 2 * windowSize);
-  targetRoot.style.setProperty("--flash-size", `${size}px`);
-  targetRoot.style.setProperty(
-    "--flash-duration",
-    `${Math.max(0.4, size / 2 / 777).toFixed(2)}s`
-  );
-
   targetRoot.replaceChildren(
     view(
       (msg) => {
@@ -1441,10 +1432,11 @@ time::after {
   position: absolute;
   margin-top: 0.5em;
   margin-left: 0.5em;
-  width: var(--flash-size);
-  height: var(--flash-size);
+  --size: min(500px, 100vmin);
+  width: var(--size);
+  height: var(--size);
   border-radius: 50%;
-  animation: flash var(--flash-duration) 0.05s ease-out both;
+  animation: flash 0.7s 0.05s ease-out both;
   pointer-events: none;
 }
 
