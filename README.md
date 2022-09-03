@@ -133,7 +133,7 @@ When using `elm-watch hot`, you’ll see a little box in the bottom-left corner 
 ▼ ✅ 13:10:05
 ```
 
-It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful for knowing when the last hot reload was applied. No more wondering “did the hot reload stop working? Or did I edit the wrong piece of code?” If the time has updated, so has the running code.
+It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful for knowing when the last hot reload was applied. No more wondering “did the hot reload stop working? Or did I edit the wrong piece of code?” If the time has updated, so has the running code. On top of that, there’s an animation – a green circle growing from the ✅ and fading out as it goes – to let you know that a hot reload has gone through successfully.
 
 Clicking the box expands it, letting you switch between the “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
 
@@ -149,6 +149,8 @@ Pay extra attention to 🚨 (compilation error). If you see it, the latest chang
 
 - I prefer seeing the errors in the terminal, in the place they were designed to be displayed.
 - I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Some error overlays prevent you from doing that, or require you to repeatedly close it. It’s nice having a runnable version of your app locally as much of the time as possible, even if the code is currently messy, in my opinion.
+
+To make that 🚨 more noticeable, there’s a similar animation as for ✅ – a growing and fading _red_ circle – which also is repeated every time you focus the tab (switch to it from another tab or window, or move focus from the dev tools to the page).
 
 ## elm-watch.json
 
