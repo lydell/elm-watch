@@ -219,12 +219,25 @@ For each target, provide the following:
 
 ### postprocess
 
+> ℹ️ Postprocessing is an “advanced” feature. If you’re just starting out – skip it.
+
 This lets you change Elm’s JavaScript output. There are two use cases for this:
 
 - Patch the JS during development as well as in production.
 - Minify the JS in production.
 
-The `"postprocess"` field is a non-empty array, describing a command to run. The first item of the array is the name of the command to spawn: It’s looked up in `PATH`, falling back to being relative to `elm-watch.json`. The remaining items are simply arguments to pass to the spawned command. Note: The arguments are just strings, not `bash` code or something like that. The command is run with CWD set to the `elm-watch.json` directory.
+The `"postprocess"` field is a non-empty array, describing a command to run. There are two types of commands:
+
+- [External process](#external-process) – run any program written in any language
+- [elm-watch-node](#elm-watch-node) – run a Node.js inside the elm-watch process itself for performance
+
+If you’re in a hurry, I recommend going straight to [elm-watch-node](#elm-watch-node), but reading [External process](#external-process) gives the full story.
+
+The goal of the postprocessing feature is to be an easier way of transforming Elm’s JavaScript output than learning how to write for example a [webpack plugin]. It’s essentially just a `String -> String` function, while still giving you full control. To push you in the “full control” direction, there are no “shortcuts” for postprocessing in elm-watch – the only way to do it is to write a small script (see the following two sections).
+
+#### External process
+
+The first item of the `"postprocess"` array is the name of the command to spawn: It’s looked up in `PATH`, falling back to being relative to `elm-watch.json`. The remaining items are simply arguments to pass to the spawned command. Note: The arguments are just strings, not `bash` code or something like that. The command is run with CWD set to the `elm-watch.json` directory.
 
 Apart from the specified arguments, elm-watch appends some more, in this order:
 
@@ -232,7 +245,7 @@ Apart from the specified arguments, elm-watch appends some more, in this order:
 2. Compilation mode. Either `"debug"`, `"standard"` or `"optimize"`. This lets you only minify in `--optimize` mode, for example.
 3. Run mode. Either `"make"` or `"hot"`. I recommend doing the same work for both modes, but in case that’s not feasible you have the possibility.
 
-For example, if you have `"postprocess": ["bash", "postprocess.bash", "one", "two"]` your script might receive these arguments: `one two "My target name" standard hot`.
+For example, if you have `"postprocess": ["bash", "postprocess.bash", "one", "two"]` your script might receive these 5 arguments: `one two "My target name" standard hot`.
 
 The command is expected to:
 
@@ -241,13 +254,37 @@ The command is expected to:
 3. Exit with code 0. Otherwise an error will be reported, with stdout and stderr printed.
 4. Not do any side effects. Think of your command as a `String -> String` pure function.
 
-You might wonder why minifying for production is a concern for elm-watch, which tries to focus _only_ on Elm. Couldn’t you just minify yourself after running `elm-watch make`?
+Example (in `bash`):
 
-- Well, you _could,_ but minifiers can be slow so running in parallel is important. But annoying to code! So you’re probably not going to do it.
-- elm-watch needs parallel postprocessing anyway for patching during development.
-- I think it’s nice to be able to easily test your minified code. With elm-watch, it’s one click away.
+```bash
+target_name="$1"
+compilation_mode="$2"
+run_mode="$3"
 
-> Apart from minifying, you might be tempted to also cache-bust the JS files by putting a hash of their content in the file name. For example: `main.js` ➡️ `main.50f612.js`. It’s not a good idea to do that _in the postprocess script,_ though. While you might get away with creating the files as a side effect in your postprocess script, you also want to keep track of them all in one place and update HTML files pointing to them. Since all postprocess commands run in parallel, that can be tricky to do correctly. Unlike minifying, hashing and updating HTML files should be fast, so I suggest doing that as a separate step afterwards. elm-watch assumes that your command is pure, so if you do things that makes that assumption not hold you’re on your own.
+patch() {
+  # Silly example of patching the output, which just changes all occurrences of
+  # the string 'apple' to 'banana'.
+  sed "s/'apple'/'banana'/g"
+}
+
+case "$compilation_mode" in
+  debug|standard)
+    patch
+    ;;
+
+  optimize)
+    # Also minify with esbuild in --optimize mode.
+    patch | ./node_modules/.bin/esbuild --minify
+    ;;
+
+  *)
+    echo "Unknown compilation mode: $compilation_mode"
+    exit 1
+    ;;
+esac
+```
+
+Debugging tip: Print stuff to stdout **and exit with code 1.** For example, `echo "my debug stuff"; exit 1`. Then elm-watch will report the error, and print all stdout and stderr it got so far. (If you exit with code 0, your debug prints will end up in the compiled JS.)
 
 #### elm-watch-node
 
@@ -271,7 +308,7 @@ It’s basically the same but faster. The difference is that `elm-watch-node` ru
 
 Here are the differences compared to `node`.
 
-- The first argument after `elm-watch-node` _has_ to be the file to run. No other flags or arguments to `node` are supported.
+- The `"postprocess"` array must be exactly 2 items: `"elm-watch-node"` plus the file to run. No other flags or arguments to `node` are supported.
 - Your code runs in the same process (but on a thread) as elm-watch, so you don’t get an isolated environment.
 - Instead of using stdin, stdout, process arguments and exit codes you just provide a good old pure function (see below).
 
@@ -309,6 +346,12 @@ Example:
 // @ts-check
 import minify from "some-minifier";
 
+function patch(code) {
+  // Silly example of patching the output, which just changes all occurrences of
+  // the string 'apple' to 'banana'.
+  return code.replace(/'apple'/g, "'banana'");
+}
+
 /**
  * @type {import("elm-watch/elm-watch-node").Postprocess}
  */
@@ -316,10 +359,10 @@ export default function postprocess({ code, compilationMode }) {
   switch (compilationMode) {
     case "standard":
     case "debug":
-      return code;
+      return patch(code);
 
     case "optimize":
-      return minify(code);
+      return minify(patch(code));
 
     default:
       throw new Error(
@@ -329,7 +372,19 @@ export default function postprocess({ code, compilationMode }) {
 }
 ```
 
-> Note: `elm-watch-node` is only available because elm-watch happens to be written in Node.js. An implementation written in another language is not expected to embed a JavaScript runtime just to implement `elm-watch-node`. In such a case you will have to make do with some other faster scripting language (like `bash`), or pay the penalty of starting `node` every time.
+Debugging tip: Use `console.log("my debug stuff", 1 + 1); throw new Error()`. Then elm-watch will report that error, and print stuff that you’ve logged. (If you use _only_ `console.log("my debug stuff")` with no `throw new Error()` you won’t see the log).
+
+> Note: `elm-watch-node` is only available because elm-watch happens to be written in Node.js. An [implementation written in another language](#ideas-for-the-future) is not expected to embed a JavaScript runtime just to implement `elm-watch-node`. In such a case you will have to make do with some other faster scripting language (like `bash`), or pay the penalty of starting `node` every time.
+
+#### Postprocess notes
+
+You might wonder why minifying for production is a concern for elm-watch, which tries to focus _only_ on Elm. Couldn’t you just minify yourself after running `elm-watch make`?
+
+- Well, you _could,_ but minifiers can be slow so running in parallel is important. But annoying to code! So you’re probably not going to do it.
+- elm-watch needs parallel postprocessing anyway for patching during development.
+- I think it’s nice to be able to easily test your minified code. With elm-watch, it’s one click away.
+
+Apart from minifying, you might be tempted to also cache-bust the JS files by putting a hash of their content in the file name. For example: `main.js` ➡️ `main.50f612.js`. It’s not a good idea to do that _in the postprocess script,_ though. While you might get away with creating the files as a side effect in your postprocess script, you also want to keep track of them all in one place and update HTML files pointing to them. Since all postprocess commands run in parallel, that can be tricky to do correctly (you’ll probably end up with parallel invocations overwriting each other). I suggest doing that as a separate step afterwards. (Unlike minifying, hashing and updating HTML files should be fast, so no need to worry about parallelization.) elm-watch assumes that your command is pure, so if you do things that makes that assumption not hold you’re on your own.
 
 ## Hot reloading
 
@@ -405,18 +460,19 @@ elm-watch grew out of my frustration with [Parcel], and also [webpack]. Support 
 I’ve heard [Vite] is really fast and reliable, including the Elm plugin. But I don’t even feel like trying it at this point. JavaScript build tools come and go. It’s nice not having to change your Elm setup because you switched tooling for JavaScript.
 
 [elm-go]: https://github.com/lucamug/elm-go
+[elm-guide-install]: https://guide.elm-lang.org/install/elm.html
 [elm-hot]: https://github.com/klazuka/elm-hot
 [elm-live]: https://github.com/wking-io/elm-live
 [elm-monitor]: https://github.com/layflags/elm-monitor
+[elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm
 [elm-remotedev]: https://github.com/utkarshkukreti/elm-remotedev
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
 [esbuild]: https://esbuild.github.io/
-[elm-guide-install]: https://guide.elm-lang.org/install/elm.html
-[elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm
 [parcel]: https://parceljs.org/
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
 [redux devtools]: https://github.com/reduxjs/redux-devtools
 [run-pty]: https://github.com/lydell/run-pty/
 [vite]: https://vitejs.dev/
+[webpack plugin]: https://webpack.js.org/api/plugins/
 [webpack]: https://webpack.js.org/
 [worker thread]: https://nodejs.org/api/worker_threads.html
