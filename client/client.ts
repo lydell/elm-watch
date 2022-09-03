@@ -1563,7 +1563,20 @@ function view(
       icon(
         statusData.icon,
         statusData.status,
-        statusClass === undefined ? {} : { className: statusClass }
+        statusClass === undefined
+          ? {}
+          : {
+              className: statusClass,
+              onanimationend: (event) => {
+                // The animations are designed to work even without this (they
+                // stay on the last frame). We also have `pointer-events: none`.
+                // But remove the absolutely positioned animation element just
+                // in case.
+                if (event.currentTarget instanceof HTMLElement) {
+                  event.currentTarget.classList.remove(statusClass);
+                }
+              },
+            }
       ),
       h(
         HTMLTimeElement,
