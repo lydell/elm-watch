@@ -2317,7 +2317,17 @@ function onWebSocketToServerMessage(
     }
 
     case "FocusedTab":
-      return [model, [{ tag: "WebSocketUpdatePriority", webSocket }]];
+      return [
+        model,
+        [
+          { tag: "WebSocketUpdatePriority", webSocket },
+          {
+            tag: "WebSocketSend",
+            webSocket,
+            message: { tag: "FocusedTabAcknowledged" },
+          },
+        ],
+      ];
   }
 }
 
