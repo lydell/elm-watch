@@ -69,6 +69,7 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
 
 - 👉 [Example](./example)
 - 👉 [Minimal example](./example-minimal)
+- 📽 [Video showing how to get started][getting-started-with-elm-watch]
 
 ## What elm-watch _is_
 
@@ -468,6 +469,7 @@ I’ve heard [Vite] is really fast and reliable, including the Elm plugin. But I
 [elm-remotedev]: https://github.com/utkarshkukreti/elm-remotedev
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
 [esbuild]: https://esbuild.github.io/
+[getting-started-with-elm-watch]: https://www.youtube.com/watch?v=n15nOCZnTac
 [parcel]: https://parceljs.org/
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
 [redux devtools]: https://github.com/reduxjs/redux-devtools
