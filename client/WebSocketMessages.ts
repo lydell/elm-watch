@@ -2,6 +2,10 @@ import * as Decode from "tiny-decoders";
 
 import { CompilationMode } from "../src/Types";
 
+const FocusedTabAcknowledged = Decode.fieldsAuto({
+  tag: () => "FocusedTabAcknowledged" as const,
+});
+
 export type StatusChanged = ReturnType<typeof StatusChanged>;
 const StatusChanged = Decode.fieldsAuto({
   tag: () => "StatusChanged" as const,
@@ -40,6 +44,7 @@ export type WebSocketToClientMessage = ReturnType<
   typeof WebSocketToClientMessage
 >;
 export const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
+  FocusedTabAcknowledged,
   StatusChanged,
   SuccessfullyCompiled,
   SuccessfullyCompiledButRecordFieldsChanged,

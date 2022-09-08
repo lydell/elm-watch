@@ -19,6 +19,7 @@ declare global {
   interface Window {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
     __ELM_WATCH_MOCKED_TIMINGS: boolean;
+    __ELM_WATCH_WEBSOCKET_TIMEOUT: number;
     __ELM_WATCH_RELOAD_STATUSES: Record<string, ReloadStatus>;
     __ELM_WATCH_RELOAD_PAGE: (message: string | undefined) => void;
     __ELM_WATCH_ON_INIT: () => void;
@@ -82,6 +83,11 @@ type ReloadStatus =
 
 window.__ELM_WATCH_MOCKED_TIMINGS ??= false;
 
+// In a browser on the same computer, sending a message and receiving a reply
+// takes around 2-4 ms. In iOS Safari via WiFi, I’ve seen it take up to 120 ms.
+// So 1 second should be plenty above the threshold, while not taking too long.
+window.__ELM_WATCH_WEBSOCKET_TIMEOUT ??= 1000;
+
 window.__ELM_WATCH_ON_INIT ??= () => {
   // Do nothing.
 };
@@ -138,6 +144,7 @@ const DEBUG = String("%DEBUG%") === "true";
 type Mutable = {
   removeListeners: () => void;
   webSocket: WebSocket;
+  webSocketTimeoutId: NodeJS.Timeout | undefined;
 };
 
 type Msg =
@@ -240,6 +247,12 @@ type Cmd =
   | {
       tag: "UpdateGlobalStatus";
       reloadStatus: ReloadStatus;
+    }
+  | {
+      tag: "WebSocketTimeoutBegin";
+    }
+  | {
+      tag: "WebSocketTimeoutClear";
     };
 
 type Status =
@@ -480,6 +493,7 @@ const initMutable =
         INITIAL_ELM_COMPILED_TIMESTAMP,
         dispatch
       ),
+      webSocketTimeoutId: undefined,
     };
 
     window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = {
@@ -504,6 +518,10 @@ const initMutable =
           });
           mutable.removeListeners();
           mutable.webSocket.close();
+          if (mutable.webSocketTimeoutId !== undefined) {
+            clearTimeout(mutable.webSocketTimeoutId);
+            mutable.webSocketTimeoutId = undefined;
+          }
           targetRoot.remove();
           resolvePromise(undefined);
         } else {
@@ -650,6 +668,9 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
                 message: { tag: "FocusedTab" },
                 sendKey: model.status.sendKey,
               },
+              {
+                tag: "WebSocketTimeoutBegin",
+              },
             ]
           : [],
       ];
@@ -741,6 +762,9 @@ function onWebSocketToClientMessage(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    case "FocusedTabAcknowledged":
+      return [model, [{ tag: "WebSocketTimeoutClear" }]];
+
     case "StatusChanged":
       return statusChanged(date, msg, model);
 
@@ -986,6 +1010,48 @@ const runCmd =
       case "UpdateGlobalStatus":
         window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = cmd.reloadStatus;
         reloadPageIfNeeded();
+        return;
+
+      // On iOS, if you lock the phone and wait a couple of seconds, the Web
+      // Socket disconnects (check the “web socket connections: X” counter in
+      // the terminal). Same thing if you just go to the home screen.  When you
+      // go back to the tab, I’ve ended up in a state where the Web Socket
+      // appears connected, but you don’t receive any messages and when I tried
+      // to switch compilation mode the server never got any message. Apparently
+      // “broken connections” is a thing with Web Sockets and the way you detect
+      // them is by sending a ping-pong pair with a timeout:
+      // https://github.com/websockets/ws/tree/975382178f8a9355a5a564bb29cb1566889da9ba#how-to-detect-and-close-broken-connections
+      // In our case, the window "focus" event occurs when returning to the page
+      // after unlocking the phone, or switching from another tab or app, and we
+      // already send a `FocusedTab` message then. That’s the perfect ping, and
+      // `FocusedTabAcknowledged` is the pong.
+      case "WebSocketTimeoutBegin":
+        if (mutable.webSocketTimeoutId === undefined) {
+          mutable.webSocketTimeoutId = setTimeout(() => {
+            mutable.webSocketTimeoutId = undefined;
+            // Sometimes, `mutable.webSocket.readyState` is `WebSocket.OPEN` and
+            // sometimes it’s `WebSocket.CLOSED` when getting here (on iOS).
+            // - OPEN: That’s not really true.
+            // - CLOSED: We missed the "close" event (iOS didn’t give it to us).
+            // Either way, `mutable.webSocket.close()` is safe to run even if
+            // the Web Socket is already closed. Finally, on OPEN, the
+            // `.close()` method seems to never trigger our "close" listener, so
+            // always dispatch ourselves. It doesn’t matter if another dispatch
+            // is made just after.
+            mutable.webSocket.close();
+            dispatch({
+              tag: "WebSocketClosed",
+              date: getNow(),
+            });
+          }, window.__ELM_WATCH_WEBSOCKET_TIMEOUT);
+        }
+        return;
+
+      case "WebSocketTimeoutClear":
+        if (mutable.webSocketTimeoutId !== undefined) {
+          clearTimeout(mutable.webSocketTimeoutId);
+          mutable.webSocketTimeoutId = undefined;
+        }
         return;
     }
   };
