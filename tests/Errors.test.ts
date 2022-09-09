@@ -2608,6 +2608,18 @@ describe("errors", () => {
 
         {"default": {}}
 
+        Here is a sample function to get you started:
+
+        // CJS
+        module.exports = async function postprocess({ code, targetName, compilationMode }) {
+          return code;
+        };
+
+        // MJS
+        export default async function postprocess({ code, targetName, compilationMode }) {
+          return code;
+        };
+
         🚨 ⧙1⧘ error found
 
         🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
@@ -2634,6 +2646,18 @@ describe("errors", () => {
         ⧙imported⧘ is:
 
         {"default": Object(1), "postprocess": function "postprocess"}
+
+        Here is a sample function to get you started:
+
+        // CJS
+        module.exports = async function postprocess({ code, targetName, compilationMode }) {
+          return code;
+        };
+
+        // MJS
+        export default async function postprocess({ code, targetName, compilationMode }) {
+          return code;
+        };
 
         STDOUT:
         This is stdout
