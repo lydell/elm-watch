@@ -606,6 +606,8 @@ export function elmWatchNodeDefaultExportNotFunction(
   stdout: string,
   stderr: string
 ): ErrorTemplate {
+  // This is in a variable to avoid a regex in scripts/Build.ts removing the line.
+  const moduleExports = "module.exports";
   return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", scriptPath)`
 I imported your postprocess file:
 
@@ -622,7 +624,7 @@ ${printUnknownValueAsString(imported)}
 Here is a sample function to get you started:
 
 // CJS
-module.exports = async function postprocess({ code, targetName, compilationMode }) {
+${moduleExports} = async function postprocess({ code, targetName, compilationMode }) {
   return code;
 };
 
