@@ -619,6 +619,18 @@ ${bold("imported")} is:
 
 ${printUnknownValueAsString(imported)}
 
+Here is a sample function to get you started:
+
+// CJS
+module.exports = async function postprocess({ code, targetName, compilationMode }) {
+  return code;
+};
+
+// MJS
+export default async function postprocess({ code, targetName, compilationMode }) {
+  return code;
+};
+
 ${printElmWatchNodeStdio(stdout, stderr)}
 `;
 }
