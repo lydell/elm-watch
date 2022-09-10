@@ -47,12 +47,9 @@ describe("help", () => {
     expect(output).toMatchInlineSnapshot(`
       ⧙elm-watch init⧘
           Create a minimal ⧙elm-watch.json⧘ in the current directory.
-          ⧙elm-watch.json⧘ defines named ⧙targets⧘ for the below commands.
 
       ⧙elm-watch make [--debug|--optimize] [target names...]⧘
           Compile Elm code into JS. Similar to ⧙elm make⧘.
-          Elm input files and JS output files are defined
-          in ⧙targets⧘ in ⧙elm-watch.json⧘.
 
       ⧙elm-watch hot [target names...]⧘
           Recompile whenever your Elm files change,
@@ -60,7 +57,7 @@ describe("help", () => {
           You can switch to ⧙--debug⧘ and ⧙--optimize⧘
           mode in the browser.
 
-      By default all ⧙targets⧘ in the closest ⧙elm-watch.json⧘ are built.
+      By default all targets in the closest ⧙elm-watch.json⧘ are built.
       Pass ⧙target names⧘ to only build some. Names are matched by substring!
 
       ⧙---⧘
@@ -117,12 +114,9 @@ describe("help", () => {
       .toMatchInlineSnapshot(`
       elm-watch init
           Create a minimal elm-watch.json in the current directory.
-          elm-watch.json defines named targets for the below commands.
 
       elm-watch make [--debug|--optimize] [target names...]
           Compile Elm code into JS. Similar to elm make.
-          Elm input files and JS output files are defined
-          in targets in elm-watch.json.
 
       elm-watch hot [target names...]
           Recompile whenever your Elm files change,
