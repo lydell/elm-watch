@@ -47,21 +47,21 @@ describe("help", () => {
     expect(output).toMatchInlineSnapshot(`
       ⧙elm-watch init⧘
           Create a minimal ⧙elm-watch.json⧘ in the current directory.
+          ⧙elm-watch.json⧘ defines named ⧙targets⧘ for the other commands.
 
-      ⧙elm-watch make [--debug|--optimize] [targets...]⧘
+      ⧙elm-watch make [--debug|--optimize] [target names...]⧘
           Compile Elm code into JS. Similar to ⧙elm make⧘.
+          Elm input files and JS output files are defined
+          in ⧙elm-watch.json⧘ and are called ⧙targets⧘.
 
-      ⧙elm-watch hot [targets...]⧘
+      ⧙elm-watch hot [target names...]⧘
           Recompile whenever your Elm files change,
           and reload the compiled JS in the browser.
           You can switch to ⧙--debug⧘ and ⧙--optimize⧘
           mode in the browser.
 
-      ⧙targets⧘ (inputs and outputs) are specified in the closest ⧙elm-watch.json⧘,
-      rather than with command line flags.
-
-      By default all targets are built. Pass target names to only build some.
-      Targets are matched by substring!
+      By default all ⧙targets⧘ in the closest ⧙elm-watch.json⧘ are built.
+      Pass ⧙target names⧘ to only build some. Names are matched by substring!
 
       ⧙---⧘
 
@@ -117,21 +117,21 @@ describe("help", () => {
       .toMatchInlineSnapshot(`
       elm-watch init
           Create a minimal elm-watch.json in the current directory.
+          elm-watch.json defines named targets for the other commands.
 
-      elm-watch make [--debug|--optimize] [targets...]
+      elm-watch make [--debug|--optimize] [target names...]
           Compile Elm code into JS. Similar to elm make.
+          Elm input files and JS output files are defined
+          in elm-watch.json and are called targets.
 
-      elm-watch hot [targets...]
+      elm-watch hot [target names...]
           Recompile whenever your Elm files change,
           and reload the compiled JS in the browser.
           You can switch to --debug and --optimize
           mode in the browser.
 
-      targets (inputs and outputs) are specified in the closest elm-watch.json,
-      rather than with command line flags.
-
-      By default all targets are built. Pass target names to only build some.
-      Targets are matched by substring!
+      By default all targets in the closest elm-watch.json are built.
+      Pass target names to only build some. Names are matched by substring!
 
       ---
 

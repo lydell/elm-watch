@@ -5,6 +5,7 @@ import { LoggerConfig } from "./Logger";
 
 const elmWatchJson = bold("elm-watch.json");
 const targets = bold("targets");
+const targetNames = bold("target names");
 
 export function render(loggerConfig: LoggerConfig): string {
   // Not trimming on purpose.
@@ -29,21 +30,21 @@ ${join(
   return `
 ${bold("elm-watch init")}
     Create a minimal ${elmWatchJson} in the current directory.
+    ${elmWatchJson} defines named ${targets} for the other commands.
 
-${bold("elm-watch make [--debug|--optimize] [targets...]")}
+${bold("elm-watch make [--debug|--optimize] [target names...]")}
     Compile Elm code into JS. Similar to ${bold("elm make")}.
+    Elm input files and JS output files are defined
+    in ${elmWatchJson} and are called ${targets}.
 
-${bold("elm-watch hot [targets...]")}
+${bold("elm-watch hot [target names...]")}
     Recompile whenever your Elm files change,
     and reload the compiled JS in the browser.
     You can switch to ${bold("--debug")} and ${bold("--optimize")}
     mode in the browser.
 
-${targets} (inputs and outputs) are specified in the closest ${elmWatchJson},
-rather than with command line flags.
-
-By default all targets are built. Pass target names to only build some.
-Targets are matched by substring!
+By default all ${targets} in the closest ${elmWatchJson} are built.
+Pass ${targetNames} to only build some. Names are matched by substring!
 
 ${dim("---")}
 ${symbolLegend}
