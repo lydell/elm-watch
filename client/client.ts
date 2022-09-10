@@ -1922,7 +1922,7 @@ function humanList(list: Array<string>, joinWord: string): string {
     ? list.join("")
     : length === 2
     ? list.join(` ${joinWord} `)
-    : `${list.slice(0, length - 2).join(",")}, ${list
+    : `${list.slice(0, length - 2).join(", ")}, ${list
         .slice(-2)
         .join(` ${joinWord} `)}`;
 }
