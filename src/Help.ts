@@ -30,12 +30,12 @@ ${join(
   return `
 ${bold("elm-watch init")}
     Create a minimal ${elmWatchJson} in the current directory.
-    ${elmWatchJson} defines named ${targets} for the other commands.
+    ${elmWatchJson} defines named ${targets} for the below commands.
 
 ${bold("elm-watch make [--debug|--optimize] [target names...]")}
     Compile Elm code into JS. Similar to ${bold("elm make")}.
     Elm input files and JS output files are defined
-    in ${elmWatchJson} and are called ${targets}.
+    in ${targets} in ${elmWatchJson}.
 
 ${bold("elm-watch hot [target names...]")}
     Recompile whenever your Elm files change,
