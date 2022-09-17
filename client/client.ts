@@ -1620,6 +1620,7 @@ textarea {
   font-weight: inherit;
   letter-spacing: inherit;
   line-height: inherit;
+  color: inherit;
   margin: 0;
 }
 
@@ -1700,11 +1701,15 @@ time::after {
 }
 
 .${CLASS.expandedUiContainer} {
-  padding: 0.75em 1em;
+  padding: 1em;
   display: grid;
   gap: 0.75em;
   outline: none;
   contain: paint;
+}
+
+.${CLASS.targetRootBottomHalf} .${CLASS.expandedUiContainer} {
+  padding: 0.75em 1em;
 }
 
 .${CLASS.expandedUiContainer}:is(.length0, .length1) {
@@ -1752,6 +1757,12 @@ time::after {
   pointer-events: auto;
   width: 1em;
   height: 1em;
+  text-align: center;
+  line-height: 1em;
+}
+
+.${CLASS.browserUiPositionButton}:hover {
+  background-color: var(--grey);
 }
 
 .${CLASS.targetRoot}:not(:first-child) .${CLASS.browserUiPositionChooser} {
@@ -2668,7 +2679,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     };
     render(
       getNow,
-      elements,
+      { ...elements, targetRoot },
       () => {
         // Ignore messages.
       },
