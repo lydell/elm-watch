@@ -146,7 +146,7 @@ elm-watch even _requires `window.Elm` to exist._ That global variable is key to 
 
 **In short:** Keep it simple and load the built Elm JS in its own `<script>` tag and you’ll be fine.
 
-If you’re coming from webpack, Parcel or Vite, you need to update your JavaScript entrypoint like so:
+If you’re coming from [webpack], [Parcel] or [Vite], you need to update your JavaScript entrypoint like so:
 
 ```diff
 -import { Elm } from "./src/Main.elm";
