@@ -661,18 +661,21 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
       return [
         // Force a re-render for the “Error” status type, so that the animation plays again.
         statusToStatusType(model.status.tag) === "Error" ? { ...model } : model,
-        model.status.tag === "Idle"
-          ? [
-              {
-                tag: "SendMessage",
-                message: { tag: "FocusedTab" },
-                sendKey: model.status.sendKey,
-              },
-              {
-                tag: "WebSocketTimeoutBegin",
-              },
-            ]
-          : [],
+        // Send these commands regardless of current status: We want to prioritize the target
+        // due to the focus no matter what, and after waking up on iOS we need to check the
+        // Web Socket connection no matter what as well. For example, it’s possible to lock
+        // the phone while Busy, and then we miss the “done” message, which makes us still
+        // have the Busy status when unlocking the phone.
+        [
+          {
+            tag: "SendMessage",
+            message: { tag: "FocusedTab" },
+            sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+          },
+          {
+            tag: "WebSocketTimeoutBegin",
+          },
+        ],
       ];
 
     case "PageVisibilityChangedToVisible":
