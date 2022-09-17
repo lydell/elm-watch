@@ -1895,6 +1895,34 @@ describe("errors", () => {
       `);
     });
 
+    test("Elm crash", async () => {
+      expect(await runWithBadElmBin("elm-crash")).toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+
+        I seem to have gotten some JSON back as expected,
+        but I ran into an error when decoding it:
+
+        Unexpected token 
+         in JSON at position 292
+
+        I wrote that to this file so you can inspect it:
+
+        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-2b1e60ae39a6a6e54939b440e89516b56c0ec80468a3027e18ed9438bb9a5db2.txt
+
+        🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
     test("interrupt typecheck with compilation error", async () => {
       const fixture = "interrupt-typecheck";
       const dir = path.join(FIXTURES_DIR, fixture);
