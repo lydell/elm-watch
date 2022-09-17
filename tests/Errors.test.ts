@@ -1895,7 +1895,7 @@ describe("errors", () => {
       `);
     });
 
-    test("Elm crash", async () => {
+    test("Elm crash immediately", async () => {
       expect(await runWithBadElmBin("elm-crash")).toMatchInlineSnapshot(`
         🚨 app
 
@@ -1907,8 +1907,31 @@ describe("errors", () => {
         cd /Users/you/project/tests/fixtures/errors/valid
         elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
 
-        I got back 242 characters of JSON,
-        but then Elm crashed with this error:
+        Elm crashed with this error:
+
+        elm: Map.!: given key is not an element in the map
+        CallStack (from HasCallStack):
+          error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal
+
+        🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
+    test("Elm crash half-way through printing JSON", async () => {
+      expect(await runWithBadElmBin("elm-crash-json")).toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+
+        I got back 242 characters of JSON, but then Elm crashed with this error:
 
         elm: Map.!: given key is not an element in the map
         CallStack (from HasCallStack):

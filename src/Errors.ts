@@ -681,17 +681,20 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 
 export function elmMakeCrashError(
   outputPath: OutputPath | { tag: "NoLocation" },
-  jsonLength: number,
+  jsonLength: number | undefined,
   error: string,
   command: Command
 ): ErrorTemplate {
+  const middle =
+    jsonLength === undefined
+      ? "Elm crashed with this error:"
+      : `I got back ${jsonLength.toString()} characters of JSON, but then Elm crashed with this error:`;
   return fancyError("ELM CRASHED", outputPath)`
 I ran the following commands:
 
 ${printCommand(command)}
 
-I got back ${jsonLength.toString()} characters of JSON,
-but then Elm crashed with this error:
+${middle}
 
 ${error}
 `;

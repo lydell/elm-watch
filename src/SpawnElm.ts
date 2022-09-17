@@ -5,7 +5,6 @@ import { ElmMakeError } from "./ElmMakeError";
 import { __ELM_WATCH_ELM_TIMEOUT, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
 import {
-  join,
   JsonError,
   silentlyReadIntEnvValue,
   toError,
@@ -30,7 +29,7 @@ export type RunElmMakeResult =
 export type RunElmMakeError =
   | {
       tag: "ElmMakeCrashError";
-      jsonLength: number;
+      jsonLength: number | undefined;
       error: string;
       command: Command;
     }
@@ -202,6 +201,20 @@ function parsePotentialElmMakeJson(
   command: Command,
   stderr: string
 ): RunElmMakeResult | undefined {
+  if (!stderr.endsWith("}")) {
+    // This is a workaround for when Elm crashes half-way through printing the JSON.
+    const braceIndex = stderr.indexOf("{");
+    const errorIndex = stderr.lastIndexOf("elm: ");
+    if (errorIndex !== -1) {
+      return {
+        tag: "ElmMakeCrashError",
+        jsonLength: braceIndex === -1 ? undefined : errorIndex - braceIndex,
+        error: stderr.slice(errorIndex),
+        command,
+      };
+    }
+  }
+
   // This is a workaround for: https://github.com/elm/compiler/issues/2264
   // Elm can print a “box” of plain text information before the JSON when
   // it fails to read certain files in elm-stuff/:
@@ -210,31 +223,10 @@ function parsePotentialElmMakeJson(
   const elmStuffError = match?.[0];
   const potentialJson =
     elmStuffError === undefined ? stderr : stderr.slice(elmStuffError.length);
-  const elmStuffErrorTrimmed = elmStuffError?.trim();
 
-  if (!potentialJson.startsWith("{")) {
-    return undefined;
-  }
-
-  if (!potentialJson.endsWith("}")) {
-    // This is a workaround for when Elm crashes half-way through printing the JSON.
-    const index = potentialJson.lastIndexOf("elm: ");
-    if (index !== -1) {
-      return {
-        tag: "ElmMakeCrashError",
-        jsonLength: index,
-        error: join(
-          [elmStuffErrorTrimmed, potentialJson.slice(index)].flatMap((item) =>
-            item === undefined ? [] : [item]
-          ),
-          "\n\n"
-        ),
-        command,
-      };
-    }
-  }
-
-  return parseActualElmMakeJson(command, potentialJson, elmStuffErrorTrimmed);
+  return potentialJson.startsWith("{")
+    ? parseActualElmMakeJson(command, potentialJson, elmStuffError?.trim())
+    : undefined;
 }
 
 function parseActualElmMakeJson(
