@@ -202,7 +202,8 @@ function parsePotentialElmMakeJson(
   stderr: string
 ): RunElmMakeResult | undefined {
   if (!stderr.endsWith("}")) {
-    // This is a workaround for when Elm crashes half-way through printing the JSON.
+    // This is a workaround for when Elm crashes, potentially half-way through printing the JSON.
+    // For example: https://github.com/elm/compiler/issues/1916
     const errorIndex = stderr.lastIndexOf("elm: ");
     if (errorIndex !== -1) {
       return {
