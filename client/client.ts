@@ -379,8 +379,10 @@ function run(): void {
     runCmd: runCmd(getNow, (dispatch, model, info, manageFocus) => {
       if (targetRoot === undefined) {
         if (model.status.tag !== model.previousStatusTag) {
+          const isError = statusToStatusType(model.status.tag) === "Error";
           // eslint-disable-next-line no-console
-          console.info(renderWebWorker(model, info));
+          const consoleMethod = isError ? console.error : console.info;
+          consoleMethod(renderWebWorker(model, info));
         }
       } else {
         render(getNow, targetRoot, dispatch, model, info, manageFocus);
