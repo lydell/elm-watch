@@ -179,6 +179,8 @@ const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
+const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
+
 type Mutable = {
   removeListeners: () => void;
   webSocket: WebSocket;
@@ -188,6 +190,9 @@ type Mutable = {
 type Msg =
   | {
       tag: "AppInit";
+    }
+  | {
+      tag: "BrowserUiMoved";
     }
   | {
       tag: "EvalErrored";
@@ -280,6 +285,10 @@ type Cmd =
       sendKey: SendKey;
     }
   | {
+      tag: "SetBrowserUiPosition";
+      browserUiPosition: BrowserUiPosition;
+    }
+  | {
       tag: "SleepBeforeReconnect";
       attemptNumber: number;
     }
@@ -369,11 +378,11 @@ function run(): void {
     // Ignore failing to read or delete from sessionStorage.
   }
 
-  const targetRoot = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
+  const elements = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
-    initMutable: initMutable(getNow, targetRoot),
+    initMutable: initMutable(getNow, elements),
     init: init(getNow()),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [updatedModel, cmds] = update(msg, model);
@@ -401,18 +410,7 @@ function run(): void {
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
-    runCmd: runCmd(getNow, (dispatch, model, info, manageFocus) => {
-      if (targetRoot === undefined) {
-        if (model.status.tag !== model.previousStatusTag) {
-          const isError = statusToStatusType(model.status.tag) === "Error";
-          // eslint-disable-next-line no-console
-          const consoleMethod = isError ? console.error : console.info;
-          consoleMethod(renderWebWorker(model, info));
-        }
-      } else {
-        render(getNow, targetRoot, dispatch, model, info, manageFocus);
-      }
-    }),
+    runCmd: runCmd(getNow, elements),
   }).catch((error) => {
     // eslint-disable-next-line no-console
     console.error("elm-watch: Unexpectedly exited with error:", error);
@@ -421,7 +419,7 @@ function run(): void {
   // This is great when working on the styling of all statuses.
   // When this call is commented out, esbuild won’t include the
   // `renderMockStatuses` function in the output.
-  // renderMockStatuses(getNow, root);
+  // renderMockStatuses(getNow, elements);
 }
 
 function statusToReloadStatus(status: Status): ReloadStatus {
@@ -482,8 +480,16 @@ function getOrCreateContainer(): HTMLElement {
   return container;
 }
 
-function getOrCreateTargetRoot(): HTMLElement {
-  const { shadowRoot } = getOrCreateContainer();
+type Elements = {
+  container: HTMLElement;
+  shadowRoot: ShadowRoot;
+  root: Element;
+  targetRoot: HTMLElement;
+};
+
+function getOrCreateTargetRoot(): Elements {
+  const container = getOrCreateContainer();
+  const { shadowRoot } = container;
 
   if (shadowRoot === null) {
     throw new Error(
@@ -500,7 +506,7 @@ function getOrCreateTargetRoot(): HTMLElement {
   const targetRoot = createTargetRoot(TARGET_NAME);
   root.append(targetRoot);
 
-  return targetRoot;
+  return { container, shadowRoot, root, targetRoot };
 }
 
 function createTargetRoot(targetName: string): HTMLElement {
@@ -559,7 +565,7 @@ function setBrowserUiPosition(
 }
 
 const initMutable =
-  (getNow: GetNow, targetRoot?: HTMLElement) =>
+  (getNow: GetNow, elements: Elements | undefined) =>
   (
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: undefined) => void
@@ -603,6 +609,17 @@ const initMutable =
               });
             }
           }),
+          elements === undefined
+            ? () => {
+                // Do nothing
+              }
+            : addEventListener(
+                elements.shadowRoot,
+                BROWSER_UI_MOVED_EVENT,
+                () => {
+                  dispatch({ tag: "BrowserUiMoved" });
+                }
+              ),
         ];
       },
       { once: true }
@@ -634,7 +651,7 @@ const initMutable =
             clearTimeout(mutable.webSocketTimeoutId);
             mutable.webSocketTimeoutId = undefined;
           }
-          targetRoot?.remove();
+          elements?.targetRoot.remove();
           resolvePromise(undefined);
         } else {
           originalKillMatching(targetName).then(resolve).catch(reject);
@@ -719,6 +736,10 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     case "AppInit":
       // Force a re-render, so the status icon can update. Need to create a new
       // model to trump the `===` check used to avoid re-renders.
+      return [{ ...model }, []];
+
+    case "BrowserUiMoved":
+      // Force a re-render, so the new position is taken into account.
       return [{ ...model }, []];
 
     case "EvalErrored":
@@ -866,11 +887,13 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
 
     case "PressedMoveBrowserUiPosition":
-      // TODO
-      console.log("PressedMoveBrowserUiPosition", msg.browserUiPosition);
       return [
         model,
         [
+          {
+            tag: "SetBrowserUiPosition",
+            browserUiPosition: msg.browserUiPosition,
+          },
           {
             tag: "SendMessage",
             message: {
@@ -1059,15 +1082,7 @@ function printRetryWaitMs(attemptNumber: number): string {
 }
 
 const runCmd =
-  (
-    getNow: GetNow,
-    passedRender: (
-      dispatch: (msg: Msg) => void,
-      model: Model,
-      info: Info,
-      manageFocus: boolean
-    ) => void
-  ) =>
+  (getNow: GetNow, elements: Elements | undefined) =>
   (
     cmd: Cmd,
     mutable: Mutable,
@@ -1108,20 +1123,27 @@ const runCmd =
         );
         return;
 
-      case "Render":
-        passedRender(
-          dispatch,
-          cmd.model,
-          {
-            version: VERSION,
-            webSocketUrl: mutable.webSocket.url,
-            targetName: TARGET_NAME,
-            originalCompilationMode: ORIGINAL_COMPILATION_MODE,
-            initializedElmAppsStatus: checkInitializedElmAppsStatus(),
-          },
-          cmd.manageFocus
-        );
+      case "Render": {
+        const { model } = cmd;
+        const info: Info = {
+          version: VERSION,
+          webSocketUrl: mutable.webSocket.url,
+          targetName: TARGET_NAME,
+          originalCompilationMode: ORIGINAL_COMPILATION_MODE,
+          initializedElmAppsStatus: checkInitializedElmAppsStatus(),
+        };
+        if (elements === undefined) {
+          if (model.status.tag !== model.previousStatusTag) {
+            const isError = statusToStatusType(model.status.tag) === "Error";
+            // eslint-disable-next-line no-console
+            const consoleMethod = isError ? console.error : console.info;
+            consoleMethod(renderWebWorker(model, info));
+          }
+        } else {
+          render(getNow, elements, dispatch, model, info, cmd.manageFocus);
+        }
         return;
+      }
 
       case "SendMessage": {
         const json = JSON.stringify(cmd.message);
@@ -1138,6 +1160,15 @@ const runCmd =
         }
         return;
       }
+
+      case "SetBrowserUiPosition":
+        if (elements !== undefined) {
+          setBrowserUiPosition(cmd.browserUiPosition, elements.container);
+          elements.shadowRoot.dispatchEvent(
+            new CustomEvent(BROWSER_UI_MOVED_EVENT)
+          );
+        }
+        return;
 
       case "SleepBeforeReconnect":
         setTimeout(() => {
@@ -1452,13 +1483,13 @@ function renderWebWorker(model: Model, info: Info): string {
 
 function render(
   getNow: GetNow,
-  targetRoot: HTMLElement,
+  { container, targetRoot }: Elements,
   dispatch: (msg: Msg) => void,
   model: Model,
   info: Info,
   manageFocus: boolean
 ): void {
-  const actualBrowserUiPosition = getActualBrowserUiPosition(targetRoot);
+  const actualBrowserUiPosition = getActualBrowserUiPosition(container);
 
   const isInBottomHalf =
     actualBrowserUiPosition === "BottomLeft" ||
@@ -1487,10 +1518,8 @@ function render(
 }
 
 // This takes CSS added by the user into account.
-function getActualBrowserUiPosition(
-  targetRoot: HTMLElement
-): BrowserUiPosition {
-  const { top, left, height, width } = targetRoot.getBoundingClientRect();
+function getActualBrowserUiPosition(container: HTMLElement): BrowserUiPosition {
+  const { top, left, height, width } = container.getBoundingClientRect();
   const isTop = top + height / 2 < window.innerHeight / 2;
   const isLeft = left + width / 2 < window.innerWidth / 2;
   const y = isTop ? "Top" : "Bottom";
@@ -1639,7 +1668,7 @@ time::after {
   display: grid;
   gap: 0.75em;
   outline: none;
-  position: relative;
+  contain: paint;
 }
 
 .${CLASS.expandedUiContainer}:is(.length0, .length1) {
@@ -2407,7 +2436,14 @@ function viewCompilationModeChooser({
   }
 }
 
-function renderMockStatuses(getNow: GetNow, root: Element): void {
+function renderMockStatuses(
+  getNow: GetNow,
+  elements: Elements | undefined
+): void {
+  if (elements === undefined) {
+    return;
+  }
+
   const date = getNow();
 
   const info: Omit<Info, "targetName"> = {
@@ -2586,7 +2622,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 
   for (const [targetName, status] of Object.entries(mockStatuses)) {
     const targetRoot = createTargetRoot(targetName);
-    root.append(targetRoot);
+    elements.root.append(targetRoot);
     const model: Model = {
       status,
       previousStatusTag: status.tag,
@@ -2596,7 +2632,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     };
     render(
       getNow,
-      targetRoot,
+      elements,
       () => {
         // Ignore messages.
       },
