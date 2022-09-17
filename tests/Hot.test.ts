@@ -3588,10 +3588,7 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Successfully compiled
-      window.Elm does not look like expected! This is the error message:
-      At root["Elm"]:
-      Expected an object
-      Got: undefined
+      elm-watch requires [window.Elm](https://github.com/lydell/elm-watch#windowelm) to exist, but it is undefined!
       ▲ ❌ 13:10:05 Main
     `);
   });

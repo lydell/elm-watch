@@ -1139,6 +1139,10 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
     };
   }
 
+  if (window.Elm === undefined) {
+    return { tag: "MissingWindowElm" };
+  }
+
   let programTypes;
   try {
     programTypes = ProgramTypes(window);
@@ -1854,6 +1858,7 @@ function viewStatus(
 function idleIcon(status: InitializedElmAppsStatus): string {
   switch (status.tag) {
     case "DecodeError":
+    case "MissingWindowElm":
       return "❌";
 
     case "NoProgramsAtAll":
@@ -1893,6 +1898,9 @@ type InitializedElmAppsStatus =
   | {
       tag: "DecodeError";
       message: string;
+    }
+  | {
+      tag: "MissingWindowElm";
     }
   | {
       tag: "NoProgramsAtAll";
@@ -1949,6 +1957,25 @@ function viewCompilationModeChooser({
           "window.Elm does not look like expected! This is the error message:"
         ),
         h(HTMLPreElement, {}, info.initializedElmAppsStatus.message),
+      ];
+
+    case "MissingWindowElm":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "elm-watch requires ",
+          h(
+            HTMLAnchorElement,
+            {
+              href: "https://github.com/lydell/elm-watch#windowelm",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            "window.Elm"
+          ),
+          " to exist, but it is undefined!"
+        ),
       ];
 
     case "NoProgramsAtAll":

@@ -561,7 +561,7 @@ function* walkTextNodes(element: Node): Generator<string, void, void> {
   for (const node of element.childNodes) {
     if (node instanceof Text) {
       yield " ";
-      yield node.data;
+      yield node.data.trim();
     } else if (node instanceof HTMLInputElement && node.type === "radio") {
       yield (node.checked ? "◉" : "◯") + (node.disabled ? " (disabled)" : "");
     } else if (node instanceof HTMLButtonElement) {
@@ -569,10 +569,11 @@ function* walkTextNodes(element: Node): Generator<string, void, void> {
       if (textContent.length === 1) {
         yield textContent;
       } else {
-        yield "\n[";
-        yield textContent;
-        yield "]";
+        yield `\n[${textContent}]`;
       }
+    } else if (node instanceof HTMLAnchorElement) {
+      const textContent = (node.textContent ?? "").trim();
+      yield ` [${textContent}](${node.href})`;
     } else {
       yield* walkTextNodes(node);
     }
