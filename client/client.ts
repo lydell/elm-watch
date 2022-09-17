@@ -14,6 +14,11 @@ import {
   WebSocketToServerMessage,
 } from "./WebSocketMessages";
 
+// Support Web Workers, where `window` does not exist.
+const window = globalThis as unknown as Window;
+
+const IS_WEB_WORKER = window.window === undefined;
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
@@ -112,7 +117,20 @@ window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
       // Ignore failing to write to sessionStorage.
     }
   }
-  window.location.reload();
+  if (IS_WEB_WORKER) {
+    if (message !== undefined) {
+      // eslint-disable-next-line no-console
+      console.info(message);
+    }
+    // eslint-disable-next-line no-console
+    console.error(
+      message === undefined
+        ? "elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I can’t do it for you."
+        : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`
+    );
+  } else {
+    window.location.reload();
+  }
 };
 
 window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
@@ -326,32 +344,7 @@ function run(): void {
     // Ignore failing to read or delete from sessionStorage.
   }
 
-  const container = getOrCreateContainer();
-  const { shadowRoot } = container;
-
-  if (shadowRoot === null) {
-    throw new Error(
-      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`
-    );
-  }
-
-  let root = shadowRoot.querySelector(`.${CLASS.root}`);
-  if (root === null) {
-    root = h(HTMLDivElement, { className: CLASS.root });
-    shadowRoot.append(root);
-  }
-
-  const existingTargetRoot = Array.from(root.children).find(
-    (element) => element.getAttribute("data-target") === TARGET_NAME
-  );
-
-  if (existingTargetRoot !== undefined) {
-    return;
-  }
-
-  const targetRoot = createTargetRoot(TARGET_NAME);
-  root.append(targetRoot);
-
+  const targetRoot = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
@@ -383,7 +376,18 @@ function run(): void {
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
-    runCmd: runCmd(getNow, targetRoot),
+    runCmd: runCmd(getNow, (dispatch, model, info, manageFocus) => {
+      if (targetRoot === undefined) {
+        if (model.status.tag !== model.previousStatusTag) {
+          const isError = statusToStatusType(model.status.tag) === "Error";
+          // eslint-disable-next-line no-console
+          const consoleMethod = isError ? console.error : console.info;
+          consoleMethod(renderWebWorker(model, info));
+        }
+      } else {
+        render(getNow, targetRoot, dispatch, model, info, manageFocus);
+      }
+    }),
   }).catch((error) => {
     // eslint-disable-next-line no-console
     console.error("elm-watch: Unexpectedly exited with error:", error);
@@ -454,6 +458,27 @@ function getOrCreateContainer(): HTMLElement {
   return container;
 }
 
+function getOrCreateTargetRoot(): HTMLElement {
+  const { shadowRoot } = getOrCreateContainer();
+
+  if (shadowRoot === null) {
+    throw new Error(
+      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`
+    );
+  }
+
+  let root = shadowRoot.querySelector(`.${CLASS.root}`);
+  if (root === null) {
+    root = h(HTMLDivElement, { className: CLASS.root });
+    shadowRoot.append(root);
+  }
+
+  const targetRoot = createTargetRoot(TARGET_NAME);
+  root.append(targetRoot);
+
+  return targetRoot;
+}
+
 function createTargetRoot(targetName: string): HTMLElement {
   return h(HTMLDivElement, {
     className: CLASS.targetRoot,
@@ -462,7 +487,7 @@ function createTargetRoot(targetName: string): HTMLElement {
 }
 
 const initMutable =
-  (getNow: GetNow, targetRoot: HTMLElement) =>
+  (getNow: GetNow, targetRoot?: HTMLElement) =>
   (
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: undefined) => void
@@ -522,7 +547,7 @@ const initMutable =
             clearTimeout(mutable.webSocketTimeoutId);
             mutable.webSocketTimeoutId = undefined;
           }
-          targetRoot.remove();
+          targetRoot?.remove();
           resolvePromise(undefined);
         } else {
           originalKillMatching(targetName).then(resolve).catch(reject);
@@ -592,10 +617,9 @@ function initWebSocket(
 }
 
 const init = (date: Date): [Model, Array<Cmd>] => {
-  const status: Status = { tag: "Connecting", date, attemptNumber: 1 };
   const model: Model = {
-    status,
-    previousStatusTag: status.tag,
+    status: { tag: "Connecting", date, attemptNumber: 1 },
+    previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
@@ -928,7 +952,15 @@ function printRetryWaitMs(attemptNumber: number): string {
 }
 
 const runCmd =
-  (getNow: GetNow, targetRoot: HTMLElement) =>
+  (
+    getNow: GetNow,
+    passedRender: (
+      dispatch: (msg: Msg) => void,
+      model: Model,
+      info: Info,
+      manageFocus: boolean
+    ) => void
+  ) =>
   (
     cmd: Cmd,
     mutable: Mutable,
@@ -970,9 +1002,7 @@ const runCmd =
         return;
 
       case "Render":
-        render(
-          getNow,
-          targetRoot,
+        passedRender(
           dispatch,
           cmd.model,
           {
@@ -992,7 +1022,10 @@ const runCmd =
 
       case "SleepBeforeReconnect":
         setTimeout(() => {
-          if (document.visibilityState === "visible") {
+          if (
+            typeof document === "undefined" ||
+            document.visibilityState === "visible"
+          ) {
             dispatch({ tag: "SleepBeforeReconnectDone", date: getNow() });
           }
         }, retryWaitMs(cmd.attemptNumber));
@@ -1139,6 +1172,10 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
     };
   }
 
+  if (window.Elm === undefined) {
+    return { tag: "MissingWindowElm" };
+  }
+
   let programTypes;
   try {
     programTypes = ProgramTypes(window);
@@ -1274,6 +1311,13 @@ type Info = {
   originalCompilationMode: CompilationModeWithProxy;
   initializedElmAppsStatus: InitializedElmAppsStatus;
 };
+
+function renderWebWorker(model: Model, info: Info): string {
+  const statusData = statusIconAndText(model.status, info);
+  return `${statusData.icon} elm-watch: ${statusData.status} ${formatTime(
+    model.status.date
+  )} (${info.targetName})`;
+}
 
 function render(
   getNow: GetNow,
@@ -1572,12 +1616,10 @@ function view(
       }
     : passedModel;
 
-  const statusData = viewStatus(
-    dispatch,
-    model.status,
-    model.compilationMode,
-    info
-  );
+  const statusData: StatusData = {
+    ...statusIconAndText(model.status, info),
+    ...viewStatus(dispatch, model.status, model.compilationMode, info),
+  };
 
   const statusType = statusToStatusType(model.status.tag);
   const statusTypeChanged =
@@ -1711,17 +1753,70 @@ type StatusData = {
   content: Array<HTMLElement>;
 };
 
-function viewStatus(
-  dispatch: (msg: UiMsg) => void,
+function statusIconAndText(
   status: Status,
-  compilationMode: CompilationModeWithProxy,
   info: Info
-): StatusData {
+): Pick<StatusData, "icon" | "status"> {
   switch (status.tag) {
     case "Busy":
       return {
         icon: "⏳",
         status: "Waiting for compilation",
+      };
+
+    case "CompileError":
+      return {
+        icon: "🚨",
+        status: "Compilation error",
+      };
+
+    case "Connecting":
+      return {
+        icon: "🔌",
+        status: "Connecting",
+      };
+
+    case "EvalError":
+      return {
+        icon: "⛔️",
+        status: "Eval error",
+      };
+
+    case "Idle":
+      return {
+        icon: idleIcon(info.initializedElmAppsStatus),
+        status: "Successfully compiled",
+      };
+
+    case "SleepingBeforeReconnect":
+      return {
+        icon: "🔌",
+        status: "Sleeping",
+      };
+
+    case "UnexpectedError":
+      return {
+        icon: "❌",
+        status: "Unexpected error",
+      };
+
+    case "WaitingForReload":
+      return {
+        icon: "⏳",
+        status: "Waiting for reload",
+      };
+  }
+}
+
+function viewStatus(
+  dispatch: (msg: UiMsg) => void,
+  status: Status,
+  compilationMode: CompilationModeWithProxy,
+  info: Info
+): Pick<StatusData, "content" | "dl"> {
+  switch (status.tag) {
+    case "Busy":
+      return {
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1735,8 +1830,6 @@ function viewStatus(
 
     case "CompileError":
       return {
-        icon: "🚨",
-        status: "Compilation error",
         dl: [],
         content: [
           ...viewCompilationModeChooser({
@@ -1760,8 +1853,6 @@ function viewStatus(
 
     case "Connecting":
       return {
-        icon: "🔌",
-        status: "Connecting",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1773,8 +1864,6 @@ function viewStatus(
 
     case "EvalError":
       return {
-        icon: "⛔️",
-        status: "Eval error",
         dl: [],
         content: [
           h(
@@ -1787,8 +1876,6 @@ function viewStatus(
 
     case "Idle":
       return {
-        icon: idleIcon(info.initializedElmAppsStatus),
-        status: "Successfully compiled",
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1801,8 +1888,6 @@ function viewStatus(
 
     case "SleepingBeforeReconnect":
       return {
-        icon: "🔌",
-        status: "Sleeping",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1822,8 +1907,6 @@ function viewStatus(
 
     case "UnexpectedError":
       return {
-        icon: "❌",
-        status: "Unexpected error",
         dl: [],
         content: [
           h(
@@ -1837,8 +1920,6 @@ function viewStatus(
 
     case "WaitingForReload":
       return {
-        icon: "⏳",
-        status: "Waiting for reload",
         dl: [],
         content: [
           h(
@@ -1854,6 +1935,7 @@ function viewStatus(
 function idleIcon(status: InitializedElmAppsStatus): string {
   switch (status.tag) {
     case "DecodeError":
+    case "MissingWindowElm":
       return "❌";
 
     case "NoProgramsAtAll":
@@ -1893,6 +1975,9 @@ type InitializedElmAppsStatus =
   | {
       tag: "DecodeError";
       message: string;
+    }
+  | {
+      tag: "MissingWindowElm";
     }
   | {
       tag: "NoProgramsAtAll";
@@ -1949,6 +2034,25 @@ function viewCompilationModeChooser({
           "window.Elm does not look like expected! This is the error message:"
         ),
         h(HTMLPreElement, {}, info.initializedElmAppsStatus.message),
+      ];
+
+    case "MissingWindowElm":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "elm-watch requires ",
+          h(
+            HTMLAnchorElement,
+            {
+              href: "https://github.com/lydell/elm-watch#windowelm",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            "window.Elm"
+          ),
+          " to exist, but it is undefined!"
+        ),
       ];
 
     case "NoProgramsAtAll":

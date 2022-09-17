@@ -1,3 +1,6 @@
+// Support Web Workers, where `window` does not exist.
+const window = globalThis as unknown as Window;
+
 const error: Error & { elmWatchProxy?: true } = new Error(
   `
 Certain parts of \`window.Elm\` aren't available yet! That's fine though!
