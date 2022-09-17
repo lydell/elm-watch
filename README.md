@@ -21,6 +21,8 @@ npm install --save-dev elm-watch
 
 ## Getting started
 
+> 📽 [Video showing how to get started][getting-started-with-elm-watch]
+
 Create a file called [elm-watch.json](#elm-watchjson):
 
 ```
@@ -64,12 +66,35 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
 **You are responsible for** creating an HTML file, link to the built JS and serve files.
 
 - If you’re just getting started, you can create an HTML file with a relative link to the built JS and double-click it to open it in a browser.
+
+  ```html
+  <!-- Relative URL to the built JS. -->
+  <script src="./build/main.js"></script>
+  ```
+
+  👉 [Minimal example](./example-minimal)
+
 - …except if you use `Browser.application`. It doesn’t work on the `file://` protocol. There are plenty of quick little “please serve this directory on localhost” tools, though.
+
+  ```html
+  <!-- Absolute URL to the built JS. -->
+  <script src="/build/main.js"></script>
+  ```
+
+  👉 [Example CLI server tool](https://github.com/vercel/serve)
+
 - If you need TypeScript and CSS compilation, you need to set up another build tool alongside elm-watch.
 
-- 👉 [Example](./example)
-- 👉 [Minimal example](./example-minimal)
-- 📽 [Video showing how to get started][getting-started-with-elm-watch]
+  ```html
+  <!-- Separate script tag for Elm. -->
+  <script src="/build/main.js"></script>
+  <!-- Another script tag for JS built by another tool. -->
+  <script src="/build/bundle.js"></script>
+  ```
+
+  👉 [Example with esbuild](./example)
+
+ℹ️ Note: elm-watch **requires** [window.Elm](#windowelm) to exist!
 
 ## What elm-watch _is_
 
@@ -90,6 +115,7 @@ Remember the first time you ran `elm make`? It’s super fast, and has beautiful
 ## What elm-watch is _not_
 
 - A watcher for other things than Elm files.
+- A watcher for Elm _packages._
 - A file server.
 - A proxy server.
 - A code generator.
@@ -103,18 +129,77 @@ That being said, it’s not super difficult to set elm-watch up together with ot
 
 But if you’re looking for a out-of-the-box setup, try [Parcel], [elm-go] or some other tool with the same goals. Choose your trade-offs.
 
-Some more notes:
+At least for now, elm-watch is focused on Elm **Applications only.** I can think of two other use cases:
 
-- **Applications only.** At least for now, elm-watch is focused on Elm applications. I can think of two other use cases:
+- Type checking packages.
+- Type checking tests.
 
-  - Type checking packages.
-  - Type checking tests.
+In both cases, `elm-test --watch` might be a better alternative. You get to see if your tests pass, too!
 
-  In both cases, `elm-test --watch` might be a better alternative. You get to see if your tests pass, too!
+For a package, it doesn’t take many tests to reach the point where if the tests compile, the package compiles too. Other than that, relying on type checking in your editor and occasionally running `elm make` (without arguments) in the terminal might be enough. Check out [issue #23](https://github.com/lydell/elm-watch/issues/23) if you’d like to see package support.
 
-  For a package, it doesn’t take many tests to reach the point where if the tests compile, the package compiles too. Other than that, relying on type checking in your editor and occasionally running `elm make` (without arguments) in the terminal might be enough.
+## window.Elm
 
-- **`window.Elm`.** elm-watch is basically just `elm-watch make`, so the output format is using the good old `window.Elm` global. It might feel ugly and old-school compared to something like `import Elm from "./elm.js"`, but I think it’s fine. It’s just going to affect one line of your code. It lets you decouple your Elm completely from all other JavaScript, makes hot reloading easier and might even be good for browser caching! Your Elm code might change very often, but some JavaScript code (perhaps using an npm package) might be very stable and can then be cached independently from the compiled Elm code.
+elm-watch is basically just `elm-watch make`, so the output format is using the good old `window.Elm` global.
+
+elm-watch even _requires `window.Elm` to exist._ That global variable is key to make [hot reloading](#hot-reloading) work.
+
+**In short:** Keep it simple and load the built Elm JS in its own `<script>` tag and you’ll be fine.
+
+If you’re coming from webpack, Parcel or Vite, you need to update your JavaScript entrypoint like so:
+
+```diff
+-import { Elm } from "./src/Main.elm";
+
+const root = document.getElementById("root");
+-const app = Elm.Main.init({ node: root });
++const app = window.Elm.Main.init({ node: root });
+```
+
+Regardless of whether you use a bundler or just standard `import`s, **don’t** be tempted to `import` the built Elm JS:
+
+```js
+// 🚨 WRONG! Don’t do this!
+import Elm from "./build/main.js";
+
+// 🚨 WRONG! Don’t do this either!
+import "./build/main.js";
+```
+
+Instead, load the built Elm JS in a separate script tag, _without_ any `type` attribute:
+
+```html
+<!-- 🚨 WRONG! Don’t do this! -->
+<script type="module" src="./build/main.js"></script>
+
+<!-- ✅ Correct! No `type` is the way to go. -->
+<script src="./build/main.js"></script>
+```
+
+Why? Because of _scripts_ vs _modules._ Back in the day, only JavaScript _scripts_ existed, but since the `import` syntax came along we also have _modules._ They are essentially two different _modes_ for JavaScript with slightly different behavior.
+
+- Module mode is enabled via the `type="module"` attribute on the `<script>` tag, or by using `import` to load a file.
+- Script mode is used for everything else.
+
+The built Elm JS is simply not made for module mode:
+
+- It does not use the `export` keyword, so there’s nothing to `import` from it.
+- It uses an old-school technique to create the `window.Elm` global: It basically does `this.Elm = stuff`. In script mode, `this` refers to the global object, which usually is `window`. The reason for using `this` is to make [Platform.worker] programs usable in [Web Workers] and Node.js (where `window` does not exist). But in module mode, global `this` is always `undefined`.
+
+If you use a bundler, `import`ing the built Elm JS can have additional downsides:
+
+- The bundler might rewrite that global `this` mentioned above to `exports` (a local object) in an attempt to support `import`ing old-school packages. However, then `window.Elm` won’t be created.
+- The bundler might waste time parsing the whole built Elm JS file for nothing.
+
+elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](#postprocess) script, though, if you really feel like it.
+
+Having `window.Elm.Main.init()` in your code might feel ugly and old-school compared to using `import`, but I think it’s fine:
+
+- It’s simple.
+- It’s just going to affect one line of your code.
+- It lets you decouple your Elm completely from all other JavaScript.
+- It makes hot reloading work without any setup.
+- And it can even be good for browser caching! Your Elm code might change very often, but some JavaScript code (perhaps using an npm package) might be very stable and can then be cached independently from the compiled Elm code.
 
 ## Ideas for the future
 
@@ -478,11 +563,14 @@ I’ve heard [Vite] is really fast and reliable, including the Elm plugin. But I
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
 [esbuild]: https://esbuild.github.io/
 [getting-started-with-elm-watch]: https://www.youtube.com/watch?v=n15nOCZnTac
+[globalthis]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
 [parcel]: https://parceljs.org/
+[platform.worker]: https://package.elm-lang.org/packages/elm/core/latest/Platform#worker
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
 [redux devtools]: https://github.com/reduxjs/redux-devtools
 [run-pty]: https://github.com/lydell/run-pty/
 [vite]: https://vitejs.dev/
+[web workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [webpack plugin]: https://webpack.js.org/api/plugins/
 [webpack]: https://webpack.js.org/
 [worker thread]: https://nodejs.org/api/worker_threads.html
