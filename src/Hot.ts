@@ -74,6 +74,12 @@ type WatcherEvent = {
 
 type WebSocketRelatedEvent =
   | {
+      tag: "WebSocketChangedBrowserUiPosition";
+      date: Date;
+      outputPath: OutputPath;
+      browserUiPosition: BrowserUiPosition;
+    }
+  | {
       tag: "WebSocketChangedCompilationMode";
       date: Date;
       outputPath: OutputPath;
@@ -2221,7 +2227,7 @@ function onWebSocketConnected(
   }
 }
 
-function onChangedCompilationMode(
+function onChangedCompilationModeOrBrowserUiPosition(
   model: Model,
   outputPath: OutputPath,
   outputState: OutputState
@@ -2286,13 +2292,13 @@ function onWebSocketToServerMessage(
   message: WebSocketToServerMessage
 ): [Model, Array<Cmd>] {
   switch (message.tag) {
-    case "ChangedCompilationMode": {
+    case "ChangedCompilationMode":
       switch (output.tag) {
         case "OutputPathError":
           return [model, []];
 
         case "Output": {
-          const [newModel, cmds] = onChangedCompilationMode(
+          const [newModel, cmds] = onChangedCompilationModeOrBrowserUiPosition(
             model,
             output.outputPath,
             output.outputState
@@ -2322,7 +2328,6 @@ function onWebSocketToServerMessage(
           ];
         }
       }
-    }
 
     case "ChangedBrowserUiPosition":
       switch (output.tag) {
@@ -2330,14 +2335,32 @@ function onWebSocketToServerMessage(
           return [model, []];
 
         case "Output": {
-          return [
+          const [newModel, cmds] = onChangedCompilationModeOrBrowserUiPosition(
             model,
+            output.outputPath,
+            output.outputState
+          );
+
+          return [
+            {
+              ...newModel,
+              latestEvents: [
+                ...newModel.latestEvents,
+                {
+                  tag: "WebSocketChangedBrowserUiPosition",
+                  date,
+                  outputPath: output.outputPath,
+                  browserUiPosition: message.browserUiPosition,
+                },
+              ],
+            },
             [
               {
                 tag: "ChangeBrowserUiPosition",
                 outputState: output.outputState,
                 browserUiPosition: message.browserUiPosition,
               },
+              ...cmds,
             ],
           ];
         }
@@ -2401,8 +2424,9 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     case "WorkersLimitedAfterWebSocketClosed":
       return 100;
 
-    // When switching compilation mode, sleep a short amount of time so that the
-    // change feels more immediate.
+    // When switching compilation mode or browser UI position, sleep a short
+    // amount of time so that the change feels more immediate.
+    case "WebSocketChangedBrowserUiPosition":
     case "WebSocketChangedCompilationMode":
       return 10;
   }
@@ -2566,6 +2590,11 @@ function printEventMessage(event: LatestEvent): string {
 
     case "WebSocketConnectedWithErrors":
       return `Web socket connected with errors (see the browser for details)`;
+
+    case "WebSocketChangedBrowserUiPosition":
+      return `Changed browser UI position to ${JSON.stringify(
+        event.browserUiPosition
+      )} of: ${event.outputPath.targetName}`;
 
     case "WebSocketChangedCompilationMode":
       return `Changed compilation mode to ${JSON.stringify(
