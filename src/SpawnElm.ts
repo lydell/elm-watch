@@ -29,7 +29,7 @@ export type RunElmMakeResult =
 export type RunElmMakeError =
   | {
       tag: "ElmMakeCrashError";
-      jsonLength: number | undefined;
+      beforeError: Errors.ElmMakeCrashBeforeError;
       error: string;
       command: Command;
     }
@@ -203,12 +203,13 @@ function parsePotentialElmMakeJson(
 ): RunElmMakeResult | undefined {
   if (!stderr.endsWith("}")) {
     // This is a workaround for when Elm crashes half-way through printing the JSON.
-    const braceIndex = stderr.indexOf("{");
     const errorIndex = stderr.lastIndexOf("elm: ");
     if (errorIndex !== -1) {
       return {
         tag: "ElmMakeCrashError",
-        jsonLength: braceIndex === -1 ? undefined : errorIndex - braceIndex,
+        beforeError: stderr.startsWith("{")
+          ? { tag: "Json", length: errorIndex }
+          : { tag: "Text", text: stderr.slice(0, errorIndex) },
         error: stderr.slice(errorIndex),
         command,
       };

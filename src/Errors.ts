@@ -679,22 +679,46 @@ ${printElmWatchNodeStdio(stdout, stderr)}
 `;
 }
 
+export type ElmMakeCrashBeforeError =
+  | {
+      tag: "Json";
+      length: number;
+    }
+  | {
+      tag: "Text";
+      text: string;
+    };
+
+function printElmMakeCrashBeforeError(
+  beforeError: ElmMakeCrashBeforeError
+): string {
+  switch (beforeError.tag) {
+    case "Json":
+      return `I got back ${beforeError.length.toString()} characters of JSON, but then Elm crashed with this error:`;
+
+    case "Text":
+      return beforeError.text === ""
+        ? "Elm crashed with this error:"
+        : `Elm printed this text:
+
+${beforeError.text}
+
+Then it crashed with this error:`;
+  }
+}
+
 export function elmMakeCrashError(
   outputPath: OutputPath | { tag: "NoLocation" },
-  jsonLength: number | undefined,
+  beforeError: ElmMakeCrashBeforeError,
   error: string,
   command: Command
 ): ErrorTemplate {
-  const middle =
-    jsonLength === undefined
-      ? "Elm crashed with this error:"
-      : `I got back ${jsonLength.toString()} characters of JSON, but then Elm crashed with this error:`;
   return fancyError("ELM CRASHED", outputPath)`
 I ran the following commands:
 
 ${printCommand(command)}
 
-${middle}
+${printElmMakeCrashBeforeError(beforeError)}
 
 ${error}
 `;

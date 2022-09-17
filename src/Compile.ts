@@ -2128,7 +2128,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           case "ElmMakeCrashError":
             return Errors.elmMakeCrashError(
               outputPath,
-              status.jsonLength,
+              status.beforeError,
               status.error,
               status.command
             );
