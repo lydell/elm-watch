@@ -3556,6 +3556,46 @@ describe("hot", () => {
     }
   });
 
+  test("missing window.Elm", async () => {
+    const { renders } = await run({
+      fixture: "missing-window-elm",
+      args: ["Main"],
+      scripts: ["Main.js"],
+      init: () => {
+        expect(window.Elm).toBeUndefined();
+      },
+      onIdle: () => {
+        expandUi();
+        return "Stop";
+      },
+    });
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ ❌ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      window.Elm does not look like expected! This is the error message:
+      At root["Elm"]:
+      Expected an object
+      Got: undefined
+      ▲ ❌ 13:10:05 Main
+    `);
+  });
+
   describe("printTimeline", () => {
     function print(
       events: Array<LatestEvent>,
