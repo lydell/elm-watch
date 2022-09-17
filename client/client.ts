@@ -1517,14 +1517,50 @@ function render(
   __ELM_WATCH.ON_RENDER(TARGET_NAME);
 }
 
+type Quadrant = {
+  position: BrowserUiPosition;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
 // This takes CSS added by the user into account.
 function getActualBrowserUiPosition(container: HTMLElement): BrowserUiPosition {
-  const { top, left, height, width } = container.getBoundingClientRect();
-  const isTop = top + height / 2 < window.innerHeight / 2;
-  const isLeft = left + width / 2 < window.innerWidth / 2;
-  const y = isTop ? "Top" : "Bottom";
-  const x = isLeft ? "Left" : "Right";
-  return `${y}${x}` as const;
+  const rect = container.getBoundingClientRect();
+  const halfHeight = window.innerHeight / 2;
+  const halfWidth = window.innerWidth / 2;
+  const size = { width: halfWidth, height: halfHeight };
+  const quadrants: Array<Quadrant> = [
+    { position: "TopLeft", top: 0, left: 0, ...size },
+    { position: "TopRight", top: 0, left: halfWidth, ...size },
+    { position: "BottomLeft", top: halfHeight, left: 0, ...size },
+    { position: "BottomRight", top: halfHeight, left: halfWidth, ...size },
+  ];
+  const areas: Array<[BrowserUiPosition, number]> = quadrants.map(
+    (quadrant) => [quadrant.position, getOverlappingArea(quadrant, rect)]
+  );
+  return maxBy(areas, ([, area]) => area)[0];
+}
+
+function getOverlappingArea(quadrant: Quadrant, rect: DOMRect): number {
+  const top = Math.max(quadrant.top, rect.top);
+  const bottom = Math.min(
+    quadrant.top + quadrant.height,
+    rect.top + rect.height
+  );
+  const left = Math.max(quadrant.left, rect.left);
+  const right = Math.min(
+    quadrant.left + quadrant.width,
+    rect.left + rect.width
+  );
+  const height = Math.max(0, bottom - top);
+  const width = Math.max(0, right - left);
+  return height * width;
+}
+
+function maxBy<T>(array: Array<T>, f: (item: T) => number): T {
+  return array.reduce((min, item) => (f(item) > f(min) ? item : min));
 }
 
 const CLASS = {
