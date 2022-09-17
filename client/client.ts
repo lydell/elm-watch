@@ -14,6 +14,11 @@ import {
   WebSocketToServerMessage,
 } from "./WebSocketMessages";
 
+// Support Web Workers, where `window` does not exist.
+const window = globalThis as unknown as Window;
+
+const IS_WEB_WORKER = window.window === undefined;
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
@@ -112,7 +117,20 @@ window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
       // Ignore failing to write to sessionStorage.
     }
   }
-  window.location.reload();
+  if (IS_WEB_WORKER) {
+    if (message !== undefined) {
+      // eslint-disable-next-line no-console
+      console.info(message);
+    }
+    // eslint-disable-next-line no-console
+    console.error(
+      message === undefined
+        ? "elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I can’t do it for you."
+        : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`
+    );
+  } else {
+    window.location.reload();
+  }
 };
 
 window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
@@ -326,32 +344,7 @@ function run(): void {
     // Ignore failing to read or delete from sessionStorage.
   }
 
-  const container = getOrCreateContainer();
-  const { shadowRoot } = container;
-
-  if (shadowRoot === null) {
-    throw new Error(
-      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`
-    );
-  }
-
-  let root = shadowRoot.querySelector(`.${CLASS.root}`);
-  if (root === null) {
-    root = h(HTMLDivElement, { className: CLASS.root });
-    shadowRoot.append(root);
-  }
-
-  const existingTargetRoot = Array.from(root.children).find(
-    (element) => element.getAttribute("data-target") === TARGET_NAME
-  );
-
-  if (existingTargetRoot !== undefined) {
-    return;
-  }
-
-  const targetRoot = createTargetRoot(TARGET_NAME);
-  root.append(targetRoot);
-
+  const targetRoot = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
@@ -383,7 +376,11 @@ function run(): void {
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
-    runCmd: runCmd(getNow, targetRoot),
+    runCmd: runCmd(getNow, (dispatch, model, info, manageFocus) => {
+      if (targetRoot !== undefined) {
+        render(getNow, targetRoot, dispatch, model, info, manageFocus);
+      }
+    }),
   }).catch((error) => {
     // eslint-disable-next-line no-console
     console.error("elm-watch: Unexpectedly exited with error:", error);
@@ -454,6 +451,27 @@ function getOrCreateContainer(): HTMLElement {
   return container;
 }
 
+function getOrCreateTargetRoot(): HTMLElement {
+  const { shadowRoot } = getOrCreateContainer();
+
+  if (shadowRoot === null) {
+    throw new Error(
+      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`
+    );
+  }
+
+  let root = shadowRoot.querySelector(`.${CLASS.root}`);
+  if (root === null) {
+    root = h(HTMLDivElement, { className: CLASS.root });
+    shadowRoot.append(root);
+  }
+
+  const targetRoot = createTargetRoot(TARGET_NAME);
+  root.append(targetRoot);
+
+  return targetRoot;
+}
+
 function createTargetRoot(targetName: string): HTMLElement {
   return h(HTMLDivElement, {
     className: CLASS.targetRoot,
@@ -462,7 +480,7 @@ function createTargetRoot(targetName: string): HTMLElement {
 }
 
 const initMutable =
-  (getNow: GetNow, targetRoot: HTMLElement) =>
+  (getNow: GetNow, targetRoot?: HTMLElement) =>
   (
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: undefined) => void
@@ -522,7 +540,7 @@ const initMutable =
             clearTimeout(mutable.webSocketTimeoutId);
             mutable.webSocketTimeoutId = undefined;
           }
-          targetRoot.remove();
+          targetRoot?.remove();
           resolvePromise(undefined);
         } else {
           originalKillMatching(targetName).then(resolve).catch(reject);
@@ -928,7 +946,15 @@ function printRetryWaitMs(attemptNumber: number): string {
 }
 
 const runCmd =
-  (getNow: GetNow, targetRoot: HTMLElement) =>
+  (
+    getNow: GetNow,
+    passedRender: (
+      dispatch: (msg: Msg) => void,
+      model: Model,
+      info: Info,
+      manageFocus: boolean
+    ) => void
+  ) =>
   (
     cmd: Cmd,
     mutable: Mutable,
@@ -970,9 +996,7 @@ const runCmd =
         return;
 
       case "Render":
-        render(
-          getNow,
-          targetRoot,
+        passedRender(
           dispatch,
           cmd.model,
           {
@@ -992,7 +1016,10 @@ const runCmd =
 
       case "SleepBeforeReconnect":
         setTimeout(() => {
-          if (document.visibilityState === "visible") {
+          if (
+            typeof document === "undefined" ||
+            document.visibilityState === "visible"
+          ) {
             dispatch({ tag: "SleepBeforeReconnectDone", date: getNow() });
           }
         }, retryWaitMs(cmd.attemptNumber));
