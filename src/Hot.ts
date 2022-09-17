@@ -551,16 +551,13 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
   const json: ElmWatchStuffJsonWritable = {
     port: mutable.webSocketServer.port.thePort,
     targets: Object.fromEntries(
-      getFlatOutputs(mutable.project).flatMap(({ outputPath, outputState }) =>
-        outputState.compilationMode === "standard"
-          ? []
-          : [
-              [
-                outputPath.targetName,
-                { compilationMode: outputState.compilationMode },
-              ],
-            ]
-      )
+      getFlatOutputs(mutable.project).map(({ outputPath, outputState }) => [
+        outputPath.targetName,
+        {
+          compilationMode: outputState.compilationMode,
+          browserUiPosition: outputState.browserUiPosition,
+        },
+      ])
     ),
   };
 

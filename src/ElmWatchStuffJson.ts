@@ -3,7 +3,11 @@ import * as Decode from "tiny-decoders";
 
 import { JsonError, toError, toJsonError } from "./Helpers";
 import { Port } from "./Port";
-import { ElmWatchStuffJsonPath } from "./Types";
+import {
+  BrowserUiPosition,
+  CompilationMode,
+  ElmWatchStuffJsonPath,
+} from "./Types";
 
 // elm-stuff/elm-watch/stuff.json stores things between runs.
 // Configuration is stored in elm-watch.json.
@@ -12,13 +16,10 @@ import { ElmWatchStuffJsonPath } from "./Types";
 // Either way, it’s a good bet and people probably have `elm-stuff` in their
 // .gitignore anyway.
 
-const CompilationMode = Decode.stringUnion({
-  debug: null,
-  optimize: null,
-});
-
+type Target = ReturnType<typeof Target>;
 const Target = Decode.fieldsAuto({
-  compilationMode: CompilationMode,
+  compilationMode: Decode.optional(CompilationMode),
+  browserUiPosition: Decode.optional(BrowserUiPosition),
 });
 
 export type ElmWatchStuffJson = ReturnType<typeof ElmWatchStuffJson>;
@@ -27,8 +28,9 @@ export const ElmWatchStuffJson = Decode.fieldsAuto({
   targets: Decode.record(Target),
 });
 
-export type ElmWatchStuffJsonWritable = Omit<ElmWatchStuffJson, "port"> & {
+export type ElmWatchStuffJsonWritable = {
   port: number;
+  targets: Record<string, Required<Target>>;
 };
 
 type ParseResult =

@@ -373,15 +373,13 @@ export function runHotReload({
 
   const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
     port: 58888,
-    targets:
-      compilationMode === "standard"
-        ? extraElmWatchStuffJson
-        : {
-            [name]: {
-              compilationMode,
-            },
-            ...extraElmWatchStuffJson,
-          },
+    targets: {
+      [name]: {
+        compilationMode,
+        browserUiPosition: "BottomLeft",
+      },
+      ...extraElmWatchStuffJson,
+    },
   };
 
   let lastContent = "";

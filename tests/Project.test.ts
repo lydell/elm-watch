@@ -130,6 +130,7 @@ const project: Project = {
               },
             ],
             "optimize",
+            "BottomLeft",
             getNow
           ),
         ],
@@ -175,6 +176,7 @@ const project: Project = {
               },
             ],
             "standard",
+            "BottomLeft",
             getNow
           ),
         ],
@@ -223,6 +225,7 @@ const project: Project = {
               },
             ],
             "optimize",
+            "BottomLeft",
             getNow
           ),
         ],

@@ -3,6 +3,7 @@ import * as Decode from "tiny-decoders";
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import type {
+  BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
   GetNow,
@@ -172,6 +173,8 @@ const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
 // have the selected compilation mode in the `Model` and the running mode here.
 const ORIGINAL_COMPILATION_MODE =
   "%ORIGINAL_COMPILATION_MODE%" as CompilationModeWithProxy;
+const ORIGINAL_BROWSER_UI_POSITION =
+  "%ORIGINAL_BROWSER_UI_POSITION%" as BrowserUiPosition;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
@@ -237,6 +240,10 @@ type UiMsg =
     }
   | {
       tag: "PressedChevron";
+    }
+  | {
+      tag: "PressedMoveBrowserUiPosition";
+      position: BrowserUiPosition;
     }
   | {
       tag: "PressedReconnectNow";
@@ -465,8 +472,7 @@ function getOrCreateContainer(): HTMLElement {
   container.style.all = "unset";
   container.style.position = "fixed";
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
-  container.style.left = "-1px";
-  container.style.bottom = "-1px";
+  setBrowserUiPosition(ORIGINAL_BROWSER_UI_POSITION, container);
 
   const shadowRoot = container.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS));
@@ -501,6 +507,54 @@ function createTargetRoot(targetName: string): HTMLElement {
     className: CLASS.targetRoot,
     attrs: { "data-target": targetName },
   });
+}
+
+type PositionCss<Position> = {
+  top: Position;
+  bottom: Position;
+  left: Position;
+  right: Position;
+};
+
+function browserUiPositionToCss(
+  browserUiPosition: BrowserUiPosition
+): PositionCss<"-1px" | "auto"> {
+  switch (browserUiPosition) {
+    case "TopLeft":
+      return { top: "-1px", bottom: "auto", left: "-1px", right: "auto" };
+    case "TopRight":
+      return { top: "-1px", bottom: "auto", left: "auto", right: "-1px" };
+    case "BottomLeft":
+      return { top: "auto", bottom: "-1px", left: "-1px", right: "auto" };
+    case "BottomRight":
+      return { top: "auto", bottom: "-1px", left: "auto", right: "-1px" };
+  }
+}
+
+function browserUiPositionToCssForChooser(
+  browserUiPosition: BrowserUiPosition
+): PositionCss<"0" | "auto"> {
+  switch (browserUiPosition) {
+    case "TopLeft":
+      return { top: "auto", bottom: "0", left: "auto", right: "0" };
+    case "TopRight":
+      return { top: "auto", bottom: "0", left: "0", right: "auto" };
+    case "BottomLeft":
+      return { top: "0", bottom: "auto", left: "auto", right: "0" };
+    case "BottomRight":
+      return { top: "0", bottom: "auto", left: "0", right: "auto" };
+  }
+}
+
+function setBrowserUiPosition(
+  browserUiPosition: BrowserUiPosition,
+  container: HTMLElement
+): void {
+  for (const [key, value] of Object.entries(
+    browserUiPositionToCss(browserUiPosition)
+  )) {
+    container.style.setProperty(key, value);
+  }
 }
 
 const initMutable =
@@ -809,6 +863,11 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
 
     case "PressedChevron":
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
+
+    case "PressedMoveBrowserUiPosition":
+      // TODO
+      console.log("PressedMoveBrowserUiPosition", msg.position);
+      return [model, []];
 
     case "PressedReconnectNow":
       return reconnect(model, date, { force: true });
@@ -1317,9 +1376,15 @@ function h<T extends HTMLElement>(
   t: new () => T,
   {
     attrs,
+    style,
     localName,
     ...props
-  }: Partial<T & { attrs: Record<string, string> }>,
+  }: Partial<
+    Omit<T, "style"> & {
+      attrs: Record<string, string>;
+      style: Partial<CSSStyleDeclaration>;
+    }
+  >,
   ...children: Array<HTMLElement | string | undefined>
 ): T {
   const element = document.createElement(
@@ -1337,6 +1402,12 @@ function h<T extends HTMLElement>(
   if (attrs !== undefined) {
     for (const [key, value] of Object.entries(attrs)) {
       element.setAttribute(key, value);
+    }
+  }
+
+  if (style !== undefined) {
+    for (const [key, value] of Object.entries(style)) {
+      element.style.setProperty(key, value);
     }
   }
 
@@ -1374,10 +1445,13 @@ function render(
   info: Info,
   manageFocus: boolean
 ): void {
-  targetRoot.classList.toggle(
-    CLASS.targetRootBottomHalf,
-    getIsPositionedInBottomHalf(targetRoot)
-  );
+  const actualBrowserUiPosition = getActualBrowserUiPosition(targetRoot);
+
+  const isInBottomHalf =
+    actualBrowserUiPosition === "BottomLeft" ||
+    actualBrowserUiPosition === "BottomRight";
+
+  targetRoot.classList.toggle(CLASS.targetRootBottomHalf, isInBottomHalf);
 
   targetRoot.replaceChildren(
     view(
@@ -1386,7 +1460,8 @@ function render(
       },
       model,
       info,
-      manageFocus
+      manageFocus,
+      actualBrowserUiPosition
     )
   );
 
@@ -1398,12 +1473,21 @@ function render(
   __ELM_WATCH.ON_RENDER(TARGET_NAME);
 }
 
-function getIsPositionedInBottomHalf(targetRoot: HTMLElement): boolean {
-  const { top, height } = targetRoot.getBoundingClientRect();
-  return top + height / 2 > window.innerHeight / 2;
+// This takes CSS added by the user into account.
+function getActualBrowserUiPosition(
+  targetRoot: HTMLElement
+): BrowserUiPosition {
+  const { top, left, height, width } = targetRoot.getBoundingClientRect();
+  const isTop = top + height / 2 < window.innerHeight / 2;
+  const isLeft = left + width / 2 < window.innerWidth / 2;
+  const y = isTop ? "Top" : "Bottom";
+  const x = isLeft ? "Left" : "Right";
+  return `${y}${x}` as const;
 }
 
 const CLASS = {
+  browserUiPositionButton: "browserUiPositionButton",
+  browserUiPositionChooser: "browserUiPositionChooser",
   chevronButton: "chevronButton",
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
@@ -1573,6 +1657,24 @@ time::after {
   gap: 0.25em;
 }
 
+.${CLASS.browserUiPositionChooser} {
+  position: absolute;
+  display: grid;
+  grid-template-columns: min-content min-content;
+  pointer-events: none;
+}
+
+.${CLASS.browserUiPositionButton} {
+  appearance: none;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: none;
+  pointer-events: auto;
+  width: 1em;
+  height: 1em;
+}
+
 .${CLASS.shortStatusContainer} {
   line-height: 1;
   padding: 0.25em;
@@ -1651,7 +1753,8 @@ function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
   info: Info,
-  manageFocus: boolean
+  manageFocus: boolean,
+  browserUiPosition: BrowserUiPosition
 ): HTMLElement {
   const model: Model = __ELM_WATCH.MOCKED_TIMINGS
     ? {
@@ -1684,7 +1787,13 @@ function view(
     HTMLDivElement,
     { className: CLASS.container },
     model.uiExpanded
-      ? viewExpandedUi(model.status, statusData, info)
+      ? viewExpandedUi(
+          model.status,
+          statusData,
+          info,
+          browserUiPosition,
+          dispatch
+        )
       : undefined,
     h(
       HTMLDivElement,
@@ -1750,7 +1859,9 @@ function icon(
 function viewExpandedUi(
   status: Status,
   statusData: StatusData,
-  info: Info
+  info: Info,
+  browserUiPosition: BrowserUiPosition,
+  dispatch: (msg: UiMsg) => void
 ): HTMLElement {
   const items: Array<[string, HTMLElement | string]> = [
     ["target", info.targetName],
@@ -1789,8 +1900,86 @@ function viewExpandedUi(
         h(HTMLElement, { localName: "dd" }, value),
       ])
     ),
-    ...statusData.content
+    ...statusData.content,
+    viewBrowserUiPositionChooser(browserUiPosition, dispatch)
   );
+}
+
+const allBrowserUiPositions: Array<BrowserUiPosition> = [
+  "TopLeft",
+  "TopRight",
+  "BottomLeft",
+  "BottomRight",
+];
+
+function viewBrowserUiPositionChooser(
+  currentPosition: BrowserUiPosition,
+  dispatch: (msg: UiMsg) => void
+): HTMLElement {
+  return h(
+    HTMLDivElement,
+    {
+      className: CLASS.browserUiPositionChooser,
+      style: browserUiPositionToCssForChooser(currentPosition),
+    },
+    ...allBrowserUiPositions.map((position) =>
+      position === currentPosition
+        ? h(HTMLDivElement, {})
+        : h(
+            HTMLButtonElement,
+            {
+              className: CLASS.browserUiPositionButton,
+              onclick: () => {
+                dispatch({ tag: "PressedMoveBrowserUiPosition", position });
+              },
+            },
+            browserUiPositionArrow(currentPosition, position)
+          )
+    )
+  );
+}
+
+function browserUiPositionArrow(
+  fromPosition: BrowserUiPosition,
+  toPosition: BrowserUiPosition
+): string {
+  const from = browserUiPositionToComponents(fromPosition);
+  const to = browserUiPositionToComponents(toPosition);
+  return from.isTop === to.isTop
+    ? from.isLeft
+      ? "→"
+      : "←"
+    : from.isLeft === to.isLeft
+    ? from.isTop
+      ? "↓"
+      : "↑"
+    : browserUiPositionDiagonalArrow(toPosition);
+}
+
+function browserUiPositionDiagonalArrow(
+  browserUiPosition: BrowserUiPosition
+): string {
+  switch (browserUiPosition) {
+    case "TopLeft":
+      return "↖";
+    case "TopRight":
+      return "↗";
+    case "BottomLeft":
+      return "↙";
+    case "BottomRight":
+      return "↘";
+  }
+}
+
+function browserUiPositionToComponents(browserUiPosition: BrowserUiPosition): {
+  isTop: boolean;
+  isLeft: boolean;
+} {
+  return {
+    isTop: browserUiPosition === "TopLeft" || browserUiPosition === "TopRight",
+    isLeft:
+      browserUiPosition === "TopLeft" || browserUiPosition === "BottomLeft",
+  };
 }
 
 type StatusData = {
