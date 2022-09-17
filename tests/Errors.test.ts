@@ -1895,6 +1895,82 @@ describe("errors", () => {
       `);
     });
 
+    test("Elm crash immediately", async () => {
+      expect(await runWithBadElmBin("elm-crash")).toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+
+        Elm crashed with this error:
+
+        elm: Map.!: given key is not an element in the map
+        CallStack (from HasCallStack):
+          error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal
+
+        🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
+    test("Elm crash half-way through printing JSON", async () => {
+      expect(await runWithBadElmBin("elm-crash-json")).toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+
+        I got back 242 characters of JSON, but then Elm crashed with this error:
+
+        elm: Map.!: given key is not an element in the map
+        CallStack (from HasCallStack):
+          error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal
+
+        🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
+    test("Elm crash with non-JSON printed before", async () => {
+      expect(await runWithBadElmBin("elm-crash-extra")).toMatchInlineSnapshot(`
+        🚨 app
+
+        ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
+        ⧙Target: app⧘
+
+        I ran the following commands:
+
+        cd /Users/you/project/tests/fixtures/errors/valid
+        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+
+        Elm printed this text:
+
+        Text before crash
+
+        Then it crashed with this error:
+
+        elm: Map.!: given key is not an element in the map
+        CallStack (from HasCallStack):
+          error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal
+
+        🚨 ⧙1⧘ error found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
     test("interrupt typecheck with compilation error", async () => {
       const fixture = "interrupt-typecheck";
       const dir = path.join(FIXTURES_DIR, fixture);

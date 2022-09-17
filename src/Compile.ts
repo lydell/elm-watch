@@ -904,7 +904,7 @@ function onCompileSuccess(
             fs.writeFileSync(
               outputPath.theOutputPath.absolutePath,
               // This will inject `elmCompiledTimestamp` into the built
-              // code, which is later used to detect if recompiles are
+              // code, which is later used to detect if recompilations are
               // needed or not. Note: This needs to be the timestamp of
               // when Elm finished compiling, not when postprocessing
               // finished. That’s because we haven’t done the
@@ -1802,6 +1802,7 @@ function statusLine(
     case "ElmWatchNodeDefaultExportNotFunction":
     case "ElmWatchNodeRunError":
     case "ElmWatchNodeBadReturnValue":
+    case "ElmMakeCrashError":
     case "ElmMakeJsonParseError":
     case "ElmMakeError":
     case "ElmJsonReadAsJsonError":
@@ -2122,6 +2123,14 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
               status.returnValue,
               status.stdout,
               status.stderr
+            );
+
+          case "ElmMakeCrashError":
+            return Errors.elmMakeCrashError(
+              outputPath,
+              status.beforeError,
+              status.error,
+              status.command
             );
 
           case "ElmMakeJsonParseError":

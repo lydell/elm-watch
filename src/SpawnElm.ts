@@ -28,6 +28,12 @@ export type RunElmMakeResult =
 
 export type RunElmMakeError =
   | {
+      tag: "ElmMakeCrashError";
+      beforeError: Errors.ElmMakeCrashBeforeError;
+      error: string;
+      command: Command;
+    }
+  | {
       tag: "ElmMakeError";
       error: ElmMakeError;
       extraError: string | undefined;
@@ -113,16 +119,13 @@ export function make({
         const stdout = spawnResult.stdout.toString("utf8");
         const stderr = spawnResult.stderr.toString("utf8");
 
-        // This is a workaround for: https://github.com/elm/compiler/issues/2264
-        // Elm can print a “box” of plain text information before the JSON when
-        // it fails to read certain files in elm-stuff/:
-        // https://github.com/elm/compiler/blob/9f1bbb558095d81edba5796099fee9981eac255a/builder/src/File.hs#L85-L94
-        const match = elmStuffErrorMessagePrefixRegex.exec(stderr);
-        const elmStuffError = match?.[0];
-        const potentialJson =
-          elmStuffError === undefined
-            ? stderr
-            : stderr.slice(elmStuffError.length);
+        const unexpectedElmMakeOutput: RunElmMakeResult = {
+          tag: "UnexpectedElmMakeOutput",
+          exitReason,
+          stdout,
+          stderr,
+          command,
+        };
 
         return exitReason.tag === "ExitCode" &&
           exitReason.exitCode === 0 &&
@@ -131,16 +134,10 @@ export function make({
           ? { tag: "Success" }
           : exitReason.tag === "ExitCode" &&
             exitReason.exitCode === 1 &&
-            stdout === "" &&
-            potentialJson.startsWith("{")
-          ? parseElmMakeJson(command, potentialJson, elmStuffError?.trim())
-          : {
-              tag: "UnexpectedElmMakeOutput",
-              exitReason,
-              stdout,
-              stderr,
-              command,
-            };
+            stdout === ""
+          ? parsePotentialElmMakeJson(command, stderr) ??
+            unexpectedElmMakeOutput
+          : unexpectedElmMakeOutput;
       }
     }
   };
@@ -200,7 +197,41 @@ function maybeToArray<T>(arg: T | undefined): Array<T> {
   return arg === undefined ? [] : [arg];
 }
 
-function parseElmMakeJson(
+function parsePotentialElmMakeJson(
+  command: Command,
+  stderr: string
+): RunElmMakeResult | undefined {
+  if (!stderr.endsWith("}")) {
+    // This is a workaround for when Elm crashes, potentially half-way through printing the JSON.
+    // For example: https://github.com/elm/compiler/issues/1916
+    const errorIndex = stderr.lastIndexOf("elm: ");
+    if (errorIndex !== -1) {
+      return {
+        tag: "ElmMakeCrashError",
+        beforeError: stderr.startsWith("{")
+          ? { tag: "Json", length: errorIndex }
+          : { tag: "Text", text: stderr.slice(0, errorIndex) },
+        error: stderr.slice(errorIndex),
+        command,
+      };
+    }
+  }
+
+  // This is a workaround for: https://github.com/elm/compiler/issues/2264
+  // Elm can print a “box” of plain text information before the JSON when
+  // it fails to read certain files in elm-stuff/:
+  // https://github.com/elm/compiler/blob/9f1bbb558095d81edba5796099fee9981eac255a/builder/src/File.hs#L85-L94
+  const match = elmStuffErrorMessagePrefixRegex.exec(stderr);
+  const elmStuffError = match?.[0];
+  const potentialJson =
+    elmStuffError === undefined ? stderr : stderr.slice(elmStuffError.length);
+
+  return potentialJson.startsWith("{")
+    ? parseActualElmMakeJson(command, potentialJson, elmStuffError?.trim())
+    : undefined;
+}
+
+function parseActualElmMakeJson(
   command: Command,
   jsonString: string,
   extraError: string | undefined
