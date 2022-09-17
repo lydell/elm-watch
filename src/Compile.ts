@@ -47,6 +47,7 @@ import {
 import * as SpawnElm from "./SpawnElm";
 import {
   AbsolutePath,
+  BrowserUiPosition,
   CompilationMode,
   ElmJsonPath,
   ElmWatchJsonPath,
@@ -531,6 +532,7 @@ export type HandleOutputActionResult =
       code: Buffer | string;
       elmCompiledTimestamp: number;
       compilationMode: CompilationMode;
+      browserUiPosition: BrowserUiPosition;
     }
   | {
       tag: "FullyCompiledJSButRecordFieldsChanged";
@@ -958,6 +960,7 @@ function onCompileSuccess(
                 code: newCode,
                 elmCompiledTimestamp,
                 compilationMode: outputState.compilationMode,
+                browserUiPosition: outputState.browserUiPosition,
               };
         }
 
@@ -1151,6 +1154,7 @@ async function postprocessHelper({
             code: postprocessResult.code,
             elmCompiledTimestamp,
             compilationMode: outputState.compilationMode,
+            browserUiPosition: outputState.browserUiPosition,
           };
     }
 

@@ -173,6 +173,10 @@ const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
 // have the selected compilation mode in the `Model` and the running mode here.
 const ORIGINAL_COMPILATION_MODE =
   "%ORIGINAL_COMPILATION_MODE%" as CompilationModeWithProxy;
+// This is the saved browser UI position as of when this file was compiled. We
+// also store the latest saved position in the model, which is updated as soon
+// as things change. Finally, we don’t trust any of these when rendering and
+// instead calculate the position on screen to take user CSS into account.
 const ORIGINAL_BROWSER_UI_POSITION =
   "%ORIGINAL_BROWSER_UI_POSITION%" as BrowserUiPosition;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
@@ -259,6 +263,7 @@ type Model = {
   status: Status;
   previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
+  lastSavedBrowserUiPosition: BrowserUiPosition;
   elmCompiledTimestamp: number;
   uiExpanded: boolean;
 };
@@ -267,6 +272,9 @@ type Cmd =
   | {
       tag: "Eval";
       code: string;
+    }
+  | {
+      tag: "NoCmd";
     }
   | {
       tag: "Reconnect";
@@ -725,6 +733,7 @@ const init = (date: Date): [Model, Array<Cmd>] => {
     status: { tag: "Connecting", date, attemptNumber: 1 },
     previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
+    lastSavedBrowserUiPosition: ORIGINAL_BROWSER_UI_POSITION,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
   };
@@ -946,8 +955,17 @@ function onWebSocketToClientMessage(
               ...model,
               compilationMode: msg.compilationMode,
               elmCompiledTimestamp: msg.elmCompiledTimestamp,
+              lastSavedBrowserUiPosition: msg.browserUiPosition,
             },
-            [{ tag: "Eval", code: msg.code }],
+            [
+              { tag: "Eval", code: msg.code },
+              msg.browserUiPosition === model.lastSavedBrowserUiPosition
+                ? { tag: "NoCmd" }
+                : {
+                    tag: "SetBrowserUiPosition",
+                    browserUiPosition: msg.browserUiPosition,
+                  },
+            ],
           ];
 
     case "SuccessfullyCompiledButRecordFieldsChanged":
@@ -1114,6 +1132,9 @@ const runCmd =
         }
         return;
       }
+
+      case "NoCmd":
+        return;
 
       case "Reconnect":
         mutable.webSocket = initWebSocket(
@@ -2674,6 +2695,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       status,
       previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
+      lastSavedBrowserUiPosition: "BottomLeft",
       elmCompiledTimestamp: 0,
       uiExpanded: true,
     };

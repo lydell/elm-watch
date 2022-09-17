@@ -34,6 +34,7 @@ const SuccessfullyCompiled = Decode.fieldsAuto({
   code: Decode.string,
   elmCompiledTimestamp: Decode.number,
   compilationMode: CompilationMode,
+  browserUiPosition: BrowserUiPosition,
 });
 
 const SuccessfullyCompiledButRecordFieldsChanged = Decode.fieldsAuto({

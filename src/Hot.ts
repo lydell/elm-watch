@@ -1756,6 +1756,7 @@ function handleOutputActionResultToCmd(
           code: handleOutputActionResult.code.toString("utf8"),
           elmCompiledTimestamp: handleOutputActionResult.elmCompiledTimestamp,
           compilationMode: handleOutputActionResult.compilationMode,
+          browserUiPosition: handleOutputActionResult.browserUiPosition,
         },
       };
 
