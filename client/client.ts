@@ -377,7 +377,12 @@ function run(): void {
       return [newModel, allCmds];
     },
     runCmd: runCmd(getNow, (dispatch, model, info, manageFocus) => {
-      if (targetRoot !== undefined) {
+      if (targetRoot === undefined) {
+        if (model.status.tag !== model.previousStatusTag) {
+          // eslint-disable-next-line no-console
+          console.info(renderWebWorker(model, info));
+        }
+      } else {
         render(getNow, targetRoot, dispatch, model, info, manageFocus);
       }
     }),
@@ -610,10 +615,9 @@ function initWebSocket(
 }
 
 const init = (date: Date): [Model, Array<Cmd>] => {
-  const status: Status = { tag: "Connecting", date, attemptNumber: 1 };
   const model: Model = {
-    status,
-    previousStatusTag: status.tag,
+    status: { tag: "Connecting", date, attemptNumber: 1 },
+    previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
@@ -1306,6 +1310,13 @@ type Info = {
   initializedElmAppsStatus: InitializedElmAppsStatus;
 };
 
+function renderWebWorker(model: Model, info: Info): string {
+  const statusData = statusIconAndText(model.status, info);
+  return `${statusData.icon} elm-watch: ${statusData.status} ${formatTime(
+    model.status.date
+  )}`;
+}
+
 function render(
   getNow: GetNow,
   targetRoot: HTMLElement,
@@ -1603,12 +1614,10 @@ function view(
       }
     : passedModel;
 
-  const statusData = viewStatus(
-    dispatch,
-    model.status,
-    model.compilationMode,
-    info
-  );
+  const statusData: StatusData = {
+    ...statusIconAndText(model.status, info),
+    ...viewStatus(dispatch, model.status, model.compilationMode, info),
+  };
 
   const statusType = statusToStatusType(model.status.tag);
   const statusTypeChanged =
@@ -1742,17 +1751,70 @@ type StatusData = {
   content: Array<HTMLElement>;
 };
 
-function viewStatus(
-  dispatch: (msg: UiMsg) => void,
+function statusIconAndText(
   status: Status,
-  compilationMode: CompilationModeWithProxy,
   info: Info
-): StatusData {
+): Pick<StatusData, "icon" | "status"> {
   switch (status.tag) {
     case "Busy":
       return {
         icon: "⏳",
         status: "Waiting for compilation",
+      };
+
+    case "CompileError":
+      return {
+        icon: "🚨",
+        status: "Compilation error",
+      };
+
+    case "Connecting":
+      return {
+        icon: "🔌",
+        status: "Connecting",
+      };
+
+    case "EvalError":
+      return {
+        icon: "⛔️",
+        status: "Eval error",
+      };
+
+    case "Idle":
+      return {
+        icon: idleIcon(info.initializedElmAppsStatus),
+        status: "Successfully compiled",
+      };
+
+    case "SleepingBeforeReconnect":
+      return {
+        icon: "🔌",
+        status: "Sleeping",
+      };
+
+    case "UnexpectedError":
+      return {
+        icon: "❌",
+        status: "Unexpected error",
+      };
+
+    case "WaitingForReload":
+      return {
+        icon: "⏳",
+        status: "Waiting for reload",
+      };
+  }
+}
+
+function viewStatus(
+  dispatch: (msg: UiMsg) => void,
+  status: Status,
+  compilationMode: CompilationModeWithProxy,
+  info: Info
+): Pick<StatusData, "content" | "dl"> {
+  switch (status.tag) {
+    case "Busy":
+      return {
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1766,8 +1828,6 @@ function viewStatus(
 
     case "CompileError":
       return {
-        icon: "🚨",
-        status: "Compilation error",
         dl: [],
         content: [
           ...viewCompilationModeChooser({
@@ -1791,8 +1851,6 @@ function viewStatus(
 
     case "Connecting":
       return {
-        icon: "🔌",
-        status: "Connecting",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1804,8 +1862,6 @@ function viewStatus(
 
     case "EvalError":
       return {
-        icon: "⛔️",
-        status: "Eval error",
         dl: [],
         content: [
           h(
@@ -1818,8 +1874,6 @@ function viewStatus(
 
     case "Idle":
       return {
-        icon: idleIcon(info.initializedElmAppsStatus),
-        status: "Successfully compiled",
         dl: [],
         content: viewCompilationModeChooser({
           dispatch,
@@ -1832,8 +1886,6 @@ function viewStatus(
 
     case "SleepingBeforeReconnect":
       return {
-        icon: "🔌",
-        status: "Sleeping",
         dl: [
           ["attempt", status.attemptNumber.toString()],
           ["sleep", printRetryWaitMs(status.attemptNumber)],
@@ -1853,8 +1905,6 @@ function viewStatus(
 
     case "UnexpectedError":
       return {
-        icon: "❌",
-        status: "Unexpected error",
         dl: [],
         content: [
           h(
@@ -1868,8 +1918,6 @@ function viewStatus(
 
     case "WaitingForReload":
       return {
-        icon: "⏳",
-        status: "Waiting for reload",
         dl: [],
         content: [
           h(
