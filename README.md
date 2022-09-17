@@ -142,7 +142,7 @@ For a package, it doesn’t take many tests to reach the point where if the test
 
 elm-watch is basically just `elm-watch make`, so the output format is using the good old `window.Elm` global.
 
-elm-watch even _requires `window.Elm` to exist._ That global variable is key to make [hot reloading](#hot-reloading) work.
+elm-watch even _requires `window.Elm` to exist._ That global variable is key to make [hot reloading](#hot-reloading) work. (Technically, `globalThis.Elm` is required to exist. See below.)
 
 **In short:** Keep it simple and load the built Elm JS in its own `<script>` tag and you’ll be fine.
 
