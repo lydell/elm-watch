@@ -1314,7 +1314,7 @@ function renderWebWorker(model: Model, info: Info): string {
   const statusData = statusIconAndText(model.status, info);
   return `${statusData.icon} elm-watch: ${statusData.status} ${formatTime(
     model.status.date
-  )}`;
+  )} (${info.targetName})`;
 }
 
 function render(
