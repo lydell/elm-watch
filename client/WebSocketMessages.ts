@@ -1,6 +1,6 @@
 import * as Decode from "tiny-decoders";
 
-import { CompilationMode } from "../src/Types";
+import { BrowserUiPosition, CompilationMode } from "../src/Types";
 
 const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
@@ -57,6 +57,10 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
   ChangedCompilationMode: Decode.fieldsAuto({
     tag: () => "ChangedCompilationMode" as const,
     compilationMode: CompilationMode,
+  }),
+  ChangedBrowserUiPosition: Decode.fieldsAuto({
+    tag: () => "ChangedBrowserUiPosition" as const,
+    browserUiPosition: BrowserUiPosition,
   }),
   FocusedTab: Decode.fieldsAuto({
     tag: () => "FocusedTab" as const,

@@ -54,6 +54,7 @@ import {
 import { runTeaProgram } from "./TeaProgram";
 import {
   AbsolutePath,
+  BrowserUiPosition,
   CompilationMode,
   ElmWatchJsonPath,
   equalsInputPath,
@@ -224,6 +225,11 @@ type HotState =
     };
 
 type Cmd =
+  | {
+      tag: "ChangeBrowserUiPosition";
+      outputState: OutputState;
+      browserUiPosition: BrowserUiPosition;
+    }
   | {
       tag: "ChangeCompilationMode";
       outputState: OutputState;
@@ -1266,6 +1272,11 @@ const runCmd =
     rejectPromise: (error: Error) => void
   ): void => {
     switch (cmd.tag) {
+      case "ChangeBrowserUiPosition":
+        cmd.outputState.browserUiPosition = cmd.browserUiPosition;
+        writeElmWatchStuffJson(mutable);
+        return;
+
       case "ChangeCompilationMode":
         cmd.outputState.compilationMode = cmd.compilationMode;
         writeElmWatchStuffJson(mutable);
@@ -2312,6 +2323,25 @@ function onWebSocketToServerMessage(
         }
       }
     }
+
+    case "ChangedBrowserUiPosition":
+      switch (output.tag) {
+        case "OutputPathError":
+          return [model, []];
+
+        case "Output": {
+          return [
+            model,
+            [
+              {
+                tag: "ChangeBrowserUiPosition",
+                outputState: output.outputState,
+                browserUiPosition: message.browserUiPosition,
+              },
+            ],
+          ];
+        }
+      }
 
     case "FocusedTab":
       return [

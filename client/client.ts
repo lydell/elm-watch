@@ -243,7 +243,8 @@ type UiMsg =
     }
   | {
       tag: "PressedMoveBrowserUiPosition";
-      position: BrowserUiPosition;
+      browserUiPosition: BrowserUiPosition;
+      sendKey: SendKey;
     }
   | {
       tag: "PressedReconnectNow";
@@ -866,8 +867,20 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
 
     case "PressedMoveBrowserUiPosition":
       // TODO
-      console.log("PressedMoveBrowserUiPosition", msg.position);
-      return [model, []];
+      console.log("PressedMoveBrowserUiPosition", msg.browserUiPosition);
+      return [
+        model,
+        [
+          {
+            tag: "SendMessage",
+            message: {
+              tag: "ChangedBrowserUiPosition",
+              browserUiPosition: msg.browserUiPosition,
+            },
+            sendKey: msg.sendKey,
+          },
+        ],
+      ];
 
     case "PressedReconnectNow":
       return reconnect(model, date, { force: true });
@@ -1901,7 +1914,13 @@ function viewExpandedUi(
       ])
     ),
     ...statusData.content,
-    viewBrowserUiPositionChooser(browserUiPosition, dispatch)
+    "sendKey" in status
+      ? viewBrowserUiPositionChooser(
+          browserUiPosition,
+          dispatch,
+          status.sendKey
+        )
+      : undefined
   );
 }
 
@@ -1914,7 +1933,8 @@ const allBrowserUiPositions: Array<BrowserUiPosition> = [
 
 function viewBrowserUiPositionChooser(
   currentPosition: BrowserUiPosition,
-  dispatch: (msg: UiMsg) => void
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey
 ): HTMLElement {
   return h(
     HTMLDivElement,
@@ -1930,7 +1950,11 @@ function viewBrowserUiPositionChooser(
             {
               className: CLASS.browserUiPositionButton,
               onclick: () => {
-                dispatch({ tag: "PressedMoveBrowserUiPosition", position });
+                dispatch({
+                  tag: "PressedMoveBrowserUiPosition",
+                  browserUiPosition: position,
+                  sendKey,
+                });
               },
             },
             browserUiPositionArrow(currentPosition, position)
