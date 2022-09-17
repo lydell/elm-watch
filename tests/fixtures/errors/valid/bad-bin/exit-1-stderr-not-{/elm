@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 if (require("../elm-install")) {
-  process.stdout.write(`This flag was given a bad value:
+  process.stderr.write(`This flag was given a bad value:
 
     --output=.js
 
