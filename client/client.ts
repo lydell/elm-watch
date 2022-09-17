@@ -1639,6 +1639,7 @@ time::after {
   display: grid;
   gap: 0.75em;
   outline: none;
+  position: relative;
 }
 
 .${CLASS.expandedUiContainer}:is(.length0, .length1) {
@@ -1686,6 +1687,10 @@ time::after {
   pointer-events: auto;
   width: 1em;
   height: 1em;
+}
+
+.${CLASS.targetRoot}:not(:first-child) .${CLASS.browserUiPositionChooser} {
+  display: none;
 }
 
 .${CLASS.shortStatusContainer} {
