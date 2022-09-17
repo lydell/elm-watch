@@ -462,11 +462,26 @@ There are many CLI programs that let you watch for file changes and then run a g
 
 elm-watch grew out of my frustration with [Parcel], and also [webpack]. Support for other languages than JavaScript and TypeScript always feels a bit like an afterthought in such tools.
 
-[elm-live] and [elm-go] are really cool. Built for Elm and works out of the box so you can get started in no time. I’ve had trouble with bugs, though, and also outgrown them in bigger projects.
+[elm-live] and [elm-go] are really cool. Built for Elm and work out of the box so you can get started in no time. I’ve had trouble with bugs, though, and I’ve also outgrown them in bigger projects, with multiple Elm apps.
 
 [esbuild] has an Elm plugin, but not with hot reloading.
 
-I’ve heard [Vite] is really fast and reliable, including the Elm plugin. But I don’t even feel like trying it at this point. JavaScript build tools come and go. It’s nice not having to change your Elm setup because you switched tooling for JavaScript.
+I’ve tried [Vite] through the wonderful [vite-elm-template]. Vite seems to get nothing but praise, and the little I’ve used it has been great. I’ve heard the Elm plugin is pretty stable, too. However, it prints the Elm compilation errors in all red, and doesn’t go the extra mile with hot reloading like elm-watch does.
+
+JavaScript build tools come and go, though. By pairing elm-watch with another build tool, rather than having that build tool also take care of Elm, you can avoid changing your Elm setup if you switch tooling for JavaScript.
+
+You can pair elm-watch with either of webpack, Parcel, Vite, esbuild or any other build tool really. I recommend pairing with Vite or esbuild!
+
+1. Set the `"output"`s in elm-watch.json to a place that is served by the dev server of your tool.
+
+2. Link to the built Elm JS in your HTML (as mentioned in [Getting Started](#getting-started)). Ideally, you want your tool to “ignore” that script tag – we don’t want it to spend time analyzing it, just serve that file. This might be a bit tricky depending on how customizable the build tool is. Try it out and see how it goes!
+
+3. When building for production:
+
+   - You might be able to re-use your build tool for minifying the built Elm JS, or you can install a minifier separately and use it in elm-watch [postprocess](#postprocess).
+   - You might want to hash the built Elm JS file, and update its link in the HTML to include the hash. If nothing else, you could make a small script that does that and run it after elm-watch and your build tool.
+
+It’s up to you to decide if you think the extra work of pairing a build tool with elm-watch is worth it.
 
 [elm-go]: https://github.com/lucamug/elm-go
 [elm-guide-install]: https://guide.elm-lang.org/install/elm.html
@@ -482,6 +497,7 @@ I’ve heard [Vite] is really fast and reliable, including the Elm plugin. But I
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
 [redux devtools]: https://github.com/reduxjs/redux-devtools
 [run-pty]: https://github.com/lydell/run-pty/
+[vite-elm-template]: https://github.com/lindsaykwardell/vite-elm-template
 [vite]: https://vitejs.dev/
 [webpack plugin]: https://webpack.js.org/api/plugins/
 [webpack]: https://webpack.js.org/
