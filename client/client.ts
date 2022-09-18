@@ -2002,7 +2002,7 @@ function viewExpandedUi(
   );
 }
 
-const allBrowserUiPositions: Array<BrowserUiPosition> = [
+const allBrowserUiPositionsInOrder: Array<BrowserUiPosition> = [
   "TopLeft",
   "TopRight",
   "BottomLeft",
@@ -2014,14 +2014,16 @@ function viewBrowserUiPositionChooser(
   dispatch: (msg: UiMsg) => void,
   sendKey: SendKey
 ): HTMLElement {
+  const arrows = getBrowserUiPositionArrows(currentPosition);
   return h(
     HTMLDivElement,
     {
       className: CLASS.browserUiPositionChooser,
       style: browserUiPositionToCssForChooser(currentPosition),
     },
-    ...allBrowserUiPositions.map((position) =>
-      position === currentPosition
+    ...allBrowserUiPositionsInOrder.map((position) => {
+      const arrow = arrows[position];
+      return arrow === undefined
         ? h(HTMLDivElement, {})
         : h(
             HTMLButtonElement,
@@ -2035,53 +2037,48 @@ function viewBrowserUiPositionChooser(
                 });
               },
             },
-            browserUiPositionArrow(currentPosition, position)
-          )
-    )
+            arrow
+          );
+    })
   );
 }
 
-function browserUiPositionArrow(
-  fromPosition: BrowserUiPosition,
-  toPosition: BrowserUiPosition
-): string {
-  const from = browserUiPositionToComponents(fromPosition);
-  const to = browserUiPositionToComponents(toPosition);
-  return from.isTop === to.isTop
-    ? from.isLeft
-      ? "→"
-      : "←"
-    : from.isLeft === to.isLeft
-    ? from.isTop
-      ? "↓"
-      : "↑"
-    : browserUiPositionDiagonalArrow(toPosition);
-}
-
-function browserUiPositionDiagonalArrow(
-  browserUiPosition: BrowserUiPosition
-): string {
+function getBrowserUiPositionArrows(browserUiPosition: BrowserUiPosition): {
+  [key in BrowserUiPosition]: string | undefined;
+} {
   switch (browserUiPosition) {
     case "TopLeft":
-      return "↖";
-    case "TopRight":
-      return "↗";
-    case "BottomLeft":
-      return "↙";
-    case "BottomRight":
-      return "↘";
-  }
-}
+      return {
+        TopLeft: undefined,
+        TopRight: "→",
+        BottomLeft: "↓",
+        BottomRight: "↘",
+      };
 
-function browserUiPositionToComponents(browserUiPosition: BrowserUiPosition): {
-  isTop: boolean;
-  isLeft: boolean;
-} {
-  return {
-    isTop: browserUiPosition === "TopLeft" || browserUiPosition === "TopRight",
-    isLeft:
-      browserUiPosition === "TopLeft" || browserUiPosition === "BottomLeft",
-  };
+    case "TopRight":
+      return {
+        TopLeft: "←",
+        TopRight: undefined,
+        BottomLeft: "↙",
+        BottomRight: "↓",
+      };
+
+    case "BottomLeft":
+      return {
+        TopLeft: "↑",
+        TopRight: "↗",
+        BottomLeft: undefined,
+        BottomRight: "→",
+      };
+
+    case "BottomRight":
+      return {
+        TopLeft: "↖",
+        TopRight: "↑",
+        BottomLeft: "←",
+        BottomRight: undefined,
+      };
+  }
 }
 
 type StatusData = {
