@@ -250,6 +250,7 @@ type ElmJsonError =
 export type ElmJsonErrorWithMetadata = {
   outputPath: OutputPath;
   compilationMode: CompilationMode;
+  browserUiPosition: BrowserUiPosition;
   error: ElmJsonError;
 };
 
@@ -393,6 +394,7 @@ export function initProject({
           elmJsonsErrors.push({
             outputPath,
             compilationMode: thisCompilationMode,
+            browserUiPosition: thisBrowserUiPosition,
             error: resolveElmJsonResult,
           });
           break;

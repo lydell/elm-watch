@@ -430,6 +430,12 @@ function run(): void {
               model: newModel,
               manageFocus: msg.tag === "UiMsg",
             },
+            model.browserUiPosition === newModel.browserUiPosition
+              ? { tag: "NoCmd" }
+              : {
+                  tag: "SetBrowserUiPosition",
+                  browserUiPosition: newModel.browserUiPosition,
+                },
           ]
         : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
@@ -926,10 +932,6 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
         },
         [
           {
-            tag: "SetBrowserUiPosition",
-            browserUiPosition: msg.browserUiPosition,
-          },
-          {
             tag: "SendMessage",
             message: {
               tag: "ChangedBrowserUiPosition",
@@ -1012,15 +1014,14 @@ function onWebSocketToClientMessage(
             },
             [
               { tag: "Eval", code: msg.code },
-              msg.browserUiPosition === model.browserUiPosition &&
-              // This condition isn’t strictly necessary, but has the
-              // side effect of getting rid of the success animation.
-              !justChangedBrowserUiPosition
-                ? { tag: "NoCmd" }
-                : {
+              // This isn’t strictly necessary, but has the side effect of
+              // getting rid of the success animation.
+              justChangedBrowserUiPosition
+                ? {
                     tag: "SetBrowserUiPosition",
                     browserUiPosition: msg.browserUiPosition,
-                  },
+                  }
+                : { tag: "NoCmd" },
             ],
           ];
     }
@@ -1058,6 +1059,7 @@ function statusChanged(
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
           compilationMode: status.compilationMode,
+          browserUiPosition: status.browserUiPosition,
         },
         [
           {
@@ -1076,6 +1078,7 @@ function statusChanged(
             date,
           },
           compilationMode: status.compilationMode,
+          browserUiPosition: status.browserUiPosition,
         },
         [],
       ];
@@ -1105,6 +1108,7 @@ function statusChanged(
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
           compilationMode: status.compilationMode,
+          browserUiPosition: status.browserUiPosition,
         },
         [
           {

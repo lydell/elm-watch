@@ -13,14 +13,17 @@ const StatusChanged = Decode.fieldsAuto({
     AlreadyUpToDate: Decode.fieldsAuto({
       tag: () => "AlreadyUpToDate" as const,
       compilationMode: CompilationMode,
+      browserUiPosition: BrowserUiPosition,
     }),
     Busy: Decode.fieldsAuto({
       tag: () => "Busy" as const,
       compilationMode: CompilationMode,
+      browserUiPosition: BrowserUiPosition,
     }),
     CompileError: Decode.fieldsAuto({
       tag: () => "CompileError" as const,
       compilationMode: CompilationMode,
+      browserUiPosition: BrowserUiPosition,
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,

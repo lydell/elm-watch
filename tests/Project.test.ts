@@ -75,6 +75,7 @@ const project: Project = {
         targetName: "Sandbox",
       },
       compilationMode: "standard",
+      browserUiPosition: "BottomLeft",
       error: {
         tag: "InputsNotFound",
         inputsNotFound: [

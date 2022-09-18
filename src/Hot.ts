@@ -642,7 +642,7 @@ const init = (
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
-      ({ outputPath, compilationMode }): Cmd => ({
+      ({ outputPath, compilationMode, browserUiPosition }): Cmd => ({
         tag: "WebSocketSendToOutput",
         outputPath,
         message: {
@@ -650,6 +650,7 @@ const init = (
           status: {
             tag: "CompileError",
             compilationMode,
+            browserUiPosition,
           },
         },
       })
@@ -1484,6 +1485,7 @@ const runCmd =
               status: {
                 tag: "Busy",
                 compilationMode: outputState.compilationMode,
+                browserUiPosition: outputState.browserUiPosition,
               },
             },
             mutable.webSocketConnections
@@ -1743,6 +1745,7 @@ function handleOutputActionResultToCmd(
           status: {
             tag: "CompileError",
             compilationMode: handleOutputActionResult.compilationMode,
+            browserUiPosition: handleOutputActionResult.browserUiPosition,
           },
         },
       };
@@ -2176,6 +2179,7 @@ function onWebSocketConnected(
                       status: {
                         tag: "AlreadyUpToDate",
                         compilationMode: outputState.compilationMode,
+                        browserUiPosition: outputState.browserUiPosition,
                       },
                     },
                   },
@@ -2218,6 +2222,7 @@ function onWebSocketConnected(
                   status: {
                     tag: "CompileError",
                     compilationMode: outputState.compilationMode,
+                    browserUiPosition: outputState.browserUiPosition,
                   },
                 },
               },

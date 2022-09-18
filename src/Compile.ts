@@ -525,6 +525,7 @@ export type HandleOutputActionResult =
       tag: "CompileError";
       outputPath: OutputPath;
       compilationMode: CompilationMode;
+      browserUiPosition: BrowserUiPosition;
     }
   | {
       tag: "FullyCompiledJS";
@@ -768,6 +769,7 @@ async function compileOneOutput({
         tag: "CompileError",
         outputPath,
         compilationMode: outputState.compilationMode,
+        browserUiPosition: outputState.browserUiPosition,
       };
 
     case "elm make failure + walker success":
@@ -777,6 +779,7 @@ async function compileOneOutput({
         tag: "CompileError",
         outputPath,
         compilationMode: outputState.compilationMode,
+        browserUiPosition: outputState.browserUiPosition,
       };
 
     case "elm make failure + walker failure":
@@ -787,6 +790,7 @@ async function compileOneOutput({
         tag: "CompileError",
         outputPath,
         compilationMode: outputState.compilationMode,
+        browserUiPosition: outputState.browserUiPosition,
       };
   }
 }
@@ -822,6 +826,7 @@ function onCompileSuccess(
               tag: "CompileError",
               outputPath,
               compilationMode: outputState.compilationMode,
+              browserUiPosition: outputState.browserUiPosition,
             };
           }
           outputState.setStatus({
@@ -852,6 +857,7 @@ function onCompileSuccess(
               tag: "CompileError",
               outputPath,
               compilationMode: outputState.compilationMode,
+              browserUiPosition: outputState.browserUiPosition,
             };
           }
           outputState.setStatus({
@@ -885,6 +891,7 @@ function onCompileSuccess(
           tag: "CompileError",
           outputPath,
           compilationMode: outputState.compilationMode,
+          browserUiPosition: outputState.browserUiPosition,
         };
       }
 
@@ -934,6 +941,7 @@ function onCompileSuccess(
               tag: "CompileError",
               outputPath,
               compilationMode: outputState.compilationMode,
+              browserUiPosition: outputState.browserUiPosition,
             };
           }
           const recordFieldsChanged = Inject.recordFieldsChanged(
@@ -1129,6 +1137,7 @@ async function postprocessHelper({
           tag: "CompileError",
           outputPath,
           compilationMode: outputState.compilationMode,
+          browserUiPosition: outputState.browserUiPosition,
         };
       }
       const recordFieldsChanged = Inject.recordFieldsChanged(
@@ -1165,6 +1174,7 @@ async function postprocessHelper({
         tag: "CompileError",
         outputPath,
         compilationMode: outputState.compilationMode,
+        browserUiPosition: outputState.browserUiPosition,
       };
   }
 }
