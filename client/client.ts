@@ -491,6 +491,29 @@ function statusToStatusType(statusTag: Status["tag"]): StatusType {
   }
 }
 
+function statusToBrowserUiPositionSendKey(status: Status): SendKey | undefined {
+  switch (status.tag) {
+    case "CompileError":
+    case "Idle":
+      return status.sendKey;
+
+    // It works well moving the browser UI while already busy.
+    case "Busy":
+      return SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
+
+    // We can’t send a message about moving the browser UI if we don’t have a
+    // connection.
+    case "Connecting":
+    case "SleepingBeforeReconnect":
+    case "WaitingForReload":
+    // These two _might_ work, but it’s unclear. They’re not supposed to happen
+    // anyway.
+    case "EvalError":
+    case "UnexpectedError":
+      return undefined;
+  }
+}
+
 function getOrCreateContainer(): HTMLElement {
   const existing = document.getElementById(CONTAINER_ID);
 
@@ -2001,6 +2024,8 @@ function viewExpandedUi(
     ...statusData.dl,
   ];
 
+  const browserUiPositionSendKey = statusToBrowserUiPositionSendKey(status);
+
   return h(
     HTMLDivElement,
     {
@@ -2020,13 +2045,13 @@ function viewExpandedUi(
       ])
     ),
     ...statusData.content,
-    "sendKey" in status
-      ? viewBrowserUiPositionChooser(
+    browserUiPositionSendKey === undefined
+      ? undefined
+      : viewBrowserUiPositionChooser(
           browserUiPosition,
           dispatch,
-          status.sendKey
+          browserUiPositionSendKey
         )
-      : undefined
   );
 }
 
