@@ -492,20 +492,7 @@ const initMutable =
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: undefined) => void
   ): Mutable => {
-    const removeListeners = [
-      addEventListener(window, "focus", (event) => {
-        // Used in tests to trigger focus for just one target.
-        if (event instanceof CustomEvent && event.detail !== TARGET_NAME) {
-          return;
-        }
-        dispatch({ tag: "FocusedTab" });
-      }),
-      addEventListener(window, "visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-          dispatch({ tag: "PageVisibilityChangedToVisible", date: getNow() });
-        }
-      }),
-    ];
+    let removeListeners: Array<() => void> = [];
 
     const mutable: Mutable = {
       removeListeners: () => {
@@ -520,6 +507,34 @@ const initMutable =
       ),
       webSocketTimeoutId: undefined,
     };
+
+    // These events might happen before the Web Socket is ready.
+    // Firefox throws this error via `FocusedTab`:
+    // DOMException: An attempt was made to use an object that is not, or is no longer, usable
+    // So wait until the Web Socket is ready before starting those listeners.
+    mutable.webSocket.addEventListener(
+      "open",
+      () => {
+        removeListeners = [
+          addEventListener(window, "focus", (event) => {
+            // Used in tests to trigger focus for just one target.
+            if (event instanceof CustomEvent && event.detail !== TARGET_NAME) {
+              return;
+            }
+            dispatch({ tag: "FocusedTab" });
+          }),
+          addEventListener(window, "visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+              dispatch({
+                tag: "PageVisibilityChangedToVisible",
+                date: getNow(),
+              });
+            }
+          }),
+        ];
+      },
+      { once: true }
+    );
 
     window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = {
       tag: "MightWantToReload",
@@ -1019,9 +1034,21 @@ const runCmd =
         );
         return;
 
-      case "SendMessage":
-        mutable.webSocket.send(JSON.stringify(cmd.message));
+      case "SendMessage": {
+        const json = JSON.stringify(cmd.message);
+        try {
+          mutable.webSocket.send(json);
+        } catch (error) {
+          // According to MDN, `.send()` throws an exception if the web socket
+          // is in the CONNECTING state. We’re not supposed to send messages
+          // in that state in the first place, but just in case.
+          // `JSON.stringify` is outside the `try` block in case it throws an
+          // error – then we at least have a chance of noticing it.
+          // eslint-disable-next-line no-console
+          console.error("elm-watch: Failed to send Web Socket message:", error);
+        }
         return;
+      }
 
       case "SleepBeforeReconnect":
         setTimeout(() => {
