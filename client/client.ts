@@ -582,6 +582,12 @@ function setBrowserUiPosition(
   browserUiPosition: BrowserUiPosition,
   elements: Elements
 ): void {
+  // Only the first target is in charge of the browser UI position.
+  const isFirstTargetRoot = elements.targetRoot.previousElementSibling === null;
+  if (!isFirstTargetRoot) {
+    return;
+  }
+
   elements.container.dataset.position = browserUiPosition;
 
   for (const [key, value] of Object.entries(
@@ -593,6 +599,10 @@ function setBrowserUiPosition(
   const isInBottomHalf =
     browserUiPosition === "BottomLeft" || browserUiPosition === "BottomRight";
   elements.root.classList.toggle(CLASS.rootBottomHalf, isInBottomHalf);
+
+  elements.shadowRoot.dispatchEvent(
+    new CustomEvent(BROWSER_UI_MOVED_EVENT, { detail: browserUiPosition })
+  );
 }
 
 const initMutable =
@@ -1230,11 +1240,6 @@ const runCmd =
       case "SetBrowserUiPosition":
         if (elements !== undefined) {
           setBrowserUiPosition(cmd.browserUiPosition, elements);
-          elements.shadowRoot.dispatchEvent(
-            new CustomEvent(BROWSER_UI_MOVED_EVENT, {
-              detail: cmd.browserUiPosition,
-            })
-          );
         }
         return;
 
