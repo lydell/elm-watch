@@ -183,6 +183,7 @@ const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
+const JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT = 1000;
 
 type Mutable = {
   removeListeners: () => void;
@@ -264,6 +265,7 @@ type Model = {
   previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
   browserUiPosition: BrowserUiPosition;
+  lastBrowserUiPositionChangeDate: Date | undefined;
   elmCompiledTimestamp: number;
   uiExpanded: boolean;
 };
@@ -763,6 +765,7 @@ const init = (
     previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
     browserUiPosition,
+    lastBrowserUiPositionChangeDate: undefined,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
   };
@@ -903,7 +906,11 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "ChangedBrowserUiPosition":
       return [
-        { ...model, browserUiPosition: msg.browserUiPosition },
+        {
+          ...model,
+          browserUiPosition: msg.browserUiPosition,
+          lastBrowserUiPositionChangeDate: date,
+        },
         [
           {
             tag: "SetBrowserUiPosition",
@@ -959,7 +966,11 @@ function onWebSocketToClientMessage(
     case "StatusChanged":
       return statusChanged(date, msg, model);
 
-    case "SuccessfullyCompiled":
+    case "SuccessfullyCompiled": {
+      const justChangedBrowserUiPosition =
+        model.lastBrowserUiPositionChangeDate !== undefined &&
+        date.getTime() - model.lastBrowserUiPositionChangeDate.getTime() <
+          JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT;
       return msg.compilationMode !== ORIGINAL_COMPILATION_MODE
         ? [
             {
@@ -984,10 +995,14 @@ function onWebSocketToClientMessage(
               compilationMode: msg.compilationMode,
               elmCompiledTimestamp: msg.elmCompiledTimestamp,
               browserUiPosition: msg.browserUiPosition,
+              lastBrowserUiPositionChangeDate: undefined,
             },
             [
               { tag: "Eval", code: msg.code },
-              msg.browserUiPosition === model.browserUiPosition
+              msg.browserUiPosition === model.browserUiPosition &&
+              // This condition isn’t strictly necessary, but has the
+              // side effect of getting rid of the success animation.
+              !justChangedBrowserUiPosition
                 ? { tag: "NoCmd" }
                 : {
                     tag: "SetBrowserUiPosition",
@@ -995,6 +1010,7 @@ function onWebSocketToClientMessage(
                   },
             ],
           ];
+    }
 
     case "SuccessfullyCompiledButRecordFieldsChanged":
       return [
@@ -2678,6 +2694,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
       browserUiPosition: "BottomLeft",
+      lastBrowserUiPositionChangeDate: undefined,
       elmCompiledTimestamp: 0,
       uiExpanded: true,
     };
