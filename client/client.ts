@@ -2,7 +2,7 @@ import * as Decode from "tiny-decoders";
 
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
-import type {
+import {
   BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
@@ -175,8 +175,7 @@ const ORIGINAL_COMPILATION_MODE =
   "%ORIGINAL_COMPILATION_MODE%" as CompilationModeWithProxy;
 // This is the saved browser UI position as of when this file was compiled. We
 // also store the latest saved position in the model, which is updated as soon
-// as things change. Finally, we don’t trust any of these when rendering and
-// instead calculate the position on screen to take user CSS into account.
+// as things change.
 const ORIGINAL_BROWSER_UI_POSITION =
   "%ORIGINAL_BROWSER_UI_POSITION%" as BrowserUiPosition;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
@@ -197,6 +196,7 @@ type Msg =
     }
   | {
       tag: "BrowserUiMoved";
+      browserUiPosition: BrowserUiPosition;
     }
   | {
       tag: "EvalErrored";
@@ -263,7 +263,7 @@ type Model = {
   status: Status;
   previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
-  lastSavedBrowserUiPosition: BrowserUiPosition;
+  browserUiPosition: BrowserUiPosition;
   elmCompiledTimestamp: number;
   uiExpanded: boolean;
 };
@@ -374,6 +374,14 @@ function logDebug(...args: Array<unknown>): void {
   }
 }
 
+function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
+  try {
+    return BrowserUiPosition(value);
+  } catch {
+    return ORIGINAL_BROWSER_UI_POSITION;
+  }
+}
+
 function run(): void {
   try {
     const message = window.sessionStorage.getItem(RELOAD_MESSAGE_KEY);
@@ -387,11 +395,15 @@ function run(): void {
   }
 
   const elements = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
+  const browserUiPosition =
+    elements === undefined
+      ? ORIGINAL_BROWSER_UI_POSITION
+      : parseBrowseUiPositionWithFallback(elements.container.dataset.position);
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, elements),
-    init: init(getNow()),
+    init: init(getNow(), browserUiPosition),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [updatedModel, cmds] = update(msg, model);
       const modelChanged = updatedModel !== model;
@@ -565,6 +577,7 @@ function setBrowserUiPosition(
   browserUiPosition: BrowserUiPosition,
   container: HTMLElement
 ): void {
+  container.dataset.position = browserUiPosition;
   for (const [key, value] of Object.entries(
     browserUiPositionToCss(browserUiPosition)
   )) {
@@ -624,8 +637,13 @@ const initMutable =
             : addEventListener(
                 elements.shadowRoot,
                 BROWSER_UI_MOVED_EVENT,
-                () => {
-                  dispatch({ tag: "BrowserUiMoved" });
+                (event) => {
+                  dispatch({
+                    tag: "BrowserUiMoved",
+                    browserUiPosition: Decode.fields((field) =>
+                      field("detail", parseBrowseUiPositionWithFallback)
+                    )(event),
+                  });
                 }
               ),
         ];
@@ -728,12 +746,15 @@ function initWebSocket(
   return webSocket;
 }
 
-const init = (date: Date): [Model, Array<Cmd>] => {
+const init = (
+  date: Date,
+  browserUiPosition: BrowserUiPosition
+): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
     previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
-    lastSavedBrowserUiPosition: ORIGINAL_BROWSER_UI_POSITION,
+    browserUiPosition,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
   };
@@ -748,8 +769,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
       return [{ ...model }, []];
 
     case "BrowserUiMoved":
-      // Force a re-render, so the new position is taken into account.
-      return [{ ...model }, []];
+      return [{ ...model, browserUiPosition: msg.browserUiPosition }, []];
 
     case "EvalErrored":
       return [
@@ -897,7 +917,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
 
     case "PressedMoveBrowserUiPosition":
       return [
-        model,
+        { ...model, browserUiPosition: msg.browserUiPosition },
         [
           {
             tag: "SetBrowserUiPosition",
@@ -955,11 +975,11 @@ function onWebSocketToClientMessage(
               ...model,
               compilationMode: msg.compilationMode,
               elmCompiledTimestamp: msg.elmCompiledTimestamp,
-              lastSavedBrowserUiPosition: msg.browserUiPosition,
+              browserUiPosition: msg.browserUiPosition,
             },
             [
               { tag: "Eval", code: msg.code },
-              msg.browserUiPosition === model.lastSavedBrowserUiPosition
+              msg.browserUiPosition === model.browserUiPosition
                 ? { tag: "NoCmd" }
                 : {
                     tag: "SetBrowserUiPosition",
@@ -1161,7 +1181,8 @@ const runCmd =
             consoleMethod(renderWebWorker(model, info));
           }
         } else {
-          render(getNow, elements, dispatch, model, info, cmd.manageFocus);
+          const { targetRoot } = elements;
+          render(getNow, targetRoot, dispatch, model, info, cmd.manageFocus);
         }
         return;
       }
@@ -1186,7 +1207,9 @@ const runCmd =
         if (elements !== undefined) {
           setBrowserUiPosition(cmd.browserUiPosition, elements.container);
           elements.shadowRoot.dispatchEvent(
-            new CustomEvent(BROWSER_UI_MOVED_EVENT)
+            new CustomEvent(BROWSER_UI_MOVED_EVENT, {
+              detail: cmd.browserUiPosition,
+            })
           );
         }
         return;
@@ -1504,17 +1527,15 @@ function renderWebWorker(model: Model, info: Info): string {
 
 function render(
   getNow: GetNow,
-  { container, targetRoot }: Elements,
+  targetRoot: HTMLElement,
   dispatch: (msg: Msg) => void,
   model: Model,
   info: Info,
   manageFocus: boolean
 ): void {
-  const actualBrowserUiPosition = getActualBrowserUiPosition(container);
-
   const isInBottomHalf =
-    actualBrowserUiPosition === "BottomLeft" ||
-    actualBrowserUiPosition === "BottomRight";
+    model.browserUiPosition === "BottomLeft" ||
+    model.browserUiPosition === "BottomRight";
 
   targetRoot.classList.toggle(CLASS.targetRootBottomHalf, isInBottomHalf);
 
@@ -1525,8 +1546,7 @@ function render(
       },
       model,
       info,
-      manageFocus,
-      actualBrowserUiPosition
+      manageFocus
     )
   );
 
@@ -1536,52 +1556,6 @@ function render(
   }
 
   __ELM_WATCH.ON_RENDER(TARGET_NAME);
-}
-
-type Quadrant = {
-  position: BrowserUiPosition;
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-};
-
-// This takes CSS added by the user into account.
-function getActualBrowserUiPosition(container: HTMLElement): BrowserUiPosition {
-  const rect = container.getBoundingClientRect();
-  const halfHeight = window.innerHeight / 2;
-  const halfWidth = window.innerWidth / 2;
-  const size = { width: halfWidth, height: halfHeight };
-  const quadrants: Array<Quadrant> = [
-    { position: "TopLeft", top: 0, left: 0, ...size },
-    { position: "TopRight", top: 0, left: halfWidth, ...size },
-    { position: "BottomLeft", top: halfHeight, left: 0, ...size },
-    { position: "BottomRight", top: halfHeight, left: halfWidth, ...size },
-  ];
-  const areas: Array<[BrowserUiPosition, number]> = quadrants.map(
-    (quadrant) => [quadrant.position, getOverlappingArea(quadrant, rect)]
-  );
-  return maxBy(areas, ([, area]) => area)[0];
-}
-
-function getOverlappingArea(quadrant: Quadrant, rect: DOMRect): number {
-  const top = Math.max(quadrant.top, rect.top);
-  const bottom = Math.min(
-    quadrant.top + quadrant.height,
-    rect.top + rect.height
-  );
-  const left = Math.max(quadrant.left, rect.left);
-  const right = Math.min(
-    quadrant.left + quadrant.width,
-    rect.left + rect.width
-  );
-  const height = Math.max(0, bottom - top);
-  const width = Math.max(0, right - left);
-  return height * width;
-}
-
-function maxBy<T>(array: Array<T>, f: (item: T) => number): T {
-  return array.reduce((min, item) => (f(item) > f(min) ? item : min));
 }
 
 const CLASS = {
@@ -1723,6 +1697,7 @@ time::after {
 
 .${CLASS.expandedUiContainer} {
   padding: 1em;
+  padding-top: 0.75em;
   display: grid;
   gap: 0.75em;
   outline: none;
@@ -1730,7 +1705,7 @@ time::after {
 }
 
 .${CLASS.targetRootBottomHalf} .${CLASS.expandedUiContainer} {
-  padding: 0.75em 1em;
+  padding-bottom: 0.75em;
 }
 
 .${CLASS.expandedUiContainer}:is(.length0, .length1) {
@@ -1868,8 +1843,7 @@ function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
   info: Info,
-  manageFocus: boolean,
-  browserUiPosition: BrowserUiPosition
+  manageFocus: boolean
 ): HTMLElement {
   const model: Model = __ELM_WATCH.MOCKED_TIMINGS
     ? {
@@ -1906,7 +1880,7 @@ function view(
           model.status,
           statusData,
           info,
-          browserUiPosition,
+          model.browserUiPosition,
           dispatch
         )
       : undefined,
@@ -2695,13 +2669,13 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       status,
       previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
-      lastSavedBrowserUiPosition: "BottomLeft",
+      browserUiPosition: "BottomLeft",
       elmCompiledTimestamp: 0,
       uiExpanded: true,
     };
     render(
       getNow,
-      { ...elements, targetRoot },
+      targetRoot,
       () => {
         // Ignore messages.
       },
