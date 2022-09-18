@@ -243,17 +243,17 @@ type Msg =
 
 type UiMsg =
   | {
+      tag: "ChangedBrowserUiPosition";
+      browserUiPosition: BrowserUiPosition;
+      sendKey: SendKey;
+    }
+  | {
       tag: "ChangedCompilationMode";
       compilationMode: CompilationMode;
       sendKey: SendKey;
     }
   | {
       tag: "PressedChevron";
-    }
-  | {
-      tag: "PressedMoveBrowserUiPosition";
-      browserUiPosition: BrowserUiPosition;
-      sendKey: SendKey;
     }
   | {
       tag: "PressedReconnectNow";
@@ -893,6 +893,25 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
 function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    case "ChangedBrowserUiPosition":
+      return [
+        { ...model, browserUiPosition: msg.browserUiPosition },
+        [
+          {
+            tag: "SetBrowserUiPosition",
+            browserUiPosition: msg.browserUiPosition,
+          },
+          {
+            tag: "SendMessage",
+            message: {
+              tag: "ChangedBrowserUiPosition",
+              browserUiPosition: msg.browserUiPosition,
+            },
+            sendKey: msg.sendKey,
+          },
+        ],
+      ];
+
     case "ChangedCompilationMode":
       return [
         {
@@ -914,25 +933,6 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
 
     case "PressedChevron":
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
-
-    case "PressedMoveBrowserUiPosition":
-      return [
-        { ...model, browserUiPosition: msg.browserUiPosition },
-        [
-          {
-            tag: "SetBrowserUiPosition",
-            browserUiPosition: msg.browserUiPosition,
-          },
-          {
-            tag: "SendMessage",
-            message: {
-              tag: "ChangedBrowserUiPosition",
-              browserUiPosition: msg.browserUiPosition,
-            },
-            sendKey: msg.sendKey,
-          },
-        ],
-      ];
 
     case "PressedReconnectNow":
       return reconnect(model, date, { force: true });
@@ -2027,7 +2027,7 @@ function viewBrowserUiPositionChooser(
               className: CLASS.browserUiPositionButton,
               onclick: () => {
                 dispatch({
-                  tag: "PressedMoveBrowserUiPosition",
+                  tag: "ChangedBrowserUiPosition",
                   browserUiPosition: position,
                   sendKey,
                 });
