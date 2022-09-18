@@ -1781,7 +1781,7 @@ time::after {
 }
 
 .${CLASS.browserUiPositionButton}:hover {
-  background-color: var(--grey);
+  background-color: rgba(0, 0, 0, 0.25);
 }
 
 .${CLASS.targetRoot}:not(:first-child) .${CLASS.browserUiPositionChooser} {
