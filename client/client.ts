@@ -491,7 +491,6 @@ function getOrCreateContainer(): HTMLElement {
   container.style.all = "unset";
   container.style.position = "fixed";
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
-  setBrowserUiPosition(ORIGINAL_BROWSER_UI_POSITION, container);
 
   const shadowRoot = container.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS));
@@ -526,7 +525,11 @@ function getOrCreateTargetRoot(): Elements {
   const targetRoot = createTargetRoot(TARGET_NAME);
   root.append(targetRoot);
 
-  return { container, shadowRoot, root, targetRoot };
+  const elements: Elements = { container, shadowRoot, root, targetRoot };
+
+  setBrowserUiPosition(ORIGINAL_BROWSER_UI_POSITION, elements);
+
+  return elements;
 }
 
 function createTargetRoot(targetName: string): HTMLElement {
@@ -575,14 +578,19 @@ function browserUiPositionToCssForChooser(
 
 function setBrowserUiPosition(
   browserUiPosition: BrowserUiPosition,
-  container: HTMLElement
+  elements: Elements
 ): void {
-  container.dataset.position = browserUiPosition;
+  elements.container.dataset.position = browserUiPosition;
+
   for (const [key, value] of Object.entries(
     browserUiPositionToCss(browserUiPosition)
   )) {
-    container.style.setProperty(key, value);
+    elements.container.style.setProperty(key, value);
   }
+
+  const isInBottomHalf =
+    browserUiPosition === "BottomLeft" || browserUiPosition === "BottomRight";
+  elements.root.classList.toggle(CLASS.rootBottomHalf, isInBottomHalf);
 }
 
 const initMutable =
@@ -1205,7 +1213,7 @@ const runCmd =
 
       case "SetBrowserUiPosition":
         if (elements !== undefined) {
-          setBrowserUiPosition(cmd.browserUiPosition, elements.container);
+          setBrowserUiPosition(cmd.browserUiPosition, elements);
           elements.shadowRoot.dispatchEvent(
             new CustomEvent(BROWSER_UI_MOVED_EVENT, {
               detail: cmd.browserUiPosition,
@@ -1533,12 +1541,6 @@ function render(
   info: Info,
   manageFocus: boolean
 ): void {
-  const isInBottomHalf =
-    model.browserUiPosition === "BottomLeft" ||
-    model.browserUiPosition === "BottomRight";
-
-  targetRoot.classList.toggle(CLASS.targetRootBottomHalf, isInBottomHalf);
-
   targetRoot.replaceChildren(
     view(
       (msg) => {
@@ -1569,10 +1571,10 @@ const CLASS = {
   flashError: "flashError",
   flashSuccess: "flashSuccess",
   root: "root",
+  rootBottomHalf: "rootBottomHalf",
   shortStatusContainer: "shortStatusContainer",
   targetName: "targetName",
   targetRoot: "targetRoot",
-  targetRootBottomHalf: "targetRootBottomHalf",
 };
 
 function getStatusClass({
@@ -1671,8 +1673,8 @@ time::after {
   font-family: system-ui;
 }
 
-.${CLASS.targetRootBottomHalf} {
-  align-self: end;
+.${CLASS.rootBottomHalf} {
+  align-items: end;
 }
 
 .${CLASS.targetRoot} + .${CLASS.targetRoot} {
@@ -1691,7 +1693,7 @@ time::after {
   border: 1px solid var(--grey);
 }
 
-.${CLASS.targetRootBottomHalf} .${CLASS.container} {
+.${CLASS.rootBottomHalf} .${CLASS.container} {
   flex-direction: column;
 }
 
@@ -1704,7 +1706,7 @@ time::after {
   contain: paint;
 }
 
-.${CLASS.targetRootBottomHalf} .${CLASS.expandedUiContainer} {
+.${CLASS.rootBottomHalf} .${CLASS.expandedUiContainer} {
   padding-bottom: 0.75em;
 }
 
