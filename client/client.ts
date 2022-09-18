@@ -1738,7 +1738,7 @@ function viewExpandedUi(
   const items: Array<[string, HTMLElement | string]> = [
     ["target", info.targetName],
     ["elm-watch", info.version],
-    ["web socket", new URL(info.webSocketUrl).origin],
+    ["web socket", printWebSocketUrl(info.webSocketUrl)],
     [
       "updated",
       h(
@@ -1991,6 +1991,14 @@ function compilationModeIcon(
   }
 }
 
+function printWebSocketUrl(webSocketUrl: string): string {
+  const url = new URL(webSocketUrl);
+  const hostname = url.hostname.endsWith(".localhost")
+    ? "localhost"
+    : url.hostname;
+  return `${url.protocol}//${hostname}:${url.port}`;
+}
+
 type CompilationModeOption = {
   mode: CompilationMode;
   name: string;
@@ -2197,6 +2205,24 @@ function renderMockStatuses(getNow: GetNow, root: Element): void {
       tag: "Idle",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+    },
+    LongSubdomain: {
+      tag: "Idle",
+      date,
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      info: {
+        ...info,
+        webSocketUrl: "ws://development.admin.example.com.localhost:53167",
+      },
+    },
+    IPAdress: {
+      tag: "Idle",
+      date,
+      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      info: {
+        ...info,
+        webSocketUrl: "ws://192.168.123.123:53167",
+      },
     },
     NoDebuggerYetWithDebugLogOptimizeError: {
       tag: "CompileError",
