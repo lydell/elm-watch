@@ -183,7 +183,10 @@ const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
-const JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT = 1000;
+
+// A compilation after moving the browser UI on a big app takes around 700 ms
+// for me. So more than double that should be plenty.
+const JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT = 2000;
 
 type Mutable = {
   removeListeners: () => void;
