@@ -2043,6 +2043,15 @@ function viewBrowserUiPositionChooser(
   );
 }
 
+const ARROW_UP = "↑";
+const ARROW_DOWN = "↓";
+const ARROW_LEFT = "←";
+const ARROW_RIGHT = "→";
+const ARROW_UP_LEFT = "↖";
+const ARROW_UP_RIGHT = "↗";
+const ARROW_DOWN_LEFT = "↙";
+const ARROW_DOWN_RIGHT = "↘";
+
 function getBrowserUiPositionArrows(browserUiPosition: BrowserUiPosition): {
   [key in BrowserUiPosition]: string | undefined;
 } {
@@ -2050,32 +2059,32 @@ function getBrowserUiPositionArrows(browserUiPosition: BrowserUiPosition): {
     case "TopLeft":
       return {
         TopLeft: undefined,
-        TopRight: "→",
-        BottomLeft: "↓",
-        BottomRight: "↘",
+        TopRight: ARROW_RIGHT,
+        BottomLeft: ARROW_DOWN,
+        BottomRight: ARROW_DOWN_RIGHT,
       };
 
     case "TopRight":
       return {
-        TopLeft: "←",
+        TopLeft: ARROW_LEFT,
         TopRight: undefined,
-        BottomLeft: "↙",
-        BottomRight: "↓",
+        BottomLeft: ARROW_DOWN_LEFT,
+        BottomRight: ARROW_DOWN,
       };
 
     case "BottomLeft":
       return {
-        TopLeft: "↑",
-        TopRight: "↗",
+        TopLeft: ARROW_UP,
+        TopRight: ARROW_UP_RIGHT,
         BottomLeft: undefined,
-        BottomRight: "→",
+        BottomRight: ARROW_RIGHT,
       };
 
     case "BottomRight":
       return {
-        TopLeft: "↖",
-        TopRight: "↑",
-        BottomLeft: "←",
+        TopLeft: ARROW_UP_LEFT,
+        TopRight: ARROW_UP,
+        BottomLeft: ARROW_LEFT,
         BottomRight: undefined,
       };
   }
