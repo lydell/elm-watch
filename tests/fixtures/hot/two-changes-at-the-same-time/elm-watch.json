@@ -1,0 +1,16 @@
+{
+    "targets": {
+        "Html": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/Html.js"
+        },
+        "Worker": {
+            "inputs": [
+                "src/Worker.elm"
+            ],
+            "output": "build/Worker.js"
+        }
+    }
+}

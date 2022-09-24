@@ -2402,7 +2402,9 @@ describe("hot", () => {
   });
 
   test("two changes at the same time", async () => {
-    const fixture = "basic";
+    // Note: This uses its own fixture because it has a tendency to write files
+    // to `build/` while the next test is removing `build/` – on Windows only.
+    const fixture = "two-changes-at-the-same-time";
     const src = path.join(FIXTURES_DIR, fixture, "src");
     const inputFile1 = path.join(src, "HtmlMain.elm");
     const inputFile2 = path.join(src, "Worker.elm");
@@ -2459,8 +2461,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/HtmlMain.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/Worker.elm⧘
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/HtmlMain.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/Worker.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
