@@ -17,7 +17,7 @@ import {
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
-// Note: These tests excessively uses snapshots, since they don’t stop execution on failure.
+// Note: These tests excessively use snapshots, since they don’t stop execution on failure.
 // That results in a much better debugging experience (fewer timeouts).
 describe("hot reloading", () => {
   afterEach(cleanupAfterEachTest);

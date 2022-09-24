@@ -11,7 +11,7 @@ import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
-import { CompilationMode } from "../src/Types";
+import { BrowserUiPosition, CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
@@ -490,6 +490,20 @@ function expandUiHelper(wantExpanded: boolean): void {
   });
 }
 
+export function moveUi(position: BrowserUiPosition): void {
+  expandUi();
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `button[data-position="${position}"]`
+    );
+    if (button instanceof HTMLButtonElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not find button for ${position}.`);
+    }
+  });
+}
+
 export function switchCompilationMode(compilationMode: CompilationMode): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
@@ -546,7 +560,12 @@ function getTextContent(element: Node): string {
     .join("")
     .trim()
     .replace(/\n /g, "\n")
-    .replace(/\n·/g, "·\n");
+    .replace(/[\n·↑↓←→↖↗↙↘]+/g, (match) => {
+      const chars = match.replace(/\s/g, "");
+      return chars === ""
+        ? match
+        : `\n${chars.slice(0, 2)}\n${chars.slice(2)}\n`;
+    });
 }
 
 function* walkTextNodes(element: Node): Generator<string, void, void> {

@@ -2082,6 +2082,7 @@ function viewBrowserUiPositionChooser(
             HTMLButtonElement,
             {
               className: CLASS.browserUiPositionButton,
+              attrs: { "data-position": position },
               onclick: () => {
                 dispatch({
                   tag: "ChangedBrowserUiPosition",
