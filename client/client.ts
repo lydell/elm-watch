@@ -1554,7 +1554,7 @@ function h<T extends HTMLElement>(
 
   if (style !== undefined) {
     for (const [key, value] of Object.entries(style)) {
-      element.style.setProperty(key, value);
+      (element.style as unknown as Record<string, string>)[key] = value;
     }
   }
 
