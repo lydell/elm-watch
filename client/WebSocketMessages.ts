@@ -6,6 +6,12 @@ const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
 });
 
+const CompileError = Decode.fieldsAuto({
+  title: Decode.string,
+  location: Decode.optional(Decode.string),
+  content: Decode.string,
+});
+
 export type StatusChanged = ReturnType<typeof StatusChanged>;
 const StatusChanged = Decode.fieldsAuto({
   tag: () => "StatusChanged" as const,
@@ -24,7 +30,7 @@ const StatusChanged = Decode.fieldsAuto({
       tag: () => "CompileError" as const,
       compilationMode: CompilationMode,
       browserUiPosition: BrowserUiPosition,
-      error: Decode.string,
+      errors: Decode.array(CompileError),
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,
