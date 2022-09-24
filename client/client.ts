@@ -11,6 +11,7 @@ import {
 import {
   CompileError,
   decodeWebSocketToClientMessage,
+  ErrorLocation,
   StatusChanged,
   WebSocketToClientMessage,
   WebSocketToServerMessage,
@@ -2348,10 +2349,25 @@ function viewCompileError(error: CompileError): HTMLLIElement {
       h(HTMLElement, { localName: "summary" }, error.title),
       error.location === undefined
         ? undefined
-        : h(HTMLParagraphElement, { innerHTML: error.location }),
+        : h(HTMLParagraphElement, {}, viewErrorLocation(error.location)),
       h(HTMLPreElement, { innerHTML: error.content })
     )
   );
+}
+
+function viewErrorLocation(location: ErrorLocation): HTMLElement | string {
+  switch (location.tag) {
+    case "AbsolutePath":
+      return h(HTMLButtonElement, {}, location.absolutePath);
+    case "AbsolutePathWithLineAndColumn":
+      return h(
+        HTMLButtonElement,
+        {},
+        `${location.absolutePath}:${location.line}:${location.column}`
+      );
+    case "Target":
+      return `Target: ${location.targetName}`;
+  }
 }
 
 function idleIcon(status: InitializedElmAppsStatus): string {
@@ -2707,7 +2723,12 @@ function renderMockStatuses(
       errors: [
         {
           title: "Error 1",
-          location: "Main.elm",
+          location: {
+            tag: "AbsolutePathWithLineAndColumn",
+            absolutePath: "/Users/you/project/src/Main.elm",
+            line: 5,
+            column: 8,
+          },
           content: "Something went wrong",
         },
         {

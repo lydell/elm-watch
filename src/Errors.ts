@@ -96,7 +96,12 @@ type FancyErrorLocation =
   | ElmWatchNodeScriptPath
   | ElmWatchStuffJsonPath
   | OutputPath
-  | { tag: "Custom"; location: string }
+  | {
+      tag: "AbsolutePathWithLineAndColumn";
+      absolutePath: string;
+      line: number;
+      column: number;
+    }
   | { tag: "NoLocation" };
 
 type Piece =
@@ -123,23 +128,37 @@ export type ErrorTemplate = (
 
 type ErrorTemplateData = {
   title: string;
-  location: string | undefined;
+  location: ErrorLocation | undefined;
   content: string;
 };
+
+type ErrorLocation =
+  | {
+      tag: "AbsolutePath";
+      absolutePath: string;
+    }
+  | {
+      tag: "AbsolutePathWithLineAndColumn";
+      absolutePath: string;
+      line: number;
+      column: number;
+    }
+  | {
+      tag: "Target";
+      targetName: string;
+    };
 
 export const fancyError =
   (title: string, location: FancyErrorLocation) =>
   (strings: ReadonlyArray<string>, ...values: Array<Piece | Template>) =>
-  (width: number, renderPiece: (piece: Piece) => string): ErrorTemplateData => {
-    const content = template(strings, ...values)(width, renderPiece);
-    const maybeLocation = fancyErrorLocation(location);
-    return {
-      title,
-      location:
-        maybeLocation === undefined ? undefined : renderPiece(maybeLocation),
-      content,
-    };
-  };
+  (
+    width: number,
+    renderPiece: (piece: Piece) => string
+  ): ErrorTemplateData => ({
+    title,
+    location: fancyToPlainErrorLocation(location),
+    content: template(strings, ...values)(width, renderPiece),
+  });
 
 export const template =
   (strings: ReadonlyArray<string>, ...values: Array<Piece | Template>) =>
@@ -174,7 +193,9 @@ export function toTerminalString(
   return joinString(
     [
       titleWithSeparator,
-      ...(location === undefined ? [] : [location]),
+      ...(location === undefined
+        ? []
+        : [renderPiece(renderErrorLocation(location))]),
       "",
       content,
     ],
@@ -260,22 +281,40 @@ function escapeHtml(string: string): string {
   });
 }
 
-function fancyErrorLocation(location: FancyErrorLocation): Piece | undefined {
+function fancyToPlainErrorLocation(
+  location: FancyErrorLocation
+): ErrorLocation | undefined {
   switch (location.tag) {
     case "ElmJsonPath":
-      return text(location.theElmJsonPath.absolutePath);
+      return location.theElmJsonPath;
     case "ElmWatchJsonPath":
-      return text(location.theElmWatchJsonPath.absolutePath);
+      return location.theElmWatchJsonPath;
     case "ElmWatchStuffJsonPath":
-      return text(location.theElmWatchStuffJsonPath.absolutePath);
+      return location.theElmWatchStuffJsonPath;
     case "OutputPath":
-      return dim(`Target: ${location.targetName}`);
+      return { tag: "Target", targetName: location.targetName };
     case "ElmWatchNodeScriptPath":
-      return text(url.fileURLToPath(location.theElmWatchNodeScriptFileUrl));
-    case "Custom":
-      return text(location.location);
+      return {
+        tag: "AbsolutePath",
+        absolutePath: url.fileURLToPath(location.theElmWatchNodeScriptFileUrl),
+      };
+    case "AbsolutePathWithLineAndColumn":
+      return location;
     case "NoLocation":
       return undefined;
+  }
+}
+
+function renderErrorLocation(location: ErrorLocation): Piece {
+  switch (location.tag) {
+    case "AbsolutePath":
+      return text(location.absolutePath);
+    case "AbsolutePathWithLineAndColumn":
+      return text(
+        `${location.absolutePath}:${location.line}:${location.column}`
+      );
+    case "Target":
+      return dim(`Target: ${location.targetName}`);
   }
 }
 
@@ -954,15 +993,12 @@ export function elmMakeProblem(
   problem: ElmMakeError.Problem,
   extraError: string | undefined
 ): ErrorTemplate {
-  const location = joinString(
-    [
-      filePath.absolutePath,
-      problem.region.start.line.toString(),
-      problem.region.start.column.toString(),
-    ],
-    ":"
-  );
-  return fancyError(problem.title, { tag: "Custom", location })`
+  return fancyError(problem.title, {
+    tag: "AbsolutePathWithLineAndColumn",
+    absolutePath: filePath.absolutePath,
+    line: problem.region.start.line,
+    column: problem.region.start.column,
+  })`
 ${text(extraError ?? "")}
 
 ${joinTemplate(problem.message.map(renderMessageChunk), "")}

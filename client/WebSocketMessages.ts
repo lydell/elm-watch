@@ -6,10 +6,28 @@ const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
 });
 
+export type ErrorLocation = ReturnType<typeof ErrorLocation>;
+const ErrorLocation = Decode.fieldsUnion("tag", {
+  AbsolutePath: Decode.fieldsAuto({
+    tag: () => "AbsolutePath" as const,
+    absolutePath: Decode.string,
+  }),
+  AbsolutePathWithLineAndColumn: Decode.fieldsAuto({
+    tag: () => "AbsolutePathWithLineAndColumn" as const,
+    absolutePath: Decode.string,
+    line: Decode.number,
+    column: Decode.number,
+  }),
+  Target: Decode.fieldsAuto({
+    tag: () => "Target" as const,
+    targetName: Decode.string,
+  }),
+});
+
 export type CompileError = ReturnType<typeof CompileError>;
 const CompileError = Decode.fieldsAuto({
   title: Decode.string,
-  location: Decode.optional(Decode.string),
+  location: Decode.optional(ErrorLocation),
   content: Decode.string,
 });
 
