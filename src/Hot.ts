@@ -1744,8 +1744,10 @@ function handleOutputActionResultToCmd(
           tag: "StatusChanged",
           status: {
             tag: "CompileError",
-            compilationMode: handleOutputActionResult.compilationMode,
-            browserUiPosition: handleOutputActionResult.browserUiPosition,
+            compilationMode:
+              handleOutputActionResult.outputState.compilationMode,
+            browserUiPosition:
+              handleOutputActionResult.outputState.browserUiPosition,
           },
         },
       };
@@ -1758,8 +1760,9 @@ function handleOutputActionResultToCmd(
           tag: "SuccessfullyCompiled",
           code: handleOutputActionResult.code.toString("utf8"),
           elmCompiledTimestamp: handleOutputActionResult.elmCompiledTimestamp,
-          compilationMode: handleOutputActionResult.compilationMode,
-          browserUiPosition: handleOutputActionResult.browserUiPosition,
+          compilationMode: handleOutputActionResult.outputState.compilationMode,
+          browserUiPosition:
+            handleOutputActionResult.outputState.browserUiPosition,
         },
       };
 
