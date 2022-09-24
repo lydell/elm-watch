@@ -12,6 +12,7 @@ import {
   CompileError,
   decodeWebSocketToClientMessage,
   ErrorLocation,
+  OpenEditorError,
   StatusChanged,
   WebSocketToClientMessage,
   WebSocketToServerMessage,
@@ -341,7 +342,7 @@ type Status =
       errors: Array<CompileError>;
       foregroundColor: string;
       backgroundColor: string;
-      openInEditorEnabled: boolean;
+      openEditorError: OpenEditorError | undefined;
     }
   | {
       tag: "Connecting";
@@ -1031,6 +1032,17 @@ function onWebSocketToClientMessage(
     case "FocusedTabAcknowledged":
       return [model, [{ tag: "WebSocketTimeoutClear" }]];
 
+    case "OpenEditorFailed":
+      return [
+        model.status.tag === "CompileError"
+          ? {
+              ...model,
+              status: { ...model.status, openEditorError: msg.error },
+            }
+          : model,
+        [],
+      ];
+
     case "StatusChanged":
       return statusChanged(date, msg, model);
 
@@ -1162,7 +1174,7 @@ function statusChanged(
             errors: status.errors,
             foregroundColor: status.foregroundColor,
             backgroundColor: status.backgroundColor,
-            openInEditorEnabled: status.openInEditorEnabled,
+            openEditorError: undefined,
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -2280,13 +2292,12 @@ function viewStatus(
               },
             },
             ...status.errors.map((error) =>
-              viewCompileError(
-                dispatch,
-                status.openInEditorEnabled ? status.sendKey : undefined,
-                error
-              )
+              viewCompileError(dispatch, status.sendKey, error)
             )
           ),
+          ...(status.openEditorError === undefined
+            ? []
+            : [viewOpenEditorError(status.openEditorError)]),
         ],
       };
 
@@ -2373,7 +2384,7 @@ function viewStatus(
 
 function viewCompileError(
   dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey | undefined,
+  sendKey: SendKey,
   error: CompileError
 ): HTMLLIElement {
   return h(
@@ -2397,7 +2408,7 @@ function viewCompileError(
 
 function viewErrorLocation(
   dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey | undefined,
+  sendKey: SendKey,
   location: ErrorLocation
 ): HTMLElement | string {
   switch (location.tag) {
@@ -2429,7 +2440,7 @@ function viewErrorLocation(
 
 function viewErrorLocationButton(
   dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey | undefined,
+  sendKey: SendKey,
   location: {
     absolutePath: string;
     line: number;
@@ -2437,23 +2448,53 @@ function viewErrorLocationButton(
   },
   text: string
 ): HTMLButtonElement | string {
-  return sendKey === undefined
-    ? text
-    : h(
-        HTMLButtonElement,
-        {
-          onclick: () => {
-            dispatch({
-              tag: "PressedOpenEditor",
-              absolutePath: location.absolutePath,
-              line: location.line,
-              column: location.column,
-              sendKey,
-            });
+  return h(
+    HTMLButtonElement,
+    {
+      onclick: () => {
+        dispatch({
+          tag: "PressedOpenEditor",
+          absolutePath: location.absolutePath,
+          line: location.line,
+          column: location.column,
+          sendKey,
+        });
+      },
+    },
+    text
+  );
+}
+
+function viewOpenEditorError(error: OpenEditorError): HTMLElement {
+  switch (error.tag) {
+    case "EnvNotSet":
+      return h(
+        HTMLParagraphElement,
+        {},
+        "Clicking error locations only work if you set it up. Check this out: ",
+        h(
+          HTMLAnchorElement,
+          {
+            href: "https://github.com/lydell/elm-watch#TODO",
+            target: "_blank",
+            rel: "noreferrer",
           },
-        },
-        text
+          "TODO"
+        )
       );
+
+    case "CommandFailed":
+      return h(
+        HTMLDivElement,
+        {},
+        h(
+          HTMLParagraphElement,
+          {},
+          "Opening the location in your editor failed!"
+        ),
+        h(HTMLPreElement, {}, error.message)
+      );
+  }
 }
 
 function idleIcon(status: InitializedElmAppsStatus): string {
@@ -2732,7 +2773,7 @@ function renderMockStatuses(
       errors: [],
       foregroundColor: "white",
       backgroundColor: "black",
-      openInEditorEnabled: false,
+      openEditorError: undefined,
       info: {
         ...info,
         originalCompilationMode: "standard",
@@ -2825,7 +2866,7 @@ function renderMockStatuses(
       ],
       foregroundColor: "#eee",
       backgroundColor: "#111",
-      openInEditorEnabled: true,
+      openEditorError: { tag: "EnvNotSet" },
     },
     Connecting: {
       tag: "Connecting",

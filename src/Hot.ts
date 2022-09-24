@@ -16,6 +16,7 @@ import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
+  __ELM_WATCH_OPEN_EDITOR_TIMEOUT,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
   ELM_WATCH_OPEN_EDITOR,
   Env,
@@ -286,6 +287,7 @@ type Cmd =
       absolutePath: string;
       line: number;
       column: number;
+      webSocket: WebSocket;
     }
   | {
       tag: "PrintCompileErrors";
@@ -1513,26 +1515,49 @@ const runCmd =
 
       case "OpenEditor": {
         const command = env[ELM_WATCH_OPEN_EDITOR];
-        // TODO: Respond with error if the env var is somehow missing?
-        if (command !== undefined) {
+        const cwd = absoluteDirname(
+          mutable.project.elmWatchJsonPath.theElmWatchJsonPath
+        );
+        const timeout = silentlyReadIntEnvValue(
+          env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT],
+          5000
+        );
+        const extraEnv = {
+          file: cmd.absolutePath,
+          line: cmd.line.toString(),
+          column: cmd.column.toString(),
+        };
+        if (command === undefined) {
+          webSocketSend(cmd.webSocket, {
+            tag: "OpenEditorFailed",
+            error: { tag: "EnvNotSet" },
+          });
+        } else {
           childProcess.exec(
             command,
             {
-              cwd: absoluteDirname(
-                mutable.project.elmWatchJsonPath.theElmWatchJsonPath
-              ).absolutePath,
-              env: {
-                ...env,
-                file: cmd.absolutePath,
-                line: cmd.line.toString(),
-                column: cmd.column.toString(),
-              },
+              cwd: cwd.absolutePath,
+              env: { ...env, ...extraEnv },
               encoding: "utf8",
-              // TODO: Add timeout setting?
+              timeout,
             },
             (error, stdout, stderr) => {
               if (error !== null) {
-                console.log("TODO handle error", error, stdout, stderr);
+                webSocketSend(cmd.webSocket, {
+                  tag: "OpenEditorFailed",
+                  error: {
+                    tag: "CommandFailed",
+                    message: Errors.openEditorCommandFailed({
+                      error,
+                      command,
+                      cwd,
+                      timeout,
+                      env: extraEnv,
+                      stdout,
+                      stderr,
+                    }),
+                  },
+                });
               }
             }
           );
@@ -1632,7 +1657,6 @@ const runCmd =
                 ),
                 foregroundColor: theme.foreground,
                 backgroundColor: theme.background,
-                openInEditorEnabled: ELM_WATCH_OPEN_EDITOR in env,
               },
             };
             webSocketSendToOutput(
@@ -2471,6 +2495,7 @@ function onWebSocketToServerMessage(
             absolutePath: message.absolutePath,
             line: message.line,
             column: message.column,
+            webSocket,
           },
         ],
       ];

@@ -1,3 +1,4 @@
+import { ExecException } from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -6,7 +7,7 @@ import * as url from "url";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
-import { Env } from "./Env";
+import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
@@ -1428,6 +1429,45 @@ The web socket code I generate is supposed to always send correct messages, so s
   `.trim();
 }
 
+export function openEditorCommandFailed({
+  error,
+  command,
+  cwd,
+  timeout,
+  env,
+  stdout,
+  stderr,
+}: {
+  error: ExecException;
+  command: string;
+  cwd: AbsolutePath;
+  timeout: number;
+  env: Env;
+  stdout: string;
+  stderr: string;
+}): string {
+  const errorReason =
+    error.killed === true
+      ? `The command took too long to run, and was killed after ${timeout} ms.`
+      : error.code !== undefined
+      ? `The command exited with code ${error.code}.`
+      : "The command failed for an unknown reason.";
+  return `
+I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):
+
+${commandToPresentationName(["cd", cwd.absolutePath])}
+${command}
+
+I ran the command with these extra environment variables:
+
+${JSON.stringify(env, null, 2)}
+
+${errorReason}
+
+${printStdio(stdout, stderr)(DEFAULT_COLUMNS, (piece) => piece.text)}
+  `.trim();
+}
+
 export function printPATH(env: Env, isWindows: boolean): Piece | Template {
   if (isWindows) {
     return printPATHWindows(env);
@@ -1536,13 +1576,13 @@ function printExitReason(exitReason: ExitReason): Piece {
   }
 }
 
-export function printStdio(stdout: string, stderr: string): Piece | Template {
+export function printStdio(stdout: string, stderr: string): Template {
   return stdout !== "" && stderr === ""
     ? limitStdio(stdout)
     : stdout === "" && stderr !== ""
     ? limitStdio(stderr)
     : stdout === "" && stderr === ""
-    ? dim("(no output)")
+    ? template`${dim("(no output)")}`
     : template`
 STDOUT:
 ${limitStdio(stdout)}
@@ -1552,12 +1592,9 @@ ${limitStdio(stderr)}
 `;
 }
 
-function printElmWatchNodeStdio(
-  stdout: string,
-  stderr: string
-): Piece | Template {
+function printElmWatchNodeStdio(stdout: string, stderr: string): Template {
   return stdout === "" && stderr === ""
-    ? text("")
+    ? template``
     : template`
 STDOUT:
 ${limitStdio(stdout)}

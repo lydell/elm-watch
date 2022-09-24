@@ -6,6 +6,22 @@ const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
 });
 
+export type OpenEditorError = ReturnType<typeof OpenEditorError>;
+const OpenEditorError = Decode.fieldsUnion("tag", {
+  EnvNotSet: Decode.fieldsAuto({
+    tag: () => "EnvNotSet" as const,
+  }),
+  CommandFailed: Decode.fieldsAuto({
+    tag: () => "CommandFailed" as const,
+    message: Decode.string,
+  }),
+});
+
+const OpenEditorFailed = Decode.fieldsAuto({
+  tag: () => "OpenEditorFailed" as const,
+  error: OpenEditorError,
+});
+
 export type ErrorLocation = ReturnType<typeof ErrorLocation>;
 const ErrorLocation = Decode.fieldsUnion("tag", {
   AbsolutePath: Decode.fieldsAuto({
@@ -52,7 +68,6 @@ const StatusChanged = Decode.fieldsAuto({
       errors: Decode.array(CompileError),
       foregroundColor: Decode.string,
       backgroundColor: Decode.string,
-      openInEditorEnabled: Decode.boolean,
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,
@@ -78,6 +93,7 @@ export type WebSocketToClientMessage = ReturnType<
 >;
 export const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
   FocusedTabAcknowledged,
+  OpenEditorFailed,
   StatusChanged,
   SuccessfullyCompiled,
   SuccessfullyCompiledButRecordFieldsChanged,

@@ -8,6 +8,11 @@ export const NO_COLOR = "NO_COLOR";
 // Type: String of shell code.
 export const ELM_WATCH_OPEN_EDITOR = "ELM_WATCH_OPEN_EDITOR";
 
+// If the `ELM_WATCH_OPEN_EDITOR` takes this long, it is killed.
+// Type: Number.
+export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT =
+  "__ELM_WATCH_OPEN_EDITOR_TIMEOUT";
+
 // This enables `logger.debug()` calls (written to stderr). Since the stuff
 // written to stdout uses cursor movements, you probably want to also set
 // `__ELM_WATCH_NOT_TTY` or pipe to `cat` (if not a tty cursor movements are
