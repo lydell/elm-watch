@@ -3769,6 +3769,11 @@ describe("hot", () => {
             moveUi("BottomLeft");
             return "KeepGoing";
           case 5:
+            // Note: This results in the server sending two "Busy" messages.
+            // Both local updates happen (moving the UI to the top-left corner),
+            // then both "Busy" messages arrive, temporarily flipping back to the
+            // bottom-right corner. In reality I’ve never seen this, but it explains
+            // the snapshot output.
             moveUi("BottomRight");
             moveUi("TopLeft");
             return "KeepGoing";
