@@ -972,7 +972,8 @@ ${joinTemplate(problem.message.map(renderMessageChunk), "")}
 function renderMessageChunk(chunk: ElmMakeError.MessageChunk): Piece {
   switch (chunk.tag) {
     case "UnstyledText":
-      return text(chunk.string);
+      // This does not use `text()` since that function trims whitespace.
+      return { tag: "Text", text: chunk.string };
     case "StyledText":
       return {
         tag: "ElmStyle",

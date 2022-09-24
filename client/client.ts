@@ -9,6 +9,7 @@ import {
   GetNow,
 } from "../src/Types";
 import {
+  CompileError,
   decodeWebSocketToClientMessage,
   StatusChanged,
   WebSocketToClientMessage,
@@ -329,6 +330,9 @@ type Status =
       tag: "CompileError";
       date: Date;
       sendKey: SendKey;
+      errors: Array<CompileError>;
+      foregroundColor: string;
+      backgroundColor: string;
     }
   | {
       tag: "Connecting";
@@ -1129,6 +1133,9 @@ function statusChanged(
             tag: "CompileError",
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+            errors: status.errors,
+            foregroundColor: status.foregroundColor,
+            backgroundColor: status.backgroundColor,
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -2238,13 +2245,14 @@ function viewStatus(
             info,
           }),
           h(
-            HTMLParagraphElement,
-            {},
-            h(
-              HTMLElement,
-              { localName: "strong" },
-              "Check the terminal to see errors!"
-            )
+            HTMLOListElement,
+            {
+              style: {
+                backgroundColor: status.backgroundColor,
+                color: status.foregroundColor,
+              },
+            },
+            ...status.errors.map(viewCompileError)
           ),
         ],
       };
@@ -2328,6 +2336,22 @@ function viewStatus(
         ],
       };
   }
+}
+
+function viewCompileError(error: CompileError): HTMLLIElement {
+  return h(
+    HTMLLIElement,
+    {},
+    h(
+      HTMLDetailsElement,
+      { open: true },
+      h(HTMLElement, { localName: "summary" }, error.title),
+      error.location === undefined
+        ? undefined
+        : h(HTMLParagraphElement, { innerHTML: error.location }),
+      h(HTMLPreElement, { innerHTML: error.content })
+    )
+  );
 }
 
 function idleIcon(status: InitializedElmAppsStatus): string {
@@ -2603,6 +2627,9 @@ function renderMockStatuses(
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      errors: [],
+      foregroundColor: "white",
+      backgroundColor: "black",
       info: {
         ...info,
         originalCompilationMode: "standard",
@@ -2677,6 +2704,19 @@ function renderMockStatuses(
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      errors: [
+        {
+          title: "Error 1",
+          location: "Main.elm",
+          content: "Something went wrong",
+        },
+        {
+          title: "Error 2",
+          content: "Some other error",
+        },
+      ],
+      foregroundColor: "#eee",
+      backgroundColor: "#111",
     },
     Connecting: {
       tag: "Connecting",

@@ -6,6 +6,7 @@ const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
 });
 
+export type CompileError = ReturnType<typeof CompileError>;
 const CompileError = Decode.fieldsAuto({
   title: Decode.string,
   location: Decode.optional(Decode.string),
