@@ -77,9 +77,9 @@ function json(data: unknown, indent?: number): Piece {
 }
 
 function joinTemplate(
-  array: Array<ErrorTemplate | Piece>,
+  array: Array<Piece | Template>,
   separator: string
-): ErrorTemplate {
+): Template {
   return template(
     ["", ...Array.from({ length: array.length - 1 }, () => separator), ""],
     ...array
@@ -111,35 +111,39 @@ type Piece =
   | { tag: "Dim"; text: string }
   | { tag: "Text"; text: string };
 
-export type ErrorTemplate = (
+type Template = (
   width: number,
   renderPiece: (piece: Piece) => string
 ) => string;
 
+export type ErrorTemplate = (
+  width: number,
+  renderPiece: (piece: Piece) => string
+) => {
+  title: string;
+  location: string | undefined;
+  content: string;
+};
+
 export const fancyError =
   (title: string, location: FancyErrorLocation) =>
-  (strings: ReadonlyArray<string>, ...values: Array<ErrorTemplate | Piece>) =>
-  (width: number, renderPiece: (piece: Piece) => string): string => {
+  (strings: ReadonlyArray<string>, ...values: Array<Piece | Template>) =>
+  (
+    width: number,
+    renderPiece: (piece: Piece) => string
+  ): ReturnType<ErrorTemplate> => {
     const content = template(strings, ...values)(width, renderPiece);
-
-    const prefix = `-- ${title} `;
-    const line = "-".repeat(Math.max(0, width - prefix.length));
-    const titleWithSeparator = renderPiece(bold(`${prefix}${line}`));
     const maybeLocation = fancyErrorLocation(location);
-
-    return joinString(
-      [
-        titleWithSeparator,
-        ...(maybeLocation === undefined ? [] : [renderPiece(maybeLocation)]),
-        "",
-        content,
-      ],
-      "\n"
-    );
+    return {
+      title,
+      location:
+        maybeLocation === undefined ? undefined : renderPiece(maybeLocation),
+      content,
+    };
   };
 
 export const template =
-  (strings: ReadonlyArray<string>, ...values: Array<ErrorTemplate | Piece>) =>
+  (strings: ReadonlyArray<string>, ...values: Array<Piece | Template>) =>
   (width: number, renderPiece: (piece: Piece) => string): string =>
     joinString(
       strings.flatMap((string, index) => {
@@ -159,13 +163,28 @@ export function toTerminalString(
   width: number,
   noColor: boolean
 ): string {
-  return noColor
-    ? errorTemplate(width, (piece) => piece.text)
-    : errorTemplate(width, renderPieceForTerminal);
+  const renderPiece = noColor
+    ? (piece: Piece): string => piece.text
+    : renderPieceForTerminal;
+
+  const { title, location, content } = errorTemplate(width, renderPiece);
+  const prefix = `-- ${title} `;
+  const line = "-".repeat(Math.max(0, width - prefix.length));
+  const titleWithSeparator = renderPiece(bold(`${prefix}${line}`));
+
+  return joinString(
+    [
+      titleWithSeparator,
+      ...(location === undefined ? [] : [location]),
+      "",
+      content,
+    ],
+    "\n"
+  );
 }
 
 export function toPlainString(errorTemplate: ErrorTemplate): string {
-  return errorTemplate(DEFAULT_COLUMNS, (piece) => piece.text);
+  return toTerminalString(errorTemplate, DEFAULT_COLUMNS, true);
 }
 
 function renderPieceForTerminal(piece: Piece): string {
@@ -312,7 +331,7 @@ ${extra}
 `;
 }
 
-function printRunModeArgsHelp(runMode: RunMode): ErrorTemplate {
+function printRunModeArgsHelp(runMode: RunMode): Template {
   switch (runMode) {
     case "make":
       return template`The ${bold(
@@ -794,7 +813,7 @@ export type ElmMakeCrashBeforeError =
 
 function printElmMakeCrashBeforeError(
   beforeError: ElmMakeCrashBeforeError
-): ErrorTemplate {
+): Template {
   switch (beforeError.tag) {
     case "Json":
       return template`I got back ${number(
@@ -1320,7 +1339,7 @@ The web socket code I generate is supposed to always send correct messages, so s
   `.trim();
 }
 
-export function printPATH(env: Env, isWindows: boolean): ErrorTemplate | Piece {
+export function printPATH(env: Env, isWindows: boolean): Piece | Template {
   if (isWindows) {
     return printPATHWindows(env);
   }
@@ -1342,7 +1361,7 @@ ${join(pathList, "\n")}
   `;
 }
 
-function printPATHWindows(env: Env): ErrorTemplate | Piece {
+function printPATHWindows(env: Env): Piece | Template {
   const pathEntries = Object.entries(env).flatMap(([key, value]) =>
     key.toUpperCase() === "PATH" && value !== undefined
       ? [[key, value] as const]
@@ -1428,10 +1447,7 @@ function printExitReason(exitReason: ExitReason): Piece {
   }
 }
 
-export function printStdio(
-  stdout: string,
-  stderr: string
-): ErrorTemplate | Piece {
+export function printStdio(stdout: string, stderr: string): Piece | Template {
   return stdout !== "" && stderr === ""
     ? limitStdio(stdout)
     : stdout === "" && stderr !== ""
@@ -1450,7 +1466,7 @@ ${limitStdio(stderr)}
 function printElmWatchNodeStdio(
   stdout: string,
   stderr: string
-): ErrorTemplate | Piece {
+): Piece | Template {
   return stdout === "" && stderr === ""
     ? text("")
     : template`
@@ -1504,7 +1520,7 @@ const limitStdio =
       : joined;
   };
 
-function printErrorFilePath(errorFilePath: ErrorFilePath): ErrorTemplate {
+function printErrorFilePath(errorFilePath: ErrorFilePath): Template {
   switch (errorFilePath.tag) {
     case "AbsolutePath":
       return template`
@@ -1544,15 +1560,13 @@ function printUnknownValueAsString(value: UnknownValueAsString): Piece {
 
 function printElmWatchNodeImportCommand(
   scriptPath: ElmWatchNodeScriptPath
-): ErrorTemplate {
+): Template {
   return template`const imported = await import(${json(
     scriptPath.theElmWatchNodeScriptFileUrl
   )})`;
 }
 
-function printElmWatchNodeRunCommand(
-  args: ElmWatchNodePublicArgs
-): ErrorTemplate {
+function printElmWatchNodeRunCommand(args: ElmWatchNodePublicArgs): Template {
   const truncated = {
     ...args,
     code: truncate(args.code),
