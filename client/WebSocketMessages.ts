@@ -31,6 +31,8 @@ const StatusChanged = Decode.fieldsAuto({
       compilationMode: CompilationMode,
       browserUiPosition: BrowserUiPosition,
       errors: Decode.array(CompileError),
+      foregroundColor: Decode.string,
+      backgroundColor: Decode.string,
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,

@@ -642,15 +642,21 @@ const init = (
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
-      ({ outputPath, compilationMode, browserUiPosition }): Cmd => ({
+      (elmJsonError): Cmd => ({
         tag: "WebSocketSendToOutput",
-        outputPath,
+        outputPath: elmJsonError.outputPath,
         message: {
           tag: "StatusChanged",
           status: {
             tag: "CompileError",
-            compilationMode,
-            browserUiPosition,
+            compilationMode: elmJsonError.compilationMode,
+            browserUiPosition: elmJsonError.browserUiPosition,
+            errors: [
+              Errors.toHtml(
+                Compile.renderElmJsonError(elmJsonError),
+                undefined
+              ),
+            ],
           },
         },
       })
@@ -769,6 +775,7 @@ function update(
           const duration = msg.date.getTime() - model.hotState.start.getTime();
 
           const cmd = handleOutputActionResultToCmd(
+            project.elmWatchJsonPath,
             msg.handleOutputActionResult
           );
 
@@ -907,6 +914,7 @@ function update(
       switch (result.tag) {
         case "Success": {
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
+            project.elmWatchJsonPath,
             msg.date,
             model,
             result.outputPath,
@@ -1733,6 +1741,7 @@ function portChoiceError(
 }
 
 function handleOutputActionResultToCmd(
+  elmWatchJsonPath: ElmWatchJsonPath,
   handleOutputActionResult: Compile.HandleOutputActionResult
 ): Cmd {
   switch (handleOutputActionResult.tag) {
@@ -1748,6 +1757,12 @@ function handleOutputActionResultToCmd(
               handleOutputActionResult.outputState.compilationMode,
             browserUiPosition:
               handleOutputActionResult.outputState.browserUiPosition,
+            errors: Compile.renderOutputErrors(
+              elmWatchJsonPath,
+              handleOutputActionResult.elmJsonPath,
+              handleOutputActionResult.outputPath,
+              handleOutputActionResult.outputState.status
+            ).map((errorTemplate) => Errors.toHtml(errorTemplate, theme)),
           },
         },
       };
@@ -2132,6 +2147,7 @@ function parseWebSocketToServerMessage(
 }
 
 function onWebSocketConnected(
+  elmWatchJsonPath: ElmWatchJsonPath,
   date: Date,
   model: Model,
   outputPath: OutputPath,
@@ -2226,6 +2242,14 @@ function onWebSocketConnected(
                     tag: "CompileError",
                     compilationMode: outputState.compilationMode,
                     browserUiPosition: outputState.browserUiPosition,
+                    errors: Compile.renderOutputErrors(
+                      elmWatchJsonPath,
+                      handleOutputActionResult.elmJsonPath,
+                      outputPath,
+                      outputState.status
+                    ).map((errorTemplate) =>
+                      Errors.toHtml(errorTemplate, theme)
+                    ),
                   },
                 },
               },

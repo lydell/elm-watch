@@ -119,7 +119,9 @@ type Template = (
 export type ErrorTemplate = (
   width: number,
   renderPiece: (piece: Piece) => string
-) => {
+) => ErrorTemplateData;
+
+type ErrorTemplateData = {
   title: string;
   location: string | undefined;
   content: string;
@@ -128,10 +130,7 @@ export type ErrorTemplate = (
 export const fancyError =
   (title: string, location: FancyErrorLocation) =>
   (strings: ReadonlyArray<string>, ...values: Array<Piece | Template>) =>
-  (
-    width: number,
-    renderPiece: (piece: Piece) => string
-  ): ReturnType<ErrorTemplate> => {
+  (width: number, renderPiece: (piece: Piece) => string): ErrorTemplateData => {
     const content = template(strings, ...values)(width, renderPiece);
     const maybeLocation = fancyErrorLocation(location);
     return {
@@ -187,6 +186,16 @@ export function toPlainString(errorTemplate: ErrorTemplate): string {
   return toTerminalString(errorTemplate, DEFAULT_COLUMNS, true);
 }
 
+export function toHtml(
+  errorTemplate: ErrorTemplate,
+  theme: Theme.Theme | undefined
+): ErrorTemplateData {
+  const renderPiece = (piece: Piece): string =>
+    theme === undefined ? piece.text : renderPieceToHtml(piece, theme);
+
+  return errorTemplate(DEFAULT_COLUMNS, renderPiece);
+}
+
 function renderPieceForTerminal(piece: Piece): string {
   switch (piece.tag) {
     case "Bold":
@@ -206,6 +215,48 @@ function renderPieceForTerminal(piece: Piece): string {
     case "Text":
       return piece.text;
   }
+}
+
+function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
+  switch (piece.tag) {
+    case "Bold":
+      return `<b>${escapeHtml(piece.text)}</b>`;
+    case "Dim":
+      return `<span style="opacity: 0.8">${escapeHtml(piece.text)}</span>`;
+    case "ElmStyle":
+      return (
+        (piece.bold ? /* istanbul ignore next */ "<b>" : "") +
+        (piece.underline ? "<u>" : "") +
+        (piece.color === undefined
+          ? ""
+          : `<span style="color: ${theme.palette[piece.color]}">`) +
+        escapeHtml(piece.text) +
+        (piece.color === undefined ? "" : "</span>") +
+        (piece.underline ? "</u>" : "") +
+        (piece.bold ? /* istanbul ignore next */ "</b>" : "")
+      );
+    case "Text":
+      return escapeHtml(piece.text);
+  }
+}
+
+function escapeHtml(string: string): string {
+  return string.replace(/[&<>"']/g, (match) => {
+    switch (match) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&apos;";
+      default:
+        return match;
+    }
+  });
 }
 
 function fancyErrorLocation(location: FancyErrorLocation): Piece | undefined {

@@ -522,9 +522,9 @@ function sortByPriority<T extends { priority: number }>(
 export type HandleOutputActionResult =
   | {
       tag: "CompileError";
+      elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
-      error: string;
     }
   | {
       tag: "FullyCompiledJS";
@@ -754,6 +754,7 @@ async function compileOneOutput({
         getNow,
         updateStatusLineHelper,
         runMode,
+        elmJsonPath,
         outputPath,
         outputState,
         outputStatus,
@@ -765,6 +766,7 @@ async function compileOneOutput({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -774,6 +776,7 @@ async function compileOneOutput({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -784,6 +787,7 @@ async function compileOneOutput({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -795,6 +799,7 @@ function onCompileSuccess(
   getNow: GetNow,
   updateStatusLineHelper: () => void,
   runMode: RunModeWithExtraData,
+  elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   outputState: OutputState,
   outputStatus: Extract<OutputStatus, { tag: "ElmMake" }>,
@@ -819,6 +824,7 @@ function onCompileSuccess(
             updateStatusLineHelper();
             return {
               tag: "CompileError",
+              elmJsonPath,
               outputPath,
               outputState,
             };
@@ -849,6 +855,7 @@ function onCompileSuccess(
             updateStatusLineHelper();
             return {
               tag: "CompileError",
+              elmJsonPath,
               outputPath,
               outputState,
             };
@@ -882,6 +889,7 @@ function onCompileSuccess(
         updateStatusLineHelper();
         return {
           tag: "CompileError",
+          elmJsonPath,
           outputPath,
           outputState,
         };
@@ -931,6 +939,7 @@ function onCompileSuccess(
             updateStatusLineHelper();
             return {
               tag: "CompileError",
+              elmJsonPath,
               outputPath,
               outputState,
             };
@@ -1020,6 +1029,7 @@ async function postprocessHelper({
   logger,
   runMode,
   elmWatchJsonPath,
+  elmJsonPath,
   outputPath,
   outputState,
   index,
@@ -1034,6 +1044,7 @@ async function postprocessHelper({
   logger: Logger;
   runMode: RunModeWithExtraData;
   elmWatchJsonPath: ElmWatchJsonPath;
+  elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
   index: number;
@@ -1125,6 +1136,7 @@ async function postprocessHelper({
         updateStatusLineHelper();
         return {
           tag: "CompileError",
+          elmJsonPath,
           outputPath,
           outputState,
         };
@@ -1160,6 +1172,7 @@ async function postprocessHelper({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -2052,7 +2065,7 @@ export function renderElmJsonError({
   }
 }
 
-function renderOutputErrors(
+export function renderOutputErrors(
   elmWatchJsonPath: ElmWatchJsonPath,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
