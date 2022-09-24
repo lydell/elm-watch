@@ -223,6 +223,8 @@ It shows the current status. The ✅ means all is good and there are no compilat
 
 Clicking the box expands it, letting you switch between the “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
 
+If the UI is in the way, you can move it to another corner using the arrow buttons. elm-watch remembers that choice per target across restarts as well.
+
 Here are some more icons you might see (they’re also explained when you expand the box):
 
 - 🔌: Connecting
