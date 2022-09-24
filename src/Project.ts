@@ -604,14 +604,17 @@ function resolveElmJson(
 }
 
 export function getFlatOutputs(project: Project): Array<{
+  elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
 }> {
-  return Array.from(project.elmJsons.values()).flatMap((outputs) =>
-    Array.from(outputs, ([outputPath, outputState]) => ({
-      outputPath,
-      outputState,
-    }))
+  return Array.from(project.elmJsons.entries()).flatMap(
+    ([elmJsonPath, outputs]) =>
+      Array.from(outputs, ([outputPath, outputState]) => ({
+        elmJsonPath,
+        outputPath,
+        outputState,
+      }))
   );
 }
 

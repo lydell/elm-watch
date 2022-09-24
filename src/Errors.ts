@@ -188,10 +188,11 @@ export function toPlainString(errorTemplate: ErrorTemplate): string {
 
 export function toHtml(
   errorTemplate: ErrorTemplate,
-  theme: Theme.Theme | undefined
+  theme: Theme.Theme,
+  noColor: boolean
 ): ErrorTemplateData {
   const renderPiece = (piece: Piece): string =>
-    theme === undefined ? piece.text : renderPieceToHtml(piece, theme);
+    noColor ? piece.text : renderPieceToHtml(piece, theme);
 
   return errorTemplate(DEFAULT_COLUMNS, renderPiece);
 }

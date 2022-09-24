@@ -52,10 +52,12 @@ import {
   Project,
 } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
+import * as Theme from "./Theme";
 import {
   AbsolutePath,
   BrowserUiPosition,
   CompilationMode,
+  ElmJsonPath,
   ElmWatchJsonPath,
   equalsInputPath,
   GetNow,
@@ -300,6 +302,13 @@ type Cmd =
       tag: "WebSocketSend";
       webSocket: WebSocket;
       message: WebSocketToClientMessage;
+    }
+  | {
+      tag: "WebSocketSendCompileErrorToOutput";
+      outputPath: OutputPath;
+      compilationMode: CompilationMode;
+      browserUiPosition: BrowserUiPosition;
+      errors: Array<Errors.ErrorTemplate>;
     }
   | {
       tag: "WebSocketSendToOutput";
@@ -643,22 +652,11 @@ const init = (
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
       (elmJsonError): Cmd => ({
-        tag: "WebSocketSendToOutput",
+        tag: "WebSocketSendCompileErrorToOutput",
         outputPath: elmJsonError.outputPath,
-        message: {
-          tag: "StatusChanged",
-          status: {
-            tag: "CompileError",
-            compilationMode: elmJsonError.compilationMode,
-            browserUiPosition: elmJsonError.browserUiPosition,
-            errors: [
-              Errors.toHtml(
-                Compile.renderElmJsonError(elmJsonError),
-                undefined
-              ),
-            ],
-          },
-        },
+        compilationMode: elmJsonError.compilationMode,
+        browserUiPosition: elmJsonError.browserUiPosition,
+        errors: [Compile.renderElmJsonError(elmJsonError)],
       })
     ),
   ],
@@ -914,9 +912,10 @@ function update(
       switch (result.tag) {
         case "Success": {
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
-            project.elmWatchJsonPath,
             msg.date,
             model,
+            project.elmWatchJsonPath,
+            result.elmJsonPath,
             result.outputPath,
             result.outputState,
             result.elmCompiledTimestamp
@@ -1582,6 +1581,31 @@ const runCmd =
         webSocketSend(cmd.webSocket, cmd.message);
         return;
 
+      case "WebSocketSendCompileErrorToOutput":
+        Theme.getThemeFromTerminal(logger)
+          .then((theme) => {
+            const message: WebSocketToClientMessage = {
+              tag: "StatusChanged",
+              status: {
+                tag: "CompileError",
+                compilationMode: cmd.compilationMode,
+                browserUiPosition: cmd.browserUiPosition,
+                errors: cmd.errors.map((errorTemplate) =>
+                  Errors.toHtml(errorTemplate, theme, logger.config.noColor)
+                ),
+                foregroundColor: theme.foreground,
+                backgroundColor: theme.background,
+              },
+            };
+            webSocketSendToOutput(
+              cmd.outputPath,
+              message,
+              mutable.webSocketConnections
+            );
+          })
+          .catch(rejectPromise);
+        return;
+
       case "WebSocketSendToOutput":
         webSocketSendToOutput(
           cmd.outputPath,
@@ -1747,24 +1771,17 @@ function handleOutputActionResultToCmd(
   switch (handleOutputActionResult.tag) {
     case "CompileError":
       return {
-        tag: "WebSocketSendToOutput",
+        tag: "WebSocketSendCompileErrorToOutput",
         outputPath: handleOutputActionResult.outputPath,
-        message: {
-          tag: "StatusChanged",
-          status: {
-            tag: "CompileError",
-            compilationMode:
-              handleOutputActionResult.outputState.compilationMode,
-            browserUiPosition:
-              handleOutputActionResult.outputState.browserUiPosition,
-            errors: Compile.renderOutputErrors(
-              elmWatchJsonPath,
-              handleOutputActionResult.elmJsonPath,
-              handleOutputActionResult.outputPath,
-              handleOutputActionResult.outputState.status
-            ).map((errorTemplate) => Errors.toHtml(errorTemplate, theme)),
-          },
-        },
+        compilationMode: handleOutputActionResult.outputState.compilationMode,
+        browserUiPosition:
+          handleOutputActionResult.outputState.browserUiPosition,
+        errors: Compile.renderOutputErrors(
+          elmWatchJsonPath,
+          handleOutputActionResult.elmJsonPath,
+          handleOutputActionResult.outputPath,
+          handleOutputActionResult.outputState.status
+        ),
       };
 
     case "FullyCompiledJS":
@@ -1970,6 +1987,7 @@ type ParseWebSocketConnectRequestUrlResult =
   | ParseWebSocketConnectRequestUrlError
   | {
       tag: "Success";
+      elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
       elmCompiledTimestamp: number;
@@ -2071,6 +2089,7 @@ function parseWebSocketConnectRequestUrl(
 
   return {
     tag: "Success",
+    elmJsonPath: match.elmJsonPath,
     outputPath: match.outputPath,
     outputState: match.outputState,
     elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
@@ -2147,9 +2166,10 @@ function parseWebSocketToServerMessage(
 }
 
 function onWebSocketConnected(
-  elmWatchJsonPath: ElmWatchJsonPath,
   date: Date,
   model: Model,
+  elmWatchJsonPath: ElmWatchJsonPath,
+  elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   outputState: OutputState,
   elmCompiledTimestamp: number
@@ -2234,24 +2254,16 @@ function onWebSocketConnected(
             event,
             [
               {
-                tag: "WebSocketSendToOutput",
+                tag: "WebSocketSendCompileErrorToOutput",
                 outputPath,
-                message: {
-                  tag: "StatusChanged",
-                  status: {
-                    tag: "CompileError",
-                    compilationMode: outputState.compilationMode,
-                    browserUiPosition: outputState.browserUiPosition,
-                    errors: Compile.renderOutputErrors(
-                      elmWatchJsonPath,
-                      handleOutputActionResult.elmJsonPath,
-                      outputPath,
-                      outputState.status
-                    ).map((errorTemplate) =>
-                      Errors.toHtml(errorTemplate, theme)
-                    ),
-                  },
-                },
+                compilationMode: outputState.compilationMode,
+                browserUiPosition: outputState.browserUiPosition,
+                errors: Compile.renderOutputErrors(
+                  elmWatchJsonPath,
+                  elmJsonPath,
+                  outputPath,
+                  outputState.status
+                ),
               },
             ],
           ];

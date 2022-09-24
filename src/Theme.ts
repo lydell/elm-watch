@@ -84,7 +84,7 @@ const DEFAULT_THEME: Theme = {
   },
 };
 
-async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
+export async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
   const stdin = await logger.queryTerminal(THEME_ESCAPES_STRING, (stdinSoFar) =>
     stdinSoFar.includes(THEME_ESCAPES_DONE_CHECK)
   );
