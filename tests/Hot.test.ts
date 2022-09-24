@@ -3102,6 +3102,118 @@ describe("hot", () => {
     `);
   });
 
+  test("persisted browser UI position", async () => {
+    const { terminal, renders } = await run({
+      fixture: "persisted-browser-ui-position",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      expandUiImmediately: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◯ (disabled) Standard
+      ◯ (disabled) Optimize
+      ←·
+      ↙↓
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ←·
+      ↙↓
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ←·
+      ↙↓
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ Debug
+      ◉ Standard
+      ◯ Optimize
+      ←·
+      ↙↓
+      ▲ ✅ 13:10:05 Main
+    `);
+  });
+
   test("persisted debug mode for Html", async () => {
     // You can set "compilationMode": "debug" for Html and Worker programs in
     // elm-stuff/elm-watch/stuff.json. The only thing that happens is that the disabled

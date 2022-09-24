@@ -1,0 +1,9 @@
+{
+    "port": 9988,
+    "targets": {
+        "Main": {
+            "compilationMode": "standard",
+            "browserUiPosition": "TopRight"
+        }
+    }
+}

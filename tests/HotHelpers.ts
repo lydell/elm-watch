@@ -545,7 +545,8 @@ function getTextContent(element: Node): string {
   return Array.from(walkTextNodes(element))
     .join("")
     .trim()
-    .replace(/\n /g, "\n");
+    .replace(/\n /g, "\n")
+    .replace(/\n·/g, "·\n");
 }
 
 function* walkTextNodes(element: Node): Generator<string, void, void> {
