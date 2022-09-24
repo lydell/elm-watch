@@ -1164,6 +1164,7 @@ function statusChanged(
       ];
 
     case "CompileError":
+      console.log("TODO use this:", status.openErrorOverlay);
       return [
         {
           ...model,

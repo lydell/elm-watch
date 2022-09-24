@@ -318,6 +318,7 @@ type Cmd =
       outputPath: OutputPath;
       compilationMode: CompilationMode;
       browserUiPosition: BrowserUiPosition;
+      openErrorOverlay: boolean;
       errors: Array<Errors.ErrorTemplate>;
     }
   | {
@@ -587,6 +588,7 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
         {
           compilationMode: outputState.compilationMode,
           browserUiPosition: outputState.browserUiPosition,
+          openErrorOverlay: outputState.openErrorOverlay,
         },
       ])
     ),
@@ -666,6 +668,7 @@ const init = (
         outputPath: elmJsonError.outputPath,
         compilationMode: elmJsonError.compilationMode,
         browserUiPosition: elmJsonError.browserUiPosition,
+        openErrorOverlay: elmJsonError.openErrorOverlay,
         errors: [Compile.renderElmJsonError(elmJsonError)],
       })
     ),
@@ -1652,6 +1655,7 @@ const runCmd =
                 tag: "CompileError",
                 compilationMode: cmd.compilationMode,
                 browserUiPosition: cmd.browserUiPosition,
+                openErrorOverlay: cmd.openErrorOverlay,
                 errors: cmd.errors.map((errorTemplate) =>
                   Errors.toHtml(errorTemplate, theme, logger.config.noColor)
                 ),
@@ -1838,6 +1842,7 @@ function handleOutputActionResultToCmd(
         compilationMode: handleOutputActionResult.outputState.compilationMode,
         browserUiPosition:
           handleOutputActionResult.outputState.browserUiPosition,
+        openErrorOverlay: handleOutputActionResult.outputState.openErrorOverlay,
         errors: Compile.renderOutputErrors(
           elmWatchJsonPath,
           handleOutputActionResult.elmJsonPath,
@@ -2320,6 +2325,7 @@ function onWebSocketConnected(
                 outputPath,
                 compilationMode: outputState.compilationMode,
                 browserUiPosition: outputState.browserUiPosition,
+                openErrorOverlay: outputState.openErrorOverlay,
                 errors: Compile.renderOutputErrors(
                   elmWatchJsonPath,
                   elmJsonPath,

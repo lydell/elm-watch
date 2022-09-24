@@ -65,6 +65,7 @@ const StatusChanged = Decode.fieldsAuto({
       tag: () => "CompileError" as const,
       compilationMode: CompilationMode,
       browserUiPosition: BrowserUiPosition,
+      openErrorOverlay: Decode.boolean,
       errors: Decode.array(CompileError),
       foregroundColor: Decode.string,
       backgroundColor: Decode.string,

@@ -70,6 +70,8 @@ export class OutputState {
 
   browserUiPosition: BrowserUiPosition;
 
+  openErrorOverlay = false;
+
   allRelatedElmFilePaths = new Set<string>();
 
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
@@ -82,11 +84,13 @@ export class OutputState {
     inputs: NonEmptyArray<InputPath>,
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
+    openErrorOverlay: boolean,
     private getNow: GetNow
   ) {
     this.inputs = inputs;
     this.compilationMode = compilationMode;
     this.browserUiPosition = browserUiPosition;
+    this.openErrorOverlay = openErrorOverlay;
   }
 
   flushDurations(): Array<Duration> {
@@ -251,6 +255,7 @@ export type ElmJsonErrorWithMetadata = {
   outputPath: OutputPath;
   compilationMode: CompilationMode;
   browserUiPosition: BrowserUiPosition;
+  openErrorOverlay: boolean;
   error: ElmJsonError;
 };
 
@@ -370,6 +375,7 @@ export function initProject({
       const {
         compilationMode: thisCompilationMode = compilationMode,
         browserUiPosition = "BottomLeft",
+        openErrorOverlay = false,
       } = persisted ?? {};
 
       switch (resolveElmJsonResult.tag) {
@@ -383,6 +389,7 @@ export function initProject({
               resolveElmJsonResult.inputs,
               thisCompilationMode,
               browserUiPosition,
+              openErrorOverlay,
               getNow
             )
           );
@@ -395,6 +402,7 @@ export function initProject({
             outputPath,
             compilationMode: thisCompilationMode,
             browserUiPosition,
+            openErrorOverlay,
             error: resolveElmJsonResult,
           });
           break;
