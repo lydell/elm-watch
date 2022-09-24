@@ -138,7 +138,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◯ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Worker
       ================================================================================
       target Worker
@@ -150,7 +151,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Worker
       ================================================================================
       ▼ 🔌 13:10:05 Worker
@@ -184,7 +186,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Worker
       ================================================================================
       target Worker
@@ -196,7 +199,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
       ◉ Standard
       ◯ Optimize
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ✅ 13:10:05 Worker
     `);
   });
@@ -364,7 +368,8 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       Check the terminal to see errors!
-      ↑↗→
+      ↑↗
+      ·→
       ▲ 🚨 13:10:05 Removed
     `);
   });
@@ -427,7 +432,8 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       Check the terminal to see errors!
-      ↑↗→
+      ↑↗
+      ·→
       ▲ 🚨 13:10:05 Readonly
     `);
   });
@@ -612,7 +618,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗→
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 ParamsDecodeError
         ================================================================================
         target ParamsDecodeError
@@ -935,7 +942,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◉ Standard
         ◯ Optimize
-        ↑↗→
+        ↑↗
+        ·→
         ▲ ✅ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
@@ -947,7 +955,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
         ◉ (disabled) Optimize 🚀
-        ↑↗→
+        ↑↗
+        ·→
         ▲ 🚀 ⏳ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
@@ -1059,7 +1068,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗→
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 Reconnect
         ================================================================================
         target Reconnect
@@ -1071,7 +1081,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗→
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 Reconnect
         ================================================================================
         ▼ 🔌 13:10:05 Reconnect
@@ -1105,7 +1116,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗→
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 Reconnect
         ================================================================================
         target Reconnect
@@ -1117,7 +1129,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◉ Standard
         ◯ Optimize
-        ↑↗→
+        ↑↗
+        ·→
         ▲ ✅ 13:10:05 Reconnect
       `);
     }, 9000); // This test sometimes reaches the default 5000 limit.
@@ -3145,7 +3158,8 @@ describe("hot", () => {
       ◉ (disabled) Debug 🐛 The Elm debugger isn't supported by \`Html\` programs.
       ◯ Standard
       ◯ Optimize
-      ↑↗→
+      ↑↗
+      ·→
       ▲ 🐛 ✅ 13:10:05 Main
     `);
   });
@@ -3200,7 +3214,8 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Main
       ================================================================================
       target Main
@@ -3209,7 +3224,8 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Successfully compiled
       It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ❓ 13:10:05 Main
       ================================================================================
       target Main
@@ -3221,7 +3237,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ Standard
       ◯ Optimize
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ✅ 13:10:05 Main
     `);
   });
@@ -3606,7 +3623,8 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Successfully compiled
       elm-watch requires [window.Elm](https://github.com/lydell/elm-watch#windowelm) to exist, but it is undefined!
-      ↑↗→
+      ↑↗
+      ·→
       ▲ ❌ 13:10:05 Main
     `);
   });
