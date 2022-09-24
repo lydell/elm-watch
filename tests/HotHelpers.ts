@@ -582,7 +582,7 @@ function shouldAddNewline(node: Node): boolean {
     case "LABEL":
     case "P":
     case "PRE":
-      return true;
+      return node.hasChildNodes();
     default:
       return false;
   }
