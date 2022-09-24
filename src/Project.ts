@@ -25,6 +25,7 @@ import { PostprocessError } from "./PostprocessShared";
 import { RunElmMakeError } from "./SpawnElm";
 import type {
   AbsolutePath,
+  BrowserUiPosition,
   CompilationMode,
   ElmJsonPath,
   ElmWatchJsonPath,
@@ -67,6 +68,8 @@ export class OutputState {
 
   compilationMode: CompilationMode;
 
+  browserUiPosition: BrowserUiPosition;
+
   allRelatedElmFilePaths = new Set<string>();
 
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
@@ -78,10 +81,12 @@ export class OutputState {
   constructor(
     inputs: NonEmptyArray<InputPath>,
     compilationMode: CompilationMode,
+    browserUiPosition: BrowserUiPosition,
     private getNow: GetNow
   ) {
     this.inputs = inputs;
     this.compilationMode = compilationMode;
+    this.browserUiPosition = browserUiPosition;
   }
 
   flushDurations(): Array<Duration> {
@@ -245,6 +250,7 @@ type ElmJsonError =
 export type ElmJsonErrorWithMetadata = {
   outputPath: OutputPath;
   compilationMode: CompilationMode;
+  browserUiPosition: BrowserUiPosition;
   error: ElmJsonError;
 };
 
@@ -361,8 +367,10 @@ export function initProject({
       );
 
       const persisted = elmWatchStuffJson?.targets[targetName];
-      const thisCompilationMode: CompilationMode =
-        persisted === undefined ? compilationMode : persisted.compilationMode;
+      const {
+        compilationMode: thisCompilationMode = compilationMode,
+        browserUiPosition = "BottomLeft",
+      } = persisted ?? {};
 
       switch (resolveElmJsonResult.tag) {
         case "Success": {
@@ -374,6 +382,7 @@ export function initProject({
             new OutputState(
               resolveElmJsonResult.inputs,
               thisCompilationMode,
+              browserUiPosition,
               getNow
             )
           );
@@ -385,6 +394,7 @@ export function initProject({
           elmJsonsErrors.push({
             outputPath,
             compilationMode: thisCompilationMode,
+            browserUiPosition,
             error: resolveElmJsonResult,
           });
           break;

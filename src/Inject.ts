@@ -1,7 +1,12 @@
 import * as ClientCode from "./ClientCode";
 import { join } from "./Helpers";
 import { Port } from "./Port";
-import { CompilationMode, CompilationModeWithProxy, OutputPath } from "./Types";
+import {
+  BrowserUiPosition,
+  CompilationMode,
+  CompilationModeWithProxy,
+  OutputPath,
+} from "./Types";
 
 // This matches full functions, declared either with `function name(` or `var name =`.
 // NOTE: All function names in the regex must also be mentioned in the
@@ -818,6 +823,7 @@ function updateString(
 export function proxyFile(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
+  browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
   debug: boolean
 ): string {
@@ -825,6 +831,7 @@ export function proxyFile(
     outputPath,
     elmCompiledTimestamp,
     "proxy",
+    browserUiPosition,
     webSocketPort,
     debug
   )}\n${ClientCode.proxy}`;
@@ -834,6 +841,7 @@ export function clientCode(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
   compilationMode: CompilationModeWithProxy,
+  browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
   debug: boolean
 ): string {
@@ -841,6 +849,7 @@ export function clientCode(
     TARGET_NAME: outputPath.targetName,
     INITIAL_ELM_COMPILED_TIMESTAMP: elmCompiledTimestamp.toString(),
     ORIGINAL_COMPILATION_MODE: compilationMode,
+    ORIGINAL_BROWSER_UI_POSITION: browserUiPosition,
     WEBSOCKET_PORT: webSocketPort.thePort.toString(),
     DEBUG: debug.toString(),
   };

@@ -1,0 +1,5 @@
+!elm-stuff/
+elm-stuff/*
+!elm-stuff/elm-watch/
+elm-stuff/elm-watch/*
+!elm-stuff/elm-watch/stuff.json

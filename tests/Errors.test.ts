@@ -2938,9 +2938,9 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["Main"]["compilationMode"]:
-        Expected one of these variants: "debug", "optimize"
-        Got: "standard"
+        At root["targets"]["Main"]["compilationMode"] (optional):
+        Expected one of these variants: "debug", "standard", "optimize"
+        Got: "normal"
 
         This file is created by elm-watch, so reading it should never fail really.
         You could try removing that file (it contains nothing essential).

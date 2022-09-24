@@ -11,7 +11,7 @@ import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
-import { CompilationMode } from "../src/Types";
+import { BrowserUiPosition, CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
@@ -373,15 +373,13 @@ export function runHotReload({
 
   const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
     port: 58888,
-    targets:
-      compilationMode === "standard"
-        ? extraElmWatchStuffJson
-        : {
-            [name]: {
-              compilationMode,
-            },
-            ...extraElmWatchStuffJson,
-          },
+    targets: {
+      [name]: {
+        compilationMode,
+        browserUiPosition: "BottomLeft",
+      },
+      ...extraElmWatchStuffJson,
+    },
   };
 
   let lastContent = "";
@@ -481,13 +479,27 @@ export function collapseUi(): void {
 
 function expandUiHelper(wantExpanded: boolean): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector("button");
+    const button = shadowRoot?.querySelector("button[aria-expanded]");
     if (button instanceof HTMLElement) {
       if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
         button.click();
       }
     } else {
       throw new Error(`Could not button for expanding UI.`);
+    }
+  });
+}
+
+export function moveUi(position: BrowserUiPosition): void {
+  expandUi();
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `button[data-position="${position}"]`
+    );
+    if (button instanceof HTMLButtonElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not find button for ${position}.`);
     }
   });
 }
@@ -547,7 +559,13 @@ function getTextContent(element: Node): string {
   return Array.from(walkTextNodes(element))
     .join("")
     .trim()
-    .replace(/\n /g, "\n");
+    .replace(/\n /g, "\n")
+    .replace(/[\n·↑↓←→↖↗↙↘]+/g, (match) => {
+      const chars = match.replace(/\s/g, "");
+      return chars === ""
+        ? match
+        : `\n${chars.slice(0, 2)}\n${chars.slice(2)}\n`;
+    });
 }
 
 function* walkTextNodes(element: Node): Generator<string, void, void> {

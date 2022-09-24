@@ -2,7 +2,8 @@ import * as Decode from "tiny-decoders";
 
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
-import type {
+import {
+  BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
   GetNow,
@@ -172,9 +173,20 @@ const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
 // have the selected compilation mode in the `Model` and the running mode here.
 const ORIGINAL_COMPILATION_MODE =
   "%ORIGINAL_COMPILATION_MODE%" as CompilationModeWithProxy;
+// This is the saved browser UI position as of when this file was compiled. We
+// also store the latest saved position in the model, which is updated as soon
+// as things change.
+const ORIGINAL_BROWSER_UI_POSITION =
+  "%ORIGINAL_BROWSER_UI_POSITION%" as BrowserUiPosition;
 const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
+
+const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
+
+// A compilation after moving the browser UI on a big app takes around 700 ms
+// for me. So more than double that should be plenty.
+const JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT = 2000;
 
 type Mutable = {
   removeListeners: () => void;
@@ -185,6 +197,10 @@ type Mutable = {
 type Msg =
   | {
       tag: "AppInit";
+    }
+  | {
+      tag: "BrowserUiMoved";
+      browserUiPosition: BrowserUiPosition;
     }
   | {
       tag: "EvalErrored";
@@ -231,6 +247,11 @@ type Msg =
 
 type UiMsg =
   | {
+      tag: "ChangedBrowserUiPosition";
+      browserUiPosition: BrowserUiPosition;
+      sendKey: SendKey;
+    }
+  | {
       tag: "ChangedCompilationMode";
       compilationMode: CompilationMode;
       sendKey: SendKey;
@@ -246,6 +267,8 @@ type Model = {
   status: Status;
   previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
+  browserUiPosition: BrowserUiPosition;
+  lastBrowserUiPositionChangeDate: Date | undefined;
   elmCompiledTimestamp: number;
   uiExpanded: boolean;
 };
@@ -254,6 +277,9 @@ type Cmd =
   | {
       tag: "Eval";
       code: string;
+    }
+  | {
+      tag: "NoCmd";
     }
   | {
       tag: "Reconnect";
@@ -270,6 +296,10 @@ type Cmd =
       // This requires the “send key”. The idea is that this forces you to check
       // `Status` before sending.
       sendKey: SendKey;
+    }
+  | {
+      tag: "SetBrowserUiPosition";
+      browserUiPosition: BrowserUiPosition;
     }
   | {
       tag: "SleepBeforeReconnect";
@@ -349,6 +379,14 @@ function logDebug(...args: Array<unknown>): void {
   }
 }
 
+function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
+  try {
+    return BrowserUiPosition(value);
+  } catch {
+    return ORIGINAL_BROWSER_UI_POSITION;
+  }
+}
+
 function run(): void {
   try {
     const message = window.sessionStorage.getItem(RELOAD_MESSAGE_KEY);
@@ -361,12 +399,16 @@ function run(): void {
     // Ignore failing to read or delete from sessionStorage.
   }
 
-  const targetRoot = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
+  const elements = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
+  const browserUiPosition =
+    elements === undefined
+      ? ORIGINAL_BROWSER_UI_POSITION
+      : parseBrowseUiPositionWithFallback(elements.container.dataset.position);
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
-    initMutable: initMutable(getNow, targetRoot),
-    init: init(getNow()),
+    initMutable: initMutable(getNow, elements),
+    init: init(getNow(), browserUiPosition),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [updatedModel, cmds] = update(msg, model);
       const modelChanged = updatedModel !== model;
@@ -388,23 +430,18 @@ function run(): void {
               model: newModel,
               manageFocus: msg.tag === "UiMsg",
             },
+            model.browserUiPosition === newModel.browserUiPosition
+              ? { tag: "NoCmd" }
+              : {
+                  tag: "SetBrowserUiPosition",
+                  browserUiPosition: newModel.browserUiPosition,
+                },
           ]
         : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
-    runCmd: runCmd(getNow, (dispatch, model, info, manageFocus) => {
-      if (targetRoot === undefined) {
-        if (model.status.tag !== model.previousStatusTag) {
-          const isError = statusToStatusType(model.status.tag) === "Error";
-          // eslint-disable-next-line no-console
-          const consoleMethod = isError ? console.error : console.info;
-          consoleMethod(renderWebWorker(model, info));
-        }
-      } else {
-        render(getNow, targetRoot, dispatch, model, info, manageFocus);
-      }
-    }),
+    runCmd: runCmd(getNow, elements),
   }).catch((error) => {
     // eslint-disable-next-line no-console
     console.error("elm-watch: Unexpectedly exited with error:", error);
@@ -413,7 +450,7 @@ function run(): void {
   // This is great when working on the styling of all statuses.
   // When this call is commented out, esbuild won’t include the
   // `renderMockStatuses` function in the output.
-  // renderMockStatuses(getNow, root);
+  // renderMockStatuses(getNow, elements);
 }
 
 function statusToReloadStatus(status: Status): ReloadStatus {
@@ -454,6 +491,29 @@ function statusToStatusType(statusTag: Status["tag"]): StatusType {
   }
 }
 
+function statusToBrowserUiPositionSendKey(status: Status): SendKey | undefined {
+  switch (status.tag) {
+    case "CompileError":
+    case "Idle":
+      return status.sendKey;
+
+    // It works well moving the browser UI while already busy.
+    case "Busy":
+      return SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
+
+    // We can’t send a message about moving the browser UI if we don’t have a
+    // connection.
+    case "Connecting":
+    case "SleepingBeforeReconnect":
+    case "WaitingForReload":
+    // These two _might_ work, but it’s unclear. They’re not supposed to happen
+    // anyway.
+    case "EvalError":
+    case "UnexpectedError":
+      return undefined;
+  }
+}
+
 function getOrCreateContainer(): HTMLElement {
   const existing = document.getElementById(CONTAINER_ID);
 
@@ -465,8 +525,6 @@ function getOrCreateContainer(): HTMLElement {
   container.style.all = "unset";
   container.style.position = "fixed";
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
-  container.style.left = "-1px";
-  container.style.bottom = "-1px";
 
   const shadowRoot = container.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS));
@@ -475,8 +533,16 @@ function getOrCreateContainer(): HTMLElement {
   return container;
 }
 
-function getOrCreateTargetRoot(): HTMLElement {
-  const { shadowRoot } = getOrCreateContainer();
+type Elements = {
+  container: HTMLElement;
+  shadowRoot: ShadowRoot;
+  root: Element;
+  targetRoot: HTMLElement;
+};
+
+function getOrCreateTargetRoot(): Elements {
+  const container = getOrCreateContainer();
+  const { shadowRoot } = container;
 
   if (shadowRoot === null) {
     throw new Error(
@@ -493,7 +559,11 @@ function getOrCreateTargetRoot(): HTMLElement {
   const targetRoot = createTargetRoot(TARGET_NAME);
   root.append(targetRoot);
 
-  return targetRoot;
+  const elements: Elements = { container, shadowRoot, root, targetRoot };
+
+  setBrowserUiPosition(ORIGINAL_BROWSER_UI_POSITION, elements);
+
+  return elements;
 }
 
 function createTargetRoot(targetName: string): HTMLElement {
@@ -503,8 +573,72 @@ function createTargetRoot(targetName: string): HTMLElement {
   });
 }
 
+type PositionCss<Position> = {
+  top: Position;
+  bottom: Position;
+  left: Position;
+  right: Position;
+};
+
+function browserUiPositionToCss(
+  browserUiPosition: BrowserUiPosition
+): PositionCss<"-1px" | "auto"> {
+  switch (browserUiPosition) {
+    case "TopLeft":
+      return { top: "-1px", bottom: "auto", left: "-1px", right: "auto" };
+    case "TopRight":
+      return { top: "-1px", bottom: "auto", left: "auto", right: "-1px" };
+    case "BottomLeft":
+      return { top: "auto", bottom: "-1px", left: "-1px", right: "auto" };
+    case "BottomRight":
+      return { top: "auto", bottom: "-1px", left: "auto", right: "-1px" };
+  }
+}
+
+function browserUiPositionToCssForChooser(
+  browserUiPosition: BrowserUiPosition
+): PositionCss<"0" | "auto"> {
+  switch (browserUiPosition) {
+    case "TopLeft":
+      return { top: "auto", bottom: "0", left: "auto", right: "0" };
+    case "TopRight":
+      return { top: "auto", bottom: "0", left: "0", right: "auto" };
+    case "BottomLeft":
+      return { top: "0", bottom: "auto", left: "auto", right: "0" };
+    case "BottomRight":
+      return { top: "0", bottom: "auto", left: "0", right: "auto" };
+  }
+}
+
+function setBrowserUiPosition(
+  browserUiPosition: BrowserUiPosition,
+  elements: Elements
+): void {
+  // Only the first target is in charge of the browser UI position.
+  const isFirstTargetRoot = elements.targetRoot.previousElementSibling === null;
+  if (!isFirstTargetRoot) {
+    return;
+  }
+
+  elements.container.dataset.position = browserUiPosition;
+
+  for (const [key, value] of Object.entries(
+    browserUiPositionToCss(browserUiPosition)
+  )) {
+    elements.container.style.setProperty(key, value);
+  }
+
+  const isInBottomHalf =
+    browserUiPosition === "BottomLeft" || browserUiPosition === "BottomRight";
+  elements.root.classList.toggle(CLASS.rootBottomHalf, isInBottomHalf);
+
+  elements.shadowRoot.dispatchEvent(
+    new CustomEvent(BROWSER_UI_MOVED_EVENT, { detail: browserUiPosition })
+  );
+}
+
 const initMutable =
-  (getNow: GetNow, targetRoot?: HTMLElement) =>
+  (getNow: GetNow, elements: Elements | undefined) =>
   (
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: undefined) => void
@@ -548,6 +682,22 @@ const initMutable =
               });
             }
           }),
+          elements === undefined
+            ? () => {
+                // Do nothing
+              }
+            : addEventListener(
+                elements.shadowRoot,
+                BROWSER_UI_MOVED_EVENT,
+                (event) => {
+                  dispatch({
+                    tag: "BrowserUiMoved",
+                    browserUiPosition: Decode.fields((field) =>
+                      field("detail", parseBrowseUiPositionWithFallback)
+                    )(event),
+                  });
+                }
+              ),
         ];
       },
       { once: true }
@@ -579,7 +729,7 @@ const initMutable =
             clearTimeout(mutable.webSocketTimeoutId);
             mutable.webSocketTimeoutId = undefined;
           }
-          targetRoot?.remove();
+          elements?.targetRoot.remove();
           resolvePromise(undefined);
         } else {
           originalKillMatching(targetName).then(resolve).catch(reject);
@@ -648,11 +798,16 @@ function initWebSocket(
   return webSocket;
 }
 
-const init = (date: Date): [Model, Array<Cmd>] => {
+const init = (
+  date: Date,
+  browserUiPosition: BrowserUiPosition
+): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
     previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
+    browserUiPosition,
+    lastBrowserUiPositionChangeDate: undefined,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     uiExpanded: false,
   };
@@ -665,6 +820,9 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
       // Force a re-render, so the status icon can update. Need to create a new
       // model to trump the `===` check used to avoid re-renders.
       return [{ ...model }, []];
+
+    case "BrowserUiMoved":
+      return [{ ...model, browserUiPosition: msg.browserUiPosition }, []];
 
     case "EvalErrored":
       return [
@@ -788,6 +946,25 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
 function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    case "ChangedBrowserUiPosition":
+      return [
+        {
+          ...model,
+          browserUiPosition: msg.browserUiPosition,
+          lastBrowserUiPositionChangeDate: date,
+        },
+        [
+          {
+            tag: "SendMessage",
+            message: {
+              tag: "ChangedBrowserUiPosition",
+              browserUiPosition: msg.browserUiPosition,
+            },
+            sendKey: msg.sendKey,
+          },
+        ],
+      ];
+
     case "ChangedCompilationMode":
       return [
         {
@@ -827,7 +1004,11 @@ function onWebSocketToClientMessage(
     case "StatusChanged":
       return statusChanged(date, msg, model);
 
-    case "SuccessfullyCompiled":
+    case "SuccessfullyCompiled": {
+      const justChangedBrowserUiPosition =
+        model.lastBrowserUiPositionChangeDate !== undefined &&
+        date.getTime() - model.lastBrowserUiPositionChangeDate.getTime() <
+          JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT;
       return msg.compilationMode !== ORIGINAL_COMPILATION_MODE
         ? [
             {
@@ -851,9 +1032,22 @@ function onWebSocketToClientMessage(
               ...model,
               compilationMode: msg.compilationMode,
               elmCompiledTimestamp: msg.elmCompiledTimestamp,
+              browserUiPosition: msg.browserUiPosition,
+              lastBrowserUiPositionChangeDate: undefined,
             },
-            [{ tag: "Eval", code: msg.code }],
+            [
+              { tag: "Eval", code: msg.code },
+              // This isn’t strictly necessary, but has the side effect of
+              // getting rid of the success animation.
+              justChangedBrowserUiPosition
+                ? {
+                    tag: "SetBrowserUiPosition",
+                    browserUiPosition: msg.browserUiPosition,
+                  }
+                : { tag: "NoCmd" },
+            ],
           ];
+    }
 
     case "SuccessfullyCompiledButRecordFieldsChanged":
       return [
@@ -888,6 +1082,7 @@ function statusChanged(
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
           compilationMode: status.compilationMode,
+          browserUiPosition: status.browserUiPosition,
         },
         [
           {
@@ -906,6 +1101,7 @@ function statusChanged(
             date,
           },
           compilationMode: status.compilationMode,
+          browserUiPosition: status.browserUiPosition,
         },
         [],
       ];
@@ -935,6 +1131,7 @@ function statusChanged(
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
           compilationMode: status.compilationMode,
+          browserUiPosition: status.browserUiPosition,
         },
         [
           {
@@ -987,15 +1184,7 @@ function printRetryWaitMs(attemptNumber: number): string {
 }
 
 const runCmd =
-  (
-    getNow: GetNow,
-    passedRender: (
-      dispatch: (msg: Msg) => void,
-      model: Model,
-      info: Info,
-      manageFocus: boolean
-    ) => void
-  ) =>
+  (getNow: GetNow, elements: Elements | undefined) =>
   (
     cmd: Cmd,
     mutable: Mutable,
@@ -1028,6 +1217,9 @@ const runCmd =
         return;
       }
 
+      case "NoCmd":
+        return;
+
       case "Reconnect":
         mutable.webSocket = initWebSocket(
           getNow,
@@ -1036,20 +1228,28 @@ const runCmd =
         );
         return;
 
-      case "Render":
-        passedRender(
-          dispatch,
-          cmd.model,
-          {
-            version: VERSION,
-            webSocketUrl: mutable.webSocket.url,
-            targetName: TARGET_NAME,
-            originalCompilationMode: ORIGINAL_COMPILATION_MODE,
-            initializedElmAppsStatus: checkInitializedElmAppsStatus(),
-          },
-          cmd.manageFocus
-        );
+      case "Render": {
+        const { model } = cmd;
+        const info: Info = {
+          version: VERSION,
+          webSocketUrl: mutable.webSocket.url,
+          targetName: TARGET_NAME,
+          originalCompilationMode: ORIGINAL_COMPILATION_MODE,
+          initializedElmAppsStatus: checkInitializedElmAppsStatus(),
+        };
+        if (elements === undefined) {
+          if (model.status.tag !== model.previousStatusTag) {
+            const isError = statusToStatusType(model.status.tag) === "Error";
+            // eslint-disable-next-line no-console
+            const consoleMethod = isError ? console.error : console.info;
+            consoleMethod(renderWebWorker(model, info));
+          }
+        } else {
+          const { targetRoot } = elements;
+          render(getNow, targetRoot, dispatch, model, info, cmd.manageFocus);
+        }
         return;
+      }
 
       case "SendMessage": {
         const json = JSON.stringify(cmd.message);
@@ -1066,6 +1266,12 @@ const runCmd =
         }
         return;
       }
+
+      case "SetBrowserUiPosition":
+        if (elements !== undefined) {
+          setBrowserUiPosition(cmd.browserUiPosition, elements);
+        }
+        return;
 
       case "SleepBeforeReconnect":
         setTimeout(() => {
@@ -1317,9 +1523,15 @@ function h<T extends HTMLElement>(
   t: new () => T,
   {
     attrs,
+    style,
     localName,
     ...props
-  }: Partial<T & { attrs: Record<string, string> }>,
+  }: Partial<
+    Omit<T, "style"> & {
+      attrs: Record<string, string>;
+      style: Partial<CSSStyleDeclaration>;
+    }
+  >,
   ...children: Array<HTMLElement | string | undefined>
 ): T {
   const element = document.createElement(
@@ -1337,6 +1549,12 @@ function h<T extends HTMLElement>(
   if (attrs !== undefined) {
     for (const [key, value] of Object.entries(attrs)) {
       element.setAttribute(key, value);
+    }
+  }
+
+  if (style !== undefined) {
+    for (const [key, value] of Object.entries(style)) {
+      (element.style as unknown as Record<string, string>)[key] = value;
     }
   }
 
@@ -1374,11 +1592,6 @@ function render(
   info: Info,
   manageFocus: boolean
 ): void {
-  targetRoot.classList.toggle(
-    CLASS.targetRootBottomHalf,
-    getIsPositionedInBottomHalf(targetRoot)
-  );
-
   targetRoot.replaceChildren(
     view(
       (msg) => {
@@ -1398,12 +1611,9 @@ function render(
   __ELM_WATCH.ON_RENDER(TARGET_NAME);
 }
 
-function getIsPositionedInBottomHalf(targetRoot: HTMLElement): boolean {
-  const { top, height } = targetRoot.getBoundingClientRect();
-  return top + height / 2 > window.innerHeight / 2;
-}
-
 const CLASS = {
+  browserUiPositionButton: "browserUiPositionButton",
+  browserUiPositionChooser: "browserUiPositionChooser",
   chevronButton: "chevronButton",
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
@@ -1412,10 +1622,10 @@ const CLASS = {
   flashError: "flashError",
   flashSuccess: "flashSuccess",
   root: "root",
+  rootBottomHalf: "rootBottomHalf",
   shortStatusContainer: "shortStatusContainer",
   targetName: "targetName",
   targetRoot: "targetRoot",
-  targetRootBottomHalf: "targetRootBottomHalf",
 };
 
 function getStatusClass({
@@ -1458,6 +1668,7 @@ textarea {
   font-weight: inherit;
   letter-spacing: inherit;
   line-height: inherit;
+  color: inherit;
   margin: 0;
 }
 
@@ -1513,8 +1724,8 @@ time::after {
   font-family: system-ui;
 }
 
-.${CLASS.targetRootBottomHalf} {
-  align-self: end;
+.${CLASS.rootBottomHalf} {
+  align-items: end;
 }
 
 .${CLASS.targetRoot} + .${CLASS.targetRoot} {
@@ -1533,15 +1744,21 @@ time::after {
   border: 1px solid var(--grey);
 }
 
-.${CLASS.targetRootBottomHalf} .${CLASS.container} {
+.${CLASS.rootBottomHalf} .${CLASS.container} {
   flex-direction: column;
 }
 
 .${CLASS.expandedUiContainer} {
-  padding: 0.75em 1em;
+  padding: 1em;
+  padding-top: 0.75em;
   display: grid;
   gap: 0.75em;
   outline: none;
+  contain: paint;
+}
+
+.${CLASS.rootBottomHalf} .${CLASS.expandedUiContainer} {
+  padding-bottom: 0.75em;
 }
 
 .${CLASS.expandedUiContainer}:is(.length0, .length1) {
@@ -1571,6 +1788,34 @@ time::after {
   display: flex;
   align-items: center;
   gap: 0.25em;
+}
+
+.${CLASS.browserUiPositionChooser} {
+  position: absolute;
+  display: grid;
+  grid-template-columns: min-content min-content;
+  pointer-events: none;
+}
+
+.${CLASS.browserUiPositionButton} {
+  appearance: none;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: none;
+  pointer-events: auto;
+  width: 1em;
+  height: 1em;
+  text-align: center;
+  line-height: 1em;
+}
+
+.${CLASS.browserUiPositionButton}:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.${CLASS.targetRoot}:not(:first-child) .${CLASS.browserUiPositionChooser} {
+  display: none;
 }
 
 .${CLASS.shortStatusContainer} {
@@ -1684,7 +1929,13 @@ function view(
     HTMLDivElement,
     { className: CLASS.container },
     model.uiExpanded
-      ? viewExpandedUi(model.status, statusData, info)
+      ? viewExpandedUi(
+          model.status,
+          statusData,
+          info,
+          model.browserUiPosition,
+          dispatch
+        )
       : undefined,
     h(
       HTMLDivElement,
@@ -1750,7 +2001,9 @@ function icon(
 function viewExpandedUi(
   status: Status,
   statusData: StatusData,
-  info: Info
+  info: Info,
+  browserUiPosition: BrowserUiPosition,
+  dispatch: (msg: UiMsg) => void
 ): HTMLElement {
   const items: Array<[string, HTMLElement | string]> = [
     ["target", info.targetName],
@@ -1771,6 +2024,8 @@ function viewExpandedUi(
     ...statusData.dl,
   ];
 
+  const browserUiPositionSendKey = statusToBrowserUiPositionSendKey(status);
+
   return h(
     HTMLDivElement,
     {
@@ -1789,8 +2044,104 @@ function viewExpandedUi(
         h(HTMLElement, { localName: "dd" }, value),
       ])
     ),
-    ...statusData.content
+    ...statusData.content,
+    browserUiPositionSendKey === undefined
+      ? undefined
+      : viewBrowserUiPositionChooser(
+          browserUiPosition,
+          dispatch,
+          browserUiPositionSendKey
+        )
   );
+}
+
+const allBrowserUiPositionsInOrder: Array<BrowserUiPosition> = [
+  "TopLeft",
+  "TopRight",
+  "BottomLeft",
+  "BottomRight",
+];
+
+function viewBrowserUiPositionChooser(
+  currentPosition: BrowserUiPosition,
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey
+): HTMLElement {
+  const arrows = getBrowserUiPositionArrows(currentPosition);
+  return h(
+    HTMLDivElement,
+    {
+      className: CLASS.browserUiPositionChooser,
+      style: browserUiPositionToCssForChooser(currentPosition),
+    },
+    ...allBrowserUiPositionsInOrder.map((position) => {
+      const arrow = arrows[position];
+      return arrow === undefined
+        ? h(HTMLDivElement, { style: { visibility: "hidden" } }, "·")
+        : h(
+            HTMLButtonElement,
+            {
+              className: CLASS.browserUiPositionButton,
+              attrs: { "data-position": position },
+              onclick: () => {
+                dispatch({
+                  tag: "ChangedBrowserUiPosition",
+                  browserUiPosition: position,
+                  sendKey,
+                });
+              },
+            },
+            arrow
+          );
+    })
+  );
+}
+
+const ARROW_UP = "↑";
+const ARROW_DOWN = "↓";
+const ARROW_LEFT = "←";
+const ARROW_RIGHT = "→";
+const ARROW_UP_LEFT = "↖";
+const ARROW_UP_RIGHT = "↗";
+const ARROW_DOWN_LEFT = "↙";
+const ARROW_DOWN_RIGHT = "↘";
+
+function getBrowserUiPositionArrows(browserUiPosition: BrowserUiPosition): {
+  [key in BrowserUiPosition]: string | undefined;
+} {
+  switch (browserUiPosition) {
+    case "TopLeft":
+      return {
+        TopLeft: undefined,
+        TopRight: ARROW_RIGHT,
+        BottomLeft: ARROW_DOWN,
+        BottomRight: ARROW_DOWN_RIGHT,
+      };
+
+    case "TopRight":
+      return {
+        TopLeft: ARROW_LEFT,
+        TopRight: undefined,
+        BottomLeft: ARROW_DOWN_LEFT,
+        BottomRight: ARROW_DOWN,
+      };
+
+    case "BottomLeft":
+      return {
+        TopLeft: ARROW_UP,
+        TopRight: ARROW_UP_RIGHT,
+        BottomLeft: undefined,
+        BottomRight: ARROW_RIGHT,
+      };
+
+    case "BottomRight":
+      return {
+        TopLeft: ARROW_UP_LEFT,
+        TopRight: ARROW_UP,
+        BottomLeft: ARROW_LEFT,
+        BottomRight: undefined,
+      };
+  }
 }
 
 type StatusData = {
@@ -2189,7 +2540,14 @@ function viewCompilationModeChooser({
   }
 }
 
-function renderMockStatuses(getNow: GetNow, root: Element): void {
+function renderMockStatuses(
+  getNow: GetNow,
+  elements: Elements | undefined
+): void {
+  if (elements === undefined) {
+    return;
+  }
+
   const date = getNow();
 
   const info: Omit<Info, "targetName"> = {
@@ -2368,11 +2726,13 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 
   for (const [targetName, status] of Object.entries(mockStatuses)) {
     const targetRoot = createTargetRoot(targetName);
-    root.append(targetRoot);
+    elements.root.append(targetRoot);
     const model: Model = {
       status,
       previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
+      browserUiPosition: "BottomLeft",
+      lastBrowserUiPositionChangeDate: undefined,
       elmCompiledTimestamp: 0,
       uiExpanded: true,
     };

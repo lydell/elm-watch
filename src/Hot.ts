@@ -54,6 +54,7 @@ import {
 import { runTeaProgram } from "./TeaProgram";
 import {
   AbsolutePath,
+  BrowserUiPosition,
   CompilationMode,
   ElmWatchJsonPath,
   equalsInputPath,
@@ -72,6 +73,12 @@ type WatcherEvent = {
 };
 
 type WebSocketRelatedEvent =
+  | {
+      tag: "WebSocketChangedBrowserUiPosition";
+      date: Date;
+      outputPath: OutputPath;
+      browserUiPosition: BrowserUiPosition;
+    }
   | {
       tag: "WebSocketChangedCompilationMode";
       date: Date;
@@ -224,6 +231,11 @@ type HotState =
     };
 
 type Cmd =
+  | {
+      tag: "ChangeBrowserUiPosition";
+      outputState: OutputState;
+      browserUiPosition: BrowserUiPosition;
+    }
   | {
       tag: "ChangeCompilationMode";
       outputState: OutputState;
@@ -551,16 +563,13 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
   const json: ElmWatchStuffJsonWritable = {
     port: mutable.webSocketServer.port.thePort,
     targets: Object.fromEntries(
-      getFlatOutputs(mutable.project).flatMap(({ outputPath, outputState }) =>
-        outputState.compilationMode === "standard"
-          ? []
-          : [
-              [
-                outputPath.targetName,
-                { compilationMode: outputState.compilationMode },
-              ],
-            ]
-      )
+      getFlatOutputs(mutable.project).map(({ outputPath, outputState }) => [
+        outputPath.targetName,
+        {
+          compilationMode: outputState.compilationMode,
+          browserUiPosition: outputState.browserUiPosition,
+        },
+      ])
     ),
   };
 
@@ -633,7 +642,7 @@ const init = (
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
-      ({ outputPath, compilationMode }): Cmd => ({
+      ({ outputPath, compilationMode, browserUiPosition }): Cmd => ({
         tag: "WebSocketSendToOutput",
         outputPath,
         message: {
@@ -641,6 +650,7 @@ const init = (
           status: {
             tag: "CompileError",
             compilationMode,
+            browserUiPosition,
           },
         },
       })
@@ -1269,6 +1279,11 @@ const runCmd =
     rejectPromise: (error: Error) => void
   ): void => {
     switch (cmd.tag) {
+      case "ChangeBrowserUiPosition":
+        cmd.outputState.browserUiPosition = cmd.browserUiPosition;
+        writeElmWatchStuffJson(mutable);
+        return;
+
       case "ChangeCompilationMode":
         cmd.outputState.compilationMode = cmd.compilationMode;
         writeElmWatchStuffJson(mutable);
@@ -1470,6 +1485,7 @@ const runCmd =
               status: {
                 tag: "Busy",
                 compilationMode: outputState.compilationMode,
+                browserUiPosition: outputState.browserUiPosition,
               },
             },
             mutable.webSocketConnections
@@ -1728,7 +1744,10 @@ function handleOutputActionResultToCmd(
           tag: "StatusChanged",
           status: {
             tag: "CompileError",
-            compilationMode: handleOutputActionResult.compilationMode,
+            compilationMode:
+              handleOutputActionResult.outputState.compilationMode,
+            browserUiPosition:
+              handleOutputActionResult.outputState.browserUiPosition,
           },
         },
       };
@@ -1741,7 +1760,9 @@ function handleOutputActionResultToCmd(
           tag: "SuccessfullyCompiled",
           code: handleOutputActionResult.code.toString("utf8"),
           elmCompiledTimestamp: handleOutputActionResult.elmCompiledTimestamp,
-          compilationMode: handleOutputActionResult.compilationMode,
+          compilationMode: handleOutputActionResult.outputState.compilationMode,
+          browserUiPosition:
+            handleOutputActionResult.outputState.browserUiPosition,
         },
       };
 
@@ -2161,6 +2182,7 @@ function onWebSocketConnected(
                       status: {
                         tag: "AlreadyUpToDate",
                         compilationMode: outputState.compilationMode,
+                        browserUiPosition: outputState.browserUiPosition,
                       },
                     },
                   },
@@ -2203,6 +2225,7 @@ function onWebSocketConnected(
                   status: {
                     tag: "CompileError",
                     compilationMode: outputState.compilationMode,
+                    browserUiPosition: outputState.browserUiPosition,
                   },
                 },
               },
@@ -2213,7 +2236,7 @@ function onWebSocketConnected(
   }
 }
 
-function onChangedCompilationMode(
+function onChangedCompilationModeOrBrowserUiPosition(
   model: Model,
   outputPath: OutputPath,
   outputState: OutputState
@@ -2278,13 +2301,13 @@ function onWebSocketToServerMessage(
   message: WebSocketToServerMessage
 ): [Model, Array<Cmd>] {
   switch (message.tag) {
-    case "ChangedCompilationMode": {
+    case "ChangedCompilationMode":
       switch (output.tag) {
         case "OutputPathError":
           return [model, []];
 
         case "Output": {
-          const [newModel, cmds] = onChangedCompilationMode(
+          const [newModel, cmds] = onChangedCompilationModeOrBrowserUiPosition(
             model,
             output.outputPath,
             output.outputState
@@ -2314,7 +2337,43 @@ function onWebSocketToServerMessage(
           ];
         }
       }
-    }
+
+    case "ChangedBrowserUiPosition":
+      switch (output.tag) {
+        case "OutputPathError":
+          return [model, []];
+
+        case "Output": {
+          const [newModel, cmds] = onChangedCompilationModeOrBrowserUiPosition(
+            model,
+            output.outputPath,
+            output.outputState
+          );
+
+          return [
+            {
+              ...newModel,
+              latestEvents: [
+                ...newModel.latestEvents,
+                {
+                  tag: "WebSocketChangedBrowserUiPosition",
+                  date,
+                  outputPath: output.outputPath,
+                  browserUiPosition: message.browserUiPosition,
+                },
+              ],
+            },
+            [
+              {
+                tag: "ChangeBrowserUiPosition",
+                outputState: output.outputState,
+                browserUiPosition: message.browserUiPosition,
+              },
+              ...cmds,
+            ],
+          ];
+        }
+      }
 
     case "FocusedTab":
       return [
@@ -2374,8 +2433,9 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     case "WorkersLimitedAfterWebSocketClosed":
       return 100;
 
-    // When switching compilation mode, sleep a short amount of time so that the
-    // change feels more immediate.
+    // When switching compilation mode or browser UI position, sleep a short
+    // amount of time so that the change feels more immediate.
+    case "WebSocketChangedBrowserUiPosition":
     case "WebSocketChangedCompilationMode":
       return 10;
   }
@@ -2539,6 +2599,11 @@ function printEventMessage(event: LatestEvent): string {
 
     case "WebSocketConnectedWithErrors":
       return `Web socket connected with errors (see the browser for details)`;
+
+    case "WebSocketChangedBrowserUiPosition":
+      return `Changed browser UI position to ${JSON.stringify(
+        event.browserUiPosition
+      )} of: ${event.outputPath.targetName}`;
 
     case "WebSocketChangedCompilationMode":
       return `Changed compilation mode to ${JSON.stringify(

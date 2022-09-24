@@ -30,6 +30,7 @@ import {
   expandUi,
   failInit,
   FIXTURES_DIR,
+  moveUi,
   run,
   switchCompilationMode,
 } from "./HotHelpers";
@@ -138,6 +139,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◯ (disabled) Standard
       ◯ (disabled) Optimize
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Worker
       ================================================================================
       target Worker
@@ -149,6 +152,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Worker
       ================================================================================
       ▼ 🔌 13:10:05 Worker
@@ -182,6 +187,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Worker
       ================================================================================
       target Worker
@@ -193,6 +200,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
       ◉ Standard
       ◯ Optimize
+      ↑↗
+      ·→
       ▲ ✅ 13:10:05 Worker
     `);
   });
@@ -360,6 +369,8 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       Check the terminal to see errors!
+      ↑↗
+      ·→
       ▲ 🚨 13:10:05 Removed
     `);
   });
@@ -422,6 +433,8 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       Check the terminal to see errors!
+      ↑↗
+      ·→
       ▲ 🚨 13:10:05 Readonly
     `);
   });
@@ -606,6 +619,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 ParamsDecodeError
         ================================================================================
         target ParamsDecodeError
@@ -644,7 +659,11 @@ describe("hot", () => {
             tag: "ChangedCompilationMode",
             compilationMode: "optimize",
           });
-          // Wait for the above message to be processed before stopping (needed
+          send({
+            tag: "ChangedBrowserUiPosition",
+            browserUiPosition: "TopLeft",
+          });
+          // Wait for the above messages to be processed before stopping (needed
           // for code coverage).
           await wait(100);
           return "Stop" as const;
@@ -928,6 +947,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◉ Standard
         ◯ Optimize
+        ↑↗
+        ·→
         ▲ ✅ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
@@ -939,6 +960,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◯ (disabled) Standard
         ◉ (disabled) Optimize 🚀
+        ↑↗
+        ·→
         ▲ 🚀 ⏳ 13:10:05 SendBadJson
         ================================================================================
         target SendBadJson
@@ -950,7 +973,7 @@ describe("hot", () => {
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
-        Expected one of these tags: "ChangedCompilationMode", "FocusedTab"
+        Expected one of these tags: "ChangedCompilationMode", "ChangedBrowserUiPosition", "FocusedTab"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
@@ -1050,6 +1073,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 Reconnect
         ================================================================================
         target Reconnect
@@ -1061,6 +1086,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't available at this point.
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 Reconnect
         ================================================================================
         ▼ 🔌 13:10:05 Reconnect
@@ -1094,6 +1121,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
+        ↑↗
+        ·→
         ▲ ⏳ 13:10:05 Reconnect
         ================================================================================
         target Reconnect
@@ -1105,6 +1134,8 @@ describe("hot", () => {
         ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
         ◉ Standard
         ◯ Optimize
+        ↑↗
+        ·→
         ▲ ✅ 13:10:05 Reconnect
       `);
     }, 9000); // This test sometimes reaches the default 5000 limit.
@@ -2371,7 +2402,9 @@ describe("hot", () => {
   });
 
   test("two changes at the same time", async () => {
-    const fixture = "basic";
+    // Note: This uses its own fixture because it has a tendency to write files
+    // to `build/` while the next test is removing `build/` – on Windows only.
+    const fixture = "two-changes-at-the-same-time";
     const src = path.join(FIXTURES_DIR, fixture, "src");
     const inputFile1 = path.join(src, "HtmlMain.elm");
     const inputFile2 = path.join(src, "Worker.elm");
@@ -2428,8 +2461,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/HtmlMain.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/basic/src/Worker.elm⧘
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/HtmlMain.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/Worker.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
@@ -3076,6 +3109,118 @@ describe("hot", () => {
     `);
   });
 
+  test("persisted browser UI position", async () => {
+    const { terminal, renders } = await run({
+      fixture: "persisted-browser-ui-position",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      expandUiImmediately: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◯ (disabled) Standard
+      ◯ (disabled) Optimize
+      ←·
+      ↙↓
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ←·
+      ↙↓
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ←·
+      ↙↓
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:9988
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ Debug
+      ◉ Standard
+      ◯ Optimize
+      ←·
+      ↙↓
+      ▲ ✅ 13:10:05 Main
+    `);
+  });
+
   test("persisted debug mode for Html", async () => {
     // You can set "compilationMode": "debug" for Html and Worker programs in
     // elm-stuff/elm-watch/stuff.json. The only thing that happens is that the disabled
@@ -3132,6 +3277,8 @@ describe("hot", () => {
       ◉ (disabled) Debug 🐛 The Elm debugger isn't supported by \`Html\` programs.
       ◯ Standard
       ◯ Optimize
+      ↑↗
+      ·→
       ▲ 🐛 ✅ 13:10:05 Main
     `);
   });
@@ -3186,6 +3333,8 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
+      ↑↗
+      ·→
       ▲ ⏳ 13:10:05 Main
       ================================================================================
       target Main
@@ -3194,6 +3343,8 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Successfully compiled
       It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
+      ↑↗
+      ·→
       ▲ ❓ 13:10:05 Main
       ================================================================================
       target Main
@@ -3205,6 +3356,8 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ Standard
       ◯ Optimize
+      ↑↗
+      ·→
       ▲ ✅ 13:10:05 Main
     `);
   });
@@ -3589,7 +3742,147 @@ describe("hot", () => {
       updated 2022-02-05 13:10:05
       status Successfully compiled
       elm-watch requires [window.Elm](https://github.com/lydell/elm-watch#windowelm) to exist, but it is undefined!
+      ↑↗
+      ·→
       ▲ ❌ 13:10:05 Main
+    `);
+  });
+
+  test("Move UI", async () => {
+    const { renders } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            moveUi("TopLeft");
+            return "KeepGoing";
+          case 2:
+            moveUi("TopRight");
+            return "KeepGoing";
+          case 3:
+            moveUi("BottomRight");
+            return "KeepGoing";
+          case 4:
+            moveUi("BottomLeft");
+            return "KeepGoing";
+          case 5:
+            // Note: This results in the server sending two "Busy" messages.
+            // Both local updates happen (moving the UI to the top-left corner),
+            // then both "Busy" messages arrive, temporarily flipping back to the
+            // bottom-right corner. In reality I’ve never seen this, but it explains
+            // the snapshot output.
+            moveUi("BottomRight");
+            moveUi("TopLeft");
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    const newRenders = renders
+      .split(/\n=+\n/)
+      // Focus on just the arrow buttons and status emojis.
+      .map((segment) => segment.split("\n").slice(-3).join("\n"))
+      .join(`\n${"=".repeat(80)}\n`)
+      // Remove duplicate renders in a row.
+      .replace(/(=+[^=]+)\1/g, "$1");
+
+    expect(newRenders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ✅ 13:10:05 Html
+      ================================================================================
+      ↑↗
+      ·→
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ←·
+      ↙↓
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ←·
+      ↙↓
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ←·
+      ↙↓
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ↖↑
+      ←·
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ↖↑
+      ←·
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ↖↑
+      ←·
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ↑↗
+      ·→
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ↑↗
+      ·→
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ↖↑
+      ←·
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ↖↑
+      ←·
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ⏳ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ✅ 13:10:05 Html
+      ================================================================================
+      ·→
+      ↓↘
+      ▲ ✅ 13:10:05 Html
     `);
   });
 

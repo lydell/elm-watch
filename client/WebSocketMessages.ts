@@ -1,6 +1,6 @@
 import * as Decode from "tiny-decoders";
 
-import { CompilationMode } from "../src/Types";
+import { BrowserUiPosition, CompilationMode } from "../src/Types";
 
 const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
@@ -13,14 +13,17 @@ const StatusChanged = Decode.fieldsAuto({
     AlreadyUpToDate: Decode.fieldsAuto({
       tag: () => "AlreadyUpToDate" as const,
       compilationMode: CompilationMode,
+      browserUiPosition: BrowserUiPosition,
     }),
     Busy: Decode.fieldsAuto({
       tag: () => "Busy" as const,
       compilationMode: CompilationMode,
+      browserUiPosition: BrowserUiPosition,
     }),
     CompileError: Decode.fieldsAuto({
       tag: () => "CompileError" as const,
       compilationMode: CompilationMode,
+      browserUiPosition: BrowserUiPosition,
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,
@@ -34,6 +37,7 @@ const SuccessfullyCompiled = Decode.fieldsAuto({
   code: Decode.string,
   elmCompiledTimestamp: Decode.number,
   compilationMode: CompilationMode,
+  browserUiPosition: BrowserUiPosition,
 });
 
 const SuccessfullyCompiledButRecordFieldsChanged = Decode.fieldsAuto({
@@ -57,6 +61,10 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
   ChangedCompilationMode: Decode.fieldsAuto({
     tag: () => "ChangedCompilationMode" as const,
     compilationMode: CompilationMode,
+  }),
+  ChangedBrowserUiPosition: Decode.fieldsAuto({
+    tag: () => "ChangedBrowserUiPosition" as const,
+    browserUiPosition: BrowserUiPosition,
   }),
   FocusedTab: Decode.fieldsAuto({
     tag: () => "FocusedTab" as const,

@@ -75,6 +75,7 @@ const project: Project = {
         targetName: "Sandbox",
       },
       compilationMode: "standard",
+      browserUiPosition: "BottomLeft",
       error: {
         tag: "InputsNotFound",
         inputsNotFound: [
@@ -130,6 +131,7 @@ const project: Project = {
               },
             ],
             "optimize",
+            "BottomLeft",
             getNow
           ),
         ],
@@ -175,6 +177,7 @@ const project: Project = {
               },
             ],
             "standard",
+            "BottomLeft",
             getNow
           ),
         ],
@@ -223,6 +226,7 @@ const project: Project = {
               },
             ],
             "optimize",
+            "BottomLeft",
             getNow
           ),
         ],

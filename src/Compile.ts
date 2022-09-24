@@ -523,14 +523,14 @@ export type HandleOutputActionResult =
   | {
       tag: "CompileError";
       outputPath: OutputPath;
-      compilationMode: CompilationMode;
+      outputState: OutputState;
     }
   | {
       tag: "FullyCompiledJS";
       outputPath: OutputPath;
+      outputState: OutputState;
       code: Buffer | string;
       elmCompiledTimestamp: number;
-      compilationMode: CompilationMode;
     }
   | {
       tag: "FullyCompiledJSButRecordFieldsChanged";
@@ -765,7 +765,7 @@ async function compileOneOutput({
       return {
         tag: "CompileError",
         outputPath,
-        compilationMode: outputState.compilationMode,
+        outputState,
       };
 
     case "elm make failure + walker success":
@@ -774,7 +774,7 @@ async function compileOneOutput({
       return {
         tag: "CompileError",
         outputPath,
-        compilationMode: outputState.compilationMode,
+        outputState,
       };
 
     case "elm make failure + walker failure":
@@ -784,7 +784,7 @@ async function compileOneOutput({
       return {
         tag: "CompileError",
         outputPath,
-        compilationMode: outputState.compilationMode,
+        outputState,
       };
   }
 }
@@ -819,7 +819,7 @@ function onCompileSuccess(
             return {
               tag: "CompileError",
               outputPath,
-              compilationMode: outputState.compilationMode,
+              outputState,
             };
           }
           outputState.setStatus({
@@ -849,7 +849,7 @@ function onCompileSuccess(
             return {
               tag: "CompileError",
               outputPath,
-              compilationMode: outputState.compilationMode,
+              outputState,
             };
           }
           outputState.setStatus({
@@ -882,7 +882,7 @@ function onCompileSuccess(
         return {
           tag: "CompileError",
           outputPath,
-          compilationMode: outputState.compilationMode,
+          outputState,
         };
       }
 
@@ -915,6 +915,7 @@ function onCompileSuccess(
                 outputPath,
                 elmCompiledTimestamp,
                 outputState.compilationMode,
+                outputState.browserUiPosition,
                 runMode.webSocketPort,
                 loggerConfig.debug
               ) + newCode
@@ -930,7 +931,7 @@ function onCompileSuccess(
             return {
               tag: "CompileError",
               outputPath,
-              compilationMode: outputState.compilationMode,
+              outputState,
             };
           }
           const recordFieldsChanged = Inject.recordFieldsChanged(
@@ -954,9 +955,9 @@ function onCompileSuccess(
             : {
                 tag: "FullyCompiledJS",
                 outputPath,
+                outputState,
                 code: newCode,
                 elmCompiledTimestamp,
-                compilationMode: outputState.compilationMode,
               };
         }
 
@@ -1097,6 +1098,7 @@ async function postprocessHelper({
               outputPath,
               elmCompiledTimestamp,
               outputState.compilationMode,
+              outputState.browserUiPosition,
               runMode.webSocketPort,
               logger.config.debug
             );
@@ -1123,7 +1125,7 @@ async function postprocessHelper({
         return {
           tag: "CompileError",
           outputPath,
-          compilationMode: outputState.compilationMode,
+          outputState,
         };
       }
       const recordFieldsChanged = Inject.recordFieldsChanged(
@@ -1146,9 +1148,9 @@ async function postprocessHelper({
         : {
             tag: "FullyCompiledJS",
             outputPath,
+            outputState,
             code: postprocessResult.code,
             elmCompiledTimestamp,
-            compilationMode: outputState.compilationMode,
           };
     }
 
@@ -1158,7 +1160,7 @@ async function postprocessHelper({
       return {
         tag: "CompileError",
         outputPath,
-        compilationMode: outputState.compilationMode,
+        outputState,
       };
   }
 }
@@ -1309,6 +1311,7 @@ async function typecheck({
             Inject.proxyFile(
               outputPath,
               getNow().getTime(),
+              outputState.browserUiPosition,
               webSocketPort,
               logger.config.debug
             )

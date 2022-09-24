@@ -15,6 +15,14 @@ export const CompilationMode = Decode.stringUnion({
 
 export type CompilationModeWithProxy = CompilationMode | "proxy";
 
+export type BrowserUiPosition = ReturnType<typeof BrowserUiPosition>;
+export const BrowserUiPosition = Decode.stringUnion({
+  TopLeft: null,
+  TopRight: null,
+  BottomLeft: null,
+  BottomRight: null,
+});
+
 // elm-watch.json
 export type ElmWatchJsonPath = {
   tag: "ElmWatchJsonPath";
