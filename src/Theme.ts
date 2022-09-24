@@ -1,25 +1,5 @@
-// Inspired by Elm – see ElmMakeError.ts.
-
+import { Color } from "./ElmMakeError";
 import { Logger } from "./Logger";
-
-// Lowercase means “dull” (regular) and uppercase means “vivid” (bright):
-export type Color =
-  | "BLACK"
-  | "black"
-  | "BLUE"
-  | "blue"
-  | "CYAN"
-  | "cyan"
-  | "GREEN"
-  | "green"
-  | "MAGENTA"
-  | "magenta"
-  | "RED"
-  | "red"
-  | "WHITE"
-  | "white"
-  | "YELLOW"
-  | "yellow";
 
 export type Theme = {
   foreground: string;
@@ -62,7 +42,7 @@ const INDEX_TO_COLOR: Record<number, Color> = {
 };
 
 //https://github.com/chalk/ansi-styles/blob/cd0b0cb59337bfd7d3669b2d0fcde7ff661a83a6/index.js#L25-L42
-const COLOR_TO_TERMINAL_ESCAPE: Record<Color, string> = {
+export const COLOR_TO_TERMINAL_ESCAPE: Record<Color, string> = {
   red: "\x1B[31m",
   RED: "\x1B[91m",
   magenta: "\x1B[35m",

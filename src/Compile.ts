@@ -1,7 +1,6 @@
 import * as fs from "fs";
 
 import * as ElmJson from "./ElmJson";
-import * as ElmMakeError from "./ElmMakeError";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
@@ -39,6 +38,7 @@ import {
 } from "./Postprocess";
 import {
   Duration,
+  ElmJsonErrorWithMetadata,
   OutputError,
   OutputState,
   OutputStatus,
@@ -2006,35 +2006,7 @@ function mockDuration(duration: Duration): Duration {
 
 export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   return [
-    ...project.elmJsonsErrors.map(({ outputPath, error }) => {
-      switch (error.tag) {
-        case "ElmJsonNotFound":
-          return Errors.elmJsonNotFound(
-            outputPath,
-            error.elmJsonNotFound,
-            error.foundElmJsonPaths
-          );
-
-        case "NonUniqueElmJsonPaths":
-          return Errors.nonUniqueElmJsonPaths(
-            outputPath,
-            error.nonUniqueElmJsonPaths
-          );
-
-        case "InputsNotFound":
-          return Errors.inputsNotFound(outputPath, error.inputsNotFound);
-
-        case "InputsFailedToResolve":
-          return Errors.inputsFailedToResolve(
-            outputPath,
-            error.inputsFailedToResolve
-          );
-
-        case "DuplicateInputs":
-          return Errors.duplicateInputs(outputPath, error.duplicates);
-      }
-    }),
-
+    ...project.elmJsonsErrors.map(renderElmJsonError),
     ...Array.from(project.elmJsons).flatMap(([elmJsonPath, outputs]) =>
       Array.from(outputs).flatMap(([outputPath, { status }]) => {
         switch (status.tag) {
@@ -2156,7 +2128,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           case "ElmMakeError":
             switch (status.error.tag) {
               case "GeneralError":
-                return ElmMakeError.renderGeneralError(
+                return Errors.elmMakeGeneralError(
                   outputPath,
                   elmJsonPath,
                   status.error,
@@ -2166,7 +2138,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
               case "CompileErrors":
                 return status.error.errors.flatMap((error) =>
                   error.problems.map((problem) =>
-                    ElmMakeError.renderProblem(
+                    Errors.elmMakeProblem(
                       error.path,
                       problem,
                       status.extraError
@@ -2204,6 +2176,38 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
       })
     ),
   ];
+}
+
+export function renderElmJsonError({
+  outputPath,
+  error,
+}: ElmJsonErrorWithMetadata): Errors.ErrorTemplate {
+  switch (error.tag) {
+    case "ElmJsonNotFound":
+      return Errors.elmJsonNotFound(
+        outputPath,
+        error.elmJsonNotFound,
+        error.foundElmJsonPaths
+      );
+
+    case "NonUniqueElmJsonPaths":
+      return Errors.nonUniqueElmJsonPaths(
+        outputPath,
+        error.nonUniqueElmJsonPaths
+      );
+
+    case "InputsNotFound":
+      return Errors.inputsNotFound(outputPath, error.inputsNotFound);
+
+    case "InputsFailedToResolve":
+      return Errors.inputsFailedToResolve(
+        outputPath,
+        error.inputsFailedToResolve
+      );
+
+    case "DuplicateInputs":
+      return Errors.duplicateInputs(outputPath, error.duplicates);
+  }
 }
 
 type GetAllRelatedElmFilePathsResult = ElmJson.ParseError | WalkImportsResult;

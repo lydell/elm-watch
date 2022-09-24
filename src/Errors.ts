@@ -4,6 +4,7 @@ import * as path from "path";
 import { DecoderError } from "tiny-decoders";
 import * as url from "url";
 
+import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { Env } from "./Env";
 import {
@@ -11,6 +12,7 @@ import {
   dim as dimTerminal,
   join as joinString,
   JsonError,
+  RESET_COLOR,
   toError,
 } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
@@ -28,6 +30,7 @@ import {
   UnknownValueAsString,
 } from "./PostprocessShared";
 import { Command, ExitReason } from "./Spawn";
+import * as Theme from "./Theme";
 import {
   AbsolutePath,
   CliArg,
@@ -97,11 +100,16 @@ type FancyErrorLocation =
   | { tag: "NoLocation" };
 
 type Piece =
+  | {
+      tag: "ElmStyle";
+      text: string;
+      bold: boolean;
+      underline: boolean;
+      color?: ElmMakeError.Color;
+    }
   | { tag: "Bold"; text: string }
-  | { tag: "Color"; color: string; text: string }
   | { tag: "Dim"; text: string }
-  | { tag: "Text"; text: string }
-  | { tag: "Underline"; text: string };
+  | { tag: "Text"; text: string };
 
 export type ErrorTemplate = (
   width: number,
@@ -164,14 +172,20 @@ function renderPieceForTerminal(piece: Piece): string {
   switch (piece.tag) {
     case "Bold":
       return boldTerminal(piece.text);
-    case "Color":
-      return todo(piece.text);
     case "Dim":
       return dimTerminal(piece.text);
+    case "ElmStyle":
+      return (
+        (piece.bold ? /* istanbul ignore next */ "\x1B[1m" : "") +
+        (piece.underline ? "\x1B[4m" : "") +
+        (piece.color === undefined
+          ? ""
+          : Theme.COLOR_TO_TERMINAL_ESCAPE[piece.color]) +
+        piece.text +
+        RESET_COLOR
+      );
     case "Text":
       return piece.text;
-    case "Underline":
-      return todo(piece.text);
   }
 }
 
@@ -833,6 +847,70 @@ ${printJsonError(error)}
 
 ${printErrorFilePath(errorFilePath)}
 `;
+}
+
+export function elmMakeGeneralError(
+  outputPath: OutputPath,
+  elmJsonPath: ElmJsonPath,
+  error: ElmMakeError.GeneralError,
+  extraError: string | undefined
+): ErrorTemplate {
+  return fancyError(
+    error.title,
+    generalErrorPath(outputPath, elmJsonPath, error.path)
+  )`
+${text(extraError ?? "")}
+
+${joinTemplate(error.message.map(renderMessageChunk), "")}
+`;
+}
+
+function generalErrorPath(
+  outputPath: OutputPath,
+  elmJsonPath: ElmJsonPath,
+  errorPath: ElmMakeError.GeneralError["path"]
+): ElmJsonPath | OutputPath {
+  switch (errorPath.tag) {
+    case "NoPath":
+      return outputPath;
+    case "elm.json":
+      return elmJsonPath;
+  }
+}
+
+export function elmMakeProblem(
+  filePath: AbsolutePath,
+  problem: ElmMakeError.Problem,
+  extraError: string | undefined
+): ErrorTemplate {
+  const location = joinString(
+    [
+      filePath.absolutePath,
+      problem.region.start.line.toString(),
+      problem.region.start.column.toString(),
+    ],
+    ":"
+  );
+  return fancyError(problem.title, { tag: "Custom", location })`
+${text(extraError ?? "")}
+
+${joinTemplate(problem.message.map(renderMessageChunk), "")}
+`;
+}
+
+function renderMessageChunk(chunk: ElmMakeError.MessageChunk): Piece {
+  switch (chunk.tag) {
+    case "UnstyledText":
+      return text(chunk.string);
+    case "StyledText":
+      return {
+        tag: "ElmStyle",
+        text: chunk.string,
+        bold: chunk.bold,
+        underline: chunk.underline,
+        color: chunk.color,
+      };
+  }
 }
 
 export function stuckInProgressState(
