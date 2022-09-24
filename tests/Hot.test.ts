@@ -659,7 +659,11 @@ describe("hot", () => {
             tag: "ChangedCompilationMode",
             compilationMode: "optimize",
           });
-          // Wait for the above message to be processed before stopping (needed
+          send({
+            tag: "ChangedBrowserUiPosition",
+            browserUiPosition: "TopLeft",
+          });
+          // Wait for the above messages to be processed before stopping (needed
           // for code coverage).
           await wait(100);
           return "Stop" as const;
