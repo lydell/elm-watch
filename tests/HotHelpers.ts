@@ -34,10 +34,10 @@ const hotKillManager: HotKillManager = { kill: undefined };
 export async function cleanupAfterEachTest(): Promise<void> {
   const { currentTestName } = expect.getState();
 
-  if (window.__ELM_WATCH_KILL_MATCHING !== undefined) {
+  if (window.__ELM_WATCH?.KILL_MATCHING !== undefined) {
     // The idea is that we need no logging here – it’ll just result in double
     // logging since there will most likely be a running server as well.
-    await window.__ELM_WATCH_KILL_MATCHING(/^/);
+    await window.__ELM_WATCH.KILL_MATCHING(/^/);
   }
 
   if (watcher !== undefined) {
@@ -62,11 +62,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
 
-  for (const key of Object.keys(window)) {
-    if (key.startsWith("__ELM_WATCH")) {
-      delete (window as unknown as Record<string, unknown>)[key];
-    }
-  }
+  delete (window as unknown as Record<string, unknown>).__ELM_WATCH;
 }
 
 let bodyCounter = 0;
@@ -162,16 +158,9 @@ export async function run({
     const loadBuiltFiles = (isReload: boolean): void => {
       loads++;
 
-      for (const key of [
-        "Elm",
-        "__ELM_WATCH_RELOAD_STATUSES",
-        "__ELM_WATCH_ON_INIT",
-        "__ELM_WATCH_EXIT",
-        "__ELM_WATCH_KILL_MATCHING",
-        "__ELM_WATCH_DISCONNECT",
-      ]) {
-        delete (window as unknown as Record<string, unknown>)[key];
-      }
+      delete (window as unknown as Record<string, unknown>).Elm;
+      (window as unknown as Record<string, unknown>).__ELM_WATCH = {};
+      setBasicElmWatchProperties();
 
       (async () => {
         for (const script of absoluteScripts) {
@@ -219,23 +208,25 @@ export async function run({
         .catch(reject);
     };
 
-    window.__ELM_WATCH_MOCKED_TIMINGS = true;
+    (window as unknown as Record<string, unknown>).__ELM_WATCH = {};
 
-    window.__ELM_WATCH_RELOAD_PAGE = (message) => {
+    window.__ELM_WATCH.MOCKED_TIMINGS = true;
+
+    window.__ELM_WATCH.RELOAD_PAGE = (message) => {
       if (message !== undefined) {
         browserConsole.push(message);
       } else if (includeProxyReloads) {
         browserConsole.push("Proxy file reload!");
       }
-      window
-        .__ELM_WATCH_KILL_MATCHING(/^/)
+      window.__ELM_WATCH
+        .KILL_MATCHING(/^/)
         .then(() => {
           loadBuiltFiles(true);
         })
         .catch(reject);
     };
 
-    window.__ELM_WATCH_ON_RENDER = (targetName) => {
+    window.__ELM_WATCH.ON_RENDER = (targetName) => {
       withShadowRoot((shadowRoot) => {
         const element = shadowRoot.lastElementChild;
 
@@ -273,10 +264,10 @@ export async function run({
       },
     });
 
-    window.__ELM_WATCH_LOG_DEBUG = logger.debug;
+    window.__ELM_WATCH.LOG_DEBUG = logger.debug;
 
     let idle = 0;
-    window.__ELM_WATCH_ON_REACHED_IDLE_STATE = (reason) => {
+    window.__ELM_WATCH.ON_REACHED_IDLE_STATE = (reason) => {
       idle++;
       // So that another idle state can’t change the previous’ number while it’s waiting.
       const localIdle = idle;
@@ -296,7 +287,7 @@ export async function run({
               return;
             case "Stop":
               return Promise.all([
-                window.__ELM_WATCH_KILL_MATCHING(/^/),
+                window.__ELM_WATCH.KILL_MATCHING(/^/),
                 hotKillManager.kill === undefined
                   ? undefined
                   : hotKillManager.kill(),
@@ -304,6 +295,11 @@ export async function run({
           }
         })
         .catch(reject);
+    };
+
+    const basic = { ...window.__ELM_WATCH };
+    const setBasicElmWatchProperties = (): void => {
+      Object.assign(window.__ELM_WATCH, basic);
     };
 
     watcher = fs.watch(build, () => {

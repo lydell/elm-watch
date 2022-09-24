@@ -2314,7 +2314,7 @@ describe("hot reloading", () => {
         case 1:
           switchCompilationMode("optimize");
           await wait(200);
-          window.__ELM_WATCH_DISCONNECT(/^SlowPostprocess$/);
+          window.__ELM_WATCH.DISCONNECT(/^SlowPostprocess$/);
           return "KeepGoing";
         default:
           return "Stop";

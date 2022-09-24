@@ -19,20 +19,27 @@ const window = globalThis as unknown as Window;
 
 const IS_WEB_WORKER = window.window === undefined;
 
+// These used to be separate properties on `window`, like
+// `window.__ELM_WATCH_MOCKED_TIMINGS`. It’s better to group them all together
+// to avoid “polluting” `window` when using the browser console.
+type __ELM_WATCH = {
+  MOCKED_TIMINGS: boolean;
+  WEBSOCKET_TIMEOUT: number;
+  RELOAD_STATUSES: Record<string, ReloadStatus>;
+  RELOAD_PAGE: (message: string | undefined) => void;
+  ON_INIT: () => void;
+  ON_RENDER: (targetName: string) => void;
+  ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
+  KILL_MATCHING: (targetName: RegExp) => Promise<void>;
+  DISCONNECT: (targetName: RegExp) => void;
+  LOG_DEBUG: typeof console.debug;
+};
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
-    __ELM_WATCH_MOCKED_TIMINGS: boolean;
-    __ELM_WATCH_WEBSOCKET_TIMEOUT: number;
-    __ELM_WATCH_RELOAD_STATUSES: Record<string, ReloadStatus>;
-    __ELM_WATCH_RELOAD_PAGE: (message: string | undefined) => void;
-    __ELM_WATCH_ON_INIT: () => void;
-    __ELM_WATCH_ON_RENDER: (targetName: string) => void;
-    __ELM_WATCH_ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
-    __ELM_WATCH_KILL_MATCHING: (targetName: RegExp) => Promise<void>;
-    __ELM_WATCH_DISCONNECT: (targetName: RegExp) => void;
-    __ELM_WATCH_LOG_DEBUG: typeof console.debug;
+    __ELM_WATCH: __ELM_WATCH;
   }
 }
 
@@ -86,30 +93,40 @@ type ReloadStatus =
       reasons: Array<string>;
     };
 
-window.__ELM_WATCH_MOCKED_TIMINGS ??= false;
+let { __ELM_WATCH } = window;
+
+if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
+  // Each property is defined later below.
+  __ELM_WATCH = {} as unknown as __ELM_WATCH;
+  // Using `Object.defineProperty` makes `__ELM_WATCH` not appear when
+  // you type just `window.` in the Chrome browser console.
+  Object.defineProperty(window, "__ELM_WATCH", { value: __ELM_WATCH });
+}
+
+__ELM_WATCH.MOCKED_TIMINGS ??= false;
 
 // In a browser on the same computer, sending a message and receiving a reply
 // takes around 2-4 ms. In iOS Safari via WiFi, I’ve seen it take up to 120 ms.
 // So 1 second should be plenty above the threshold, while not taking too long.
-window.__ELM_WATCH_WEBSOCKET_TIMEOUT ??= 1000;
+__ELM_WATCH.WEBSOCKET_TIMEOUT ??= 1000;
 
-window.__ELM_WATCH_ON_INIT ??= () => {
+__ELM_WATCH.ON_INIT ??= () => {
   // Do nothing.
 };
 
-window.__ELM_WATCH_ON_RENDER ??= () => {
+__ELM_WATCH.ON_RENDER ??= () => {
   // Do nothing.
 };
 
-window.__ELM_WATCH_ON_REACHED_IDLE_STATE ??= () => {
+__ELM_WATCH.ON_REACHED_IDLE_STATE ??= () => {
   // Do nothing.
 };
 
-window.__ELM_WATCH_RELOAD_STATUSES ??= {};
+__ELM_WATCH.RELOAD_STATUSES ??= {};
 
 const RELOAD_MESSAGE_KEY = "__elmWatchReloadMessage";
 
-window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
+__ELM_WATCH.RELOAD_PAGE ??= (message) => {
   if (message !== undefined) {
     try {
       window.sessionStorage.setItem(RELOAD_MESSAGE_KEY, message);
@@ -133,13 +150,13 @@ window.__ELM_WATCH_RELOAD_PAGE ??= (message) => {
   }
 };
 
-window.__ELM_WATCH_KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
+__ELM_WATCH.KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
 
-window.__ELM_WATCH_DISCONNECT ??= (): void => {
+__ELM_WATCH.DISCONNECT ??= (): void => {
   // Do nothing.
 };
 
-window.__ELM_WATCH_LOG_DEBUG ??=
+__ELM_WATCH.LOG_DEBUG ??=
   // eslint-disable-next-line no-console
   console.debug;
 
@@ -328,7 +345,7 @@ const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
 
 function logDebug(...args: Array<unknown>): void {
   if (DEBUG) {
-    window.__ELM_WATCH_LOG_DEBUG(...args);
+    __ELM_WATCH.LOG_DEBUG(...args);
   }
 }
 
@@ -536,18 +553,18 @@ const initMutable =
       { once: true }
     );
 
-    window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = {
+    __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = {
       tag: "MightWantToReload",
     };
 
-    const originalOnInit = window.__ELM_WATCH_ON_INIT;
-    window.__ELM_WATCH_ON_INIT = () => {
+    const originalOnInit = __ELM_WATCH.ON_INIT;
+    __ELM_WATCH.ON_INIT = () => {
       dispatch({ tag: "AppInit" });
       originalOnInit();
     };
 
-    const originalKillMatching = window.__ELM_WATCH_KILL_MATCHING;
-    window.__ELM_WATCH_KILL_MATCHING = (targetName) =>
+    const originalKillMatching = __ELM_WATCH.KILL_MATCHING;
+    __ELM_WATCH.KILL_MATCHING = (targetName) =>
       new Promise((resolve, reject) => {
         if (
           targetName.test(TARGET_NAME) &&
@@ -569,8 +586,8 @@ const initMutable =
         }
       });
 
-    const originalDisconnect = window.__ELM_WATCH_DISCONNECT;
-    window.__ELM_WATCH_DISCONNECT = (targetName) => {
+    const originalDisconnect = __ELM_WATCH.DISCONNECT;
+    __ELM_WATCH.DISCONNECT = (targetName) => {
       if (
         targetName.test(TARGET_NAME) &&
         mutable.webSocket.readyState !== WebSocket.CLOSED
@@ -1065,13 +1082,13 @@ const runCmd =
         // Let the cmd queue be emptied first.
         Promise.resolve()
           .then(() => {
-            window.__ELM_WATCH_ON_REACHED_IDLE_STATE(cmd.reason);
+            __ELM_WATCH.ON_REACHED_IDLE_STATE(cmd.reason);
           })
           .catch(rejectPromise);
         return;
 
       case "UpdateGlobalStatus":
-        window.__ELM_WATCH_RELOAD_STATUSES[TARGET_NAME] = cmd.reloadStatus;
+        __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = cmd.reloadStatus;
         reloadPageIfNeeded();
         return;
 
@@ -1106,7 +1123,7 @@ const runCmd =
               tag: "WebSocketClosed",
               date: getNow(),
             });
-          }, window.__ELM_WATCH_WEBSOCKET_TIMEOUT);
+          }, __ELM_WATCH.WEBSOCKET_TIMEOUT);
         }
         return;
 
@@ -1253,7 +1270,7 @@ function reloadPageIfNeeded(): void {
   const reasons: Array<[string, Array<string>]> = [];
 
   for (const [targetName, reloadStatus] of Object.entries(
-    window.__ELM_WATCH_RELOAD_STATUSES
+    __ELM_WATCH.RELOAD_STATUSES
   )) {
     switch (reloadStatus.tag) {
       case "MightWantToReload":
@@ -1292,8 +1309,8 @@ function reloadPageIfNeeded(): void {
     reasons.length === 0
       ? undefined
       : `elm-watch: I did a full page reload because${separator}${reasonString}`;
-  window.__ELM_WATCH_RELOAD_STATUSES = {};
-  window.__ELM_WATCH_RELOAD_PAGE(message);
+  __ELM_WATCH.RELOAD_STATUSES = {};
+  __ELM_WATCH.RELOAD_PAGE(message);
 }
 
 function h<T extends HTMLElement>(
@@ -1378,7 +1395,7 @@ function render(
     firstFocusableElement.focus();
   }
 
-  window.__ELM_WATCH_ON_RENDER(TARGET_NAME);
+  __ELM_WATCH.ON_RENDER(TARGET_NAME);
 }
 
 function getIsPositionedInBottomHalf(targetRoot: HTMLElement): boolean {
@@ -1636,7 +1653,7 @@ function view(
   info: Info,
   manageFocus: boolean
 ): HTMLElement {
-  const model: Model = window.__ELM_WATCH_MOCKED_TIMINGS
+  const model: Model = __ELM_WATCH.MOCKED_TIMINGS
     ? {
         ...passedModel,
         status: {

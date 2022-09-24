@@ -1212,7 +1212,7 @@ describe("hot", () => {
       },
     });
 
-    await window.__ELM_WATCH_KILL_MATCHING(/^/);
+    await window.__ELM_WATCH.KILL_MATCHING(/^/);
 
     expect(terminal).toMatchInlineSnapshot(`
       ⏳ Dependencies
@@ -2975,7 +2975,7 @@ describe("hot", () => {
           case 1:
             return "KeepGoing"; // First script has loaded.
           default:
-            await window.__ELM_WATCH_KILL_MATCHING(/^/);
+            await window.__ELM_WATCH.KILL_MATCHING(/^/);
             return "KeepGoing" as const;
         }
       },
