@@ -479,7 +479,7 @@ export function collapseUi(): void {
 
 function expandUiHelper(wantExpanded: boolean): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector("button");
+    const button = shadowRoot?.querySelector("button[aria-expanded]");
     if (button instanceof HTMLElement) {
       if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
         button.click();
@@ -582,7 +582,7 @@ function shouldAddNewline(node: Node): boolean {
     case "LABEL":
     case "P":
     case "PRE":
-      return node.hasChildNodes();
+      return true;
     default:
       return false;
   }

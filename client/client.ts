@@ -2077,7 +2077,7 @@ function viewBrowserUiPositionChooser(
     ...allBrowserUiPositionsInOrder.map((position) => {
       const arrow = arrows[position];
       return arrow === undefined
-        ? h(HTMLDivElement, {})
+        ? h(HTMLDivElement, { style: { visibility: "hidden" } }, "·")
         : h(
             HTMLButtonElement,
             {
