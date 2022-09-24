@@ -369,7 +369,7 @@ export function initProject({
       const persisted = elmWatchStuffJson?.targets[targetName];
       const {
         compilationMode: thisCompilationMode = compilationMode,
-        browserUiPosition: thisBrowserUiPosition = "BottomLeft",
+        browserUiPosition = "BottomLeft",
       } = persisted ?? {};
 
       switch (resolveElmJsonResult.tag) {
@@ -382,7 +382,7 @@ export function initProject({
             new OutputState(
               resolveElmJsonResult.inputs,
               thisCompilationMode,
-              thisBrowserUiPosition,
+              browserUiPosition,
               getNow
             )
           );
@@ -394,7 +394,7 @@ export function initProject({
           elmJsonsErrors.push({
             outputPath,
             compilationMode: thisCompilationMode,
-            browserUiPosition: thisBrowserUiPosition,
+            browserUiPosition,
             error: resolveElmJsonResult,
           });
           break;
