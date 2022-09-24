@@ -9,8 +9,15 @@ import {
   NO_COLOR,
   WT_SESSION,
 } from "./Env";
-import { ErrorTemplate } from "./Errors";
-import { bold, CLEAR, join, removeColor, WriteStream } from "./Helpers";
+import * as Errors from "./Errors";
+import {
+  bold,
+  CLEAR,
+  join,
+  ReadStream,
+  removeColor,
+  WriteStream,
+} from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 
 export const DEFAULT_COLUMNS = 80;
@@ -22,16 +29,21 @@ export type Logger = {
   // `writeToStderrMakesALotOfSenseHere`.
   write: (message: string) => void;
   writeToStderrMakesALotOfSenseHere: (message: string) => void;
-  errorTemplate: (template: ErrorTemplate) => void;
+  errorTemplate: (template: Errors.ErrorTemplate) => void;
   debug: typeof console.debug;
   clearScreen: () => void;
   clearScreenDown: () => void;
   clearLine: (dir: readline.Direction) => void;
   moveCursor: (dx: number, dy: number) => void;
+  queryTerminal: (
+    escapes: string,
+    isDone: (stdin: string) => boolean
+  ) => Promise<string | undefined>;
 };
 
 export type LoggerConfig = {
   debug: boolean;
+  noColor: boolean;
   fancy: boolean;
   isTTY: boolean;
   mockedTimings: boolean;
@@ -40,11 +52,13 @@ export type LoggerConfig = {
 
 export function makeLogger({
   env,
+  stdin,
   stdout,
   stderr,
   logDebug,
 }: {
   env: Env;
+  stdin: ReadStream;
   stdout: WriteStream;
   stderr: WriteStream;
   logDebug: (message: string) => void;
@@ -55,6 +69,7 @@ export function makeLogger({
 
   const config: LoggerConfig = {
     debug: __ELM_WATCH_DEBUG in env,
+    noColor,
     fancy:
       // istanbul ignore next
       (!IS_WINDOWS || WT_SESSION in env) && !noColor,
@@ -80,7 +95,9 @@ export function makeLogger({
       stderr.write(`${handleColor(message)}\n`);
     },
     errorTemplate(template) {
-      stdout.write(`${handleColor(template(config.columns))}\n`);
+      stdout.write(
+        `${Errors.toTerminalString(template, config.columns, noColor)}\n`
+      );
     },
     // istanbul ignore next
     debug(...args) {
@@ -121,6 +138,60 @@ export function makeLogger({
         readline.moveCursor(stdout, dx, dy);
       }
     },
+    async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {
+      return queryTerminal(stdin, stdout, escapes, isDone);
+    },
     config,
   };
+}
+
+async function queryTerminal(
+  stdin: ReadStream,
+  stdout: WriteStream,
+  escapes: string,
+  isDone: (stdin: string) => boolean
+): Promise<string | undefined> {
+  if (!stdin.isTTY || !stdout.isTTY) {
+    return undefined;
+  }
+  try {
+    stdin.setRawMode(true);
+    stdin.resume();
+    return await queryTerminalHelper(stdin, stdout, escapes, isDone);
+  } finally {
+    stdin.setRawMode(false);
+    stdin.pause();
+  }
+}
+
+/**
+ * @returns {Promise<Theme>}
+ */
+async function queryTerminalHelper(
+  stdin: ReadStream,
+  stdout: WriteStream,
+  escapes: string,
+  isDone: (stdin: string) => boolean
+): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    let stdinString = "";
+
+    const onStdin = (data: Buffer): void => {
+      stdinString += data.toString("utf8");
+      if (isDone(stdinString)) {
+        clearTimeout(timeoutId);
+        stdin.off("data", onStdin);
+        resolve(stdinString);
+      }
+    };
+
+    stdin.on("data", onStdin);
+
+    stdout.write(escapes);
+
+    const timeoutId = setTimeout(() => {
+      stdin.off("data", onStdin);
+      resolve(undefined);
+    }, 10);
+  });
 }

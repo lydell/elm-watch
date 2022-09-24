@@ -1,7 +1,6 @@
 import * as Decode from "tiny-decoders";
 
 import { ErrorTemplate, fancyError } from "./Errors";
-import { join, RESET_COLOR } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath, ElmJsonPath, OutputPath } from "./Types";
 
@@ -174,44 +173,5 @@ function renderMessageChunk(chunk: MessageChunk): string {
         RESET_COLOR
       );
     }
-  }
-}
-
-//https://github.com/chalk/ansi-styles/blob/cd0b0cb59337bfd7d3669b2d0fcde7ff661a83a6/index.js#L25-L42
-function renderColor(color: Color): string {
-  // istanbul ignore next
-  switch (color) {
-    case "red":
-      return "\x1B[31m";
-    case "RED":
-      return "\x1B[91m";
-    case "magenta":
-      return "\x1B[35m";
-    case "MAGENTA":
-      return "\x1B[95m";
-    case "yellow":
-      return "\x1B[33m";
-    case "YELLOW":
-      return "\x1B[93m";
-    case "green":
-      return "\x1B[32m";
-    case "GREEN":
-      return "\x1B[92m";
-    case "cyan":
-      return "\x1B[36m";
-    case "CYAN":
-      return "\x1B[96m";
-    case "blue":
-      return "\x1B[34m";
-    case "BLUE":
-      return "\x1B[94m";
-    case "black":
-      return "\x1B[30m";
-    case "BLACK":
-      return "\x1B[90m";
-    case "white":
-      return "\x1B[37m";
-    case "WHITE":
-      return "\x1B[97m";
   }
 }

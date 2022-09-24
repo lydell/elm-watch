@@ -6,7 +6,13 @@ import * as url from "url";
 
 import * as ElmWatchJson from "./ElmWatchJson";
 import { Env } from "./Env";
-import { bold, dim, join, JsonError, removeColor, toError } from "./Helpers";
+import {
+  bold as boldTerminal,
+  dim as dimTerminal,
+  join as joinString,
+  JsonError,
+  toError,
+} from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 import { DEFAULT_COLUMNS } from "./Logger";
 import {
@@ -37,6 +43,46 @@ import {
   WriteOutputErrorReasonForWriting,
 } from "./Types";
 
+function bold(string: string): Piece {
+  return { tag: "Bold", text: string };
+}
+
+function dim(string: string): Piece {
+  return { tag: "Dim", text: string };
+}
+
+function text(string: string): Piece {
+  return { tag: "Text", text: string.trim() };
+}
+
+function number(num: number): Piece {
+  return { tag: "Text", text: num.toString() };
+}
+
+function join(array: Array<string>, separator: string): Piece {
+  return text(joinString(array, separator));
+}
+
+function json(data: unknown, indent?: number): Piece {
+  return {
+    tag: "Text",
+    text:
+      indent === undefined
+        ? JSON.stringify(data)
+        : JSON.stringify(data, null, indent),
+  };
+}
+
+function joinTemplate(
+  array: Array<ErrorTemplate | Piece>,
+  separator: string
+): ErrorTemplate {
+  return template(
+    ["", ...Array.from({ length: array.length - 1 }, () => separator), ""],
+    ...array
+  );
+}
+
 const elmJson = bold("elm.json");
 const elmWatchJson = bold("elm-watch.json");
 const elmWatchStuffJson = bold("elm-stuff/elm-watch/stuff.json");
@@ -50,33 +96,33 @@ type FancyErrorLocation =
   | { tag: "Custom"; location: string }
   | { tag: "NoLocation" };
 
+type Piece =
+  | { tag: "Bold"; text: string }
+  | { tag: "Color"; color: string; text: string }
+  | { tag: "Dim"; text: string }
+  | { tag: "Text"; text: string }
+  | { tag: "Underline"; text: string };
+
+export type ErrorTemplate = (
+  width: number,
+  renderPiece: (piece: Piece) => string
+) => string;
+
 export const fancyError =
   (title: string, location: FancyErrorLocation) =>
-  (
-    strings: TemplateStringsArray,
-    ...values: Array<string | ((width: number) => string)>
-  ) =>
-  (width: number): string => {
-    const content = join(
-      strings.flatMap((string, index) => {
-        const value = values[index] ?? "";
-        return [
-          string,
-          typeof value === "function" ? value(width) : value.trim(),
-        ];
-      }),
-      ""
-    ).trim();
+  (strings: ReadonlyArray<string>, ...values: Array<ErrorTemplate | Piece>) =>
+  (width: number, renderPiece: (piece: Piece) => string): string => {
+    const content = template(strings, ...values)(width, renderPiece);
 
     const prefix = `-- ${title} `;
     const line = "-".repeat(Math.max(0, width - prefix.length));
-    const titleWithSeparator = bold(`${prefix}${line}`);
+    const titleWithSeparator = renderPiece(bold(`${prefix}${line}`));
     const maybeLocation = fancyErrorLocation(location);
 
-    return join(
+    return joinString(
       [
         titleWithSeparator,
-        ...(maybeLocation === undefined ? [] : [maybeLocation]),
+        ...(maybeLocation === undefined ? [] : [renderPiece(maybeLocation)]),
         "",
         content,
       ],
@@ -84,30 +130,69 @@ export const fancyError =
     );
   };
 
-export function toPlainString(errorTemplate: ErrorTemplate): string {
-  return removeColor(errorTemplate(DEFAULT_COLUMNS));
+export const template =
+  (strings: ReadonlyArray<string>, ...values: Array<ErrorTemplate | Piece>) =>
+  (width: number, renderPiece: (piece: Piece) => string): string =>
+    joinString(
+      strings.flatMap((string, index) => {
+        const value = values[index] ?? text("");
+        return [
+          string,
+          typeof value === "function"
+            ? value(width, renderPiece)
+            : renderPiece(value),
+        ];
+      }),
+      ""
+    ).trim();
+
+export function toTerminalString(
+  errorTemplate: ErrorTemplate,
+  width: number,
+  noColor: boolean
+): string {
+  return noColor
+    ? errorTemplate(width, (piece) => piece.text)
+    : errorTemplate(width, renderPieceForTerminal);
 }
 
-function fancyErrorLocation(location: FancyErrorLocation): string | undefined {
+export function toPlainString(errorTemplate: ErrorTemplate): string {
+  return errorTemplate(DEFAULT_COLUMNS, (piece) => piece.text);
+}
+
+function renderPieceForTerminal(piece: Piece): string {
+  switch (piece.tag) {
+    case "Bold":
+      return boldTerminal(piece.text);
+    case "Color":
+      return todo(piece.text);
+    case "Dim":
+      return dimTerminal(piece.text);
+    case "Text":
+      return piece.text;
+    case "Underline":
+      return todo(piece.text);
+  }
+}
+
+function fancyErrorLocation(location: FancyErrorLocation): Piece | undefined {
   switch (location.tag) {
     case "ElmJsonPath":
-      return location.theElmJsonPath.absolutePath;
+      return text(location.theElmJsonPath.absolutePath);
     case "ElmWatchJsonPath":
-      return location.theElmWatchJsonPath.absolutePath;
+      return text(location.theElmWatchJsonPath.absolutePath);
     case "ElmWatchStuffJsonPath":
-      return location.theElmWatchStuffJsonPath.absolutePath;
+      return text(location.theElmWatchStuffJsonPath.absolutePath);
     case "OutputPath":
       return dim(`Target: ${location.targetName}`);
     case "ElmWatchNodeScriptPath":
-      return url.fileURLToPath(location.theElmWatchNodeScriptFileUrl);
+      return text(url.fileURLToPath(location.theElmWatchNodeScriptFileUrl));
     case "Custom":
-      return location.location;
+      return text(location.location);
     case "NoLocation":
       return undefined;
   }
 }
-
-export type ErrorTemplate = (width: number) => string;
 
 export function readElmWatchJsonAsJson(
   elmWatchJsonPath: ElmWatchJsonPath,
@@ -118,7 +203,7 @@ I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("I had trouble reading it as JSON:")}
 
-${error.message}
+${text(error.message)}
 `;
 }
 
@@ -155,7 +240,7 @@ ${bold("But I couldn't find one!")}
 
 You need to create one with JSON like this:
 
-${example}
+${text(example)}
 `;
 }
 
@@ -185,17 +270,17 @@ export function unknownFlags(
 
   const extra =
     elmMakeParsed.output !== undefined
-      ? `
+      ? template`
 It looks like your arguments might fit in an ${bold("elm make")} command.
 If so, you could try moving them to the ${elmWatchJson} I found here:
 
-${elmWatchJsonPath.theElmWatchJsonPath.absolutePath}
+${text(elmWatchJsonPath.theElmWatchJsonPath.absolutePath)}
 
 For example, you could add some JSON like this:
 
-${ElmWatchJson.example(cwd, elmWatchJsonPath, elmMakeParsed)}
+${text(ElmWatchJson.example(cwd, elmWatchJsonPath, elmMakeParsed))}
   `
-      : "";
+      : text("");
 
   return fancyError("UNEXPECTED FLAGS", { tag: "NoLocation" })`
 ${printRunModeArgsHelp(runMode)}
@@ -213,15 +298,19 @@ ${extra}
 `;
 }
 
-function printRunModeArgsHelp(runMode: RunMode): string {
+function printRunModeArgsHelp(runMode: RunMode): ErrorTemplate {
   switch (runMode) {
     case "make":
-      return `The ${bold(runMode)} command only accepts the flags ${bold(
-        "--debug"
-      )} and ${bold("--optimize")}.`;
+      return template`The ${bold(
+        runMode
+      )} command only accepts the flags ${bold("--debug")} and ${bold(
+        "--optimize"
+      )}.`;
 
     case "hot":
-      return `The ${bold(runMode)} command only accepts no flags at all.`;
+      return template`The ${bold(
+        runMode
+      )} command only accepts no flags at all.`;
   }
 }
 
@@ -270,7 +359,7 @@ export function elmJsonNotFound(
   }>
 ): ErrorTemplate {
   const extra = isNonEmptyArray(foundElmJsonPaths)
-    ? `
+    ? template`
 Note that I did find an ${elmJson} for some inputs:
 
 ${join(
@@ -284,7 +373,7 @@ ${join(
 
 Make sure that one single ${elmJson} covers all the inputs together!
       `
-    : "";
+    : text("");
 
   return fancyError("elm.json NOT FOUND", outputPath)`
 I could not find an ${elmJson} for these inputs:
@@ -333,11 +422,11 @@ export function inputsNotFound(
   return fancyError("INPUTS NOT FOUND", outputPath)`
 You asked me to compile these inputs:
 
-${join(
+${joinTemplate(
   mapNonEmptyArray(
     inputs,
     (inputPath) =>
-      `${inputPath.originalString} ${dim(
+      template`${text(inputPath.originalString)} ${dim(
         `(${inputPath.theUncheckedInputPath.absolutePath})`
       )}`
   ),
@@ -389,16 +478,16 @@ export function duplicateInputs(
   return fancyError("DUPLICATE INPUTS", outputPath)`
 Some of your inputs seem to be duplicates!
 
-${join(
+${joinTemplate(
   mapNonEmptyArray(duplicates, ({ inputs, resolved }) =>
-    join(
+    joinTemplate(
       [
         ...mapNonEmptyArray(inputs, (inputPath) =>
           isSymlink(inputPath)
-            ? `${inputPath.originalString} ${dim("(symlink)")}`
-            : inputPath.originalString
+            ? template`${text(inputPath.originalString)} ${dim("(symlink)")}`
+            : text(inputPath.originalString)
         ),
-        `-> ${resolved.absolutePath}`,
+        text(`-> ${resolved.absolutePath}`),
       ],
       "\n"
     )
@@ -408,7 +497,7 @@ ${join(
 
 Make sure every input is listed just once!
 
-${symlinkText}
+${text(symlinkText)}
 `;
 }
 
@@ -422,7 +511,7 @@ export function duplicateOutputs(
   return fancyError("DUPLICATE OUTPUTS", elmWatchJsonPath)`
 Some of your outputs seem to be duplicates!
 
-${join(
+${joinTemplate(
   mapNonEmptyArray(duplicates, ({ originalOutputPathStrings, absolutePath }) =>
     join(
       [...originalOutputPathStrings, `-> ${absolutePath.absolutePath}`],
@@ -474,7 +563,7 @@ export function otherSpawnError(
   return fancyError("TROUBLE SPAWNING COMMAND", location)`
 I tried to execute ${bold(command.command)}, but I ran into an error!
 
-${error.message}
+${text(error.message)}
 
 This happened when trying to run the following commands:
 
@@ -543,7 +632,7 @@ Note: If you don't need stdin in some case, you can pipe it to stdout!
 
 This is the error message I got:
 
-${error.message}
+${text(error.message)}
 `;
 }
 
@@ -572,11 +661,11 @@ export function elmWatchNodeMissingScript(
   return fancyError("MISSING POSTPROCESS SCRIPT", elmWatchJsonPath)`
 You have specified this in ${elmWatchJson}:
 
-"postprocess": [${JSON.stringify(ELM_WATCH_NODE)}]
+"postprocess": [${json(ELM_WATCH_NODE)}]
 
 You need to specify a JavaScript file to run as well, like so:
 
-"postprocess": [${JSON.stringify(ELM_WATCH_NODE)}, "postprocess.js"]
+"postprocess": [${json(ELM_WATCH_NODE)}, "postprocess.js"]
 `;
 }
 
@@ -607,7 +696,7 @@ export function elmWatchNodeDefaultExportNotFunction(
   stderr: string
 ): ErrorTemplate {
   // This is in a variable to avoid a regex in scripts/Build.ts removing the line.
-  const moduleExports = "module.exports";
+  const moduleExports = text("module.exports");
   return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", scriptPath)`
 I imported your postprocess file:
 
@@ -615,7 +704,7 @@ ${printElmWatchNodeImportCommand(scriptPath)}
 
 I expected ${bold("imported.default")} to be a function, but it isn't!
 
-typeof imported.default === ${JSON.stringify(typeofDefault)}
+typeof imported.default === ${json(typeofDefault)}
 
 ${bold("imported")} is:
 
@@ -691,17 +780,19 @@ export type ElmMakeCrashBeforeError =
 
 function printElmMakeCrashBeforeError(
   beforeError: ElmMakeCrashBeforeError
-): string {
+): ErrorTemplate {
   switch (beforeError.tag) {
     case "Json":
-      return `I got back ${beforeError.length.toString()} characters of JSON, but then Elm crashed with this error:`;
+      return template`I got back ${number(
+        beforeError.length
+      )} characters of JSON, but then Elm crashed with this error:`;
 
     case "Text":
       return beforeError.text === ""
-        ? "Elm crashed with this error:"
-        : `Elm printed this text:
+        ? template`Elm crashed with this error:`
+        : template`Elm printed this text:
 
-${beforeError.text}
+${text(beforeError.text)}
 
 Then it crashed with this error:`;
   }
@@ -720,7 +811,7 @@ ${printCommand(command)}
 
 ${printElmMakeCrashBeforeError(beforeError)}
 
-${error}
+${text(error)}
 `;
 }
 
@@ -764,7 +855,7 @@ export function creatingDummyFailed(
 I tried to make sure that all packages are installed. To do that, I need to
 create a temporary dummy .elm file but that failed:
 
-${error.message}
+${text(error.message)}
 `;
 }
 
@@ -774,7 +865,7 @@ export function elmInstallError(
   message: string
 ): ErrorTemplate {
   return fancyError(title, elmJsonPath)`
-${message}
+${text(message)}
 `;
 }
 
@@ -788,7 +879,7 @@ your inputs depend on.
 
 ${bold("I had trouble reading it as JSON:")}
 
-${error.message}
+${text(error.message)}
 
 (I still managed to compile your code, but the watcher will not work properly
 and "postprocess" was not run.)
@@ -824,7 +915,7 @@ I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble reading it as JSON:")}
 
-${error.message}
+${text(error.message)}
 
 This file is created by elm-watch, so reading it should never fail really.
 You could try removing that file (it contains nothing essential).
@@ -862,7 +953,7 @@ I write stuff to ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble writing that file:")}
 
-${error.message}
+${text(error.message)}
 
 The file contains nothing essential, but something weird is going on.
 `;
@@ -876,7 +967,7 @@ export function importWalkerFileSystemError(
 When figuring out all Elm files that your inputs depend on I read a lot of Elm files.
 Doing so I encountered this error:
 
-${error.message}
+${text(error.message)}
 
 (I still managed to compile your code, but the watcher will not work properly
 and "postprocess" was not run.)
@@ -891,11 +982,11 @@ export function readOutputError(
   return fancyError("TROUBLE READING OUTPUT", outputPath)`
 I managed to compile your code. Then I tried to read the output:
 
-${triedPath.absolutePath}
+${text(triedPath.absolutePath)}
 
 Doing so I encountered this error:
 
-${error.message}
+${text(error.message)}
 `;
 }
 
@@ -907,27 +998,31 @@ export function writeOutputError(
   return fancyError("TROUBLE WRITING OUTPUT", outputPath)`
 I managed to compile your code and read the generated file:
 
-${outputPath.temporaryOutputPath.absolutePath}
+${text(outputPath.temporaryOutputPath.absolutePath)}
 
 ${printWriteOutputErrorReasonForWriting(reasonForWriting)}
 
-${outputPath.theOutputPath.absolutePath}
+${text(outputPath.theOutputPath.absolutePath)}
 
 But I encountered this error:
 
-${error.message}
+${text(error.message)}
 `;
 }
 
 function printWriteOutputErrorReasonForWriting(
   reasonForWriting: WriteOutputErrorReasonForWriting
-): string {
+): Piece {
   switch (reasonForWriting) {
     case "InjectWebSocketClient":
-      return "I injected code for hot reloading, and then tried to write that to the output path:";
+      return text(
+        "I injected code for hot reloading, and then tried to write that to the output path:"
+      );
 
     case "Postprocess":
-      return "After running your postprocess command, I tried to write the result of that to the output path:";
+      return text(
+        "After running your postprocess command, I tried to write the result of that to the output path:"
+      );
   }
 }
 
@@ -939,11 +1034,11 @@ export function writeProxyOutputError(
 There are no websocket connections for this target, so I only typecheck the
 code. That went well. Then I tried to write a dummy output file here:
 
-${outputPath.theOutputPath.absolutePath}
+${text(outputPath.theOutputPath.absolutePath)}
 
 Doing so I encountered this error:
 
-${error.message}
+${text(error.message)}
 `;
 }
 
@@ -957,7 +1052,7 @@ but it looks like that wasn't the case this time!
 
 This is the error message I got:
 
-${error.message}
+${text(error.message)}
   `;
 }
 
@@ -974,16 +1069,16 @@ get a new port number on each restart, which means that if you had tabs
 open in the browser they would try to connect to the old port number.
 
 I tried to use such a saved port number from a previous run (or from previous
-configuration). But now that port (${port.thePort.toString()}) wasn't available!
+configuration). But now that port (${number(port.thePort)}) wasn't available!
 
 Most likely you already have elm-watch running somewhere else! If so,
 find it and use that, or kill it.
 
-If not, something else could have started using port ${port.thePort.toString()}
+If not, something else could have started using port ${number(port.thePort)}
 (though it's not very likely.) Then you can either try to find what that is,
 or remove ${elmWatchStuffJson} here:
 
-${elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath}
+${text(elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath)}
 
 Then I will ask the operating system for a new arbitrary available port.
   `;
@@ -996,7 +1091,7 @@ export function portConflictForPortFromConfig(
   return fancyError("PORT CONFLICT", elmWatchJsonPath)`
 In your ${elmWatchJson} you have this:
 
-"port": ${JSON.stringify(port.thePort)}
+"port": ${json(port.thePort)}
 
 But something else seems to already be running on that port!
 You might already have elm-watch running somewhere, or it could be a completely
@@ -1017,7 +1112,7 @@ or something!
 
 This is the error message I got:
 
-${error.message}
+${text(error.message)}
   `;
 }
 
@@ -1045,14 +1140,14 @@ export function webSocketParamsDecodeError(
   return `
 I ran into trouble parsing the web socket connection URL parameters:
 
-${printJsonError(error)}
+${printJsonError(error).text}
 
 The URL looks like this:
 
 ${actualUrlString}
 
 The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-  `.trim();
+  `;
 }
 
 export function webSocketWrongVersion(
@@ -1082,7 +1177,7 @@ export function webSocketTargetNotFound(
 
 These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
 
-${join(
+${joinString(
   mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName),
   "\n"
 )}
@@ -1098,7 +1193,7 @@ But I can't find that target in elm-watch.json!
 
 These targets are available in elm-watch.json:
 
-${join(
+${joinString(
   enabledOutputs.map((outputPath) => outputPath.targetName),
   "\n"
 )}${extra}
@@ -1121,14 +1216,14 @@ That target does exist in elm-watch.json, but isn't enabled.
 
 These targets are enabled via CLI arguments:
 
-${join(
+${joinString(
   enabledOutputs.map((outputPath) => outputPath.targetName),
   "\n"
 )}
 
 These targets exist in elm-watch.json but aren't enabled:
 
-${join(
+${joinString(
   disabledOutputs.map((outputPath) => outputPath.targetName),
   "\n"
 )}
@@ -1141,13 +1236,13 @@ export function webSocketDecodeError(error: JsonError): string {
   return `
 The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
-${printJsonError(error)}
+${printJsonError(error).text}
 
 The web socket code I generate is supposed to always send correct messages, so something is up here.
   `.trim();
 }
 
-export function printPATH(env: Env, isWindows: boolean): string {
+export function printPATH(env: Env, isWindows: boolean): ErrorTemplate | Piece {
   if (isWindows) {
     return printPATHWindows(env);
   }
@@ -1155,19 +1250,21 @@ export function printPATH(env: Env, isWindows: boolean): string {
   const { PATH } = env;
 
   if (PATH === undefined) {
-    return "I can't find any program, because process.env.PATH is undefined!";
+    return text(
+      "I can't find any program, because process.env.PATH is undefined!"
+    );
   }
 
   const pathList = PATH.split(path.delimiter);
 
-  return `
+  return template`
 This is what the PATH environment variable looks like:
 
 ${join(pathList, "\n")}
-  `.trim();
+  `;
 }
 
-function printPATHWindows(env: Env): string {
+function printPATHWindows(env: Env): ErrorTemplate | Piece {
   const pathEntries = Object.entries(env).flatMap(([key, value]) =>
     key.toUpperCase() === "PATH" && value !== undefined
       ? [[key, value] as const]
@@ -1175,34 +1272,36 @@ function printPATHWindows(env: Env): string {
   );
 
   if (!isNonEmptyArray(pathEntries)) {
-    return "I can't find any program, because I can't find any PATH-like environment variables!";
+    return text(
+      "I can't find any program, because I can't find any PATH-like environment variables!"
+    );
   }
 
   if (pathEntries.length === 1) {
     const [key, value] = pathEntries[0];
-    return `
-This is what the ${key} environment variable looks like:
+    return template`
+This is what the ${text(key)} environment variable looks like:
 
 ${join(value.split(path.delimiter), "\n")}
-    `.trim();
+    `;
   }
 
   const pathEntriesString = join(
     pathEntries.map(([key, value]) =>
-      join([`${key}:`, ...value.split(path.delimiter)], "\n")
+      joinString([`${key}:`, ...value.split(path.delimiter)], "\n")
     ),
     "\n\n"
   );
 
-  return `
+  return template`
 You seem to have several PATH-like environment variables set. The last one
 should be the one that is actually used, but it's better to have a single one!
 
 ${pathEntriesString}
-  `.trim();
+  `;
 }
 
-function printCommand(command: Command): string {
+function printCommand(command: Command): Piece {
   const stdin =
     command.stdin === undefined
       ? ""
@@ -1210,18 +1309,18 @@ function printCommand(command: Command): string {
           "printf",
           truncate(command.stdin.toString("utf8")),
         ])} | `;
-  return `
+  return text(`
 ${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
 ${stdin}${commandToPresentationName([command.command, ...command.args])}
-`;
+`);
 }
 
 function commandToPresentationName(command: NonEmptyArray<string>): string {
-  return join(
+  return joinString(
     command.map((part) =>
       part === ""
         ? "''"
-        : join(
+        : joinString(
             part
               .split(/(')/)
               .map((subPart) =>
@@ -1240,141 +1339,147 @@ function commandToPresentationName(command: NonEmptyArray<string>): string {
   );
 }
 
-function printExitReason(exitReason: ExitReason): string {
+function printExitReason(exitReason: ExitReason): Piece {
   switch (exitReason.tag) {
     case "ExitCode":
-      return `exit ${exitReason.exitCode}`;
+      return text(`exit ${exitReason.exitCode}`);
     case "Signal":
-      return `signal ${exitReason.signal}`;
+      return text(`signal ${exitReason.signal}`);
     case "Unknown":
-      return "unknown exit reason";
+      return text("unknown exit reason");
   }
 }
 
-export const printStdio =
-  (stdout: string, stderr: string) =>
-  (width: number): string =>
-    stdout !== "" && stderr === ""
-      ? limitStdio(stdout, width)
-      : stdout === "" && stderr !== ""
-      ? limitStdio(stderr, width)
-      : stdout === "" && stderr === ""
-      ? dim("(no output)")
-      : `
+export function printStdio(
+  stdout: string,
+  stderr: string
+): ErrorTemplate | Piece {
+  return stdout !== "" && stderr === ""
+    ? limitStdio(stdout)
+    : stdout === "" && stderr !== ""
+    ? limitStdio(stderr)
+    : stdout === "" && stderr === ""
+    ? dim("(no output)")
+    : template`
 STDOUT:
-${limitStdio(stdout, width)}
+${limitStdio(stdout)}
 
 STDERR:
-${limitStdio(stderr, width)}
-`.trim();
+${limitStdio(stderr)}
+`;
+}
 
-const printElmWatchNodeStdio =
-  (stdout: string, stderr: string) =>
-  (width: number): string =>
-    stdout === "" && stderr === ""
-      ? ""
-      : `
+function printElmWatchNodeStdio(
+  stdout: string,
+  stderr: string
+): ErrorTemplate | Piece {
+  return stdout === "" && stderr === ""
+    ? text("")
+    : template`
 STDOUT:
-${limitStdio(stdout, width)}
+${limitStdio(stdout)}
 
 STDERR:
-${limitStdio(stderr, width)}
-`.trim();
+${limitStdio(stderr)}
+`;
+}
 
 // Limit `string` to take at most 100 lines of terminal (roughly).
 // It doesn’t need to be precise. As long as we don’t print megabytes of
 // JavaScript that completely destroys the error message we’re good.
-function limitStdio(string: string, width: number): string {
-  const max = 100;
-  const lines = string.trimEnd().split("\n");
-  const result: Array<string> = [];
-  let usedLines = 0;
+const limitStdio =
+  (string: string) =>
+  (width: number, renderPiece: (piece: Piece) => string) => {
+    const max = 100;
+    const lines = string.trimEnd().split("\n");
+    const result: Array<string> = [];
+    let usedLines = 0;
 
-  for (const line of lines) {
-    const count = Math.ceil(line.length / width);
-    const available = max - usedLines;
-    if (available <= 0) {
-      break;
-    } else if (count > available) {
-      const take = available * width;
-      const left = line.length - take;
-      result.push(
-        `${line.slice(0, take)} ${dim(
-          left === 1 ? "1 more character" : `${left} more characters`
-        )}`
-      );
-      usedLines += available;
-      break;
-    } else {
-      result.push(line);
-      usedLines += count;
+    for (const line of lines) {
+      const count = Math.ceil(line.length / width);
+      const available = max - usedLines;
+      if (available <= 0) {
+        break;
+      } else if (count > available) {
+        const take = available * width;
+        const left = line.length - take;
+        result.push(
+          `${line.slice(0, take)} ${renderPiece(
+            dim(left === 1 ? "1 more character" : `${left} more characters`)
+          )}`
+        );
+        usedLines += available;
+        break;
+      } else {
+        result.push(line);
+        usedLines += count;
+      }
     }
-  }
 
-  const joined = join(result, "\n");
-  const left = lines.length - result.length;
+    const joined = joinString(result, "\n");
+    const left = lines.length - result.length;
 
-  return left > 0
-    ? `${joined}\n${dim(left === 1 ? "1 more line" : `${left} more lines`)}`
-    : joined;
-}
+    return left > 0
+      ? `${joined}\n${renderPiece(
+          dim(left === 1 ? "1 more line" : `${left} more lines`)
+        )}`
+      : joined;
+  };
 
-function printErrorFilePath(errorFilePath: ErrorFilePath): string {
+function printErrorFilePath(errorFilePath: ErrorFilePath): ErrorTemplate {
   switch (errorFilePath.tag) {
     case "AbsolutePath":
-      return `
+      return template`
 I wrote that to this file so you can inspect it:
 
-${errorFilePath.absolutePath}
-      `.trim();
+${text(errorFilePath.absolutePath)}
+      `;
 
     case "WritingErrorFileFailed":
-      return `
+      return template`
 I tried to write that to this file:
 
-${errorFilePath.attemptedPath.absolutePath}
+${text(errorFilePath.attemptedPath.absolutePath)}
 
 ${bold("But that failed too:")}
 
-${errorFilePath.error.message}
-      `.trim();
+${text(errorFilePath.error.message)}
+      `;
 
     case "ErrorFileBadContent":
-      return `
+      return template`
 I wrote this error to a file so you can inspect and possibly report it more easily.
 
 This is the data that caused the error:
 
-${errorFilePath.content}
-      `.trim();
+${text(errorFilePath.content)}
+      `;
   }
 }
 
-function printUnknownValueAsString(value: UnknownValueAsString): string {
+function printUnknownValueAsString(value: UnknownValueAsString): Piece {
   switch (value.tag) {
     case "UnknownValueAsString":
-      return value.value;
+      return text(value.value);
   }
 }
 
 function printElmWatchNodeImportCommand(
   scriptPath: ElmWatchNodeScriptPath
-): string {
-  return `const imported = await import(${JSON.stringify(
+): ErrorTemplate {
+  return template`const imported = await import(${json(
     scriptPath.theElmWatchNodeScriptFileUrl
   )})`;
 }
 
-function printElmWatchNodeRunCommand(args: ElmWatchNodePublicArgs): string {
+function printElmWatchNodeRunCommand(
+  args: ElmWatchNodePublicArgs
+): ErrorTemplate {
   const truncated = {
     ...args,
     code: truncate(args.code),
   };
-  return `const result = await imported.default(${JSON.stringify(
-    truncated,
-    null,
-    2
-  )})`;
+  return template`const result = await imported.default(${json(truncated, 2)})`;
 }
 
 function truncate(string: string): string {
@@ -1386,8 +1491,8 @@ function truncate(string: string): string {
     : `${string.slice(0, half)}...${string.slice(-half)}`;
 }
 
-function printJsonError(error: JsonError): string {
-  return error instanceof DecoderError ? error.format() : error.message;
+function printJsonError(error: JsonError): Piece {
+  return text(error instanceof DecoderError ? error.format() : error.message);
 }
 
 export type ErrorFilePath =

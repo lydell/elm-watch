@@ -24,7 +24,7 @@ export async function elmWatchCli(
   {
     cwd: cwdString,
     env,
-    // stdin,
+    stdin,
     stdout,
     stderr,
     logDebug,
@@ -34,6 +34,7 @@ export async function elmWatchCli(
   const getNow: GetNow = () => new Date();
   const logger = makeLogger({
     env,
+    stdin,
     stdout,
     stderr,
     logDebug,

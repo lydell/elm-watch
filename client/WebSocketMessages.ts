@@ -24,6 +24,7 @@ const StatusChanged = Decode.fieldsAuto({
       tag: () => "CompileError" as const,
       compilationMode: CompilationMode,
       browserUiPosition: BrowserUiPosition,
+      error: Decode.string,
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,

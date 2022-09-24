@@ -524,6 +524,7 @@ export type HandleOutputActionResult =
       tag: "CompileError";
       outputPath: OutputPath;
       outputState: OutputState;
+      error: string;
     }
   | {
       tag: "FullyCompiledJS";
@@ -1673,7 +1674,15 @@ export function printErrors(
   errors: NonEmptyArray<Errors.ErrorTemplate>
 ): void {
   const errorStrings = Array.from(
-    new Set(errors.map((template) => template(logger.config.columns)))
+    new Set(
+      errors.map((template) =>
+        Errors.toTerminalString(
+          template,
+          logger.config.columns,
+          logger.config.noColor
+        )
+      )
+    )
   );
 
   logger.write("");
