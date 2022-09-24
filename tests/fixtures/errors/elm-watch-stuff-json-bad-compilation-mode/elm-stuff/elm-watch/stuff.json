@@ -1,4 +1,8 @@
 {
     "port": 123,
-    "targets": {}
+    "targets": {
+        "Main": {
+            "compilationMode": "normal"
+        }
+    }
 }
