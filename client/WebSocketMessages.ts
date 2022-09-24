@@ -52,6 +52,7 @@ const StatusChanged = Decode.fieldsAuto({
       errors: Decode.array(CompileError),
       foregroundColor: Decode.string,
       backgroundColor: Decode.string,
+      openInEditorEnabled: Decode.boolean,
     }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,
@@ -96,6 +97,12 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
   }),
   FocusedTab: Decode.fieldsAuto({
     tag: () => "FocusedTab" as const,
+  }),
+  PressedOpenEditor: Decode.fieldsAuto({
+    tag: () => "PressedOpenEditor" as const,
+    absolutePath: Decode.string,
+    line: Decode.number,
+    column: Decode.number,
   }),
 });
 

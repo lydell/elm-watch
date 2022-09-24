@@ -4,6 +4,10 @@ export type Env = Record<string, string | undefined>;
 // Type: Check if defined and ignore value.
 export const NO_COLOR = "NO_COLOR";
 
+// If set, enables clicking error locations in the browser to open them in your editor.
+// Type: String of shell code.
+export const ELM_WATCH_OPEN_EDITOR = "ELM_WATCH_OPEN_EDITOR";
+
 // This enables `logger.debug()` calls (written to stderr). Since the stuff
 // written to stdout uses cursor movements, you probably want to also set
 // `__ELM_WATCH_NOT_TTY` or pipe to `cat` (if not a tty cursor movements are

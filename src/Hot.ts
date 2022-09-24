@@ -1,3 +1,4 @@
+import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
 import * as fs from "fs";
 import * as path from "path";
@@ -16,6 +17,7 @@ import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  ELM_WATCH_OPEN_EDITOR,
   Env,
 } from "./Env";
 import * as Errors from "./Errors";
@@ -278,6 +280,12 @@ type Cmd =
     }
   | {
       tag: "NoCmd";
+    }
+  | {
+      tag: "OpenEditor";
+      absolutePath: string;
+      line: number;
+      column: number;
     }
   | {
       tag: "PrintCompileErrors";
@@ -1503,6 +1511,35 @@ const runCmd =
       case "NoCmd":
         return;
 
+      case "OpenEditor": {
+        const command = env[ELM_WATCH_OPEN_EDITOR];
+        // TODO: Respond with error if the env var is somehow missing?
+        if (command !== undefined) {
+          childProcess.exec(
+            command,
+            {
+              cwd: absoluteDirname(
+                mutable.project.elmWatchJsonPath.theElmWatchJsonPath
+              ).absolutePath,
+              env: {
+                ...env,
+                file: cmd.absolutePath,
+                line: cmd.line.toString(),
+                column: cmd.column.toString(),
+              },
+              encoding: "utf8",
+              // TODO: Add timeout setting?
+            },
+            (error, stdout, stderr) => {
+              if (error !== null) {
+                console.log("TODO handle error", error, stdout, stderr);
+              }
+            }
+          );
+        }
+        return;
+      }
+
       case "PrintCompileErrors":
         Compile.printErrors(logger, cmd.errors);
         return;
@@ -1595,6 +1632,7 @@ const runCmd =
                 ),
                 foregroundColor: theme.foreground,
                 backgroundColor: theme.background,
+                openInEditorEnabled: ELM_WATCH_OPEN_EDITOR in env,
               },
             };
             webSocketSendToOutput(
@@ -2420,6 +2458,19 @@ function onWebSocketToServerMessage(
             tag: "WebSocketSend",
             webSocket,
             message: { tag: "FocusedTabAcknowledged" },
+          },
+        ],
+      ];
+
+    case "PressedOpenEditor":
+      return [
+        model,
+        [
+          {
+            tag: "OpenEditor",
+            absolutePath: message.absolutePath,
+            line: message.line,
+            column: message.column,
           },
         ],
       ];

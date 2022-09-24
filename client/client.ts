@@ -262,6 +262,13 @@ type UiMsg =
       tag: "PressedChevron";
     }
   | {
+      tag: "PressedOpenEditor";
+      absolutePath: string;
+      line: number;
+      column: number;
+      sendKey: SendKey;
+    }
+  | {
       tag: "PressedReconnectNow";
     };
 
@@ -334,6 +341,7 @@ type Status =
       errors: Array<CompileError>;
       foregroundColor: string;
       backgroundColor: string;
+      openInEditorEnabled: boolean;
     }
   | {
       tag: "Connecting";
@@ -992,6 +1000,23 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
     case "PressedChevron":
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
 
+    case "PressedOpenEditor":
+      return [
+        model,
+        [
+          {
+            tag: "SendMessage",
+            message: {
+              tag: "PressedOpenEditor",
+              absolutePath: msg.absolutePath,
+              line: msg.line,
+              column: msg.column,
+            },
+            sendKey: msg.sendKey,
+          },
+        ],
+      ];
+
     case "PressedReconnectNow":
       return reconnect(model, date, { force: true });
   }
@@ -1137,6 +1162,7 @@ function statusChanged(
             errors: status.errors,
             foregroundColor: status.foregroundColor,
             backgroundColor: status.backgroundColor,
+            openInEditorEnabled: status.openInEditorEnabled,
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -2253,7 +2279,13 @@ function viewStatus(
                 color: status.foregroundColor,
               },
             },
-            ...status.errors.map(viewCompileError)
+            ...status.errors.map((error) =>
+              viewCompileError(
+                dispatch,
+                status.openInEditorEnabled ? status.sendKey : undefined,
+                error
+              )
+            )
           ),
         ],
       };
@@ -2339,7 +2371,11 @@ function viewStatus(
   }
 }
 
-function viewCompileError(error: CompileError): HTMLLIElement {
+function viewCompileError(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  error: CompileError
+): HTMLLIElement {
   return h(
     HTMLLIElement,
     {},
@@ -2349,25 +2385,75 @@ function viewCompileError(error: CompileError): HTMLLIElement {
       h(HTMLElement, { localName: "summary" }, error.title),
       error.location === undefined
         ? undefined
-        : h(HTMLParagraphElement, {}, viewErrorLocation(error.location)),
+        : h(
+            HTMLParagraphElement,
+            {},
+            viewErrorLocation(dispatch, sendKey, error.location)
+          ),
       h(HTMLPreElement, { innerHTML: error.content })
     )
   );
 }
 
-function viewErrorLocation(location: ErrorLocation): HTMLElement | string {
+function viewErrorLocation(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  location: ErrorLocation
+): HTMLElement | string {
   switch (location.tag) {
     case "AbsolutePath":
-      return h(HTMLButtonElement, {}, location.absolutePath);
-    case "AbsolutePathWithLineAndColumn":
-      return h(
-        HTMLButtonElement,
-        {},
+      return viewErrorLocationButton(
+        dispatch,
+        sendKey,
+        {
+          absolutePath: location.absolutePath,
+          line: 1,
+          column: 1,
+        },
+        location.absolutePath
+      );
+
+    case "AbsolutePathWithLineAndColumn": {
+      return viewErrorLocationButton(
+        dispatch,
+        sendKey,
+        location,
         `${location.absolutePath}:${location.line}:${location.column}`
       );
+    }
+
     case "Target":
       return `Target: ${location.targetName}`;
   }
+}
+
+function viewErrorLocationButton(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  location: {
+    absolutePath: string;
+    line: number;
+    column: number;
+  },
+  text: string
+): HTMLButtonElement | string {
+  return sendKey === undefined
+    ? text
+    : h(
+        HTMLButtonElement,
+        {
+          onclick: () => {
+            dispatch({
+              tag: "PressedOpenEditor",
+              absolutePath: location.absolutePath,
+              line: location.line,
+              column: location.column,
+              sendKey,
+            });
+          },
+        },
+        text
+      );
 }
 
 function idleIcon(status: InitializedElmAppsStatus): string {
@@ -2646,6 +2732,7 @@ function renderMockStatuses(
       errors: [],
       foregroundColor: "white",
       backgroundColor: "black",
+      openInEditorEnabled: false,
       info: {
         ...info,
         originalCompilationMode: "standard",
@@ -2738,6 +2825,7 @@ function renderMockStatuses(
       ],
       foregroundColor: "#eee",
       backgroundColor: "#111",
+      openInEditorEnabled: true,
     },
     Connecting: {
       tag: "Connecting",
