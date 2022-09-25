@@ -2887,7 +2887,12 @@ function updateErrorOverlay(
 
   for (const [id, { targetNames, element }] of existingErrorElements) {
     if (targetNames.has(targetName) && !errors.has(id)) {
-      element.remove();
+      targetNames.delete(targetName);
+      if (targetNames.size === 0) {
+        element.remove();
+      } else {
+        element.setAttribute(DATA_TARGET_NAMES, [...targetNames].join("\n"));
+      }
     }
   }
 
