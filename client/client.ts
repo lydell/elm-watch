@@ -1881,7 +1881,8 @@ time::after {
   position: fixed;
   z-index: -1;
   inset: 0;
-  overflow: auto;
+  overflow-y: auto;
+  padding: 2ch 0;
 }
 
 .${CLASS.overlay}:empty {
@@ -1893,15 +1894,10 @@ time::after {
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 }
 
-.${CLASS.overlay} pre {
-  margin: 0;
-}
-
 .${CLASS.overlay} details {
   --border-thickness: 0.125em;
   border-top: var(--border-thickness) solid;
-  padding: 0 2ch;
-  margin: 4ch 0;
+  margin: 2ch 0;
 }
 
 .${CLASS.overlay} summary {
@@ -1910,7 +1906,8 @@ time::after {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-bottom: 2ch;
+  padding: 0 2ch;
+  word-break: break-word;
 }
 
 .${CLASS.overlay} summary::-webkit-details-marker {
@@ -1928,8 +1925,9 @@ time::after {
 .${CLASS.errorTitle} {
   display: inline-block;
   font-weight: bold;
-  padding: 0 1ch;
-  transform: translateY(calc(-50% - var(--border-thickness) / 2));
+  --padding: 1ch;
+  padding: 0 var(--padding);
+  transform: translate(calc(var(--padding) * -1), calc(-50% - var(--border-thickness) / 2));
 }
 
 .${CLASS.errorTitle}::before {
@@ -1949,8 +1947,15 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   border: none;
   border-radius: 0;
   background: none;
+  text-align: left;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.${CLASS.overlay} pre {
+  margin: 0;
+  padding: 2ch;
+  overflow-x: auto;
 }
 
 .${CLASS.root} {
