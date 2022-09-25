@@ -3,6 +3,7 @@ module ElementMain exposing (main)
 import Browser
 import Html exposing (Html)
 import Html.Events exposing (onClick)
+import Shared
 
 
 type Msg
@@ -42,10 +43,10 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ Html.button [ onClick DecrementClicked ]
-            [ Html.text "-" ]
+            [ Html.text Shared.minus ]
         , Html.text (" " ++ String.fromInt model.count ++ " ")
         , Html.button [ onClick IncrementClicked ]
-            [ Html.text "+" ]
+            [ Html.text Shared.plus ]
         ]
 
 
