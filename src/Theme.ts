@@ -66,25 +66,28 @@ export const COLOR_TO_TERMINAL_ESCAPE: Record<Color, string> = {
 };
 
 const DEFAULT_THEME: Theme = {
-  foreground: "white",
-  background: "black",
+  // Picked using eye dropper on VSCode’s default dark theme, in its terminal.
+  foreground: "rgb(204, 204, 204)",
+  background: "rgb(32, 30, 30)",
+  // Taken from the “Visual Studio Code” column at:
+  // https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
   palette: {
-    red: "red",
-    RED: "red",
-    magenta: "magenta",
-    MAGENTA: "magenta",
-    yellow: "yellow",
-    YELLOW: "yellow",
-    green: "green",
-    GREEN: "green",
-    cyan: "cyan",
-    CYAN: "cyan",
-    blue: "blue",
-    BLUE: "blue",
-    black: "black",
-    BLACK: "black",
-    white: "white",
-    WHITE: "white",
+    red: "rgb(205, 49, 49)",
+    RED: "rgb(241, 76, 76)",
+    magenta: "rgb(188, 63, 188)",
+    MAGENTA: "rgb(214, 112, 214)",
+    yellow: "rgb(229, 229, 16)",
+    YELLOW: "rgb(245, 245, 67)",
+    green: "rgb(13, 188, 121)",
+    GREEN: "rgb(35, 209, 139)",
+    cyan: "rgb(17, 168, 205)",
+    CYAN: "rgb(41, 184, 219)",
+    blue: "rgb(36, 114, 200)",
+    BLUE: "rgb(59, 142, 234)",
+    black: "rgb(0, 0, 0)",
+    BLACK: "rgb(102, 102, 102)",
+    white: "rgb(229, 229, 229)",
+    WHITE: "rgb(229, 229, 229)",
   },
 };
 
