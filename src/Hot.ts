@@ -587,16 +587,30 @@ const initMutable =
 function writeElmWatchStuffJson(mutable: Mutable): void {
   const json: ElmWatchStuffJsonWritable = {
     port: mutable.webSocketServer.port.thePort,
-    targets: Object.fromEntries(
-      getFlatOutputs(mutable.project).map(({ outputPath, outputState }) => [
-        outputPath.targetName,
-        {
-          compilationMode: outputState.compilationMode,
-          browserUiPosition: outputState.browserUiPosition,
-          openErrorOverlay: outputState.openErrorOverlay,
-        },
-      ])
-    ),
+    targets: Object.fromEntries([
+      ...mutable.project.elmJsonsErrors.map(
+        (error) =>
+          [
+            error.outputPath.targetName,
+            {
+              compilationMode: error.compilationMode,
+              browserUiPosition: error.browserUiPosition,
+              openErrorOverlay: error.openErrorOverlay,
+            },
+          ] as const
+      ),
+      ...getFlatOutputs(mutable.project).map(
+        ({ outputPath, outputState }) =>
+          [
+            outputPath.targetName,
+            {
+              compilationMode: outputState.compilationMode,
+              browserUiPosition: outputState.browserUiPosition,
+              openErrorOverlay: outputState.openErrorOverlay,
+            },
+          ] as const
+      ),
+    ]),
   };
 
   try {
