@@ -260,6 +260,11 @@ type UiMsg =
       sendKey: SendKey;
     }
   | {
+      tag: "ChangedOpenErrorOverlay";
+      openErrorOverlay: boolean;
+      sendKey: SendKey;
+    }
+  | {
       tag: "PressedChevron";
     }
   | {
@@ -320,6 +325,11 @@ type Cmd =
       reason: ReachedIdleStateReason;
     }
   | {
+      tag: "UpdateErrorOverlay";
+      errors: Map<string, OverlayError>;
+      sendKey: SendKey | undefined;
+    }
+  | {
       tag: "UpdateGlobalStatus";
       reloadStatus: ReloadStatus;
     }
@@ -329,6 +339,14 @@ type Cmd =
   | {
       tag: "WebSocketTimeoutClear";
     };
+
+type OverlayError = {
+  title: string;
+  location: ErrorLocation | undefined;
+  content: string;
+  foregroundColor: string;
+  backgroundColor: string;
+};
 
 type Status =
   | {
@@ -343,6 +361,7 @@ type Status =
       foregroundColor: string;
       backgroundColor: string;
       openEditorError: OpenEditorError | undefined;
+      openErrorOverlay: boolean;
     }
   | {
       tag: "Connecting";
@@ -432,6 +451,8 @@ function run(): void {
             previousStatusTag: model.status.tag,
           }
         : model;
+      const oldShouldShowErrorOverlay = shouldShowErrorOverlay(model);
+      const newShouldShowErrorOverlay = shouldShowErrorOverlay(newModel);
       const allCmds: Array<Cmd> = modelChanged
         ? [
             ...cmds,
@@ -450,6 +471,13 @@ function run(): void {
                   tag: "SetBrowserUiPosition",
                   browserUiPosition: newModel.browserUiPosition,
                 },
+            oldShouldShowErrorOverlay === newShouldShowErrorOverlay
+              ? { tag: "NoCmd" }
+              : {
+                  tag: "UpdateErrorOverlay",
+                  errors: makeOverlayErrors(newModel.status),
+                  sendKey: statusToSpecialCaseSendKey(newModel.status),
+                },
           ]
         : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
@@ -465,6 +493,10 @@ function run(): void {
   // When this call is commented out, esbuild won’t include the
   // `renderMockStatuses` function in the output.
   // renderMockStatuses(getNow, elements);
+}
+
+function shouldShowErrorOverlay(model: Model): boolean {
+  return model.status.tag === "CompileError" && model.status.openErrorOverlay;
 }
 
 function statusToReloadStatus(status: Status): ReloadStatus {
@@ -505,18 +537,18 @@ function statusToStatusType(statusTag: Status["tag"]): StatusType {
   }
 }
 
-function statusToBrowserUiPositionSendKey(status: Status): SendKey | undefined {
+function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
   switch (status.tag) {
     case "CompileError":
     case "Idle":
       return status.sendKey;
 
     // It works well moving the browser UI while already busy.
+    // It works well clicking an error location to open it in an editor while busy.
     case "Busy":
       return SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
-    // We can’t send a message about moving the browser UI if we don’t have a
-    // connection.
+    // We can’t send messages about anything if we don’t have a connection.
     case "Connecting":
     case "SleepingBeforeReconnect":
     case "WaitingForReload":
@@ -550,6 +582,7 @@ function getOrCreateContainer(): HTMLElement {
 type Elements = {
   container: HTMLElement;
   shadowRoot: ShadowRoot;
+  overlay: HTMLElement;
   root: Element;
   targetRoot: HTMLElement;
 };
@@ -564,6 +597,12 @@ function getOrCreateTargetRoot(): Elements {
     );
   }
 
+  let overlay = shadowRoot.querySelector(`.${CLASS.overlay}`);
+  if (overlay === null) {
+    overlay = h(HTMLDivElement, { className: CLASS.overlay });
+    shadowRoot.append(overlay);
+  }
+
   let root = shadowRoot.querySelector(`.${CLASS.root}`);
   if (root === null) {
     root = h(HTMLDivElement, { className: CLASS.root });
@@ -573,7 +612,13 @@ function getOrCreateTargetRoot(): Elements {
   const targetRoot = createTargetRoot(TARGET_NAME);
   root.append(targetRoot);
 
-  const elements: Elements = { container, shadowRoot, root, targetRoot };
+  const elements: Elements = {
+    container,
+    shadowRoot,
+    overlay: overlay as HTMLElement,
+    root,
+    targetRoot,
+  };
 
   setBrowserUiPosition(ORIGINAL_BROWSER_UI_POSITION, elements);
 
@@ -998,6 +1043,29 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
         ],
       ];
 
+    case "ChangedOpenErrorOverlay":
+      return model.status.tag === "CompileError"
+        ? [
+            {
+              ...model,
+              status: {
+                ...model.status,
+                openErrorOverlay: msg.openErrorOverlay,
+              },
+            },
+            [
+              {
+                tag: "SendMessage",
+                message: {
+                  tag: "ChangedOpenErrorOverlay",
+                  openErrorOverlay: msg.openErrorOverlay,
+                },
+                sendKey: msg.sendKey,
+              },
+            ],
+          ]
+        : [model, []];
+
     case "PressedChevron":
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
 
@@ -1038,6 +1106,7 @@ function onWebSocketToClientMessage(
           ? {
               ...model,
               status: { ...model.status, openEditorError: msg.error },
+              uiExpanded: true,
             }
           : model,
         [],
@@ -1164,7 +1233,6 @@ function statusChanged(
       ];
 
     case "CompileError":
-      console.log("TODO use this:", status.openErrorOverlay);
       return [
         {
           ...model,
@@ -1176,6 +1244,7 @@ function statusChanged(
             foregroundColor: status.foregroundColor,
             backgroundColor: status.backgroundColor,
             openEditorError: undefined,
+            openErrorOverlay: status.openErrorOverlay,
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -1338,6 +1407,20 @@ const runCmd =
             __ELM_WATCH.ON_REACHED_IDLE_STATE(cmd.reason);
           })
           .catch(rejectPromise);
+        return;
+
+      case "UpdateErrorOverlay":
+        if (elements !== undefined) {
+          updateErrorOverlay(
+            TARGET_NAME,
+            (msg) => {
+              dispatch({ tag: "UiMsg", date: getNow(), msg });
+            },
+            cmd.sendKey,
+            cmd.errors,
+            elements.overlay
+          );
+        }
         return;
 
       case "UpdateGlobalStatus":
@@ -1665,9 +1748,12 @@ const CLASS = {
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
   debugModeIcon: "debugModeIcon",
+  errorTitle: "errorTitle",
+  errorLocationButton: "errorLocationButton",
   expandedUiContainer: "expandedUiContainer",
   flashError: "flashError",
   flashSuccess: "flashSuccess",
+  overlay: "overlay",
   root: "root",
   rootBottomHalf: "rootBottomHalf",
   shortStatusContainer: "shortStatusContainer",
@@ -1698,14 +1784,10 @@ function getStatusClass({
   }
 }
 
-const CSS = `
-pre {
-  margin: 0;
-  white-space: pre-wrap;
-  border-left: 0.25em solid var(--grey);
-  padding-left: 0.5em;
-}
+const CHEVRON_UP = "▲";
+const CHEVRON_DOWN = "▼";
 
+const CSS = `
 input,
 button,
 select,
@@ -1760,6 +1842,82 @@ time::after {
   height: 0;
 }
 
+.${CLASS.overlay} {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  overflow: auto;
+}
+
+.${CLASS.overlay}:empty {
+  display: none;
+}
+
+.${CLASS.overlay},
+.${CLASS.overlay} pre {
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.${CLASS.overlay} pre {
+  margin: 0;
+}
+
+.${CLASS.overlay} details {
+  --border-thickness: 0.125em;
+  border-top: var(--border-thickness) solid;
+  padding: 0 2ch;
+  margin: 4ch 0;
+}
+
+.${CLASS.overlay} summary {
+  cursor: pointer;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 2ch;
+}
+
+.${CLASS.overlay} summary::-webkit-details-marker {
+  display: none;
+}
+
+.${CLASS.overlay} summary::marker {
+  content: none;
+}
+
+.${CLASS.overlay} summary > * {
+  pointer-events: auto;
+}
+
+.${CLASS.errorTitle} {
+  display: inline-block;
+  font-weight: bold;
+  padding: 0 1ch;
+  transform: translateY(calc(-50% - var(--border-thickness) / 2));
+}
+
+.${CLASS.errorTitle}::before {
+  content: "${CHEVRON_DOWN}";
+  display: inline-block;
+  margin-right: 1ch;
+  transform: translateY(-0.0625em);
+}
+
+details[open] > summary > .${CLASS.errorTitle}::before {
+  content: "${CHEVRON_UP}";
+}
+
+.${CLASS.errorLocationButton} {
+  appearance: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .${CLASS.root} {
   --grey: #767676;
   display: flex;
@@ -1793,6 +1951,13 @@ time::after {
 
 .${CLASS.rootBottomHalf} .${CLASS.container} {
   flex-direction: column;
+}
+
+.${CLASS.root} pre {
+  margin: 0;
+  white-space: pre-wrap;
+  border-left: 0.25em solid var(--grey);
+  padding-left: 0.5em;
 }
 
 .${CLASS.expandedUiContainer} {
@@ -2000,7 +2165,7 @@ function view(
           attrs: { "aria-expanded": model.uiExpanded.toString() },
         },
         icon(
-          model.uiExpanded ? "▲" : "▼",
+          model.uiExpanded ? CHEVRON_UP : CHEVRON_DOWN,
           model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch"
         )
       ),
@@ -2071,7 +2236,7 @@ function viewExpandedUi(
     ...statusData.dl,
   ];
 
-  const browserUiPositionSendKey = statusToBrowserUiPositionSendKey(status);
+  const browserUiPositionSendKey = statusToSpecialCaseSendKey(status);
 
   return h(
     HTMLDivElement,
@@ -2285,20 +2450,21 @@ function viewStatus(
             info,
           }),
           h(
-            HTMLOListElement,
+            HTMLButtonElement,
             {
-              style: {
-                backgroundColor: status.backgroundColor,
-                color: status.foregroundColor,
+              onclick: () => {
+                dispatch({
+                  tag: "ChangedOpenErrorOverlay",
+                  openErrorOverlay: !status.openErrorOverlay,
+                  sendKey: status.sendKey,
+                });
               },
             },
-            ...status.errors.map((error) =>
-              viewCompileError(dispatch, status.sendKey, error)
-            )
+            status.openErrorOverlay ? "Hide errors" : "Show errors"
           ),
           ...(status.openEditorError === undefined
             ? []
-            : [viewOpenEditorError(status.openEditorError)]),
+            : viewOpenEditorError(status.openEditorError)),
         ],
       };
 
@@ -2383,118 +2549,39 @@ function viewStatus(
   }
 }
 
-function viewCompileError(
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey,
-  error: CompileError
-): HTMLLIElement {
-  return h(
-    HTMLLIElement,
-    {},
-    h(
-      HTMLDetailsElement,
-      { open: true },
-      h(HTMLElement, { localName: "summary" }, error.title),
-      error.location === undefined
-        ? undefined
-        : h(
-            HTMLParagraphElement,
-            {},
-            viewErrorLocation(dispatch, sendKey, error.location)
-          ),
-      h(HTMLPreElement, { innerHTML: error.content })
-    )
-  );
-}
-
-function viewErrorLocation(
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey,
-  location: ErrorLocation
-): HTMLElement | string {
-  switch (location.tag) {
-    case "AbsolutePath":
-      return viewErrorLocationButton(
-        dispatch,
-        sendKey,
-        {
-          absolutePath: location.absolutePath,
-          line: 1,
-          column: 1,
-        },
-        location.absolutePath
-      );
-
-    case "AbsolutePathWithLineAndColumn": {
-      return viewErrorLocationButton(
-        dispatch,
-        sendKey,
-        location,
-        `${location.absolutePath}:${location.line}:${location.column}`
-      );
-    }
-
-    case "Target":
-      return `Target: ${location.targetName}`;
-  }
-}
-
-function viewErrorLocationButton(
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey,
-  location: {
-    absolutePath: string;
-    line: number;
-    column: number;
-  },
-  text: string
-): HTMLButtonElement | string {
-  return h(
-    HTMLButtonElement,
-    {
-      onclick: () => {
-        dispatch({
-          tag: "PressedOpenEditor",
-          absolutePath: location.absolutePath,
-          line: location.line,
-          column: location.column,
-          sendKey,
-        });
-      },
-    },
-    text
-  );
-}
-
-function viewOpenEditorError(error: OpenEditorError): HTMLElement {
+function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
   switch (error.tag) {
     case "EnvNotSet":
-      return h(
-        HTMLParagraphElement,
-        {},
-        "Clicking error locations only work if you set it up. Check this out: ",
-        h(
-          HTMLAnchorElement,
-          {
-            href: "https://github.com/lydell/elm-watch#TODO",
-            target: "_blank",
-            rel: "noreferrer",
-          },
-          "TODO"
-        )
-      );
-
-    case "CommandFailed":
-      return h(
-        HTMLDivElement,
-        {},
+      return [
         h(
           HTMLParagraphElement,
           {},
-          "Opening the location in your editor failed!"
+          "Clicking error locations only work if you set it up. Check this out: ",
+          h(
+            HTMLAnchorElement,
+            {
+              href: "https://github.com/lydell/elm-watch#TODO",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            "TODO"
+          )
         ),
-        h(HTMLPreElement, {}, error.message)
-      );
+      ];
+
+    case "CommandFailed":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          h(
+            HTMLElement,
+            { localName: "strong" },
+            "Opening the location in your editor failed!"
+          )
+        ),
+        h(HTMLPreElement, {}, error.message),
+      ];
   }
 }
 
@@ -2708,6 +2795,183 @@ function viewCompilationModeChooser({
   }
 }
 
+function makeOverlayErrors(status: Status): Map<string, OverlayError> {
+  return status.tag === "CompileError" && status.openErrorOverlay
+    ? new Map<string, OverlayError>(
+        status.errors.map((error) => {
+          const overlayError: OverlayError = {
+            title: error.title,
+            location: error.location,
+            content: error.content,
+            foregroundColor: status.foregroundColor,
+            backgroundColor: status.backgroundColor,
+          };
+          const id = JSON.stringify(overlayError);
+          return [id, overlayError];
+        })
+      )
+    : new Map<string, OverlayError>();
+}
+
+const DATA_TARGET_NAMES = "data-target-names";
+
+function updateErrorOverlay(
+  targetName: string,
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  errors: Map<string, OverlayError>,
+  overlay: HTMLElement
+): void {
+  const existingErrorElements = new Map<
+    string,
+    { targetNames: Set<string>; element: Element }
+  >(
+    Array.from(overlay.children, (element) => [
+      element.id,
+      {
+        targetNames: new Set(
+          // Newline is not a valid target name character.
+          (element.getAttribute(DATA_TARGET_NAMES) ?? "").split("\n")
+        ),
+        element,
+      },
+    ])
+  );
+
+  for (const [id, { targetNames, element }] of existingErrorElements) {
+    if (targetNames.has(targetName) && !errors.has(id)) {
+      element.remove();
+    }
+  }
+
+  for (const [id, error] of errors) {
+    const maybeExisting = existingErrorElements.get(id);
+    if (maybeExisting === undefined) {
+      const element = viewOverlayError(
+        targetName,
+        dispatch,
+        sendKey,
+        id,
+        error
+      );
+      overlay.appendChild(element);
+      overlay.style.backgroundColor = error.backgroundColor;
+    } else if (!maybeExisting.targetNames.has(targetName)) {
+      maybeExisting.element.setAttribute(
+        DATA_TARGET_NAMES,
+        [...maybeExisting.targetNames, targetName].join("\n")
+      );
+    }
+  }
+}
+
+function viewOverlayError(
+  targetName: string,
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  id: string,
+  error: OverlayError
+): HTMLElement {
+  return h(
+    HTMLDetailsElement,
+    {
+      open: true,
+      id,
+      style: {
+        backgroundColor: error.backgroundColor,
+        color: error.foregroundColor,
+      },
+      attrs: {
+        [DATA_TARGET_NAMES]: targetName,
+      },
+    },
+    h(
+      HTMLElement,
+      { localName: "summary" },
+      h(
+        HTMLSpanElement,
+        {
+          className: CLASS.errorTitle,
+          style: {
+            backgroundColor: error.backgroundColor,
+          },
+        },
+        error.title
+      ),
+      error.location === undefined
+        ? undefined
+        : h(
+            HTMLParagraphElement,
+            {},
+            viewErrorLocation(dispatch, sendKey, error.location)
+          )
+    ),
+    h(HTMLPreElement, { innerHTML: error.content })
+  );
+}
+
+function viewErrorLocation(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  location: ErrorLocation
+): HTMLElement | string {
+  switch (location.tag) {
+    case "AbsolutePath":
+      return viewErrorLocationButton(
+        dispatch,
+        sendKey,
+        {
+          absolutePath: location.absolutePath,
+          line: 1,
+          column: 1,
+        },
+        location.absolutePath
+      );
+
+    case "AbsolutePathWithLineAndColumn": {
+      return viewErrorLocationButton(
+        dispatch,
+        sendKey,
+        location,
+        `${location.absolutePath}:${location.line}:${location.column}`
+      );
+    }
+
+    case "Target":
+      return `Target: ${location.targetName}`;
+  }
+}
+
+function viewErrorLocationButton(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  location: {
+    absolutePath: string;
+    line: number;
+    column: number;
+  },
+  text: string
+): HTMLButtonElement | string {
+  return sendKey === undefined
+    ? text
+    : h(
+        HTMLButtonElement,
+        {
+          className: CLASS.errorLocationButton,
+          onclick: () => {
+            dispatch({
+              tag: "PressedOpenEditor",
+              absolutePath: location.absolutePath,
+              line: location.line,
+              column: location.column,
+              sendKey,
+            });
+          },
+        },
+        text
+      );
+}
+
 function renderMockStatuses(
   getNow: GetNow,
   elements: Elements | undefined
@@ -2775,6 +3039,7 @@ function renderMockStatuses(
       foregroundColor: "white",
       backgroundColor: "black",
       openEditorError: undefined,
+      openErrorOverlay: false,
       info: {
         ...info,
         originalCompilationMode: "standard",
@@ -2868,6 +3133,7 @@ function renderMockStatuses(
       foregroundColor: "#eee",
       backgroundColor: "#111",
       openEditorError: { tag: "EnvNotSet" },
+      openErrorOverlay: true,
     },
     Connecting: {
       tag: "Connecting",

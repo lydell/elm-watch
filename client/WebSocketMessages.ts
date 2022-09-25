@@ -112,6 +112,10 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
     tag: () => "ChangedBrowserUiPosition" as const,
     browserUiPosition: BrowserUiPosition,
   }),
+  ChangedOpenErrorOverlay: Decode.fieldsAuto({
+    tag: () => "ChangedOpenErrorOverlay" as const,
+    openErrorOverlay: Decode.boolean,
+  }),
   FocusedTab: Decode.fieldsAuto({
     tag: () => "FocusedTab" as const,
   }),

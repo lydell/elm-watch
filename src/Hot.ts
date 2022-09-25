@@ -247,6 +247,11 @@ type Cmd =
       compilationMode: CompilationMode;
     }
   | {
+      tag: "ChangeOpenErrorOverlay";
+      outputState: OutputState;
+      openErrorOverlay: boolean;
+    }
+  | {
       tag: "ClearScreen";
     }
   | {
@@ -1306,6 +1311,11 @@ const runCmd =
 
       case "ChangeCompilationMode":
         cmd.outputState.compilationMode = cmd.compilationMode;
+        writeElmWatchStuffJson(mutable);
+        return;
+
+      case "ChangeOpenErrorOverlay":
+        cmd.outputState.openErrorOverlay = cmd.openErrorOverlay;
         writeElmWatchStuffJson(mutable);
         return;
 
@@ -2477,6 +2487,24 @@ function onWebSocketToServerMessage(
             ],
           ];
         }
+      }
+
+    case "ChangedOpenErrorOverlay":
+      switch (output.tag) {
+        case "OutputPathError":
+          return [model, []];
+
+        case "Output":
+          return [
+            model,
+            [
+              {
+                tag: "ChangeOpenErrorOverlay",
+                outputState: output.outputState,
+                openErrorOverlay: message.openErrorOverlay,
+              },
+            ],
+          ];
       }
 
     case "FocusedTab":
