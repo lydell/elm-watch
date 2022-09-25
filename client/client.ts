@@ -9,7 +9,6 @@ import {
   GetNow,
 } from "../src/Types";
 import {
-  CompileError,
   decodeWebSocketToClientMessage,
   ErrorLocation,
   OpenEditorError,
@@ -352,16 +351,14 @@ type Status =
   | {
       tag: "Busy";
       date: Date;
+      errorOverlay: ErrorOverlay | undefined;
     }
   | {
       tag: "CompileError";
       date: Date;
       sendKey: SendKey;
-      errors: Array<CompileError>;
-      foregroundColor: string;
-      backgroundColor: string;
+      errorOverlay: ErrorOverlay;
       openEditorError: OpenEditorError | undefined;
-      openErrorOverlay: boolean;
     }
   | {
       tag: "Connecting";
@@ -392,6 +389,11 @@ type Status =
       date: Date;
       reasons: Array<string>;
     };
+
+type ErrorOverlay = {
+  errors: Map<string, OverlayError>;
+  openErrorOverlay: boolean;
+};
 
 export type ReachedIdleStateReason =
   | "AlreadyUpToDate"
@@ -451,8 +453,8 @@ function run(): void {
             previousStatusTag: model.status.tag,
           }
         : model;
-      const oldShouldShowErrorOverlay = shouldShowErrorOverlay(model);
-      const newShouldShowErrorOverlay = shouldShowErrorOverlay(newModel);
+      const oldErrorOverlay = getErrorOverlay(model.status);
+      const newErrorOverlay = getErrorOverlay(newModel.status);
       const allCmds: Array<Cmd> = modelChanged
         ? [
             ...cmds,
@@ -471,11 +473,17 @@ function run(): void {
                   tag: "SetBrowserUiPosition",
                   browserUiPosition: newModel.browserUiPosition,
                 },
-            oldShouldShowErrorOverlay === newShouldShowErrorOverlay
+            newModel.status.tag === newModel.previousStatusTag &&
+            oldErrorOverlay?.openErrorOverlay ===
+              newErrorOverlay?.openErrorOverlay
               ? { tag: "NoCmd" }
               : {
                   tag: "UpdateErrorOverlay",
-                  errors: makeOverlayErrors(newModel.status),
+                  errors:
+                    newErrorOverlay === undefined ||
+                    !newErrorOverlay.openErrorOverlay
+                      ? new Map<string, OverlayError>()
+                      : newErrorOverlay.errors,
                   sendKey: statusToSpecialCaseSendKey(newModel.status),
                 },
           ]
@@ -495,8 +503,8 @@ function run(): void {
   // renderMockStatuses(getNow, elements);
 }
 
-function shouldShowErrorOverlay(model: Model): boolean {
-  return model.status.tag === "CompileError" && model.status.openErrorOverlay;
+function getErrorOverlay(status: Status): ErrorOverlay | undefined {
+  return "errorOverlay" in status ? status.errorOverlay : undefined;
 }
 
 function statusToReloadStatus(status: Status): ReloadStatus {
@@ -977,7 +985,13 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     }
 
     case "WebSocketConnected":
-      return [{ ...model, status: { tag: "Busy", date: msg.date } }, []];
+      return [
+        {
+          ...model,
+          status: { tag: "Busy", date: msg.date, errorOverlay: undefined },
+        },
+        [],
+      ];
 
     case "WebSocketMessageReceived": {
       const result = parseWebSocketMessageData(msg.data);
@@ -1028,7 +1042,11 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
       return [
         {
           ...model,
-          status: { tag: "Busy", date },
+          status: {
+            tag: "Busy",
+            date,
+            errorOverlay: getErrorOverlay(model.status),
+          },
           compilationMode: msg.compilationMode,
         },
         [
@@ -1044,13 +1062,17 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
       ];
 
     case "ChangedOpenErrorOverlay":
-      return model.status.tag === "CompileError"
+      return "errorOverlay" in model.status &&
+        model.status.errorOverlay !== undefined
         ? [
             {
               ...model,
               status: {
                 ...model.status,
-                openErrorOverlay: msg.openErrorOverlay,
+                errorOverlay: {
+                  ...model.status.errorOverlay,
+                  openErrorOverlay: msg.openErrorOverlay,
+                },
               },
             },
             [
@@ -1210,6 +1232,7 @@ function statusChanged(
           status: {
             tag: "Busy",
             date,
+            errorOverlay: getErrorOverlay(model.status),
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -1240,11 +1263,23 @@ function statusChanged(
             tag: "CompileError",
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-            errors: status.errors,
-            foregroundColor: status.foregroundColor,
-            backgroundColor: status.backgroundColor,
+            errorOverlay: {
+              errors: new Map(
+                status.errors.map((error) => {
+                  const overlayError: OverlayError = {
+                    title: error.title,
+                    location: error.location,
+                    content: error.content,
+                    foregroundColor: status.foregroundColor,
+                    backgroundColor: status.backgroundColor,
+                  };
+                  const id = JSON.stringify(overlayError);
+                  return [id, overlayError];
+                })
+              ),
+              openErrorOverlay: status.openErrorOverlay,
+            },
             openEditorError: undefined,
-            openErrorOverlay: status.openErrorOverlay,
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -2428,14 +2463,26 @@ function viewStatus(
     case "Busy":
       return {
         dl: [],
-        content: viewCompilationModeChooser({
-          dispatch,
-          sendKey: undefined,
-          compilationMode,
-          // Avoid the warning flashing by when switching modes (which is usually very fast).
-          warnAboutCompilationModeMismatch: false,
-          info,
-        }),
+        content: [
+          ...viewCompilationModeChooser({
+            dispatch,
+            sendKey: undefined,
+            compilationMode,
+            // Avoid the warning flashing by when switching modes (which is usually very fast).
+            warnAboutCompilationModeMismatch: false,
+            info,
+          }),
+          ...(status.errorOverlay === undefined
+            ? []
+            : [
+                viewErrorOverlayToggleButton(
+                  dispatch,
+                  // It works well clicking an error location to open it in an editor while busy.
+                  SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+                  status.errorOverlay
+                ),
+              ]),
+        ],
       };
 
     case "CompileError":
@@ -2449,18 +2496,10 @@ function viewStatus(
             warnAboutCompilationModeMismatch: true,
             info,
           }),
-          h(
-            HTMLButtonElement,
-            {
-              onclick: () => {
-                dispatch({
-                  tag: "ChangedOpenErrorOverlay",
-                  openErrorOverlay: !status.openErrorOverlay,
-                  sendKey: status.sendKey,
-                });
-              },
-            },
-            status.openErrorOverlay ? "Hide errors" : "Show errors"
+          viewErrorOverlayToggleButton(
+            dispatch,
+            status.sendKey,
+            status.errorOverlay
           ),
           ...(status.openEditorError === undefined
             ? []
@@ -2547,6 +2586,26 @@ function viewStatus(
         ],
       };
   }
+}
+
+function viewErrorOverlayToggleButton(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey,
+  errorOverlay: ErrorOverlay
+): HTMLElement {
+  return h(
+    HTMLButtonElement,
+    {
+      onclick: () => {
+        dispatch({
+          tag: "ChangedOpenErrorOverlay",
+          openErrorOverlay: !errorOverlay.openErrorOverlay,
+          sendKey,
+        });
+      },
+    },
+    errorOverlay.openErrorOverlay ? "Hide errors" : "Show errors"
+  );
 }
 
 function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
@@ -2795,24 +2854,6 @@ function viewCompilationModeChooser({
   }
 }
 
-function makeOverlayErrors(status: Status): Map<string, OverlayError> {
-  return status.tag === "CompileError" && status.openErrorOverlay
-    ? new Map<string, OverlayError>(
-        status.errors.map((error) => {
-          const overlayError: OverlayError = {
-            title: error.title,
-            location: error.location,
-            content: error.content,
-            foregroundColor: status.foregroundColor,
-            backgroundColor: status.backgroundColor,
-          };
-          const id = JSON.stringify(overlayError);
-          return [id, overlayError];
-        })
-      )
-    : new Map<string, OverlayError>();
-}
-
 const DATA_TARGET_NAMES = "data-target-names";
 
 function updateErrorOverlay(
@@ -3002,6 +3043,7 @@ function renderMockStatuses(
     Busy: {
       tag: "Busy",
       date,
+      errorOverlay: undefined,
     },
     Idle: {
       tag: "Idle",
@@ -3035,11 +3077,11 @@ function renderMockStatuses(
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      errors: [],
-      foregroundColor: "white",
-      backgroundColor: "black",
+      errorOverlay: {
+        errors: new Map(),
+        openErrorOverlay: false,
+      },
       openEditorError: undefined,
-      openErrorOverlay: false,
       info: {
         ...info,
         originalCompilationMode: "standard",
@@ -3114,26 +3156,11 @@ function renderMockStatuses(
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      errors: [
-        {
-          title: "Error 1",
-          location: {
-            tag: "AbsolutePathWithLineAndColumn",
-            absolutePath: "/Users/you/project/src/Main.elm",
-            line: 5,
-            column: 8,
-          },
-          content: "Something went wrong",
-        },
-        {
-          title: "Error 2",
-          content: "Some other error",
-        },
-      ],
-      foregroundColor: "#eee",
-      backgroundColor: "#111",
+      errorOverlay: {
+        errors: new Map(),
+        openErrorOverlay: false,
+      },
       openEditorError: { tag: "EnvNotSet" },
-      openErrorOverlay: true,
     },
     Connecting: {
       tag: "Connecting",
