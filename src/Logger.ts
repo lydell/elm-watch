@@ -189,9 +189,13 @@ async function queryTerminalHelper(
 
     stdout.write(escapes);
 
+    // In my testing, getting the responses take about 1 ms on macOS (both the
+    // default Terminal and iTerm), and about 10 ms on Gnome Terminal. 100 ms
+    // should be plenty, while still not being _too_ slow on terminals that
+    // don’t support querying colors.
     const timeoutId = setTimeout(() => {
       stdin.off("data", onStdin);
       resolve(undefined);
-    }, 10);
+    }, 100);
   });
 }

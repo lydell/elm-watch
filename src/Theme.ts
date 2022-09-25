@@ -19,8 +19,11 @@ const THEME_ESCAPES_STRING = Array.from(
 
 const THEME_ESCAPES_DONE_CHECK = "]11;";
 
+// On macOS (both the default Terminal and iTerm), the returned escape ends with `\x07`.
+// On Gnome Terminal it ends with `\x1B\\`. I don’t think there’s any need of matching
+// the “end” – just take the hexadecimal parts we want.
 const THEME_ESCAPES_REGEX =
-  /\x1B](4;)?(\d+);rgb:([\da-f]+)\/([\da-f]+)\/([\da-f]+)\x07/gi;
+  /\x1B](4;)?(\d+);rgb:([\da-f]+)\/([\da-f]+)\/([\da-f]+)/gi;
 
 const INDEX_TO_COLOR: Record<number, Color> = {
   0: "black",
