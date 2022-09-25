@@ -1074,6 +1074,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
                   openErrorOverlay: msg.openErrorOverlay,
                 },
               },
+              uiExpanded: false,
             },
             [
               {
