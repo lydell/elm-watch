@@ -1,4 +1,5 @@
 import { Color } from "./ElmMakeError";
+import { IS_WINDOWS } from "./IsWindows";
 import { Logger } from "./Logger";
 
 export type Theme = {
@@ -88,6 +89,12 @@ const DEFAULT_THEME: Theme = {
 };
 
 export async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
+  // Querying colors is not supported on Windows:
+  // https://github.com/microsoft/terminal/issues/3718
+  // Save them the timeout.
+  if (IS_WINDOWS) {
+    return DEFAULT_THEME;
+  }
   const stdin = await logger.queryTerminal(THEME_ESCAPES_STRING, (stdinSoFar) =>
     stdinSoFar.includes(THEME_ESCAPES_DONE_CHECK)
   );
