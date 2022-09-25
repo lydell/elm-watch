@@ -961,6 +961,32 @@ function update(
           ];
         }
 
+        case "ElmJsonError": {
+          const elmJsonError = result.error;
+          const event: WebSocketRelatedEvent = {
+            tag: "WebSocketConnectedNeedingNoAction",
+            date: msg.date,
+            outputPath: elmJsonError.outputPath,
+          };
+
+          return [
+            {
+              ...model,
+              latestEvents: [...model.latestEvents, event],
+            },
+            [
+              {
+                tag: "WebSocketSendCompileErrorToOutput",
+                outputPath: elmJsonError.outputPath,
+                compilationMode: elmJsonError.compilationMode,
+                browserUiPosition: elmJsonError.browserUiPosition,
+                openErrorOverlay: elmJsonError.openErrorOverlay,
+                errors: [Compile.renderElmJsonError(elmJsonError)],
+              },
+            ],
+          ];
+        }
+
         default:
           return [
             {
@@ -1730,10 +1756,7 @@ function onWebSocketServerMsg(
       );
       const webSocketConnection: WebSocketConnection = {
         webSocket: msg.webSocket,
-        outputPath:
-          result.tag === "Success"
-            ? result.outputPath
-            : { tag: "OutputPathError" },
+        outputPath: webSocketConnectRequestUrlResultToOutputPath(result),
         priority: now.getTime(),
       };
       mutable.webSocketConnections.push(webSocketConnection);
@@ -2077,6 +2100,10 @@ const WebSocketConnectedParams = Decode.fieldsAuto(
 type ParseWebSocketConnectRequestUrlResult =
   | ParseWebSocketConnectRequestUrlError
   | {
+      tag: "ElmJsonError";
+      error: ElmJsonErrorWithMetadata;
+    }
+  | {
       tag: "Success";
       elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
@@ -2153,12 +2180,31 @@ function parseWebSocketConnectRequestUrl(
   const flatOutputs = getFlatOutputs(project);
 
   const { targetName } = webSocketConnectedParams;
-  const match = flatOutputs.find(
+  const matchElmJsonError = project.elmJsonsErrors.find(
+    ({ outputPath }) => outputPath.targetName === targetName
+  );
+  const matchOutput = flatOutputs.find(
     ({ outputPath }) => outputPath.targetName === targetName
   );
 
-  if (match === undefined) {
-    const enabledOutputs = flatOutputs.map(({ outputPath }) => outputPath);
+  if (matchElmJsonError !== undefined) {
+    return {
+      tag: "ElmJsonError",
+      error: matchElmJsonError,
+    };
+  } else if (matchOutput !== undefined) {
+    return {
+      tag: "Success",
+      elmJsonPath: matchOutput.elmJsonPath,
+      outputPath: matchOutput.outputPath,
+      outputState: matchOutput.outputState,
+      elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
+    };
+  } else {
+    const enabledOutputs = [
+      ...project.elmJsonsErrors.map(({ outputPath }) => outputPath),
+      ...flatOutputs.map(({ outputPath }) => outputPath),
+    ];
     const disabledOutputs = Array.from(project.disabledOutputs);
     const disabledMatch = disabledOutputs.find(
       (outputPath) => outputPath.targetName === targetName
@@ -2177,14 +2223,23 @@ function parseWebSocketConnectRequestUrl(
           disabledOutputs,
         };
   }
+}
 
-  return {
-    tag: "Success",
-    elmJsonPath: match.elmJsonPath,
-    outputPath: match.outputPath,
-    outputState: match.outputState,
-    elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
-  };
+function webSocketConnectRequestUrlResultToOutputPath(
+  result: ParseWebSocketConnectRequestUrlResult
+): OutputPath | OutputPathError {
+  switch (result.tag) {
+    case "Success":
+      return result.outputPath;
+    case "ElmJsonError":
+      return result.error.outputPath;
+    default: {
+      // Make sure only error results are left.
+      const _: ParseWebSocketConnectRequestUrlError = result;
+      void _;
+      return { tag: "OutputPathError" };
+    }
+  }
 }
 
 function webSocketConnectRequestUrlErrorToString(
