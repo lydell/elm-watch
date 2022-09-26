@@ -73,6 +73,9 @@ export function makeLogger({
     noColor ? removeColor(string) : string;
 
   let queryTerminalStatus: QueryTerminalStatus = { tag: "NotQueried" };
+  let onCtrlC = (): void => {
+    // Do nothing.
+  };
 
   const config: LoggerConfig = {
     debug: __ELM_WATCH_DEBUG in env,
@@ -145,7 +148,8 @@ export function makeLogger({
         readline.moveCursor(stdout, dx, dy);
       }
     },
-    setRawMode(onCtrlC: () => void) {
+    setRawMode(passedOnCtrlC: () => void) {
+      onCtrlC = passedOnCtrlC;
       if (stdin.isTTY && stdout.isTTY && !stdin.isRaw) {
         stdin.setRawMode(true);
         stdin.on("data", (data: Buffer) => {
