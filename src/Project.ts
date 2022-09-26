@@ -158,13 +158,13 @@ export type OutputStatus =
       elmDurationMs: number;
       walkerDurationMs: number;
       injectDurationMs: number;
-      kill: () => void;
+      kill: (options: { force: boolean }) => void;
     }
   | {
       tag: "ElmMakeTypecheckOnly";
       elmDurationMs: number;
       walkerDurationMs: number;
-      kill: () => void;
+      kill: (options: { force: boolean }) => void;
     }
   | {
       tag: "Interrupted";

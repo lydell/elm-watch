@@ -77,7 +77,10 @@ export function make({
   outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean });
   env: Env;
   getNow: GetNow;
-}): { promise: Promise<RunElmMakeResult>; kill: () => void } {
+}): {
+  promise: Promise<RunElmMakeResult>;
+  kill: (options: { force: boolean }) => void;
+} {
   const command: Command = {
     command: "elm",
     args: [
@@ -146,8 +149,13 @@ export function make({
 
   return {
     promise: promise.then(handleSpawnResult),
-    kill: () => {
-      delayKill(startTime, getNow, env, kill);
+    kill: ({ force }) => {
+      // istanbul ignore if
+      if (force) {
+        kill();
+      } else {
+        delayKill(startTime, getNow, env, kill);
+      }
     },
   };
 }
@@ -344,7 +352,10 @@ export function install({
   elmJsonPath: ElmJsonPath;
   env: Env;
   getNow: GetNow;
-}): { promise: Promise<ElmInstallResult>; kill: () => void } {
+}): {
+  promise: Promise<ElmInstallResult>;
+  kill: (options: { force: boolean }) => void;
+} {
   const dummy = absolutePathFromString(
     {
       tag: "AbsolutePath",
@@ -471,8 +482,13 @@ export function install({
 
   return {
     promise: promise.then(handleSpawnResult),
-    kill: () => {
-      delayKill(startTime, getNow, env, kill);
+    kill: ({ force }) => {
+      // istanbul ignore if
+      if (force) {
+        kill();
+      } else {
+        delayKill(startTime, getNow, env, kill);
+      }
     },
   };
 }

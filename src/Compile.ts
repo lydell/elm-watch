@@ -72,8 +72,12 @@ export function installDependencies(
   logger: Logger,
   getNow: GetNow,
   project: Project
-): { promise: Promise<InstallDependenciesResult>; kill: () => void } {
-  let currentKill: (() => void) | undefined = undefined;
+): {
+  promise: Promise<InstallDependenciesResult>;
+  kill: (options: { force: boolean }) => void;
+} {
+  let currentKill: ((options: { force: boolean }) => void) | undefined =
+    undefined;
 
   const loadingMessageDelay = silentlyReadIntEnvValue(
     env[__ELM_WATCH_LOADING_MESSAGE_DELAY],
@@ -206,9 +210,9 @@ export function installDependencies(
 
   return {
     promise: continuation(),
-    kill: () => {
+    kill: ({ force }) => {
       if (currentKill !== undefined) {
-        currentKill();
+        currentKill({ force });
       }
     },
   };

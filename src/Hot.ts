@@ -570,7 +570,7 @@ const initMutable =
         await Promise.all(
           getFlatOutputs(project).map(({ outputState }) =>
             "kill" in outputState.status
-              ? outputState.status.kill()
+              ? outputState.status.kill({ force: true })
               : Promise.resolve()
           )
         );
@@ -1486,7 +1486,7 @@ const runCmd =
               mutable.project
             );
             mutable.killInstallDependencies = () => {
-              kill();
+              kill({ force: true });
               mutable.killInstallDependencies = undefined;
             };
             return promise;
@@ -1563,7 +1563,9 @@ const runCmd =
         for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;
           if ("kill" in outputState.status) {
-            Promise.resolve(outputState.status.kill()).catch(rejectPromise);
+            Promise.resolve(outputState.status.kill({ force: false })).catch(
+              rejectPromise
+            );
           }
           webSocketSendToOutput(
             outputPath,
