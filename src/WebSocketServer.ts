@@ -134,6 +134,7 @@ export class WebSocketServer {
   }
 
   async close(): Promise<void> {
+    this.unsetDispatch();
     return new Promise((resolve, reject) => {
       // This terminates all connections and closes the server.
       this.webSocketServer.close((error) => {

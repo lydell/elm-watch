@@ -126,6 +126,7 @@ type Mutable = {
   webSocketConnections: Array<WebSocketConnection>;
   lastWebSocketCloseTimestamp: number | undefined;
   workerLimitTimeoutMs: number;
+  workerLimitTimeoutId: NodeJS.Timeout | undefined;
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
@@ -523,6 +524,7 @@ const initMutable =
       webSocketConnections,
       lastWebSocketCloseTimestamp: undefined,
       workerLimitTimeoutMs,
+      workerLimitTimeoutId: undefined,
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
@@ -1792,7 +1794,11 @@ function onWebSocketServerMsg(
         (connection) => connection.webSocket !== msg.webSocket
       );
       mutable.lastWebSocketCloseTimestamp = now.getTime();
-      setTimeout(() => {
+      if (mutable.workerLimitTimeoutId !== undefined) {
+        clearTimeout(mutable.workerLimitTimeoutId);
+      }
+      mutable.workerLimitTimeoutId = setTimeout(() => {
+        mutable.workerLimitTimeoutId = undefined;
         dispatch({ tag: "WorkerLimitTimeoutPassed" });
       }, mutable.workerLimitTimeoutMs);
       dispatch({
@@ -1940,6 +1946,10 @@ function handleOutputActionResultToCmd(
 }
 
 async function closeAll(mutable: Mutable): Promise<void> {
+  // istanbul ignore if
+  if (mutable.workerLimitTimeoutId !== undefined) {
+    clearTimeout(mutable.workerLimitTimeoutId);
+  }
   // istanbul ignore if
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
