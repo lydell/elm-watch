@@ -366,6 +366,11 @@ type Status =
       attemptNumber: number;
     }
   | {
+      tag: "ElmJsonError";
+      date: Date;
+      error: string;
+    }
+  | {
       tag: "EvalError";
       date: Date;
     }
@@ -399,6 +404,7 @@ export type ReachedIdleStateReason =
   | "AlreadyUpToDate"
   | "ClientError"
   | "CompileError"
+  | "ElmJsonError"
   | "EvalErrored"
   | "EvalSucceeded";
 
@@ -514,6 +520,7 @@ function statusToReloadStatus(status: Status): ReloadStatus {
       return { tag: "MightWantToReload" };
 
     case "CompileError":
+    case "ElmJsonError":
     case "EvalError":
     case "Idle":
     case "SleepingBeforeReconnect":
@@ -539,6 +546,7 @@ function statusToStatusType(statusTag: Status["tag"]): StatusType {
       return "Waiting";
 
     case "CompileError":
+    case "ElmJsonError":
     case "EvalError":
     case "UnexpectedError":
       return "Error";
@@ -560,6 +568,8 @@ function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
     case "Connecting":
     case "SleepingBeforeReconnect":
     case "WaitingForReload":
+    // We can’t really send messages if there are elm.json errors.
+    case "ElmJsonError":
     // These two _might_ work, but it’s unclear. They’re not supposed to happen
     // anyway.
     case "EvalError":
@@ -1289,6 +1299,20 @@ function statusChanged(
           {
             tag: "TriggerReachedIdleState",
             reason: "CompileError",
+          },
+        ],
+      ];
+
+    case "ElmJsonError":
+      return [
+        {
+          ...model,
+          status: { tag: "ElmJsonError", date, error: status.error },
+        },
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "ElmJsonError",
           },
         ],
       ];
@@ -2427,6 +2451,12 @@ function statusIconAndText(
         status: "Connecting",
       };
 
+    case "ElmJsonError":
+      return {
+        icon: "🚨",
+        status: "elm.json or inputs error",
+      };
+
     case "EvalError":
       return {
         icon: "⛔️",
@@ -2521,6 +2551,14 @@ function viewStatus(
         ],
         content: [
           h(HTMLButtonElement, { disabled: true }, "Connecting web socket…"),
+        ],
+      };
+
+    case "ElmJsonError":
+      return {
+        dl: [],
+        content: [
+          h(HTMLPreElement, { style: { minWidth: "80ch" } }, status.error),
         ],
       };
 
@@ -3172,6 +3210,11 @@ function renderMockStatuses(
         openErrorOverlay: false,
       },
       openEditorError: { tag: "EnvNotSet" },
+    },
+    ElmJsonError: {
+      tag: "ElmJsonError",
+      date,
+      error: "Elm.json error",
     },
     Connecting: {
       tag: "Connecting",

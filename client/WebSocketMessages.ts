@@ -70,6 +70,10 @@ const StatusChanged = Decode.fieldsAuto({
       foregroundColor: Decode.string,
       backgroundColor: Decode.string,
     }),
+    ElmJsonError: Decode.fieldsAuto({
+      tag: () => "ElmJsonError" as const,
+      error: Decode.string,
+    }),
     ClientError: Decode.fieldsAuto({
       tag: () => "ClientError" as const,
       message: Decode.string,

@@ -700,12 +700,17 @@ const init = (
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
       (elmJsonError): Cmd => ({
-        tag: "WebSocketSendCompileErrorToOutput",
+        tag: "WebSocketSendToOutput",
         outputPath: elmJsonError.outputPath,
-        compilationMode: elmJsonError.compilationMode,
-        browserUiPosition: elmJsonError.browserUiPosition,
-        openErrorOverlay: elmJsonError.openErrorOverlay,
-        errors: [Compile.renderElmJsonError(elmJsonError)],
+        message: {
+          tag: "StatusChanged",
+          status: {
+            tag: "ElmJsonError",
+            error: Errors.toPlainString(
+              Compile.renderElmJsonError(elmJsonError)
+            ),
+          },
+        },
       })
     ),
   ],
@@ -993,12 +998,17 @@ function update(
             },
             [
               {
-                tag: "WebSocketSendCompileErrorToOutput",
+                tag: "WebSocketSendToOutput",
                 outputPath: elmJsonError.outputPath,
-                compilationMode: elmJsonError.compilationMode,
-                browserUiPosition: elmJsonError.browserUiPosition,
-                openErrorOverlay: elmJsonError.openErrorOverlay,
-                errors: [Compile.renderElmJsonError(elmJsonError)],
+                message: {
+                  tag: "StatusChanged",
+                  status: {
+                    tag: "ElmJsonError",
+                    error: Errors.toPlainString(
+                      Compile.renderElmJsonError(elmJsonError)
+                    ),
+                  },
+                },
               },
             ],
           ];
