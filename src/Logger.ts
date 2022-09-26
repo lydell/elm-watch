@@ -19,6 +19,7 @@ import {
   WriteStream,
 } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
+import { GetNow } from "./Types";
 
 export const DEFAULT_COLUMNS = 80;
 
@@ -35,6 +36,8 @@ export type Logger = {
   clearScreenDown: () => void;
   clearLine: (dir: readline.Direction) => void;
   moveCursor: (dx: number, dy: number) => void;
+  setRawMode: (onCtrlC: () => void) => void;
+  kill: () => void;
   queryTerminal: (
     escapes: string,
     isDone: (stdin: string) => boolean
@@ -52,12 +55,14 @@ export type LoggerConfig = {
 
 export function makeLogger({
   env,
+  getNow,
   stdin,
   stdout,
   stderr,
   logDebug,
 }: {
   env: Env;
+  getNow: GetNow;
   stdin: ReadStream;
   stdout: WriteStream;
   stderr: WriteStream;
@@ -66,6 +71,8 @@ export function makeLogger({
   const noColor = NO_COLOR in env;
   const handleColor = (string: string): string =>
     noColor ? removeColor(string) : string;
+
+  let queryTerminalStatus: QueryTerminalStatus = { tag: "NotQueried" };
 
   const config: LoggerConfig = {
     debug: __ELM_WATCH_DEBUG in env,
@@ -138,35 +145,73 @@ export function makeLogger({
         readline.moveCursor(stdout, dx, dy);
       }
     },
+    setRawMode(onCtrlC: () => void) {
+      if (stdin.isTTY && stdout.isTTY && !stdin.isRaw) {
+        stdin.setRawMode(true);
+        stdin.on("data", (data: Buffer) => {
+          if (data.toString("utf8") === "\x03") {
+            onCtrlC();
+          }
+        });
+      }
+    },
+    kill() {
+      stdin.pause();
+    },
     async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {
-      return queryTerminal(stdin, stdout, escapes, isDone);
+      if (!stdin.isRaw) {
+        return undefined;
+      }
+
+      const run = async (): Promise<string | undefined> => {
+        const callbacks: Array<(stdin: string | undefined) => void> = [];
+        queryTerminalStatus = { tag: "Querying", callbacks };
+        const result = await queryTerminalHelper(
+          stdin,
+          stdout,
+          escapes,
+          isDone
+        );
+        queryTerminalStatus = {
+          tag: "Queried",
+          stdin: result,
+          date: getNow(),
+        };
+        for (const callback of callbacks) {
+          callback(result);
+        }
+        return result;
+      };
+
+      switch (queryTerminalStatus.tag) {
+        case "NotQueried":
+          return run();
+
+        case "Querying": {
+          const { callbacks } = queryTerminalStatus;
+          return new Promise<string | undefined>((resolve) => {
+            callbacks.push(resolve);
+          });
+        }
+
+        case "Queried":
+          return getNow().getTime() - queryTerminalStatus.date.getTime() <=
+            QUERY_TERMINAL_MAX_AGE_MS
+            ? queryTerminalStatus.stdin
+            : run();
+      }
     },
     config,
   };
 }
 
-async function queryTerminal(
-  stdin: ReadStream,
-  stdout: WriteStream,
-  escapes: string,
-  isDone: (stdin: string) => boolean
-): Promise<string | undefined> {
-  if (!stdin.isTTY || !stdout.isTTY) {
-    return undefined;
-  }
-  try {
-    stdin.setRawMode(true);
-    stdin.resume();
-    return await queryTerminalHelper(stdin, stdout, escapes, isDone);
-  } finally {
-    stdin.setRawMode(false);
-    stdin.pause();
-  }
-}
+type QueryTerminalStatus =
+  | { tag: "NotQueried" }
+  | { tag: "Queried"; stdin: string | undefined; date: Date }
+  | { tag: "Querying"; callbacks: Array<(stdin: string | undefined) => void> };
 
-/**
- * @returns {Promise<Theme>}
- */
+const QUERY_TERMINAL_MAX_AGE_MS = 1000;
+
 async function queryTerminalHelper(
   stdin: ReadStream,
   stdout: WriteStream,

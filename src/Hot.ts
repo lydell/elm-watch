@@ -343,6 +343,7 @@ type HotRunResult =
     }
   | {
       tag: "ExitOnIdle";
+      reason: "CtrlCPressed" | "Other";
     }
   | {
       tag: "Restart";
@@ -382,6 +383,7 @@ export async function run(
   const result = await runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
       env,
+      logger,
       getNow,
       postprocessWorkerPool,
       webSocketState,
@@ -454,6 +456,7 @@ export async function watchElmWatchJsonOnce(
 const initMutable =
   (
     env: Env,
+    logger: Logger,
     getNow: GetNow,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
@@ -556,9 +559,7 @@ const initMutable =
       })
       .catch(rejectPromise);
 
-    hotKillManager.kill = async () => {
-      dispatch({ tag: "ExitRequested", date: getNow() });
-
+    const kill = async (): Promise<void> => {
       // istanbul ignore next
       try {
         if (mutable.killInstallDependencies !== undefined) {
@@ -572,14 +573,28 @@ const initMutable =
           )
         );
         await closeAll(mutable);
+        logger.kill();
       } catch (unknownError) {
         const error = toError(unknownError);
         rejectPromise(toError(error));
       }
 
       delete hotKillManager.kill;
-      resolvePromise({ tag: "ExitOnIdle" });
     };
+
+    hotKillManager.kill = async () => {
+      dispatch({ tag: "ExitRequested", date: getNow() });
+      await kill();
+      resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
+    };
+
+    logger.setRawMode(() => {
+      kill()
+        .then(() => {
+          resolvePromise({ tag: "ExitOnIdle", reason: "CtrlCPressed" });
+        })
+        .catch(rejectPromise);
+    });
 
     return mutable;
   };
@@ -1450,7 +1465,7 @@ const runCmd =
             if (exitOnError) {
               closeAll(mutable)
                 .then(() => {
-                  resolvePromise({ tag: "ExitOnIdle" });
+                  resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
                 })
                 .catch(rejectPromise);
             }
@@ -1529,7 +1544,7 @@ const runCmd =
         ) {
           closeAll(mutable)
             .then(() => {
-              resolvePromise({ tag: "ExitOnIdle" });
+              resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
             })
             .catch(rejectPromise);
         }
@@ -1672,7 +1687,7 @@ const runCmd =
       case "ExitOnIdle":
         closeAll(mutable)
           .then(() => {
-            resolvePromise({ tag: "ExitOnIdle" });
+            resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
           })
           .catch(rejectPromise);
         return;

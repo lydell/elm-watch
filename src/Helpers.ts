@@ -5,6 +5,7 @@ import { NonEmptyArray } from "./NonEmptyArray";
 
 export type ReadStream = Readable & {
   isTTY: boolean;
+  isRaw: boolean;
   setRawMode: (mode: boolean) => void;
 };
 
