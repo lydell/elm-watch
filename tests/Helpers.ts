@@ -135,7 +135,7 @@ export function rmSymlink(symlink: string): void {
 export class FailReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 
-  isRaw = false;
+  isRaw = true;
 
   override _read(size: number): void {
     throw new Error(

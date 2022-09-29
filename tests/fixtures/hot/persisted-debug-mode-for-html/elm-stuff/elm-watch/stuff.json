@@ -3,7 +3,8 @@
     "targets": {
         "Main": {
             "compilationMode": "debug",
-            "browserUiPosition": "BottomLeft"
+            "browserUiPosition": "BottomLeft",
+            "openErrorOverlay": false
         }
     }
 }
