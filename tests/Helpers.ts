@@ -135,6 +135,8 @@ export function rmSymlink(symlink: string): void {
 export class FailReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 
+  isRaw = false;
+
   override _read(size: number): void {
     throw new Error(
       `Expected FailReadStream not to be read but tried to read ${size} bytes.`
@@ -512,7 +514,7 @@ export function assertExitCode(
       `
 exit ${actualExitCode} (expected ${expectedExitCode})
 
-${printStdio(stdout, stderr)(process.stdout.columns)}
+${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
       `.trim()
     );
   }

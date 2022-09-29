@@ -1468,7 +1468,7 @@ ${printStdio(stdout, stderr)(DEFAULT_COLUMNS, (piece) => piece.text)}
   `.trim();
 }
 
-export function printPATH(env: Env, isWindows: boolean): Piece | Template {
+export function printPATH(env: Env, isWindows: boolean): Template {
   if (isWindows) {
     return printPATHWindows(env);
   }
@@ -1476,9 +1476,7 @@ export function printPATH(env: Env, isWindows: boolean): Piece | Template {
   const { PATH } = env;
 
   if (PATH === undefined) {
-    return text(
-      "I can't find any program, because process.env.PATH is undefined!"
-    );
+    return template`I can't find any program, because process.env.PATH is undefined!`;
   }
 
   const pathList = PATH.split(path.delimiter);
@@ -1490,7 +1488,7 @@ ${join(pathList, "\n")}
   `;
 }
 
-function printPATHWindows(env: Env): Piece | Template {
+function printPATHWindows(env: Env): Template {
   const pathEntries = Object.entries(env).flatMap(([key, value]) =>
     key.toUpperCase() === "PATH" && value !== undefined
       ? [[key, value] as const]
@@ -1498,9 +1496,7 @@ function printPATHWindows(env: Env): Piece | Template {
   );
 
   if (!isNonEmptyArray(pathEntries)) {
-    return text(
-      "I can't find any program, because I can't find any PATH-like environment variables!"
-    );
+    return template`I can't find any program, because I can't find any PATH-like environment variables!`;
   }
 
   if (pathEntries.length === 1) {

@@ -1480,6 +1480,7 @@ describe("hot reloading", () => {
         MultipleTargetsOther1: {
           compilationMode: "debug",
           browserUiPosition: "BottomLeft",
+          openErrorOverlay: false,
         },
       },
       init: (node) => {

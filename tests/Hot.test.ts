@@ -3894,6 +3894,7 @@ describe("hot", () => {
       const result = printTimeline(
         {
           debug: false,
+          noColor: false,
           fancy: true,
           isTTY: true,
           mockedTimings: false,

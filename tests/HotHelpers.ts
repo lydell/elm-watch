@@ -255,16 +255,16 @@ export async function run({
             ...env,
           };
 
-    const logger = makeLogger({
+    window.__ELM_WATCH.LOG_DEBUG = makeLogger({
       env: fullEnv,
+      getNow: () => new Date(),
+      stdin: process.stdin,
       stdout: process.stdout,
       stderr: process.stderr,
       logDebug: (message) => {
         logDebug(`Browser: ${message}`);
       },
-    });
-
-    window.__ELM_WATCH.LOG_DEBUG = logger.debug;
+    }).debug;
 
     let idle = 0;
     window.__ELM_WATCH.ON_REACHED_IDLE_STATE = (reason) => {
@@ -377,6 +377,7 @@ export function runHotReload({
       [name]: {
         compilationMode,
         browserUiPosition: "BottomLeft",
+        openErrorOverlay: false,
       },
       ...extraElmWatchStuffJson,
     },
