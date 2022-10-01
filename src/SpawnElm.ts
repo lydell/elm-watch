@@ -154,13 +154,14 @@ export function make({
       if (force) {
         kill();
       } else {
-        delayKill(startTime, getNow, env, kill);
+        delayKill(promise, startTime, getNow, env, kill);
       }
     },
   };
 }
 
 function delayKill(
+  promise: Promise<SpawnResult>,
   startTime: number,
   getNow: GetNow,
   env: Env,
@@ -168,7 +169,10 @@ function delayKill(
 ): void {
   const timeout = silentlyReadIntEnvValue(env[__ELM_WATCH_ELM_TIMEOUT], 10000);
   const elapsed = getNow().getTime() - startTime;
-  setTimeout(kill, Math.max(0, timeout - elapsed));
+  const timeoutId = setTimeout(kill, Math.max(0, timeout - elapsed));
+  promise.finally(() => {
+    clearTimeout(timeoutId);
+  });
 }
 
 export function compilationModeToArg(
@@ -487,7 +491,7 @@ export function install({
       if (force) {
         kill();
       } else {
-        delayKill(startTime, getNow, env, kill);
+        delayKill(promise, startTime, getNow, env, kill);
       }
     },
   };
