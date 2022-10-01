@@ -2030,7 +2030,8 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           project.elmWatchJsonPath,
           elmJsonPath,
           outputPath,
-          status
+          status,
+          true
         )
       )
     ),
@@ -2073,7 +2074,8 @@ export function renderOutputErrors(
   elmWatchJsonPath: ElmWatchJsonPath,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
-  status: OutputStatus
+  status: OutputStatus,
+  includeStuckInProgressState = false
 ): Array<Errors.ErrorTemplate> {
   switch (status.tag) {
     case "NotWrittenToDisk":
@@ -2088,7 +2090,9 @@ export function renderOutputErrors(
     // istanbul ignore next
     case "Interrupted":
     case "QueuedForElmMake":
-      return [Errors.stuckInProgressState(outputPath, status.tag)];
+      return includeStuckInProgressState
+        ? [Errors.stuckInProgressState(outputPath, status.tag)]
+        : [];
 
     // If there are `elm make` errors we skip postprocessing (fail fast).
     case "QueuedForPostprocess":

@@ -146,6 +146,7 @@ type WebSocketMessageReceivedOutput =
   | OutputPathError
   | {
       tag: "Output";
+      elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
     };
@@ -1049,6 +1050,7 @@ function update(
       switch (result.tag) {
         case "Success":
           return onWebSocketToServerMessage(
+            project.elmWatchJsonPath,
             model,
             msg.date,
             msg.output,
@@ -2514,6 +2516,7 @@ function compileNextAction(nextAction: NextAction): NextAction {
 }
 
 function onWebSocketToServerMessage(
+  elmWatchJsonPath: ElmWatchJsonPath,
   model: Model,
   date: Date,
   output: WebSocketMessageReceivedOutput,
@@ -2600,7 +2603,13 @@ function onWebSocketToServerMessage(
         case "OutputPathError":
           return [model, []];
 
-        case "Output":
+        case "Output": {
+          const errors = Compile.renderOutputErrors(
+            elmWatchJsonPath,
+            output.elmJsonPath,
+            output.outputPath,
+            output.outputState.status
+          );
           return [
             model,
             [
@@ -2609,8 +2618,19 @@ function onWebSocketToServerMessage(
                 outputState: output.outputState,
                 openErrorOverlay: message.openErrorOverlay,
               },
+              isNonEmptyArray(errors)
+                ? {
+                    tag: "WebSocketSendCompileErrorToOutput",
+                    outputPath: output.outputPath,
+                    compilationMode: output.outputState.compilationMode,
+                    browserUiPosition: output.outputState.browserUiPosition,
+                    openErrorOverlay: message.openErrorOverlay,
+                    errors,
+                  }
+                : { tag: "NoCmd" },
             ],
           ];
+        }
       }
 
     case "FocusedTab":
