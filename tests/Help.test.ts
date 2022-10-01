@@ -90,6 +90,9 @@ describe("help", () => {
           ⧙NO_COLOR⧘
               Disable colored output
 
+          ⧙ELM_WATCH_OPEN_EDITOR⧘
+              TODO good description
+
       ⧙Documentation:⧘
           https://github.com/lydell/elm-watch#readme
 
@@ -145,6 +148,9 @@ describe("help", () => {
       Environment variables:
           NO_COLOR
               Disable colored output
+
+          ELM_WATCH_OPEN_EDITOR
+              TODO good description
 
       Documentation:
           https://github.com/lydell/elm-watch#readme
