@@ -2280,7 +2280,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◯ Standard
       ◉ Optimize 🚀 Note: The code currently running is in standard mode.
-      Check the terminal to see errors!
+      [Show errors]
       ↑↗
       ·→
       ▲ 🚀 🚨 13:10:05 DebugLog

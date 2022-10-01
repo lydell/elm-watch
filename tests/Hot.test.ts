@@ -368,7 +368,7 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ Standard
       ◯ Optimize
-      Check the terminal to see errors!
+      [Show errors]
       ↑↗
       ·→
       ▲ 🚨 13:10:05 Removed
@@ -432,7 +432,7 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ Standard
       ◯ Optimize
-      Check the terminal to see errors!
+      [Show errors]
       ↑↗
       ·→
       ▲ 🚨 13:10:05 Readonly
