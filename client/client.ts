@@ -185,6 +185,7 @@ const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
+const CLOSE_ALL_ERROR_OVERLAYS_EVENT = "CLOSE_ALL_ERROR_OVERLAYS_EVENT";
 
 // A compilation after moving the browser UI on a big app takes around 700 ms
 // for me. So more than double that should be plenty.
@@ -261,7 +262,6 @@ type UiMsg =
   | {
       tag: "ChangedOpenErrorOverlay";
       openErrorOverlay: boolean;
-      sendKey: SendKey;
     }
   | {
       tag: "PressedChevron";
@@ -601,6 +601,7 @@ type Elements = {
   container: HTMLElement;
   shadowRoot: ShadowRoot;
   overlay: HTMLElement;
+  overlayCloseButton: HTMLElement;
   root: Element;
   targetRoot: HTMLElement;
 };
@@ -621,6 +622,31 @@ function getOrCreateTargetRoot(): Elements {
     shadowRoot.append(overlay);
   }
 
+  let overlayCloseButton = shadowRoot.querySelector(
+    `.${CLASS.overlayCloseButton}`
+  );
+  if (overlayCloseButton === null) {
+    const closeAllErrorOverlays = (): void => {
+      shadowRoot.dispatchEvent(new CustomEvent(CLOSE_ALL_ERROR_OVERLAYS_EVENT));
+    };
+    overlayCloseButton = h(HTMLButtonElement, {
+      className: CLASS.overlayCloseButton,
+      attrs: { "aria-label": "Close error overlay" },
+      onclick: closeAllErrorOverlays,
+    });
+    shadowRoot.append(overlayCloseButton);
+    const overlayNonNull = overlay;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (overlayNonNull.hasChildNodes() && event.key === "Escape") {
+          closeAllErrorOverlays();
+        }
+      },
+      true
+    );
+  }
+
   let root = shadowRoot.querySelector(`.${CLASS.root}`);
   if (root === null) {
     root = h(HTMLDivElement, { className: CLASS.root });
@@ -634,6 +660,7 @@ function getOrCreateTargetRoot(): Elements {
     container,
     shadowRoot,
     overlay: overlay as HTMLElement,
+    overlayCloseButton: overlayCloseButton as HTMLElement,
     root,
     targetRoot,
   };
@@ -759,22 +786,36 @@ const initMutable =
               });
             }
           }),
-          elements === undefined
-            ? () => {
-                // Do nothing
-              }
-            : addEventListener(
-                elements.shadowRoot,
-                BROWSER_UI_MOVED_EVENT,
-                (event) => {
-                  dispatch({
-                    tag: "BrowserUiMoved",
-                    browserUiPosition: Decode.fields((field) =>
-                      field("detail", parseBrowseUiPositionWithFallback)
-                    )(event),
-                  });
-                }
-              ),
+          ...(elements === undefined
+            ? []
+            : [
+                addEventListener(
+                  elements.shadowRoot,
+                  BROWSER_UI_MOVED_EVENT,
+                  (event) => {
+                    dispatch({
+                      tag: "BrowserUiMoved",
+                      browserUiPosition: Decode.fields((field) =>
+                        field("detail", parseBrowseUiPositionWithFallback)
+                      )(event),
+                    });
+                  }
+                ),
+                addEventListener(
+                  elements.shadowRoot,
+                  CLOSE_ALL_ERROR_OVERLAYS_EVENT,
+                  () => {
+                    dispatch({
+                      tag: "UiMsg",
+                      date: getNow(),
+                      msg: {
+                        tag: "ChangedOpenErrorOverlay",
+                        openErrorOverlay: false,
+                      },
+                    });
+                  }
+                ),
+              ]),
         ];
       },
       { once: true }
@@ -1093,7 +1134,11 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
                   tag: "ChangedOpenErrorOverlay",
                   openErrorOverlay: msg.openErrorOverlay,
                 },
-                sendKey: msg.sendKey,
+                sendKey:
+                  // It works well clicking an error location to open it in an editor while busy.
+                  model.status.tag === "Busy"
+                    ? SEND_KEY_DO_NOT_USE_ALL_THE_TIME
+                    : model.status.sendKey,
               },
             ],
           ]
@@ -1478,7 +1523,8 @@ const runCmd =
             },
             cmd.sendKey,
             cmd.errors,
-            elements.overlay
+            elements.overlay,
+            elements.overlayCloseButton
           );
         }
         return;
@@ -1808,12 +1854,13 @@ const CLASS = {
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
   debugModeIcon: "debugModeIcon",
-  errorTitle: "errorTitle",
   errorLocationButton: "errorLocationButton",
+  errorTitle: "errorTitle",
   expandedUiContainer: "expandedUiContainer",
   flashError: "flashError",
   flashSuccess: "flashSuccess",
   overlay: "overlay",
+  overlayCloseButton: "overlayCloseButton",
   root: "root",
   rootBottomHalf: "rootBottomHalf",
   shortStatusContainer: "shortStatusContainer",
@@ -1904,14 +1951,42 @@ time::after {
 
 .${CLASS.overlay} {
   position: fixed;
-  z-index: -1;
+  z-index: -2;
   inset: 0;
   overflow-y: auto;
   padding: 2ch 0;
 }
 
-.${CLASS.overlay}:empty {
-  display: none;
+.${CLASS.overlayCloseButton} {
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  appearance: none;
+  padding: 1em;
+  border: none;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 1.25em;
+  filter: drop-shadow(0 0 0.125em var(--backgroundColor));
+}
+
+.${CLASS.overlayCloseButton}::before,
+.${CLASS.overlayCloseButton}::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.125em;
+  height: 1em;
+  background-color: var(--foregroundColor);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.${CLASS.overlayCloseButton}::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .${CLASS.overlay},
@@ -2510,14 +2585,7 @@ function viewStatus(
           }),
           ...(status.errorOverlay === undefined
             ? []
-            : [
-                viewErrorOverlayToggleButton(
-                  dispatch,
-                  // It works well clicking an error location to open it in an editor while busy.
-                  SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-                  status.errorOverlay
-                ),
-              ]),
+            : [viewErrorOverlayToggleButton(dispatch, status.errorOverlay)]),
         ],
       };
 
@@ -2532,11 +2600,7 @@ function viewStatus(
             warnAboutCompilationModeMismatch: true,
             info,
           }),
-          viewErrorOverlayToggleButton(
-            dispatch,
-            status.sendKey,
-            status.errorOverlay
-          ),
+          viewErrorOverlayToggleButton(dispatch, status.errorOverlay),
           ...(status.openEditorError === undefined
             ? []
             : viewOpenEditorError(status.openEditorError)),
@@ -2634,7 +2698,6 @@ function viewStatus(
 
 function viewErrorOverlayToggleButton(
   dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey,
   errorOverlay: ErrorOverlay
 ): HTMLElement {
   return h(
@@ -2644,7 +2707,6 @@ function viewErrorOverlayToggleButton(
         dispatch({
           tag: "ChangedOpenErrorOverlay",
           openErrorOverlay: !errorOverlay.openErrorOverlay,
-          sendKey,
         });
       },
     },
@@ -2905,7 +2967,8 @@ function updateErrorOverlay(
   dispatch: (msg: UiMsg) => void,
   sendKey: SendKey | undefined,
   errors: Map<string, OverlayError>,
-  overlay: HTMLElement
+  overlay: HTMLElement,
+  overlayCloseButton: HTMLElement
 ): void {
   const existingErrorElements = new Map<
     string,
@@ -2946,6 +3009,14 @@ function updateErrorOverlay(
       );
       overlay.appendChild(element);
       overlay.style.backgroundColor = error.backgroundColor;
+      overlayCloseButton.style.setProperty(
+        "--foregroundColor",
+        error.foregroundColor
+      );
+      overlayCloseButton.style.setProperty(
+        "--backgroundColor",
+        error.backgroundColor
+      );
     } else if (!maybeExisting.targetNames.has(targetName)) {
       maybeExisting.element.setAttribute(
         DATA_TARGET_NAMES,
@@ -2953,6 +3024,14 @@ function updateErrorOverlay(
       );
     }
   }
+
+  const hidden = !overlay.hasChildNodes();
+  overlay.hidden = hidden;
+  overlayCloseButton.hidden = hidden;
+
+  overlayCloseButton.style.right = `${
+    overlay.offsetWidth - overlay.clientWidth
+  }px`;
 }
 
 function viewOverlayError(
