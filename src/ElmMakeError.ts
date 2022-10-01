@@ -107,21 +107,3 @@ export const ElmMakeError = Decode.fieldsUnion("type", {
     errors: NonEmptyArray(CompileError),
   }),
 });
-
-// function renderMessageChunk(chunk: MessageChunk): string {
-//   switch (chunk.tag) {
-//     case "UnstyledText":
-//       return chunk.string;
-
-//     case "StyledText": {
-//       const { style } = chunk;
-//       return (
-//         (style.bold ? /* istanbul ignore next */ "\x1B[1m" : "") +
-//         (style.underline ? "\x1B[4m" : "") +
-//         (style.color === undefined ? "" : renderColor(style.color)) +
-//         style.string +
-//         RESET_COLOR
-//       );
-//     }
-//   }
-// }
