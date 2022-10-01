@@ -2294,6 +2294,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
+      [Show errors]
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 DebugLog
@@ -2307,6 +2308,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
+      [Show errors]
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 DebugLog
@@ -2320,6 +2322,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
+      [Show errors]
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 DebugLog
