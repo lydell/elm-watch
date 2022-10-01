@@ -2721,15 +2721,20 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
         h(
           HTMLParagraphElement,
           {},
-          "Clicking error locations only work if you set it up. Check this out: ",
+          "Clicking error locations only works if you set it up."
+        ),
+        h(
+          HTMLParagraphElement,
+          {},
+          "Check this out: ",
           h(
             HTMLAnchorElement,
             {
-              href: "https://github.com/lydell/elm-watch#TODO",
+              href: "https://github.com/lydell/elm-watch#clickable-error-locations",
               target: "_blank",
               rel: "noreferrer",
             },
-            "TODO"
+            h(HTMLElement, { localName: "strong" }, "Clickable error locations")
           )
         ),
       ];

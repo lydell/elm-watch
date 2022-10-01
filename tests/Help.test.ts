@@ -91,7 +91,8 @@ describe("help", () => {
               Disable colored output
 
           ⧙ELM_WATCH_OPEN_EDITOR⧘
-              TODO good description
+              Open your editor when clicking error locations in the browser
+              https://github.com/lydell/elm-watch#clickable-error-locations
 
       ⧙Documentation:⧘
           https://github.com/lydell/elm-watch#readme
@@ -150,7 +151,8 @@ describe("help", () => {
               Disable colored output
 
           ELM_WATCH_OPEN_EDITOR
-              TODO good description
+              Open your editor when clicking error locations in the browser
+              https://github.com/lydell/elm-watch#clickable-error-locations
 
       Documentation:
           https://github.com/lydell/elm-watch#readme
