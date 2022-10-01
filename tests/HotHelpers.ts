@@ -16,11 +16,11 @@ import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
-  FailReadStream,
   logDebug,
   MemoryWriteStream,
   rimraf,
   rm,
+  SilentReadStream,
   TEST_ENV,
   wait,
 } from "./Helpers";
@@ -315,7 +315,7 @@ export async function run({
     elmWatchCli(["hot", ...args], {
       cwd: path.join(dir, cwd),
       env: fullEnv,
-      stdin: new FailReadStream(),
+      stdin: new SilentReadStream(),
       stdout,
       stderr,
       logDebug,

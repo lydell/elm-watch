@@ -973,7 +973,7 @@ describe("hot", () => {
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
-        Expected one of these tags: "ChangedCompilationMode", "ChangedBrowserUiPosition", "FocusedTab"
+        Expected one of these tags: "ChangedCompilationMode", "ChangedBrowserUiPosition", "ChangedOpenErrorOverlay", "FocusedTab", "PressedOpenEditor"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.

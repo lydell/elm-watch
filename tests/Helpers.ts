@@ -132,19 +132,17 @@ export function rmSymlink(symlink: string): void {
   }
 }
 
-export class FailReadStream extends stream.Readable implements ReadStream {
+export class SilentReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 
-  isRaw = true;
+  isRaw = false;
 
-  override _read(size: number): void {
-    throw new Error(
-      `Expected FailReadStream not to be read but tried to read ${size} bytes.`
-    );
+  override _read(): void {
+    // Do nothing.
   }
 
-  setRawMode(): void {
-    // Do nothing
+  setRawMode(isRaw: boolean): void {
+    this.isRaw = isRaw;
   }
 }
 

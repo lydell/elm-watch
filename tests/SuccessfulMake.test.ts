@@ -7,11 +7,11 @@ import {
   assertExitCode,
   clean,
   CursorWriteStream,
-  FailReadStream,
   logDebug,
   MemoryWriteStream,
   prependPATH,
   rimraf,
+  SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
 } from "./Helpers";
@@ -43,7 +43,7 @@ async function run(
       PATH:
         bin === undefined ? process.env.PATH : prependPATH(path.join(dir, bin)),
     },
-    stdin: new FailReadStream(),
+    stdin: new SilentReadStream(),
     stdout,
     stderr,
     logDebug,

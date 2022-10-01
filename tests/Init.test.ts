@@ -5,11 +5,11 @@ import { elmWatchCli } from "../src";
 import {
   assertExitCode,
   clean,
-  FailReadStream,
   logDebug,
   MemoryWriteStream,
   readFile,
   rm,
+  SilentReadStream,
   stringSnapshotSerializer,
   testExceptWindows,
 } from "./Helpers";
@@ -29,7 +29,7 @@ async function initSuccessHelper(
   const exitCode = await elmWatchCli(["init"], {
     cwd: dir,
     env: {},
-    stdin: new FailReadStream(),
+    stdin: new SilentReadStream(),
     stdout,
     stderr,
     logDebug,
@@ -56,7 +56,7 @@ async function initFailHelper(
   const exitCode = await elmWatchCli(["init", ...args], {
     cwd: dir,
     env: {},
-    stdin: new FailReadStream(),
+    stdin: new SilentReadStream(),
     stdout,
     stderr,
     logDebug,
