@@ -16,7 +16,7 @@ import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
-  __ELM_WATCH_OPEN_EDITOR_TIMEOUT,
+  __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
   ELM_WATCH_OPEN_EDITOR,
   Env,
@@ -1601,7 +1601,7 @@ const runCmd =
           mutable.project.elmWatchJsonPath.theElmWatchJsonPath
         );
         const timeout = silentlyReadIntEnvValue(
-          env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT],
+          env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
           5000
         );
         const extraEnv = {

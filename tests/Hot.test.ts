@@ -6,7 +6,7 @@ import * as path from "path";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
-  __ELM_WATCH_ELM_TIMEOUT,
+  __ELM_WATCH_ELM_TIMEOUT_MS,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
   NO_COLOR,
@@ -2671,7 +2671,7 @@ describe("hot", () => {
       bin: "compile-forever",
       env: {
         ...TEST_ENV,
-        [__ELM_WATCH_ELM_TIMEOUT]: "0",
+        [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
         window.Elm?.Main?.init({ node });
@@ -2749,7 +2749,7 @@ describe("hot", () => {
       bin: "compile-forever",
       env: {
         ...TEST_ENV,
-        [__ELM_WATCH_ELM_TIMEOUT]: "0",
+        [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
         window.Elm?.Main?.init({ node });

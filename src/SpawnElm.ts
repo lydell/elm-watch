@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { __ELM_WATCH_ELM_TIMEOUT, __ELM_WATCH_TMP_DIR, Env } from "./Env";
+import { __ELM_WATCH_ELM_TIMEOUT_MS, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
 import {
   JsonError,
@@ -167,7 +167,10 @@ function delayKill(
   env: Env,
   kill: () => void
 ): void {
-  const timeout = silentlyReadIntEnvValue(env[__ELM_WATCH_ELM_TIMEOUT], 10000);
+  const timeout = silentlyReadIntEnvValue(
+    env[__ELM_WATCH_ELM_TIMEOUT_MS],
+    10000
+  );
   const elapsed = getNow().getTime() - startTime;
   const timeoutId = setTimeout(kill, Math.max(0, timeout - elapsed));
   promise.finally(() => {

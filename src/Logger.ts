@@ -5,6 +5,8 @@ import {
   __ELM_WATCH_DEBUG,
   __ELM_WATCH_MOCKED_TIMINGS,
   __ELM_WATCH_NOT_TTY,
+  __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
+  __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
   Env,
   NO_COLOR,
   WT_SESSION,
@@ -16,6 +18,7 @@ import {
   join,
   ReadStream,
   removeColor,
+  silentlyReadIntEnvValue,
   WriteStream,
 } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
@@ -76,6 +79,19 @@ export function makeLogger({
   let onCtrlC = (): void => {
     // Do nothing.
   };
+
+  // In my testing, getting the responses take about 1 ms on macOS (both the
+  // default Terminal and iTerm), and about 10 ms on Gnome Terminal. 100 ms
+  // should be plenty, while still not being _too_ slow on terminals that
+  // don’t support querying colors.
+  const queryTerminalTimeoutMs = silentlyReadIntEnvValue(
+    env[__ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS],
+    100
+  );
+  const queryTerminalMaxAgeMs = silentlyReadIntEnvValue(
+    env[__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS],
+    1000
+  );
 
   const config: LoggerConfig = {
     debug: __ELM_WATCH_DEBUG in env,
@@ -171,6 +187,7 @@ export function makeLogger({
         const callbacks: Array<(stdin: string | undefined) => void> = [];
         queryTerminalStatus = { tag: "Querying", callbacks };
         const result = await queryTerminalHelper(
+          queryTerminalTimeoutMs,
           stdin,
           stdout,
           escapes,
@@ -200,7 +217,7 @@ export function makeLogger({
 
         case "Queried":
           return getNow().getTime() - queryTerminalStatus.date.getTime() <=
-            QUERY_TERMINAL_MAX_AGE_MS
+            queryTerminalMaxAgeMs
             ? queryTerminalStatus.stdin
             : run();
       }
@@ -214,9 +231,8 @@ type QueryTerminalStatus =
   | { tag: "Queried"; stdin: string | undefined; date: Date }
   | { tag: "Querying"; callbacks: Array<(stdin: string | undefined) => void> };
 
-const QUERY_TERMINAL_MAX_AGE_MS = 1000;
-
 async function queryTerminalHelper(
+  queryTerminalTimeoutMs: number,
   stdin: ReadStream,
   stdout: WriteStream,
   escapes: string,
@@ -238,13 +254,9 @@ async function queryTerminalHelper(
 
     stdout.write(escapes);
 
-    // In my testing, getting the responses take about 1 ms on macOS (both the
-    // default Terminal and iTerm), and about 10 ms on Gnome Terminal. 100 ms
-    // should be plenty, while still not being _too_ slow on terminals that
-    // don’t support querying colors.
     const timeoutId = setTimeout(() => {
       stdin.off("data", onStdin);
       resolve(undefined);
-    }, 100);
+    }, queryTerminalTimeoutMs);
   });
 }
