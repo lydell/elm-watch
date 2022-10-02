@@ -640,6 +640,8 @@ function getOrCreateTargetRoot(): Elements {
       "keydown",
       (event) => {
         if (overlayNonNull.hasChildNodes() && event.key === "Escape") {
+          event.preventDefault();
+          event.stopImmediatePropagation();
           closeAllErrorOverlays();
         }
       },
