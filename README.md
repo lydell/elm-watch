@@ -511,11 +511,51 @@ elm-watch’s hot reloading works by injecting an extra little program into your
 
 ## HTTPS
 
-**TL;DR:** Use `http://` for local development if you can and spare you the pain.
+**TL;DR:** Use `http://` for local development.
 
 I’d say it’s the most common to use plain old `http://` when working on `localhost`. One could argue that `https://` would be better even for local development since it’s closer to your production environment (which most likely uses `https://`). To be honest, I’ve tried using `https://` for local development and can’t remember a single time it saved me from a bug. Instead it just complicates things with certificates.
 
 With elm-watch HTTPS causes a new complexity. elm-watch uses Web Sockets for hot reloading. So now there’s the question of `ws://` vs `wss://`. Here are my findings last time I dove into this:
+
+✅ = works  
+🤕 = works with workaround  
+💥 = throws an error  
+❌ = never connects  
+📢 = logs a warning
+
+| Origin | Certificate | Web Socket | Chrome | Firefox | Safari | iOS Safari |
+| --- | --- | --- | --- | --- | --- | --- |
+| http: | n/a | ws: | ✅ | ✅ | ✅ | ✅ |
+| https://localhost | self-signed | ws: | ✅ | ✅ | ❌📢 | ❌📢 |
+| https://localhost | self-signed | wss: | ✅ | 🤕 | 🤕 | ✅ |
+| https://example.com | self-signed | ws: | 💥📢 | 💥 | ❌📢 | ? |
+| https://example.com | self-signed | wss: | ✅ | 🤕 | 🤕 | ? |
+| https://example.com | true signed | ws: | 💥📢 | 💥 | ❌📢 | ❌📢 |
+| https://example.com | true signed | wss: | ✅ | ✅ | ✅ | ✅ |
+
+- ✅ The Web Socket just connects without any problems.
+- 🤕 Required workaround: If elm-watch is using port 12345, you need to visit for example https://localhost:12345 once and accept the self-signed certificate. Then you can refresh https://localhost and the Web Socket should connect.
+- 💥 `new WebSocket("ws://...")` immediately throws an error (that can be caught using `try-catch`).
+- ❌ `new WebSocket("ws://...")` throws no error, but the Web Socket never connects.
+- 📢 A warning is logged to the browser console no matter what.
+
+Summary:
+
+- ✅ `http:` with `ws:` works perfectly.
+- ✅ True signed `https:` with `wss:` works perfectly.
+- 🤕 Self-signed `https:` with `wss:` works pretty good.
+- 🚨 `https:` with `ws:` depends:
+  - It might work sometimes in some browsers.
+  - It throw an error.
+  - It might never connect.
+  - It might pollute the browser console.
+
+Because of the above, elm-watch:
+
+- Always uses `ws:` on `http:` pages.
+- Always uses `wss:` on `https:` pages.
+
+TODO:
 
 - `ws://` works fine on `https://localhost` in both Chrome and Firefox these days.
 - However, Safari Desktop requires `wss://` on `https://` pages (even localhost).
