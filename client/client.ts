@@ -769,7 +769,8 @@ function initWebSocket(
 ): WebSocket {
   const hostname =
     window.location.hostname === "" ? "localhost" : window.location.hostname;
-  const url = new URL(`ws://${hostname}:${WEBSOCKET_PORT}/`);
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/`);
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
@@ -1232,7 +1233,7 @@ const runCmd =
         const { model } = cmd;
         const info: Info = {
           version: VERSION,
-          webSocketUrl: mutable.webSocket.url,
+          webSocketUrl: new URL(mutable.webSocket.url),
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
           initializedElmAppsStatus: checkInitializedElmAppsStatus(),
@@ -1571,7 +1572,7 @@ function h<T extends HTMLElement>(
 
 type Info = {
   version: string;
-  webSocketUrl: string;
+  webSocketUrl: URL;
   targetName: string;
   originalCompilationMode: CompilationModeWithProxy;
   initializedElmAppsStatus: InitializedElmAppsStatus;
@@ -2256,6 +2257,7 @@ function viewStatus(
           ["sleep", printRetryWaitMs(status.attemptNumber)],
         ],
         content: [
+          ...viewHttpsInfo(info.webSocketUrl),
           h(HTMLButtonElement, { disabled: true }, "Connecting web socket…"),
         ],
       };
@@ -2291,6 +2293,7 @@ function viewStatus(
           ["sleep", printRetryWaitMs(status.attemptNumber)],
         ],
         content: [
+          ...viewHttpsInfo(info.webSocketUrl),
           h(
             HTMLButtonElement,
             {
@@ -2359,12 +2362,33 @@ function compilationModeIcon(
   }
 }
 
-function printWebSocketUrl(webSocketUrl: string): string {
-  const url = new URL(webSocketUrl);
+function printWebSocketUrl(url: URL): string {
   const hostname = url.hostname.endsWith(".localhost")
     ? "localhost"
     : url.hostname;
   return `${url.protocol}//${hostname}:${url.port}`;
+}
+
+function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
+  return webSocketUrl.protocol === "wss:"
+    ? [
+        h(
+          HTMLParagraphElement,
+          {},
+          h(HTMLElement, { localName: "strong" }, "Note:"),
+          " Partial ",
+          h(
+            HTMLAnchorElement,
+            {
+              href: "https://github.com/lydell/elm-watch#https",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            "HTTPS Support"
+          )
+        ),
+      ]
+    : [];
 }
 
 type CompilationModeOption = {
@@ -2552,7 +2576,7 @@ function renderMockStatuses(
 
   const info: Omit<Info, "targetName"> = {
     version: VERSION,
-    webSocketUrl: "ws://localhost:53167",
+    webSocketUrl: new URL("ws://localhost:53167"),
     originalCompilationMode: "standard",
     initializedElmAppsStatus: {
       tag: "DebuggerModeStatus",
@@ -2587,7 +2611,9 @@ function renderMockStatuses(
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        webSocketUrl: "ws://development.admin.example.com.localhost:53167",
+        webSocketUrl: new URL(
+          "ws://development.admin.example.com.localhost:53167"
+        ),
       },
     },
     IPAdress: {
@@ -2596,7 +2622,7 @@ function renderMockStatuses(
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        webSocketUrl: "ws://192.168.123.123:53167",
+        webSocketUrl: new URL("ws://192.168.123.123:53167"),
       },
     },
     NoDebuggerYetWithDebugLogOptimizeError: {
