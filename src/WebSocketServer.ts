@@ -51,23 +51,9 @@ class PolyHttpServer {
     this.net.on("connection", (socket) => {
       socket.once("data", (buffer) => {
         socket.pause();
-
-        const byte = buffer[0];
-
-        // TODO: Just check 22 and always use http otherwise?
-        const server =
-          byte === 22
-            ? this.https
-            : byte !== undefined && byte > 32 && byte < 127
-            ? this.http
-            : undefined;
-
-        if (server !== undefined) {
-          socket.unshift(buffer);
-          server.emit("connection", socket);
-        }
-
-        // TODO: Test if nextTick is needed.
+        const server = buffer[0] === 22 ? this.https : this.http;
+        socket.unshift(buffer);
+        server.emit("connection", socket);
         process.nextTick(() => socket.resume());
       });
     });
