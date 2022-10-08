@@ -24,7 +24,7 @@ const THEME_ESCAPES_DONE_CHECK = "]11;";
 // On Gnome Terminal it ends with `\x1B\\`. I don’t think there’s any need of matching
 // the “end” – just take the hexadecimal parts we want.
 const THEME_ESCAPES_REGEX =
-  /\x1B](4;)?(\d+);rgb:([\da-f]+)\/([\da-f]+)\/([\da-f]+)/gi;
+  /\x1B](4;)?(\d+);rgb:([\da-f]{4})\/([\da-f]{4})\/([\da-f]{4})/gi;
 
 const INDEX_TO_COLOR: Record<number, Color> = {
   0: "black",

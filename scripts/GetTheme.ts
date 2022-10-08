@@ -12,4 +12,15 @@ const logger = makeLogger({
   logDebug: console.debug,
 });
 
-getThemeFromTerminal(logger).then(console.log).catch(console.error);
+logger.setRawMode(() => {
+  process.exit();
+});
+
+getThemeFromTerminal(logger)
+  .then((theme) => {
+    console.log(theme);
+  })
+  .catch(console.error)
+  .finally(() => {
+    logger.kill();
+  });
