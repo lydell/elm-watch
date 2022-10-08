@@ -2398,8 +2398,9 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
               target: "_blank",
               rel: "noreferrer",
             },
-            "More information."
-          )
+            "More information"
+          ),
+          "."
         ),
       ]
     : [];
