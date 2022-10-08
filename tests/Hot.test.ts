@@ -32,6 +32,7 @@ import {
   expandUi,
   failInit,
   FIXTURES_DIR,
+  getOverlay,
   moveUi,
   run,
   switchCompilationMode,
@@ -3220,6 +3221,68 @@ describe("hot", () => {
       ←·
       ↙↓
       ▲ ✅ 13:10:05 Main
+    `);
+  });
+
+  test("persisted open error overlay", async () => {
+    const { terminal } = await run({
+      fixture: "persisted-open-error-overlay",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      🚨 Main
+
+      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30
+
+      The 1st argument to \`text\` is not what I expect:
+
+      10|     , view = \\_ -> Html.text 5
+                                       ⧙^⧘
+      This argument is a number of type:
+
+          ⧙number⧘
+
+      But \`text\` needs the 1st argument to be:
+
+          ⧙String⧘
+
+      ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      🚨 ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(getOverlay()).toMatchInlineSnapshot(`
+      <overlay visible style="background-color: rgb(32, 30, 30);">
+      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30</button></p></summary>
+      <pre>The 1st argument to \`text\` is not what I expect:
+
+      10|     , view = \\_ -&gt; Html.text 5
+                                       <span style="color: rgb(241, 76, 76)">^</span>
+      This argument is a number of type:
+
+          <span style="color: rgb(229, 229, 16)">number</span>
+
+      But \`text\` needs the 1st argument to be:
+
+          <span style="color: rgb(229, 229, 16)">String</span>
+
+      <u>Hint</u>: Try using <span style="color: rgb(35, 209, 139)">String.fromInt</span> to convert it to a string?</pre></details>
+      </overlay>
     `);
   });
 

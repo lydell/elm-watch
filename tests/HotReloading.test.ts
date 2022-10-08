@@ -2467,7 +2467,7 @@ describe("hot reloading", () => {
   });
 
   describe("error overlay", () => {
-    test.only("multiple targets", async () => {
+    test("multiple targets", async () => {
       const fixture = "error-overlay";
       const dir = path.join(FIXTURES_DIR, fixture);
       const template = path.join(dir, "template");
