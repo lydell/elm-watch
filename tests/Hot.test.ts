@@ -41,6 +41,7 @@ import {
   getOverlay,
   moveUi,
   run,
+  showErrors,
   switchCompilationMode,
 } from "./HotHelpers";
 
@@ -3478,6 +3479,70 @@ describe("hot", () => {
           number
 
       Hint: Only Int and Float values work as numbers.</pre></details>
+      </overlay>
+    `);
+  });
+
+  test("error overlay bold and dim", async () => {
+    const { terminal } = await run({
+      fixture: "error-overlay-bold-and-dim",
+      args: [],
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 2:
+            expandUi();
+            showErrors();
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      🚨 Main
+
+      ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+      ⧙Target: Main⧘
+
+      I ran your postprocess command:
+
+      cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
+      printf '(function(...;}(this));' | node postprocess.js Main optimize hot
+
+      ⧙It exited with an error:⧘
+
+      exit 1
+      ⧙(no output)⧘
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed compilation mode to "optimize" of: Main⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+
+    expect(getOverlay()).toMatchInlineSnapshot(`
+      <overlay visible style="background-color: rgb(32, 30, 30);">
+      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <summary><span style="background-color: rgb(32, 30, 30);">POSTPROCESS ERROR</span><p>Target: Main</p></summary>
+      <pre>I ran your postprocess command:
+
+      cd /Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay-bold-and-dim
+      printf '(function(...;}(this));' | node postprocess.js Main optimize hot
+
+      <b>It exited with an error:</b>
+
+      exit 1
+      <span style="opacity: 0.6">(no output)</span></pre></details>
       </overlay>
     `);
   });

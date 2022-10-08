@@ -245,7 +245,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
     case "Bold":
       return `<b>${escapeHtml(piece.text)}</b>`;
     case "Dim":
-      return `<span style="opacity: 0.8">${escapeHtml(piece.text)}</span>`;
+      return `<span style="opacity: 0.6">${escapeHtml(piece.text)}</span>`;
     case "ElmStyle":
       return (
         (piece.bold ? /* istanbul ignore next */ "<b>" : "") +
