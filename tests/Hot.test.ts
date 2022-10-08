@@ -3888,53 +3888,94 @@ describe("hot", () => {
     `);
   });
 
-  describe("WebSocket server HTTP HTML page", () => {
-    test("http", async () => {
-      const fixture = "websocket-server-http-html";
-      const dir = path.join(FIXTURES_DIR, fixture);
-      const elmWatchJsonPath = path.join(dir, "elm-watch.json");
-      const elmWatchJson: unknown = JSON.parse(
-        fs.readFileSync(elmWatchJsonPath, "utf8")
-      );
-      const port = Decode.fields((field) => field("port", Decode.number))(
-        elmWatchJson
-      );
+  test("WebSocket server HTTP HTML page", async () => {
+    const fixture = "websocket-server-http-html";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    const elmWatchJsonPath = path.join(dir, "elm-watch.json");
+    const elmWatchJson: unknown = JSON.parse(
+      fs.readFileSync(elmWatchJsonPath, "utf8")
+    );
+    const port = Decode.fields((field) => field("port", Decode.number))(
+      elmWatchJson
+    );
 
-      let html = "(not set)";
+    let mainHtml = "(not set)";
+    let variations: Array<string> = ["(not set)"];
 
-      await run({
-        fixture,
-        args: ["Main"],
-        scripts: ["Main.js"],
-        init: (node) => {
-          window.Elm?.HtmlMain?.init({ node });
-        },
-        onIdle: async () => {
-          html = await httpGet(`http://localhost:${port}`);
-          return "Stop" as const;
-        },
-      });
-
-      expect(html).toMatchInlineSnapshot(`
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>elm-watch</title>
-            <style>
-              html {
-                font-family: system-ui, sans-serif;
-              }
-            </style>
-          </head>
-          <body>
-            <p>ℹ️ This is the elm-watch WebSocket server.</p>
-            
-          </body>
-        </html>
-      `);
+    await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: async () => {
+        mainHtml = await httpGet(`http://localhost:${port}`);
+        variations = await Promise.all([
+          httpGet(`https://localhost:${port}`),
+          httpGet(`http://localhost:${port}/accept`),
+          httpGet(`http://localhost:${port}/accept`, { setHost: false }),
+          httpGet(`https://localhost:${port}/accept`),
+          httpGet(`https://localhost:${port}/accept`, {
+            headers: { referer: `http://localhost:${port + 1}/page` },
+          }),
+          httpGet(`https://localhost:${port}/accept`, {
+            headers: { referer: `http://localhost:${port}/accept` },
+          }),
+        ]);
+        return "Stop" as const;
+      },
     });
+
+    expect(mainHtml).toMatchInlineSnapshot(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>elm-watch</title>
+          <style>
+            html {
+              font-family: system-ui, sans-serif;
+            }
+          </style>
+        </head>
+        <body>
+          <p>ℹ️ This is the elm-watch WebSocket server.</p>
+          
+        </body>
+      </html>
+    `);
+
+    const variationsString = variations
+      .map((html) => {
+        const match = /<body>\n( *)([^]*)<\/body>/.exec(html);
+        if (match === null) {
+          return `Unable to match '<body> ... </body>' in:\n${html}`;
+        }
+        const [, indent = "", content = "missing content"] = match;
+        return content.trim().replace(RegExp(`^ {${indent.length}}`, "gm"), "");
+      })
+      .join(`\n${"=".repeat(80)}\n`);
+
+    expect(variationsString).toMatchInlineSnapshot(`
+      <p>ℹ️ This is the elm-watch WebSocket server.</p>
+      ================================================================================
+      <p>ℹ️ This is the elm-watch WebSocket server.</p>
+      <p>Did you mean to go to the <a href="https://localhost:9753/accept">HTTPS version of this page</a> to accept elm-watch's self-signed certificate?</p>
+      ================================================================================
+      <p>ℹ️ This is the elm-watch WebSocket server.</p>
+      <p>Did you mean to go to the HTTPS version of this page to accept elm-watch's self-signed certificate?</p>
+      ================================================================================
+      <p>ℹ️ This is the elm-watch WebSocket server.</p>
+      <p>✅ Certificate accepted. You may now return to your page.</p>
+      ================================================================================
+      <p>ℹ️ This is the elm-watch WebSocket server.</p>
+      <p>✅ Certificate accepted. You may now <a href="http://localhost:9754/page">return to your page</a>.</p>
+      ================================================================================
+      <p>ℹ️ This is the elm-watch WebSocket server.</p>
+      <p>✅ Certificate accepted. You may now return to your page.</p>
+    `);
   });
 
   describe("printTimeline", () => {

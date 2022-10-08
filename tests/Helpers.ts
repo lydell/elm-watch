@@ -532,10 +532,13 @@ export const stringSnapshotSerializer = {
 export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;
 
-export async function httpGet(urlString: string): Promise<string> {
+export async function httpGet(
+  urlString: string,
+  options: http.RequestOptions = {}
+): Promise<string> {
   return new Promise((resolve, reject) => {
     (urlString.startsWith("https:") ? https : http)
-      .get(urlString, (res) => {
+      .get(urlString, { ...options, rejectUnauthorized: false }, (res) => {
         const chunks: Array<Buffer> = [];
 
         res.on("data", (chunk: Buffer) => {
