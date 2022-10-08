@@ -259,7 +259,7 @@ function html(isHttps: boolean, request: http.IncomingMessage): string {
           : `<p>Did you mean to go to the ${maybeLink(
               host !== undefined ? `https://${host}${request.url}` : undefined,
               "HTTPS version of this page"
-            )} to accept elm-watch’s self-signed certificate?</p>`
+            )} to accept elm-watch's self-signed certificate?</p>`
         : ""
     }
   </body>

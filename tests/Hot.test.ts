@@ -3,6 +3,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import * as Decode from "tiny-decoders";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
@@ -15,6 +16,7 @@ import { LatestEvent, printTimeline } from "../src/Hot";
 import { LoggerConfig } from "../src/Logger";
 import {
   clean,
+  httpGet,
   rimraf,
   rm,
   rmSymlink,
@@ -3884,6 +3886,55 @@ describe("hot", () => {
       ↓↘
       ▲ ✅ 13:10:05 Html
     `);
+  });
+
+  describe("WebSocket server HTTP HTML page", () => {
+    test("http", async () => {
+      const fixture = "websocket-server-http-html";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const elmWatchJsonPath = path.join(dir, "elm-watch.json");
+      const elmWatchJson: unknown = JSON.parse(
+        fs.readFileSync(elmWatchJsonPath, "utf8")
+      );
+      const port = Decode.fields((field) => field("port", Decode.number))(
+        elmWatchJson
+      );
+
+      let html = "(not set)";
+
+      await run({
+        fixture,
+        args: ["Main"],
+        scripts: ["Main.js"],
+        init: (node) => {
+          window.Elm?.HtmlMain?.init({ node });
+        },
+        onIdle: async () => {
+          html = await httpGet(`http://localhost:${port}`);
+          return "Stop" as const;
+        },
+      });
+
+      expect(html).toMatchInlineSnapshot(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>elm-watch</title>
+            <style>
+              html {
+                font-family: system-ui, sans-serif;
+              }
+            </style>
+          </head>
+          <body>
+            <p>ℹ️ This is the elm-watch WebSocket server.</p>
+            
+          </body>
+        </html>
+      `);
+    });
   });
 
   describe("printTimeline", () => {
