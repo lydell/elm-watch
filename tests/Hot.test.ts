@@ -805,29 +805,44 @@ describe("hot", () => {
       });
 
       const { terminal, renders } = await run({
-        fixture: "basic",
-        args: ["TargetNotFound"],
-        scripts: ["TargetNotFound.js"],
+        fixture: "target-not-found",
+        args: ["Enabled"],
+        scripts: ["Enabled1.js"],
         init: failInit,
         onIdle: () => "Stop",
       });
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ TargetNotFound⧙                                   1 ms Q | 765 ms T ¦  50 ms W⧘
+        🚨 EnabledNotFound
+        ✅ Enabled1⧙                                         1 ms Q | 765 ms T ¦  50 ms W⧘
+        ✅ Enabled2⧙                                         1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+        ⧙Target: EnabledNotFound⧘
+
+        You asked me to compile these inputs:
+
+        src/EnabledNotFound.elm ⧙(/Users/you/project/tests/fixtures/hot/target-not-found/src/EnabledNotFound.elm)⧘
+
+        ⧙But they don't exist!⧘
+
+        Is something misspelled? Or do you need to create them?
+
+        🚨 ⧙1⧘ error found
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
+        🚨 ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 TargetNotFound
+        ▼ 🔌 13:10:05 Enabled1
         ================================================================================
-        ▼ ⏳ 13:10:05 TargetNotFound
+        ▼ ⏳ 13:10:05 Enabled1
         ================================================================================
-        target TargetNotFound
+        target Enabled1
         elm-watch %VERSION%
         web socket ws://localhost:59123
         updated 2022-02-05 13:10:05
@@ -841,24 +856,17 @@ describe("hot", () => {
 
         These targets are available in elm-watch.json:
 
-        TargetNotFound
+        EnabledNotFound
+        Enabled1
+        Enabled2
 
         These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
 
-        Html
-        Worker
-        Removed
-        Readonly
-        InjectError
-        BadUrl
-        ParamsDecodeError
-        WrongVersion
-        TargetDisabled
-        SendBadJson
-        Reconnect
+        Disabled1
+        Disabled2
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
-        ▲ ❌ 13:10:05 TargetNotFound
+        ▲ ❌ 13:10:05 Enabled1
       `);
     });
 
