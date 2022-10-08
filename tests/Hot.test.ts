@@ -323,6 +323,89 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
   });
 
+  test("connect with elm.json error", async () => {
+    const fixture = "connect-with-elm-json-error";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    fs.copyFileSync(
+      path.join(dir, "elm.template.json"),
+      path.join(dir, "elm.json")
+    );
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    rm(path.join(dir, "elm.json"));
+
+    const { renders } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      expandUiImmediately: true,
+      keepBuild: true,
+      keepElmStuffJson: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json NOT FOUND ----------------------------------------------------------
+      Target: Main
+
+      I could not find an elm.json for these inputs:
+
+      src/Main.elm
+
+      Has it gone missing? Maybe run elm init to create one?
+      ▲ 🚨 13:10:05 Main
+    `);
+  });
+
   test("fail to read Elm’s output (no postprocess)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",

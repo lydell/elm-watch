@@ -84,6 +84,7 @@ type SharedRunOptions = {
   isTTY?: boolean;
   bin?: string;
   env?: Env;
+  keepBuild?: boolean;
   keepElmStuffJson?: boolean;
   clearElmStuff?: boolean;
   cwd?: string;
@@ -101,6 +102,7 @@ export async function run({
   isTTY = true,
   bin,
   env,
+  keepBuild = false,
   keepElmStuffJson = false,
   clearElmStuff = false,
   cwd = ".",
@@ -129,8 +131,10 @@ export async function run({
   const elmStuff = path.join(dir, "elm-stuff");
   const elmWatchStuff = path.join(elmStuff, "elm-watch", "stuff.json");
 
-  await rimraf(build);
-  fs.mkdirSync(build, { recursive: true });
+  if (!keepBuild) {
+    await rimraf(build);
+    fs.mkdirSync(build, { recursive: true });
+  }
 
   if (!keepElmStuffJson) {
     rm(elmWatchStuff);
@@ -305,15 +309,18 @@ export async function run({
       Object.assign(window.__ELM_WATCH, basic);
     };
 
-    watcher = fs.watch(build, () => {
-      if (absoluteScripts.every(fs.existsSync)) {
-        watcher?.close();
-        watcher = undefined;
-        loadBuiltFiles(false);
-      }
-    });
-
-    watcher.on("error", reject);
+    if (keepBuild) {
+      loadBuiltFiles(false);
+    } else {
+      watcher = fs.watch(build, () => {
+        if (absoluteScripts.every(fs.existsSync)) {
+          watcher?.close();
+          watcher = undefined;
+          loadBuiltFiles(false);
+        }
+      });
+      watcher.on("error", reject);
+    }
 
     elmWatchCli(["hot", ...args], {
       cwd: path.join(dir, cwd),
