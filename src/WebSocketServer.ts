@@ -70,6 +70,7 @@ class PolyHttpServer {
         error: (Error & { code?: string }) | undefined
       ): void => {
         numClosed++;
+        // istanbul ignore if
         if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
           reject(error);
         } else if (numClosed === 3) {
