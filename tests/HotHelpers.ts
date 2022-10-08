@@ -570,6 +570,17 @@ export function getOverlay(): string {
   return result;
 }
 
+export function clickFirstErrorLocation(): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(`[data-test-id="Overlay"] button`);
+    if (button instanceof HTMLButtonElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not find any button in overlay.`);
+    }
+  });
+}
+
 export function moveUi(position: BrowserUiPosition): void {
   expandUi();
   withShadowRoot((shadowRoot) => {

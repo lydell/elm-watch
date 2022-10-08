@@ -406,7 +406,8 @@ export type ReachedIdleStateReason =
   | "CompileError"
   | "ElmJsonError"
   | "EvalErrored"
-  | "EvalSucceeded";
+  | "EvalSucceeded"
+  | "OpenEditorFailed";
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
@@ -1196,7 +1197,12 @@ function onWebSocketToClientMessage(
               uiExpanded: true,
             }
           : model,
-        [],
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "OpenEditorFailed",
+          },
+        ],
       ];
 
     case "StatusChanged":

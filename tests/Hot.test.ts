@@ -9,7 +9,10 @@ import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
   __ELM_WATCH_ELM_TIMEOUT_MS,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
+  __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  ELM_WATCH_OPEN_EDITOR,
+  Env,
   NO_COLOR,
 } from "../src/Env";
 import { LatestEvent, printTimeline } from "../src/Hot";
@@ -29,6 +32,7 @@ import {
 import {
   assertDebugger,
   cleanupAfterEachTest,
+  clickFirstErrorLocation,
   expandUi,
   failInit,
   FIXTURES_DIR,
@@ -3284,6 +3288,234 @@ describe("hot", () => {
       <u>Hint</u>: Try using <span style="color: rgb(35, 209, 139)">String.fromInt</span> to convert it to a string?</pre></details>
       </overlay>
     `);
+  });
+
+  describe("click error location", () => {
+    const fixture = "persisted-open-error-overlay";
+
+    const runFailClickErrorLocation = async (env: Env): Promise<string> => {
+      const { renders } = await run({
+        fixture,
+        args: [],
+        scripts: ["Main.js"],
+        keepElmStuffJson: true,
+        env,
+        init: (node) => {
+          window.Elm?.Main?.init({ node });
+        },
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              clickFirstErrorLocation();
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+      return clean(renders);
+    };
+
+    test("env var not set", async () => {
+      const renders = await runFailClickErrorLocation({});
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Clicking error locations only works if you set it up.
+        Check this out: [Clickable error locations](https://github.com/lydell/elm-watch#clickable-error-locations)
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("unknown command", async () => {
+      const renders = await runFailClickErrorLocation({
+        [ELM_WATCH_OPEN_EDITOR]: "nope",
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
+
+        cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
+        nope
+
+        I ran the command with these extra environment variables:
+
+        {
+         "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
+         "line": "10",
+         "column": "30"
+        }
+
+        The command exited with code 127.
+
+        /bin/sh: nope: command not found
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("timeout", async () => {
+      const renders = await runFailClickErrorLocation({
+        [ELM_WATCH_OPEN_EDITOR]:
+          "node -e 'setTimeout(() => process.exit(1), 10000)'",
+        [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "10",
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
+
+        cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
+        node -e 'setTimeout(() => process.exit(1), 10000)'
+
+        I ran the command with these extra environment variables:
+
+        {
+         "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
+         "line": "10",
+         "column": "30"
+        }
+
+        The command took too long to run, and was killed after 10 ms.
+
+        (no output)
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("exit 1", async () => {
+      const renders = await runFailClickErrorLocation({
+        [ELM_WATCH_OPEN_EDITOR]: "node -e 'process.exit(1)'",
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
+
+        cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
+        node -e 'process.exit(1)'
+
+        I ran the command with these extra environment variables:
+
+        {
+         "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
+         "line": "10",
+         "column": "30"
+        }
+
+        The command exited with code 1.
+
+        (no output)
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("successful execution", async () => {
+      const outputFile = path.join(
+        FIXTURES_DIR,
+        fixture,
+        "click-error-location.txt"
+      );
+      rm(outputFile);
+
+      const { renders } = await run({
+        fixture,
+        args: [],
+        scripts: ["Main.js"],
+        keepElmStuffJson: true,
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: `node -e 'require("fs").writeFileSync("click-error-location.txt", process.argv[1])' "$file:$line:$column"`,
+        },
+        init: (node) => {
+          window.Elm?.Main?.init({ node });
+        },
+        onIdle: async () => {
+          clickFirstErrorLocation();
+          while (!fs.existsSync(outputFile)) {
+            await wait(100);
+          }
+          return "Stop" as const;
+        },
+      });
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+      `);
+      expect(clean(fs.readFileSync(outputFile, "utf-8"))).toMatchInlineSnapshot(
+        `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30`
+      );
+    });
   });
 
   test("persisted debug mode for Html", async () => {
