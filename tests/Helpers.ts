@@ -181,6 +181,13 @@ export class TerminalColorReadStream
   }
 }
 
+export class CtrlCReadStream extends SilentReadStream implements ReadStream {
+  ctrlC(): void {
+    this.data.push("\x03");
+    this._read();
+  }
+}
+
 export class MemoryWriteStream extends stream.Writable implements WriteStream {
   isTTY = true;
 

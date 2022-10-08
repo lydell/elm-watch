@@ -19,6 +19,7 @@ import { LatestEvent, printTimeline } from "../src/Hot";
 import { LoggerConfig } from "../src/Logger";
 import {
   clean,
+  CtrlCReadStream,
   httpGet,
   rimraf,
   rm,
@@ -4461,6 +4462,49 @@ describe("hot", () => {
       ================================================================================
       <p>ℹ️ This is the elm-watch WebSocket server.</p>
       <p>✅ Certificate accepted. You may now return to your page.</p>
+    `);
+  });
+
+  test("ctrl+c", async () => {
+    const stdin = new CtrlCReadStream();
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      stdin,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: () => {
+        stdin.ctrlC();
+        return "KeepGoing";
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
+      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ✅ 13:10:05 Html
     `);
   });
 
