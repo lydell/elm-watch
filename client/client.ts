@@ -2734,6 +2734,15 @@ function renderMockStatuses(
       date,
       attemptNumber: 100,
     },
+    ConnectingWss: {
+      tag: "Connecting",
+      date,
+      attemptNumber: 1,
+      info: {
+        ...info,
+        webSocketUrl: new URL("wss://localhost:53167"),
+      },
+    },
     EvalError: {
       tag: "EvalError",
       date,
@@ -2742,6 +2751,15 @@ function renderMockStatuses(
       tag: "SleepingBeforeReconnect",
       date,
       attemptNumber: 1,
+    },
+    SleepingBeforeReconnectWss: {
+      tag: "SleepingBeforeReconnect",
+      date,
+      attemptNumber: 1,
+      info: {
+        ...info,
+        webSocketUrl: new URL("wss://localhost:53167"),
+      },
     },
     UnexpectedError: {
       tag: "UnexpectedError",
