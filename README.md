@@ -292,7 +292,7 @@ Example:
 | --- | --- | --- | --- |
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
 | [postprocess](#postprocess) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
-| port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | Web Socket port for hot reloading. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
+| port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | WebSocket port for hot reloading. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
 
 ### targets
 
@@ -507,23 +507,56 @@ That said, hot reloading is essentially a hack. But a pretty good one. As long a
 
 In case you’re wondering, elm-watch has its own hot reloading implementation, built with Elm’s needs at the core. In other words, elm-watch is _not_ using the common [elm-hot] package (which is more focused on fitting into the hot reloading systems of [webpack] and [Parcel]).
 
-elm-watch’s hot reloading works by injecting an extra little program into your built JavaScript files (when running `elm-watch hot` only, not `elm-watch make`). It renders the browser UI in the bottom-left corner, and connects to elm-watch’s Web Socket server. You’re not supposed to really notice or have to think any of that, but it can help to know how the “magic” works when debugging things. Or just for fun.
+elm-watch’s hot reloading works by injecting an extra little program into your built JavaScript files (when running `elm-watch hot` only, not `elm-watch make`). It renders the browser UI in the bottom-left corner, and connects to elm-watch’s WebSocket server. You’re not supposed to really notice or have to think any of that, but it can help to know how the “magic” works when debugging things. Or just for fun.
 
 ## HTTPS
 
-**TL;DR:** Use `http://` for local development if you can and spare you the pain.
+**TL;DR:** I recommend using `http://` for local development. If you really want `https://`, accept elm-watch’s “unsafe” self-signed SSL certificate.
 
 I’d say it’s the most common to use plain old `http://` when working on `localhost`. One could argue that `https://` would be better even for local development since it’s closer to your production environment (which most likely uses `https://`). To be honest, I’ve tried using `https://` for local development and can’t remember a single time it saved me from a bug. Instead it just complicates things with certificates.
 
-With elm-watch HTTPS causes a new complexity. elm-watch uses Web Sockets for hot reloading. So now there’s the question of `ws://` vs `wss://`. Here are my findings last time I dove into this:
+With elm-watch HTTPS causes a new complexity: elm-watch uses WebSockets for hot reloading, which results in the question of `ws://` vs `wss://`.
 
-- `ws://` works fine on `https://localhost` in both Chrome and Firefox these days.
-- However, Safari Desktop requires `wss://` on `https://` pages (even localhost).
-- You can use a self-signed certificate (but get security prompts in the browser). If you set up your `https://` and `wss://` with the same certificate, it works seamlessly.
-- …except that Firefox requires you to separately visit the `wss://` origin and accept the unsafe certificate, which is very non-intuitive.
-- Safari for iOS does not seem to allow self-signed certificates for Web Sockets at all.
+elm-watch uses:
 
-In short, you _can_ use a simple `ws://` together with `https://` in _some_ cases. But to get things working all the time, you would have to create a certificate and add it to your computer OS and phone OS so it becomes trusted for real. Which is a bit annoying. If you are doing that and would like to be able to configure elm-watch to use that certificate as well (with `wss://`), please let me know! Until then, elm-watch keeps things simple and _always_ uses `ws://`.
+- `ws://` on `http://` pages.
+- `wss://` on `https://` pages.
+
+If you use `https://`, then the first time you visit your page you’ll see how elm-watch’s WebSocket gets stuck in the 🔌 connecting state. In the browser console you might see messages about connection errors due to an invalid certificate. You need to accept the certificate to make it work.
+
+Click elm-watch’s [browser UI](#browser-ui) to expand it. There’s a link there that goes to the WebSocket server. When you click it, your browser will show a scary-looking security screen. That’s because elm-watch uses a self-signed certificate, which isn’t secure. However, there’s no security to worry about here – elm-watch just needs a certificate to be able to use `wss://` (which is basically required on `https://` pages – more on that below). Click a few buttons to proceed to the page anyway. Once you’ve done that once, the browser remembers your choice. Go back to your page (and possibly refresh the page) and now the WebSocket should connect! If you’ve ever created a self-signed certificate yourself for development – that’s exactly what’s happening here. elm-watch ships with a generic self-signed certificate created with `openssl`.
+
+If you’d like to be able to configure the certificate used by elm-watch, let me know!
+
+Here are my findings from testing different combinations of http/s, ws/s, localhost vs not-localhost, and self-signed vs valid certificates:
+
+✅ = Works.  
+🤕 = Works with workaround: If elm-watch is using port 12345, you need to visit for example https://localhost:12345 once and accept the self-signed certificate.  
+💥 = `new WebSocket("ws://...")` immediately throws an error (that can be caught using `try-catch`).  
+❌ = `new WebSocket("ws://...")` throws no error, but the WebSocket never connects.  
+📢 = A warning is logged to the browser console. It cannot be turned off.  
+❓ = Not tested.
+
+| Origin | Certificate | WebSocket | Chrome | Firefox | Safari | iOS Safari |
+| --- | --- | --- | --- | --- | --- | --- |
+| http: | n/a | ws: | ✅ | ✅ | ✅ | ✅ |
+| https://localhost | self-signed | ws: | ✅ | ✅ | ❌📢 | ❌📢 |
+| https://localhost | self-signed | wss: | ✅ | 🤕 | 🤕 | ✅ |
+| https://example.com | self-signed | ws: | 💥📢 | 💥 | ❌📢 | ❓ |
+| https://example.com | self-signed | wss: | ✅ | 🤕 | 🤕 | ❓ |
+| https://example.com | valid | ws: | 💥📢 | 💥 | ❌📢 | ❌📢 |
+| https://example.com | valid | wss: | ✅ | ✅ | ✅ | ✅ |
+
+Summary:
+
+- ✅ `http:` with `ws:` works perfectly.
+- ✅ Valid `https:` with `wss:` works perfectly.
+- 🤕 Self-signed `https:` with `wss:` works pretty good.
+- 🚨 `https:` with `ws:` depends:
+  - It might work sometimes (localhost).
+  - It might throw an error.
+  - It might never connect.
+  - It might pollute the browser console.
 
 ## Comparison to other tools
 
@@ -541,7 +574,7 @@ There are many CLI programs that let you watch for file changes and then run a g
 
 - **Build duplication.** You need to maintain your watcher command, and a separate build command for every target. With elm-watch, your targets are defined in [elm-watch.json](#elm-watchjson) so you can both watch and build for production easily.
 
-- **Hot reloading.** That’s just not doable with an ad-hoc command. Sure, you might find some smooth Web Socket CLI, but you still need to do the code injection in Elm’s compiled JS.
+- **Hot reloading.** That’s just not doable with an ad-hoc command. Sure, you might find some smooth WebSocket CLI, but you still need to do the code injection in Elm’s compiled JS.
 
 - **Mode switching.** elm-watch makes it super easy to toggle Elm’s debugger, directly from the browser. An ad-hoc command probably means stopping the watcher and restarting with some flag or environment variable set.
 

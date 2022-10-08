@@ -1,5 +1,11 @@
+import * as fs from "fs";
 import * as http from "http";
 import * as https from "https";
+import * as net from "net";
+import * as path from "path";
+import { fileURLToPath } from "url";
+
+const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.argv.length !== 3) {
   console.error(
@@ -200,7 +206,7 @@ function proxyToWeb(req, res, log, hostname) {
 
 const LOOKS_LIKE_IP_ADDRESS = /^(\d+\.\d+\.\d+\.\d+):\d+$/;
 
-function indexPage(host = "", userAgent = "", url = "/") {
+function indexPage(host = "", userAgent = "", url = "/", isHttps = false) {
   // On mobile you go to http://192.168.x.x instead of http://localhost.
   // There, link to the different ports since subdomains cannot be used
   // with IP addresses.
@@ -213,6 +219,7 @@ function indexPage(host = "", userAgent = "", url = "/") {
     !userAgent.includes("Chrome");
   const boringHost =
     match !== null ? match[1] : isSafari ? "localhost" : undefined;
+  const protocol = isHttps ? "https" : "http";
 
   return `
 <!DOCTYPE html>
@@ -236,13 +243,15 @@ function indexPage(host = "", userAgent = "", url = "/") {
           const [href, title] =
             boringHost === undefined
               ? [
-                  `http://${
+                  `${protocol}://${
                     serverConfig.subdomain
                   }.localhost:${DEV_SERVER_PORT}${escapeHtml(url)}`,
                   `${serverConfig.subdomain}.localhost:${DEV_SERVER_PORT}`,
                 ]
               : [
-                  `http://${boringHost}:${serverConfig.port}${escapeHtml(url)}`,
+                  `${protocol}://${boringHost}:${serverConfig.port}${escapeHtml(
+                    url
+                  )}`,
                   `${serverConfig.subdomain}: ${boringHost}:${serverConfig.port}`,
                 ];
           return `
@@ -298,18 +307,47 @@ function formatTime(date) {
     .join(":");
 }
 
+const CERTIFICATE = {
+  key: fs.readFileSync(path.join(DIRNAME, "certificate", "dev.key")),
+  cert: fs.readFileSync(path.join(DIRNAME, "certificate", "dev.crt")),
+};
+
+// This serves both on HTTP and HTTPS for testing.
+// In a real project, I recommend using `http.createServer` instead of this function.
+// Inspired by: https://stackoverflow.com/a/42019773
+function createServer(handler) {
+  const netServer = net.createServer();
+  const httpServer = http.createServer(handler);
+  const httpsServer = https.createServer(CERTIFICATE, handler);
+
+  netServer.on("connection", (socket) => {
+    socket.once("data", (buffer) => {
+      socket.pause();
+      const server = buffer[0] === 22 ? httpsServer : httpServer;
+      socket.unshift(buffer);
+      server.emit("connection", socket);
+      server.on("close", () => {
+        socket.destroy();
+      });
+      process.nextTick(() => socket.resume());
+    });
+  });
+
+  return netServer;
+}
+
 // These servers are needed when testing on mobile: You can’t use localhost
 // there, so you need to type in your IP address. Then it’s not possible to
 // have subdomains, so we need servers on different ports.
 for (const serverConfig of servers) {
-  const server = http.createServer((req, res) => {
+  const server = createServer((req, res) => {
     serverConfig.serve(req, res, makeLog(req));
   });
   server.listen(serverConfig.port);
 }
 
 // This server lets you access all apps from one place.
-const convenienceServer = http.createServer((req, res) => {
+const convenienceServer = createServer((req, res) => {
   const { host } = req.headers;
   const log = makeLog(req);
 
@@ -320,12 +358,16 @@ const convenienceServer = http.createServer((req, res) => {
   if (serverConfig === undefined) {
     log(404);
     res.writeHead(404);
-    res.end(indexPage(host, req.headers["user-agent"], req.url));
+    res.end(
+      indexPage(host, req.headers["user-agent"], req.url, req.socket.encrypted)
+    );
   } else {
     serverConfig.serve(req, res, log);
   }
 });
 
 convenienceServer.listen(DEV_SERVER_PORT, () => {
-  console.log(`Server ready at: http://localhost:${DEV_SERVER_PORT}`);
+  console.log("Server ready at:");
+  console.log(`http://localhost:${DEV_SERVER_PORT}`);
+  console.log(`https://localhost:${DEV_SERVER_PORT}`);
 });

@@ -1,6 +1,11 @@
+import * as http from "http";
+import * as https from "https";
+import * as net from "net";
+import type { Duplex } from "stream";
 import * as util from "util";
 import WebSocket, { Server as WsServer } from "ws";
 
+import { CERTIFICATE } from "./Certificate";
 import { Port, PortChoice } from "./Port";
 
 export type WebSocketServerMsg =
@@ -34,8 +39,86 @@ type WebSocketServerError =
       error: Error;
     };
 
+// Inspired by: https://stackoverflow.com/a/42019773
+class PolyHttpServer {
+  private net = net.createServer();
+
+  private http = http.createServer();
+
+  private https = https.createServer(CERTIFICATE);
+
+  constructor() {
+    this.net.on("connection", (socket) => {
+      socket.once("data", (buffer) => {
+        socket.pause();
+        const server = buffer[0] === 22 ? this.https : this.http;
+        socket.unshift(buffer);
+        server.emit("connection", socket);
+        server.on("close", () => {
+          socket.destroy();
+        });
+        process.nextTick(() => socket.resume());
+      });
+    });
+  }
+
+  listen(port: number): void {
+    this.net.listen(port);
+  }
+
+  async close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let numClosed = 0;
+      const callback = (
+        error: (Error & { code?: string }) | undefined
+      ): void => {
+        numClosed++;
+        // istanbul ignore if
+        if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
+          reject(error);
+        } else if (numClosed === 3) {
+          resolve();
+        }
+      };
+      this.net.close(callback);
+      this.http.close(callback);
+      this.https.close(callback);
+    });
+  }
+
+  onRequest(listener: (isHttps: boolean) => http.RequestListener): void {
+    this.http.on("request", listener(false));
+    this.https.on("request", listener(true));
+  }
+
+  onUpgrade(
+    listener: (
+      req: InstanceType<typeof http.IncomingMessage>,
+      socket: Duplex,
+      head: Buffer
+    ) => void
+  ): void {
+    this.http.on("upgrade", listener);
+    this.https.on("upgrade", listener);
+  }
+
+  onError(listener: (error: Error & { code?: string }) => void): void {
+    this.net.on("error", listener);
+    this.http.on("error", listener);
+    this.https.on("error", listener);
+  }
+
+  onceListening(listener: (address: net.AddressInfo) => void): void {
+    this.net.once("listening", () => {
+      listener(this.net.address() as net.AddressInfo);
+    });
+  }
+}
+
 export class WebSocketServer {
-  private webSocketServer: WsServer;
+  private polyHttpServer = new PolyHttpServer();
+
+  private webSocketServer = new WsServer({ noServer: true });
 
   port: Port;
 
@@ -47,21 +130,6 @@ export class WebSocketServer {
 
   constructor(portChoice: PortChoice) {
     this.dispatch = this.dispatchToQueue;
-
-    this.webSocketServer = new WsServer({
-      // If `port` is 0, the operating system will assign an arbitrary unused port.
-      port: portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
-    });
-
-    this.port = { tag: "Port", thePort: 0 };
-    this.listening = new Promise((resolve) => {
-      this.webSocketServer.once("listening", () => {
-        const { port } =
-          this.webSocketServer.address() as WebSocket.AddressInfo;
-        this.port.thePort = port;
-        resolve();
-      });
-    });
 
     this.webSocketServer.on("connection", (webSocket, request) => {
       (
@@ -103,7 +171,7 @@ export class WebSocketServer {
       });
     });
 
-    this.webSocketServer.on("error", (error: Error & { code?: string }) => {
+    this.polyHttpServer.onError((error) => {
       this.dispatch({
         tag: "WebSocketServerError",
         error:
@@ -113,6 +181,29 @@ export class WebSocketServer {
               { tag: "OtherError", error },
       });
     });
+
+    this.polyHttpServer.onRequest((isHttps) => (request, response) => {
+      response.end(html(isHttps, request));
+    });
+
+    this.polyHttpServer.onUpgrade((request, socket, head) => {
+      this.webSocketServer.handleUpgrade(request, socket, head, (webSocket) => {
+        this.webSocketServer.emit("connection", webSocket, request);
+      });
+    });
+
+    this.port = { tag: "Port", thePort: 0 };
+    this.listening = new Promise((resolve) => {
+      this.polyHttpServer.onceListening((address) => {
+        this.port.thePort = address.port;
+        resolve();
+      });
+    });
+
+    this.polyHttpServer.listen(
+      // If `port` is 0, the operating system will assign an arbitrary unused port.
+      portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort
+    );
   }
 
   dispatchToQueue = (msg: WebSocketServerMsg): void => {
@@ -134,19 +225,52 @@ export class WebSocketServer {
   }
 
   async close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // This terminates all connections and closes the server.
-      this.webSocketServer.close((error) => {
-        // istanbul ignore else
-        if (error === undefined) {
-          resolve();
-        } else {
-          reject(error);
-        }
-      });
-      for (const webSocket of this.webSocketServer.clients) {
-        webSocket.close();
-      }
-    });
+    // This terminates all connections.
+    this.webSocketServer.close();
+    await this.polyHttpServer.close();
+    for (const webSocket of this.webSocketServer.clients) {
+      webSocket.close();
+    }
   }
+}
+
+function html(isHttps: boolean, request: http.IncomingMessage): string {
+  const { host, referer } = request.headers;
+  return `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>elm-watch</title>
+    <style>
+      html {
+        font-family: system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <p>ℹ️ This is the elm-watch WebSocket server.</p>
+    ${
+      request.url === "/accept"
+        ? isHttps
+          ? `<p>✅ Certificate accepted. You may now ${maybeLink(
+              referer !== undefined && new URL(referer).host !== host
+                ? referer
+                : undefined,
+              "return to your page"
+            )}.</p>`
+          : `<p>Did you mean to go to the ${maybeLink(
+              host !== undefined ? `https://${host}${request.url}` : undefined,
+              "HTTPS version of this page"
+            )} to accept elm-watch's self-signed certificate?</p>`
+        : ""
+    }
+  </body>
+</html>
+  `.trim();
+}
+
+function maybeLink(href: string | undefined, text: string): string {
+  return href === undefined ? text : `<a href="${href}">${text}</a>`;
 }

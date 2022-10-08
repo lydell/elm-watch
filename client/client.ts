@@ -659,10 +659,10 @@ const initMutable =
       webSocketTimeoutId: undefined,
     };
 
-    // These events might happen before the Web Socket is ready.
+    // These events might happen before the WebSocket is ready.
     // Firefox throws this error via `FocusedTab`:
     // DOMException: An attempt was made to use an object that is not, or is no longer, usable
-    // So wait until the Web Socket is ready before starting those listeners.
+    // So wait until the WebSocket is ready before starting those listeners.
     mutable.webSocket.addEventListener(
       "open",
       () => {
@@ -769,7 +769,8 @@ function initWebSocket(
 ): WebSocket {
   const hostname =
     window.location.hostname === "" ? "localhost" : window.location.hostname;
-  const url = new URL(`ws://${hostname}:${WEBSOCKET_PORT}/`);
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/`);
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
@@ -877,7 +878,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
         statusToStatusType(model.status.tag) === "Error" ? { ...model } : model,
         // Send these commands regardless of current status: We want to prioritize the target
         // due to the focus no matter what, and after waking up on iOS we need to check the
-        // Web Socket connection no matter what as well. For example, it’s possible to lock
+        // WebSocket connection no matter what as well. For example, it’s possible to lock
         // the phone while Busy, and then we miss the “done” message, which makes us still
         // have the Busy status when unlocking the phone.
         [
@@ -1232,7 +1233,7 @@ const runCmd =
         const { model } = cmd;
         const info: Info = {
           version: VERSION,
-          webSocketUrl: mutable.webSocket.url,
+          webSocketUrl: new URL(mutable.webSocket.url),
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
           initializedElmAppsStatus: checkInitializedElmAppsStatus(),
@@ -1262,7 +1263,7 @@ const runCmd =
           // `JSON.stringify` is outside the `try` block in case it throws an
           // error – then we at least have a chance of noticing it.
           // eslint-disable-next-line no-console
-          console.error("elm-watch: Failed to send Web Socket message:", error);
+          console.error("elm-watch: Failed to send WebSocket message:", error);
         }
         return;
       }
@@ -1301,10 +1302,10 @@ const runCmd =
       // On iOS, if you lock the phone and wait a couple of seconds, the Web
       // Socket disconnects (check the “web socket connections: X” counter in
       // the terminal). Same thing if you just go to the home screen.  When you
-      // go back to the tab, I’ve ended up in a state where the Web Socket
+      // go back to the tab, I’ve ended up in a state where the WebSocket
       // appears connected, but you don’t receive any messages and when I tried
       // to switch compilation mode the server never got any message. Apparently
-      // “broken connections” is a thing with Web Sockets and the way you detect
+      // “broken connections” is a thing with WebSockets and the way you detect
       // them is by sending a ping-pong pair with a timeout:
       // https://github.com/websockets/ws/tree/975382178f8a9355a5a564bb29cb1566889da9ba#how-to-detect-and-close-broken-connections
       // In our case, the window "focus" event occurs when returning to the page
@@ -1320,7 +1321,7 @@ const runCmd =
             // - OPEN: That’s not really true.
             // - CLOSED: We missed the "close" event (iOS didn’t give it to us).
             // Either way, `mutable.webSocket.close()` is safe to run even if
-            // the Web Socket is already closed. Finally, on OPEN, the
+            // the WebSocket is already closed. Finally, on OPEN, the
             // `.close()` method seems to never trigger our "close" listener, so
             // always dispatch ourselves. It doesn’t matter if another dispatch
             // is made just after.
@@ -1571,7 +1572,7 @@ function h<T extends HTMLElement>(
 
 type Info = {
   version: string;
-  webSocketUrl: string;
+  webSocketUrl: URL;
   targetName: string;
   originalCompilationMode: CompilationModeWithProxy;
   initializedElmAppsStatus: InitializedElmAppsStatus;
@@ -2256,6 +2257,7 @@ function viewStatus(
           ["sleep", printRetryWaitMs(status.attemptNumber)],
         ],
         content: [
+          ...viewHttpsInfo(info.webSocketUrl),
           h(HTMLButtonElement, { disabled: true }, "Connecting web socket…"),
         ],
       };
@@ -2291,6 +2293,7 @@ function viewStatus(
           ["sleep", printRetryWaitMs(status.attemptNumber)],
         ],
         content: [
+          ...viewHttpsInfo(info.webSocketUrl),
           h(
             HTMLButtonElement,
             {
@@ -2359,12 +2362,48 @@ function compilationModeIcon(
   }
 }
 
-function printWebSocketUrl(webSocketUrl: string): string {
-  const url = new URL(webSocketUrl);
+function printWebSocketUrl(url: URL): string {
   const hostname = url.hostname.endsWith(".localhost")
     ? "localhost"
     : url.hostname;
   return `${url.protocol}//${hostname}:${url.port}`;
+}
+
+function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
+  return webSocketUrl.protocol === "wss:"
+    ? [
+        h(
+          HTMLParagraphElement,
+          {},
+          h(HTMLElement, { localName: "strong" }, "Having trouble connecting?")
+        ),
+        h(
+          HTMLParagraphElement,
+          {},
+          " You might need to ",
+          h(
+            HTMLAnchorElement,
+            { href: new URL(`https://${webSocketUrl.host}/accept`).href },
+            "accept elm-watch’s self-signed certificate"
+          ),
+          ". "
+        ),
+        h(
+          HTMLParagraphElement,
+          {},
+          h(
+            HTMLAnchorElement,
+            {
+              href: "https://github.com/lydell/elm-watch#https",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            "More information"
+          ),
+          "."
+        ),
+      ]
+    : [];
 }
 
 type CompilationModeOption = {
@@ -2552,7 +2591,7 @@ function renderMockStatuses(
 
   const info: Omit<Info, "targetName"> = {
     version: VERSION,
-    webSocketUrl: "ws://localhost:53167",
+    webSocketUrl: new URL("ws://localhost:53167"),
     originalCompilationMode: "standard",
     initializedElmAppsStatus: {
       tag: "DebuggerModeStatus",
@@ -2587,7 +2626,9 @@ function renderMockStatuses(
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        webSocketUrl: "ws://development.admin.example.com.localhost:53167",
+        webSocketUrl: new URL(
+          "ws://development.admin.example.com.localhost:53167"
+        ),
       },
     },
     IPAdress: {
@@ -2596,7 +2637,7 @@ function renderMockStatuses(
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        webSocketUrl: "ws://192.168.123.123:53167",
+        webSocketUrl: new URL("ws://192.168.123.123:53167"),
       },
     },
     NoDebuggerYetWithDebugLogOptimizeError: {
@@ -2693,6 +2734,15 @@ function renderMockStatuses(
       date,
       attemptNumber: 100,
     },
+    ConnectingWss: {
+      tag: "Connecting",
+      date,
+      attemptNumber: 1,
+      info: {
+        ...info,
+        webSocketUrl: new URL("wss://localhost:53167"),
+      },
+    },
     EvalError: {
       tag: "EvalError",
       date,
@@ -2701,6 +2751,15 @@ function renderMockStatuses(
       tag: "SleepingBeforeReconnect",
       date,
       attemptNumber: 1,
+    },
+    SleepingBeforeReconnectWss: {
+      tag: "SleepingBeforeReconnect",
+      date,
+      attemptNumber: 1,
+      info: {
+        ...info,
+        webSocketUrl: new URL("wss://localhost:53167"),
+      },
     },
     UnexpectedError: {
       tag: "UnexpectedError",
