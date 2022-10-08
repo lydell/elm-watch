@@ -7,6 +7,7 @@ import * as path from "path";
 import {
   rimraf,
   stringSnapshotSerializer,
+  TerminalColorReadStream,
   touch,
   wait,
   waitOneFrame,
@@ -2466,7 +2467,7 @@ describe("hot reloading", () => {
       `);
   });
 
-  describe.only("error overlay", () => {
+  describe("error overlay", () => {
     const fixture = "error-overlay";
     const dir = path.join(FIXTURES_DIR, fixture);
     const template = path.join(dir, "template");
@@ -2964,12 +2965,13 @@ describe("hot reloading", () => {
       `);
     });
 
-    test("automatically hide and show the overlay", async () => {
+    test("automatically hide and show the overlay, with terminal theme", async () => {
       const { replace, go } = runHotReload({
         fixture,
         name: "App",
         programType: "Html",
         compilationMode: "standard",
+        stdin: new TerminalColorReadStream(),
       });
 
       const overlays: Array<string> = [];
@@ -3007,36 +3009,36 @@ describe("hot reloading", () => {
 
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
-        <pre>I cannot do addition with <span style="color: rgb(229, 229, 16)">String</span> values like this one:
+        <overlay visible style="background-color: rgb(170, 187, 204);">
+        <details open="" id="0" data-target-names="App" style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
+        <summary><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
+        <pre>I cannot do addition with <span style="color: #333333">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)
-                             <span style="color: rgb(241, 76, 76)">^^^^^^^^^^^^^^^</span>
-        The (+) operator only works with <span style="color: rgb(229, 229, 16)">Int</span> and <span style="color: rgb(229, 229, 16)">Float</span> values.
+                             <span style="color: #999999">^^^^^^^^^^^^^^^</span>
+        The (+) operator only works with <span style="color: #333333">Int</span> and <span style="color: #333333">Float</span> values.
 
-        <u>Hint</u>: Switch to the <span style="color: rgb(35, 209, 139)">(++)</span> operator to append strings!</pre></details>
+        <u>Hint</u>: Switch to the <span style="color: #aaaaaa">(++)</span> operator to append strings!</pre></details>
         </overlay>
         ================================================================================
-        <overlay hidden style="background-color: rgb(32, 30, 30);">
+        <overlay hidden style="background-color: rgb(170, 187, 204);">
 
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">SYNTAX PROBLEM</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></summary>
+        <overlay visible style="background-color: rgb(170, 187, 204);">
+        <details open="" id="0" data-target-names="App" style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
+        <summary><span style="background-color: rgb(170, 187, 204);">SYNTAX PROBLEM</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></summary>
         <pre>I got stuck here:
 
         1|  App exposing (main)
-            <span style="color: rgb(241, 76, 76)">^</span>
+            <span style="color: #999999">^</span>
         I am not sure what is going on, but I recommend starting an Elm file with the
         following lines:
 
-            <span style="color: rgb(41, 184, 219)">import</span> Html
+            <span style="color: #eeeeee">import</span> Html
             
             main =
-              Html.text <span style="color: rgb(229, 229, 16)">"Hello!"</span>
+              Html.text <span style="color: #333333">"Hello!"</span>
 
         You should be able to copy those lines directly into your file. Check out the
         examples at &lt;https://elm-lang.org/examples&gt; for more help getting started!

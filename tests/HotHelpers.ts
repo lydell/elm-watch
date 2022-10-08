@@ -9,6 +9,7 @@ import {
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
+import { ReadStream } from "../src/Helpers";
 import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
 import { BrowserUiPosition, CompilationMode } from "../src/Types";
@@ -87,6 +88,7 @@ type SharedRunOptions = {
   clearElmStuff?: boolean;
   cwd?: string;
   includeProxyReloads?: boolean;
+  stdin?: ReadStream;
 };
 
 export async function run({
@@ -103,6 +105,7 @@ export async function run({
   clearElmStuff = false,
   cwd = ".",
   includeProxyReloads = false,
+  stdin = new SilentReadStream(),
 }: SharedRunOptions & {
   fixture: string;
   scripts: Array<string>;
@@ -315,7 +318,7 @@ export async function run({
     elmWatchCli(["hot", ...args], {
       cwd: path.join(dir, cwd),
       env: fullEnv,
-      stdin: new SilentReadStream(),
+      stdin,
       stdout,
       stderr,
       logDebug,

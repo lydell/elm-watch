@@ -143,12 +143,39 @@ export class SilentReadStream extends stream.Readable implements ReadStream {
 
   isRaw = false;
 
+  data: Array<string> = [];
+
   override _read(): void {
-    // Do nothing.
+    this.push(this.data.shift());
   }
 
   setRawMode(isRaw: boolean): void {
     this.isRaw = isRaw;
+  }
+}
+
+export class TerminalColorReadStream
+  extends SilentReadStream
+  implements ReadStream
+{
+  override on<T>(
+    eventName: string | symbol,
+    listener: (...args: Array<T>) => void
+  ): this {
+    if (eventName === "data" && this.isRaw) {
+      this.data.push(
+        ...Array.from({ length: 16 }, (_, i) => {
+          const hex = i.toString(16).toUpperCase().repeat(4);
+          return `\x1B]4;${i};rgb:${hex}/${hex}/${hex}${
+            i % 2 === 0 ? "\x07" : "\x1B\\"
+          }`;
+        }),
+        "\x1B]10;rgb:1111/2222/3333\x07",
+        "\x1B]11;rgb:aaaa/bbbb/cccc\x1B\\"
+      );
+      this._read();
+    }
+    return super.on(eventName, listener);
   }
 }
 
