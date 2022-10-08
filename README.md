@@ -530,12 +530,12 @@ If you’d like to be able to configure the certificate used by elm-watch, let m
 
 Here are my findings from testing different combinations of http/s, ws/s, localhost vs not-localhost, and self-signed vs valid certificates:
 
-✅ = works  
-🤕 = works with workaround  
-💥 = throws an error  
-❌ = never connects  
-📢 = logs a warning  
-❓ = not tested
+✅ = Works.  
+🤕 = Works with workaround: If elm-watch is using port 12345, you need to visit for example https://localhost:12345 once and accept the self-signed certificate.  
+💥 = `new WebSocket("ws://...")` immediately throws an error (that can be caught using `try-catch`).  
+❌ = `new WebSocket("ws://...")` throws no error, but the WebSocket never connects.  
+📢 = A warning is logged to the browser console. It cannot be turned off.  
+❓ = Not tested.
 
 | Origin | Certificate | WebSocket | Chrome | Firefox | Safari | iOS Safari |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -546,12 +546,6 @@ Here are my findings from testing different combinations of http/s, ws/s, localh
 | https://example.com | self-signed | wss: | ✅ | 🤕 | 🤕 | ❓ |
 | https://example.com | valid | ws: | 💥📢 | 💥 | ❌📢 | ❌📢 |
 | https://example.com | valid | wss: | ✅ | ✅ | ✅ | ✅ |
-
-- ✅ The WebSocket just connects without any problems.
-- 🤕 Required workaround: If elm-watch is using port 12345, you need to visit for example https://localhost:12345 once and accept the self-signed certificate. Then you can refresh https://localhost and the WebSocket should connect.
-- 💥 `new WebSocket("ws://...")` immediately throws an error (that can be caught using `try-catch`).
-- ❌ `new WebSocket("ws://...")` throws no error, but the WebSocket never connects.
-- 📢 A warning is logged to the browser console no matter what.
 
 Summary:
 
