@@ -670,6 +670,10 @@ describe("hot", () => {
             tag: "ChangedBrowserUiPosition",
             browserUiPosition: "TopLeft",
           });
+          send({
+            tag: "ChangedOpenErrorOverlay",
+            openErrorOverlay: true,
+          });
           // Wait for the above messages to be processed before stopping (needed
           // for code coverage).
           await wait(100);
