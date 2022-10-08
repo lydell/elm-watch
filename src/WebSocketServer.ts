@@ -63,8 +63,23 @@ class PolyHttpServer {
     this.net.listen(port);
   }
 
-  close(callback: (err?: Error) => void): void {
-    this.net.close(callback);
+  async close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let numClosed = 0;
+      const callback = (
+        error: (Error & { code?: string }) | undefined
+      ): void => {
+        numClosed++;
+        if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
+          reject(error);
+        } else if (numClosed === 3) {
+          resolve();
+        }
+      };
+      this.net.close(callback);
+      this.http.close(callback);
+      this.https.close(callback);
+    });
   }
 
   onRequest(listener: (isHttps: boolean) => http.RequestListener): void {
@@ -206,21 +221,12 @@ export class WebSocketServer {
   }
 
   async close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // This terminates all connections.
-      this.webSocketServer.close();
-      this.polyHttpServer.close((error) => {
-        // istanbul ignore else
-        if (error === undefined) {
-          resolve();
-        } else {
-          reject(error);
-        }
-      });
-      for (const webSocket of this.webSocketServer.clients) {
-        webSocket.close();
-      }
-    });
+    // This terminates all connections.
+    this.webSocketServer.close();
+    await this.polyHttpServer.close();
+    for (const webSocket of this.webSocketServer.clients) {
+      webSocket.close();
+    }
   }
 }
 
