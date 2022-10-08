@@ -246,7 +246,7 @@ function html(isHttps: boolean, request: http.IncomingMessage): string {
     </style>
   </head>
   <body>
-    <p>ℹ️ This is the elm-watch Web Socket server.</p>
+    <p>ℹ️ This is the elm-watch WebSocket server.</p>
     ${
       request.url === "/accept"
         ? isHttps
