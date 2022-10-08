@@ -3245,21 +3245,17 @@ describe("hot", () => {
       🚨 Main
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
-      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30
+      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
 
-      The 1st argument to \`text\` is not what I expect:
+      I am struggling with this boolean operation:
 
-      10|     , view = \\_ -> Html.text 5
-                                       ⧙^⧘
-      This argument is a number of type:
+      10|     , view = \\_ -> if True && 5 then Html.text "yes" else Html.text "no"
+                                        ⧙^⧘
+      Both sides of (&&) must be ⧙Bool⧘ values, but the right side is:
 
           ⧙number⧘
 
-      But \`text\` needs the 1st argument to be:
-
-          ⧙String⧘
-
-      ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
+      ⧙Hint⧘: Only ⧙Int⧘ and ⧙Float⧘ values work as numbers.
 
       🚨 ⧙1⧘ error found
 
@@ -3272,20 +3268,16 @@ describe("hot", () => {
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30);">
       <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30</button></p></summary>
-      <pre>The 1st argument to \`text\` is not what I expect:
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <pre>I am struggling with this boolean operation:
 
-      10|     , view = \\_ -&gt; Html.text 5
-                                       <span style="color: rgb(241, 76, 76)">^</span>
-      This argument is a number of type:
+      10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
+                                        <span style="color: rgb(241, 76, 76)">^</span>
+      Both sides of (&amp;&amp;) must be <span style="color: rgb(229, 229, 16)">Bool</span> values, but the right side is:
 
           <span style="color: rgb(229, 229, 16)">number</span>
 
-      But \`text\` needs the 1st argument to be:
-
-          <span style="color: rgb(229, 229, 16)">String</span>
-
-      <u>Hint</u>: Try using <span style="color: rgb(35, 209, 139)">String.fromInt</span> to convert it to a string?</pre></details>
+      <u>Hint</u>: Only <span style="color: rgb(35, 209, 139)">Int</span> and <span style="color: rgb(35, 209, 139)">Float</span> values work as numbers.</pre></details>
       </overlay>
     `);
   });
@@ -3310,21 +3302,17 @@ describe("hot", () => {
       Main: error
 
       -- TYPE MISMATCH ---------------------------------------------------------------
-      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30
+      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
 
-      The 1st argument to \`text\` is not what I expect:
+      I am struggling with this boolean operation:
 
-      10|     , view = \\_ -> Html.text 5
-                                       ^
-      This argument is a number of type:
+      10|     , view = \\_ -> if True && 5 then Html.text "yes" else Html.text "no"
+                                        ^
+      Both sides of (&&) must be Bool values, but the right side is:
 
           number
 
-      But \`text\` needs the 1st argument to be:
-
-          String
-
-      Hint: Try using String.fromInt to convert it to a string?
+      Hint: Only Int and Float values work as numbers.
 
       1 error found
 
@@ -3337,20 +3325,16 @@ describe("hot", () => {
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30);">
       <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30</button></p></summary>
-      <pre>The 1st argument to \`text\` is not what I expect:
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <pre>I am struggling with this boolean operation:
 
-      10|     , view = \\_ -&gt; Html.text 5
-                                       ^
-      This argument is a number of type:
+      10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
+                                        ^
+      Both sides of (&amp;&amp;) must be Bool values, but the right side is:
 
           number
 
-      But \`text\` needs the 1st argument to be:
-
-          String
-
-      Hint: Try using String.fromInt to convert it to a string?</pre></details>
+      Hint: Only Int and Float values work as numbers.</pre></details>
       </overlay>
     `);
   });
@@ -3440,7 +3424,7 @@ describe("hot", () => {
         {
          "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
          "line": "10",
-         "column": "30"
+         "column": "31"
         }
 
         The command exited with code 127.
@@ -3486,7 +3470,7 @@ describe("hot", () => {
         {
          "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
          "line": "10",
-         "column": "30"
+         "column": "31"
         }
 
         The command took too long to run, and was killed after 10 ms.
@@ -3530,7 +3514,7 @@ describe("hot", () => {
         {
          "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
          "line": "10",
-         "column": "30"
+         "column": "31"
         }
 
         The command exited with code 1.
@@ -3578,7 +3562,7 @@ describe("hot", () => {
         ▼ 🚨 13:10:05 Main
       `);
       expect(clean(fs.readFileSync(outputFile, "utf-8"))).toMatchInlineSnapshot(
-        `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30`
+        `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31`
       );
     });
   });
