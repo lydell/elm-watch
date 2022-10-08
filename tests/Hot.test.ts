@@ -33,6 +33,7 @@ import {
   assertDebugger,
   cleanupAfterEachTest,
   clickFirstErrorLocation,
+  collapseUi,
   expandUi,
   failInit,
   FIXTURES_DIR,
@@ -1457,10 +1458,12 @@ describe("hot", () => {
             fs.unlinkSync(elmJsonPath);
             return "KeepGoing";
           case 6:
+            expandUi();
             touch(inputPath);
             return "KeepGoing";
           case 7:
             touch(otherInputPath);
+            collapseUi();
             return "KeepGoing";
           case 8:
             fs.unlinkSync(elmJsonPathSub);
@@ -1712,6 +1715,50 @@ describe("hot", () => {
       ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
       ▼ 🚨 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json NOT FOUND ----------------------------------------------------------
+      Target: HtmlMain
+
+      I could not find an elm.json for these inputs:
+
+      src/HtmlMain.elm
+
+      Has it gone missing? Maybe run elm init to create one?
+
+      Note that I did find an elm.json for some inputs:
+
+      src/Sub/OtherMain.elm
+      -> /Users/simon/src/elm-watch/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      Make sure that one single elm.json covers all the inputs together!
+      ▲ 🚨 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json NOT FOUND ----------------------------------------------------------
+      Target: HtmlMain
+
+      I could not find an elm.json for these inputs:
+
+      src/HtmlMain.elm
+
+      Has it gone missing? Maybe run elm init to create one?
+
+      Note that I did find an elm.json for some inputs:
+
+      src/Sub/OtherMain.elm
+      -> /Users/simon/src/elm-watch/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      Make sure that one single elm.json covers all the inputs together!
+      ▲ 🚨 13:10:05 HtmlMain
       ================================================================================
       ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
