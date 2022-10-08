@@ -618,7 +618,10 @@ function getOrCreateTargetRoot(): Elements {
 
   let overlay = shadowRoot.querySelector(`.${CLASS.overlay}`);
   if (overlay === null) {
-    overlay = h(HTMLDivElement, { className: CLASS.overlay });
+    overlay = h(HTMLDivElement, {
+      className: CLASS.overlay,
+      attrs: { "data-test-id": "Overlay" },
+    });
     shadowRoot.append(overlay);
   }
 
@@ -2296,7 +2299,7 @@ function view(
       HTMLDivElement,
       {
         className: CLASS.shortStatusContainer,
-        // Placed on the span to increase clickable area.
+        // Placed on the div to increase clickable area.
         onclick: () => {
           dispatch({ tag: "PressedChevron" });
         },
@@ -2708,6 +2711,11 @@ function viewErrorOverlayToggleButton(
   return h(
     HTMLButtonElement,
     {
+      attrs: {
+        "data-test-id": errorOverlay.openErrorOverlay
+          ? "HideErrorOverlayButton"
+          : "ShowErrorOverlayButton",
+      },
       onclick: () => {
         dispatch({
           tag: "ChangedOpenErrorOverlay",

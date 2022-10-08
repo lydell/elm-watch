@@ -470,17 +470,23 @@ function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
   }
 }
 
-export function expandUi(): void {
-  expandUiHelper(true);
+export function expandUi(targetName?: string): void {
+  expandUiHelper(true, targetName);
 }
 
-export function collapseUi(): void {
-  expandUiHelper(false);
+export function collapseUi(targetName?: string): void {
+  expandUiHelper(false, targetName);
 }
 
-function expandUiHelper(wantExpanded: boolean): void {
+function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector("button[aria-expanded]");
+    const button = shadowRoot?.querySelector(
+      `${
+        targetName === undefined
+          ? "[data-target]"
+          : `[data-target="${targetName}"]`
+      } button[aria-expanded]`
+    );
     if (button instanceof HTMLElement) {
       if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
         button.click();
@@ -489,6 +495,63 @@ function expandUiHelper(wantExpanded: boolean): void {
       throw new Error(`Could not button for expanding UI.`);
     }
   });
+}
+
+export function showErrors(targetName?: string): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `${
+        targetName === undefined
+          ? "[data-target]"
+          : `[data-target="${targetName}"]`
+      } [data-test-id="ShowErrorOverlayButton"]`
+    );
+    if (button instanceof HTMLElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not button for showing errors.`);
+    }
+  });
+}
+
+export function hideErrors(targetName?: string): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `${
+        targetName === undefined
+          ? "[data-target]"
+          : `[data-target="${targetName}"]`
+      } [data-test-id="HideErrorOverlayButton"]`
+    );
+    if (button instanceof HTMLElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not button for hiding errors.`);
+    }
+  });
+}
+
+export function getOverlay(): string {
+  let result = "(Overlay not found)";
+  withShadowRoot((shadowRoot) => {
+    const overlay = shadowRoot?.querySelector(`[data-test-id="Overlay"]`);
+    if (overlay instanceof HTMLElement) {
+      const children = Array.from(overlay.children, (child, index) => {
+        const clone = child.cloneNode(true) as HTMLElement;
+        clone.id = index.toString();
+        for (const element of clone.querySelectorAll("[class]")) {
+          element.removeAttribute("class");
+        }
+        return clone.outerHTML
+          .replace("<summary", "\n<summary")
+          .replace("</summary>", "</summary>\n");
+      }).join(`\n${"-".repeat(80)}\n`);
+      result = `<overlay ${overlay.hidden ? "hidden" : "visible"} style="${
+        overlay.getAttribute("style") ?? ""
+      }">\n${children}\n</overlay>`;
+    }
+  });
+  return result;
 }
 
 export function moveUi(position: BrowserUiPosition): void {

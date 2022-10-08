@@ -1,17 +1,28 @@
 /**
  * @jest-environment jsdom
  */
+import * as fs from "fs";
 import * as path from "path";
 
-import { stringSnapshotSerializer, touch, wait, waitOneFrame } from "./Helpers";
+import {
+  rimraf,
+  stringSnapshotSerializer,
+  touch,
+  wait,
+  waitOneFrame,
+} from "./Helpers";
 import {
   assertCompilationMode,
   assertDebugDisabled,
   assertDebugger,
   cleanupAfterEachTest,
   click,
+  expandUi,
   FIXTURES_DIR,
+  getOverlay,
+  hideErrors,
   runHotReload,
+  showErrors,
   switchCompilationMode,
 } from "./HotHelpers";
 
@@ -2452,5 +2463,349 @@ describe("hot reloading", () => {
         elm-watch: I did a full page reload because compilation mode changed from standard to optimize.
         (target: SlowPostprocess)
       `);
+  });
+
+  describe("error overlay", () => {
+    test.only("multiple targets", async () => {
+      const fixture = "error-overlay";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const template = path.join(dir, "template");
+      const src = path.join(dir, "src");
+      await rimraf(src);
+      fs.mkdirSync(src);
+      for (const name of fs.readdirSync(template)) {
+        fs.copyFileSync(path.join(template, name), path.join(src, name));
+      }
+      const replace = (name: string, f: (content: string) => string): void => {
+        fs.writeFileSync(
+          path.join(src, name),
+          f(fs.readFileSync(path.join(src, name), "utf-8"))
+        );
+      };
+      const { go } = runHotReload({
+        fixture,
+        name: "App",
+        programType: "Html",
+        compilationMode: "standard",
+        extraScripts: ["AppOther.js"],
+        init: (node) => {
+          const node1 = document.createElement("div");
+          const node2 = document.createElement("div");
+          node.append(node1, node2);
+          window.Elm?.App?.init({ node: node1 });
+          window.Elm?.AppOther?.init({ node: node2 });
+        },
+      });
+
+      const overlays: Array<string> = [];
+
+      const { renders } = await go(({ idle, reason }) => {
+        console.log("idle: ", idle, reason);
+        switch (idle) {
+          case 1:
+            return "KeepGoing"; // The first script has loaded.
+          case 2:
+            replace("AppHelpers.elm", (content) => content.replace(/"/g, "'"));
+            return "KeepGoing";
+          case 3:
+            expandUi("App");
+            showErrors("App");
+            overlays.push(getOverlay());
+            return "KeepGoing";
+          case 4:
+            replace("AppOtherHelpers.elm", (content) =>
+              content.replace("=", ":=")
+            );
+            return "KeepGoing";
+          case 5:
+            expandUi("AppOther");
+            showErrors("AppOther");
+            overlays.push(getOverlay());
+            return "KeepGoing";
+          case 6:
+            replace("Shared.elm", (content) =>
+              content.replace("text", "textTypo")
+            );
+            return "KeepGoing";
+          case 7:
+            return "KeepGoing"; // First script finished.
+          case 8:
+            expandUi("App");
+            hideErrors("App");
+            overlays.push(getOverlay());
+            return "KeepGoing";
+          case 9:
+            expandUi("AppOther");
+            hideErrors("AppOther");
+            overlays.push(getOverlay());
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      });
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 App
+        ================================================================================
+        ▼ 🔌 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        ================================================================================
+        ▼ 🔌 13:10:05 App
+        ================================================================================
+        ▼ 🔌 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ 🔌 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ 🔌 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ 🔌 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ 🔌 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ ✅ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🔌 13:10:05 AppOther
+        ================================================================================
+        ▼ ✅ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 AppOther
+        ================================================================================
+        ▼ ✅ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ✅ 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ✅ 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ✅ 13:10:05 AppOther
+        ================================================================================
+        target App
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        [Show errors]
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ✅ 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ✅ 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ✅ 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        target AppOther
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        [Show errors]
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ ⏳ 13:10:05 AppOther
+        ================================================================================
+        ▼ ⏳ 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        target App
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        target AppOther
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+        ================================================================================
+        ▼ 🚨 13:10:05 App
+        --------------------------------------------------------------------------------
+        ▼ 🚨 13:10:05 AppOther
+      `);
+
+      const overlaysString = overlays.join(`\n${"=".repeat(80)}\n`);
+
+      expect(overlaysString).toMatchInlineSnapshot(`
+        <overlay visible style="background-color: rgb(32, 30, 30);">
+        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <pre>The following string uses single quotes:
+
+        3| text = 'App'
+                  <span style="color: rgb(241, 76, 76)">^^^^^</span>
+        Please switch to double quotes instead:
+
+            <span style="color: rgb(229, 229, 16)">'this'</span> =&gt; <span style="color: rgb(35, 209, 139)">"this"</span>
+
+        <u>Note</u>: Elm uses double quotes for strings like "hello", whereas it uses single
+        quotes for individual characters like 'a' and 'ø'. This distinction helps with
+        code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
+        individual characters.</pre></details>
+        </overlay>
+        ================================================================================
+        <overlay visible style="background-color: rgb(32, 30, 30);">
+        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <pre>The following string uses single quotes:
+
+        3| text = 'App'
+                  <span style="color: rgb(241, 76, 76)">^^^^^</span>
+        Please switch to double quotes instead:
+
+            <span style="color: rgb(229, 229, 16)">'this'</span> =&gt; <span style="color: rgb(35, 209, 139)">"this"</span>
+
+        <u>Note</u>: Elm uses double quotes for strings like "hello", whereas it uses single
+        quotes for individual characters like 'a' and 'ø'. This distinction helps with
+        code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
+        individual characters.</pre></details>
+        --------------------------------------------------------------------------------
+        <details open="" id="1" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
+        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
+
+        3| text := "AppOther"
+                 <span style="color: rgb(241, 76, 76)">^</span>
+        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
+        </overlay>
+        ================================================================================
+        <overlay visible style="background-color: rgb(32, 30, 30);">
+        <details open="" id="0" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
+        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
+
+        3| text := "AppOther"
+                 <span style="color: rgb(241, 76, 76)">^</span>
+        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
+        --------------------------------------------------------------------------------
+        <details open="" id="1" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
+        <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
+        definition.
+
+        Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></details>
+        </overlay>
+        ================================================================================
+        <overlay hidden style="background-color: rgb(32, 30, 30);">
+
+        </overlay>
+      `);
+    });
   });
 });
