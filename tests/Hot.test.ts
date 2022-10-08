@@ -3290,6 +3290,71 @@ describe("hot", () => {
     `);
   });
 
+  test("persisted open error overlay, no color", async () => {
+    const { terminal } = await run({
+      fixture: "persisted-open-error-overlay",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      env: {
+        [NO_COLOR]: "",
+      },
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      Dependencies: success
+      Main: error
+
+      -- TYPE MISMATCH ---------------------------------------------------------------
+      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30
+
+      The 1st argument to \`text\` is not what I expect:
+
+      10|     , view = \\_ -> Html.text 5
+                                       ^
+      This argument is a number of type:
+
+          number
+
+      But \`text\` needs the 1st argument to be:
+
+          String
+
+      Hint: Try using String.fromInt to convert it to a string?
+
+      1 error found
+
+      web socket connections: 1 (ws://0.0.0.0:9988)
+
+      13:10:05 Web socket connected needing compilation of: Main
+      13:10:05 Everything up to date.
+    `);
+
+    expect(getOverlay()).toMatchInlineSnapshot(`
+      <overlay visible style="background-color: rgb(32, 30, 30);">
+      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:30</button></p></summary>
+      <pre>The 1st argument to \`text\` is not what I expect:
+
+      10|     , view = \\_ -&gt; Html.text 5
+                                       ^
+      This argument is a number of type:
+
+          number
+
+      But \`text\` needs the 1st argument to be:
+
+          String
+
+      Hint: Try using String.fromInt to convert it to a string?</pre></details>
+      </overlay>
+    `);
+  });
+
   describe("click error location", () => {
     const fixture = "persisted-open-error-overlay";
 
