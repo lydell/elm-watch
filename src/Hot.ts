@@ -2627,7 +2627,8 @@ function onWebSocketToServerMessage(
                     openErrorOverlay: message.openErrorOverlay,
                     errors,
                   }
-                : { tag: "NoCmd" },
+                : // istanbul ignore next
+                  { tag: "NoCmd" },
             ],
           ];
         }
