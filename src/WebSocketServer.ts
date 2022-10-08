@@ -54,6 +54,9 @@ class PolyHttpServer {
         const server = buffer[0] === 22 ? this.https : this.http;
         socket.unshift(buffer);
         server.emit("connection", socket);
+        server.on("close", () => {
+          socket.destroy();
+        });
         process.nextTick(() => socket.resume());
       });
     });
