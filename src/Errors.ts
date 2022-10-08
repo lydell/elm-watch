@@ -276,6 +276,7 @@ function escapeHtml(string: string): string {
         return "&quot;";
       case "'":
         return "&apos;";
+      // istanbul ignore next
       default:
         return match;
     }
@@ -1451,7 +1452,8 @@ export function openEditorCommandFailed({
       ? `The command took too long to run, and was killed after ${timeout} ms.`
       : error.code !== undefined
       ? `The command exited with code ${error.code}.`
-      : "The command failed for an unknown reason.";
+      : // istanbul ignore next
+        "The command failed for an unknown reason.";
   return `
 I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):
 

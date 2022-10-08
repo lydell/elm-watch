@@ -2092,7 +2092,8 @@ export function renderOutputErrors(
     case "QueuedForElmMake":
       return includeStuckInProgressState
         ? [Errors.stuckInProgressState(outputPath, status.tag)]
-        : [];
+        : // istanbul ignore next
+          [];
 
     // If there are `elm make` errors we skip postprocessing (fail fast).
     case "QueuedForPostprocess":

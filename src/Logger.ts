@@ -76,6 +76,7 @@ export function makeLogger({
     noColor ? removeColor(string) : string;
 
   let queryTerminalStatus: QueryTerminalStatus = { tag: "NotQueried" };
+  // istanbul ignore next
   let onCtrlC = (): void => {
     // Do nothing.
   };

@@ -95,6 +95,7 @@ export async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
   // Querying colors is not supported on Windows:
   // https://github.com/microsoft/terminal/issues/3718
   // Save them the timeout.
+  // istanbul ignore if
   if (IS_WINDOWS) {
     return DEFAULT_THEME;
   }
@@ -108,7 +109,8 @@ function parseTheme(stdin: string): Theme {
   const theme = { ...DEFAULT_THEME, palette: { ...DEFAULT_THEME.palette } };
 
   for (const match of stdin.matchAll(THEME_ESCAPES_REGEX)) {
-    const [, isPaletteString, indexString, r, g, b] = match;
+    // istanbul ignore next
+    const [, isPaletteString, indexString, r = "0", g = "0", b = "0"] = match;
     const isPalette = isPaletteString !== undefined;
     const index = Number(indexString);
     const color = `#${convert(r)}${convert(g)}${convert(b)}`;
@@ -129,7 +131,7 @@ function parseTheme(stdin: string): Theme {
 }
 
 // https://github.com/xtermjs/xterm.js/blob/19367a6042a6360e9130fd0fbee0a66cdd75ddd4/src/common/input/XParseColor.ts#L7-L56
-function convert(hexDigits: string = "0"): string {
+function convert(hexDigits: string): string {
   return Math.floor((parseInt(hexDigits, 16) / 0xffff) * 0xff)
     .toString(16)
     .padStart(2, "0");
