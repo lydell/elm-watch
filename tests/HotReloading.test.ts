@@ -2466,7 +2466,7 @@ describe("hot reloading", () => {
       `);
   });
 
-  describe("error overlay", () => {
+  describe.only("error overlay", () => {
     const fixture = "error-overlay";
     const dir = path.join(FIXTURES_DIR, fixture);
     const template = path.join(dir, "template");
