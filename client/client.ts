@@ -634,7 +634,10 @@ function getOrCreateTargetRoot(): Elements {
     };
     overlayCloseButton = h(HTMLButtonElement, {
       className: CLASS.overlayCloseButton,
-      attrs: { "aria-label": "Close error overlay" },
+      attrs: {
+        "aria-label": "Close error overlay",
+        "data-test-id": "OverlayCloseButton",
+      },
       onclick: closeAllErrorOverlays,
     });
     shadowRoot.append(overlayCloseButton);

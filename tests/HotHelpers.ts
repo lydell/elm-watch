@@ -531,6 +531,19 @@ export function hideErrors(targetName?: string): void {
   });
 }
 
+export function closeOverlay(): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `[data-test-id="OverlayCloseButton"]`
+    );
+    if (button instanceof HTMLElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not button for closing overlay.`);
+    }
+  });
+}
+
 export function getOverlay(): string {
   let result = "(Overlay not found)";
   withShadowRoot((shadowRoot) => {
