@@ -13,6 +13,7 @@ import {
   __ELM_WATCH_MOCKED_TIMINGS,
   __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
+  ELM_WATCH_OPEN_EDITOR,
   Env,
   WT_SESSION,
 } from "../src/Env";
@@ -56,6 +57,7 @@ export function readFile(filePath: string): string {
 }
 
 export const TEST_ENV = {
+  [ELM_WATCH_OPEN_EDITOR]: undefined,
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
   [__ELM_WATCH_MOCKED_TIMINGS]: "",
