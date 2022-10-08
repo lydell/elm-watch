@@ -1,4 +1,6 @@
 import * as fs from "fs";
+import * as http from "http";
+import * as https from "https";
 import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
@@ -537,3 +539,35 @@ export const stringSnapshotSerializer = {
 // For things like symlinks and readonly files/folders that aren’t really a thing on Windows.
 export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;
+
+export async function httpGet(
+  urlString: string,
+  options: http.RequestOptions = {}
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    (urlString.startsWith("https:") ? https : http)
+      .get(urlString, { ...options, rejectUnauthorized: false }, (res) => {
+        const chunks: Array<Buffer> = [];
+
+        res.on("data", (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+
+        res.on("end", () => {
+          const body = Buffer.concat(chunks).toString();
+          if (res.statusCode === 200) {
+            resolve(body);
+          } else {
+            reject(
+              new Error(
+                `GET ${urlString} – expected status code 200 but got ${
+                  res.statusCode ?? "(no status code)"
+                }:\n\n${body}`
+              )
+            );
+          }
+        });
+      })
+      .on("error", reject);
+  });
+}
