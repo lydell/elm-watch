@@ -650,7 +650,7 @@ export function assertDebugger(body: HTMLBodyElement): void {
   expect(
     Array.from(body.querySelectorAll("svg"), (element) => element.localName)
   ).toMatchInlineSnapshot(`
-    Array [
+    [
       svg,
     ]
   `);
