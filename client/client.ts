@@ -343,7 +343,7 @@ type Cmd =
 type OverlayError = {
   title: string;
   location: ErrorLocation | undefined;
-  content: string;
+  htmlContent: string;
   foregroundColor: string;
   backgroundColor: string;
 };
@@ -1343,7 +1343,7 @@ function statusChanged(
                   const overlayError: OverlayError = {
                     title: error.title,
                     location: error.location,
-                    content: error.content,
+                    htmlContent: error.htmlContent,
                     foregroundColor: status.foregroundColor,
                     backgroundColor: status.backgroundColor,
                   };
@@ -3154,7 +3154,7 @@ function viewOverlayError(
             viewErrorLocation(dispatch, sendKey, error.location)
           )
     ),
-    h(HTMLPreElement, { innerHTML: error.content })
+    h(HTMLPreElement, { innerHTML: error.htmlContent })
   );
 }
 

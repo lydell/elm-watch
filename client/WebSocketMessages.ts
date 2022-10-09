@@ -44,7 +44,7 @@ export type CompileError = ReturnType<typeof CompileError>;
 const CompileError = Decode.fieldsAuto({
   title: Decode.string,
   location: Decode.optional(ErrorLocation),
-  content: Decode.string,
+  htmlContent: Decode.string,
 });
 
 export type StatusChanged = ReturnType<typeof StatusChanged>;

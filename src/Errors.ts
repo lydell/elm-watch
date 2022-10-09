@@ -212,11 +212,19 @@ export function toHtml(
   errorTemplate: ErrorTemplate,
   theme: Theme.Theme,
   noColor: boolean
-): ErrorTemplateData {
+): {
+  title: string;
+  location: ErrorLocation | undefined;
+  htmlContent: string;
+} {
   const renderPiece = (piece: Piece): string =>
     noColor ? piece.text : renderPieceToHtml(piece, theme);
 
-  return errorTemplate(DEFAULT_COLUMNS, renderPiece);
+  const { title, location, content } = errorTemplate(
+    DEFAULT_COLUMNS,
+    renderPiece
+  );
+  return { title, location, htmlContent: content };
 }
 
 function renderPieceForTerminal(piece: Piece): string {
