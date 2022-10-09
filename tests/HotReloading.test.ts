@@ -4,6 +4,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import { __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS } from "../src/Env";
 import {
   rimraf,
   stringSnapshotSerializer,
@@ -2501,6 +2502,9 @@ describe("hot reloading", () => {
         programType: "Html",
         compilationMode: "standard",
         extraScripts: ["AppOther.js"],
+        env: {
+          [__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS]: "0",
+        },
         init: (node) => {
           const node1 = document.createElement("div");
           const node2 = document.createElement("div");
