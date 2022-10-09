@@ -15,8 +15,8 @@
   "devDependencies": {
     "elm-tooling": "1.8.0",
     "elm-watch": "file:../build",
-    "esbuild": "0.15.7",
-    "run-pty": "4.0.0",
-    "uglify-js": "3.17.0"
+    "esbuild": "0.15.10",
+    "run-pty": "4.0.1",
+    "uglify-js": "3.17.3"
   }
 }
