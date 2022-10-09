@@ -120,6 +120,10 @@ if (require.main === module) {
     .then((exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.
       process.exitCode = exitCode;
+      // Turn off raw mode so that ctrl+c automatically kills things left behind
+      // accidentally on the event loop. That’s of course a bug, but if it
+      // happens it should at least be possible to exit with a simple ctrl+c.
+      process.stdin.setRawMode(false);
     })
     .catch((error: unknown) => {
       process.stderr.write(
