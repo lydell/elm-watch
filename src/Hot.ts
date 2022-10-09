@@ -471,8 +471,8 @@ const initMutable =
     resolvePromise: (result: HotRunResult) => void,
     rejectPromise: (error: Error) => void
   ): Mutable => {
-    // The more targets that are enabled by connecting websockets, the more
-    // workers we might have. Terminate unnecessary idle workers as websockets
+    // The more targets that are enabled by connecting WebSockets, the more
+    // workers we might have. Terminate unnecessary idle workers as WebSockets
     // close. But wait a while first: We don’t want to terminate workers just
     // because the user refreshed the page (which results in a disconnect +
     // connect).

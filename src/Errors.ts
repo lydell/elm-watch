@@ -1219,7 +1219,7 @@ export function writeProxyOutputError(
   error: Error
 ): ErrorTemplate {
   return fancyError("TROUBLE WRITING DUMMY OUTPUT", outputPath)`
-There are no websocket connections for this target, so I only typecheck the
+There are no WebSocket connections for this target, so I only typecheck the
 code. That went well. Then I tried to write a dummy output file here:
 
 ${text(outputPath.theOutputPath.absolutePath)}
