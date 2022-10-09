@@ -131,7 +131,7 @@ type Mutable = {
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
-  killInstallDependencies: (() => void) | undefined;
+  killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
 };
 
 type WebSocketConnection = {
@@ -566,7 +566,7 @@ const initMutable =
       // istanbul ignore next
       try {
         if (mutable.killInstallDependencies !== undefined) {
-          mutable.killInstallDependencies();
+          mutable.killInstallDependencies({ force: true });
         }
         await Promise.all(
           getFlatOutputs(project).map(({ outputState }) =>
@@ -1497,8 +1497,8 @@ const runCmd =
               getNow,
               mutable.project
             );
-            mutable.killInstallDependencies = () => {
-              kill({ force: true });
+            mutable.killInstallDependencies = ({ force }) => {
+              kill({ force });
               mutable.killInstallDependencies = undefined;
             };
             return promise;
@@ -1570,7 +1570,7 @@ const runCmd =
           cmd.killInstallDependencies &&
           mutable.killInstallDependencies !== undefined
         ) {
-          mutable.killInstallDependencies();
+          mutable.killInstallDependencies({ force: false });
         }
         for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;

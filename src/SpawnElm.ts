@@ -490,7 +490,7 @@ export function install({
   return {
     promise: promise.then(handleSpawnResult),
     kill: ({ force }) => {
-      // istanbul ignore else
+      // istanbul ignore if
       if (force) {
         kill();
       } else {
