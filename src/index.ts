@@ -123,7 +123,11 @@ if (require.main === module) {
       // Turn off raw mode so that ctrl+c automatically kills things left behind
       // accidentally on the event loop. That’s of course a bug, but if it
       // happens it should at least be possible to exit with a simple ctrl+c.
-      process.stdin.setRawMode(false);
+      // Note: `.setRawMode` is `undefined` when stdin is not a TTY, but this is
+      // not reflected in the type definitions.
+      if (process.stdin.setRawMode !== undefined) {
+        process.stdin.setRawMode(false);
+      }
     })
     .catch((error: unknown) => {
       process.stderr.write(
