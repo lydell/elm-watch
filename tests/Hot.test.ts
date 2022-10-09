@@ -3605,7 +3605,22 @@ describe("hot", () => {
       const renders = await runFailClickErrorLocation({
         [ELM_WATCH_OPEN_EDITOR]: "nope",
       });
-      expect(renders).toMatchInlineSnapshot(`
+
+      const replacement = "nope: command not found";
+
+      const cleanedRenders = renders
+        // macOS
+        .replace("/bin/sh: nope: command not found", replacement)
+        // Linux
+        .replace("/bin/sh: 1: nope: not found", replacement)
+        // Windows
+        .replace(
+          "'nope' is not recognized as an internal or external command,\r\noperable program or batch file.",
+          replacement
+        )
+        .replace("code 1.", "code 127.");
+
+      expect(cleanedRenders).toMatchInlineSnapshot(`
         ▼ 🔌 13:10:05 Main
         ================================================================================
         ▼ ⏳ 13:10:05 Main
@@ -3638,7 +3653,7 @@ describe("hot", () => {
 
         The command exited with code 127.
 
-        /bin/sh: nope: command not found
+        nope: command not found
         ↑↗
         ·→
         ▲ 🚨 13:10:05 Main
