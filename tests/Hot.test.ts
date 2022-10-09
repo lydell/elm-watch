@@ -976,7 +976,6 @@ describe("hot", () => {
         BadUrl
         ParamsDecodeError
         WrongVersion
-        TargetNotFound
         SendBadJson
         Reconnect
 
