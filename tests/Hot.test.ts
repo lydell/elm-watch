@@ -924,6 +924,160 @@ describe("hot", () => {
       `);
     });
 
+    test("change target name", async () => {
+      const fixture = "change-target-name";
+      const dir = path.join(FIXTURES_DIR, fixture);
+      const elmWatchJsonPath = path.join(dir, "elm-watch.json");
+      const elmWatchJsonTemplatePath = path.join(
+        dir,
+        "elm-watch.template.json"
+      );
+      const elmWatchJsonString = fs.readFileSync(
+        elmWatchJsonTemplatePath,
+        "utf8"
+      );
+      fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
+
+      const { terminal, renders } = await run({
+        fixture,
+        scripts: ["Main.js"],
+        isTTY: false,
+        init: (node) => {
+          try {
+            window.Elm?.Main?.init({ node });
+          } catch {
+            // Ignore elm-watch proxy “error” on reload.
+          }
+        },
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              fs.writeFileSync(
+                elmWatchJsonPath,
+                elmWatchJsonString.replace("Main", "Renamed")
+              );
+              return "KeepGoing";
+            case 2:
+              expandUi();
+              window.__ELM_WATCH.RELOAD_PAGE(undefined);
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ Main: elm make (typecheck only)
+        ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ⏳ Main: elm make
+        ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+        ℹ️ 13:10:05 Web socket connected for: Main⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ Renamed: elm make (typecheck only)
+        ✅ Renamed⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/change-target-name/elm-watch.json⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+        ⏳ Renamed: elm make
+        ✅ Renamed⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: (no matching target)
+        ℹ️ 13:10:05 Web socket connected needing compilation of: Renamed⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Web socket disconnected for: Renamed
+        ℹ️ 13:10:05 Web socket connected for: Renamed⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ ✅ 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:59123
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        Main
+
+        But I can't find that target in elm-watch.json!
+
+        These targets are available in elm-watch.json:
+
+        Renamed
+
+        Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        If so, try reloading the page.
+        ▲ ❌ 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Renamed
+        ================================================================================
+        ▼ ⏳ 13:10:05 Renamed
+        ================================================================================
+        ▼ ⏳ 13:10:05 Renamed
+        ================================================================================
+        ▼ 🔌 13:10:05 Renamed
+        ================================================================================
+        ▼ 🔌 13:10:05 Renamed
+        ================================================================================
+        ▼ ⏳ 13:10:05 Renamed
+        ================================================================================
+        ▼ ✅ 13:10:05 Renamed
+      `);
+    });
+
     test("target disabled", async () => {
       modifyUrl((url) => {
         url.searchParams.set("targetName", "Html");
