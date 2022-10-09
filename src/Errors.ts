@@ -1400,6 +1400,7 @@ ${joinString(
 )}${extra}
 
 Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+If so, try reloading the page.
   `.trim();
 }
 

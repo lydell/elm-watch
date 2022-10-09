@@ -1315,7 +1315,9 @@ async function typecheck({
 
     const proxyFileResult = needsToWriteProxyFile(
       outputPath.theOutputPath,
-      Buffer.from(Inject.versionedIdentifier(webSocketPort))
+      Buffer.from(
+        Inject.versionedIdentifier(outputPath.targetName, webSocketPort)
+      )
     );
 
     switch (proxyFileResult.tag) {

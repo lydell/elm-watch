@@ -854,7 +854,7 @@ export function clientCode(
     DEBUG: debug.toString(),
   };
   return (
-    versionedIdentifier(webSocketPort) +
+    versionedIdentifier(outputPath.targetName, webSocketPort) +
     ClientCode.client.replace(
       new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
       (match: string, name: string) =>
@@ -868,10 +868,15 @@ export function clientCode(
 // - The output exists.
 // - And it was created by `elm-watch hot`. (`elm-watch make` output does not contain WebSocket stuff).
 // - And it was created by the same version of `elm-watch`. (Older versions could have bugs.)
+// - And it has the same target name. (It might have changed, and needs to match.)
 // - And it used the same WebSocket port. (Otherwise it will never connect to us.)
-export function versionedIdentifier(webSocketPort: Port): string {
+export function versionedIdentifier(
+  targetName: string,
+  webSocketPort: Port
+): string {
   return `// elm-watch hot ${JSON.stringify({
     version: "%VERSION%",
+    targetName,
     webSocketPort: webSocketPort.thePort,
   })}\n`;
 }
