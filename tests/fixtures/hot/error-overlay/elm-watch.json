@@ -1,0 +1,16 @@
+{
+    "targets": {
+        "App": {
+            "inputs": [
+                "src/App.elm"
+            ],
+            "output": "build/App.js"
+        },
+        "AppOther": {
+            "inputs": [
+                "src/AppOther.elm"
+            ],
+            "output": "build/AppOther.js"
+        }
+    }
+}

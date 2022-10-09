@@ -11,6 +11,9 @@ import {
   __ELM_WATCH_LOADING_MESSAGE_DELAY,
   __ELM_WATCH_MAX_PARALLEL,
   __ELM_WATCH_MOCKED_TIMINGS,
+  __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
+  __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
+  ELM_WATCH_OPEN_EDITOR,
   Env,
   WT_SESSION,
 } from "../src/Env";
@@ -54,9 +57,12 @@ export function readFile(filePath: string): string {
 }
 
 export const TEST_ENV = {
+  [ELM_WATCH_OPEN_EDITOR]: undefined,
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
   [__ELM_WATCH_MOCKED_TIMINGS]: "",
+  [__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS]: "100000",
+  [__ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS]: "0",
   [WT_SESSION]: "",
 };
 
@@ -134,17 +140,51 @@ export function rmSymlink(symlink: string): void {
   }
 }
 
-export class FailReadStream extends stream.Readable implements ReadStream {
+export class SilentReadStream extends stream.Readable implements ReadStream {
   isTTY = true;
 
-  override _read(size: number): void {
-    throw new Error(
-      `Expected FailReadStream not to be read but tried to read ${size} bytes.`
-    );
+  isRaw = false;
+
+  data: Array<string> = [];
+
+  override _read(): void {
+    this.push(this.data.shift());
   }
 
-  setRawMode(): void {
-    // Do nothing
+  setRawMode(isRaw: boolean): void {
+    this.isRaw = isRaw;
+  }
+}
+
+export class TerminalColorReadStream
+  extends SilentReadStream
+  implements ReadStream
+{
+  override on<T>(
+    eventName: string | symbol,
+    listener: (...args: Array<T>) => void
+  ): this {
+    if (eventName === "data" && this.isRaw) {
+      this.data.push(
+        ...Array.from({ length: 16 }, (_, i) => {
+          const hex = i.toString(16).toUpperCase().repeat(4);
+          return `\x1B]4;${i};rgb:${hex}/${hex}/${hex}${
+            i % 2 === 0 ? "\x07" : "\x1B\\"
+          }`;
+        }),
+        "\x1B]10;rgb:1111/2222/3333\x07",
+        "\x1B]11;rgb:aaaa/bbbb/cccc\x1B\\"
+      );
+      this._read();
+    }
+    return super.on(eventName, listener);
+  }
+}
+
+export class CtrlCReadStream extends SilentReadStream implements ReadStream {
+  ctrlC(): void {
+    this.data.push("\x03");
+    this._read();
   }
 }
 
@@ -160,7 +200,7 @@ export class MemoryWriteStream extends stream.Writable implements WriteStream {
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void
   ): void {
-    this.content += chunk.toString();
+    this.content += removeTerminalColorRequests(chunk.toString());
     callback();
   }
 }
@@ -323,7 +363,9 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void
   ): void {
-    const parts = chunk.toString().split(SPLIT_REGEX);
+    const parts = removeTerminalColorRequests(chunk.toString()).split(
+      SPLIT_REGEX
+    );
     for (const part of parts) {
       switch (part) {
         case "":
@@ -464,6 +506,10 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
   }
 }
 
+function removeTerminalColorRequests(string: string): string {
+  return string.replace(/\x1B\][^\x1B]+\x1B\\/g, "");
+}
+
 export function clean(string: string): string {
   const { root } = path.parse(__dirname);
 
@@ -514,7 +560,7 @@ export function assertExitCode(
       `
 exit ${actualExitCode} (expected ${expectedExitCode})
 
-${printStdio(stdout, stderr)(process.stdout.columns)}
+${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
       `.trim()
     );
   }

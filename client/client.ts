@@ -3,6 +3,7 @@ import * as Decode from "tiny-decoders";
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
+  AbsolutePath,
   BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
@@ -10,6 +11,8 @@ import {
 } from "../src/Types";
 import {
   decodeWebSocketToClientMessage,
+  ErrorLocation,
+  OpenEditorError,
   StatusChanged,
   WebSocketToClientMessage,
   WebSocketToServerMessage,
@@ -183,6 +186,7 @@ const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
+const CLOSE_ALL_ERROR_OVERLAYS_EVENT = "CLOSE_ALL_ERROR_OVERLAYS_EVENT";
 
 // A compilation after moving the browser UI on a big app takes around 700 ms
 // for me. So more than double that should be plenty.
@@ -257,7 +261,18 @@ type UiMsg =
       sendKey: SendKey;
     }
   | {
+      tag: "ChangedOpenErrorOverlay";
+      openErrorOverlay: boolean;
+    }
+  | {
       tag: "PressedChevron";
+    }
+  | {
+      tag: "PressedOpenEditor";
+      file: AbsolutePath;
+      line: number;
+      column: number;
+      sendKey: SendKey;
     }
   | {
       tag: "PressedReconnectNow";
@@ -310,6 +325,11 @@ type Cmd =
       reason: ReachedIdleStateReason;
     }
   | {
+      tag: "UpdateErrorOverlay";
+      errors: Map<string, OverlayError>;
+      sendKey: SendKey | undefined;
+    }
+  | {
       tag: "UpdateGlobalStatus";
       reloadStatus: ReloadStatus;
     }
@@ -320,20 +340,36 @@ type Cmd =
       tag: "WebSocketTimeoutClear";
     };
 
+type OverlayError = {
+  title: string;
+  location: ErrorLocation | undefined;
+  htmlContent: string;
+  foregroundColor: string;
+  backgroundColor: string;
+};
+
 type Status =
   | {
       tag: "Busy";
       date: Date;
+      errorOverlay: ErrorOverlay | undefined;
     }
   | {
       tag: "CompileError";
       date: Date;
       sendKey: SendKey;
+      errorOverlay: ErrorOverlay;
+      openEditorError: OpenEditorError | undefined;
     }
   | {
       tag: "Connecting";
       date: Date;
       attemptNumber: number;
+    }
+  | {
+      tag: "ElmJsonError";
+      date: Date;
+      error: string;
     }
   | {
       tag: "EvalError";
@@ -360,12 +396,19 @@ type Status =
       reasons: Array<string>;
     };
 
+type ErrorOverlay = {
+  errors: Map<string, OverlayError>;
+  openErrorOverlay: boolean;
+};
+
 export type ReachedIdleStateReason =
   | "AlreadyUpToDate"
   | "ClientError"
   | "CompileError"
+  | "ElmJsonError"
   | "EvalErrored"
-  | "EvalSucceeded";
+  | "EvalSucceeded"
+  | "OpenEditorFailed";
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
@@ -418,6 +461,8 @@ function run(): void {
             previousStatusTag: model.status.tag,
           }
         : model;
+      const oldErrorOverlay = getErrorOverlay(model.status);
+      const newErrorOverlay = getErrorOverlay(newModel.status);
       const allCmds: Array<Cmd> = modelChanged
         ? [
             ...cmds,
@@ -425,6 +470,21 @@ function run(): void {
               tag: "UpdateGlobalStatus",
               reloadStatus: statusToReloadStatus(newModel.status),
             },
+            // This needs to be done before Render, since it depends on whether
+            // the error overlay is visible or not.
+            newModel.status.tag === newModel.previousStatusTag &&
+            oldErrorOverlay?.openErrorOverlay ===
+              newErrorOverlay?.openErrorOverlay
+              ? { tag: "NoCmd" }
+              : {
+                  tag: "UpdateErrorOverlay",
+                  errors:
+                    newErrorOverlay === undefined ||
+                    !newErrorOverlay.openErrorOverlay
+                      ? new Map<string, OverlayError>()
+                      : newErrorOverlay.errors,
+                  sendKey: statusToSpecialCaseSendKey(newModel.status),
+                },
             {
               tag: "Render",
               model: newModel,
@@ -453,6 +513,10 @@ function run(): void {
   // renderMockStatuses(getNow, elements);
 }
 
+function getErrorOverlay(status: Status): ErrorOverlay | undefined {
+  return "errorOverlay" in status ? status.errorOverlay : undefined;
+}
+
 function statusToReloadStatus(status: Status): ReloadStatus {
   switch (status.tag) {
     case "Busy":
@@ -460,6 +524,7 @@ function statusToReloadStatus(status: Status): ReloadStatus {
       return { tag: "MightWantToReload" };
 
     case "CompileError":
+    case "ElmJsonError":
     case "EvalError":
     case "Idle":
     case "SleepingBeforeReconnect":
@@ -485,27 +550,30 @@ function statusToStatusType(statusTag: Status["tag"]): StatusType {
       return "Waiting";
 
     case "CompileError":
+    case "ElmJsonError":
     case "EvalError":
     case "UnexpectedError":
       return "Error";
   }
 }
 
-function statusToBrowserUiPositionSendKey(status: Status): SendKey | undefined {
+function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
   switch (status.tag) {
     case "CompileError":
     case "Idle":
       return status.sendKey;
 
     // It works well moving the browser UI while already busy.
+    // It works well clicking an error location to open it in an editor while busy.
     case "Busy":
       return SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
-    // We can’t send a message about moving the browser UI if we don’t have a
-    // connection.
+    // We can’t send messages about anything if we don’t have a connection.
     case "Connecting":
     case "SleepingBeforeReconnect":
     case "WaitingForReload":
+    // We can’t really send messages if there are elm.json errors.
+    case "ElmJsonError":
     // These two _might_ work, but it’s unclear. They’re not supposed to happen
     // anyway.
     case "EvalError":
@@ -536,6 +604,8 @@ function getOrCreateContainer(): HTMLElement {
 type Elements = {
   container: HTMLElement;
   shadowRoot: ShadowRoot;
+  overlay: HTMLElement;
+  overlayCloseButton: HTMLElement;
   root: Element;
   targetRoot: HTMLElement;
 };
@@ -550,6 +620,45 @@ function getOrCreateTargetRoot(): Elements {
     );
   }
 
+  let overlay = shadowRoot.querySelector(`.${CLASS.overlay}`);
+  if (overlay === null) {
+    overlay = h(HTMLDivElement, {
+      className: CLASS.overlay,
+      attrs: { "data-test-id": "Overlay" },
+    });
+    shadowRoot.append(overlay);
+  }
+
+  let overlayCloseButton = shadowRoot.querySelector(
+    `.${CLASS.overlayCloseButton}`
+  );
+  if (overlayCloseButton === null) {
+    const closeAllErrorOverlays = (): void => {
+      shadowRoot.dispatchEvent(new CustomEvent(CLOSE_ALL_ERROR_OVERLAYS_EVENT));
+    };
+    overlayCloseButton = h(HTMLButtonElement, {
+      className: CLASS.overlayCloseButton,
+      attrs: {
+        "aria-label": "Close error overlay",
+        "data-test-id": "OverlayCloseButton",
+      },
+      onclick: closeAllErrorOverlays,
+    });
+    shadowRoot.append(overlayCloseButton);
+    const overlayNonNull = overlay;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (overlayNonNull.hasChildNodes() && event.key === "Escape") {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          closeAllErrorOverlays();
+        }
+      },
+      true
+    );
+  }
+
   let root = shadowRoot.querySelector(`.${CLASS.root}`);
   if (root === null) {
     root = h(HTMLDivElement, { className: CLASS.root });
@@ -559,7 +668,14 @@ function getOrCreateTargetRoot(): Elements {
   const targetRoot = createTargetRoot(TARGET_NAME);
   root.append(targetRoot);
 
-  const elements: Elements = { container, shadowRoot, root, targetRoot };
+  const elements: Elements = {
+    container,
+    shadowRoot,
+    overlay: overlay as HTMLElement,
+    overlayCloseButton: overlayCloseButton as HTMLElement,
+    root,
+    targetRoot,
+  };
 
   setBrowserUiPosition(ORIGINAL_BROWSER_UI_POSITION, elements);
 
@@ -682,22 +798,36 @@ const initMutable =
               });
             }
           }),
-          elements === undefined
-            ? () => {
-                // Do nothing
-              }
-            : addEventListener(
-                elements.shadowRoot,
-                BROWSER_UI_MOVED_EVENT,
-                (event) => {
-                  dispatch({
-                    tag: "BrowserUiMoved",
-                    browserUiPosition: Decode.fields((field) =>
-                      field("detail", parseBrowseUiPositionWithFallback)
-                    )(event),
-                  });
-                }
-              ),
+          ...(elements === undefined
+            ? []
+            : [
+                addEventListener(
+                  elements.shadowRoot,
+                  BROWSER_UI_MOVED_EVENT,
+                  (event) => {
+                    dispatch({
+                      tag: "BrowserUiMoved",
+                      browserUiPosition: Decode.fields((field) =>
+                        field("detail", parseBrowseUiPositionWithFallback)
+                      )(event),
+                    });
+                  }
+                ),
+                addEventListener(
+                  elements.shadowRoot,
+                  CLOSE_ALL_ERROR_OVERLAYS_EVENT,
+                  () => {
+                    dispatch({
+                      tag: "UiMsg",
+                      date: getNow(),
+                      msg: {
+                        tag: "ChangedOpenErrorOverlay",
+                        openErrorOverlay: false,
+                      },
+                    });
+                  }
+                ),
+              ]),
         ];
       },
       { once: true }
@@ -919,7 +1049,13 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     }
 
     case "WebSocketConnected":
-      return [{ ...model, status: { tag: "Busy", date: msg.date } }, []];
+      return [
+        {
+          ...model,
+          status: { tag: "Busy", date: msg.date, errorOverlay: undefined },
+        },
+        [],
+      ];
 
     case "WebSocketMessageReceived": {
       const result = parseWebSocketMessageData(msg.data);
@@ -970,7 +1106,11 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
       return [
         {
           ...model,
-          status: { tag: "Busy", date },
+          status: {
+            tag: "Busy",
+            date,
+            errorOverlay: getErrorOverlay(model.status),
+          },
           compilationMode: msg.compilationMode,
         },
         [
@@ -985,8 +1125,57 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
         ],
       ];
 
+    case "ChangedOpenErrorOverlay":
+      return "errorOverlay" in model.status &&
+        model.status.errorOverlay !== undefined
+        ? [
+            {
+              ...model,
+              status: {
+                ...model.status,
+                errorOverlay: {
+                  ...model.status.errorOverlay,
+                  openErrorOverlay: msg.openErrorOverlay,
+                },
+              },
+              uiExpanded: false,
+            },
+            [
+              {
+                tag: "SendMessage",
+                message: {
+                  tag: "ChangedOpenErrorOverlay",
+                  openErrorOverlay: msg.openErrorOverlay,
+                },
+                sendKey:
+                  // It works well clicking an error location to open it in an editor while busy.
+                  model.status.tag === "Busy"
+                    ? SEND_KEY_DO_NOT_USE_ALL_THE_TIME
+                    : model.status.sendKey,
+              },
+            ],
+          ]
+        : [model, []];
+
     case "PressedChevron":
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
+
+    case "PressedOpenEditor":
+      return [
+        model,
+        [
+          {
+            tag: "SendMessage",
+            message: {
+              tag: "PressedOpenEditor",
+              file: msg.file,
+              line: msg.line,
+              column: msg.column,
+            },
+            sendKey: msg.sendKey,
+          },
+        ],
+      ];
 
     case "PressedReconnectNow":
       return reconnect(model, date, { force: true });
@@ -1001,6 +1190,23 @@ function onWebSocketToClientMessage(
   switch (msg.tag) {
     case "FocusedTabAcknowledged":
       return [model, [{ tag: "WebSocketTimeoutClear" }]];
+
+    case "OpenEditorFailed":
+      return [
+        model.status.tag === "CompileError"
+          ? {
+              ...model,
+              status: { ...model.status, openEditorError: msg.error },
+              uiExpanded: true,
+            }
+          : model,
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "OpenEditorFailed",
+          },
+        ],
+      ];
 
     case "StatusChanged":
       return statusChanged(date, msg, model);
@@ -1100,6 +1306,7 @@ function statusChanged(
           status: {
             tag: "Busy",
             date,
+            errorOverlay: getErrorOverlay(model.status),
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -1130,6 +1337,23 @@ function statusChanged(
             tag: "CompileError",
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+            errorOverlay: {
+              errors: new Map(
+                status.errors.map((error) => {
+                  const overlayError: OverlayError = {
+                    title: error.title,
+                    location: error.location,
+                    htmlContent: error.htmlContent,
+                    foregroundColor: status.foregroundColor,
+                    backgroundColor: status.backgroundColor,
+                  };
+                  const id = JSON.stringify(overlayError);
+                  return [id, overlayError];
+                })
+              ),
+              openErrorOverlay: status.openErrorOverlay,
+            },
+            openEditorError: undefined,
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -1138,6 +1362,20 @@ function statusChanged(
           {
             tag: "TriggerReachedIdleState",
             reason: "CompileError",
+          },
+        ],
+      ];
+
+    case "ElmJsonError":
+      return [
+        {
+          ...model,
+          status: { tag: "ElmJsonError", date, error: status.error },
+        },
+        [
+          {
+            tag: "TriggerReachedIdleState",
+            reason: "ElmJsonError",
           },
         ],
       ];
@@ -1237,6 +1475,8 @@ const runCmd =
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
           initializedElmAppsStatus: checkInitializedElmAppsStatus(),
+          errorOverlayVisible:
+            elements !== undefined && !elements.overlay.hidden,
         };
         if (elements === undefined) {
           if (model.status.tag !== model.previousStatusTag) {
@@ -1292,6 +1532,21 @@ const runCmd =
             __ELM_WATCH.ON_REACHED_IDLE_STATE(cmd.reason);
           })
           .catch(rejectPromise);
+        return;
+
+      case "UpdateErrorOverlay":
+        if (elements !== undefined) {
+          updateErrorOverlay(
+            TARGET_NAME,
+            (msg) => {
+              dispatch({ tag: "UiMsg", date: getNow(), msg });
+            },
+            cmd.sendKey,
+            cmd.errors,
+            elements.overlay,
+            elements.overlayCloseButton
+          );
+        }
         return;
 
       case "UpdateGlobalStatus":
@@ -1576,6 +1831,7 @@ type Info = {
   targetName: string;
   originalCompilationMode: CompilationModeWithProxy;
   initializedElmAppsStatus: InitializedElmAppsStatus;
+  errorOverlayVisible: boolean;
 };
 
 function renderWebWorker(model: Model, info: Info): string {
@@ -1619,9 +1875,13 @@ const CLASS = {
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
   debugModeIcon: "debugModeIcon",
+  errorLocationButton: "errorLocationButton",
+  errorTitle: "errorTitle",
   expandedUiContainer: "expandedUiContainer",
   flashError: "flashError",
   flashSuccess: "flashSuccess",
+  overlay: "overlay",
+  overlayCloseButton: "overlayCloseButton",
   root: "root",
   rootBottomHalf: "rootBottomHalf",
   shortStatusContainer: "shortStatusContainer",
@@ -1634,11 +1894,13 @@ function getStatusClass({
   statusTypeChanged,
   hasReceivedHotReload,
   uiRelatedUpdate,
+  errorOverlayVisible,
 }: {
   statusType: StatusType;
   statusTypeChanged: boolean;
   hasReceivedHotReload: boolean;
   uiRelatedUpdate: boolean;
+  errorOverlayVisible: boolean;
 }): string | undefined {
   switch (statusType) {
     case "Success":
@@ -1646,20 +1908,22 @@ function getStatusClass({
         ? CLASS.flashSuccess
         : undefined;
     case "Error":
-      return uiRelatedUpdate ? undefined : CLASS.flashError;
+      return errorOverlayVisible
+        ? statusTypeChanged && hasReceivedHotReload
+          ? CLASS.flashError
+          : undefined
+        : uiRelatedUpdate
+        ? undefined
+        : CLASS.flashError;
     case "Waiting":
       return undefined;
   }
 }
 
-const CSS = `
-pre {
-  margin: 0;
-  white-space: pre-wrap;
-  border-left: 0.25em solid var(--grey);
-  padding-left: 0.5em;
-}
+const CHEVRON_UP = "▲";
+const CHEVRON_DOWN = "▼";
 
+const CSS = `
 input,
 button,
 select,
@@ -1714,6 +1978,115 @@ time::after {
   height: 0;
 }
 
+.${CLASS.overlay} {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  overflow-y: auto;
+  padding: 2ch 0;
+}
+
+.${CLASS.overlayCloseButton} {
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  appearance: none;
+  padding: 1em;
+  border: none;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 1.25em;
+  filter: drop-shadow(0 0 0.125em var(--backgroundColor));
+}
+
+.${CLASS.overlayCloseButton}::before,
+.${CLASS.overlayCloseButton}::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.125em;
+  height: 1em;
+  background-color: var(--foregroundColor);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.${CLASS.overlayCloseButton}::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.${CLASS.overlay},
+.${CLASS.overlay} pre {
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.${CLASS.overlay} details {
+  --border-thickness: 0.125em;
+  border-top: var(--border-thickness) solid;
+  margin: 2ch 0;
+}
+
+.${CLASS.overlay} summary {
+  cursor: pointer;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 2ch;
+  word-break: break-word;
+}
+
+.${CLASS.overlay} summary::-webkit-details-marker {
+  display: none;
+}
+
+.${CLASS.overlay} summary::marker {
+  content: none;
+}
+
+.${CLASS.overlay} summary > * {
+  pointer-events: auto;
+}
+
+.${CLASS.errorTitle} {
+  display: inline-block;
+  font-weight: bold;
+  --padding: 1ch;
+  padding: 0 var(--padding);
+  transform: translate(calc(var(--padding) * -1), calc(-50% - var(--border-thickness) / 2));
+}
+
+.${CLASS.errorTitle}::before {
+  content: "${CHEVRON_DOWN}";
+  display: inline-block;
+  margin-right: 1ch;
+  transform: translateY(-0.0625em);
+}
+
+details[open] > summary > .${CLASS.errorTitle}::before {
+  content: "${CHEVRON_UP}";
+}
+
+.${CLASS.errorLocationButton} {
+  appearance: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.${CLASS.overlay} pre {
+  margin: 0;
+  padding: 2ch;
+  overflow-x: auto;
+}
+
 .${CLASS.root} {
   --grey: #767676;
   display: flex;
@@ -1747,6 +2120,13 @@ time::after {
 
 .${CLASS.rootBottomHalf} .${CLASS.container} {
   flex-direction: column;
+}
+
+.${CLASS.root} pre {
+  margin: 0;
+  white-space: pre-wrap;
+  border-left: 0.25em solid var(--grey);
+  padding-left: 0.5em;
 }
 
 .${CLASS.expandedUiContainer} {
@@ -1924,6 +2304,7 @@ function view(
     hasReceivedHotReload:
       model.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
     uiRelatedUpdate: manageFocus,
+    errorOverlayVisible: info.errorOverlayVisible,
   });
 
   return h(
@@ -1942,7 +2323,7 @@ function view(
       HTMLDivElement,
       {
         className: CLASS.shortStatusContainer,
-        // Placed on the span to increase clickable area.
+        // Placed on the div to increase clickable area.
         onclick: () => {
           dispatch({ tag: "PressedChevron" });
         },
@@ -1954,7 +2335,7 @@ function view(
           attrs: { "aria-expanded": model.uiExpanded.toString() },
         },
         icon(
-          model.uiExpanded ? "▲" : "▼",
+          model.uiExpanded ? CHEVRON_UP : CHEVRON_DOWN,
           model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch"
         )
       ),
@@ -2025,7 +2406,7 @@ function viewExpandedUi(
     ...statusData.dl,
   ];
 
-  const browserUiPositionSendKey = statusToBrowserUiPositionSendKey(status);
+  const browserUiPositionSendKey = statusToSpecialCaseSendKey(status);
 
   return h(
     HTMLDivElement,
@@ -2175,6 +2556,12 @@ function statusIconAndText(
         status: "Connecting",
       };
 
+    case "ElmJsonError":
+      return {
+        icon: "🚨",
+        status: "elm.json or inputs error",
+      };
+
     case "EvalError":
       return {
         icon: "⛔️",
@@ -2217,14 +2604,19 @@ function viewStatus(
     case "Busy":
       return {
         dl: [],
-        content: viewCompilationModeChooser({
-          dispatch,
-          sendKey: undefined,
-          compilationMode,
-          // Avoid the warning flashing by when switching modes (which is usually very fast).
-          warnAboutCompilationModeMismatch: false,
-          info,
-        }),
+        content: [
+          ...viewCompilationModeChooser({
+            dispatch,
+            sendKey: undefined,
+            compilationMode,
+            // Avoid the warning flashing by when switching modes (which is usually very fast).
+            warnAboutCompilationModeMismatch: false,
+            info,
+          }),
+          ...(status.errorOverlay === undefined
+            ? []
+            : [viewErrorOverlayToggleButton(dispatch, status.errorOverlay)]),
+        ],
       };
 
     case "CompileError":
@@ -2238,15 +2630,10 @@ function viewStatus(
             warnAboutCompilationModeMismatch: true,
             info,
           }),
-          h(
-            HTMLParagraphElement,
-            {},
-            h(
-              HTMLElement,
-              { localName: "strong" },
-              "Check the terminal to see errors!"
-            )
-          ),
+          viewErrorOverlayToggleButton(dispatch, status.errorOverlay),
+          ...(status.openEditorError === undefined
+            ? []
+            : viewOpenEditorError(status.openEditorError)),
         ],
       };
 
@@ -2259,6 +2646,14 @@ function viewStatus(
         content: [
           ...viewHttpsInfo(info.webSocketUrl),
           h(HTMLButtonElement, { disabled: true }, "Connecting web socket…"),
+        ],
+      };
+
+    case "ElmJsonError":
+      return {
+        dl: [],
+        content: [
+          h(HTMLPreElement, { style: { minWidth: "80ch" } }, status.error),
         ],
       };
 
@@ -2330,6 +2725,70 @@ function viewStatus(
           ),
         ],
       };
+  }
+}
+
+function viewErrorOverlayToggleButton(
+  dispatch: (msg: UiMsg) => void,
+  errorOverlay: ErrorOverlay
+): HTMLElement {
+  return h(
+    HTMLButtonElement,
+    {
+      attrs: {
+        "data-test-id": errorOverlay.openErrorOverlay
+          ? "HideErrorOverlayButton"
+          : "ShowErrorOverlayButton",
+      },
+      onclick: () => {
+        dispatch({
+          tag: "ChangedOpenErrorOverlay",
+          openErrorOverlay: !errorOverlay.openErrorOverlay,
+        });
+      },
+    },
+    errorOverlay.openErrorOverlay ? "Hide errors" : "Show errors"
+  );
+}
+
+function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
+  switch (error.tag) {
+    case "EnvNotSet":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "Clicking error locations only works if you set it up."
+        ),
+        h(
+          HTMLParagraphElement,
+          {},
+          "Check this out: ",
+          h(
+            HTMLAnchorElement,
+            {
+              href: "https://github.com/lydell/elm-watch#clickable-error-locations",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            h(HTMLElement, { localName: "strong" }, "Clickable error locations")
+          )
+        ),
+      ];
+
+    case "CommandFailed":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          h(
+            HTMLElement,
+            { localName: "strong" },
+            "Opening the location in your editor failed!"
+          )
+        ),
+        h(HTMLPreElement, {}, error.message),
+      ];
   }
 }
 
@@ -2579,6 +3038,188 @@ function viewCompilationModeChooser({
   }
 }
 
+const DATA_TARGET_NAMES = "data-target-names";
+
+function updateErrorOverlay(
+  targetName: string,
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  errors: Map<string, OverlayError>,
+  overlay: HTMLElement,
+  overlayCloseButton: HTMLElement
+): void {
+  const existingErrorElements = new Map<
+    string,
+    { targetNames: Set<string>; element: Element }
+  >(
+    Array.from(overlay.children, (element) => [
+      element.id,
+      {
+        targetNames: new Set(
+          // Newline is not a valid target name character.
+          (element.getAttribute(DATA_TARGET_NAMES) ?? "").split("\n")
+        ),
+        element,
+      },
+    ])
+  );
+
+  for (const [id, { targetNames, element }] of existingErrorElements) {
+    if (targetNames.has(targetName) && !errors.has(id)) {
+      targetNames.delete(targetName);
+      if (targetNames.size === 0) {
+        element.remove();
+      } else {
+        element.setAttribute(DATA_TARGET_NAMES, [...targetNames].join("\n"));
+      }
+    }
+  }
+
+  for (const [id, error] of errors) {
+    const maybeExisting = existingErrorElements.get(id);
+    if (maybeExisting === undefined) {
+      const element = viewOverlayError(
+        targetName,
+        dispatch,
+        sendKey,
+        id,
+        error
+      );
+      overlay.appendChild(element);
+      overlay.style.backgroundColor = error.backgroundColor;
+      overlayCloseButton.style.setProperty(
+        "--foregroundColor",
+        error.foregroundColor
+      );
+      overlayCloseButton.style.setProperty(
+        "--backgroundColor",
+        error.backgroundColor
+      );
+    } else if (!maybeExisting.targetNames.has(targetName)) {
+      maybeExisting.element.setAttribute(
+        DATA_TARGET_NAMES,
+        [...maybeExisting.targetNames, targetName].join("\n")
+      );
+    }
+  }
+
+  const hidden = !overlay.hasChildNodes();
+  overlay.hidden = hidden;
+  overlayCloseButton.hidden = hidden;
+
+  // Avoid drawing the close button on top of a scrollbar.
+  overlayCloseButton.style.right = `${
+    overlay.offsetWidth - overlay.clientWidth
+  }px`;
+}
+
+function viewOverlayError(
+  targetName: string,
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  id: string,
+  error: OverlayError
+): HTMLElement {
+  return h(
+    HTMLDetailsElement,
+    {
+      open: true,
+      id,
+      style: {
+        backgroundColor: error.backgroundColor,
+        color: error.foregroundColor,
+      },
+      attrs: {
+        [DATA_TARGET_NAMES]: targetName,
+      },
+    },
+    h(
+      HTMLElement,
+      { localName: "summary" },
+      h(
+        HTMLSpanElement,
+        {
+          className: CLASS.errorTitle,
+          style: {
+            backgroundColor: error.backgroundColor,
+          },
+        },
+        error.title
+      ),
+      error.location === undefined
+        ? undefined
+        : h(
+            HTMLParagraphElement,
+            {},
+            viewErrorLocation(dispatch, sendKey, error.location)
+          )
+    ),
+    h(HTMLPreElement, { innerHTML: error.htmlContent })
+  );
+}
+
+function viewErrorLocation(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  location: ErrorLocation
+): HTMLElement | string {
+  switch (location.tag) {
+    case "FileOnly":
+      return viewErrorLocationButton(
+        dispatch,
+        sendKey,
+        {
+          file: location.file,
+          line: 1,
+          column: 1,
+        },
+        location.file.absolutePath
+      );
+
+    case "FileWithLineAndColumn": {
+      return viewErrorLocationButton(
+        dispatch,
+        sendKey,
+        location,
+        `${location.file.absolutePath}:${location.line}:${location.column}`
+      );
+    }
+
+    case "Target":
+      return `Target: ${location.targetName}`;
+  }
+}
+
+function viewErrorLocationButton(
+  dispatch: (msg: UiMsg) => void,
+  sendKey: SendKey | undefined,
+  location: {
+    file: AbsolutePath;
+    line: number;
+    column: number;
+  },
+  text: string
+): HTMLButtonElement | string {
+  return sendKey === undefined
+    ? text
+    : h(
+        HTMLButtonElement,
+        {
+          className: CLASS.errorLocationButton,
+          onclick: () => {
+            dispatch({
+              tag: "PressedOpenEditor",
+              file: location.file,
+              line: location.line,
+              column: location.column,
+              sendKey,
+            });
+          },
+        },
+        text
+      );
+}
+
 function renderMockStatuses(
   getNow: GetNow,
   elements: Elements | undefined
@@ -2597,6 +3238,7 @@ function renderMockStatuses(
       tag: "DebuggerModeStatus",
       status: { tag: "Enabled" },
     },
+    errorOverlayVisible: false,
   };
 
   const mockStatuses: Record<
@@ -2609,6 +3251,7 @@ function renderMockStatuses(
     Busy: {
       tag: "Busy",
       date,
+      errorOverlay: undefined,
     },
     Idle: {
       tag: "Idle",
@@ -2644,6 +3287,11 @@ function renderMockStatuses(
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      errorOverlay: {
+        errors: new Map(),
+        openErrorOverlay: false,
+      },
+      openEditorError: undefined,
       info: {
         ...info,
         originalCompilationMode: "standard",
@@ -2718,6 +3366,16 @@ function renderMockStatuses(
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+      errorOverlay: {
+        errors: new Map(),
+        openErrorOverlay: false,
+      },
+      openEditorError: { tag: "EnvNotSet" },
+    },
+    ElmJsonError: {
+      tag: "ElmJsonError",
+      date,
+      error: "Elm.json error",
     },
     Connecting: {
       tag: "Connecting",

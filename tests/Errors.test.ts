@@ -20,13 +20,13 @@ import {
   clean,
   CursorWriteStream,
   describeExceptWindows,
-  FailReadStream,
   logDebug,
   MemoryWriteStream,
   prependPATH,
   rimraf,
   rm,
   rmSymlink,
+  SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
   testExceptWindows,
@@ -69,7 +69,7 @@ async function runAbsolute(
           }
         : env),
     },
-    stdin: new FailReadStream(),
+    stdin: new SilentReadStream(),
     stdout,
     stderr,
     logDebug,
@@ -150,7 +150,7 @@ async function runWithBadElmBinAndWrittenError(
 }
 
 function printError(errorTemplate: Errors.ErrorTemplate): string {
-  return clean(errorTemplate(80));
+  return clean(Errors.toTerminalString(errorTemplate, 80, false));
 }
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -1104,7 +1104,7 @@ describe("errors", () => {
     });
 
     const printPATHWindows = (env: Env): string =>
-      clean(Errors.printPATH(env, true));
+      clean(Errors.printPATH(env, true)(80, (piece) => piece.text));
 
     test("Windows basic", () => {
       expect(
@@ -2133,7 +2133,7 @@ describe("errors", () => {
         ⧙-- TROUBLE WRITING DUMMY OUTPUT ------------------------------------------------⧘
         ⧙Target: Main⧘
 
-        There are no websocket connections for this target, so I only typecheck the
+        There are no WebSocket connections for this target, so I only typecheck the
         code. That went well. Then I tried to write a dummy output file here:
 
         /Users/you/project/tests/fixtures/errors/readonly-output/readonly.js
@@ -3343,10 +3343,14 @@ describe("errors", () => {
     test("noCommonRoot", () => {
       expect(
         removeColor(
-          Errors.noCommonRoot([
-            { tag: "AbsolutePath", absolutePath: "C:\\project\\elm.json" },
-            { tag: "AbsolutePath", absolutePath: "D:\\stuff\\elm\\elm.json" },
-          ])(80)
+          Errors.toTerminalString(
+            Errors.noCommonRoot([
+              { tag: "AbsolutePath", absolutePath: "C:\\project\\elm.json" },
+              { tag: "AbsolutePath", absolutePath: "D:\\stuff\\elm\\elm.json" },
+            ]),
+            80,
+            false
+          )
         )
       ).toMatchInlineSnapshot(`
         -- NO COMMON ROOT --------------------------------------------------------------

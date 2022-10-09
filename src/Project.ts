@@ -70,6 +70,8 @@ export class OutputState {
 
   browserUiPosition: BrowserUiPosition;
 
+  openErrorOverlay = false;
+
   allRelatedElmFilePaths = new Set<string>();
 
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
@@ -82,11 +84,13 @@ export class OutputState {
     inputs: NonEmptyArray<InputPath>,
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
+    openErrorOverlay: boolean,
     private getNow: GetNow
   ) {
     this.inputs = inputs;
     this.compilationMode = compilationMode;
     this.browserUiPosition = browserUiPosition;
+    this.openErrorOverlay = openErrorOverlay;
   }
 
   flushDurations(): Array<Duration> {
@@ -154,13 +158,13 @@ export type OutputStatus =
       elmDurationMs: number;
       walkerDurationMs: number;
       injectDurationMs: number;
-      kill: () => void;
+      kill: (options: { force: boolean }) => void;
     }
   | {
       tag: "ElmMakeTypecheckOnly";
       elmDurationMs: number;
       walkerDurationMs: number;
-      kill: () => void;
+      kill: (options: { force: boolean }) => void;
     }
   | {
       tag: "Interrupted";
@@ -251,6 +255,7 @@ export type ElmJsonErrorWithMetadata = {
   outputPath: OutputPath;
   compilationMode: CompilationMode;
   browserUiPosition: BrowserUiPosition;
+  openErrorOverlay: boolean;
   error: ElmJsonError;
 };
 
@@ -370,6 +375,7 @@ export function initProject({
       const {
         compilationMode: thisCompilationMode = compilationMode,
         browserUiPosition = "BottomLeft",
+        openErrorOverlay = false,
       } = persisted ?? {};
 
       switch (resolveElmJsonResult.tag) {
@@ -383,6 +389,7 @@ export function initProject({
               resolveElmJsonResult.inputs,
               thisCompilationMode,
               browserUiPosition,
+              openErrorOverlay,
               getNow
             )
           );
@@ -395,6 +402,7 @@ export function initProject({
             outputPath,
             compilationMode: thisCompilationMode,
             browserUiPosition,
+            openErrorOverlay,
             error: resolveElmJsonResult,
           });
           break;
@@ -604,14 +612,17 @@ function resolveElmJson(
 }
 
 export function getFlatOutputs(project: Project): Array<{
+  elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
 }> {
-  return Array.from(project.elmJsons.values()).flatMap((outputs) =>
-    Array.from(outputs, ([outputPath, outputState]) => ({
-      outputPath,
-      outputState,
-    }))
+  return Array.from(project.elmJsons.entries()).flatMap(
+    ([elmJsonPath, outputs]) =>
+      Array.from(outputs, ([outputPath, outputState]) => ({
+        elmJsonPath,
+        outputPath,
+        outputState,
+      }))
   );
 }
 

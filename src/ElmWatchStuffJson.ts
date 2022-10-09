@@ -20,6 +20,7 @@ type Target = ReturnType<typeof Target>;
 const Target = Decode.fieldsAuto({
   compilationMode: Decode.optional(CompilationMode),
   browserUiPosition: Decode.optional(BrowserUiPosition),
+  openErrorOverlay: Decode.optional(Decode.boolean),
 });
 
 export type ElmWatchStuffJson = ReturnType<typeof ElmWatchStuffJson>;

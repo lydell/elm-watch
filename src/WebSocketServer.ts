@@ -225,6 +225,7 @@ export class WebSocketServer {
   }
 
   async close(): Promise<void> {
+    this.unsetDispatch();
     // This terminates all connections.
     this.webSocketServer.close();
     await this.polyHttpServer.close();

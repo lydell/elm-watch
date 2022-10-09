@@ -76,6 +76,7 @@ const project: Project = {
       },
       compilationMode: "standard",
       browserUiPosition: "BottomLeft",
+      openErrorOverlay: false,
       error: {
         tag: "InputsNotFound",
         inputsNotFound: [
@@ -132,6 +133,7 @@ const project: Project = {
             ],
             "optimize",
             "BottomLeft",
+            false,
             getNow
           ),
         ],
@@ -178,6 +180,7 @@ const project: Project = {
             ],
             "standard",
             "BottomLeft",
+            false,
             getNow
           ),
         ],
@@ -227,6 +230,7 @@ const project: Project = {
             ],
             "optimize",
             "BottomLeft",
+            false,
             getNow
           ),
         ],

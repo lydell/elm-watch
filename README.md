@@ -233,12 +233,63 @@ Here are some more icons you might see (they’re also explained when you expand
 - ⛔️: Eval error
 - ❌: Unexpected error
 
-Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Many build tools put an overlay across the entire browser window in this case, showing the compilation error. I find that very annoying:
+Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Go to the terminal to see the errors, or expand the UI and click the “Show errors” button if you’d like to see them directly in the browser, in an overlay. The overlay is visible until you close it again, or until you fix all errors. elm-watch remembers your choice to show errors in the browser per target, and opens the overlay again when there are new errors if you had previously opted to show it.
 
-- I prefer seeing the errors in the terminal, in the place they were designed to be displayed.
-- I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Some error overlays prevent you from doing that, or require you to repeatedly close it. It’s nice having a runnable version of your app locally as much of the time as possible, even if the code is currently messy, in my opinion.
+I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. This is why elm-watch lets you choose if you want the overlay or not, and remembers your choice. Let me know if you think a future version of elm-watch should or should not show it by default, though!
 
-To make that 🚨 more noticeable, there’s a similar animation as for ✅ – a growing and fading _red_ circle – which also is repeated every time you focus the tab (switch to it from another tab or window, or move focus from the dev tools to the page).
+(A cool little detail: The error overlay picks up the colors from your terminal, if possible.)
+
+To make that 🚨 more noticeable, there’s a similar animation as for ✅ – a growing and fading _red_ circle – which also is repeated every time you focus the tab (switch to it from another tab or window, or move focus from the dev tools to the page). (It’s only repeated when the error overlay isn’t showing, though.)
+
+### Clickable error locations
+
+In the error overlay you can click error locations to open them in your editor!
+
+There’s no universal way of doing that, though, so you’ll have to set it up. It’s not that complicated: You need to set the `ELM_WATCH_OPEN_EDITOR` environment variable to some shell script code.
+
+Here’s how to set it in different shells:
+
+| Shell | Config file | Code |
+| --- | --- | --- |
+| bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
+| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
+| fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your command here'` |
+| Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `your command here` |
+
+(Feel free to do it in a different way if you have a preference. Try [direnv] if you want different editors in different projects.)
+
+And here are some commands for a few editors:
+
+| Editor | Command | Windows command |
+| --- | --- | --- |
+| [VSCode] | `code --goto "$file:$line:$column"` | `code --goto "%file%:%line%:%column%"` |
+| [IntelliJ IDEA] | `idea --line "$line" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
+| [Rider] | `rider --line "$line" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
+
+\* Neither IntelliJ IDEA nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. Chances are other [JetBrains] IDEs work similarly, just with different names.
+
+† I haven’t tested IntelliJ IDEA or Rider on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
+
+Full examples:
+
+- bash/zsh with VSCode: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
+- fish with Rider: `set -Ux ELM_WATCH_OPEN_EDITOR 'rider --line "$line" "$file"'`
+
+Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contains digits, but it doesn’t hurt to quote them too.)
+
+- ✅ `"$file"`, `"%file%"`
+- ❌ `$file`, `%file%`
+
+elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child_process.exec], with the following:
+
+- Shell:
+  - On Windows: `cmd.exe`
+  - Otherwise: `sh`
+- CWD: The `elm-watch.json` directory.
+- Environment: Three extra environment variables are set:
+  - `file`: The absolute file path of the error location.
+  - `line`: 1-based line number of the error location. `1` if the error location has no line number.
+  - `column`: 1-based column number of the error location. `1` if the error location has no column number.
 
 ## elm-watch.json
 
@@ -603,6 +654,8 @@ You can pair elm-watch with either of webpack, Parcel, Vite, esbuild or any othe
 
 It’s up to you to decide if you think the extra work of pairing a build tool with elm-watch is worth it.
 
+[child_process.exec]: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+[direnv]: https://direnv.net/
 [elm-go]: https://github.com/lucamug/elm-go
 [elm-guide-install]: https://guide.elm-lang.org/install/elm.html
 [elm-hot]: https://github.com/klazuka/elm-hot
@@ -614,13 +667,17 @@ It’s up to you to decide if you think the extra work of pairing a build tool w
 [esbuild]: https://esbuild.github.io/
 [getting-started-with-elm-watch]: https://www.youtube.com/watch?v=n15nOCZnTac
 [globalthis]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
+[intellij idea]: https://www.jetbrains.com/idea/
+[jetbrains]: https://www.jetbrains.com/
 [parcel]: https://parceljs.org/
 [platform.worker]: https://package.elm-lang.org/packages/elm/core/latest/Platform#worker
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
 [redux devtools]: https://github.com/reduxjs/redux-devtools
+[rider]: https://www.jetbrains.com/rider/
 [run-pty]: https://github.com/lydell/run-pty/
 [vite-elm-template]: https://github.com/lindsaykwardell/vite-elm-template
 [vite]: https://vitejs.dev/
+[vscode]: https://code.visualstudio.com/
 [web workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [webpack plugin]: https://webpack.js.org/api/plugins/
 [webpack]: https://webpack.js.org/

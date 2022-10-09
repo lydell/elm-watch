@@ -9,6 +9,7 @@ import {
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
+import { ReadStream } from "../src/Helpers";
 import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
 import { BrowserUiPosition, CompilationMode } from "../src/Types";
@@ -16,11 +17,11 @@ import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
-  FailReadStream,
   logDebug,
   MemoryWriteStream,
   rimraf,
   rm,
+  SilentReadStream,
   TEST_ENV,
   wait,
 } from "./Helpers";
@@ -83,10 +84,12 @@ type SharedRunOptions = {
   isTTY?: boolean;
   bin?: string;
   env?: Env;
+  keepBuild?: boolean;
   keepElmStuffJson?: boolean;
   clearElmStuff?: boolean;
   cwd?: string;
   includeProxyReloads?: boolean;
+  stdin?: ReadStream;
 };
 
 export async function run({
@@ -99,10 +102,12 @@ export async function run({
   isTTY = true,
   bin,
   env,
+  keepBuild = false,
   keepElmStuffJson = false,
   clearElmStuff = false,
   cwd = ".",
   includeProxyReloads = false,
+  stdin = new SilentReadStream(),
 }: SharedRunOptions & {
   fixture: string;
   scripts: Array<string>;
@@ -126,8 +131,10 @@ export async function run({
   const elmStuff = path.join(dir, "elm-stuff");
   const elmWatchStuff = path.join(elmStuff, "elm-watch", "stuff.json");
 
-  await rimraf(build);
-  fs.mkdirSync(build, { recursive: true });
+  if (!keepBuild) {
+    await rimraf(build);
+    fs.mkdirSync(build, { recursive: true });
+  }
 
   if (!keepElmStuffJson) {
     rm(elmWatchStuff);
@@ -255,16 +262,16 @@ export async function run({
             ...env,
           };
 
-    const logger = makeLogger({
+    window.__ELM_WATCH.LOG_DEBUG = makeLogger({
       env: fullEnv,
+      getNow: () => new Date(),
+      stdin: process.stdin,
       stdout: process.stdout,
       stderr: process.stderr,
       logDebug: (message) => {
         logDebug(`Browser: ${message}`);
       },
-    });
-
-    window.__ELM_WATCH.LOG_DEBUG = logger.debug;
+    }).debug;
 
     let idle = 0;
     window.__ELM_WATCH.ON_REACHED_IDLE_STATE = (reason) => {
@@ -302,20 +309,23 @@ export async function run({
       Object.assign(window.__ELM_WATCH, basic);
     };
 
-    watcher = fs.watch(build, () => {
-      if (absoluteScripts.every(fs.existsSync)) {
-        watcher?.close();
-        watcher = undefined;
-        loadBuiltFiles(false);
-      }
-    });
-
-    watcher.on("error", reject);
+    if (keepBuild) {
+      loadBuiltFiles(false);
+    } else {
+      watcher = fs.watch(build, () => {
+        if (absoluteScripts.every(fs.existsSync)) {
+          watcher?.close();
+          watcher = undefined;
+          loadBuiltFiles(false);
+        }
+      });
+      watcher.on("error", reject);
+    }
 
     elmWatchCli(["hot", ...args], {
       cwd: path.join(dir, cwd),
       env: fullEnv,
-      stdin: new FailReadStream(),
+      stdin,
       stdout,
       stderr,
       logDebug,
@@ -325,14 +335,12 @@ export async function run({
       .catch(reject);
   });
 
-  const stdoutString = clean(stdout.getOutput());
-
   expect(stderr.content).toBe("");
 
   return {
-    terminal: stdoutString,
+    terminal: clean(stdout.getOutput()),
     browserConsole: browserConsole.join("\n\n"),
-    renders: renders.join(`\n${"=".repeat(80)}\n`),
+    renders: clean(renders.join(`\n${"=".repeat(80)}\n`)),
     div: outerDiv,
   };
 }
@@ -377,6 +385,7 @@ export function runHotReload({
       [name]: {
         compilationMode,
         browserUiPosition: "BottomLeft",
+        openErrorOverlay: false,
       },
       ...extraElmWatchStuffJson,
     },
@@ -469,23 +478,110 @@ function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
   }
 }
 
-export function expandUi(): void {
-  expandUiHelper(true);
+export function expandUi(targetName?: string): void {
+  expandUiHelper(true, targetName);
 }
 
-export function collapseUi(): void {
-  expandUiHelper(false);
+export function collapseUi(targetName?: string): void {
+  expandUiHelper(false, targetName);
 }
 
-function expandUiHelper(wantExpanded: boolean): void {
+function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector("button[aria-expanded]");
+    const button = shadowRoot?.querySelector(
+      `${
+        targetName === undefined
+          ? "[data-target]"
+          : `[data-target="${targetName}"]`
+      } button[aria-expanded]`
+    );
     if (button instanceof HTMLElement) {
       if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
         button.click();
       }
     } else {
       throw new Error(`Could not button for expanding UI.`);
+    }
+  });
+}
+
+export function showErrors(targetName?: string): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `${
+        targetName === undefined
+          ? "[data-target]"
+          : `[data-target="${targetName}"]`
+      } [data-test-id="ShowErrorOverlayButton"]`
+    );
+    if (button instanceof HTMLElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not button for showing errors.`);
+    }
+  });
+}
+
+export function hideErrors(targetName?: string): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `${
+        targetName === undefined
+          ? "[data-target]"
+          : `[data-target="${targetName}"]`
+      } [data-test-id="HideErrorOverlayButton"]`
+    );
+    if (button instanceof HTMLElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not button for hiding errors.`);
+    }
+  });
+}
+
+export function closeOverlay(): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(
+      `[data-test-id="OverlayCloseButton"]`
+    );
+    if (button instanceof HTMLElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not button for closing overlay.`);
+    }
+  });
+}
+
+export function getOverlay(): string {
+  let result = "(Overlay not found)";
+  withShadowRoot((shadowRoot) => {
+    const overlay = shadowRoot?.querySelector(`[data-test-id="Overlay"]`);
+    if (overlay instanceof HTMLElement) {
+      const children = Array.from(overlay.children, (child, index) => {
+        const clone = child.cloneNode(true) as HTMLElement;
+        clone.id = index.toString();
+        for (const element of clone.querySelectorAll("[class]")) {
+          element.removeAttribute("class");
+        }
+        return clone.outerHTML
+          .replace("<summary", "\n<summary")
+          .replace("</summary>", "</summary>\n");
+      }).join(`\n${"-".repeat(80)}\n`);
+      result = `<overlay ${overlay.hidden ? "hidden" : "visible"} style="${
+        overlay.getAttribute("style") ?? ""
+      }">\n${children}\n</overlay>`;
+    }
+  });
+  return clean(result);
+}
+
+export function clickFirstErrorLocation(): void {
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot?.querySelector(`[data-test-id="Overlay"] button`);
+    if (button instanceof HTMLButtonElement) {
+      button.click();
+    } else {
+      throw new Error(`Could not find any button in overlay.`);
     }
   });
 }

@@ -1,6 +1,10 @@
 import * as Decode from "tiny-decoders";
 
-export type AbsolutePath = { tag: "AbsolutePath"; absolutePath: string };
+export type AbsolutePath = ReturnType<typeof AbsolutePath>;
+export const AbsolutePath = Decode.fieldsAuto({
+  tag: () => "AbsolutePath" as const,
+  absolutePath: Decode.string,
+});
 
 export type Cwd = { tag: "Cwd"; path: AbsolutePath };
 

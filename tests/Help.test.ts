@@ -4,9 +4,9 @@ import {
   assertExitCode,
   clean,
   CursorWriteStream,
-  FailReadStream,
   logDebug,
   MemoryWriteStream,
+  SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
 } from "./Helpers";
@@ -24,7 +24,7 @@ async function helpHelper(
       ...TEST_ENV,
       ...env,
     },
-    stdin: new FailReadStream(),
+    stdin: new SilentReadStream(),
     stdout,
     stderr,
     logDebug,
@@ -90,6 +90,10 @@ describe("help", () => {
           ⧙NO_COLOR⧘
               Disable colored output
 
+          ⧙ELM_WATCH_OPEN_EDITOR⧘
+              Open your editor when clicking error locations in the browser
+              https://github.com/lydell/elm-watch#clickable-error-locations
+
       ⧙Documentation:⧘
           https://github.com/lydell/elm-watch#readme
 
@@ -145,6 +149,10 @@ describe("help", () => {
       Environment variables:
           NO_COLOR
               Disable colored output
+
+          ELM_WATCH_OPEN_EDITOR
+              Open your editor when clicking error locations in the browser
+              https://github.com/lydell/elm-watch#clickable-error-locations
 
       Documentation:
           https://github.com/lydell/elm-watch#readme

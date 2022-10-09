@@ -4,6 +4,15 @@ export type Env = Record<string, string | undefined>;
 // Type: Check if defined and ignore value.
 export const NO_COLOR = "NO_COLOR";
 
+// If set, enables clicking error locations in the browser to open them in your editor.
+// Type: String of shell code.
+export const ELM_WATCH_OPEN_EDITOR = "ELM_WATCH_OPEN_EDITOR";
+
+// If the `ELM_WATCH_OPEN_EDITOR` takes this long, it is killed.
+// Type: Number.
+export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS =
+  "__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS";
+
 // This enables `logger.debug()` calls (written to stderr). Since the stuff
 // written to stdout uses cursor movements, you probably want to also set
 // `__ELM_WATCH_NOT_TTY` or pipe to `cat` (if not a tty cursor movements are
@@ -55,4 +64,14 @@ export const __ELM_WATCH_TMP_DIR = "__ELM_WATCH_TMP_DIR";
 // to finish. The thinking is that this can reduce corruption of elm-stuff.
 // Used in tests by not having to wait for so long.
 // Type: Number.
-export const __ELM_WATCH_ELM_TIMEOUT = "__ELM_WATCH_ELM_TIMEOUT";
+export const __ELM_WATCH_ELM_TIMEOUT_MS = "__ELM_WATCH_ELM_TIMEOUT_MS";
+
+// Used in tests to quickly fall back to the default theme.
+// Type: Number.
+export const __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS =
+  "__ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS";
+
+// Used in tests to test reusing of a recent terminal query.
+// Type: Number.
+export const __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS =
+  "__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS";

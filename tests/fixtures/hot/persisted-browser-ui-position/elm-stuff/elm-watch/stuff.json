@@ -3,7 +3,8 @@
     "targets": {
         "Main": {
             "compilationMode": "standard",
-            "browserUiPosition": "TopRight"
+            "browserUiPosition": "TopRight",
+            "openErrorOverlay": false
         }
     }
 }

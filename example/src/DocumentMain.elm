@@ -2,7 +2,9 @@ module DocumentMain exposing (main)
 
 import Browser
 import Html
+import Html.Attributes as Attr
 import Html.Events exposing (onClick)
+import Shared
 
 
 type Msg
@@ -44,10 +46,18 @@ view model =
     , body =
         [ Html.div []
             [ Html.button [ onClick DecrementClicked ]
-                [ Html.text "-" ]
+                [ Html.text Shared.minus ]
             , Html.text (" " ++ String.fromInt model.count ++ " ")
             , Html.button [ onClick IncrementClicked ]
-                [ Html.text "+" ]
+                [ Html.text Shared.plus ]
+            , Html.p
+                [ Attr.style "position" "fixed"
+                , Attr.style "top" "0"
+                , Attr.style "right" "0"
+                , Attr.style "background" "red"
+                , Attr.style "z-index" "2147483647"
+                ]
+                [ Html.text "position: fixed with maximum z-index – should be covered by the error overlay" ]
             ]
         ]
     }

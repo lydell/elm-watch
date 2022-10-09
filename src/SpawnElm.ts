@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { __ELM_WATCH_ELM_TIMEOUT, __ELM_WATCH_TMP_DIR, Env } from "./Env";
+import { __ELM_WATCH_ELM_TIMEOUT_MS, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
 import {
   JsonError,
@@ -77,7 +77,10 @@ export function make({
   outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean });
   env: Env;
   getNow: GetNow;
-}): { promise: Promise<RunElmMakeResult>; kill: () => void } {
+}): {
+  promise: Promise<RunElmMakeResult>;
+  kill: (options: { force: boolean }) => void;
+} {
   const command: Command = {
     command: "elm",
     args: [
@@ -146,21 +149,33 @@ export function make({
 
   return {
     promise: promise.then(handleSpawnResult),
-    kill: () => {
-      delayKill(startTime, getNow, env, kill);
+    kill: ({ force }) => {
+      // istanbul ignore if
+      if (force) {
+        kill();
+      } else {
+        delayKill(promise, startTime, getNow, env, kill);
+      }
     },
   };
 }
 
 function delayKill(
+  promise: Promise<SpawnResult>,
   startTime: number,
   getNow: GetNow,
   env: Env,
   kill: () => void
 ): void {
-  const timeout = silentlyReadIntEnvValue(env[__ELM_WATCH_ELM_TIMEOUT], 10000);
+  const timeout = silentlyReadIntEnvValue(
+    env[__ELM_WATCH_ELM_TIMEOUT_MS],
+    10000
+  );
   const elapsed = getNow().getTime() - startTime;
-  setTimeout(kill, Math.max(0, timeout - elapsed));
+  const timeoutId = setTimeout(kill, Math.max(0, timeout - elapsed));
+  promise.finally(() => {
+    clearTimeout(timeoutId);
+  });
 }
 
 export function compilationModeToArg(
@@ -344,7 +359,10 @@ export function install({
   elmJsonPath: ElmJsonPath;
   env: Env;
   getNow: GetNow;
-}): { promise: Promise<ElmInstallResult>; kill: () => void } {
+}): {
+  promise: Promise<ElmInstallResult>;
+  kill: (options: { force: boolean }) => void;
+} {
   const dummy = absolutePathFromString(
     {
       tag: "AbsolutePath",
@@ -471,8 +489,13 @@ export function install({
 
   return {
     promise: promise.then(handleSpawnResult),
-    kill: () => {
-      delayKill(startTime, getNow, env, kill);
+    kill: ({ force }) => {
+      // istanbul ignore if
+      if (force) {
+        kill();
+      } else {
+        delayKill(promise, startTime, getNow, env, kill);
+      }
     },
   };
 }

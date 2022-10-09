@@ -1,0 +1,34 @@
+{
+    "targets": {
+        "Enabled1": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/Enabled1.js"
+        },
+        "Enabled2": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/Enabled2.js"
+        },
+        "Disabled1": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/Disabled1.js"
+        },
+        "Disabled2": {
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/Disabled2.js"
+        },
+        "EnabledNotFound": {
+            "inputs": [
+                "src/EnabledNotFound.elm"
+            ],
+            "output": "build/EnabledNotFound.js"
+        }
+    }
+}

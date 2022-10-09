@@ -1,3 +1,4 @@
+import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
 import * as fs from "fs";
 import * as path from "path";
@@ -15,7 +16,9 @@ import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
+  __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  ELM_WATCH_OPEN_EDITOR,
   Env,
 } from "./Env";
 import * as Errors from "./Errors";
@@ -52,10 +55,12 @@ import {
   Project,
 } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
+import * as Theme from "./Theme";
 import {
   AbsolutePath,
   BrowserUiPosition,
   CompilationMode,
+  ElmJsonPath,
   ElmWatchJsonPath,
   equalsInputPath,
   GetNow,
@@ -121,11 +126,12 @@ type Mutable = {
   webSocketConnections: Array<WebSocketConnection>;
   lastWebSocketCloseTimestamp: number | undefined;
   workerLimitTimeoutMs: number;
+  workerLimitTimeoutId: NodeJS.Timeout | undefined;
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
-  killInstallDependencies: (() => void) | undefined;
+  killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
 };
 
 type WebSocketConnection = {
@@ -140,6 +146,7 @@ type WebSocketMessageReceivedOutput =
   | OutputPathError
   | {
       tag: "Output";
+      elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
     };
@@ -242,6 +249,11 @@ type Cmd =
       compilationMode: CompilationMode;
     }
   | {
+      tag: "ChangeOpenErrorOverlay";
+      outputState: OutputState;
+      openErrorOverlay: boolean;
+    }
+  | {
       tag: "ClearScreen";
     }
   | {
@@ -278,6 +290,13 @@ type Cmd =
       tag: "NoCmd";
     }
   | {
+      tag: "OpenEditor";
+      file: AbsolutePath;
+      line: number;
+      column: number;
+      webSocket: WebSocket;
+    }
+  | {
       tag: "PrintCompileErrors";
       errors: NonEmptyArray<ErrorTemplate>;
     }
@@ -302,6 +321,14 @@ type Cmd =
       message: WebSocketToClientMessage;
     }
   | {
+      tag: "WebSocketSendCompileErrorToOutput";
+      outputPath: OutputPath;
+      compilationMode: CompilationMode;
+      browserUiPosition: BrowserUiPosition;
+      openErrorOverlay: boolean;
+      errors: Array<Errors.ErrorTemplate>;
+    }
+  | {
       tag: "WebSocketSendToOutput";
       outputPath: OutputPath;
       message: WebSocketToClientMessage;
@@ -318,6 +345,7 @@ type HotRunResult =
     }
   | {
       tag: "ExitOnIdle";
+      reason: "CtrlCPressed" | "Other";
     }
   | {
       tag: "Restart";
@@ -357,6 +385,7 @@ export async function run(
   const result = await runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
       env,
+      logger,
       getNow,
       postprocessWorkerPool,
       webSocketState,
@@ -429,6 +458,7 @@ export async function watchElmWatchJsonOnce(
 const initMutable =
   (
     env: Env,
+    logger: Logger,
     getNow: GetNow,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
@@ -441,8 +471,8 @@ const initMutable =
     resolvePromise: (result: HotRunResult) => void,
     rejectPromise: (error: Error) => void
   ): Mutable => {
-    // The more targets that are enabled by connecting websockets, the more
-    // workers we might have. Terminate unnecessary idle workers as websockets
+    // The more targets that are enabled by connecting WebSockets, the more
+    // workers we might have. Terminate unnecessary idle workers as WebSockets
     // close. But wait a while first: We don’t want to terminate workers just
     // because the user refreshed the page (which results in a disconnect +
     // connect).
@@ -495,6 +525,7 @@ const initMutable =
       webSocketConnections,
       lastWebSocketCloseTimestamp: undefined,
       workerLimitTimeoutMs,
+      workerLimitTimeoutId: undefined,
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
@@ -531,30 +562,42 @@ const initMutable =
       })
       .catch(rejectPromise);
 
-    hotKillManager.kill = async () => {
-      dispatch({ tag: "ExitRequested", date: getNow() });
-
+    const kill = async (): Promise<void> => {
       // istanbul ignore next
       try {
         if (mutable.killInstallDependencies !== undefined) {
-          mutable.killInstallDependencies();
+          mutable.killInstallDependencies({ force: true });
         }
         await Promise.all(
           getFlatOutputs(project).map(({ outputState }) =>
             "kill" in outputState.status
-              ? outputState.status.kill()
+              ? outputState.status.kill({ force: true })
               : Promise.resolve()
           )
         );
         await closeAll(mutable);
+        logger.kill();
       } catch (unknownError) {
         const error = toError(unknownError);
         rejectPromise(toError(error));
       }
 
       delete hotKillManager.kill;
-      resolvePromise({ tag: "ExitOnIdle" });
     };
+
+    hotKillManager.kill = async () => {
+      dispatch({ tag: "ExitRequested", date: getNow() });
+      await kill();
+      resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
+    };
+
+    logger.setRawMode(() => {
+      kill()
+        .then(() => {
+          resolvePromise({ tag: "ExitOnIdle", reason: "CtrlCPressed" });
+        })
+        .catch(rejectPromise);
+    });
 
     return mutable;
   };
@@ -562,15 +605,30 @@ const initMutable =
 function writeElmWatchStuffJson(mutable: Mutable): void {
   const json: ElmWatchStuffJsonWritable = {
     port: mutable.webSocketServer.port.thePort,
-    targets: Object.fromEntries(
-      getFlatOutputs(mutable.project).map(({ outputPath, outputState }) => [
-        outputPath.targetName,
-        {
-          compilationMode: outputState.compilationMode,
-          browserUiPosition: outputState.browserUiPosition,
-        },
-      ])
-    ),
+    targets: Object.fromEntries([
+      ...mutable.project.elmJsonsErrors.map(
+        (error) =>
+          [
+            error.outputPath.targetName,
+            {
+              compilationMode: error.compilationMode,
+              browserUiPosition: error.browserUiPosition,
+              openErrorOverlay: error.openErrorOverlay,
+            },
+          ] as const
+      ),
+      ...getFlatOutputs(mutable.project).map(
+        ({ outputPath, outputState }) =>
+          [
+            outputPath.targetName,
+            {
+              compilationMode: outputState.compilationMode,
+              browserUiPosition: outputState.browserUiPosition,
+              openErrorOverlay: outputState.openErrorOverlay,
+            },
+          ] as const
+      ),
+    ]),
   };
 
   try {
@@ -642,15 +700,16 @@ const init = (
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
-      ({ outputPath, compilationMode, browserUiPosition }): Cmd => ({
+      (elmJsonError): Cmd => ({
         tag: "WebSocketSendToOutput",
-        outputPath,
+        outputPath: elmJsonError.outputPath,
         message: {
           tag: "StatusChanged",
           status: {
-            tag: "CompileError",
-            compilationMode,
-            browserUiPosition,
+            tag: "ElmJsonError",
+            error: Errors.toPlainString(
+              Compile.renderElmJsonError(elmJsonError)
+            ),
           },
         },
       })
@@ -769,6 +828,7 @@ function update(
           const duration = msg.date.getTime() - model.hotState.start.getTime();
 
           const cmd = handleOutputActionResultToCmd(
+            project.elmWatchJsonPath,
             msg.handleOutputActionResult
           );
 
@@ -909,6 +969,8 @@ function update(
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
             msg.date,
             model,
+            project.elmWatchJsonPath,
+            result.elmJsonPath,
             result.outputPath,
             result.outputState,
             result.elmCompiledTimestamp
@@ -919,6 +981,37 @@ function update(
               latestEvents: [...newModel.latestEvents, latestEvent],
             },
             cmds,
+          ];
+        }
+
+        case "ElmJsonError": {
+          const elmJsonError = result.error;
+          const event: WebSocketRelatedEvent = {
+            tag: "WebSocketConnectedNeedingNoAction",
+            date: msg.date,
+            outputPath: elmJsonError.outputPath,
+          };
+
+          return [
+            {
+              ...model,
+              latestEvents: [...model.latestEvents, event],
+            },
+            [
+              {
+                tag: "WebSocketSendToOutput",
+                outputPath: elmJsonError.outputPath,
+                message: {
+                  tag: "StatusChanged",
+                  status: {
+                    tag: "ElmJsonError",
+                    error: Errors.toPlainString(
+                      Compile.renderElmJsonError(elmJsonError)
+                    ),
+                  },
+                },
+              },
+            ],
           ];
         }
 
@@ -957,6 +1050,7 @@ function update(
       switch (result.tag) {
         case "Success":
           return onWebSocketToServerMessage(
+            project.elmWatchJsonPath,
             model,
             msg.date,
             msg.output,
@@ -1289,6 +1383,11 @@ const runCmd =
         writeElmWatchStuffJson(mutable);
         return;
 
+      case "ChangeOpenErrorOverlay":
+        cmd.outputState.openErrorOverlay = cmd.openErrorOverlay;
+        writeElmWatchStuffJson(mutable);
+        return;
+
       case "ClearScreen":
         logger.clearScreen();
         mutable.lastInfoMessage = undefined;
@@ -1380,7 +1479,7 @@ const runCmd =
             if (exitOnError) {
               closeAll(mutable)
                 .then(() => {
-                  resolvePromise({ tag: "ExitOnIdle" });
+                  resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
                 })
                 .catch(rejectPromise);
             }
@@ -1398,8 +1497,8 @@ const runCmd =
               getNow,
               mutable.project
             );
-            mutable.killInstallDependencies = () => {
-              kill();
+            mutable.killInstallDependencies = ({ force }) => {
+              kill({ force });
               mutable.killInstallDependencies = undefined;
             };
             return promise;
@@ -1459,7 +1558,7 @@ const runCmd =
         ) {
           closeAll(mutable)
             .then(() => {
-              resolvePromise({ tag: "ExitOnIdle" });
+              resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
             })
             .catch(rejectPromise);
         }
@@ -1471,12 +1570,14 @@ const runCmd =
           cmd.killInstallDependencies &&
           mutable.killInstallDependencies !== undefined
         ) {
-          mutable.killInstallDependencies();
+          mutable.killInstallDependencies({ force: false });
         }
         for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;
           if ("kill" in outputState.status) {
-            Promise.resolve(outputState.status.kill()).catch(rejectPromise);
+            Promise.resolve(outputState.status.kill({ force: false })).catch(
+              rejectPromise
+            );
           }
           webSocketSendToOutput(
             outputPath,
@@ -1495,6 +1596,58 @@ const runCmd =
 
       case "NoCmd":
         return;
+
+      case "OpenEditor": {
+        const command = env[ELM_WATCH_OPEN_EDITOR];
+        const cwd = absoluteDirname(
+          mutable.project.elmWatchJsonPath.theElmWatchJsonPath
+        );
+        const timeout = silentlyReadIntEnvValue(
+          env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
+          5000
+        );
+        const extraEnv = {
+          file: cmd.file.absolutePath,
+          line: cmd.line.toString(),
+          column: cmd.column.toString(),
+        };
+        if (command === undefined) {
+          webSocketSend(cmd.webSocket, {
+            tag: "OpenEditorFailed",
+            error: { tag: "EnvNotSet" },
+          });
+        } else {
+          childProcess.exec(
+            command,
+            {
+              cwd: cwd.absolutePath,
+              env: { ...env, ...extraEnv },
+              encoding: "utf8",
+              timeout,
+            },
+            (error, stdout, stderr) => {
+              if (error !== null) {
+                webSocketSend(cmd.webSocket, {
+                  tag: "OpenEditorFailed",
+                  error: {
+                    tag: "CommandFailed",
+                    message: Errors.openEditorCommandFailed({
+                      error,
+                      command,
+                      cwd,
+                      timeout,
+                      env: extraEnv,
+                      stdout,
+                      stderr,
+                    }),
+                  },
+                });
+              }
+            }
+          );
+        }
+        return;
+      }
 
       case "PrintCompileErrors":
         Compile.printErrors(logger, cmd.errors);
@@ -1550,7 +1703,7 @@ const runCmd =
       case "ExitOnIdle":
         closeAll(mutable)
           .then(() => {
-            resolvePromise({ tag: "ExitOnIdle" });
+            resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
           })
           .catch(rejectPromise);
         return;
@@ -1572,6 +1725,32 @@ const runCmd =
 
       case "WebSocketSend":
         webSocketSend(cmd.webSocket, cmd.message);
+        return;
+
+      case "WebSocketSendCompileErrorToOutput":
+        Theme.getThemeFromTerminal(logger)
+          .then((theme) => {
+            const message: WebSocketToClientMessage = {
+              tag: "StatusChanged",
+              status: {
+                tag: "CompileError",
+                compilationMode: cmd.compilationMode,
+                browserUiPosition: cmd.browserUiPosition,
+                openErrorOverlay: cmd.openErrorOverlay,
+                errors: cmd.errors.map((errorTemplate) =>
+                  Errors.toHtml(errorTemplate, theme, logger.config.noColor)
+                ),
+                foregroundColor: theme.foreground,
+                backgroundColor: theme.background,
+              },
+            };
+            webSocketSendToOutput(
+              cmd.outputPath,
+              message,
+              mutable.webSocketConnections
+            );
+          })
+          .catch(rejectPromise);
         return;
 
       case "WebSocketSendToOutput":
@@ -1608,10 +1787,7 @@ function onWebSocketServerMsg(
       );
       const webSocketConnection: WebSocketConnection = {
         webSocket: msg.webSocket,
-        outputPath:
-          result.tag === "Success"
-            ? result.outputPath
-            : { tag: "OutputPathError" },
+        outputPath: webSocketConnectRequestUrlResultToOutputPath(result),
         priority: now.getTime(),
       };
       mutable.webSocketConnections.push(webSocketConnection);
@@ -1632,7 +1808,11 @@ function onWebSocketServerMsg(
         (connection) => connection.webSocket !== msg.webSocket
       );
       mutable.lastWebSocketCloseTimestamp = now.getTime();
-      setTimeout(() => {
+      if (mutable.workerLimitTimeoutId !== undefined) {
+        clearTimeout(mutable.workerLimitTimeoutId);
+      }
+      mutable.workerLimitTimeoutId = setTimeout(() => {
+        mutable.workerLimitTimeoutId = undefined;
         dispatch({ tag: "WorkerLimitTimeoutPassed" });
       }, mutable.workerLimitTimeoutMs);
       dispatch({
@@ -1733,23 +1913,24 @@ function portChoiceError(
 }
 
 function handleOutputActionResultToCmd(
+  elmWatchJsonPath: ElmWatchJsonPath,
   handleOutputActionResult: Compile.HandleOutputActionResult
 ): Cmd {
   switch (handleOutputActionResult.tag) {
     case "CompileError":
       return {
-        tag: "WebSocketSendToOutput",
+        tag: "WebSocketSendCompileErrorToOutput",
         outputPath: handleOutputActionResult.outputPath,
-        message: {
-          tag: "StatusChanged",
-          status: {
-            tag: "CompileError",
-            compilationMode:
-              handleOutputActionResult.outputState.compilationMode,
-            browserUiPosition:
-              handleOutputActionResult.outputState.browserUiPosition,
-          },
-        },
+        compilationMode: handleOutputActionResult.outputState.compilationMode,
+        browserUiPosition:
+          handleOutputActionResult.outputState.browserUiPosition,
+        openErrorOverlay: handleOutputActionResult.outputState.openErrorOverlay,
+        errors: Compile.renderOutputErrors(
+          elmWatchJsonPath,
+          handleOutputActionResult.elmJsonPath,
+          handleOutputActionResult.outputPath,
+          handleOutputActionResult.outputState.status
+        ),
       };
 
     case "FullyCompiledJS":
@@ -1779,6 +1960,10 @@ function handleOutputActionResultToCmd(
 }
 
 async function closeAll(mutable: Mutable): Promise<void> {
+  // istanbul ignore if
+  if (mutable.workerLimitTimeoutId !== undefined) {
+    clearTimeout(mutable.workerLimitTimeoutId);
+  }
   // istanbul ignore if
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
@@ -1954,7 +2139,12 @@ const WebSocketConnectedParams = Decode.fieldsAuto(
 type ParseWebSocketConnectRequestUrlResult =
   | ParseWebSocketConnectRequestUrlError
   | {
+      tag: "ElmJsonError";
+      error: ElmJsonErrorWithMetadata;
+    }
+  | {
       tag: "Success";
+      elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
       elmCompiledTimestamp: number;
@@ -2029,12 +2219,31 @@ function parseWebSocketConnectRequestUrl(
   const flatOutputs = getFlatOutputs(project);
 
   const { targetName } = webSocketConnectedParams;
-  const match = flatOutputs.find(
+  const matchElmJsonError = project.elmJsonsErrors.find(
+    ({ outputPath }) => outputPath.targetName === targetName
+  );
+  const matchOutput = flatOutputs.find(
     ({ outputPath }) => outputPath.targetName === targetName
   );
 
-  if (match === undefined) {
-    const enabledOutputs = flatOutputs.map(({ outputPath }) => outputPath);
+  if (matchElmJsonError !== undefined) {
+    return {
+      tag: "ElmJsonError",
+      error: matchElmJsonError,
+    };
+  } else if (matchOutput !== undefined) {
+    return {
+      tag: "Success",
+      elmJsonPath: matchOutput.elmJsonPath,
+      outputPath: matchOutput.outputPath,
+      outputState: matchOutput.outputState,
+      elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
+    };
+  } else {
+    const enabledOutputs = [
+      ...project.elmJsonsErrors.map(({ outputPath }) => outputPath),
+      ...flatOutputs.map(({ outputPath }) => outputPath),
+    ];
     const disabledOutputs = Array.from(project.disabledOutputs);
     const disabledMatch = disabledOutputs.find(
       (outputPath) => outputPath.targetName === targetName
@@ -2053,13 +2262,23 @@ function parseWebSocketConnectRequestUrl(
           disabledOutputs,
         };
   }
+}
 
-  return {
-    tag: "Success",
-    outputPath: match.outputPath,
-    outputState: match.outputState,
-    elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
-  };
+function webSocketConnectRequestUrlResultToOutputPath(
+  result: ParseWebSocketConnectRequestUrlResult
+): OutputPath | OutputPathError {
+  switch (result.tag) {
+    case "Success":
+      return result.outputPath;
+    case "ElmJsonError":
+      return result.error.outputPath;
+    default: {
+      // Make sure only error results are left.
+      const _: ParseWebSocketConnectRequestUrlError = result;
+      void _;
+      return { tag: "OutputPathError" };
+    }
+  }
 }
 
 function webSocketConnectRequestUrlErrorToString(
@@ -2134,6 +2353,8 @@ function parseWebSocketToServerMessage(
 function onWebSocketConnected(
   date: Date,
   model: Model,
+  elmWatchJsonPath: ElmWatchJsonPath,
+  elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   outputState: OutputState,
   elmCompiledTimestamp: number
@@ -2218,16 +2439,17 @@ function onWebSocketConnected(
             event,
             [
               {
-                tag: "WebSocketSendToOutput",
+                tag: "WebSocketSendCompileErrorToOutput",
                 outputPath,
-                message: {
-                  tag: "StatusChanged",
-                  status: {
-                    tag: "CompileError",
-                    compilationMode: outputState.compilationMode,
-                    browserUiPosition: outputState.browserUiPosition,
-                  },
-                },
+                compilationMode: outputState.compilationMode,
+                browserUiPosition: outputState.browserUiPosition,
+                openErrorOverlay: outputState.openErrorOverlay,
+                errors: Compile.renderOutputErrors(
+                  elmWatchJsonPath,
+                  elmJsonPath,
+                  outputPath,
+                  outputState.status
+                ),
               },
             ],
           ];
@@ -2294,6 +2516,7 @@ function compileNextAction(nextAction: NextAction): NextAction {
 }
 
 function onWebSocketToServerMessage(
+  elmWatchJsonPath: ElmWatchJsonPath,
   model: Model,
   date: Date,
   output: WebSocketMessageReceivedOutput,
@@ -2375,6 +2598,42 @@ function onWebSocketToServerMessage(
         }
       }
 
+    case "ChangedOpenErrorOverlay":
+      switch (output.tag) {
+        case "OutputPathError":
+          return [model, []];
+
+        case "Output": {
+          const errors = Compile.renderOutputErrors(
+            elmWatchJsonPath,
+            output.elmJsonPath,
+            output.outputPath,
+            output.outputState.status
+          );
+          return [
+            model,
+            [
+              {
+                tag: "ChangeOpenErrorOverlay",
+                outputState: output.outputState,
+                openErrorOverlay: message.openErrorOverlay,
+              },
+              isNonEmptyArray(errors)
+                ? {
+                    tag: "WebSocketSendCompileErrorToOutput",
+                    outputPath: output.outputPath,
+                    compilationMode: output.outputState.compilationMode,
+                    browserUiPosition: output.outputState.browserUiPosition,
+                    openErrorOverlay: message.openErrorOverlay,
+                    errors,
+                  }
+                : // istanbul ignore next
+                  { tag: "NoCmd" },
+            ],
+          ];
+        }
+      }
+
     case "FocusedTab":
       return [
         model,
@@ -2384,6 +2643,20 @@ function onWebSocketToServerMessage(
             tag: "WebSocketSend",
             webSocket,
             message: { tag: "FocusedTabAcknowledged" },
+          },
+        ],
+      ];
+
+    case "PressedOpenEditor":
+      return [
+        model,
+        [
+          {
+            tag: "OpenEditor",
+            file: message.file,
+            line: message.line,
+            column: message.column,
+            webSocket,
           },
         ],
       ];

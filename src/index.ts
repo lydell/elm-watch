@@ -24,7 +24,7 @@ export async function elmWatchCli(
   {
     cwd: cwdString,
     env,
-    // stdin,
+    stdin,
     stdout,
     stderr,
     logDebug,
@@ -34,6 +34,8 @@ export async function elmWatchCli(
   const getNow: GetNow = () => new Date();
   const logger = makeLogger({
     env,
+    getNow,
+    stdin,
     stdout,
     stderr,
     logDebug,
@@ -118,6 +120,14 @@ if (require.main === module) {
     .then((exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.
       process.exitCode = exitCode;
+      // Turn off raw mode so that ctrl+c automatically kills things left behind
+      // accidentally on the event loop. That’s of course a bug, but if it
+      // happens it should at least be possible to exit with a simple ctrl+c.
+      // Note: `.setRawMode` is `undefined` when stdin is not a TTY, but this is
+      // not reflected in the type definitions.
+      if (process.stdin.setRawMode !== undefined) {
+        process.stdin.setRawMode(false);
+      }
     })
     .catch((error: unknown) => {
       process.stderr.write(

@@ -1,7 +1,6 @@
 import * as fs from "fs";
 
 import * as ElmJson from "./ElmJson";
-import * as ElmMakeError from "./ElmMakeError";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
@@ -39,6 +38,7 @@ import {
 } from "./Postprocess";
 import {
   Duration,
+  ElmJsonErrorWithMetadata,
   OutputError,
   OutputState,
   OutputStatus,
@@ -72,8 +72,12 @@ export function installDependencies(
   logger: Logger,
   getNow: GetNow,
   project: Project
-): { promise: Promise<InstallDependenciesResult>; kill: () => void } {
-  let currentKill: (() => void) | undefined = undefined;
+): {
+  promise: Promise<InstallDependenciesResult>;
+  kill: (options: { force: boolean }) => void;
+} {
+  let currentKill: ((options: { force: boolean }) => void) | undefined =
+    undefined;
 
   const loadingMessageDelay = silentlyReadIntEnvValue(
     env[__ELM_WATCH_LOADING_MESSAGE_DELAY],
@@ -206,9 +210,9 @@ export function installDependencies(
 
   return {
     promise: continuation(),
-    kill: () => {
+    kill: ({ force }) => {
       if (currentKill !== undefined) {
-        currentKill();
+        currentKill({ force });
       }
     },
   };
@@ -522,6 +526,7 @@ function sortByPriority<T extends { priority: number }>(
 export type HandleOutputActionResult =
   | {
       tag: "CompileError";
+      elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
     }
@@ -753,6 +758,7 @@ async function compileOneOutput({
         getNow,
         updateStatusLineHelper,
         runMode,
+        elmJsonPath,
         outputPath,
         outputState,
         outputStatus,
@@ -764,6 +770,7 @@ async function compileOneOutput({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -773,6 +780,7 @@ async function compileOneOutput({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -783,6 +791,7 @@ async function compileOneOutput({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -794,6 +803,7 @@ function onCompileSuccess(
   getNow: GetNow,
   updateStatusLineHelper: () => void,
   runMode: RunModeWithExtraData,
+  elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   outputState: OutputState,
   outputStatus: Extract<OutputStatus, { tag: "ElmMake" }>,
@@ -818,6 +828,7 @@ function onCompileSuccess(
             updateStatusLineHelper();
             return {
               tag: "CompileError",
+              elmJsonPath,
               outputPath,
               outputState,
             };
@@ -848,6 +859,7 @@ function onCompileSuccess(
             updateStatusLineHelper();
             return {
               tag: "CompileError",
+              elmJsonPath,
               outputPath,
               outputState,
             };
@@ -881,6 +893,7 @@ function onCompileSuccess(
         updateStatusLineHelper();
         return {
           tag: "CompileError",
+          elmJsonPath,
           outputPath,
           outputState,
         };
@@ -930,6 +943,7 @@ function onCompileSuccess(
             updateStatusLineHelper();
             return {
               tag: "CompileError",
+              elmJsonPath,
               outputPath,
               outputState,
             };
@@ -1019,6 +1033,7 @@ async function postprocessHelper({
   logger,
   runMode,
   elmWatchJsonPath,
+  elmJsonPath,
   outputPath,
   outputState,
   index,
@@ -1033,6 +1048,7 @@ async function postprocessHelper({
   logger: Logger;
   runMode: RunModeWithExtraData;
   elmWatchJsonPath: ElmWatchJsonPath;
+  elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
   index: number;
@@ -1124,6 +1140,7 @@ async function postprocessHelper({
         updateStatusLineHelper();
         return {
           tag: "CompileError",
+          elmJsonPath,
           outputPath,
           outputState,
         };
@@ -1159,6 +1176,7 @@ async function postprocessHelper({
       updateStatusLineHelper();
       return {
         tag: "CompileError",
+        elmJsonPath,
         outputPath,
         outputState,
       };
@@ -1673,7 +1691,15 @@ export function printErrors(
   errors: NonEmptyArray<Errors.ErrorTemplate>
 ): void {
   const errorStrings = Array.from(
-    new Set(errors.map((template) => template(logger.config.columns)))
+    new Set(
+      errors.map((template) =>
+        Errors.toTerminalString(
+          template,
+          logger.config.columns,
+          logger.config.noColor
+        )
+      )
+    )
   );
 
   logger.write("");
@@ -1997,204 +2023,239 @@ function mockDuration(duration: Duration): Duration {
 
 export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   return [
-    ...project.elmJsonsErrors.map(({ outputPath, error }) => {
-      switch (error.tag) {
-        case "ElmJsonNotFound":
-          return Errors.elmJsonNotFound(
-            outputPath,
-            error.elmJsonNotFound,
-            error.foundElmJsonPaths
-          );
-
-        case "NonUniqueElmJsonPaths":
-          return Errors.nonUniqueElmJsonPaths(
-            outputPath,
-            error.nonUniqueElmJsonPaths
-          );
-
-        case "InputsNotFound":
-          return Errors.inputsNotFound(outputPath, error.inputsNotFound);
-
-        case "InputsFailedToResolve":
-          return Errors.inputsFailedToResolve(
-            outputPath,
-            error.inputsFailedToResolve
-          );
-
-        case "DuplicateInputs":
-          return Errors.duplicateInputs(outputPath, error.duplicates);
-      }
-    }),
-
+    ...project.elmJsonsErrors.map(renderElmJsonError),
     ...Array.from(project.elmJsons).flatMap(([elmJsonPath, outputs]) =>
-      Array.from(outputs).flatMap(([outputPath, { status }]) => {
-        switch (status.tag) {
-          case "NotWrittenToDisk":
-            return [];
-
-          // istanbul ignore next
-          case "ElmMake":
-          // istanbul ignore next
-          case "ElmMakeTypecheckOnly":
-          // istanbul ignore next
-          case "Postprocess":
-          // istanbul ignore next
-          case "Interrupted":
-          case "QueuedForElmMake":
-            return Errors.stuckInProgressState(outputPath, status.tag);
-
-          // If there are `elm make` errors we skip postprocessing (fail fast).
-          case "QueuedForPostprocess":
-            return [];
-
-          case "Success":
-            return [];
-
-          // istanbul ignore next
-          case "ElmNotFoundError":
-            return Errors.elmNotFoundError(outputPath, status.command);
-
-          case "CommandNotFoundError":
-            return Errors.commandNotFoundError(outputPath, status.command);
-
-          // istanbul ignore next
-          case "OtherSpawnError":
-            return Errors.otherSpawnError(
-              outputPath,
-              status.error,
-              status.command
-            );
-
-          case "UnexpectedElmMakeOutput":
-            return Errors.unexpectedElmMakeOutput(
-              outputPath,
-              status.exitReason,
-              status.stdout,
-              status.stderr,
-              status.command
-            );
-
-          case "PostprocessStdinWriteError":
-            return Errors.postprocessStdinWriteError(
-              outputPath,
-              status.error,
-              status.command
-            );
-
-          case "PostprocessNonZeroExit":
-            return Errors.postprocessNonZeroExit(
-              outputPath,
-              status.exitReason,
-              status.stdout,
-              status.stderr,
-              status.command
-            );
-
-          case "ElmWatchNodeMissingScript":
-            return Errors.elmWatchNodeMissingScript(project.elmWatchJsonPath);
-
-          case "ElmWatchNodeImportError":
-            return Errors.elmWatchNodeImportError(
-              status.scriptPath,
-              status.error,
-              status.stdout,
-              status.stderr
-            );
-
-          case "ElmWatchNodeDefaultExportNotFunction":
-            return Errors.elmWatchNodeDefaultExportNotFunction(
-              status.scriptPath,
-              status.imported,
-              status.typeofDefault,
-              status.stdout,
-              status.stderr
-            );
-
-          case "ElmWatchNodeRunError":
-            return Errors.elmWatchNodeRunError(
-              status.scriptPath,
-              status.args,
-              status.error,
-              status.stdout,
-              status.stderr
-            );
-
-          case "ElmWatchNodeBadReturnValue":
-            return Errors.elmWatchNodeBadReturnValue(
-              status.scriptPath,
-              status.args,
-              status.returnValue,
-              status.stdout,
-              status.stderr
-            );
-
-          case "ElmMakeCrashError":
-            return Errors.elmMakeCrashError(
-              outputPath,
-              status.beforeError,
-              status.error,
-              status.command
-            );
-
-          case "ElmMakeJsonParseError":
-            return Errors.elmMakeJsonParseError(
-              outputPath,
-              status.error,
-              status.errorFilePath,
-              status.command
-            );
-
-          case "ElmMakeError":
-            switch (status.error.tag) {
-              case "GeneralError":
-                return ElmMakeError.renderGeneralError(
-                  outputPath,
-                  elmJsonPath,
-                  status.error,
-                  status.extraError
-                );
-
-              case "CompileErrors":
-                return status.error.errors.flatMap((error) =>
-                  error.problems.map((problem) =>
-                    ElmMakeError.renderProblem(
-                      error.path,
-                      problem,
-                      status.extraError
-                    )
-                  )
-                );
-            }
-
-          case "ElmJsonReadAsJsonError":
-            return Errors.readElmJsonAsJson(status.elmJsonPath, status.error);
-
-          case "ElmJsonDecodeError":
-            return Errors.decodeElmJson(status.elmJsonPath, status.error);
-
-          case "ImportWalkerFileSystemError":
-            return Errors.importWalkerFileSystemError(outputPath, status.error);
-
-          case "ReadOutputError":
-            return Errors.readOutputError(
-              outputPath,
-              status.error,
-              status.triedPath
-            );
-
-          case "WriteOutputError":
-            return Errors.writeOutputError(
-              outputPath,
-              status.error,
-              status.reasonForWriting
-            );
-
-          case "WriteProxyOutputError":
-            return Errors.writeProxyOutputError(outputPath, status.error);
-        }
-      })
+      Array.from(outputs).flatMap(([outputPath, { status }]) =>
+        renderOutputErrors(
+          project.elmWatchJsonPath,
+          elmJsonPath,
+          outputPath,
+          status,
+          true
+        )
+      )
     ),
   ];
+}
+
+export function renderElmJsonError({
+  outputPath,
+  error,
+}: ElmJsonErrorWithMetadata): Errors.ErrorTemplate {
+  switch (error.tag) {
+    case "ElmJsonNotFound":
+      return Errors.elmJsonNotFound(
+        outputPath,
+        error.elmJsonNotFound,
+        error.foundElmJsonPaths
+      );
+
+    case "NonUniqueElmJsonPaths":
+      return Errors.nonUniqueElmJsonPaths(
+        outputPath,
+        error.nonUniqueElmJsonPaths
+      );
+
+    case "InputsNotFound":
+      return Errors.inputsNotFound(outputPath, error.inputsNotFound);
+
+    case "InputsFailedToResolve":
+      return Errors.inputsFailedToResolve(
+        outputPath,
+        error.inputsFailedToResolve
+      );
+
+    case "DuplicateInputs":
+      return Errors.duplicateInputs(outputPath, error.duplicates);
+  }
+}
+
+export function renderOutputErrors(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  elmJsonPath: ElmJsonPath,
+  outputPath: OutputPath,
+  status: OutputStatus,
+  includeStuckInProgressState = false
+): Array<Errors.ErrorTemplate> {
+  switch (status.tag) {
+    case "NotWrittenToDisk":
+      return [];
+
+    // istanbul ignore next
+    case "ElmMake":
+    // istanbul ignore next
+    case "ElmMakeTypecheckOnly":
+    // istanbul ignore next
+    case "Postprocess":
+    // istanbul ignore next
+    case "Interrupted":
+    case "QueuedForElmMake":
+      return includeStuckInProgressState
+        ? [Errors.stuckInProgressState(outputPath, status.tag)]
+        : // istanbul ignore next
+          [];
+
+    // If there are `elm make` errors we skip postprocessing (fail fast).
+    case "QueuedForPostprocess":
+      return [];
+
+    case "Success":
+      return [];
+
+    // istanbul ignore next
+    case "ElmNotFoundError":
+      return [Errors.elmNotFoundError(outputPath, status.command)];
+
+    case "CommandNotFoundError":
+      return [Errors.commandNotFoundError(outputPath, status.command)];
+
+    // istanbul ignore next
+    case "OtherSpawnError":
+      return [Errors.otherSpawnError(outputPath, status.error, status.command)];
+
+    case "UnexpectedElmMakeOutput":
+      return [
+        Errors.unexpectedElmMakeOutput(
+          outputPath,
+          status.exitReason,
+          status.stdout,
+          status.stderr,
+          status.command
+        ),
+      ];
+
+    case "PostprocessStdinWriteError":
+      return [
+        Errors.postprocessStdinWriteError(
+          outputPath,
+          status.error,
+          status.command
+        ),
+      ];
+
+    case "PostprocessNonZeroExit":
+      return [
+        Errors.postprocessNonZeroExit(
+          outputPath,
+          status.exitReason,
+          status.stdout,
+          status.stderr,
+          status.command
+        ),
+      ];
+
+    case "ElmWatchNodeMissingScript":
+      return [Errors.elmWatchNodeMissingScript(elmWatchJsonPath)];
+
+    case "ElmWatchNodeImportError":
+      return [
+        Errors.elmWatchNodeImportError(
+          status.scriptPath,
+          status.error,
+          status.stdout,
+          status.stderr
+        ),
+      ];
+
+    case "ElmWatchNodeDefaultExportNotFunction":
+      return [
+        Errors.elmWatchNodeDefaultExportNotFunction(
+          status.scriptPath,
+          status.imported,
+          status.typeofDefault,
+          status.stdout,
+          status.stderr
+        ),
+      ];
+
+    case "ElmWatchNodeRunError":
+      return [
+        Errors.elmWatchNodeRunError(
+          status.scriptPath,
+          status.args,
+          status.error,
+          status.stdout,
+          status.stderr
+        ),
+      ];
+
+    case "ElmWatchNodeBadReturnValue":
+      return [
+        Errors.elmWatchNodeBadReturnValue(
+          status.scriptPath,
+          status.args,
+          status.returnValue,
+          status.stdout,
+          status.stderr
+        ),
+      ];
+
+    case "ElmMakeCrashError":
+      return [
+        Errors.elmMakeCrashError(
+          outputPath,
+          status.beforeError,
+          status.error,
+          status.command
+        ),
+      ];
+
+    case "ElmMakeJsonParseError":
+      return [
+        Errors.elmMakeJsonParseError(
+          outputPath,
+          status.error,
+          status.errorFilePath,
+          status.command
+        ),
+      ];
+
+    case "ElmMakeError":
+      switch (status.error.tag) {
+        case "GeneralError":
+          return [
+            Errors.elmMakeGeneralError(
+              outputPath,
+              elmJsonPath,
+              status.error,
+              status.extraError
+            ),
+          ];
+
+        case "CompileErrors":
+          return status.error.errors.flatMap((error) =>
+            error.problems.map((problem) =>
+              Errors.elmMakeProblem(error.path, problem, status.extraError)
+            )
+          );
+      }
+
+    case "ElmJsonReadAsJsonError":
+      return [Errors.readElmJsonAsJson(status.elmJsonPath, status.error)];
+
+    case "ElmJsonDecodeError":
+      return [Errors.decodeElmJson(status.elmJsonPath, status.error)];
+
+    case "ImportWalkerFileSystemError":
+      return [Errors.importWalkerFileSystemError(outputPath, status.error)];
+
+    case "ReadOutputError":
+      return [
+        Errors.readOutputError(outputPath, status.error, status.triedPath),
+      ];
+
+    case "WriteOutputError":
+      return [
+        Errors.writeOutputError(
+          outputPath,
+          status.error,
+          status.reasonForWriting
+        ),
+      ];
+
+    case "WriteProxyOutputError":
+      return [Errors.writeProxyOutputError(outputPath, status.error)];
+  }
 }
 
 type GetAllRelatedElmFilePathsResult = ElmJson.ParseError | WalkImportsResult;

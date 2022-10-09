@@ -1,5 +1,5 @@
 import { EMOJI, emojiWidthFix } from "./Compile";
-import { NO_COLOR } from "./Env";
+import { ELM_WATCH_OPEN_EDITOR, NO_COLOR } from "./Env";
 import { bold, dim, join } from "./Helpers";
 import { LoggerConfig } from "./Logger";
 
@@ -59,6 +59,10 @@ ${dim("---")}
 ${bold("Environment variables:")}
     ${bold(NO_COLOR)}
         Disable colored output
+
+    ${bold(ELM_WATCH_OPEN_EDITOR)}
+        Open your editor when clicking error locations in the browser
+        https://github.com/lydell/elm-watch#clickable-error-locations
 
 ${bold("Documentation:")}
     https://github.com/lydell/elm-watch#readme

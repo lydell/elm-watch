@@ -7,15 +7,20 @@ import * as Decode from "tiny-decoders";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
-  __ELM_WATCH_ELM_TIMEOUT,
+  __ELM_WATCH_ELM_TIMEOUT_MS,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
+  __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  ELM_WATCH_OPEN_EDITOR,
+  Env,
   NO_COLOR,
 } from "../src/Env";
 import { LatestEvent, printTimeline } from "../src/Hot";
+import { IS_WINDOWS } from "../src/IsWindows";
 import { LoggerConfig } from "../src/Logger";
 import {
   clean,
+  CtrlCReadStream,
   httpGet,
   rimraf,
   rm,
@@ -29,11 +34,15 @@ import {
 import {
   assertDebugger,
   cleanupAfterEachTest,
+  clickFirstErrorLocation,
+  collapseUi,
   expandUi,
   failInit,
   FIXTURES_DIR,
+  getOverlay,
   moveUi,
   run,
+  showErrors,
   switchCompilationMode,
 } from "./HotHelpers";
 
@@ -317,6 +326,89 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
   });
 
+  test("connect with elm.json error", async () => {
+    const fixture = "connect-with-elm-json-error";
+    const dir = path.join(FIXTURES_DIR, fixture);
+    fs.copyFileSync(
+      path.join(dir, "elm.template.json"),
+      path.join(dir, "elm.json")
+    );
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
+      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    rm(path.join(dir, "elm.json"));
+
+    const { renders } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      expandUiImmediately: true,
+      keepBuild: true,
+      keepElmStuffJson: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json NOT FOUND ----------------------------------------------------------
+      Target: Main
+
+      I could not find an elm.json for these inputs:
+
+      src/Main.elm
+
+      Has it gone missing? Maybe run elm init to create one?
+      ▲ 🚨 13:10:05 Main
+    `);
+  });
+
   test("fail to read Elm’s output (no postprocess)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",
@@ -370,7 +462,7 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ Standard
       ◯ Optimize
-      Check the terminal to see errors!
+      [Show errors]
       ↑↗
       ·→
       ▲ 🚨 13:10:05 Removed
@@ -434,7 +526,7 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ Standard
       ◯ Optimize
-      Check the terminal to see errors!
+      [Show errors]
       ↑↗
       ·→
       ▲ 🚨 13:10:05 Readonly
@@ -665,6 +757,10 @@ describe("hot", () => {
             tag: "ChangedBrowserUiPosition",
             browserUiPosition: "TopLeft",
           });
+          send({
+            tag: "ChangedOpenErrorOverlay",
+            openErrorOverlay: true,
+          });
           // Wait for the above messages to be processed before stopping (needed
           // for code coverage).
           await wait(100);
@@ -712,29 +808,44 @@ describe("hot", () => {
       });
 
       const { terminal, renders } = await run({
-        fixture: "basic",
-        args: ["TargetNotFound"],
-        scripts: ["TargetNotFound.js"],
+        fixture: "target-not-found",
+        args: ["Enabled"],
+        scripts: ["Enabled1.js"],
         init: failInit,
         onIdle: () => "Stop",
       });
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Dependencies
-        ✅ TargetNotFound⧙                                   1 ms Q | 765 ms T ¦  50 ms W⧘
+        🚨 EnabledNotFound
+        ✅ Enabled1⧙                                         1 ms Q | 765 ms T ¦  50 ms W⧘
+        ✅ Enabled2⧙                                         1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+        ⧙Target: EnabledNotFound⧘
+
+        You asked me to compile these inputs:
+
+        src/EnabledNotFound.elm ⧙(/Users/you/project/tests/fixtures/hot/target-not-found/src/EnabledNotFound.elm)⧘
+
+        ⧙But they don't exist!⧘
+
+        Is something misspelled? Or do you need to create them?
+
+        🚨 ⧙1⧘ error found
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
         ⧙ℹ️ 13:10:05 Web socket connected with errors (see the browser for details)⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
+        🚨 ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 TargetNotFound
+        ▼ 🔌 13:10:05 Enabled1
         ================================================================================
-        ▼ ⏳ 13:10:05 TargetNotFound
+        ▼ ⏳ 13:10:05 Enabled1
         ================================================================================
-        target TargetNotFound
+        target Enabled1
         elm-watch %VERSION%
         web socket ws://localhost:59123
         updated 2022-02-05 13:10:05
@@ -748,24 +859,17 @@ describe("hot", () => {
 
         These targets are available in elm-watch.json:
 
-        TargetNotFound
+        EnabledNotFound
+        Enabled1
+        Enabled2
 
         These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
 
-        Html
-        Worker
-        Removed
-        Readonly
-        InjectError
-        BadUrl
-        ParamsDecodeError
-        WrongVersion
-        TargetDisabled
-        SendBadJson
-        Reconnect
+        Disabled1
+        Disabled2
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
-        ▲ ❌ 13:10:05 TargetNotFound
+        ▲ ❌ 13:10:05 Enabled1
       `);
     });
 
@@ -872,7 +976,6 @@ describe("hot", () => {
         BadUrl
         ParamsDecodeError
         WrongVersion
-        TargetNotFound
         SendBadJson
         Reconnect
 
@@ -975,7 +1078,7 @@ describe("hot", () => {
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
-        Expected one of these tags: "ChangedCompilationMode", "ChangedBrowserUiPosition", "FocusedTab"
+        Expected one of these tags: "ChangedCompilationMode", "ChangedBrowserUiPosition", "ChangedOpenErrorOverlay", "FocusedTab", "PressedOpenEditor"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
@@ -1448,10 +1551,12 @@ describe("hot", () => {
             fs.unlinkSync(elmJsonPath);
             return "KeepGoing";
           case 6:
+            expandUi();
             touch(inputPath);
             return "KeepGoing";
           case 7:
             touch(otherInputPath);
+            collapseUi();
             return "KeepGoing";
           case 8:
             fs.unlinkSync(elmJsonPathSub);
@@ -1703,6 +1808,50 @@ describe("hot", () => {
       ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
       ▼ 🚨 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json NOT FOUND ----------------------------------------------------------
+      Target: HtmlMain
+
+      I could not find an elm.json for these inputs:
+
+      src/HtmlMain.elm
+
+      Has it gone missing? Maybe run elm init to create one?
+
+      Note that I did find an elm.json for some inputs:
+
+      src/Sub/OtherMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      Make sure that one single elm.json covers all the inputs together!
+      ▲ 🚨 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json NOT FOUND ----------------------------------------------------------
+      Target: HtmlMain
+
+      I could not find an elm.json for these inputs:
+
+      src/HtmlMain.elm
+
+      Has it gone missing? Maybe run elm init to create one?
+
+      Note that I did find an elm.json for some inputs:
+
+      src/Sub/OtherMain.elm
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+
+      Make sure that one single elm.json covers all the inputs together!
+      ▲ 🚨 13:10:05 HtmlMain
       ================================================================================
       ▼ 🚨 13:10:05 HtmlMain
       ================================================================================
@@ -2673,7 +2822,7 @@ describe("hot", () => {
       bin: "compile-forever",
       env: {
         ...TEST_ENV,
-        [__ELM_WATCH_ELM_TIMEOUT]: "0",
+        [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
         window.Elm?.Main?.init({ node });
@@ -2751,7 +2900,7 @@ describe("hot", () => {
       bin: "compile-forever",
       env: {
         ...TEST_ENV,
-        [__ELM_WATCH_ELM_TIMEOUT]: "0",
+        [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
         window.Elm?.Main?.init({ node });
@@ -3221,6 +3370,427 @@ describe("hot", () => {
       ↙↓
       ▲ ✅ 13:10:05 Main
     `);
+  });
+
+  test("persisted open error overlay", async () => {
+    const { terminal } = await run({
+      fixture: "persisted-open-error-overlay",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      🚨 Main
+
+      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
+
+      I am struggling with this boolean operation:
+
+      10|     , view = \\_ -> if True && 5 then Html.text "yes" else Html.text "no"
+                                        ⧙^⧘
+      Both sides of (&&) must be ⧙Bool⧘ values, but the right side is:
+
+          ⧙number⧘
+
+      ⧙Hint⧘: Only ⧙Int⧘ and ⧙Float⧘ values work as numbers.
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:9988)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
+      🚨 ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(getOverlay()).toMatchInlineSnapshot(`
+      <overlay visible style="background-color: rgb(32, 30, 30);">
+      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <pre>I am struggling with this boolean operation:
+
+      10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
+                                        <span style="color: rgb(241, 76, 76)">^</span>
+      Both sides of (&amp;&amp;) must be <span style="color: rgb(229, 229, 16)">Bool</span> values, but the right side is:
+
+          <span style="color: rgb(229, 229, 16)">number</span>
+
+      <u>Hint</u>: Only <span style="color: rgb(35, 209, 139)">Int</span> and <span style="color: rgb(35, 209, 139)">Float</span> values work as numbers.</pre></details>
+      </overlay>
+    `);
+  });
+
+  test("persisted open error overlay, no color", async () => {
+    const { terminal } = await run({
+      fixture: "persisted-open-error-overlay",
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      env: {
+        [NO_COLOR]: "",
+      },
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      Dependencies: success
+      Main: error
+
+      -- TYPE MISMATCH ---------------------------------------------------------------
+      /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
+
+      I am struggling with this boolean operation:
+
+      10|     , view = \\_ -> if True && 5 then Html.text "yes" else Html.text "no"
+                                        ^
+      Both sides of (&&) must be Bool values, but the right side is:
+
+          number
+
+      Hint: Only Int and Float values work as numbers.
+
+      1 error found
+
+      web socket connections: 1 (ws://0.0.0.0:9988)
+
+      13:10:05 Web socket connected needing compilation of: Main
+      13:10:05 Everything up to date.
+    `);
+
+    expect(getOverlay()).toMatchInlineSnapshot(`
+      <overlay visible style="background-color: rgb(32, 30, 30);">
+      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <pre>I am struggling with this boolean operation:
+
+      10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
+                                        ^
+      Both sides of (&amp;&amp;) must be Bool values, but the right side is:
+
+          number
+
+      Hint: Only Int and Float values work as numbers.</pre></details>
+      </overlay>
+    `);
+  });
+
+  test("error overlay bold and dim", async () => {
+    const { terminal } = await run({
+      fixture: "error-overlay-bold-and-dim",
+      args: [],
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          case 2:
+            expandUi();
+            showErrors();
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      🚨 Main
+
+      ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+      ⧙Target: Main⧘
+
+      I ran your postprocess command:
+
+      cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
+      printf '(function(...;}(this));' | node postprocess.js Main optimize hot
+
+      ⧙It exited with an error:⧘
+
+      exit 1
+      ⧙(no output)⧘
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed compilation mode to "optimize" of: Main⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+
+    expect(getOverlay()).toMatchInlineSnapshot(`
+      <overlay visible style="background-color: rgb(32, 30, 30);">
+      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <summary><span style="background-color: rgb(32, 30, 30);">POSTPROCESS ERROR</span><p>Target: Main</p></summary>
+      <pre>I ran your postprocess command:
+
+      cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
+      printf '(function(...;}(this));' | node postprocess.js Main optimize hot
+
+      <b>It exited with an error:</b>
+
+      exit 1
+      <span style="opacity: 0.6">(no output)</span></pre></details>
+      </overlay>
+    `);
+  });
+
+  describe("click error location", () => {
+    const fixture = "persisted-open-error-overlay";
+
+    const runFailClickErrorLocation = async (env: Env): Promise<string> => {
+      const { renders } = await run({
+        fixture,
+        args: [],
+        scripts: ["Main.js"],
+        keepElmStuffJson: true,
+        env,
+        init: (node) => {
+          window.Elm?.Main?.init({ node });
+        },
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              clickFirstErrorLocation();
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+      return renders;
+    };
+
+    test("env var not set", async () => {
+      const renders = await runFailClickErrorLocation({});
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Clicking error locations only works if you set it up.
+        Check this out: [Clickable error locations](https://github.com/lydell/elm-watch#clickable-error-locations)
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("unknown command", async () => {
+      const renders = await runFailClickErrorLocation({
+        [ELM_WATCH_OPEN_EDITOR]: "nope",
+      });
+
+      const replacement = "nope: command not found";
+
+      const cleanedRenders = renders
+        // macOS
+        .replace("/bin/sh: nope: command not found", replacement)
+        // Linux
+        .replace("/bin/sh: 1: nope: not found", replacement)
+        // Windows
+        .replace(
+          "'nope' is not recognized as an internal or external command,\r\noperable program or batch file.",
+          replacement
+        )
+        .replace("code 1.", "code 127.");
+
+      expect(cleanedRenders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
+
+        cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
+        nope
+
+        I ran the command with these extra environment variables:
+
+        {
+         "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
+         "line": "10",
+         "column": "31"
+        }
+
+        The command exited with code 127.
+
+        nope: command not found
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("timeout", async () => {
+      const renders = await runFailClickErrorLocation({
+        [ELM_WATCH_OPEN_EDITOR]: `node -e "setTimeout(() => process.exit(1), 10000)"`,
+        [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "10",
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
+
+        cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
+        node -e "setTimeout(() => process.exit(1), 10000)"
+
+        I ran the command with these extra environment variables:
+
+        {
+         "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
+         "line": "10",
+         "column": "31"
+        }
+
+        The command took too long to run, and was killed after 10 ms.
+
+        (no output)
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("exit 1", async () => {
+      const renders = await runFailClickErrorLocation({
+        [ELM_WATCH_OPEN_EDITOR]: `node -e "process.exit(1)"`,
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
+
+        cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
+        node -e "process.exit(1)"
+
+        I ran the command with these extra environment variables:
+
+        {
+         "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
+         "line": "10",
+         "column": "31"
+        }
+
+        The command exited with code 1.
+
+        (no output)
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("successful execution", async () => {
+      const outputFile = path.join(
+        FIXTURES_DIR,
+        fixture,
+        "click-error-location.txt"
+      );
+      rm(outputFile);
+
+      const arg = IS_WINDOWS
+        ? `"%file%:%line%:%column%"`
+        : `"$file:$line:$column"`;
+
+      const { renders } = await run({
+        fixture,
+        args: [],
+        scripts: ["Main.js"],
+        keepElmStuffJson: true,
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: `node -e "require('fs').writeFileSync('click-error-location.txt', process.argv[1])" ${arg}`,
+        },
+        init: (node) => {
+          window.Elm?.Main?.init({ node });
+        },
+        onIdle: async () => {
+          clickFirstErrorLocation();
+          while (!fs.existsSync(outputFile)) {
+            await wait(100);
+          }
+          return "Stop" as const;
+        },
+      });
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🚨 13:10:05 Main
+      `);
+      expect(clean(fs.readFileSync(outputFile, "utf-8"))).toMatchInlineSnapshot(
+        `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31`
+      );
+    });
   });
 
   test("persisted debug mode for Html", async () => {
@@ -3978,6 +4548,49 @@ describe("hot", () => {
     `);
   });
 
+  test("ctrl+c", async () => {
+    const stdin = new CtrlCReadStream();
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      stdin,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: () => {
+        stdin.ctrlC();
+        return "KeepGoing";
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
+      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ✅ 13:10:05 Html
+    `);
+  });
+
   describe("printTimeline", () => {
     function print(
       events: Array<LatestEvent>,
@@ -3986,6 +4599,7 @@ describe("hot", () => {
       const result = printTimeline(
         {
           debug: false,
+          noColor: false,
           fancy: true,
           isTTY: true,
           mockedTimings: false,
