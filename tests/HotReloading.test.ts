@@ -9,6 +9,7 @@ import {
   rimraf,
   stringSnapshotSerializer,
   TerminalColorReadStream,
+  testExceptWindows,
   touch,
   wait,
   waitOneFrame,
@@ -2969,7 +2970,89 @@ describe("hot reloading", () => {
       `);
     });
 
-    test("automatically hide and show the overlay, with terminal theme", async () => {
+    test("automatically hide and show the overlay", async () => {
+      const { replace, go } = runHotReload({
+        fixture,
+        name: "App",
+        programType: "Html",
+        compilationMode: "standard",
+      });
+
+      const overlays: Array<string> = [];
+
+      await go(({ idle }) => {
+        switch (idle) {
+          case 1:
+            replace((content) => content.replace("++", "+"));
+            return "KeepGoing";
+
+          case 2:
+            overlays.push(getOverlay());
+            expandUi();
+            showErrors();
+            overlays.push(getOverlay());
+            return "KeepGoing";
+
+          case 3:
+            replace((content) => content.replace("+", "++"));
+            return "KeepGoing";
+
+          case 4:
+            overlays.push(getOverlay());
+            replace((content) => content.replace("module", ""));
+            return "KeepGoing";
+
+          default:
+            overlays.push(getOverlay());
+            return "Stop";
+        }
+      });
+
+      expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
+        <overlay hidden style="">
+
+        </overlay>
+        ================================================================================
+        <overlay visible style="background-color: rgb(32, 30, 30);">
+        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
+        <pre>I cannot do addition with <span style="color: rgb(229, 229, 16)">String</span> values like this one:
+
+        7| main = Html.text (AppHelpers.text + Shared.text)
+                             <span style="color: rgb(241, 76, 76)">^^^^^^^^^^^^^^^</span>
+        The (+) operator only works with <span style="color: rgb(229, 229, 16)">Int</span> and <span style="color: rgb(229, 229, 16)">Float</span> values.
+
+        <u>Hint</u>: Switch to the <span style="color: rgb(35, 209, 139)">(++)</span> operator to append strings!</pre></details>
+        </overlay>
+        ================================================================================
+        <overlay hidden style="background-color: rgb(32, 30, 30);">
+
+        </overlay>
+        ================================================================================
+        <overlay visible style="background-color: rgb(32, 30, 30);">
+        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">SYNTAX PROBLEM</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></summary>
+        <pre>I got stuck here:
+
+        1|  App exposing (main)
+            <span style="color: rgb(241, 76, 76)">^</span>
+        I am not sure what is going on, but I recommend starting an Elm file with the
+        following lines:
+
+            <span style="color: rgb(41, 184, 219)">import</span> Html
+            
+            main =
+              Html.text <span style="color: rgb(229, 229, 16)">"Hello!"</span>
+
+        You should be able to copy those lines directly into your file. Check out the
+        examples at &lt;https://elm-lang.org/examples&gt; for more help getting started!
+
+        <u>Note</u>: This can also happen when something is indented too much!</pre></details>
+        </overlay>
+      `);
+    });
+
+    testExceptWindows("terminal theme", async () => {
       const { replace, go } = runHotReload({
         fixture,
         name: "App",
