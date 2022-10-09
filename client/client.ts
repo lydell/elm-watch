@@ -1462,9 +1462,11 @@ const runCmd =
   ): void => {
     switch (cmd.tag) {
       case "Eval": {
-        // eslint-disable-next-line @typescript-eslint/no-implied-eval
-        const f = new Function(cmd.code);
         try {
+          // `new Function` throws if the code contains syntax errors.
+          // eslint-disable-next-line @typescript-eslint/no-implied-eval
+          const f = new Function(cmd.code);
+          // Running the code can cause runtime errors.
           f();
           dispatch({ tag: "EvalSucceeded", date: getNow() });
         } catch (unknownError) {
