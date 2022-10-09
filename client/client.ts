@@ -3107,6 +3107,7 @@ function updateErrorOverlay(
   overlay.hidden = hidden;
   overlayCloseButton.hidden = hidden;
 
+  // Avoid drawing the close button on top of a scrollbar.
   overlayCloseButton.style.right = `${
     overlay.offsetWidth - overlay.clientWidth
   }px`;
