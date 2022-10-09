@@ -247,22 +247,38 @@ In the error overlay you can click error locations to open them in your editor!
 
 There’s no universal way of doing that, though, so you’ll have to set it up. It’s not that complicated: You need to set the `ELM_WATCH_OPEN_EDITOR` environment variable to some shell script code.
 
-Here are some examples of setting it up for [VSCode] for different shells and environments:
+Here’s how to set it in different shells:
 
-- zsh: `.zshrc`: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
-- bash: `.bashrc`: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
-- fish: `set -Ux ELM_WATCH_OPEN_EDITOR 'code --goto "$file:$line:$column"'`
-- Windows: TODO
-- Specific to each project: [direnv]
+| Shell   | Config file | Code                                                |
+| ------- | ----------- | --------------------------------------------------- |
+| zsh     | `~/.zshrc`  | `export ELM_WATCH_OPEN_EDITOR='your command here'`  |
+| bash    | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'`  |
+| fish    | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your command here'` |
+| Windows | TODO        | TODO                                                |
 
-Here are some copy-paste:able commands for some common editors:
+(Feel free to do it in a different way if you have a preference. Try [direnv] if you want different editors in different projects.)
 
-- [VSCode]: `'code --goto "$file:$line:$column"'`
-- [IntelliJ]: `'idea --line "$line" "$file"'` \*
-- [Rider]: `'rider --line "$line" "$file"'` \*
-- Other [JetBrains] IDEs: Chances are the setup is similar to IntelliJ and Rider.
+And here are some commands for a few editors:
 
-\* Neither IntelliJ nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. On Windows, the command might be `idea64.exe`. On Linux, it might be `idea.sh`. Either way – once you’ve found the command, the `--line "$line" "$file"` bit after should work without changes.
+| Editor | Command | Windows command |
+| --- | --- | --- |
+| [VSCode] | `code --goto "$file:$line:$column"` | `code --goto "%file%:%line%:%column%"` |
+| [IntelliJ] | `idea --line "$line" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
+| [Rider] | `rider --line "$line" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
+
+\* Neither IntelliJ nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. Either way – once you’ve found the command, the `--line "$line" "$file"` bit after should work without changes. Chances are other [JetBrains] IDEs work similarly, just with different names.
+
+† I haven’t tested IntelliJ or Rider on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
+
+Full examples:
+
+- `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
+- `set -Ux ELM_WATCH_OPEN_EDITOR 'idea --line "$line" "$file"'`
+
+Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contains digits, but it doesn’t hurt to quote them too.)
+
+- ✅ `"$file"`, `"%file%"`
+- ❌ `$file`, `%file%`
 
 elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child_process.exec], with the following:
 
