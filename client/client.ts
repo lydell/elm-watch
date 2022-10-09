@@ -3,6 +3,7 @@ import * as Decode from "tiny-decoders";
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
+  AbsolutePath,
   BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
@@ -268,7 +269,7 @@ type UiMsg =
     }
   | {
       tag: "PressedOpenEditor";
-      absolutePath: string;
+      file: AbsolutePath;
       line: number;
       column: number;
       sendKey: SendKey;
@@ -1167,7 +1168,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
             tag: "SendMessage",
             message: {
               tag: "PressedOpenEditor",
-              absolutePath: msg.absolutePath,
+              file: msg.file,
               line: msg.line,
               column: msg.column,
             },
@@ -3162,24 +3163,24 @@ function viewErrorLocation(
   location: ErrorLocation
 ): HTMLElement | string {
   switch (location.tag) {
-    case "AbsolutePath":
+    case "FileOnly":
       return viewErrorLocationButton(
         dispatch,
         sendKey,
         {
-          absolutePath: location.absolutePath,
+          file: location.file,
           line: 1,
           column: 1,
         },
-        location.absolutePath
+        location.file.absolutePath
       );
 
-    case "AbsolutePathWithLineAndColumn": {
+    case "FileWithLineAndColumn": {
       return viewErrorLocationButton(
         dispatch,
         sendKey,
         location,
-        `${location.absolutePath}:${location.line}:${location.column}`
+        `${location.file.absolutePath}:${location.line}:${location.column}`
       );
     }
 
@@ -3192,7 +3193,7 @@ function viewErrorLocationButton(
   dispatch: (msg: UiMsg) => void,
   sendKey: SendKey | undefined,
   location: {
-    absolutePath: string;
+    file: AbsolutePath;
     line: number;
     column: number;
   },
@@ -3207,7 +3208,7 @@ function viewErrorLocationButton(
           onclick: () => {
             dispatch({
               tag: "PressedOpenEditor",
-              absolutePath: location.absolutePath,
+              file: location.file,
               line: location.line,
               column: location.column,
               sendKey,

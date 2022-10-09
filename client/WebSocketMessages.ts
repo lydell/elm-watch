@@ -1,6 +1,6 @@
 import * as Decode from "tiny-decoders";
 
-import { BrowserUiPosition, CompilationMode } from "../src/Types";
+import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
 const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
@@ -24,13 +24,13 @@ const OpenEditorFailed = Decode.fieldsAuto({
 
 export type ErrorLocation = ReturnType<typeof ErrorLocation>;
 const ErrorLocation = Decode.fieldsUnion("tag", {
-  AbsolutePath: Decode.fieldsAuto({
-    tag: () => "AbsolutePath" as const,
-    absolutePath: Decode.string,
+  FileOnly: Decode.fieldsAuto({
+    tag: () => "FileOnly" as const,
+    file: AbsolutePath,
   }),
-  AbsolutePathWithLineAndColumn: Decode.fieldsAuto({
-    tag: () => "AbsolutePathWithLineAndColumn" as const,
-    absolutePath: Decode.string,
+  FileWithLineAndColumn: Decode.fieldsAuto({
+    tag: () => "FileWithLineAndColumn" as const,
+    file: AbsolutePath,
     line: Decode.number,
     column: Decode.number,
   }),
@@ -125,7 +125,7 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
   }),
   PressedOpenEditor: Decode.fieldsAuto({
     tag: () => "PressedOpenEditor" as const,
-    absolutePath: Decode.string,
+    file: AbsolutePath,
     line: Decode.number,
     column: Decode.number,
   }),

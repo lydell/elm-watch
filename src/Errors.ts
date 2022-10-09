@@ -98,8 +98,8 @@ type FancyErrorLocation =
   | ElmWatchStuffJsonPath
   | OutputPath
   | {
-      tag: "AbsolutePathWithLineAndColumn";
-      absolutePath: string;
+      tag: "FileWithLineAndColumn";
+      file: AbsolutePath;
       line: number;
       column: number;
     }
@@ -135,12 +135,12 @@ type ErrorTemplateData = {
 
 type ErrorLocation =
   | {
-      tag: "AbsolutePath";
-      absolutePath: string;
+      tag: "FileOnly";
+      file: AbsolutePath;
     }
   | {
-      tag: "AbsolutePathWithLineAndColumn";
-      absolutePath: string;
+      tag: "FileWithLineAndColumn";
+      file: AbsolutePath;
       line: number;
       column: number;
     }
@@ -288,19 +288,24 @@ function fancyToPlainErrorLocation(
 ): ErrorLocation | undefined {
   switch (location.tag) {
     case "ElmJsonPath":
-      return location.theElmJsonPath;
+      return { tag: "FileOnly", file: location.theElmJsonPath };
     case "ElmWatchJsonPath":
-      return location.theElmWatchJsonPath;
+      return { tag: "FileOnly", file: location.theElmWatchJsonPath };
     case "ElmWatchStuffJsonPath":
-      return location.theElmWatchStuffJsonPath;
+      return { tag: "FileOnly", file: location.theElmWatchStuffJsonPath };
     case "OutputPath":
       return { tag: "Target", targetName: location.targetName };
     case "ElmWatchNodeScriptPath":
       return {
-        tag: "AbsolutePath",
-        absolutePath: url.fileURLToPath(location.theElmWatchNodeScriptFileUrl),
+        tag: "FileOnly",
+        file: {
+          tag: "AbsolutePath",
+          absolutePath: url.fileURLToPath(
+            location.theElmWatchNodeScriptFileUrl
+          ),
+        },
       };
-    case "AbsolutePathWithLineAndColumn":
+    case "FileWithLineAndColumn":
       return location;
     case "NoLocation":
       return undefined;
@@ -309,11 +314,11 @@ function fancyToPlainErrorLocation(
 
 function renderErrorLocation(location: ErrorLocation): Piece {
   switch (location.tag) {
-    case "AbsolutePath":
-      return text(location.absolutePath);
-    case "AbsolutePathWithLineAndColumn":
+    case "FileOnly":
+      return text(location.file.absolutePath);
+    case "FileWithLineAndColumn":
       return text(
-        `${location.absolutePath}:${location.line}:${location.column}`
+        `${location.file.absolutePath}:${location.line}:${location.column}`
       );
     case "Target":
       return dim(`Target: ${location.targetName}`);
@@ -996,8 +1001,8 @@ export function elmMakeProblem(
   extraError: string | undefined
 ): ErrorTemplate {
   return fancyError(problem.title, {
-    tag: "AbsolutePathWithLineAndColumn",
-    absolutePath: filePath.absolutePath,
+    tag: "FileWithLineAndColumn",
+    file: filePath,
     line: problem.region.start.line,
     column: problem.region.start.column,
   })`

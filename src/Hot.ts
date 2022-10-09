@@ -291,7 +291,7 @@ type Cmd =
     }
   | {
       tag: "OpenEditor";
-      absolutePath: string;
+      file: AbsolutePath;
       line: number;
       column: number;
       webSocket: WebSocket;
@@ -1607,7 +1607,7 @@ const runCmd =
           5000
         );
         const extraEnv = {
-          file: cmd.absolutePath,
+          file: cmd.file.absolutePath,
           line: cmd.line.toString(),
           column: cmd.column.toString(),
         };
@@ -2653,7 +2653,7 @@ function onWebSocketToServerMessage(
         [
           {
             tag: "OpenEditor",
-            absolutePath: message.absolutePath,
+            file: message.file,
             line: message.line,
             column: message.column,
             webSocket,
