@@ -89,6 +89,7 @@ type SharedRunOptions = {
   clearElmStuff?: boolean;
   cwd?: string;
   includeProxyReloads?: boolean;
+  simulateHttpCacheOnReload?: boolean;
   stdin?: ReadStream;
 };
 
@@ -107,6 +108,7 @@ export async function run({
   clearElmStuff = false,
   cwd = ".",
   includeProxyReloads = false,
+  simulateHttpCacheOnReload = false,
   stdin = new SilentReadStream(),
 }: SharedRunOptions & {
   fixture: string;
@@ -157,12 +159,15 @@ export async function run({
   document.documentElement.append(body);
   bodyCounter++;
 
+  const numberedScript = (script: string, loads: number): string =>
+    script.replace(/\.(\w+)$/, `.${bodyIndex}.${loads}.$1`);
+
   const browserConsole: Array<string> = [];
   const renders: Array<string> = [];
   let loads = 0;
 
   await new Promise((resolve, reject) => {
-    const loadBuiltFiles = (isReload: boolean): void => {
+    const loadBuiltFiles = (): void => {
       loads++;
 
       delete (window as unknown as Record<string, unknown>).Elm;
@@ -175,17 +180,17 @@ export async function run({
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
           // - Lets us make a few replacements for Jest.
-          const newScript = script.replace(
-            /\.(\w+)$/,
-            `.${bodyIndex}.${loads}.$1`
-          );
-          const content = fs
-            .readFileSync(script, "utf8")
-            .replace(/\(this\)\);\s*$/, "(window));")
-            .replace(
-              /^(\s*var bodyNode) = .+;/m,
-              `$1 = document.documentElement.children[${bodyIndex}];`
-            );
+          const newScript = numberedScript(script, loads);
+          const content =
+            loads > 2 && simulateHttpCacheOnReload
+              ? fs.readFileSync(numberedScript(script, loads - 1), "utf8")
+              : fs
+                  .readFileSync(script, "utf8")
+                  .replace(/\(this\)\);\s*$/, "(window));")
+                  .replace(
+                    /^(\s*var bodyNode) = .+;/m,
+                    `$1 = document.documentElement.children[${bodyIndex}];`
+                  );
           fs.writeFileSync(newScript, content);
           await import(newScript);
         }
@@ -194,7 +199,7 @@ export async function run({
           if (expandUiImmediately) {
             expandUi();
           }
-          if (isReload) {
+          if (loads > 1) {
             const innerDiv = document.createElement("div");
             outerDiv.replaceChildren(innerDiv);
             body.replaceChildren(outerDiv);
@@ -228,7 +233,7 @@ export async function run({
       window.__ELM_WATCH
         .KILL_MATCHING(/^/)
         .then(() => {
-          loadBuiltFiles(true);
+          loadBuiltFiles();
         })
         .catch(reject);
     };
@@ -310,13 +315,13 @@ export async function run({
     };
 
     if (keepBuild) {
-      loadBuiltFiles(false);
+      loadBuiltFiles();
     } else {
       watcher = fs.watch(build, () => {
         if (absoluteScripts.every(fs.existsSync)) {
           watcher?.close();
           watcher = undefined;
-          loadBuiltFiles(false);
+          loadBuiltFiles();
         }
       });
       watcher.on("error", reject);

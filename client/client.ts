@@ -411,7 +411,8 @@ export type ReachedIdleStateReason =
   | "ElmJsonError"
   | "EvalErrored"
   | "EvalSucceeded"
-  | "OpenEditorFailed";
+  | "OpenEditorFailed"
+  | "ReloadTrouble";
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
@@ -468,17 +469,16 @@ function run(): void {
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [updatedModel, cmds] = update(msg, model);
       const modelChanged = updatedModel !== model;
+      const reloadTrouble =
+        model.status.tag !== updatedModel.status.tag &&
+        updatedModel.status.tag === "WaitingForReload" &&
+        updatedModel.elmCompiledTimestamp ===
+          updatedModel.elmCompiledTimestampBeforeReload;
       const newModel: Model = modelChanged
         ? {
             ...updatedModel,
             previousStatusTag: model.status.tag,
-            uiExpanded:
-              model.status.tag !== updatedModel.status.tag &&
-              updatedModel.status.tag === "WaitingForReload" &&
-              updatedModel.elmCompiledTimestamp ===
-                updatedModel.elmCompiledTimestampBeforeReload
-                ? true
-                : updatedModel.uiExpanded,
+            uiExpanded: reloadTrouble ? true : updatedModel.uiExpanded,
           }
         : model;
       const oldErrorOverlay = getErrorOverlay(model.status);
@@ -517,6 +517,9 @@ function run(): void {
                   tag: "SetBrowserUiPosition",
                   browserUiPosition: newModel.browserUiPosition,
                 },
+            reloadTrouble
+              ? { tag: "TriggerReachedIdleState", reason: "ReloadTrouble" }
+              : { tag: "NoCmd" },
           ]
         : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
