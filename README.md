@@ -249,12 +249,12 @@ There’s no universal way of doing that, though, so you’ll have to set it up.
 
 Here’s how to set it in different shells:
 
-| Shell   | Config file | Code                                                |
-| ------- | ----------- | --------------------------------------------------- |
-| zsh     | `~/.zshrc`  | `export ELM_WATCH_OPEN_EDITOR='your command here'`  |
-| bash    | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'`  |
-| fish    | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your command here'` |
-| Windows | TODO        | TODO                                                |
+| Shell | Config file | Code |
+| --- | --- | --- |
+| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
+| bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
+| fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your command here'` |
+| Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `your command here` |
 
 (Feel free to do it in a different way if you have a preference. Try [direnv] if you want different editors in different projects.)
 
