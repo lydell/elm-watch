@@ -136,6 +136,19 @@ const servers = [
       }
     },
   },
+  {
+    port: 8008,
+    subdomain: "application-cached",
+    serve: (req, res, log) => {
+      res.setHeader("cache-control", "max-age=3600");
+      serveWithEsbuild(
+        req,
+        res,
+        log,
+        looksLikeFile(req.url) ? req.url : "/ApplicationMain.html"
+      );
+    },
+  },
 ];
 
 function serveWithEsbuild(req, res, log, newUrl) {

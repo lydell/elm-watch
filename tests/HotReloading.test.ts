@@ -1632,7 +1632,7 @@ describe("hot reloading", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Waiting for reload
-      Waiting for other targets to finish compiling…
+      Waiting for other targets…
       ▲ 🐛 ⏳ 13:10:05 MultipleTargets
       ================================================================================
       ▼ 🐛 🔌 13:10:05 MultipleTargets
@@ -1824,7 +1824,7 @@ describe("hot reloading", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Waiting for reload
-      Waiting for other targets to finish compiling…
+      Waiting for other targets…
       ▲ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
       ================================================================================
       target MultipleTargets
@@ -1845,7 +1845,7 @@ describe("hot reloading", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Waiting for reload
-      Waiting for other targets to finish compiling…
+      Waiting for other targets…
       ▲ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
       ================================================================================
       target MultipleTargets
@@ -1853,7 +1853,7 @@ describe("hot reloading", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Waiting for reload
-      Waiting for other targets to finish compiling…
+      Waiting for other targets…
       ▲ 🐛 ⏳ 13:10:05 MultipleTargets
       ================================================================================
       ▼ 🐛 🔌 13:10:05 MultipleTargets
