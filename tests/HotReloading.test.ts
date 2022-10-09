@@ -3061,7 +3061,7 @@ describe("hot reloading", () => {
         stdin: new TerminalColorReadStream(),
       });
 
-      const overlays: Array<string> = [];
+      let overlay = "(not set)";
 
       await go(({ idle }) => {
         switch (idle) {
@@ -3070,32 +3070,17 @@ describe("hot reloading", () => {
             return "KeepGoing";
 
           case 2:
-            overlays.push(getOverlay());
             expandUi();
             showErrors();
-            overlays.push(getOverlay());
-            return "KeepGoing";
-
-          case 3:
-            replace((content) => content.replace("+", "++"));
-            return "KeepGoing";
-
-          case 4:
-            overlays.push(getOverlay());
-            replace((content) => content.replace("module", ""));
+            overlay = getOverlay();
             return "KeepGoing";
 
           default:
-            overlays.push(getOverlay());
             return "Stop";
         }
       });
 
-      expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay hidden style="">
-
-        </overlay>
-        ================================================================================
+      expect(overlay).toMatchInlineSnapshot(`
         <overlay visible style="background-color: rgb(170, 187, 204);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
         <summary><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
@@ -3106,31 +3091,6 @@ describe("hot reloading", () => {
         The (+) operator only works with <span style="color: #333333">Int</span> and <span style="color: #333333">Float</span> values.
 
         <u>Hint</u>: Switch to the <span style="color: #aaaaaa">(++)</span> operator to append strings!</pre></details>
-        </overlay>
-        ================================================================================
-        <overlay hidden style="background-color: rgb(170, 187, 204);">
-
-        </overlay>
-        ================================================================================
-        <overlay visible style="background-color: rgb(170, 187, 204);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
-        <summary><span style="background-color: rgb(170, 187, 204);">SYNTAX PROBLEM</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></summary>
-        <pre>I got stuck here:
-
-        1|  App exposing (main)
-            <span style="color: #999999">^</span>
-        I am not sure what is going on, but I recommend starting an Elm file with the
-        following lines:
-
-            <span style="color: #eeeeee">import</span> Html
-            
-            main =
-              Html.text <span style="color: #333333">"Hello!"</span>
-
-        You should be able to copy those lines directly into your file. Check out the
-        examples at &lt;https://elm-lang.org/examples&gt; for more help getting started!
-
-        <u>Note</u>: This can also happen when something is indented too much!</pre></details>
         </overlay>
       `);
     });
