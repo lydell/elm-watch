@@ -370,9 +370,29 @@ The `"postprocess"` field is a non-empty array, describing a command to run. The
 - [External process](#external-process) – run any program written in any language
 - [elm-watch-node](#elm-watch-node) – run a Node.js inside the elm-watch process itself for performance
 
-If you’re in a hurry, I recommend going straight to [elm-watch-node](#elm-watch-node), but reading [External process](#external-process) gives the full story.
+If you’re in a hurry, I recommend going straight to [elm-watch-node](#elm-watch-node), but reading [External process](#external-process) gives the full story. And the next section about “bricking” your setup is well worth the read.
 
 The goal of the postprocessing feature is to be an easier way of transforming Elm’s JavaScript output than learning how to write for example a [webpack plugin]. It’s essentially just a `String -> String` function, while still giving you full control. To push you in the “full control” direction, there are no “shortcuts” for postprocessing in elm-watch – the only way to do it is to write a small script (see the following two sections).
+
+#### Warning: “Bricked” setup
+
+Doing string replacements on source code is very easy to mess up! You will probably end up with syntax errors on your first attempts.
+
+**Syntax errors might “brick” your setup!**
+
+At first, elm-watch’s browser UI shows “⛔️ Eval error” and in the browser console you’ll see the syntax error. But if you refresh the page, you’ll load a JavaScript file with syntax errors in it, which means none of it will run! That includes the extra JavaScript code that elm-watch injects for its browser UI and for connecting via WebSocket, which in turn means that elm-watch thinks it can skip compiling your target (since no page has connected via WebSocket) and only typecheck it. elm-watch keeps reacting to changes to your elm-watch-node postprocess file, but won’t run it. Basically, it’ll feel like elm-watch has stopped working no matter what you do.
+
+The only way to “unbrick” the situation is to:
+
+1. Remove the output JavaScript file.
+2. Cause a recompile, by re-saving an Elm file or your elm-watch-node postprocess file.
+
+elm-watch has no good way of detecting this situation, so manually removing the output JavaScript file is an important trick to remember.
+
+In summary:
+
+- Resist the urge to refresh the page while working on your postprocess script. You’ll get more help from elm-watch if you don’t.
+- If you do, know how to “unbrick”.
 
 #### External process
 
