@@ -1826,7 +1826,7 @@ describe("hot", () => {
       Note that I did find an elm.json for some inputs:
 
       src/Sub/OtherMain.elm
-      -> /Users/simon/src/elm-watch/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
 
       Make sure that one single elm.json covers all the inputs together!
       ▲ 🚨 13:10:05 HtmlMain
@@ -1848,7 +1848,7 @@ describe("hot", () => {
       Note that I did find an elm.json for some inputs:
 
       src/Sub/OtherMain.elm
-      -> /Users/simon/src/elm-watch/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
+      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
 
       Make sure that one single elm.json covers all the inputs together!
       ▲ 🚨 13:10:05 HtmlMain
@@ -3412,7 +3412,7 @@ describe("hot", () => {
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30);">
       <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -3469,7 +3469,7 @@ describe("hot", () => {
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30);">
       <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -3536,7 +3536,7 @@ describe("hot", () => {
       <summary><span style="background-color: rgb(32, 30, 30);">POSTPROCESS ERROR</span><p>Target: Main</p></summary>
       <pre>I ran your postprocess command:
 
-      cd /Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay-bold-and-dim
+      cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
       printf '(function(...;}(this));' | node postprocess.js Main optimize hot
 
       <b>It exited with an error:</b>
@@ -3570,7 +3570,7 @@ describe("hot", () => {
           }
         },
       });
-      return clean(renders);
+      return renders;
     };
 
     test("env var not set", async () => {

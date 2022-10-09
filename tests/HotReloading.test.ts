@@ -2869,7 +2869,7 @@ describe("hot reloading", () => {
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -2886,7 +2886,7 @@ describe("hot reloading", () => {
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -2901,7 +2901,7 @@ describe("hot reloading", () => {
         individual characters.</pre></details>
         --------------------------------------------------------------------------------
         <details open="" id="1" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
         <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
 
         3| text := "AppOther"
@@ -2911,7 +2911,7 @@ describe("hot reloading", () => {
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30);">
         <details open="" id="0" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
         <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
 
         3| text := "AppOther"
@@ -2919,7 +2919,7 @@ describe("hot reloading", () => {
         I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
         --------------------------------------------------------------------------------
         <details open="" id="1" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
@@ -2932,7 +2932,7 @@ describe("hot reloading", () => {
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -2948,14 +2948,14 @@ describe("hot reloading", () => {
         --------------------------------------------------------------------------------
         <details open="" id="1" data-target-names="App
         AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></details>
         --------------------------------------------------------------------------------
         <details open="" id="2" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
+        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
         <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
 
         3| text := "AppOther"
@@ -3015,7 +3015,7 @@ describe("hot reloading", () => {
         ================================================================================
         <overlay visible style="background-color: rgb(170, 187, 204);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
-        <summary><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
+        <summary><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
         <pre>I cannot do addition with <span style="color: #333333">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)
@@ -3031,7 +3031,7 @@ describe("hot reloading", () => {
         ================================================================================
         <overlay visible style="background-color: rgb(170, 187, 204);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
-        <summary><span style="background-color: rgb(170, 187, 204);">SYNTAX PROBLEM</span><p><button>/Users/simon/src/elm-watch/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></summary>
+        <summary><span style="background-color: rgb(170, 187, 204);">SYNTAX PROBLEM</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></summary>
         <pre>I got stuck here:
 
         1|  App exposing (main)

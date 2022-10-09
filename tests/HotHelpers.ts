@@ -335,14 +335,12 @@ export async function run({
       .catch(reject);
   });
 
-  const stdoutString = clean(stdout.getOutput());
-
   expect(stderr.content).toBe("");
 
   return {
-    terminal: stdoutString,
+    terminal: clean(stdout.getOutput()),
     browserConsole: browserConsole.join("\n\n"),
-    renders: renders.join(`\n${"=".repeat(80)}\n`),
+    renders: clean(renders.join(`\n${"=".repeat(80)}\n`)),
     div: outerDiv,
   };
 }
@@ -574,7 +572,7 @@ export function getOverlay(): string {
       }">\n${children}\n</overlay>`;
     }
   });
-  return result;
+  return clean(result);
 }
 
 export function clickFirstErrorLocation(): void {
