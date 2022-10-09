@@ -533,7 +533,7 @@ describe("hot", () => {
     `);
   });
 
-  describe("Parse web socket connect request url errors", () => {
+  describe("Parse WebSocket connect request url errors", () => {
     const originalWebSocket = WebSocket;
     let _lastWebSocket: WebSocket | undefined = undefined;
 
@@ -1134,6 +1134,7 @@ describe("hot", () => {
         WrongVersion
         SendBadJson
         Reconnect
+        HttpCaching
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
         ▲ ❌ 13:10:05 TargetDisabled
@@ -4744,6 +4745,108 @@ describe("hot", () => {
       ▼ ⏳ 13:10:05 Html
       ================================================================================
       ▼ ✅ 13:10:05 Html
+    `);
+  });
+
+  test("reload trouble with http caching", async () => {
+    const { renders } = await run({
+      fixture: "basic",
+      args: ["HttpCaching"],
+      scripts: ["HttpCaching.js"],
+      simulateHttpCacheOnReload: true,
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            switchCompilationMode("optimize");
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    const cleanedRenders = renders.replace(
+      /compiled .+? and/,
+      "compiled 10/9/2022, 11:36:01 AM, and"
+    );
+
+    expect(cleanedRenders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 HttpCaching
+      ================================================================================
+      ▼ ⏳ 13:10:05 HttpCaching
+      ================================================================================
+      ▼ ⏳ 13:10:05 HttpCaching
+      ================================================================================
+      ▼ 🔌 13:10:05 HttpCaching
+      ================================================================================
+      ▼ 🔌 13:10:05 HttpCaching
+      ================================================================================
+      ▼ ⏳ 13:10:05 HttpCaching
+      ================================================================================
+      ▼ ✅ 13:10:05 HttpCaching
+      ================================================================================
+      target HttpCaching
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ↑↗
+      ·→
+      ▲ ✅ 13:10:05 HttpCaching
+      ================================================================================
+      target HttpCaching
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◯ (disabled) Standard
+      ◉ (disabled) Optimize 🚀
+      ↑↗
+      ·→
+      ▲ 🚀 ⏳ 13:10:05 HttpCaching
+      ================================================================================
+      target HttpCaching
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◯ (disabled) Standard
+      ◉ (disabled) Optimize 🚀
+      ↑↗
+      ·→
+      ▲ 🚀 ⏳ 13:10:05 HttpCaching
+      ================================================================================
+      ▼ 🔌 13:10:05 HttpCaching
+      ================================================================================
+      ▼ 🔌 13:10:05 HttpCaching
+      ================================================================================
+      ▼ ⏳ 13:10:05 HttpCaching
+      ================================================================================
+      ▼ 🚀 ⏳ 13:10:05 HttpCaching
+      ================================================================================
+      target HttpCaching
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Reload trouble
+      A while ago I reloaded the page to get new compiled JavaScript.
+      But it looks like after the last page reload I got the same JavaScript as before, instead of new stuff!
+      The old JavaScript was compiled 10/9/2022, 11:36:01 AM, and so was the JavaScript currently running.
+      I currently need to reload the page again, but fear a reload loop if I try.
+      Do you have accidental HTTP caching enabled maybe?
+      Try hard refreshing the page and see if that helps, and consider disabling HTTP caching during development.
+      ▲ 🚀 ❌ 13:10:05 HttpCaching
     `);
   });
 

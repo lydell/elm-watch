@@ -129,6 +129,7 @@ __ELM_WATCH.ON_REACHED_IDLE_STATE ??= () => {
 __ELM_WATCH.RELOAD_STATUSES ??= {};
 
 const RELOAD_MESSAGE_KEY = "__elmWatchReloadMessage";
+const RELOAD_TARGET_NAME_KEY_PREFIX = "__elmWatchReloadTarget__";
 
 __ELM_WATCH.RELOAD_PAGE ??= (message) => {
   if (message !== undefined) {
@@ -285,6 +286,7 @@ type Model = {
   browserUiPosition: BrowserUiPosition;
   lastBrowserUiPositionChangeDate: Date | undefined;
   elmCompiledTimestamp: number;
+  elmCompiledTimestampBeforeReload: number | undefined;
   uiExpanded: boolean;
 };
 
@@ -332,6 +334,7 @@ type Cmd =
   | {
       tag: "UpdateGlobalStatus";
       reloadStatus: ReloadStatus;
+      elmCompiledTimestamp: number;
     }
   | {
       tag: "WebSocketTimeoutBegin";
@@ -408,7 +411,8 @@ export type ReachedIdleStateReason =
   | "ElmJsonError"
   | "EvalErrored"
   | "EvalSucceeded"
-  | "OpenEditorFailed";
+  | "OpenEditorFailed"
+  | "ReloadTrouble";
 
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
@@ -431,12 +435,22 @@ function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
 }
 
 function run(): void {
+  let elmCompiledTimestampBeforeReload: number | undefined = undefined;
   try {
     const message = window.sessionStorage.getItem(RELOAD_MESSAGE_KEY);
     if (message !== null) {
       // eslint-disable-next-line no-console
       console.info(message);
       window.sessionStorage.removeItem(RELOAD_MESSAGE_KEY);
+    }
+    const key = RELOAD_TARGET_NAME_KEY_PREFIX + TARGET_NAME;
+    const previous = window.sessionStorage.getItem(key);
+    if (previous !== null) {
+      const number = Number(previous);
+      if (Number.isFinite(number)) {
+        elmCompiledTimestampBeforeReload = number;
+      }
+      window.sessionStorage.removeItem(key);
     }
   } catch {
     // Ignore failing to read or delete from sessionStorage.
@@ -451,14 +465,20 @@ function run(): void {
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, elements),
-    init: init(getNow(), browserUiPosition),
+    init: init(getNow(), browserUiPosition, elmCompiledTimestampBeforeReload),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [updatedModel, cmds] = update(msg, model);
       const modelChanged = updatedModel !== model;
+      const reloadTrouble =
+        model.status.tag !== updatedModel.status.tag &&
+        updatedModel.status.tag === "WaitingForReload" &&
+        updatedModel.elmCompiledTimestamp ===
+          updatedModel.elmCompiledTimestampBeforeReload;
       const newModel: Model = modelChanged
         ? {
             ...updatedModel,
             previousStatusTag: model.status.tag,
+            uiExpanded: reloadTrouble ? true : updatedModel.uiExpanded,
           }
         : model;
       const oldErrorOverlay = getErrorOverlay(model.status);
@@ -468,7 +488,8 @@ function run(): void {
             ...cmds,
             {
               tag: "UpdateGlobalStatus",
-              reloadStatus: statusToReloadStatus(newModel.status),
+              reloadStatus: statusToReloadStatus(newModel),
+              elmCompiledTimestamp: newModel.elmCompiledTimestamp,
             },
             // This needs to be done before Render, since it depends on whether
             // the error overlay is visible or not.
@@ -496,6 +517,9 @@ function run(): void {
                   tag: "SetBrowserUiPosition",
                   browserUiPosition: newModel.browserUiPosition,
                 },
+            reloadTrouble
+              ? { tag: "TriggerReachedIdleState", reason: "ReloadTrouble" }
+              : { tag: "NoCmd" },
           ]
         : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
@@ -517,8 +541,8 @@ function getErrorOverlay(status: Status): ErrorOverlay | undefined {
   return "errorOverlay" in status ? status.errorOverlay : undefined;
 }
 
-function statusToReloadStatus(status: Status): ReloadStatus {
-  switch (status.tag) {
+function statusToReloadStatus(model: Model): ReloadStatus {
+  switch (model.status.tag) {
     case "Busy":
     case "Connecting":
       return { tag: "MightWantToReload" };
@@ -532,7 +556,10 @@ function statusToReloadStatus(status: Status): ReloadStatus {
       return { tag: "NoReloadWanted" };
 
     case "WaitingForReload":
-      return { tag: "ReloadRequested", reasons: status.reasons };
+      return model.elmCompiledTimestamp ===
+        model.elmCompiledTimestampBeforeReload
+        ? { tag: "NoReloadWanted" }
+        : { tag: "ReloadRequested", reasons: model.status.reasons };
   }
 }
 
@@ -931,7 +958,8 @@ function initWebSocket(
 
 const init = (
   date: Date,
-  browserUiPosition: BrowserUiPosition
+  browserUiPosition: BrowserUiPosition,
+  elmCompiledTimestampBeforeReload: number | undefined
 ): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
@@ -940,6 +968,7 @@ const init = (
     browserUiPosition,
     lastBrowserUiPositionChangeDate: undefined,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
+    elmCompiledTimestampBeforeReload,
     uiExpanded: false,
   };
   return [model, [{ tag: "Render", model, manageFocus: false }]];
@@ -1551,6 +1580,20 @@ const runCmd =
 
       case "UpdateGlobalStatus":
         __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = cmd.reloadStatus;
+        switch (cmd.reloadStatus.tag) {
+          case "NoReloadWanted":
+          case "MightWantToReload":
+            break;
+          case "ReloadRequested":
+            try {
+              window.sessionStorage.setItem(
+                RELOAD_TARGET_NAME_KEY_PREFIX + TARGET_NAME,
+                cmd.elmCompiledTimestamp.toString()
+              );
+            } catch {
+              // Ignore failing to write to sessionStorage.
+            }
+        }
         reloadPageIfNeeded();
         return;
 
@@ -1835,7 +1878,7 @@ type Info = {
 };
 
 function renderWebWorker(model: Model, info: Info): string {
-  const statusData = statusIconAndText(model.status, info);
+  const statusData = statusIconAndText(model, info);
   return `${statusData.icon} elm-watch: ${statusData.status} ${formatTime(
     model.status.date
   )} (${info.targetName})`;
@@ -2290,8 +2333,8 @@ function view(
     : passedModel;
 
   const statusData: StatusData = {
-    ...statusIconAndText(model.status, info),
-    ...viewStatus(dispatch, model.status, model.compilationMode, info),
+    ...statusIconAndText(model, info),
+    ...viewStatus(dispatch, model, info),
   };
 
   const statusType = statusToStatusType(model.status.tag);
@@ -2534,10 +2577,10 @@ type StatusData = {
 };
 
 function statusIconAndText(
-  status: Status,
+  model: Model,
   info: Info
 ): Pick<StatusData, "icon" | "status"> {
-  switch (status.tag) {
+  switch (model.status.tag) {
     case "Busy":
       return {
         icon: "⏳",
@@ -2587,19 +2630,25 @@ function statusIconAndText(
       };
 
     case "WaitingForReload":
-      return {
-        icon: "⏳",
-        status: "Waiting for reload",
-      };
+      return model.elmCompiledTimestamp ===
+        model.elmCompiledTimestampBeforeReload
+        ? {
+            icon: "❌",
+            status: "Reload trouble",
+          }
+        : {
+            icon: "⏳",
+            status: "Waiting for reload",
+          };
   }
 }
 
 function viewStatus(
   dispatch: (msg: UiMsg) => void,
-  status: Status,
-  compilationMode: CompilationModeWithProxy,
+  model: Model,
   info: Info
 ): Pick<StatusData, "content" | "dl"> {
+  const { status, compilationMode } = model;
   switch (status.tag) {
     case "Busy":
       return {
@@ -2717,13 +2766,19 @@ function viewStatus(
     case "WaitingForReload":
       return {
         dl: [],
-        content: [
-          h(
-            HTMLParagraphElement,
-            {},
-            "Waiting for other targets to finish compiling…"
-          ),
-        ],
+        content:
+          model.elmCompiledTimestamp === model.elmCompiledTimestampBeforeReload
+            ? [
+                "A while ago I reloaded the page to get new compiled JavaScript.",
+                "But it looks like after the last page reload I got the same JavaScript as before, instead of new stuff!",
+                `The old JavaScript was compiled ${new Date(
+                  model.elmCompiledTimestamp
+                ).toLocaleString()}, and so was the JavaScript currently running.`,
+                "I currently need to reload the page again, but fear a reload loop if I try.",
+                "Do you have accidental HTTP caching enabled maybe?",
+                "Try hard refreshing the page and see if that helps, and consider disabling HTTP caching during development.",
+              ].map((text) => h(HTMLParagraphElement, {}, text))
+            : [h(HTMLParagraphElement, {}, "Waiting for other targets…")],
       };
   }
 }
@@ -3451,6 +3506,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       browserUiPosition: "BottomLeft",
       lastBrowserUiPositionChangeDate: undefined,
       elmCompiledTimestamp: 0,
+      elmCompiledTimestampBeforeReload: undefined,
       uiExpanded: true,
     };
     render(

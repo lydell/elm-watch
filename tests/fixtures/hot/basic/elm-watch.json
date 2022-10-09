@@ -65,6 +65,12 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/Reconnect.js"
+        },
+        "HttpCaching": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/HttpCaching.js"
         }
     }
 }
