@@ -533,7 +533,7 @@ describe("hot", () => {
     `);
   });
 
-  describe("Parse web socket connect request url errors", () => {
+  describe("Parse WebSocket connect request url errors", () => {
     const originalWebSocket = WebSocket;
     let _lastWebSocket: WebSocket | undefined = undefined;
 
@@ -1134,6 +1134,7 @@ describe("hot", () => {
         WrongVersion
         SendBadJson
         Reconnect
+        HttpCaching
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
         ▲ ❌ 13:10:05 TargetDisabled
