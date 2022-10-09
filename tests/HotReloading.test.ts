@@ -861,8 +861,8 @@ describe("hot reloading", () => {
         `);
 
       expect(mockConsoleInfo.mock.calls).toMatchInlineSnapshot(`
-          Array [
-            Array [
+          [
+            [
               elm-watch: A new port 'toJs' was added. You might want to reload the page!,
             ],
           ]
@@ -1119,17 +1119,17 @@ describe("hot reloading", () => {
       });
 
       expect(mockConsoleLog.mock.calls).toMatchInlineSnapshot(`
-          Array [
-            Array [
+          [
+            [
               ELM_LAZY_TEST isDivisible: True,
             ],
-            Array [
+            [
               ELM_LAZY_TEST isDivisible: False,
             ],
-            Array [
+            [
               ELM_LAZY_TEST isDivisible: False,
             ],
-            Array [
+            [
               ELM_LAZY_TEST isDivisible: True,
             ],
           ]
@@ -1447,8 +1447,8 @@ describe("hot reloading", () => {
       `);
 
       expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`
-          Array [
-            Array [
+          [
+            [
               [Error: Very unexpected error],
             ],
           ]
