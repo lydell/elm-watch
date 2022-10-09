@@ -73,4 +73,4 @@ jobs:
       - name: Jest
         run: npx jest --coverage --forceExit
         env:
-          JEST_RETRIES: 2
+          JEST_RETRIES: 4
