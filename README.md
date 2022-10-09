@@ -235,7 +235,7 @@ Here are some more icons you might see (they’re also explained when you expand
 
 Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Go to the terminal to see the errors, or expand the UI and click the “Show errors” button if you’d like to see them directly in the browser, in an overlay. The overlay is visible until you close it again, or until you fix all errors. elm-watch remembers your choice to show errors in the browser per target, and opens the overlay again when there are new errors if you had previously opted to show it.
 
-The error overlay does not show by default because it didn’t exist in version 1.0.0, but might do in the future if it makes sense. I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. This is why elm-watch lets you choose if you want the overlay or not, and remembers your choice.
+I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. This is why elm-watch lets you choose if you want the overlay or not, and remembers your choice. Let me know if you think a future version of elm-watch should or should not show it by default, though!
 
 (A cool little detail: The error overlay picks up the colors from your terminal, if possible.)
 
@@ -251,8 +251,8 @@ Here’s how to set it in different shells:
 
 | Shell | Config file | Code |
 | --- | --- | --- |
-| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
 | bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
+| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
 | fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your command here'` |
 | Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `your command here` |
 
@@ -263,17 +263,17 @@ And here are some commands for a few editors:
 | Editor | Command | Windows command |
 | --- | --- | --- |
 | [VSCode] | `code --goto "$file:$line:$column"` | `code --goto "%file%:%line%:%column%"` |
-| [IntelliJ] | `idea --line "$line" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
+| [IntelliJ IDEA] | `idea --line "$line" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
 | [Rider] | `rider --line "$line" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
 
-\* Neither IntelliJ nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. Either way – once you’ve found the command, the `--line "$line" "$file"` bit after should work without changes. Chances are other [JetBrains] IDEs work similarly, just with different names.
+\* Neither IntelliJ IDEA nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. Chances are other [JetBrains] IDEs work similarly, just with different names.
 
-† I haven’t tested IntelliJ or Rider on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
+† I haven’t tested IntelliJ IDEA or Rider on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
 
 Full examples:
 
-- `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
-- `set -Ux ELM_WATCH_OPEN_EDITOR 'idea --line "$line" "$file"'`
+- bash/zsh with VSCode: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
+- fish with Rider: `set -Ux ELM_WATCH_OPEN_EDITOR 'rider --line "$line" "$file"'`
 
 Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contains digits, but it doesn’t hurt to quote them too.)
 
@@ -667,7 +667,7 @@ It’s up to you to decide if you think the extra work of pairing a build tool w
 [esbuild]: https://esbuild.github.io/
 [getting-started-with-elm-watch]: https://www.youtube.com/watch?v=n15nOCZnTac
 [globalthis]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
-[intellij]: https://www.jetbrains.com/idea/
+[intellij idea]: https://www.jetbrains.com/idea/
 [jetbrains]: https://www.jetbrains.com/
 [parcel]: https://parceljs.org/
 [platform.worker]: https://package.elm-lang.org/packages/elm/core/latest/Platform#worker
