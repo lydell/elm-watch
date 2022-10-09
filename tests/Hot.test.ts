@@ -16,6 +16,7 @@ import {
   NO_COLOR,
 } from "../src/Env";
 import { LatestEvent, printTimeline } from "../src/Hot";
+import { IS_WINDOWS } from "../src/IsWindows";
 import { LoggerConfig } from "../src/Logger";
 import {
   clean,
@@ -3646,8 +3647,7 @@ describe("hot", () => {
 
     test("timeout", async () => {
       const renders = await runFailClickErrorLocation({
-        [ELM_WATCH_OPEN_EDITOR]:
-          "node -e 'setTimeout(() => process.exit(1), 10000)'",
+        [ELM_WATCH_OPEN_EDITOR]: `node -e "setTimeout(() => process.exit(1), 10000)"`,
         [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "10",
       });
       expect(renders).toMatchInlineSnapshot(`
@@ -3671,7 +3671,7 @@ describe("hot", () => {
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
         cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
-        node -e 'setTimeout(() => process.exit(1), 10000)'
+        node -e "setTimeout(() => process.exit(1), 10000)"
 
         I ran the command with these extra environment variables:
 
@@ -3692,7 +3692,7 @@ describe("hot", () => {
 
     test("exit 1", async () => {
       const renders = await runFailClickErrorLocation({
-        [ELM_WATCH_OPEN_EDITOR]: "node -e 'process.exit(1)'",
+        [ELM_WATCH_OPEN_EDITOR]: `node -e "process.exit(1)"`,
       });
       expect(renders).toMatchInlineSnapshot(`
         ▼ 🔌 13:10:05 Main
@@ -3715,7 +3715,7 @@ describe("hot", () => {
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
         cd /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay
-        node -e 'process.exit(1)'
+        node -e "process.exit(1)"
 
         I ran the command with these extra environment variables:
 
@@ -3742,13 +3742,15 @@ describe("hot", () => {
       );
       rm(outputFile);
 
+      const arg = IS_WINDOWS ? "%file%:%line%:%column%" : "$file:$line:$column";
+
       const { renders } = await run({
         fixture,
         args: [],
         scripts: ["Main.js"],
         keepElmStuffJson: true,
         env: {
-          [ELM_WATCH_OPEN_EDITOR]: `node -e 'require("fs").writeFileSync("click-error-location.txt", process.argv[1])' "$file:$line:$column"`,
+          [ELM_WATCH_OPEN_EDITOR]: `node -e "require('fs').writeFileSync('click-error-location.txt', process.argv[1])" ${arg}`,
         },
         init: (node) => {
           window.Elm?.Main?.init({ node });
