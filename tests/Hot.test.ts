@@ -869,6 +869,7 @@ describe("hot", () => {
         Disabled2
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        If so, try reloading the page.
         ▲ ❌ 13:10:05 Enabled1
       `);
     });
@@ -918,6 +919,7 @@ describe("hot", () => {
         Main
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        If so, try reloading the page.
         ▲ ❌ 13:10:05 Main
       `);
     });
