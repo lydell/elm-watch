@@ -3757,7 +3757,9 @@ describe("hot", () => {
       );
       rm(outputFile);
 
-      const arg = IS_WINDOWS ? "%file%:%line%:%column%" : "$file:$line:$column";
+      const arg = IS_WINDOWS
+        ? `"%file%:%line%:%column%"`
+        : `"$file:$line:$column"`;
 
       const { renders } = await run({
         fixture,
