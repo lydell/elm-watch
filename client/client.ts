@@ -469,17 +469,8 @@ function run(): void {
               tag: "UpdateGlobalStatus",
               reloadStatus: statusToReloadStatus(newModel.status),
             },
-            {
-              tag: "Render",
-              model: newModel,
-              manageFocus: msg.tag === "UiMsg",
-            },
-            model.browserUiPosition === newModel.browserUiPosition
-              ? { tag: "NoCmd" }
-              : {
-                  tag: "SetBrowserUiPosition",
-                  browserUiPosition: newModel.browserUiPosition,
-                },
+            // This needs to be done before Render, since it depends on whether
+            // the error overlay is visible or not.
             newModel.status.tag === newModel.previousStatusTag &&
             oldErrorOverlay?.openErrorOverlay ===
               newErrorOverlay?.openErrorOverlay
@@ -492,6 +483,17 @@ function run(): void {
                       ? new Map<string, OverlayError>()
                       : newErrorOverlay.errors,
                   sendKey: statusToSpecialCaseSendKey(newModel.status),
+                },
+            {
+              tag: "Render",
+              model: newModel,
+              manageFocus: msg.tag === "UiMsg",
+            },
+            model.browserUiPosition === newModel.browserUiPosition
+              ? { tag: "NoCmd" }
+              : {
+                  tag: "SetBrowserUiPosition",
+                  browserUiPosition: newModel.browserUiPosition,
                 },
           ]
         : cmds;
@@ -1472,6 +1474,8 @@ const runCmd =
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
           initializedElmAppsStatus: checkInitializedElmAppsStatus(),
+          errorOverlayVisible:
+            elements !== undefined && !elements.overlay.hidden,
         };
         if (elements === undefined) {
           if (model.status.tag !== model.previousStatusTag) {
@@ -1826,6 +1830,7 @@ type Info = {
   targetName: string;
   originalCompilationMode: CompilationModeWithProxy;
   initializedElmAppsStatus: InitializedElmAppsStatus;
+  errorOverlayVisible: boolean;
 };
 
 function renderWebWorker(model: Model, info: Info): string {
@@ -1888,11 +1893,13 @@ function getStatusClass({
   statusTypeChanged,
   hasReceivedHotReload,
   uiRelatedUpdate,
+  errorOverlayVisible,
 }: {
   statusType: StatusType;
   statusTypeChanged: boolean;
   hasReceivedHotReload: boolean;
   uiRelatedUpdate: boolean;
+  errorOverlayVisible: boolean;
 }): string | undefined {
   switch (statusType) {
     case "Success":
@@ -1900,7 +1907,13 @@ function getStatusClass({
         ? CLASS.flashSuccess
         : undefined;
     case "Error":
-      return uiRelatedUpdate ? undefined : CLASS.flashError;
+      return errorOverlayVisible
+        ? statusTypeChanged && hasReceivedHotReload
+          ? CLASS.flashError
+          : undefined
+        : uiRelatedUpdate
+        ? undefined
+        : CLASS.flashError;
     case "Waiting":
       return undefined;
   }
@@ -2290,6 +2303,7 @@ function view(
     hasReceivedHotReload:
       model.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
     uiRelatedUpdate: manageFocus,
+    errorOverlayVisible: info.errorOverlayVisible,
   });
 
   return h(
@@ -3222,6 +3236,7 @@ function renderMockStatuses(
       tag: "DebuggerModeStatus",
       status: { tag: "Enabled" },
     },
+    errorOverlayVisible: false,
   };
 
   const mockStatuses: Record<

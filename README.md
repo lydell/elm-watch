@@ -233,13 +233,13 @@ Here are some more icons you might see (they’re also explained when you expand
 - ⛔️: Eval error
 - ❌: Unexpected error
 
-Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Go to the terminal to see the errors, or expand the UI and click the “Show errors” button if you’d like to see them directly in the browser, in an overlay. The overlay is visible until you close it again, or until you fix all errors. elm-watch remembers your choice to show errors in the browser per target, and opens the overlay again if you had previously opted to show it.
+Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Go to the terminal to see the errors, or expand the UI and click the “Show errors” button if you’d like to see them directly in the browser, in an overlay. The overlay is visible until you close it again, or until you fix all errors. elm-watch remembers your choice to show errors in the browser per target, and opens the overlay again when there are new errors if you had previously opted to show it.
 
-The error overlay does not show by default because it didn’t exist in version 1.0.0, but might do in the future if it makes sense. I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. This is why elm-watch lets you choose if you want them or not, and remembers your choice.
+The error overlay does not show by default because it didn’t exist in version 1.0.0, but might do in the future if it makes sense. I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. This is why elm-watch lets you choose if you want the overlay or not, and remembers your choice.
 
 (A cool little detail: The error overlay picks up the colors from your terminal, if possible.)
 
-To make that 🚨 more noticeable, there’s a similar animation as for ✅ – a growing and fading _red_ circle – which also is repeated every time you focus the tab (switch to it from another tab or window, or move focus from the dev tools to the page).
+To make that 🚨 more noticeable, there’s a similar animation as for ✅ – a growing and fading _red_ circle – which also is repeated every time you focus the tab (switch to it from another tab or window, or move focus from the dev tools to the page). (It’s only repeated when the error overlay isn’t showing, though.)
 
 ### Clickable error locations
 
