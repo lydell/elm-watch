@@ -13,7 +13,8 @@ nav_order: 9
 
 <!-- prettier-ignore-end -->
 
-> ℹ️ Postprocessing is an “advanced” feature. If you’re just starting out – skip it.
+{: .info }  
+ℹ️ Postprocessing is an “advanced” feature. If you’re just starting out – skip it.
 
 This lets you change Elm’s JavaScript output. There are two use cases for this:
 
@@ -33,7 +34,8 @@ The goal of the postprocessing feature is to be an easier way of transforming El
 
 Doing string replacements on source code is very easy to mess up! You will probably end up with syntax errors on your first attempts.
 
-**Syntax errors might “brick” your setup!**
+{: .warning }  
+⚠️ Syntax errors might “brick” your setup!
 
 At first, elm-watch’s browser UI shows “⛔️ Eval error” and in the browser console you’ll see the syntax error. But if you refresh the page, you’ll load a JavaScript file with syntax errors in it, which means none of it will run! That includes the extra JavaScript code that elm-watch injects for its browser UI and for connecting via WebSocket, which in turn means that elm-watch thinks it can skip compiling your target (since no page has connected via WebSocket) and only typecheck it. elm-watch keeps reacting to changes to your elm-watch-node postprocess file, but won’t run it. Basically, it’ll feel like elm-watch has stopped working no matter what you do.
 
@@ -98,6 +100,7 @@ case "$compilation_mode" in
 esac
 ```
 
+{: .info }  
 Debugging tip: Print stuff to stdout **and exit with code 1.** For example, `echo "my debug stuff"; exit 1`. Then elm-watch will report the error, and print all stdout and stderr it got so far. (If you exit with code 0, your debug prints will end up in the compiled JS.)
 
 ## elm-watch-node
@@ -186,6 +189,7 @@ export default function postprocess({ code, compilationMode }) {
 }
 ```
 
+{: .info }  
 Debugging tip: Use `console.log("my debug stuff", 1 + 1); throw new Error()`. Then elm-watch will report that error, and print stuff that you’ve logged. (If you use _only_ `console.log("my debug stuff")` with no `throw new Error()` you won’t see the log).
 
 > Note: `elm-watch-node` is only available because elm-watch happens to be written in Node.js. An [implementation written in another language](../postprocess/#ideas-for-the-future/) is not expected to embed a JavaScript runtime just to implement `elm-watch-node`. In such a case you will have to make do with some other faster scripting language (like `bash`), or pay the penalty of starting `node` every time.

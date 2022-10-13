@@ -5,6 +5,7 @@ nav_order: 10
 
 # HTTPS
 
+{: .info }  
 **TL;DR:** I recommend using `http://` for local development. If you really want `https://`, accept elm-watch’s “unsafe” self-signed SSL certificate.
 
 I’d say it’s the most common to use plain old `http://` when working on `localhost`. One could argue that `https://` would be better even for local development since it’s closer to your production environment (which most likely uses `https://`). To be honest, I’ve tried using `https://` for local development and can’t remember a single time it saved me from a bug. Instead it just complicates things with certificates.
