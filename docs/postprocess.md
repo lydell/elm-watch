@@ -188,7 +188,7 @@ export default function postprocess({ code, compilationMode }) {
 
 Debugging tip: Use `console.log("my debug stuff", 1 + 1); throw new Error()`. Then elm-watch will report that error, and print stuff that you’ve logged. (If you use _only_ `console.log("my debug stuff")` with no `throw new Error()` you won’t see the log).
 
-> Note: `elm-watch-node` is only available because elm-watch happens to be written in Node.js. An [implementation written in another language](../ideas-for-the-future/) is not expected to embed a JavaScript runtime just to implement `elm-watch-node`. In such a case you will have to make do with some other faster scripting language (like `bash`), or pay the penalty of starting `node` every time.
+> Note: `elm-watch-node` is only available because elm-watch happens to be written in Node.js. An [implementation written in another language](../postprocess/#ideas-for-the-future/) is not expected to embed a JavaScript runtime just to implement `elm-watch-node`. In such a case you will have to make do with some other faster scripting language (like `bash`), or pay the penalty of starting `node` every time.
 
 ## Postprocess notes
 
