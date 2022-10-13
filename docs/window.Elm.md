@@ -7,7 +7,7 @@ nav_order: 3
 
 elm-watch is basically just `elm-watch make`, so the output format is using the good old `window.Elm` global.
 
-elm-watch even _requires `window.Elm` to exist._ That global variable is key to make [hot reloading](./hot-reloading) work. (Technically, `globalThis.Elm` is required to exist. See below.)
+elm-watch even _requires `window.Elm` to exist._ That global variable is key to make [hot reloading](../hot-reloading/) work. (Technically, `globalThis.Elm` is required to exist. See below.)
 
 **In short:** Keep it simple and load the built Elm JS in its own `<script>` tag and you’ll be fine.
 
@@ -56,7 +56,7 @@ If you use a bundler, `import`ing the built Elm JS can have additional downsides
 - The bundler might rewrite that global `this` mentioned above to `exports` (a local object) in an attempt to support `import`ing old-school packages. However, then `window.Elm` won’t be created.
 - The bundler might waste time parsing the whole built Elm JS file for nothing.
 
-elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](./postprocess) script, though, if you really feel like it.
+elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](../postprocess/) script, though, if you really feel like it.
 
 Having `window.Elm.Main.init()` in your code might feel ugly and old-school compared to using `import`, but I think it’s fine:
 

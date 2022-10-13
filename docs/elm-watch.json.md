@@ -54,14 +54,14 @@ Example:
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
-| [postprocess](./postprocess) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
+| [postprocess](../postprocess/) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | WebSocket port for hot reloading. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
 
 ## targets
 
 There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
 
-It’s an object. They keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](./postprocess) script. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
+It’s an object. They keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](../postprocess/) script. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
 
 For each target, provide the following:
 

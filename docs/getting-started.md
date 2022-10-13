@@ -31,7 +31,7 @@ npx elm-watch --help
 
 > 📽 [Video showing how to get started][getting-started-with-elm-watch]
 
-Create a file called [elm-watch.json](#elm-watchjson):
+Create a file called [elm-watch.json](../elm-watch.json/):
 
 ```
 npx elm-watch init
@@ -104,8 +104,9 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
 
   👉 [Example with esbuild](https://github.com/lydell/elm-watch/tree/main/example#readme)
 
-ℹ️ Note: elm-watch **requires** [window.Elm](./window.Elm) to exist!
+ℹ️ Note: elm-watch **requires** [window.Elm](../window.Elm/) to exist!
 
 [elm-guide-install]: https://guide.elm-lang.org/install/elm.html
 [elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
+[getting-started-with-elm-watch]: https://www.youtube.com/watch?v=n15nOCZnTac
