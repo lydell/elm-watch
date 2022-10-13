@@ -17,13 +17,14 @@ Clicking the box expands it, letting you switch between the “standard” compi
 
 If the UI is in the way, you can move it to another corner using the arrow buttons. elm-watch remembers that choice per target across restarts as well.
 
-Here are some more icons you might see (they’re also explained when you expand the box):
+Here are all the icons you might see (they’re also explained when you expand the box):
 
-- 🔌: Connecting
-- ⏳: Waiting for compilation
-- 🚨: Compilation error
-- ⛔️: Eval error
-- ❌: Unexpected error
+✅ = Successfully compiled  
+🔌 = Connecting  
+⏳ = Waiting for compilation  
+🚨 = Compilation error  
+⛔️ = Eval error  
+❌ = Unexpected error
 
 Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Go to the terminal to see the errors, or expand the UI and click the “Show errors” button if you’d like to see them directly in the browser, in an overlay. The overlay is visible until you close it again, or until you fix all errors. elm-watch remembers your choice to show errors in the browser per target, and opens the overlay again when there are new errors if you had previously opted to show it.
 
