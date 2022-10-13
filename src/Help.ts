@@ -62,7 +62,7 @@ ${bold("Environment variables:")}
 
     ${bold(ELM_WATCH_OPEN_EDITOR)}
         Open your editor when clicking error locations in the browser
-        https://lydell.github.io/elm-watch/browser-ui#clickable-error-locations
+        https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
 ${bold("Documentation:")}
     https://lydell.github.io/elm-watch
