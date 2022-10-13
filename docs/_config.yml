@@ -1,0 +1,7 @@
+remote_theme: just-the-docs/just-the-docs@v0.4.0.rc3
+permalink: pretty
+
+# Aux links for the upper right navigation
+aux_links:
+  "elm-watch on GitHub":
+    - "https://github.com/lydell/elm-watch"

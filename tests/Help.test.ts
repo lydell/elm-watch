@@ -92,10 +92,10 @@ describe("help", () => {
 
           ⧙ELM_WATCH_OPEN_EDITOR⧘
               Open your editor when clicking error locations in the browser
-              https://github.com/lydell/elm-watch#clickable-error-locations
+              https://lydell.github.io/elm-watch/browser-ui#clickable-error-locations
 
       ⧙Documentation:⧘
-          https://github.com/lydell/elm-watch#readme
+          https://lydell.github.io/elm-watch
 
       ⧙Version:⧘
           %VERSION%
@@ -152,10 +152,10 @@ describe("help", () => {
 
           ELM_WATCH_OPEN_EDITOR
               Open your editor when clicking error locations in the browser
-              https://github.com/lydell/elm-watch#clickable-error-locations
+              https://lydell.github.io/elm-watch/browser-ui#clickable-error-locations
 
       Documentation:
-          https://github.com/lydell/elm-watch#readme
+          https://lydell.github.io/elm-watch
 
       Version:
           %VERSION%

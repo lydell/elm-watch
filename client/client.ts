@@ -2824,7 +2824,7 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
           h(
             HTMLAnchorElement,
             {
-              href: "https://github.com/lydell/elm-watch#clickable-error-locations",
+              href: "https://lydell.github.io/elm-watch/browser-ui#clickable-error-locations",
               target: "_blank",
               rel: "noreferrer",
             },
@@ -2910,7 +2910,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
           h(
             HTMLAnchorElement,
             {
-              href: "https://github.com/lydell/elm-watch#https",
+              href: "https://lydell.github.io/elm-watch/https",
               target: "_blank",
               rel: "noreferrer",
             },
@@ -3006,7 +3006,7 @@ function viewCompilationModeChooser({
           h(
             HTMLAnchorElement,
             {
-              href: "https://github.com/lydell/elm-watch#windowelm",
+              href: "https://lydell.github.com/elm-watch/window.Elm",
               target: "_blank",
               rel: "noreferrer",
             },

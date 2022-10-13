@@ -24,4 +24,4 @@ See also the [elm-watch example with esbuild][example].
 
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli
 [example-minimal.yml]: https://github.com/lydell/elm-watch/blob/main/.github/workflows/example-minimal.yml
-[example]: https://github.com/lydell/elm-watch/tree/main/example
+[example]: https://github.com/lydell/elm-watch/tree/main/example#readme
