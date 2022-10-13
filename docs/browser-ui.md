@@ -1,6 +1,6 @@
 ---
 title: Browser UI
-nav_order: 6
+nav_order: 7
 ---
 
 # Browser UI

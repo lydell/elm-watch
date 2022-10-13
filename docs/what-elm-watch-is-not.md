@@ -1,6 +1,6 @@
 ---
 title: What elm-watch is not
-nav_order: 5
+nav_order: 4
 ---
 
 # What elm-watch is _not_

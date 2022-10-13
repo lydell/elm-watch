@@ -1,6 +1,6 @@
 ---
 title: What elm-watch is
-nav_order: 4
+nav_order: 3
 ---
 
 # What elm-watch _is_
