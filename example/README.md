@@ -37,7 +37,7 @@ This example has many Elm apps (many targets in `elm-watch.json`):
 
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli
 [esbuild]: https://esbuild.github.io/
-[example-minimal]: https://github.com/lydell/elm-watch/tree/main/example-minimal
+[example-minimal]: https://github.com/lydell/elm-watch/tree/main/example-minimal#readme
 [example.yml]: https://github.com/lydell/elm-watch/blob/main/.github/workflows/example.yml
 [run-pty]: https://github.com/lydell/run-pty/
 [uglifyjs]: https://github.com/mishoo/UglifyJS

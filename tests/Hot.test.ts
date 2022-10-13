@@ -3750,7 +3750,7 @@ describe("hot", () => {
         ◯ Optimize
         [Hide errors]
         Clicking error locations only works if you set it up.
-        Check this out: [Clickable error locations](https://github.com/lydell/elm-watch#clickable-error-locations)
+        Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
         ↑↗
         ·→
         ▲ 🚨 13:10:05 Main
@@ -4470,7 +4470,7 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Successfully compiled
-      elm-watch requires [window.Elm](https://github.com/lydell/elm-watch#windowelm) to exist, but it is undefined!
+      elm-watch requires [window.Elm](https://lydell.github.io/elm-watch/window.Elm/) to exist, but it is undefined!
       ↑↗
       ·→
       ▲ ❌ 13:10:05 Main
