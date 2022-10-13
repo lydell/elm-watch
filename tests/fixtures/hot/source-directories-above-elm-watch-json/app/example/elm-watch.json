@@ -1,0 +1,10 @@
+{
+    "targets": {
+        "Main": {
+            "inputs": [
+                "Main.elm"
+            ],
+            "output": "build/Main.js"
+        }
+    }
+}
