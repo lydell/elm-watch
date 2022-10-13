@@ -4470,7 +4470,7 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Successfully compiled
-      elm-watch requires [window.Elm](https://lydell.github.com/elm-watch/window.Elm) to exist, but it is undefined!
+      elm-watch requires [window.Elm](https://lydell.github.io/elm-watch/window.Elm) to exist, but it is undefined!
       ↑↗
       ·→
       ▲ ❌ 13:10:05 Main

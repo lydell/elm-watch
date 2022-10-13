@@ -71,7 +71,7 @@ npx elm-watch --help
 
 #### Warning: “Bricked” setup
 
-👉 https://lydell.github.io/elm-watch/postprocess#TODO
+👉 https://lydell.github.io/elm-watch/postprocess#warning-bricked-setup
 
 #### External process
 
@@ -87,11 +87,11 @@ npx elm-watch --help
 
 ## Hot reloading
 
-👉 https://lydell.github.io/elm-watch/postprocess#hot-reloading
+👉 https://lydell.github.io/elm-watch/hot-reloading
 
 ## HTTPS
 
-👉 https://lydell.github.io/elm-watch/postprocess#https
+👉 https://lydell.github.io/elm-watch/https
 
 ## Comparison to other tools
 

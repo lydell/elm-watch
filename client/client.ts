@@ -3006,7 +3006,7 @@ function viewCompilationModeChooser({
           h(
             HTMLAnchorElement,
             {
-              href: "https://lydell.github.com/elm-watch/window.Elm",
+              href: "https://lydell.github.io/elm-watch/window.Elm",
               target: "_blank",
               rel: "noreferrer",
             },
