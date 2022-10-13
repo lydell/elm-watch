@@ -27,7 +27,7 @@ npx elm-watch --help
 
 > ℹ️ **The rest of the documentation has moved!**
 >
-> 👉 https://lydell.github.io/elm-watch
+> 👉 https://lydell.github.io/elm-watch/
 >
 > There are a bunch of links elsewhere that go straight to headings in this readme, so I’ve kept them around.
 

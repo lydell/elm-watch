@@ -65,7 +65,7 @@ ${bold("Environment variables:")}
         https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
 ${bold("Documentation:")}
-    https://lydell.github.io/elm-watch
+    https://lydell.github.io/elm-watch/
 
 ${bold("Version:")}
     %VERSION%
