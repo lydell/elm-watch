@@ -8,11 +8,7 @@ import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
-import {
-  isNonEmptyArray,
-  mapNonEmptyArray,
-  NonEmptyArray,
-} from "./NonEmptyArray";
+import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,
   absolutePathFromString,
@@ -426,16 +422,35 @@ export function initProject({
     };
   }
 
-  const paths = mapNonEmptyArray(
-    [
-      elmWatchJsonPath.theElmWatchJsonPath,
-      ...Array.from(
-        elmJsons.keys(),
-        (elmJsonPath) => elmJsonPath.theElmJsonPath
-      ),
-    ],
-    (absolutePath) => absoluteDirname(absolutePath)
-  );
+  const paths: NonEmptyArray<AbsolutePath> = [
+    absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+    ...Array.from(elmJsons.keys()).flatMap(
+      (elmJsonPath): Array<AbsolutePath> => {
+        // This is a bit weird, but we can actually ignore errors here. Some facts:
+        // - We want to run Elm even if the elm.json is invalid, because Elm has
+        //   really nice error messages.
+        // - We run `ElmJson.readAndParse` again later and do report the errors then.
+        //   (But in practice you won’t see them because we show Elm’s errors instead.)
+        // - Regardless of whether we report the errors here we can’t know the
+        //   real watch root until it becomes valid. The best guess is to just
+        //   use the elm-watch.json and elm.json paths then.
+        const result = ElmJson.readAndParse(elmJsonPath);
+        switch (result.tag) {
+          case "Parsed":
+            return [
+              absoluteDirname(elmJsonPath.theElmJsonPath),
+              ...ElmJson.getSourceDirectories(elmJsonPath, result.elmJson).map(
+                (sourceDirectory) => sourceDirectory.theSourceDirectory
+              ),
+            ];
+
+          case "ElmJsonReadAsJsonError":
+          case "ElmJsonDecodeError":
+            return [absoluteDirname(elmJsonPath.theElmJsonPath)];
+        }
+      }
+    ),
+  ];
 
   const watchRoot = longestCommonAncestorPath(paths);
 

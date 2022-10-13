@@ -4850,6 +4850,69 @@ describe("hot", () => {
     `);
   });
 
+  test("elm.json further up than elm-watch.json", async () => {
+    const fixture = "elm-json-above-elm-watch-json";
+    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+
+    const { terminal } = await run({
+      fixture: path.join(fixture, "example"),
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            touch(elmJsonPath);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/elm-json-above-elm-watch-json/elm.json⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
+  test("source-directories further up than elm.json and elm-watch.json", async () => {
+    const fixture = "source-directories-above-elm-watch-json";
+    const elmFile = path.join(FIXTURES_DIR, fixture, "src", "Answer.elm");
+
+    const { terminal } = await run({
+      fixture: path.join(fixture, "app", "example"),
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.Main?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            touch(elmFile);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/source-directories-above-elm-watch-json/src/Answer.elm⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
   describe("printTimeline", () => {
     function print(
       events: Array<LatestEvent>,
