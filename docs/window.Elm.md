@@ -66,6 +66,7 @@ Having `window.Elm.Main.init()` in your code might feel ugly and old-school comp
 - It makes hot reloading work without any setup.
 - And it can even be good for browser caching! Your Elm code might change very often, but some JavaScript code (perhaps using an npm package) might be very stable and can then be cached independently from the compiled Elm code.
 
+[globalthis]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
 [parcel]: https://parceljs.org/
 [vite]: https://vitejs.dev/
 [webpack]: https://webpack.js.org/
