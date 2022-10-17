@@ -68,5 +68,7 @@ Having `window.Elm.Main.init()` in your code might feel ugly and old-school comp
 
 [globalthis]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
 [parcel]: https://parceljs.org/
+[platform.worker]: https://package.elm-lang.org/packages/elm/core/latest/Platform#worker
 [vite]: https://vitejs.dev/
+[web workers]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [webpack]: https://webpack.js.org/
