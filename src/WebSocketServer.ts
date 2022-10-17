@@ -265,7 +265,7 @@ function html(isHttps: boolean, request: http.IncomingMessage): string {
               host !== undefined ? `https://${host}${request.url}` : undefined,
               "HTTPS version of this page"
             )} to accept elm-watch's self-signed certificate?</p>`
-        : ""
+        : `<p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>`
     }
   </body>
 </html>

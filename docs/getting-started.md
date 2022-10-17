@@ -33,6 +33,9 @@ npx elm-watch --help
 
 > 📽 [Video showing how to get started][getting-started-with-elm-watch]
 
+{: .info }  
+ℹ️ If you don’t already have an Elm project, create one by running `elm make`.
+
 Create a file called [elm-watch.json](../elm-watch.json/):
 
 ```
@@ -65,11 +68,8 @@ To build for production:
 npx elm-watch make --optimize
 ```
 
-That’s pretty much it! For the remaining details:
-
-```
-npx elm-watch --help
-```
+{: .info }  
+ℹ️ elm-watch is _not_ a file server. See the next section.
 
 ## Your responsibilities
 

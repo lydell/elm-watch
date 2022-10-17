@@ -4669,7 +4669,7 @@ describe("hot", () => {
         </head>
         <body>
           <p>ℹ️ This is the elm-watch WebSocket server.</p>
-          
+          <p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>
         </body>
       </html>
     `);
@@ -4687,6 +4687,7 @@ describe("hot", () => {
 
     expect(variationsString).toMatchInlineSnapshot(`
       <p>ℹ️ This is the elm-watch WebSocket server.</p>
+      <p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>
       ================================================================================
       <p>ℹ️ This is the elm-watch WebSocket server.</p>
       <p>Did you mean to go to the <a href="https://localhost:9753/accept">HTTPS version of this page</a> to accept elm-watch's self-signed certificate?</p>
