@@ -34,7 +34,7 @@ npx elm-watch --help
 > 📽 [Video showing how to get started][getting-started-with-elm-watch]
 
 {: .info }  
-ℹ️ If you don’t already have an Elm project, create one by running `elm make`.
+ℹ️ If you don’t already have an Elm project, create one by running `elm init`.
 
 Create a file called [elm-watch.json](../elm-watch.json/):
 
