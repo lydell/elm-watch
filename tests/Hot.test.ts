@@ -618,7 +618,7 @@ describe("hot", () => {
         I ran into an unexpected error! This is the error message:
         I expected the web socket connection URL to start with:
 
-        /?
+        /elm-watch?
 
         But it looks like this:
 
@@ -679,7 +679,7 @@ describe("hot", () => {
 
         The URL looks like this:
 
-        /?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+        /elm-watch?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         ▲ ❌ 13:10:05 ParamsDecodeError
@@ -731,7 +731,7 @@ describe("hot", () => {
 
         The URL looks like this:
 
-        /?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+        /elm-watch?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         ▲ ❌ 13:10:05 ParamsDecodeError

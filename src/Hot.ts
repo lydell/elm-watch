@@ -2153,7 +2153,7 @@ type ParseWebSocketConnectRequestUrlResult =
 type ParseWebSocketConnectRequestUrlError =
   | {
       tag: "BadUrl";
-      expectedStart: "/?";
+      expectedStart: typeof WEBSOCKET_URL_EXPECTED_START;
       actualUrlString: string;
     }
   | {
@@ -2179,20 +2179,27 @@ type ParseWebSocketConnectRequestUrlError =
       actualVersion: string;
     };
 
+// We used to require `/?`. Putting “elm-watch” in the path is useful for people
+// running elm-watch behind a proxy: They can use the same port for both the web
+// site and elm-watch, and direct traffic by path matching.
+const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
+
 function parseWebSocketConnectRequestUrl(
   project: Project,
   urlString: string
 ): ParseWebSocketConnectRequestUrlResult {
-  if (!urlString.startsWith("/?")) {
+  if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
     return {
       tag: "BadUrl",
-      expectedStart: "/?",
+      expectedStart: WEBSOCKET_URL_EXPECTED_START,
       actualUrlString: urlString,
     };
   }
 
   // This never throws as far as I can tell.
-  const params = new URLSearchParams(urlString.slice(2));
+  const params = new URLSearchParams(
+    urlString.slice(WEBSOCKET_URL_EXPECTED_START.length)
+  );
 
   let webSocketConnectedParams;
   try {
