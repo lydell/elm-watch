@@ -39,7 +39,7 @@ export type Logger = {
   clearScreenDown: () => void;
   clearLine: (dir: readline.Direction) => void;
   moveCursor: (dx: number, dy: number) => void;
-  setRawMode: (onCtrlC: () => void) => void;
+  setRawMode: (onExit: () => void) => void;
   kill: () => void;
   queryTerminal: (
     escapes: string,
@@ -77,7 +77,7 @@ export function makeLogger({
 
   let queryTerminalStatus: QueryTerminalStatus = { tag: "NotQueried" };
   // istanbul ignore next
-  let onCtrlC = (): void => {
+  let onExit = (): void => {
     // Do nothing.
   };
 
@@ -113,6 +113,13 @@ export function makeLogger({
       return stdout.columns ?? DEFAULT_COLUMNS;
     },
   };
+
+  stdin.on("end", () => {
+    stderr.write("elm-watch: Exiting because stdin ended.\n");
+    // `onExit` is mutated over time, so don’t do `stdin.on("close", onExit)`.
+    onExit();
+  });
+  stdin.resume();
 
   return {
     write(message) {
@@ -165,13 +172,14 @@ export function makeLogger({
         readline.moveCursor(stdout, dx, dy);
       }
     },
-    setRawMode(passedOnCtrlC: () => void) {
-      onCtrlC = passedOnCtrlC;
+    setRawMode(passedOnExit: () => void) {
+      onExit = passedOnExit;
       if (stdin.isTTY && stdout.isTTY && !stdin.isRaw) {
         stdin.setRawMode(true);
         stdin.on("data", (data: Buffer) => {
           if (data.toString("utf8") === "\x03") {
-            onCtrlC();
+            // ctrl+c was pressed.
+            onExit();
           }
         });
       }
