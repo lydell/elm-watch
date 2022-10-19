@@ -94,6 +94,9 @@ describe("help", () => {
               Open your editor when clicking error locations in the browser
               https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
+          ⧙ELM_WATCH_EXIT_ON_STDIN_END⧘
+              Exit elm-watch when stdin ends
+
       ⧙Documentation:⧘
           https://lydell.github.io/elm-watch/
 
@@ -153,6 +156,9 @@ describe("help", () => {
           ELM_WATCH_OPEN_EDITOR
               Open your editor when clicking error locations in the browser
               https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+
+          ELM_WATCH_EXIT_ON_STDIN_END
+              Exit elm-watch when stdin ends
 
       Documentation:
           https://lydell.github.io/elm-watch/

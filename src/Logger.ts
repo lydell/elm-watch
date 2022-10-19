@@ -7,6 +7,7 @@ import {
   __ELM_WATCH_NOT_TTY,
   __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
+  ELM_WATCH_EXIT_ON_STDIN_END,
   Env,
   NO_COLOR,
   WT_SESSION,
@@ -114,12 +115,13 @@ export function makeLogger({
     },
   };
 
-  stdin.on("end", () => {
-    stderr.write("elm-watch: Exiting because stdin ended.\n");
-    // `onExit` is mutated over time, so don’t do `stdin.on("close", onExit)`.
-    onExit();
-  });
-  stdin.resume();
+  if (ELM_WATCH_EXIT_ON_STDIN_END in env) {
+    stdin.on("end", () => {
+      // `onExit` is mutated over time, so don’t do `stdin.on("close", onExit)`.
+      onExit();
+    });
+    stdin.resume();
+  }
 
   return {
     write(message) {
