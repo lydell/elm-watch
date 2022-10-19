@@ -2153,7 +2153,7 @@ type ParseWebSocketConnectRequestUrlResult =
 type ParseWebSocketConnectRequestUrlError =
   | {
       tag: "BadUrl";
-      expectedStart: "/?";
+      expectedStart: "/elm-watch?";
       actualUrlString: string;
     }
   | {
@@ -2183,16 +2183,16 @@ function parseWebSocketConnectRequestUrl(
   project: Project,
   urlString: string
 ): ParseWebSocketConnectRequestUrlResult {
-  if (!urlString.startsWith("/?")) {
+  if (!urlString.startsWith("/elm-watch?")) {
     return {
       tag: "BadUrl",
-      expectedStart: "/?",
+      expectedStart: "/elm-watch?",
       actualUrlString: urlString,
     };
   }
 
   // This never throws as far as I can tell.
-  const params = new URLSearchParams(urlString.slice(2));
+  const params = new URLSearchParams(urlString.slice("/elm-watch?".length));
 
   let webSocketConnectedParams;
   try {

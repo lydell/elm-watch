@@ -927,7 +927,7 @@ function initWebSocket(
   const hostname =
     window.location.hostname === "" ? "localhost" : window.location.hostname;
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/`);
+  const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/elm-watch`);
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
