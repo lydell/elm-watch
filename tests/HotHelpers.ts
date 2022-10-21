@@ -268,7 +268,7 @@ export async function run({
           };
 
     window.__ELM_WATCH.LOG_DEBUG = makeLogger({
-      env: fullEnv,
+      env: {},
       getNow: () => new Date(),
       stdin: process.stdin,
       stdout: process.stdout,

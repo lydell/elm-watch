@@ -345,7 +345,7 @@ type HotRunResult =
     }
   | {
       tag: "ExitOnIdle";
-      reason: "CtrlCPressed" | "Other";
+      reason: "CtrlCPressedOrStdinEnd" | "Other";
     }
   | {
       tag: "Restart";
@@ -594,7 +594,10 @@ const initMutable =
     logger.setRawMode(() => {
       kill()
         .then(() => {
-          resolvePromise({ tag: "ExitOnIdle", reason: "CtrlCPressed" });
+          resolvePromise({
+            tag: "ExitOnIdle",
+            reason: "CtrlCPressedOrStdinEnd",
+          });
         })
         .catch(rejectPromise);
     });

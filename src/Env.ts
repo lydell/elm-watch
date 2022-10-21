@@ -8,6 +8,10 @@ export const NO_COLOR = "NO_COLOR";
 // Type: String of shell code.
 export const ELM_WATCH_OPEN_EDITOR = "ELM_WATCH_OPEN_EDITOR";
 
+// If set, elm-watch exits if stdin ends. https://github.com/evanw/esbuild/pull/1449
+// Type: Check if defined and ignore value.
+export const ELM_WATCH_EXIT_ON_STDIN_END = "ELM_WATCH_EXIT_ON_STDIN_END";
+
 // If the `ELM_WATCH_OPEN_EDITOR` takes this long, it is killed.
 // Type: Number.
 export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS =

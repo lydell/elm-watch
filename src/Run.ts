@@ -286,7 +286,10 @@ export async function run(
                         case "ExitOnIdle":
                           return {
                             tag: "Exit",
-                            exitCode: result.reason === "CtrlCPressed" ? 0 : 1,
+                            exitCode:
+                              result.reason === "CtrlCPressedOrStdinEnd"
+                                ? 0
+                                : 1,
                           };
 
                         case "Restart":

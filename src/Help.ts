@@ -1,5 +1,9 @@
 import { EMOJI, emojiWidthFix } from "./Compile";
-import { ELM_WATCH_OPEN_EDITOR, NO_COLOR } from "./Env";
+import {
+  ELM_WATCH_EXIT_ON_STDIN_END,
+  ELM_WATCH_OPEN_EDITOR,
+  NO_COLOR,
+} from "./Env";
 import { bold, dim, join } from "./Helpers";
 import { LoggerConfig } from "./Logger";
 
@@ -63,6 +67,9 @@ ${bold("Environment variables:")}
     ${bold(ELM_WATCH_OPEN_EDITOR)}
         Open your editor when clicking error locations in the browser
         https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+
+    ${bold(ELM_WATCH_EXIT_ON_STDIN_END)}
+        Exit elm-watch when stdin ends
 
 ${bold("Documentation:")}
     https://lydell.github.io/elm-watch/
