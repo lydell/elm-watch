@@ -11,6 +11,7 @@ import {
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  ELM_WATCH_EXIT_ON_STDIN_END,
   ELM_WATCH_OPEN_EDITOR,
   Env,
   NO_COLOR,
@@ -25,6 +26,7 @@ import {
   rimraf,
   rm,
   rmSymlink,
+  SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
   testExceptWindows,
@@ -4718,6 +4720,53 @@ describe("hot", () => {
       },
       onIdle: () => {
         stdin.ctrlC();
+        return "KeepGoing";
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
+      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ✅ 13:10:05 Html
+    `);
+  });
+
+  test("exit when stdin ends", async () => {
+    const stdin = new SilentReadStream();
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      stdin,
+      env: {
+        [ELM_WATCH_EXIT_ON_STDIN_END]: "",
+      },
+      init: (node) => {
+        window.Elm?.HtmlMain?.init({ node });
+      },
+      onIdle: () => {
+        // stdin.destroy();
+        stdin.push(null);
         return "KeepGoing";
       },
     });
