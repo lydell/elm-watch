@@ -1964,7 +1964,7 @@ async function closeAll(
   mutable: Mutable,
   { killWebSocketServer = true, killPostprocessWorkerPool = true } = {}
 ): Promise<void> {
-  logger.pause();
+  logger.reset();
   // istanbul ignore if
   if (mutable.workerLimitTimeoutId !== undefined) {
     clearTimeout(mutable.workerLimitTimeoutId);

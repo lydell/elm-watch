@@ -41,7 +41,7 @@ export type Logger = {
   clearLine: (dir: readline.Direction) => void;
   moveCursor: (dx: number, dy: number) => void;
   setRawMode: (onExit: () => void) => void;
-  pause: () => void;
+  reset: () => void;
   queryTerminal: (
     escapes: string,
     isDone: (stdin: string) => boolean
@@ -78,8 +78,19 @@ export function makeLogger({
 
   let queryTerminalStatus: QueryTerminalStatus = { tag: "NotQueried" };
   // istanbul ignore next
-  let onExit = (): void => {
+  const defaultOnExit = (): void => {
     // Do nothing.
+  };
+  let onExit = defaultOnExit;
+  const exitOnCtrlC = (data: Buffer): void => {
+    if (data.toString("utf8") === "\x03") {
+      // ctrl+c was pressed.
+      onExit();
+    }
+  };
+  const exitOnStdinEnd = (): void => {
+    // `onExit` is mutated over time, so don’t do `stdin.on("close", onExit)`.
+    onExit();
   };
 
   // In my testing, getting the responses take about 1 ms on macOS (both the
@@ -116,10 +127,7 @@ export function makeLogger({
   };
 
   if (ELM_WATCH_EXIT_ON_STDIN_END in env) {
-    stdin.on("end", () => {
-      // `onExit` is mutated over time, so don’t do `stdin.on("close", onExit)`.
-      onExit();
-    });
+    stdin.on("end", exitOnStdinEnd);
     stdin.resume();
   }
 
@@ -178,16 +186,19 @@ export function makeLogger({
       onExit = passedOnExit;
       if (stdin.isTTY && stdout.isTTY && !stdin.isRaw) {
         stdin.setRawMode(true);
-        stdin.on("data", (data: Buffer) => {
-          if (data.toString("utf8") === "\x03") {
-            // ctrl+c was pressed.
-            onExit();
-          }
-        });
+        stdin.on("data", exitOnCtrlC);
+        stdin.resume();
       }
     },
-    pause() {
+    reset() {
+      onExit = defaultOnExit;
+      queryTerminalStatus = { tag: "NotQueried" };
       stdin.pause();
+      stdin.off("data", exitOnCtrlC);
+      stdin.off("end", exitOnStdinEnd);
+      if (stdin.isRaw) {
+        stdin.setRawMode(false);
+      }
     },
     async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {
       if (!stdin.isRaw) {
