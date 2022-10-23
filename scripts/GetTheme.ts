@@ -22,5 +22,5 @@ getThemeFromTerminal(logger)
   })
   .catch(console.error)
   .finally(() => {
-    logger.kill();
+    logger.pause();
   });

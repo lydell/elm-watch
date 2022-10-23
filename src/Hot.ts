@@ -494,7 +494,7 @@ const initMutable =
     watcherOnAll(
       watcher,
       (error) => {
-        closeAll(mutable)
+        closeAll(logger, mutable)
           .then(() => {
             resolvePromise({
               tag: "ExitOnHandledFatalError",
@@ -536,6 +536,7 @@ const initMutable =
     webSocketServer.setDispatch((msg) => {
       onWebSocketServerMsg(
         getNow(),
+        logger,
         mutable,
         dispatch,
         resolvePromise,
@@ -575,8 +576,7 @@ const initMutable =
               : Promise.resolve()
           )
         );
-        await closeAll(mutable);
-        logger.kill();
+        await closeAll(logger, mutable);
       } catch (unknownError) {
         const error = toError(unknownError);
         rejectPromise(toError(error));
@@ -1480,7 +1480,7 @@ const runCmd =
             );
             // istanbul ignore else
             if (exitOnError) {
-              closeAll(mutable)
+              closeAll(logger, mutable)
                 .then(() => {
                   resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
                 })
@@ -1559,7 +1559,7 @@ const runCmd =
             (event) => event.tag === "WorkersLimitedAfterWebSocketClosed"
           )
         ) {
-          closeAll(mutable)
+          closeAll(logger, mutable)
             .then(() => {
               resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
             })
@@ -1669,14 +1669,10 @@ const runCmd =
               return false;
           }
         });
-        mutable.webSocketServer.unsetDispatch();
-        Promise.all([
-          mutable.watcher.close(),
-          elmWatchJsonChanged ? mutable.webSocketServer.close() : undefined,
-          elmWatchJsonChanged
-            ? mutable.postprocessWorkerPool.terminate()
-            : undefined,
-        ])
+        closeAll(logger, mutable, {
+          killWebSocketServer: elmWatchJsonChanged,
+          killPostprocessWorkerPool: elmWatchJsonChanged,
+        })
           .then(() => {
             resolvePromise({
               tag: "Restart",
@@ -1704,7 +1700,7 @@ const runCmd =
         return;
 
       case "ExitOnIdle":
-        closeAll(mutable)
+        closeAll(logger, mutable)
           .then(() => {
             resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
           })
@@ -1776,6 +1772,7 @@ const runCmd =
 
 function onWebSocketServerMsg(
   now: Date,
+  logger: Logger,
   mutable: Mutable,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
@@ -1868,7 +1865,7 @@ function onWebSocketServerMsg(
       switch (msg.error.tag) {
         case "PortConflict": {
           const { portChoice } = msg.error;
-          closeAll(mutable)
+          closeAll(logger, mutable)
             .then(() => {
               resolvePromise({
                 tag: "ExitOnHandledFatalError",
@@ -1962,7 +1959,12 @@ function handleOutputActionResultToCmd(
   }
 }
 
-async function closeAll(mutable: Mutable): Promise<void> {
+async function closeAll(
+  logger: Logger,
+  mutable: Mutable,
+  { killWebSocketServer = true, killPostprocessWorkerPool = true } = {}
+): Promise<void> {
+  logger.pause();
   // istanbul ignore if
   if (mutable.workerLimitTimeoutId !== undefined) {
     clearTimeout(mutable.workerLimitTimeoutId);
@@ -1971,10 +1973,13 @@ async function closeAll(mutable: Mutable): Promise<void> {
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
   }
+  mutable.webSocketServer.unsetDispatch();
   await Promise.all([
     mutable.watcher.close(),
-    mutable.webSocketServer.close(),
-    mutable.postprocessWorkerPool.terminate(),
+    killWebSocketServer ? mutable.webSocketServer.close() : undefined,
+    killPostprocessWorkerPool
+      ? mutable.postprocessWorkerPool.terminate()
+      : undefined,
   ]);
 }
 

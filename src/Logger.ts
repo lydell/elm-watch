@@ -41,7 +41,7 @@ export type Logger = {
   clearLine: (dir: readline.Direction) => void;
   moveCursor: (dx: number, dy: number) => void;
   setRawMode: (onExit: () => void) => void;
-  kill: () => void;
+  pause: () => void;
   queryTerminal: (
     escapes: string,
     isDone: (stdin: string) => boolean
@@ -186,7 +186,7 @@ export function makeLogger({
         });
       }
     },
-    kill() {
+    pause() {
       stdin.pause();
     },
     async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {
