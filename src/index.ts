@@ -128,6 +128,15 @@ if (require.main === module) {
       if (process.stdin.setRawMode !== undefined) {
         process.stdin.setRawMode(false);
       }
+      if (process.stdout.isTTY) {
+        process.stdout.write(
+          "Exiting elm-watch. Press ctrl+c (again) to force."
+        );
+        process.once("exit", () => {
+          process.stdout.cursorTo(0);
+          process.stdout.clearLine(0);
+        });
+      }
     })
     .catch((error: unknown) => {
       process.stderr.write(
