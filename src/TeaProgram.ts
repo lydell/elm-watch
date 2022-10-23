@@ -21,6 +21,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     let killed = false;
 
     const dispatch = (dispatchedMsg: Msg): void => {
+      // istanbul ignore if
       if (killed) {
         return;
       }
