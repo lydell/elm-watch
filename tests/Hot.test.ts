@@ -3751,7 +3751,8 @@ describe("hot", () => {
         ◉ Standard
         ◯ Optimize
         [Hide errors]
-        Clicking error locations only works if you set it up.
+
+        ℹ️ Clicking error locations only works if you set it up.
         Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
         ↑↗
         ·→

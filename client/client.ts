@@ -1920,6 +1920,7 @@ const CLASS = {
   compilationModeWithIcon: "compilationModeWithIcon",
   container: "container",
   debugModeIcon: "debugModeIcon",
+  envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
   expandedUiContainer: "expandedUiContainer",
@@ -2167,11 +2168,21 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   flex-direction: column;
 }
 
+.${CLASS.envNotSet} {
+  display: grid;
+  gap: 0.75em;
+  margin: 2em 0;
+}
+
+.${CLASS.envNotSet},
+.${CLASS.root} pre {
+  border-left: 0.25em solid var(--grey);
+  padding-left: 0.5em;
+}
+
 .${CLASS.root} pre {
   margin: 0;
   white-space: pre-wrap;
-  border-left: 0.25em solid var(--grey);
-  padding-left: 0.5em;
 }
 
 .${CLASS.expandedUiContainer} {
@@ -2813,22 +2824,30 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
     case "EnvNotSet":
       return [
         h(
-          HTMLParagraphElement,
-          {},
-          "Clicking error locations only works if you set it up."
-        ),
-        h(
-          HTMLParagraphElement,
-          {},
-          "Check this out: ",
+          HTMLDivElement,
+          { className: CLASS.envNotSet },
           h(
-            HTMLAnchorElement,
-            {
-              href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
-              target: "_blank",
-              rel: "noreferrer",
-            },
-            h(HTMLElement, { localName: "strong" }, "Clickable error locations")
+            HTMLParagraphElement,
+            {},
+            "ℹ️ Clicking error locations only works if you set it up."
+          ),
+          h(
+            HTMLParagraphElement,
+            {},
+            "Check this out: ",
+            h(
+              HTMLAnchorElement,
+              {
+                href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
+                target: "_blank",
+                rel: "noreferrer",
+              },
+              h(
+                HTMLElement,
+                { localName: "strong" },
+                "Clickable error locations"
+              )
+            )
           )
         ),
       ];
