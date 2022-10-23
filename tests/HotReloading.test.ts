@@ -1819,13 +1819,7 @@ describe("hot reloading", () => {
       ·→
       ▲ 🐛 ⏳ 13:10:05 MultipleTargets
       --------------------------------------------------------------------------------
-      target MultipleTargetsOther1
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for reload
-      Waiting for other targets…
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
+      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
       ================================================================================
       target MultipleTargets
       elm-watch %VERSION%
@@ -1840,13 +1834,7 @@ describe("hot reloading", () => {
       ·→
       ▲ 🐛 ⏳ 13:10:05 MultipleTargets
       --------------------------------------------------------------------------------
-      target MultipleTargetsOther1
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for reload
-      Waiting for other targets…
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
+      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
       ================================================================================
       target MultipleTargets
       elm-watch %VERSION%

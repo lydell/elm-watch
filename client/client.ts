@@ -1008,7 +1008,6 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
             date: msg.date,
             reasons: msg.reasons,
           },
-          uiExpanded: true,
         },
         [],
       ];
