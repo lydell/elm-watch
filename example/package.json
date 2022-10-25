@@ -13,10 +13,10 @@
     "dev": "npm --prefix .. run build && elm-watch hot"
   },
   "devDependencies": {
-    "elm-tooling": "1.8.0",
+    "elm-tooling": "1.10.0",
     "elm-watch": "file:../build",
-    "esbuild": "0.15.10",
+    "esbuild": "0.15.12",
     "run-pty": "4.0.2",
-    "uglify-js": "3.17.3"
+    "uglify-js": "3.17.4"
   }
 }
