@@ -104,3 +104,7 @@ npx elm-watch --help
 ### elm-watch vs build tools with Elm support
 
 👉 https://lydell.github.io/elm-watch/comparison-to-other-tools/#elm-watch-vs-build-tools-with-elm-support
+
+[elm-guide-install]: https://guide.elm-lang.org/install/elm.html
+[elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm
+[elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
