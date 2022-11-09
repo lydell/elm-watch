@@ -11,6 +11,7 @@ import {
 } from "./NonEmptyArray";
 import { findClosest } from "./PathHelpers";
 import { Port } from "./Port";
+import { Certificate } from "./Certificate";
 import type { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
@@ -92,6 +93,7 @@ const Config = Decode.fieldsAuto(
     targets: Decode.chain(Decode.record(Target), targetRecordHelper),
     postprocess: Decode.optional(NonEmptyArray(Decode.string)),
     port: Decode.optional(Port),
+    certificate: Decode.optional(Certificate),
   },
   { exact: "throw" }
 );

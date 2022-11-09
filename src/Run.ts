@@ -276,6 +276,12 @@ export async function run(
                               port: elmWatchStuffJson.port,
                             }
                           : { tag: "NoPort" },
+                        config.certificate !== undefined
+                          ? {
+                              tag: "CertificateFromConfig",
+                              certificate: config.certificate,
+                            }
+                          : { tag: "NoCertificate" },
                         hotKillManager
                       );
                       switch (result.tag) {

@@ -21,6 +21,19 @@ openssl req \
 
 Source: https://stackoverflow.com/a/64309893
 */
+
+import * as Decode from "tiny-decoders";
+
+export type Certificate = ReturnType<typeof Certificate>;
+export const Certificate = Decode.fieldsAuto({
+  key: Decode.string,
+  cert: Decode.string,
+});
+
+export type CertificateChoice =
+  | { tag: "CertificateFromConfig"; certificate: Certificate }
+  | { tag: "NoCertificate" };
+
 export const CERTIFICATE = {
   key: `-----BEGIN PRIVATE KEY-----
 MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQC012uZX87KEVJA
