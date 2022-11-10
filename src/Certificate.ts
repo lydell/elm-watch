@@ -22,12 +22,31 @@ openssl req \
 Source: https://stackoverflow.com/a/64309893
 */
 
+import * as fs from "fs";
 import * as Decode from "tiny-decoders";
+
+const fileDecoder = Decode.chain(Decode.string, (filePath) => {
+  try {
+    return fs.readFileSync(filePath);
+  } catch (err) {
+    if (err instanceof Error) {
+      throw new Decode.DecoderError({
+        message: `File not found: ${err.message}`,
+        value: filePath,
+      });
+    } else {
+      throw new Decode.DecoderError({
+        message: `File not found`,
+        value: filePath,
+      });
+    }
+  }
+});
 
 export type Certificate = ReturnType<typeof Certificate>;
 export const Certificate = Decode.fieldsAuto({
-  key: Decode.string,
-  cert: Decode.string,
+  key: fileDecoder,
+  cert: fileDecoder,
 });
 
 export type CertificateChoice =

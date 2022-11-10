@@ -53,8 +53,8 @@ Example:
         }
     },
     "certificate": {
-        "cert": "-----BEGIN CERTIFICATE-----\n…",
-        "key": "-----BEGIN PRIVATE KEY-----\n…"
+        "cert": "./ssl/le-certs/foo.crt",
+        "key": "./ssl/le-certs/foo.key"
     }
 }
 ```
