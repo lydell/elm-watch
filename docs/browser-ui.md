@@ -58,10 +58,11 @@ And here are some commands for a few editors:
 | [VSCode] | `code --goto "$file:$line:$column"` | `code --goto "%file%:%line%:%column%"` |
 | [IntelliJ IDEA] | `idea --line "$line" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
 | [Rider] | `rider --line "$line" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
+| [Sublime Text] | `subl "$file:$line:$column"` | `subl "%file%:%line%:%column%"` † |
 
 \* Neither IntelliJ IDEA nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. Chances are other [JetBrains] IDEs work similarly, just with different names.
 
-† I haven’t tested IntelliJ IDEA or Rider on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
+† I haven’t tested IntelliJ IDEA, Rider or Sublime Text on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
 
 Full examples:
 
@@ -90,3 +91,4 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 [jetbrains]: https://www.jetbrains.com/
 [rider]: https://www.jetbrains.com/rider/
 [vscode]: https://code.visualstudio.com/
+[sublime text]: https://www.sublimetext.com/
