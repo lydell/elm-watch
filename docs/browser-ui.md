@@ -90,5 +90,5 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 [intellij idea]: https://www.jetbrains.com/idea/
 [jetbrains]: https://www.jetbrains.com/
 [rider]: https://www.jetbrains.com/rider/
-[vscode]: https://code.visualstudio.com/
 [sublime text]: https://www.sublimetext.com/
+[vscode]: https://code.visualstudio.com/
