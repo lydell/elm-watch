@@ -58,11 +58,13 @@ And here are some commands for a few editors:
 | [VSCode] | `code --goto "$file:$line:$column"` | `code --goto "%file%:%line%:%column%"` |
 | [IntelliJ IDEA] | `idea --line "$line" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
 | [Rider] | `rider --line "$line" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
-| [Sublime Text] | `subl "$file:$line:$column"` | `subl "%file%:%line%:%column%"` † |
+| [Sublime Text] | `subl "$file:$line:$column"` § | `subl "%file%:%line%:%column%"` § † |
 
 \* Neither IntelliJ IDEA nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. Chances are other [JetBrains] IDEs work similarly, just with different names.
 
 † I haven’t tested IntelliJ IDEA, Rider or Sublime Text on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
+
+§ For Sublime Text, you might need to [enable the `subl` command][subl].
 
 Full examples:
 
@@ -90,5 +92,6 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 [intellij idea]: https://www.jetbrains.com/idea/
 [jetbrains]: https://www.jetbrains.com/
 [rider]: https://www.jetbrains.com/rider/
+[subl]: https://www.sublimetext.com/docs/command_line.html
 [sublime text]: https://www.sublimetext.com/
 [vscode]: https://code.visualstudio.com/
