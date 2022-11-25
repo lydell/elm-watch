@@ -3544,4 +3544,8 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 
 void renderMockStatuses;
 
-run();
+// `Platform.worker` programs can also be run in Node.js. (`this === exports` there.)
+// But there’s no `WebSocket`. So don’t bother with starting anything.
+if (typeof WebSocket !== "undefined") {
+  run();
+}
