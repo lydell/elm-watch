@@ -739,15 +739,16 @@ function getReplacements(
 // `.init` might be called `.G` in optimize mode. This figures out the shortened
 // names needed for hot reloading.
 function getOptimizeModeRecordNames(code: string): Record<string, string> {
-  const match1 = /^\s*impl\.(\w+),\s*impl\.(\w+),\s*impl\.(\w+),/m.exec(code);
-  const match2 = /^\s*var divertHrefToApp = impl\.(\w+)/m.exec(code);
+  const match1 =
+    /^\s*impl\.([\w$]+),\s*impl\.([\w$]+),\s*impl\.([\w$]+),/m.exec(code);
+  const match2 = /^\s*var divertHrefToApp = impl\.([\w$]+)/m.exec(code);
   const match3 =
-    /^\s*var nextNode = _VirtualDom_node\('body'\)\(_List_Nil\)\(doc\.(\w+)\);/m.exec(
+    /^\s*var nextNode = _VirtualDom_node\('body'\)\(_List_Nil\)\(doc\.([\w$]+)\);/m.exec(
       code
     );
-  const match4 = /^\s*\(title !== doc\.(\w+)\)/m.exec(code);
+  const match4 = /^\s*\(title !== doc\.([\w$]+)\)/m.exec(code);
   const match5 =
-    /^\s*&& curr\.(\w+) .*\s*&& curr\.(\w+) .*\s*&& curr\.(\w+)\..*/m.exec(
+    /^\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+)\..*/m.exec(
       code
     );
 
@@ -778,7 +779,7 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
 
   const extra = Object.fromEntries(
     Array.from(
-      code.matchAll(/^\s*var (\w+) = impl\.(\w+);/gm),
+      code.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
       // istanbul ignore next
       ([, from = "from_missing", to = "to_missing"]) => [from, to]
     )
