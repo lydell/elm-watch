@@ -2990,7 +2990,15 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <details open="" id="0" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
+        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
+
+        3| text := "AppOther"
+                 <span style="color: rgb(241, 76, 76)">^</span>
+        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
+        --------------------------------------------------------------------------------
+        <details open="" id="1" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
         <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
         <pre>The following string uses single quotes:
 
@@ -3004,14 +3012,6 @@ describe("hot reloading", () => {
         quotes for individual characters like 'a' and 'ø'. This distinction helps with
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></details>
-        --------------------------------------------------------------------------------
-        <details open="" id="1" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
-        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
-
-        3| text := "AppOther"
-                 <span style="color: rgb(241, 76, 76)">^</span>
-        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30);">
@@ -3036,7 +3036,15 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <details open="" id="0" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
+        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
+
+        3| text := "AppOther"
+                 <span style="color: rgb(241, 76, 76)">^</span>
+        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
+        --------------------------------------------------------------------------------
+        <details open="" id="1" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
         <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
         <pre>The following string uses single quotes:
 
@@ -3051,21 +3059,13 @@ describe("hot reloading", () => {
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></details>
         --------------------------------------------------------------------------------
-        <details open="" id="1" data-target-names="App
+        <details open="" id="2" data-target-names="App
         AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
         <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></details>
-        --------------------------------------------------------------------------------
-        <details open="" id="2" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
-        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
-
-        3| text := "AppOther"
-                 <span style="color: rgb(241, 76, 76)">^</span>
-        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
         </overlay>
         ================================================================================
         <overlay hidden style="background-color: rgb(32, 30, 30);">

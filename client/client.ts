@@ -3150,6 +3150,8 @@ function updateErrorOverlay(
     }
   }
 
+  let previousElement: Element | undefined = undefined;
+
   for (const [id, error] of errors) {
     const maybeExisting = existingErrorElements.get(id);
     if (maybeExisting === undefined) {
@@ -3160,7 +3162,11 @@ function updateErrorOverlay(
         id,
         error
       );
-      overlay.appendChild(element);
+      if (previousElement === undefined) {
+        overlay.prepend(element);
+      } else {
+        previousElement.after(element);
+      }
       overlay.style.backgroundColor = error.backgroundColor;
       overlayCloseButton.style.setProperty(
         "--foregroundColor",
@@ -3170,11 +3176,15 @@ function updateErrorOverlay(
         "--backgroundColor",
         error.backgroundColor
       );
-    } else if (!maybeExisting.targetNames.has(targetName)) {
-      maybeExisting.element.setAttribute(
-        DATA_TARGET_NAMES,
-        [...maybeExisting.targetNames, targetName].join("\n")
-      );
+      previousElement = element;
+    } else {
+      if (!maybeExisting.targetNames.has(targetName)) {
+        maybeExisting.element.setAttribute(
+          DATA_TARGET_NAMES,
+          [...maybeExisting.targetNames, targetName].join("\n")
+        );
+      }
+      previousElement = maybeExisting.element;
     }
   }
 
