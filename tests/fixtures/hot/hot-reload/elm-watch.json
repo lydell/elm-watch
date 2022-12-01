@@ -137,6 +137,16 @@
                 "src/DebugLog.elm"
             ],
             "output": "build/DebugLog.js"
+        },
+        "AllProgramTypes": {
+            "inputs": [
+                "src/AllProgramTypes/WorkerProgram.elm",
+                "src/AllProgramTypes/HtmlProgram.elm",
+                "src/AllProgramTypes/SandboxProgram.elm",
+                "src/AllProgramTypes/ElementProgram.elm",
+                "src/AllProgramTypes/ApplicationProgram.elm"
+            ],
+            "output": "build/AllProgramTypes.js"
         }
     }
 }

@@ -539,6 +539,122 @@ describe("hot reloading", () => {
     }
   );
 
+  describe("All program types", () => {
+    const container = document.createElement("div");
+
+    afterAll(() => {
+      container.remove();
+    });
+
+    test("Program types that do and don’t support the debugger in the same output", async () => {
+      let sendToWorker = (): void => {
+        throw new Error("sendToWorker was never reassigned.");
+      };
+
+      const { replace, go } = runHotReload({
+        name: "AllProgramTypes",
+        programType: "Element",
+        compilationMode: "debug",
+        init: () => {
+          const base = window.Elm?.AllProgramTypes;
+          if (base === undefined) {
+            throw new Error("Could not find Elm.AllProgramTypes.");
+          }
+
+          document.documentElement.appendChild(container);
+
+          for (const appName of [
+            "HtmlProgram",
+            "SandboxProgram",
+            "ElementProgram",
+          ] as const) {
+            const node = document.createElement("div");
+            container.append(node);
+            base[appName]?.init({ node });
+          }
+
+          base.ApplicationProgram?.init();
+
+          const workerNode = document.createElement("p");
+          container.append(workerNode);
+          const workerApp = base.WorkerProgram?.init();
+          if (workerApp?.ports === undefined) {
+            throw new Error("WorkerProgram should have ports.");
+          }
+          const subscribe = workerApp.ports.output?.subscribe;
+          if (subscribe === undefined) {
+            throw new Error(
+              "WorkerProgram app.ports.output.subscribe should exist."
+            );
+          }
+          subscribe((value: unknown) => {
+            workerNode.textContent = String(value);
+          });
+          const send = workerApp.ports.input?.send;
+          if (send === undefined) {
+            throw new Error("WorkerProgram app.ports.input.send should exist.");
+          }
+          sendToWorker = () => {
+            send(null);
+          };
+          sendToWorker();
+        },
+      });
+
+      const { terminal } = await go(({ idle, body }) => {
+        switch (idle) {
+          case 1:
+            assertDebugger(body);
+            assert1(body);
+            replace((content) => content.replace("(1)", "(2)"));
+            return "KeepGoing";
+          default:
+            sendToWorker();
+            assert2(body);
+            return "Stop";
+        }
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ AllProgramTypes⧙                       1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/AllProgramTypes.elm⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      `);
+
+      function assert1(body: HTMLBodyElement): void {
+        expect(removeDebugger(body)).toMatchInlineSnapshot(
+          `<body><p>ApplicationProgram (1)</p></body>`
+        );
+
+        expect(removeDebugger(container)).toMatchInlineSnapshot(
+          `<div><p>HtmlProgram (1)</p><p>SandboxProgram (1)</p><p>ElementProgram (1)</p><p>WorkerProgram (1)</p></div>`
+        );
+      }
+
+      function assert2(body: HTMLBodyElement): void {
+        expect(removeDebugger(body)).toMatchInlineSnapshot(
+          `<body><p>ApplicationProgram (2)</p></body>`
+        );
+
+        expect(removeDebugger(container)).toMatchInlineSnapshot(
+          `<div><p>HtmlProgram (2)</p><p>SandboxProgram (2)</p><p>ElementProgram (2)</p><p>WorkerProgram (2)</p></div>`
+        );
+      }
+
+      function removeDebugger(element: HTMLElement): string {
+        const clone = element.cloneNode(true) as HTMLElement;
+        // In this test, we know that we render no `<div>`s, so all `<div>`s must be debugger elements.
+        for (const div of clone.querySelectorAll("div")) {
+          div.remove();
+        }
+        return clone.outerHTML;
+      }
+    });
+  });
+
   test("remove input file", async () => {
     const elmJsonPath = path.join(FIXTURES_DIR, "hot-reload", "elm.json");
 
