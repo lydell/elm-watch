@@ -25,9 +25,15 @@ const PLACEHOLDER_REGEX = /%(\w+)%/g;
 const REPLACEMENTS: Record<string, string> = {
   // ### _Platform_initialize (main : Program flags model msg)
   // New implementation.
+  // Note: `isDebug` is needed when you have programs that do and don’t support
+  // the debugger in the same output. `$elm$browser$Debugger$Main$wrapUpdate`
+  // etc is going to be defined, but it should only be used in
+  // `_Platform_initialize` when actually called from `_Debugger_element` or
+  // `_Debugger_document`, not from `_Platform_worker`. (`Html` programs don’t
+  // call `_Platform_initialize`.)
   _Platform_initialize: `
 // This whole function was changed by elm-watch.
-function _Platform_initialize(programType, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
+function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
 	if (args === "__elmWatchReturnData") {
 		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType };
@@ -49,7 +55,7 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
 	function setUpdateAndSubscriptions() {
 		update = impl.%update% || impl._impl.%update%;
 		subscriptions = impl.%subscriptions% || impl._impl.%subscriptions%;
-		if (typeof $elm$browser$Debugger$Main$wrapUpdate !== "undefined") {
+		if (isDebug) {
 			update = $elm$browser$Debugger$Main$wrapUpdate(update);
 			subscriptions = $elm$browser$Debugger$Main$wrapSubs(subscriptions);
 		}
@@ -98,7 +104,7 @@ function _Platform_initialize(programType, debugMetadata, flagDecoder, args, ini
 			return { tag: "ReloadPage", reason: "the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).' };
 		}
 		init = impl.%init% || impl._impl.%init%;
-		if (typeof $elm$browser$Debugger$Main$wrapInit !== "undefined") {
+		if (isDebug) {
 			init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
 		}
 		globalThis.__ELM_WATCH.INIT_URL = initUrl;
@@ -400,13 +406,14 @@ var $elm$browser$Browser$sandbox = function (impl) {
   // `$elm$browser$Browser$sandbox` calls `_Browser_element`/`_Debugger_element`.
   // In those cases we need `impl._impl`.
   // Don’t pluck `view` from `impl`.
-  // Also pass the type of program and the `debugMetadata` to `_Platform_initialize`.
+  // Also pass the type of program, `isDebug` and the `debugMetadata` to `_Platform_initialize`.
   _Platform_worker: `
 // This function was slightly modified by elm-watch.
 var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 {
 	return _Platform_initialize(
 		"Platform.worker", // added by elm-watch
+		false, // isDebug, added by elm-watch
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
@@ -425,6 +432,7 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 {
 	return _Platform_initialize(
 		impl._impl ? "Browser.sandbox" : "Browser.element", // added by elm-watch
+		false, // isDebug, added by elm-watch
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
@@ -461,6 +469,7 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 {
 	return _Platform_initialize(
 		impl._impl ? "Browser.application" : "Browser.document", // added by elm-watch
+		false, // isDebug, added by elm-watch
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
@@ -498,6 +507,7 @@ var _Debugger_element = F4(function(impl, flagDecoder, debugMetadata, args)
 {
 	return _Platform_initialize(
 		impl._impl ? "Browser.sandbox" : "Browser.element", // added by elm-watch
+		true, // isDebug, added by elm-watch
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
@@ -568,6 +578,7 @@ var _Debugger_document = F4(function(impl, flagDecoder, debugMetadata, args)
 {
 	return _Platform_initialize(
 		impl._impl ? "Browser.application" : "Browser.document", // added by elm-watch
+		true, // isDebug, added by elm-watch
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
