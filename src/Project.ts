@@ -198,6 +198,11 @@ export type OutputError =
 
 type OutputFsError =
   | {
+      tag: "NeedsToWriteProxyFileReadError";
+      error: Error;
+      triedPath: AbsolutePath;
+    }
+  | {
       tag: "ReadOutputError";
       error: Error;
       triedPath: AbsolutePath;

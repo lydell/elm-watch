@@ -1175,6 +1175,23 @@ and "postprocess" was not run.)
 `;
 }
 
+export function needsToWriteProxyFileReadError(
+  outputPath: OutputPath,
+  error: Error,
+  triedPath: AbsolutePath
+): ErrorTemplate {
+  return fancyError("TROUBLE CHECKING OUTPUT", outputPath)`
+I managed to typecheck your code. Then I tried to read part of the previous output,
+to see if I need to write a dummy output file there:
+
+${text(triedPath.absolutePath)}
+
+Doing so I encountered this error:
+
+${text(error.message)}
+`;
+}
+
 export function readOutputError(
   outputPath: OutputPath,
   error: Error,

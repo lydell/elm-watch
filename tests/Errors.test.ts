@@ -803,10 +803,11 @@ describe("errors", () => {
           ✅ Dependencies
           🚨 Main
 
-          ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+          ⧙-- TROUBLE CHECKING OUTPUT -----------------------------------------------------⧘
           ⧙Target: Main⧘
 
-          I managed to compile your code. Then I tried to read the output:
+          I managed to typecheck your code. Then I tried to read part of the previous output,
+          to see if I need to write a dummy output file there:
 
           /Users/you/project/tests/fixtures/errors/output-is-folder/output/Main.js
 

@@ -1350,7 +1350,7 @@ async function typecheck({
 
       case "ReadError":
         outputState.setStatus({
-          tag: "ReadOutputError",
+          tag: "NeedsToWriteProxyFileReadError",
           error: proxyFileResult.error,
           triedPath: outputPath.theOutputPath,
         });
@@ -1839,6 +1839,7 @@ function statusLine(
     case "ElmJsonReadAsJsonError":
     case "ElmJsonDecodeError":
     case "ImportWalkerFileSystemError":
+    case "NeedsToWriteProxyFileReadError":
     case "ReadOutputError":
     case "WriteOutputError":
     case "WriteProxyOutputError":
@@ -2240,6 +2241,15 @@ export function renderOutputErrors(
 
     case "ImportWalkerFileSystemError":
       return [Errors.importWalkerFileSystemError(outputPath, status.error)];
+
+    case "NeedsToWriteProxyFileReadError":
+      return [
+        Errors.needsToWriteProxyFileReadError(
+          outputPath,
+          status.error,
+          status.triedPath
+        ),
+      ];
 
     case "ReadOutputError":
       return [
