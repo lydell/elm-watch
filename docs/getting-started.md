@@ -20,7 +20,7 @@ npm install --save-dev elm-watch
 ```
 
 {: .info }  
-ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [elm-tooling]).
+ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [unofficial npm][unofficial-npm], [elm-tooling]).
 
 {: .info }  
 ℹ️ Node.js 14 or newer is required. On Windows, only Node.js 16 or later is officially supported.
@@ -113,3 +113,4 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
 [elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
 [getting-started-with-elm-watch]: https://www.youtube.com/watch?v=n15nOCZnTac
+[unofficial-npm]: https://github.com/lydell/compiler/tree/zero-deps-arm-lydell/installers/npm

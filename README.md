@@ -15,7 +15,7 @@ Note that elm-watch is all about Elm. Not HTML, not CSS, not JavaScript, not Typ
 npm install --save-dev elm-watch
 ```
 
-> ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [elm-tooling]).
+> ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [unofficial npm][unofficial-npm], [elm-tooling]).
 
 > ℹ️ Node.js 14 or newer is required. On Windows, only Node.js 16 or later is officially supported.
 
@@ -108,3 +108,4 @@ npx elm-watch --help
 [elm-guide-install]: https://guide.elm-lang.org/install/elm.html
 [elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm
 [elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli/
+[unofficial-npm]: https://github.com/lydell/compiler/tree/zero-deps-arm-lydell/installers/npm
