@@ -33,18 +33,13 @@ const MessageChunk = Decode.multi({
     tag: "UnstyledText" as const,
     string,
   }),
-  object: Decode.chain(
-    Decode.fieldsAuto({
-      bold: Decode.boolean,
-      underline: Decode.boolean,
-      color: Decode.nullable(Color, undefined),
-      string: Decode.string,
-    }),
-    (style) => ({
-      tag: "StyledText" as const,
-      ...style,
-    })
-  ),
+  object: Decode.fieldsAuto({
+    tag: () => "StyledText" as const,
+    bold: Decode.boolean,
+    underline: Decode.boolean,
+    color: Decode.nullable(Color, undefined),
+    string: Decode.string,
+  }),
 });
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Error.hs#L201-L204
