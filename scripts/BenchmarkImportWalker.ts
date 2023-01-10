@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 
 import * as fs from "fs";
-import * as Decode from "tiny-decoders";
 
+import * as Codec from "../src/Codec";
 import { ElmJson, getSourceDirectories } from "../src/ElmJson";
 import { HashSet } from "../src/HashSet";
 import { getSetSingleton } from "../src/Helpers";
@@ -83,7 +83,7 @@ function run(args: Array<string>): void {
     );
   } catch (error) {
     console.error(
-      error instanceof Decode.DecoderError
+      error instanceof Codec.DecoderError
         ? error.format()
         : error instanceof Error
         ? error.message

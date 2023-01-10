@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
 
+import * as Codec from "./Codec";
 import { JsonError, toError, toJsonError } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 import {
@@ -34,64 +34,71 @@ function isValidTargetName(name: string): boolean {
   return TARGET_NAME.test(name);
 }
 
-type Target = ReturnType<typeof Target>;
-const Target = Decode.fieldsAuto(
+type Target = Codec.Infer<typeof Target>;
+const Target = Codec.fields(
   {
     inputs: NonEmptyArray(
-      Decode.chain(Decode.string, (string) => {
-        if (isValidInputName(string)) {
-          return string;
-        }
-        throw new Decode.DecoderError({
-          message: "Inputs must have a valid module name and end with .elm",
-          value: string,
-        });
+      Codec.chain(Codec.string, {
+        decoder(string) {
+          if (isValidInputName(string)) {
+            return string;
+          }
+          throw new Codec.DecoderError({
+            message: "Inputs must have a valid module name and end with .elm",
+            value: string,
+          });
+        },
+        encoder: (value) => value,
       })
     ),
-    output: Decode.chain(Decode.string, (output) => {
-      if (isValidOutputName(output)) {
-        return output;
-      }
-      throw new Decode.DecoderError({
-        message: "Outputs must end with .js",
-        value: Decode.DecoderError.MISSING_VALUE,
-      });
+    output: Codec.chain(Codec.string, {
+      decoder(output) {
+        if (isValidOutputName(output)) {
+          return output;
+        }
+        throw new Codec.DecoderError({
+          message: "Outputs must end with .js",
+          value: Codec.DecoderError.MISSING_VALUE,
+        });
+      },
+      encoder: (value) => value,
     }),
   },
   { exact: "throw" }
 );
 
-function targetRecordHelper(
-  record: Record<string, Target>
-): Record<string, Target> {
-  const entries = Object.entries(record);
-  if (!isNonEmptyArray(entries)) {
-    throw new Decode.DecoderError({
-      message: "Expected a non-empty object",
-      value: record,
-    });
-  }
-  return Object.fromEntries(
-    entries.map(([key, value]) => {
-      if (isValidTargetName(key)) {
-        return [key, value];
-      }
-      throw new Decode.DecoderError({
-        message:
-          "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
-        value: Decode.DecoderError.MISSING_VALUE,
-        key,
+const TargetRecordHelper = {
+  decoder(record: Record<string, Target>): Record<string, Target> {
+    const entries = Object.entries(record);
+    if (!isNonEmptyArray(entries)) {
+      throw new Codec.DecoderError({
+        message: "Expected a non-empty object",
+        value: record,
       });
-    })
-  );
-}
+    }
+    return Object.fromEntries(
+      entries.map(([key, value]) => {
+        if (isValidTargetName(key)) {
+          return [key, value];
+        }
+        throw new Codec.DecoderError({
+          message:
+            "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
+          value: Codec.DecoderError.MISSING_VALUE,
+          key,
+        });
+      })
+    );
+  },
+  encoder: (value: Record<string, Target>) => value,
+};
 
-export type Config = ReturnType<typeof Config>;
-const Config = Decode.fieldsAuto(
+export type Config = Codec.Infer<typeof Config>;
+const Config = Codec.fields(
   {
-    targets: Decode.chain(Decode.record(Target), targetRecordHelper),
-    postprocess: Decode.optional(NonEmptyArray(Decode.string)),
-    port: Decode.optional(Port),
+    targets: Codec.chain(Codec.record(Target), TargetRecordHelper),
+    postprocess: Codec.optional(NonEmptyArray(Codec.string)),
+    port: Codec.optional(Port),
   },
   { exact: "throw" }
 );
@@ -147,7 +154,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
     return {
       tag: "Parsed",
       elmWatchJsonPath,
-      config: Config(json),
+      config: Config.decoder(json),
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);

@@ -1,135 +1,137 @@
-import * as Decode from "tiny-decoders";
-
+import * as Codec from "../src/Codec";
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
-const FocusedTabAcknowledged = Decode.fieldsAuto({
-  tag: () => "FocusedTabAcknowledged" as const,
-});
+export type OpenEditorError = Codec.Infer<typeof OpenEditorError>;
+const OpenEditorError = Codec.fieldsUnion("tag", (tag) => [
+  {
+    tag: tag("EnvNotSet"),
+  },
+  {
+    tag: tag("CommandFailed"),
+    message: Codec.string,
+  },
+]);
 
-export type OpenEditorError = ReturnType<typeof OpenEditorError>;
-const OpenEditorError = Decode.fieldsUnion("tag", {
-  EnvNotSet: Decode.fieldsAuto({
-    tag: () => "EnvNotSet" as const,
-  }),
-  CommandFailed: Decode.fieldsAuto({
-    tag: () => "CommandFailed" as const,
-    message: Decode.string,
-  }),
-});
-
-const OpenEditorFailed = Decode.fieldsAuto({
-  tag: () => "OpenEditorFailed" as const,
-  error: OpenEditorError,
-});
-
-export type ErrorLocation = ReturnType<typeof ErrorLocation>;
-const ErrorLocation = Decode.fieldsUnion("tag", {
-  FileOnly: Decode.fieldsAuto({
-    tag: () => "FileOnly" as const,
+export type ErrorLocation = Codec.Infer<typeof ErrorLocation>;
+const ErrorLocation = Codec.fieldsUnion("tag", (tag) => [
+  {
+    tag: tag("FileOnly"),
     file: AbsolutePath,
-  }),
-  FileWithLineAndColumn: Decode.fieldsAuto({
-    tag: () => "FileWithLineAndColumn" as const,
+  },
+  {
+    tag: tag("FileWithLineAndColumn"),
     file: AbsolutePath,
-    line: Decode.number,
-    column: Decode.number,
-  }),
-  Target: Decode.fieldsAuto({
-    tag: () => "Target" as const,
-    targetName: Decode.string,
-  }),
+    line: Codec.number,
+    column: Codec.number,
+  },
+  {
+    tag: tag("Target"),
+    targetName: Codec.string,
+  },
+]);
+
+export type CompileError = Codec.Infer<typeof CompileError>;
+const CompileError = Codec.fields({
+  title: Codec.string,
+  location: Codec.optional(ErrorLocation),
+  htmlContent: Codec.string,
 });
 
-export type CompileError = ReturnType<typeof CompileError>;
-const CompileError = Decode.fieldsAuto({
-  title: Decode.string,
-  location: Decode.optional(ErrorLocation),
-  htmlContent: Decode.string,
-});
+export type StatusChange = Codec.Infer<typeof StatusChange>;
+const StatusChange = Codec.fieldsUnion("tag", (tag) => [
+  {
+    tag: tag("AlreadyUpToDate"),
+    compilationMode: CompilationMode,
+    browserUiPosition: BrowserUiPosition,
+  },
+  {
+    tag: tag("Busy"),
+    compilationMode: CompilationMode,
+    browserUiPosition: BrowserUiPosition,
+  },
+  {
+    tag: tag("CompileError"),
+    compilationMode: CompilationMode,
+    browserUiPosition: BrowserUiPosition,
+    openErrorOverlay: Codec.boolean,
+    errors: Codec.array(CompileError),
+    foregroundColor: Codec.string,
+    backgroundColor: Codec.string,
+  },
+  {
+    tag: tag("ElmJsonError"),
+    error: Codec.string,
+  },
+  {
+    tag: tag("ClientError"),
+    message: Codec.string,
+  },
+]);
 
-export type StatusChanged = ReturnType<typeof StatusChanged>;
-const StatusChanged = Decode.fieldsAuto({
-  tag: () => "StatusChanged" as const,
-  status: Decode.fieldsUnion("tag", {
-    AlreadyUpToDate: Decode.fieldsAuto({
-      tag: () => "AlreadyUpToDate" as const,
-      compilationMode: CompilationMode,
-      browserUiPosition: BrowserUiPosition,
-    }),
-    Busy: Decode.fieldsAuto({
-      tag: () => "Busy" as const,
-      compilationMode: CompilationMode,
-      browserUiPosition: BrowserUiPosition,
-    }),
-    CompileError: Decode.fieldsAuto({
-      tag: () => "CompileError" as const,
-      compilationMode: CompilationMode,
-      browserUiPosition: BrowserUiPosition,
-      openErrorOverlay: Decode.boolean,
-      errors: Decode.array(CompileError),
-      foregroundColor: Decode.string,
-      backgroundColor: Decode.string,
-    }),
-    ElmJsonError: Decode.fieldsAuto({
-      tag: () => "ElmJsonError" as const,
-      error: Decode.string,
-    }),
-    ClientError: Decode.fieldsAuto({
-      tag: () => "ClientError" as const,
-      message: Decode.string,
-    }),
-  }),
-});
-
-const SuccessfullyCompiled = Decode.fieldsAuto({
-  tag: () => "SuccessfullyCompiled" as const,
-  code: Decode.string,
-  elmCompiledTimestamp: Decode.number,
+const SuccessfullyCompiledFields = {
+  code: Codec.string,
+  elmCompiledTimestamp: Codec.number,
   compilationMode: CompilationMode,
   browserUiPosition: BrowserUiPosition,
-});
+};
 
-const SuccessfullyCompiledButRecordFieldsChanged = Decode.fieldsAuto({
-  tag: () => "SuccessfullyCompiledButRecordFieldsChanged" as const,
-});
+const SuccessfullyCompiled = Codec.fieldsUnion("tag", (tag) => [
+  {
+    tag: tag("SuccessfullyCompiled"),
+    ...SuccessfullyCompiledFields,
+  },
+]);
 
-export type WebSocketToClientMessage = ReturnType<
+export type WebSocketToClientMessage = Codec.Infer<
   typeof WebSocketToClientMessage
 >;
-export const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
-  FocusedTabAcknowledged,
-  OpenEditorFailed,
-  StatusChanged,
-  SuccessfullyCompiled,
-  SuccessfullyCompiledButRecordFieldsChanged,
-});
+export const WebSocketToClientMessage = Codec.fieldsUnion("tag", (tag) => [
+  {
+    tag: tag("FocusedTabAcknowledged"),
+  },
+  {
+    tag: tag("OpenEditorFailed"),
+    error: OpenEditorError,
+  },
+  {
+    tag: tag("StatusChanged"),
+    status: StatusChange,
+  },
+  {
+    tag: tag("SuccessfullyCompiled"),
+    ...SuccessfullyCompiledFields,
+  },
+  {
+    tag: tag("SuccessfullyCompiledButRecordFieldsChanged"),
+  },
+]);
 
-export type WebSocketToServerMessage = ReturnType<
+export type WebSocketToServerMessage = Codec.Infer<
   typeof WebSocketToServerMessage
 >;
-export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
-  ChangedCompilationMode: Decode.fieldsAuto({
-    tag: () => "ChangedCompilationMode" as const,
+export const WebSocketToServerMessage = Codec.fieldsUnion("tag", (tag) => [
+  {
+    tag: tag("ChangedCompilationMode"),
     compilationMode: CompilationMode,
-  }),
-  ChangedBrowserUiPosition: Decode.fieldsAuto({
-    tag: () => "ChangedBrowserUiPosition" as const,
+  },
+  {
+    tag: tag("ChangedBrowserUiPosition"),
     browserUiPosition: BrowserUiPosition,
-  }),
-  ChangedOpenErrorOverlay: Decode.fieldsAuto({
-    tag: () => "ChangedOpenErrorOverlay" as const,
-    openErrorOverlay: Decode.boolean,
-  }),
-  FocusedTab: Decode.fieldsAuto({
-    tag: () => "FocusedTab" as const,
-  }),
-  PressedOpenEditor: Decode.fieldsAuto({
-    tag: () => "PressedOpenEditor" as const,
+  },
+  {
+    tag: tag("ChangedOpenErrorOverlay"),
+    openErrorOverlay: Codec.boolean,
+  },
+  {
+    tag: tag("FocusedTab"),
+  },
+  {
+    tag: tag("PressedOpenEditor"),
     file: AbsolutePath,
-    line: Decode.number,
-    column: Decode.number,
-  }),
-});
+    line: Codec.number,
+    column: Codec.number,
+  },
+]);
 
 export function encodeWebSocketToClientMessage(
   message: WebSocketToClientMessage
@@ -155,9 +157,9 @@ export function decodeWebSocketToClientMessage(
     const newlineIndex =
       newlineIndexRaw === -1 ? message.length : newlineIndexRaw;
     const jsonString = message.slice(2, newlineIndex);
-    const parsed = SuccessfullyCompiled(JSON.parse(jsonString));
+    const parsed = SuccessfullyCompiled.decoder(JSON.parse(jsonString));
     return { ...parsed, code: message };
   } else {
-    return WebSocketToClientMessage(JSON.parse(message));
+    return WebSocketToClientMessage.decoder(JSON.parse(message));
   }
 }

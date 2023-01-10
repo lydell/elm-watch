@@ -2,7 +2,6 @@ import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
 import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
 import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
@@ -11,6 +10,7 @@ import {
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages";
+import * as Codec from "./Codec";
 import * as Compile from "./Compile";
 import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import {
@@ -2126,19 +2126,22 @@ function webSocketConnectionIsForOutputPath(
   }
 }
 
-const WebSocketConnectedParams = Decode.fieldsAuto(
+const WebSocketConnectedParams = Codec.fields(
   {
-    elmWatchVersion: Decode.string,
-    targetName: Decode.string,
-    elmCompiledTimestamp: Decode.chain(Decode.string, (string) => {
-      const number = Number(string);
-      if (Number.isFinite(number)) {
-        return number;
-      }
-      throw new Decode.DecoderError({
-        message: "Expected a number",
-        value: string,
-      });
+    elmWatchVersion: Codec.string,
+    targetName: Codec.string,
+    elmCompiledTimestamp: Codec.chain(Codec.string, {
+      decoder(string) {
+        const number = Number(string);
+        if (Number.isFinite(number)) {
+          return number;
+        }
+        throw new Codec.DecoderError({
+          message: "Expected a number",
+          value: string,
+        });
+      },
+      encoder: (value) => value.toString(),
     }),
   },
   { exact: "throw" }
@@ -2211,7 +2214,7 @@ function parseWebSocketConnectRequestUrl(
 
   let webSocketConnectedParams;
   try {
-    webSocketConnectedParams = WebSocketConnectedParams(
+    webSocketConnectedParams = WebSocketConnectedParams.decoder(
       Object.fromEntries(params)
     );
   } catch (unknownError) {
@@ -2357,7 +2360,7 @@ function parseWebSocketToServerMessage(
   try {
     return {
       tag: "Success",
-      message: WebSocketToServerMessage(JSON.parse(stringData)),
+      message: WebSocketToServerMessage.decoder(JSON.parse(stringData)),
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);

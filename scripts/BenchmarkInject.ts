@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 
 import * as fs from "fs";
-import * as Decode from "tiny-decoders";
 
+import * as Codec from "../src/Codec";
 import { inject } from "../src/Inject";
 import { absolutePathFromString } from "../src/PathHelpers";
 import { CompilationMode, Cwd } from "../src/Types";
@@ -18,7 +18,7 @@ function run(args: Array<string>): void {
     );
   }
 
-  const compilationMode = CompilationMode(compilationModeRaw);
+  const compilationMode = CompilationMode.decoder(compilationModeRaw);
 
   const cwd: Cwd = {
     tag: "Cwd",
@@ -43,7 +43,7 @@ new Promise(() => {
   run(process.argv.slice(2));
 }).catch((error) => {
   console.error(
-    error instanceof Decode.DecoderError
+    error instanceof Codec.DecoderError
       ? error.format()
       : error instanceof KnownError
       ? error.message

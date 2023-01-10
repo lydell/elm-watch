@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
 
+import * as Codec from "../src/Codec";
 import * as mainElmJson from "../tests/install-packages/elm.json";
 
 const PACKAGES_TO_INSTALL: Record<string, string> = {
@@ -24,10 +24,10 @@ function checkDir(dir: string): void {
   }
 }
 
-const Dependencies = Decode.record(Decode.string);
+const Dependencies = Codec.record(Codec.string);
 
-const ElmJson = Decode.fieldsAuto({
-  dependencies: Decode.fieldsAuto({
+const ElmJson = Codec.fields({
+  dependencies: Codec.fields({
     direct: Dependencies,
     indirect: Dependencies,
   }),
@@ -38,13 +38,13 @@ function checkFile(file: string): void {
 
   let json;
   try {
-    json = ElmJson(JSON.parse(fs.readFileSync(file, "utf8")));
+    json = ElmJson.decoder(JSON.parse(fs.readFileSync(file, "utf8")));
   } catch (error) {
     // Some test files contain syntax errors on purpose – ignore those.
     // One test is for an Elm package – ignore that too (since version ranges are hard).
     console.info(
       `Skipping: ${relativeFile}:`,
-      error instanceof Decode.DecoderError
+      error instanceof Codec.DecoderError
         ? error.format().replace(/\n/g, " | ")
         : error instanceof Error
         ? error.message

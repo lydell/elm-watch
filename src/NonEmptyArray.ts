@@ -1,18 +1,21 @@
-import * as Decode from "tiny-decoders";
+import * as Codec from "./Codec";
 
 export type NonEmptyArray<T> = [T, ...Array<T>];
 
-export function NonEmptyArray<T>(
-  decoder: Decode.Decoder<T>
-): Decode.Decoder<NonEmptyArray<T>> {
-  return Decode.chain(Decode.array(decoder), (array) => {
-    if (isNonEmptyArray(array)) {
-      return array;
-    }
-    throw new Decode.DecoderError({
-      message: "Expected a non-empty array",
-      value: array,
-    });
+export function NonEmptyArray<Decoded, Encoded>(
+  decoder: Codec.Codec<Decoded, Encoded>
+): Codec.Codec<NonEmptyArray<Decoded>, Array<Encoded>> {
+  return Codec.chain(Codec.array(decoder), {
+    decoder(array) {
+      if (isNonEmptyArray(array)) {
+        return array;
+      }
+      throw new Codec.DecoderError({
+        message: "Expected a non-empty array",
+        value: array,
+      });
+    },
+    encoder: (array) => array,
   });
 }
 

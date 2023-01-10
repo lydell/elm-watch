@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import * as Decode from "tiny-decoders";
 
+import * as Codec from "./Codec";
 import { JsonError, toError, toJsonError } from "./Helpers";
 import { Port } from "./Port";
 import {
@@ -16,17 +16,17 @@ import {
 // Either way, it’s a good bet and people probably have `elm-stuff` in their
 // .gitignore anyway.
 
-type Target = ReturnType<typeof Target>;
-const Target = Decode.fieldsAuto({
-  compilationMode: Decode.optional(CompilationMode),
-  browserUiPosition: Decode.optional(BrowserUiPosition),
-  openErrorOverlay: Decode.optional(Decode.boolean),
+type Target = Codec.Infer<typeof Target>;
+const Target = Codec.fields({
+  compilationMode: Codec.optional(CompilationMode),
+  browserUiPosition: Codec.optional(BrowserUiPosition),
+  openErrorOverlay: Codec.optional(Codec.boolean),
 });
 
-export type ElmWatchStuffJson = ReturnType<typeof ElmWatchStuffJson>;
-export const ElmWatchStuffJson = Decode.fieldsAuto({
+export type ElmWatchStuffJson = Codec.Infer<typeof ElmWatchStuffJson>;
+export const ElmWatchStuffJson = Codec.fields({
   port: Port,
-  targets: Decode.record(Target),
+  targets: Codec.record(Target),
 });
 
 export type ElmWatchStuffJsonWritable = {
@@ -84,7 +84,7 @@ export function readAndParse(
     return {
       tag: "Parsed",
       elmWatchStuffJsonPath,
-      elmWatchStuffJson: ElmWatchStuffJson(json),
+      elmWatchStuffJson: ElmWatchStuffJson.decoder(json),
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);

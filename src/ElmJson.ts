@@ -1,21 +1,21 @@
 import * as fs from "fs";
-import * as Decode from "tiny-decoders";
 
+import * as Codec from "./Codec";
 import { JsonError, toError, toJsonError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { ElmJsonPath, SourceDirectory } from "./Types";
 
-export type ElmJson = ReturnType<typeof ElmJson>;
-export const ElmJson = Decode.fieldsUnion("type", {
-  application: Decode.fieldsAuto({
-    tag: () => "Application" as const,
-    "source-directories": NonEmptyArray(Decode.string),
-  }),
-  package: () => ({
-    tag: "Package" as const,
-  }),
-});
+export type ElmJson = Codec.Infer<typeof ElmJson>;
+export const ElmJson = Codec.fieldsUnion("type", (tag) => [
+  {
+    tag: tag("Application"),
+    "source-directories": NonEmptyArray(Codec.string),
+  },
+  {
+    tag: tag("Package"),
+  },
+]);
 
 type ParseResult =
   | ParseError
@@ -54,7 +54,7 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
   try {
     return {
       tag: "Parsed",
-      elmJson: ElmJson(json),
+      elmJson: ElmJson.decoder(json),
     };
   } catch (unknownError) {
     const error = toJsonError(unknownError);

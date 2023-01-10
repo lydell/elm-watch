@@ -1,5 +1,4 @@
-import * as Decode from "tiny-decoders";
-
+import * as Codec from "../src/Codec";
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
@@ -13,7 +12,7 @@ import {
   decodeWebSocketToClientMessage,
   ErrorLocation,
   OpenEditorError,
-  StatusChanged,
+  StatusChange,
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "./WebSocketMessages";
@@ -426,13 +425,19 @@ function logDebug(...args: Array<unknown>): void {
   }
 }
 
-function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
-  try {
-    return BrowserUiPosition(value);
-  } catch {
-    return ORIGINAL_BROWSER_UI_POSITION;
-  }
-}
+const BrowserUiPositionWithFallback: Codec.Codec<
+  BrowserUiPosition,
+  BrowserUiPosition
+> = {
+  decoder(value: unknown): BrowserUiPosition {
+    try {
+      return BrowserUiPosition.decoder(value);
+    } catch {
+      return ORIGINAL_BROWSER_UI_POSITION;
+    }
+  },
+  encoder: (value) => value,
+};
 
 function run(): void {
   let elmCompiledTimestampBeforeReload: number | undefined = undefined;
@@ -460,7 +465,9 @@ function run(): void {
   const browserUiPosition =
     elements === undefined
       ? ORIGINAL_BROWSER_UI_POSITION
-      : parseBrowseUiPositionWithFallback(elements.container.dataset.position);
+      : BrowserUiPositionWithFallback.decoder(
+          elements.container.dataset.position
+        );
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
@@ -834,9 +841,9 @@ const initMutable =
                   (event) => {
                     dispatch({
                       tag: "BrowserUiMoved",
-                      browserUiPosition: Decode.fields((field) =>
-                        field("detail", parseBrowseUiPositionWithFallback)
-                      )(event),
+                      browserUiPosition: Codec.fields({
+                        detail: BrowserUiPositionWithFallback,
+                      }).decoder(event).detail,
                     });
                   }
                 ),
@@ -1237,7 +1244,7 @@ function onWebSocketToClientMessage(
       ];
 
     case "StatusChanged":
-      return statusChanged(date, msg, model);
+      return statusChanged(date, msg.status, model);
 
     case "SuccessfullyCompiled": {
       const justChangedBrowserUiPosition =
@@ -1303,7 +1310,7 @@ function onWebSocketToClientMessage(
 
 function statusChanged(
   date: Date,
-  { status }: StatusChanged,
+  status: StatusChange,
   model: Model
 ): [Model, Array<Cmd>] {
   switch (status.tag) {
@@ -1658,7 +1665,7 @@ function parseWebSocketMessageData(
   try {
     return {
       tag: "Success",
-      message: decodeWebSocketToClientMessage(Decode.string(data)),
+      message: decodeWebSocketToClientMessage(Codec.string.decoder(data)),
     };
   } catch (unknownError) {
     return {
@@ -1671,44 +1678,67 @@ function parseWebSocketMessageData(
 }
 
 function possiblyDecodeErrorToString(unknownError: unknown): string {
-  return unknownError instanceof Decode.DecoderError
+  return unknownError instanceof Codec.DecoderError
     ? unknownError.format()
     : unknownError instanceof Error
     ? unknownError.message
-    : Decode.repr(unknownError);
+    : Codec.repr(unknownError);
 }
 
-function functionToNull(value: unknown): unknown {
-  return typeof value === "function" ? null : value;
-}
+const FunctionToNull = {
+  decoder(value: unknown): unknown {
+    return typeof value === "function" ? null : value;
+  },
+  encoder(value: unknown): unknown {
+    return value;
+  },
+};
 
-type ProgramType = ReturnType<typeof ProgramType>;
-const ProgramType = Decode.stringUnion({
-  "Platform.worker": null,
-  "Browser.sandbox": null,
-  "Browser.element": null,
-  "Browser.document": null,
-  "Browser.application": null,
-  Html: null,
-});
+type ProgramType = Codec.Infer<typeof ProgramType>;
+const ProgramType = Codec.stringUnion([
+  "Platform.worker",
+  "Browser.sandbox",
+  "Browser.element",
+  "Browser.document",
+  "Browser.application",
+  "Html",
+]);
 
-const ElmModule: Decode.Decoder<Array<ProgramType>> = Decode.chain(
-  Decode.record(
-    Decode.chain(
-      functionToNull,
-      Decode.multi({
-        null: () => [],
-        array: Decode.array(
-          Decode.fields((field) => field("__elmWatchProgramType", ProgramType))
-        ),
-        object: (value) => ElmModule(value),
+const ElmModule: Codec.Codec<
+  Array<ProgramType>,
+  Record<string, unknown>
+> = Codec.chain(
+  Codec.record(
+    Codec.chain(
+      FunctionToNull,
+      Codec.chain(Codec.multi(["null", "array", "object"]), {
+        decoder(value) {
+          switch (value.type) {
+            case "null":
+              return [];
+            case "array":
+              return Codec.fields({
+                __elmWatchProgramType: ProgramType,
+              }).decoder(value.value).__elmWatchProgramType;
+            case "object":
+              return ElmModule.decoder(value.value);
+          }
+        },
+        encoder: () => ({ type: "null" as const, value: null }),
       })
     )
   ),
-  (record) => Object.values(record).flat()
+  {
+    decoder: (record: Record<string, Array<ProgramType>>) =>
+      Object.values(record).flat(),
+    encoder: () => ({}),
+  }
 );
 
-const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
+const ProgramTypes = Codec.chain(Codec.fields({ Elm: ElmModule }), {
+  decoder: (record) => record.Elm,
+  encoder: () => ({ Elm: [] }),
+});
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   // If this target is a proxy, or if another one is, it’s not safe to touch
@@ -1731,7 +1761,7 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
 
   let programTypes;
   try {
-    programTypes = ProgramTypes(window);
+    programTypes = ProgramTypes.decoder(window);
   } catch (unknownError) {
     return {
       tag: "DecodeError",
@@ -3439,7 +3469,7 @@ function renderMockStatuses(
         ...info,
         initializedElmAppsStatus: {
           tag: "DecodeError",
-          message: new Decode.DecoderError({
+          message: new Codec.DecoderError({
             tag: "object",
             got: 5,
             key: "Main",

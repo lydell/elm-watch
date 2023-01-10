@@ -1,31 +1,33 @@
-import * as Decode from "tiny-decoders";
+import * as Codec from "./Codec";
 
-export type AbsolutePath = ReturnType<typeof AbsolutePath>;
-export const AbsolutePath = Decode.fieldsAuto({
-  tag: () => "AbsolutePath" as const,
-  absolutePath: Decode.string,
-});
+export type AbsolutePath = Codec.Infer<typeof AbsolutePath>;
+export const AbsolutePath = Codec.fieldsUnion("tag", (tag) => [
+  {
+    tag: tag("AbsolutePath"),
+    absolutePath: Codec.string,
+  },
+]);
 
 export type Cwd = { tag: "Cwd"; path: AbsolutePath };
 
 export type RunMode = "hot" | "make";
 
-export type CompilationMode = ReturnType<typeof CompilationMode>;
-export const CompilationMode = Decode.stringUnion({
-  debug: null,
-  standard: null,
-  optimize: null,
-});
+export type CompilationMode = Codec.Infer<typeof CompilationMode>;
+export const CompilationMode = Codec.stringUnion([
+  "debug",
+  "standard",
+  "optimize",
+]);
 
 export type CompilationModeWithProxy = CompilationMode | "proxy";
 
-export type BrowserUiPosition = ReturnType<typeof BrowserUiPosition>;
-export const BrowserUiPosition = Decode.stringUnion({
-  TopLeft: null,
-  TopRight: null,
-  BottomLeft: null,
-  BottomRight: null,
-});
+export type BrowserUiPosition = Codec.Infer<typeof BrowserUiPosition>;
+export const BrowserUiPosition = Codec.stringUnion([
+  "TopLeft",
+  "TopRight",
+  "BottomLeft",
+  "BottomRight",
+]);
 
 // elm-watch.json
 export type ElmWatchJsonPath = {
