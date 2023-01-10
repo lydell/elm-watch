@@ -705,6 +705,17 @@ export function chain<Decoded, Encoded, NewDecoded>(
   };
 }
 
+export function singleField<Decoded, Encoded>(
+  field: string,
+  codec: Codec<Decoded, Encoded>
+): Codec<Decoded, Record<string, Encoded>> {
+  return chain(fields({ [field]: codec }), {
+    decoder: (value) => value[field],
+    // @ts-expect-error: yo yo yo
+    encoder: (value) => ({ [field]: value }),
+  });
+}
+
 export type DecoderErrorVariant =
   | {
       tag: "custom";

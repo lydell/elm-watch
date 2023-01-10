@@ -4625,7 +4625,7 @@ describe("hot", () => {
     const elmWatchJson: unknown = JSON.parse(
       fs.readFileSync(elmWatchJsonPath, "utf8")
     );
-    const { port } = Codec.fields({ port: Codec.number }).decoder(elmWatchJson);
+    const port = Codec.singleField("port", Codec.number).decoder(elmWatchJson);
 
     let mainHtml = "(not set)";
     let variations: Array<string> = ["(not set)"];

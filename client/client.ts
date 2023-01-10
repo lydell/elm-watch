@@ -841,9 +841,10 @@ const initMutable =
                   (event) => {
                     dispatch({
                       tag: "BrowserUiMoved",
-                      browserUiPosition: Codec.fields({
-                        detail: BrowserUiPositionWithFallback,
-                      }).decoder(event).detail,
+                      browserUiPosition: Codec.singleField(
+                        "detail",
+                        BrowserUiPositionWithFallback
+                      ).decoder(event),
                     });
                   }
                 ),
@@ -1720,18 +1721,7 @@ const ElmModule: Codec.Codec<
               return [];
             case "array":
               return Codec.array(
-                Codec.chain(
-                  Codec.fields({
-                    __elmWatchProgramType: ProgramType,
-                  }),
-                  {
-                    decoder: ({ __elmWatchProgramType }) =>
-                      __elmWatchProgramType,
-                    encoder: (__elmWatchProgramType) => ({
-                      __elmWatchProgramType,
-                    }),
-                  }
-                )
+                Codec.singleField("__elmWatchProgramType", ProgramType)
               ).decoder(value.value);
             case "object":
               return ElmModule.decoder(value.value);
@@ -1748,10 +1738,7 @@ const ElmModule: Codec.Codec<
   }
 );
 
-const ProgramTypes = Codec.chain(Codec.fields({ Elm: ElmModule }), {
-  decoder: ({ Elm }) => Elm,
-  encoder: (Elm) => ({ Elm }),
-});
+const ProgramTypes = Codec.singleField("Elm", ElmModule);
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   // If this target is a proxy, or if another one is, it’s not safe to touch
