@@ -281,7 +281,7 @@ function parseActualElmMakeJson(
   try {
     return {
       tag: "ElmMakeError",
-      error: ElmMakeError(json),
+      error: ElmMakeError.decoder(json),
       extraError,
     };
   } catch (unknownError) {

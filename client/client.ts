@@ -1530,7 +1530,9 @@ const runCmd =
       }
 
       case "SendMessage": {
-        const json = JSON.stringify(cmd.message);
+        const json = JSON.stringify(
+          WebSocketToServerMessage.encoder(cmd.message)
+        );
         try {
           mutable.webSocket.send(json);
         } catch (error) {

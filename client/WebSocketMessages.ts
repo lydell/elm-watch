@@ -140,12 +140,15 @@ export function encodeWebSocketToClientMessage(
     // Optimization: Avoid encoding megabytes of JS code as a JSON string.
     // With a large Elm app, `JSON.stringify` + `JSON.parse` can time ~40 ms.
     case "SuccessfullyCompiled": {
-      const shortMessage = { ...message, code: "" };
+      const shortMessage = SuccessfullyCompiled.encoder({
+        ...message,
+        code: "",
+      });
       return `//${JSON.stringify(shortMessage)}\n${message.code}`;
     }
 
     default:
-      return JSON.stringify(message);
+      return JSON.stringify(WebSocketToClientMessage.encoder(message));
   }
 }
 

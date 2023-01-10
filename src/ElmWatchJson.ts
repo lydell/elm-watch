@@ -195,7 +195,7 @@ export function example(
     },
   };
 
-  return JSON.stringify(json, null, 4);
+  return JSON.stringify(Config.encoder(json), null, 4);
 }
 
 function toUnixPath(filePath: string): string {

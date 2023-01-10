@@ -76,7 +76,7 @@ function run(args: Array<string>): void {
 
   let elmJson;
   try {
-    elmJson = ElmJson(
+    elmJson = ElmJson.decoder(
       JSON.parse(
         fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf8")
       )
