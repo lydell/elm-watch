@@ -2220,7 +2220,7 @@ export function renderOutputErrors(
             Errors.elmMakeGeneralError(
               outputPath,
               elmJsonPath,
-              status.error.error,
+              status.error,
               status.extraError
             ),
           ];

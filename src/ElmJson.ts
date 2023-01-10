@@ -9,11 +9,11 @@ import { ElmJsonPath, SourceDirectory } from "./Types";
 export type ElmJson = Codec.Infer<typeof ElmJson>;
 export const ElmJson = Codec.fieldsUnion("type", (tag) => [
   {
-    tag: tag("Application"),
+    tag: tag("Application", "application"),
     "source-directories": NonEmptyArray(Codec.string),
   },
   {
-    tag: tag("Package"),
+    tag: tag("Package", "package"),
   },
 ]);
 

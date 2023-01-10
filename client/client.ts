@@ -1719,9 +1719,20 @@ const ElmModule: Codec.Codec<
             case "null":
               return [];
             case "array":
-              return Codec.fields({
-                __elmWatchProgramType: ProgramType,
-              }).decoder(value.value).__elmWatchProgramType;
+              return Codec.array(
+                Codec.chain(
+                  Codec.fields({
+                    __elmWatchProgramType: ProgramType,
+                  }),
+                  {
+                    decoder: ({ __elmWatchProgramType }) =>
+                      __elmWatchProgramType,
+                    encoder: (__elmWatchProgramType) => ({
+                      __elmWatchProgramType,
+                    }),
+                  }
+                )
+              ).decoder(value.value);
             case "object":
               return ElmModule.decoder(value.value);
           }
@@ -1738,8 +1749,8 @@ const ElmModule: Codec.Codec<
 );
 
 const ProgramTypes = Codec.chain(Codec.fields({ Elm: ElmModule }), {
-  decoder: (record) => record.Elm,
-  encoder: () => ({ Elm: [] }),
+  decoder: ({ Elm }) => Elm,
+  encoder: (Elm) => ({ Elm }),
 });
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {

@@ -103,26 +103,25 @@ const CompileError = Codec.fields({
   problems: NonEmptyArray(Problem),
 });
 
-export type GeneralError = Codec.Infer<typeof GeneralError>;
-const GeneralError = Codec.fields({
-  // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
-  path: Codec.nullable(
-    Codec.chain(Codec.stringUnion(["elm.json"]), {
-      decoder: (tag) => ({ tag }),
-      encoder: ({ tag }) => tag,
-    }),
-    { tag: "NoPath" as const }
-  ),
-  title: Codec.string,
-  message: Codec.array(MessageChunk),
-});
+const GeneralErrorPath = Codec.nullable(
+  Codec.chain(Codec.stringUnion(["elm.json"]), {
+    decoder: (tag) => ({ tag }),
+    encoder: ({ tag }) => tag,
+  }),
+  { tag: "NoPath" as const }
+);
+
+export type GeneralError = Extract<ElmMakeError, { tag: "GeneralError" }>;
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/builder/src/Reporting/Exit/Help.hs#L94-L109
 export type ElmMakeError = Codec.Infer<typeof ElmMakeError>;
 export const ElmMakeError = Codec.fieldsUnion("type", (tag) => [
   {
     tag: tag("GeneralError", "error"),
-    error: GeneralError,
+    // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
+    path: GeneralErrorPath,
+    title: Codec.string,
+    message: Codec.array(MessageChunk),
   },
   {
     tag: tag("CompileErrors", "compile-errors"),
