@@ -185,7 +185,8 @@ export function fields<
         if (key === "__proto__") {
           continue;
         }
-        const { decoder, field = key } = mapping[key];
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const { decoder, field = key } = mapping[key]!;
         if (field === "__proto__") {
           continue;
         }
@@ -217,7 +218,8 @@ export function fields<
         if (key === "__proto__") {
           continue;
         }
-        const { encoder, field = key } = mapping[key];
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const { encoder, field = key } = mapping[key]!;
         if (field === "__proto__") {
           continue;
         }
@@ -900,6 +902,7 @@ export function repr(
 
   try {
     if (
+      // eslint-disable-next-line eqeqeq
       value == null ||
       type === "number" ||
       type === "boolean" ||
@@ -982,7 +985,7 @@ export function repr(
     }
 
     return toStringType;
-  } catch (_error) {
+  } catch {
     return toStringType;
   }
 }
