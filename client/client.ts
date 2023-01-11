@@ -425,10 +425,7 @@ function logDebug(...args: Array<unknown>): void {
   }
 }
 
-const BrowserUiPositionWithFallback: Codec.Codec<
-  BrowserUiPosition,
-  BrowserUiPosition
-> = {
+const BrowserUiPositionWithFallback: Codec.Codec<BrowserUiPosition> = {
   decoder(value: unknown): BrowserUiPosition {
     try {
       return BrowserUiPosition.decoder(value);
@@ -1707,10 +1704,7 @@ const ProgramType = Codec.stringUnion([
   "Html",
 ]);
 
-const ElmModule: Codec.Codec<
-  Array<ProgramType>,
-  Record<string, unknown>
-> = Codec.chain(
+const ElmModule: Codec.Codec<Array<ProgramType>> = Codec.chain(
   Codec.record(
     Codec.chain(
       FunctionToNull,

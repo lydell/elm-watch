@@ -2,7 +2,7 @@
 // No `any` “leaks” when _using_ the library, though.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export type Codec<Decoded, Encoded> = {
+export type Codec<Decoded, Encoded = unknown> = {
   decoder: (value: unknown) => Decoded;
   encoder: (value: WithUndefinedAsOptional<Decoded>) => Encoded;
 };
@@ -530,9 +530,9 @@ type Result<Value, Err> =
     };
 
 const resultCodec = function <Value, Err>(
-  decodeValue: Codec<Value, unknown>,
-  decodeError: Codec<Err, unknown>
-): Codec<Result<Value, Err>, unknown> {
+  decodeValue: Codec<Value>,
+  decodeError: Codec<Err>
+): Codec<Result<Value, Err>> {
   return fieldsUnion("type", (tag) => [
     {
       type: tag("ok"),
