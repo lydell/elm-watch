@@ -16,7 +16,18 @@ export function parse<Decoded>(
   try {
     return codec.decoder(JSON.parse(jsonString));
   } catch (error) {
-    return error as DecoderError | SyntaxError;
+    return error instanceof SyntaxError ? error : DecoderError.at(error);
+  }
+}
+
+export function parseUnknown<Decoded>(
+  codec: Codec<Decoded, any>,
+  value: unknown
+): Decoded | DecoderError {
+  try {
+    return codec.decoder(value);
+  } catch (error) {
+    return DecoderError.at(error);
   }
 }
 
@@ -27,6 +38,10 @@ export function stringify<Decoded, Encoded>(
 ): string {
   return JSON.stringify(codec.encoder(value), null, space);
 }
+
+export const parseWithoutCodec = JSON.parse;
+
+export const stringifyWithoutCodec = JSON.stringify;
 
 function identity<T>(value: T): T {
   return value;
