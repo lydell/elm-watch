@@ -1668,8 +1668,6 @@ describe("hot reloading", () => {
       extraElmWatchStuffJson: {
         MultipleTargetsOther1: {
           compilationMode: "debug",
-          browserUiPosition: "BottomLeft",
-          openErrorOverlay: false,
         },
       },
       init: (node) => {

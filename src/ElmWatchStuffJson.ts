@@ -16,7 +16,7 @@ import {
 // Either way, it’s a good bet and people probably have `elm-stuff` in their
 // .gitignore anyway.
 
-type Target = Codec.Infer<typeof Target>;
+export type Target = Codec.Infer<typeof Target>;
 const Target = Codec.fields({
   compilationMode: Codec.optional(CompilationMode),
   browserUiPosition: Codec.optional(BrowserUiPosition),
@@ -28,11 +28,6 @@ export const ElmWatchStuffJson = Codec.fields({
   port: Port,
   targets: Codec.record(Target),
 });
-
-export type ElmWatchStuffJsonWritable = {
-  port: number;
-  targets: Record<string, Required<Target>>;
-};
 
 type ParseResult =
   | ParseError

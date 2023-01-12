@@ -12,7 +12,7 @@ import {
 } from "../client/WebSocketMessages";
 import * as Codec from "./Codec";
 import * as Compile from "./Compile";
-import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
+import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
@@ -606,32 +606,34 @@ const initMutable =
   };
 
 function writeElmWatchStuffJson(mutable: Mutable): void {
-  const json: ElmWatchStuffJsonWritable = {
-    port: mutable.webSocketServer.port.thePort,
-    targets: Object.fromEntries([
-      ...mutable.project.elmJsonsErrors.map(
-        (error) =>
-          [
-            error.outputPath.targetName,
-            {
-              compilationMode: error.compilationMode,
-              browserUiPosition: error.browserUiPosition,
-              openErrorOverlay: error.openErrorOverlay,
-            },
-          ] as const
-      ),
-      ...getFlatOutputs(mutable.project).map(
-        ({ outputPath, outputState }) =>
-          [
-            outputPath.targetName,
-            {
-              compilationMode: outputState.compilationMode,
-              browserUiPosition: outputState.browserUiPosition,
-              openErrorOverlay: outputState.openErrorOverlay,
-            },
-          ] as const
-      ),
-    ]),
+  const targets: Record<string, Required<Target>> = Object.fromEntries([
+    ...mutable.project.elmJsonsErrors.map(
+      (error) =>
+        [
+          error.outputPath.targetName,
+          {
+            compilationMode: error.compilationMode,
+            browserUiPosition: error.browserUiPosition,
+            openErrorOverlay: error.openErrorOverlay,
+          },
+        ] as const
+    ),
+    ...getFlatOutputs(mutable.project).map(
+      ({ outputPath, outputState }) =>
+        [
+          outputPath.targetName,
+          {
+            compilationMode: outputState.compilationMode,
+            browserUiPosition: outputState.browserUiPosition,
+            openErrorOverlay: outputState.openErrorOverlay,
+          },
+        ] as const
+    ),
+  ]);
+
+  const json: ElmWatchStuffJson = {
+    port: mutable.webSocketServer.port,
+    targets,
   };
 
   try {
@@ -645,7 +647,7 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
     fs.writeFileSync(
       mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath
         .absolutePath,
-      `${JSON.stringify(json, null, 4)}\n`
+      `${JSON.stringify(ElmWatchStuffJson.encoder(json), null, 4)}\n`
     );
     mutable.elmWatchStuffJsonWriteError = undefined;
   } catch (unknownError) {

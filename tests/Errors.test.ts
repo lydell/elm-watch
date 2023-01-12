@@ -4,7 +4,7 @@ import * as http from "http";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
-import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
+import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_MAX_PARALLEL,
@@ -2950,8 +2950,8 @@ describe("errors", () => {
 
     test("write error", async () => {
       const dir = path.join(FIXTURES_DIR, "elm-watch-stuff-json-write-error");
-      const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
-        port: 59999,
+      const elmWatchStuffJson: ElmWatchStuffJson = {
+        port: { tag: "Port", thePort: 59999 },
         targets: {},
       };
       const elmWatchStuffJsonPath = path.join(
@@ -2967,7 +2967,7 @@ describe("errors", () => {
         rm(elmWatchStuffJsonPath);
         fs.writeFileSync(
           elmWatchStuffJsonPath,
-          JSON.stringify(elmWatchStuffJson),
+          JSON.stringify(ElmWatchStuffJson.encoder(elmWatchStuffJson)),
           { mode: "0444" } // readonly
         );
       } catch {
