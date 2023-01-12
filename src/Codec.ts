@@ -9,6 +9,25 @@ export type Codec<Decoded, Encoded = unknown> = {
 
 export type Infer<T extends Codec<any, any>> = ReturnType<T["decoder"]>;
 
+export function parse<Decoded>(
+  codec: Codec<Decoded, any>,
+  jsonString: string
+): Decoded | DecoderError | SyntaxError {
+  try {
+    return codec.decoder(JSON.parse(jsonString));
+  } catch (error) {
+    return error as DecoderError | SyntaxError;
+  }
+}
+
+export function stringify<Decoded, Encoded>(
+  codec: Codec<Decoded, Encoded>,
+  value: Decoded,
+  space?: number | string
+): string {
+  return JSON.stringify(codec.encoder(value), null, space);
+}
+
 function identity<T>(value: T): T {
   return value;
 }
@@ -229,10 +248,8 @@ export function fields<Mapping extends FieldsMapping, EncodedFieldValueUnion>(
   };
 }
 
-type Extract<VariantsUnion extends Record<string, Codec<any, any>>> =
-  VariantsUnion extends any
-    ? { [Key in keyof VariantsUnion]: Infer<VariantsUnion[Key]> }
-    : never;
+type InferFieldsUnion<MappingsUnion extends Record<string, Codec<any, any>>> =
+  MappingsUnion extends any ? InferFields<MappingsUnion> : never;
 
 const tagSymbol: unique symbol = Symbol("fieldsUnion tag");
 
@@ -261,7 +278,10 @@ export function fieldsUnion<
         ) => Codec<Name, string>
       ) => [...Variants],
   { exact = "allow extra" }: { exact?: "allow extra" | "throw" } = {}
-): Codec<Extract<Variants[number]>, Record<string, EncodedFieldValueUnion>> {
+): Codec<
+  InferFieldsUnion<Variants[number]>,
+  Record<string, EncodedFieldValueUnion>
+> {
   if (encodedCommonField === "__proto__") {
     throw new Error("fieldsUnion: commonField cannot be __proto__");
   }
@@ -367,7 +387,7 @@ export function fieldsUnion<
           key: encodedCommonField,
         });
       }
-      return decoder(object) as Extract<Variants[number]>;
+      return decoder(object) as InferFieldsUnion<Variants[number]>;
     },
     encoder: function fieldsUnionEncoder(value) {
       const decodedName = value[decodedCommonField as string] as string;
@@ -381,6 +401,17 @@ export function fieldsUnion<
       }
       return encoder(value);
     },
+  };
+}
+
+// TODO: Good name
+export function named<T extends Codec<any, any>>(
+  encodedFieldName: string,
+  codec: T
+): T & { field: string } {
+  return {
+    field: encodedFieldName,
+    ...codec,
   };
 }
 
@@ -493,11 +524,13 @@ export function multi<
   };
 }
 
+type fu = Infer<typeof fu>;
 const fu = fieldsUnion("type", (tag) => [
   {
     tag: tag("fu"),
-    fullName: { field: "full_name", ...string, bield: 5 },
-    hmm: { decoder: () => 5, encoder: () => 5, bield: 5 },
+    fullName: named("full_name", string),
+    hmm: named("HMM", optional(string)),
+    flip: optional(named("flip", boolean)),
   },
 ]);
 void fu;
@@ -576,12 +609,13 @@ const dictFoo: Codec<Record<string, string>, Record<string, unknown>> = record(
 );
 void dictFoo;
 
-const fieldsFoo: Codec<
-  { name: string; age: number },
-  Record<string, number | string>
-> = fields({
+const age = named("AGE", optional(number));
+const page = optional(named("PAGE", number));
+
+const fieldsFoo = fields({
   name: string,
-  age: number,
+  age,
+  page,
 });
 void fieldsFoo;
 

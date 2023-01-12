@@ -647,7 +647,7 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
     fs.writeFileSync(
       mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath
         .absolutePath,
-      `${JSON.stringify(ElmWatchStuffJson.encoder(json), null, 4)}\n`
+      `${Codec.stringify(ElmWatchStuffJson, json, 4)}\n`
     );
     mutable.elmWatchStuffJsonWriteError = undefined;
   } catch (unknownError) {
