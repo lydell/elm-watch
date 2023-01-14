@@ -171,7 +171,7 @@ describe("errors", () => {
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙I had trouble reading it as JSON:⧘
+      ⧙I had trouble reading it:⧘
 
       EISDIR: illegal operation on a directory, read
     `);
@@ -180,14 +180,16 @@ describe("errors", () => {
   test("elm-watch.json bad json", async () => {
     expect(await run("elm-watch-json-bad-json", ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
+      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-json/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙I had trouble reading it as JSON:⧘
+      ⧙I had trouble with the JSON inside:⧘
 
+      At root:
       Unexpected end of JSON input
+      Got: "{\\n"
     `);
   });
 
@@ -972,7 +974,7 @@ describe("errors", () => {
         I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
         your inputs depend on.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble reading it:⧘
 
         EISDIR: illegal operation on a directory, read
 
@@ -997,15 +999,17 @@ describe("errors", () => {
         ✅ Dependencies
         🚨 Main
 
-        ⧙-- TROUBLE READING elm.json ----------------------------------------------------⧘
+        ⧙-- INVALID elm.json FORMAT -----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-json-bad-json/elm.json
 
         I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
         your inputs depend on.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble with the JSON inside:⧘
 
+        At root:
         Unexpected end of JSON input
+        Got: "{\\n"
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
@@ -1325,7 +1329,9 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
+        At root:
         Unexpected end of JSON input
+        Got: "{"
 
         I wrote that to this file so you can inspect it:
 
@@ -1347,7 +1353,9 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
+        At root:
         Unexpected end of JSON input
+        Got: "{"
 
         I wrote this error to a file so you can inspect and possibly report it more easily.
 
@@ -1408,9 +1416,7 @@ describe("errors", () => {
 
         This is the data that caused the error:
 
-        {
-          "type": "laser-error"
-        }
+        {"type":"laser-error"}
       `);
     });
 
@@ -1430,7 +1436,9 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
+        At root:
         Unexpected token { in JSON at position 1
+        Got: "{{{"
 
         I tried to write that to this file:
 
@@ -2904,7 +2912,7 @@ describe("errors", () => {
 
         I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble reading it:⧘
 
         EISDIR: illegal operation on a directory, read
 
@@ -2916,14 +2924,16 @@ describe("errors", () => {
     test("bad json", async () => {
       expect(await run("elm-watch-stuff-json-bad-json", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        ⧙-- INVALID elm-stuff/elm-watch/stuff.json FORMAT -------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch/stuff.json
 
         I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble with the JSON inside:⧘
 
+        At root:
         Unexpected end of JSON input
+        Got: "{\\n"
 
         This file is created by elm-watch, so reading it should never fail really.
         You could try removing that file (it contains nothing essential).

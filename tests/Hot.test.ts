@@ -1536,14 +1536,16 @@ describe("hot", () => {
       ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
       ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
-      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
+      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙I had trouble reading it as JSON:⧘
+      ⧙I had trouble with the JSON inside:⧘
 
+      At root:
       Unexpected end of JSON input
+      Got: "{\\n    \\"postprocess\\": [\\"elm-watch-node\\", \\"po…      \\"output\\": \\"build/HtmlMain.js\\"\\n        "
 
       🚨 ⧙1⧘ error found
       ⏳ Dependencies
