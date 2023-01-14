@@ -2142,7 +2142,9 @@ const WebSocketConnectedParams = Codec.fields(
           value: string,
         });
       },
-      encoder: (value) => value.toString(),
+      encoder:
+        // istanbul ignore next
+        (value) => value.toString(),
     }),
   },
   { exact: "throw" }
