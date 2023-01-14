@@ -49,18 +49,20 @@ function checkFile(file: AbsolutePath): void {
     file.absolutePath
   );
 
-  const json = readJsonFile(file, ElmJson);
-  if (json instanceof Error) {
-    // Some test files contain syntax errors on purpose – ignore those.
-    // One test is for an Elm package – ignore that too (since version ranges are hard).
-    console.info(
-      `Skipping: ${relativeFile}:`,
-      json instanceof Codec.DecoderError
-        ? json.format().replace(/\n/g, " | ")
-        : json.message
-    );
-    return;
+  const parsed = readJsonFile(file, ElmJson);
+  // Some test files contain syntax errors on purpose – ignore those.
+  // One test is for an Elm package – ignore that too (since version ranges are hard).
+  switch (parsed.tag) {
+    case "ReadError":
+      console.info(`Skipping: ${relativeFile}:`, parsed.error.message);
+      return;
+    case "DecodeError":
+      console.info(`Skipping: ${relativeFile}:`, parsed.error.format());
+      return;
+    case "Success":
+    // Keep going.
   }
+  const json = parsed.value;
 
   console.info(`Checking: ${relativeFile}`);
 

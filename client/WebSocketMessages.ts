@@ -155,7 +155,7 @@ export function decodeWebSocketToClientMessage(
   data: unknown
 ): Codec.DecoderError | WebSocketToClientMessage {
   const message = Codec.parseUnknown(Codec.string, data);
-  if (message instanceof Error) {
+  if (message instanceof Codec.DecoderError) {
     return message;
   }
   if (message.startsWith("//")) {
@@ -164,7 +164,9 @@ export function decodeWebSocketToClientMessage(
       newlineIndexRaw === -1 ? message.length : newlineIndexRaw;
     const jsonString = message.slice(2, newlineIndex);
     const parsed = Codec.parse(SuccessfullyCompiled, jsonString);
-    return parsed instanceof Error ? parsed : { ...parsed, code: message };
+    return parsed instanceof Codec.DecoderError
+      ? parsed
+      : { ...parsed, code: message };
   } else {
     return Codec.parse(WebSocketToClientMessage, message);
   }

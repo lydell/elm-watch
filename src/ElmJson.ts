@@ -39,22 +39,25 @@ export type ParseError =
 
 export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
   const parsed = readJsonFile(elmJsonPath.theElmJsonPath, ElmJson);
-  return parsed instanceof Codec.DecoderError
-    ? {
+  switch (parsed.tag) {
+    case "DecodeError":
+      return {
         tag: "ElmJsonDecodeError",
         elmJsonPath,
-        error: parsed,
-      }
-    : parsed instanceof Error
-    ? {
+        error: parsed.error,
+      };
+    case "ReadError":
+      return {
         tag: "ElmJsonReadError",
         elmJsonPath,
-        error: parsed,
-      }
-    : {
-        tag: "Parsed",
-        elmJson: parsed,
+        error: parsed.error,
       };
+    case "Success":
+      return {
+        tag: "Parsed",
+        elmJson: parsed.value,
+      };
+  }
 }
 
 export function getSourceDirectories(

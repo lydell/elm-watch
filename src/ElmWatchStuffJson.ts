@@ -56,24 +56,27 @@ export function readAndParse(
     elmWatchStuffJsonPath.theElmWatchStuffJsonPath,
     ElmWatchStuffJson
   );
-  return parsed instanceof Codec.DecoderError
-    ? {
+  switch (parsed.tag) {
+    case "DecodeError":
+      return {
         tag: "ElmWatchStuffJsonDecodeError",
-        error: parsed,
-      }
-    : parsed instanceof Error
-    ? parsed.code === "ENOENT"
-      ? {
-          tag: "NoElmWatchStuffJson",
-          elmWatchStuffJsonPath,
-        }
-      : {
-          tag: "ElmWatchStuffJsonReadError",
-          error: parsed,
-        }
-    : {
+        error: parsed.error,
+      };
+    case "ReadError":
+      return parsed.error.code === "ENOENT"
+        ? {
+            tag: "NoElmWatchStuffJson",
+            elmWatchStuffJsonPath,
+          }
+        : {
+            tag: "ElmWatchStuffJsonReadError",
+            error: parsed.error,
+          };
+    case "Success":
+      return {
         tag: "Parsed",
         elmWatchStuffJsonPath,
-        elmWatchStuffJson: parsed,
+        elmWatchStuffJson: parsed.value,
       };
+  }
 }

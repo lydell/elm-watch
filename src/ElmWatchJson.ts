@@ -135,23 +135,27 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
   };
 
   const parsed = readJsonFile(elmWatchJsonPathRaw, Config);
-  return parsed instanceof Codec.DecoderError
-    ? {
+
+  switch (parsed.tag) {
+    case "DecodeError":
+      return {
         tag: "DecodeError",
         elmWatchJsonPath,
-        error: parsed,
-      }
-    : parsed instanceof Error
-    ? {
+        error: parsed.error,
+      };
+    case "ReadError":
+      return {
         tag: "ReadError",
         elmWatchJsonPath,
-        error: parsed,
-      }
-    : {
+        error: parsed.error,
+      };
+    case "Success":
+      return {
         tag: "Parsed",
         elmWatchJsonPath,
-        config: parsed,
+        config: parsed.value,
       };
+  }
 }
 
 export function example(

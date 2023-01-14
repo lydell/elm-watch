@@ -76,15 +76,32 @@ export function longestCommonAncestorPath(
       undefined;
 }
 
+type ReadJsonFileResult<T> =
+  | {
+      tag: "DecodeError";
+      error: Codec.DecoderError;
+    }
+  | {
+      tag: "ReadError";
+      error: NodeJS.ErrnoException;
+    }
+  | {
+      tag: "Success";
+      value: T;
+    };
+
 export function readJsonFile<T>(
   file: AbsolutePath,
   codec: Codec.Codec<T>
-): Codec.DecoderError | NodeJS.ErrnoException | T {
+): ReadJsonFileResult<T> {
   let content;
   try {
     content = fs.readFileSync(file.absolutePath, "utf8");
   } catch (error) {
-    return toError(error);
+    return { tag: "ReadError", error: toError(error) };
   }
-  return Codec.parse(codec, content);
+  const parsed = Codec.parse(codec, content);
+  return parsed instanceof Codec.DecoderError
+    ? { tag: "DecodeError", error: parsed }
+    : { tag: "Success", value: parsed };
 }
