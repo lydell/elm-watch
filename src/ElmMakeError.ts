@@ -29,7 +29,12 @@ const StyledText = Codec.chain(
   Codec.fields({
     bold: Codec.boolean,
     underline: Codec.boolean,
-    color: Codec.nullable(Color, undefined),
+    color: Codec.chain(Codec.nullable(Color), {
+      decoder: (value) => value ?? undefined,
+      encoder:
+        // istanbul ignore next
+        (value) => value ?? null,
+    }),
     string: Codec.string,
   }),
   {
@@ -108,14 +113,21 @@ const CompileError = Codec.fields({
   problems: NonEmptyArray(Problem),
 });
 
-const GeneralErrorPath = Codec.nullable(
-  Codec.chain(Codec.stringUnion(["elm.json"]), {
-    decoder: (tag) => ({ tag }),
+const GeneralErrorPath = Codec.chain(
+  Codec.nullable(
+    Codec.chain(Codec.stringUnion(["elm.json"]), {
+      decoder: (tag) => ({ tag }),
+      encoder:
+        // istanbul ignore next
+        ({ tag }) => tag,
+    })
+  ),
+  {
+    decoder: (value) => value ?? { tag: "NoPath" as const },
     encoder:
       // istanbul ignore next
-      ({ tag }) => tag,
-  }),
-  { tag: "NoPath" as const }
+      (value) => (value.tag === "NoPath" ? null : value),
+  }
 );
 
 export type GeneralError = Extract<ElmMakeError, { tag: "GeneralError" }>;
