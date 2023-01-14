@@ -31,17 +31,13 @@ const StyledText = Codec.chain(
     underline: Codec.boolean,
     color: Codec.chain(Codec.nullable(Color), {
       decoder: (value) => value ?? undefined,
-      encoder:
-        // istanbul ignore next
-        (value) => value ?? null,
+      encoder: (value) => value ?? null,
     }),
     string: Codec.string,
   }),
   {
     decoder: (value) => ({ tag: "StyledText" as const, ...value }),
-    encoder:
-      // istanbul ignore next
-      ({ tag: _tag, ...value }) => value,
+    encoder: ({ tag: _tag, ...value }) => value,
   }
 );
 
@@ -59,7 +55,6 @@ const MessageChunk = Codec.chain(Codec.multi(["string", "object"]), {
         return StyledText.decoder(value.value);
     }
   },
-  // istanbul ignore next
   encoder(value) {
     switch (value.tag) {
       case "UnstyledText":
@@ -105,9 +100,7 @@ const CompileError = Codec.fields({
       tag: "AbsolutePath",
       absolutePath: string,
     }),
-    encoder:
-      // istanbul ignore next
-      ({ absolutePath }): string => absolutePath,
+    encoder: ({ absolutePath }): string => absolutePath,
   }),
   name: Codec.string,
   problems: NonEmptyArray(Problem),
@@ -117,16 +110,12 @@ const GeneralErrorPath = Codec.chain(
   Codec.nullable(
     Codec.chain(Codec.stringUnion(["elm.json"]), {
       decoder: (tag) => ({ tag }),
-      encoder:
-        // istanbul ignore next
-        ({ tag }) => tag,
+      encoder: ({ tag }) => tag,
     })
   ),
   {
     decoder: (value) => value ?? { tag: "NoPath" as const },
-    encoder:
-      // istanbul ignore next
-      (value) => (value.tag === "NoPath" ? null : value),
+    encoder: (value) => (value.tag === "NoPath" ? null : value),
   }
 );
 
