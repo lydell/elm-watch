@@ -1001,6 +1001,11 @@ export class DecoderError extends TypeError {
     this.variant = variant;
     this.nullable = false;
     this.optional = false;
+
+    // For Node.js 14 and 15, which don’t support the `cause` option.
+    if ("cause" in options && !("cause" in this)) {
+      this.cause = cause;
+    }
   }
 
   static MISSING_VALUE = Symbol("DecoderError.MISSING_VALUE");

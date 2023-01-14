@@ -251,8 +251,7 @@ function parseActualElmMakeJson(
   const cleanedJsonString = jsonString.replace(/\t/g, "\\t");
   const parsed = Codec.parse(ElmMakeError, cleanedJsonString);
   return parsed instanceof Codec.DecoderError
-    ? // TODO: This requires Node.js 16! Can maybe tiny-decoders assign .cause itself if not supported?
-      parsed.cause instanceof SyntaxError
+    ? parsed.cause instanceof SyntaxError
       ? {
           tag: "ElmMakeJsonParseError",
           error: parsed,
