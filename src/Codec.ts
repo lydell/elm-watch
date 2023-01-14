@@ -978,6 +978,10 @@ export class DecoderError extends TypeError {
 
   optional: boolean;
 
+  // Unnecessary if using `"lib": ["ES2022"]` in tsconfig.json.
+  // For those who don’t, this allows `.cause` to be used anyway.
+  cause?: unknown;
+
   constructor(
     options:
       | { message: string; value: unknown; key?: Key; cause?: unknown }
@@ -995,6 +999,7 @@ export class DecoderError extends TypeError {
         // anything. Explicit `.format()` defaults to non-sensitive.
         { sensitive: true }
       )}\n\nFor better error messages, see https://github.com/lydell/tiny-decoders#error-messages`,
+      // @ts-expect-error: yo yo yo
       "cause" in options ? { cause } : {}
     );
     this.path = key === undefined ? [] : [key];
