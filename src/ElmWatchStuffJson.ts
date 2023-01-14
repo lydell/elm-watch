@@ -1,7 +1,5 @@
-import * as fs from "fs";
-
 import * as Codec from "./Codec";
-import { JsonError, toError, toJsonError } from "./Helpers";
+import { readJsonFile } from "./PathHelpers";
 import { Port } from "./Port";
 import {
   BrowserUiPosition,
@@ -44,48 +42,38 @@ type ParseResult =
 type ParseError =
   | {
       tag: "ElmWatchStuffJsonDecodeError";
-      error: JsonError;
+      error: Codec.DecoderError;
     }
   | {
-      tag: "ElmWatchStuffJsonReadAsJsonError";
+      tag: "ElmWatchStuffJsonReadError";
       error: Error;
     };
 
 export function readAndParse(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath
 ): ParseResult {
-  let json: unknown = undefined;
-  try {
-    json = JSON.parse(
-      fs.readFileSync(
-        elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,
-        "utf-8"
-      )
-    );
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    return error.code === "ENOENT"
+  const parsed = readJsonFile(
+    elmWatchStuffJsonPath.theElmWatchStuffJsonPath,
+    ElmWatchStuffJson
+  );
+  return parsed instanceof Codec.DecoderError
+    ? {
+        tag: "ElmWatchStuffJsonDecodeError",
+        error: parsed,
+      }
+    : parsed instanceof Error
+    ? parsed.code === "ENOENT"
       ? {
           tag: "NoElmWatchStuffJson",
           elmWatchStuffJsonPath,
         }
       : {
-          tag: "ElmWatchStuffJsonReadAsJsonError",
-          error,
-        };
-  }
-
-  try {
-    return {
-      tag: "Parsed",
-      elmWatchStuffJsonPath,
-      elmWatchStuffJson: ElmWatchStuffJson.decoder(json),
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmWatchStuffJsonDecodeError",
-      error,
-    };
-  }
+          tag: "ElmWatchStuffJsonReadError",
+          error: parsed,
+        }
+    : {
+        tag: "Parsed",
+        elmWatchStuffJsonPath,
+        elmWatchStuffJson: parsed,
+      };
 }

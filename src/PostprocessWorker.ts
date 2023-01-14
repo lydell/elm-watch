@@ -2,7 +2,7 @@ import * as path from "path";
 import * as url from "url";
 import { MessagePort, parentPort } from "worker_threads";
 
-import { repr } from "./Codec";
+import * as Codec from "./Codec";
 import { unknownErrorToString } from "./Helpers";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import {
@@ -95,7 +95,7 @@ async function elmWatchNode({
       imported: unknownValueAsString(
         // To/from entries is needed. Otherwise `repr` prints `"Module"`.
         Object.fromEntries(Object.entries(imported)),
-        (value) => repr(value, { maxObjectChildren: 10 })
+        (value) => Codec.repr(value, { maxObjectChildren: 10 })
       ),
       typeofDefault: typeof imported.default,
       ...emptyStdio,
@@ -133,7 +133,7 @@ async function elmWatchNode({
       tag: "ElmWatchNodeBadReturnValue",
       scriptPath,
       args,
-      returnValue: unknownValueAsString(returnValue, repr),
+      returnValue: unknownValueAsString(returnValue, Codec.repr),
       ...emptyStdio,
     };
   }

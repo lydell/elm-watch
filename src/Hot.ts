@@ -31,11 +31,10 @@ import {
   dim,
   formatTime,
   join,
-  JsonError,
   printDurationMs,
+  quote,
   silentlyReadIntEnvValue,
   toError,
-  toJsonError,
 } from "./Helpers";
 import type { Logger, LoggerConfig } from "./Logger";
 import {
@@ -1837,7 +1836,7 @@ function onWebSocketServerMsg(
       if (webSocketConnection === undefined) {
         rejectPromise(
           new Error(
-            `No web socket connection found for web socket message ${JSON.stringify(
+            `No web socket connection found for web socket message ${quote(
               msg.tag
             )}`
           )
@@ -2171,7 +2170,7 @@ type ParseWebSocketConnectRequestUrlError =
     }
   | {
       tag: "ParamsDecodeError";
-      error: JsonError;
+      error: Codec.DecoderError;
       actualUrlString: string;
     }
   | {
@@ -2214,16 +2213,14 @@ function parseWebSocketConnectRequestUrl(
     urlString.slice(WEBSOCKET_URL_EXPECTED_START.length)
   );
 
-  let webSocketConnectedParams;
-  try {
-    webSocketConnectedParams = WebSocketConnectedParams.decoder(
-      Object.fromEntries(params)
-    );
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
+  const webSocketConnectedParams = Codec.parseUnknown(
+    WebSocketConnectedParams,
+    Object.fromEntries(params)
+  );
+  if (webSocketConnectedParams instanceof Codec.DecoderError) {
     return {
       tag: "ParamsDecodeError",
-      error,
+      error: webSocketConnectedParams,
       actualUrlString: urlString,
     };
   }
@@ -2339,7 +2336,7 @@ function webSocketConnectRequestUrlErrorToString(
 type ParseWebSocketToServerMessageResult =
   | {
       tag: "DecodeError";
-      error: JsonError;
+      error: Codec.DecoderError;
     }
   | {
       tag: "Success";
@@ -2359,15 +2356,10 @@ function parseWebSocketToServerMessage(
       ? new TextDecoder("utf8").decode(data)
       : data.toString("utf8");
 
-  try {
-    return {
-      tag: "Success",
-      message: WebSocketToServerMessage.decoder(JSON.parse(stringData)),
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return { tag: "DecodeError", error };
-  }
+  const parsed = Codec.parse(WebSocketToServerMessage, stringData);
+  return parsed instanceof Codec.DecoderError
+    ? { tag: "DecodeError", error: parsed }
+    : { tag: "Success", message: parsed };
 }
 
 function onWebSocketConnected(
@@ -2894,14 +2886,14 @@ function printEventMessage(event: LatestEvent): string {
       return `Web socket connected with errors (see the browser for details)`;
 
     case "WebSocketChangedBrowserUiPosition":
-      return `Changed browser UI position to ${JSON.stringify(
+      return `Changed browser UI position to ${quote(
         event.browserUiPosition
       )} of: ${event.outputPath.targetName}`;
 
     case "WebSocketChangedCompilationMode":
-      return `Changed compilation mode to ${JSON.stringify(
-        event.compilationMode
-      )} of: ${event.outputPath.targetName}`;
+      return `Changed compilation mode to ${quote(event.compilationMode)} of: ${
+        event.outputPath.targetName
+      }`;
 
     case "WorkersLimitedAfterWebSocketClosed":
       return `Terminated ${event.numTerminatedWorkers} superfluous ${

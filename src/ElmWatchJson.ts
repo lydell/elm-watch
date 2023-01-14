@@ -1,15 +1,13 @@
-import * as fs from "fs";
 import * as path from "path";
 
 import * as Codec from "./Codec";
-import { JsonError, toError, toJsonError } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { findClosest } from "./PathHelpers";
+import { findClosest, readJsonFile } from "./PathHelpers";
 import { Port } from "./Port";
 import type { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
 
@@ -107,7 +105,7 @@ type ParseResult =
   | {
       tag: "DecodeError";
       elmWatchJsonPath: ElmWatchJsonPath;
-      error: JsonError;
+      error: Codec.DecoderError;
     }
   | {
       tag: "ElmWatchJsonNotFound";
@@ -118,7 +116,7 @@ type ParseResult =
       config: Config;
     }
   | {
-      tag: "ReadAsJsonError";
+      tag: "ReadError";
       elmWatchJsonPath: ElmWatchJsonPath;
       error: Error;
     };
@@ -136,34 +134,24 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
     theElmWatchJsonPath: elmWatchJsonPathRaw,
   };
 
-  let json: unknown = undefined;
-  try {
-    json = JSON.parse(
-      fs.readFileSync(elmWatchJsonPathRaw.absolutePath, "utf-8")
-    );
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    return {
-      tag: "ReadAsJsonError",
-      elmWatchJsonPath,
-      error,
-    };
-  }
-
-  try {
-    return {
-      tag: "Parsed",
-      elmWatchJsonPath,
-      config: Config.decoder(json),
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "DecodeError",
-      elmWatchJsonPath,
-      error,
-    };
-  }
+  const parsed = readJsonFile(elmWatchJsonPathRaw, Config);
+  return parsed instanceof Codec.DecoderError
+    ? {
+        tag: "DecodeError",
+        elmWatchJsonPath,
+        error: parsed,
+      }
+    : parsed instanceof Error
+    ? {
+        tag: "ReadError",
+        elmWatchJsonPath,
+        error: parsed,
+      }
+    : {
+        tag: "Parsed",
+        elmWatchJsonPath,
+        config: parsed,
+      };
 }
 
 export function example(

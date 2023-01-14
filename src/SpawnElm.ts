@@ -1,15 +1,11 @@
 import * as fs from "fs";
 import * as os from "os";
 
+import * as Codec from "./Codec";
 import { ElmMakeError } from "./ElmMakeError";
 import { __ELM_WATCH_ELM_TIMEOUT_MS, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
-import {
-  JsonError,
-  silentlyReadIntEnvValue,
-  toError,
-  toJsonError,
-} from "./Helpers";
+import { silentlyReadIntEnvValue, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn, SpawnResult } from "./Spawn";
@@ -40,7 +36,7 @@ export type RunElmMakeError =
     }
   | {
       tag: "ElmMakeJsonParseError";
-      error: JsonError;
+      error: Codec.DecoderError;
       errorFilePath: Errors.ErrorFilePath;
       command: Command;
     }
@@ -251,63 +247,56 @@ function parseActualElmMakeJson(
   jsonString: string,
   extraError: string | undefined
 ): RunElmMakeResult {
-  let json: unknown;
-
-  try {
-    // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
-    json = JSON.parse(jsonString.replace(/\t/g, "\\t"));
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmMakeJsonParseError",
-      error,
-      errorFilePath: Errors.tryWriteErrorFile({
-        cwd: command.options.cwd,
-        name: "ElmMakeJsonParseError",
-        content: Errors.toPlainString(
-          Errors.elmMakeJsonParseError(
-            { tag: "NoLocation" },
-            error,
-            { tag: "ErrorFileBadContent", content: jsonString },
-            command
-          )
-        ),
-        hash: jsonString,
-      }),
-      command,
-    };
-  }
-
-  try {
-    return {
-      tag: "ElmMakeError",
-      error: ElmMakeError.decoder(json),
-      extraError,
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmMakeJsonParseError",
-      error,
-      errorFilePath: Errors.tryWriteErrorFile({
-        cwd: command.options.cwd,
-        name: "ElmMakeJsonParseError",
-        content: Errors.toPlainString(
-          Errors.elmMakeJsonParseError(
-            { tag: "NoLocation" },
-            error,
-            {
-              tag: "ErrorFileBadContent",
-              content: JSON.stringify(json, null, 2),
-            },
-            command
-          )
-        ),
-        hash: jsonString,
-      }),
-      command,
-    };
-  }
+  // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
+  const cleanedJsonString = jsonString.replace(/\t/g, "\\t");
+  const parsed = Codec.parse(ElmMakeError, cleanedJsonString);
+  return parsed instanceof Codec.DecoderError
+    ? // TODO: This requires Node.js 16! Can maybe tiny-decoders assign .cause itself if not supported?
+      parsed.cause instanceof SyntaxError
+      ? {
+          tag: "ElmMakeJsonParseError",
+          error: parsed,
+          errorFilePath: Errors.tryWriteErrorFile({
+            cwd: command.options.cwd,
+            name: "ElmMakeJsonParseError",
+            content: Errors.toPlainString(
+              Errors.elmMakeJsonParseError(
+                { tag: "NoLocation" },
+                parsed,
+                { tag: "ErrorFileBadContent", content: cleanedJsonString },
+                command
+              )
+            ),
+            hash: jsonString,
+          }),
+          command,
+        }
+      : {
+          tag: "ElmMakeJsonParseError",
+          error: parsed,
+          errorFilePath: Errors.tryWriteErrorFile({
+            cwd: command.options.cwd,
+            name: "ElmMakeJsonParseError",
+            content: Errors.toPlainString(
+              Errors.elmMakeJsonParseError(
+                { tag: "NoLocation" },
+                parsed,
+                {
+                  tag: "ErrorFileBadContent",
+                  content: cleanedJsonString,
+                },
+                command
+              )
+            ),
+            hash: jsonString,
+          }),
+          command,
+        }
+    : {
+        tag: "ElmMakeError",
+        error: parsed,
+        extraError,
+      };
 }
 
 type ElmInstallResult =

@@ -1,7 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { getSetSingleton, join } from "./Helpers";
+import * as Codec from "./Codec";
+import { getSetSingleton, join, toError } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -73,4 +74,17 @@ export function longestCommonAncestorPath(
     : // On Windows, a `C:` path and a `D:` path has no common ancestor.
       // istanbul ignore next
       undefined;
+}
+
+export function readJsonFile<T>(
+  file: AbsolutePath,
+  codec: Codec.Codec<T>
+): Codec.DecoderError | NodeJS.ErrnoException | T {
+  let content;
+  try {
+    content = fs.readFileSync(file.absolutePath, "utf8");
+  } catch (error) {
+    return toError(error);
+  }
+  return Codec.parse(codec, content);
 }

@@ -10,7 +10,7 @@ const restrictedGlobals = [
   {
     name: "JSON",
     message:
-      "Use Codec.parse, Codec.stringify, Codec.parseWithoutCodec or Codec.stringifyWithoutCodec instead.",
+      "Use Codec.parse, Codec.stringify, Codec.parseWithoutCodec, Codec.stringifyWithoutCodec or quote instead.",
   },
 ];
 

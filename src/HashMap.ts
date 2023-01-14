@@ -1,5 +1,7 @@
 import * as util from "util";
 
+import * as Codec from "./Codec";
+
 /**
  * Like a `Map`, but the keys are looked up by structure instead of by
  * reference.
@@ -54,7 +56,7 @@ export class HashMap<K extends Record<string, unknown>, V>
 
   *keys(): IterableIterator<K> {
     for (const key of this.map.keys()) {
-      yield JSON.parse(key) as K;
+      yield Codec.parseWithoutCodec(key) as K;
     }
   }
 
@@ -64,7 +66,7 @@ export class HashMap<K extends Record<string, unknown>, V>
 
   *entries(): IterableIterator<[K, V]> {
     for (const [key, value] of this.map.entries()) {
-      yield [JSON.parse(key) as K, value];
+      yield [Codec.parseWithoutCodec(key) as K, value];
     }
   }
 
@@ -81,7 +83,7 @@ export class HashMap<K extends Record<string, unknown>, V>
 }
 
 function hash(value: Record<string, unknown>): string {
-  return JSON.stringify(
+  return Codec.stringifyWithoutCodec(
     Object.fromEntries(
       Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1))
     )

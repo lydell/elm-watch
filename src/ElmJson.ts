@@ -1,9 +1,10 @@
-import * as fs from "fs";
-
 import * as Codec from "./Codec";
-import { JsonError, toError, toJsonError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
+import {
+  absoluteDirname,
+  absolutePathFromString,
+  readJsonFile,
+} from "./PathHelpers";
 import { ElmJsonPath, SourceDirectory } from "./Types";
 
 export type ElmJson = Codec.Infer<typeof ElmJson>;
@@ -28,42 +29,32 @@ export type ParseError =
   | {
       tag: "ElmJsonDecodeError";
       elmJsonPath: ElmJsonPath;
-      error: JsonError;
+      error: Codec.DecoderError;
     }
   | {
-      tag: "ElmJsonReadAsJsonError";
+      tag: "ElmJsonReadError";
       elmJsonPath: ElmJsonPath;
       error: Error;
     };
 
 export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
-  let json: unknown = undefined;
-  try {
-    json = JSON.parse(
-      fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf-8")
-    );
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    return {
-      tag: "ElmJsonReadAsJsonError",
-      elmJsonPath,
-      error,
-    };
-  }
-
-  try {
-    return {
-      tag: "Parsed",
-      elmJson: ElmJson.decoder(json),
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmJsonDecodeError",
-      elmJsonPath,
-      error,
-    };
-  }
+  const parsed = readJsonFile(elmJsonPath.theElmJsonPath, ElmJson);
+  return parsed instanceof Codec.DecoderError
+    ? {
+        tag: "ElmJsonDecodeError",
+        elmJsonPath,
+        error: parsed,
+      }
+    : parsed instanceof Error
+    ? {
+        tag: "ElmJsonReadError",
+        elmJsonPath,
+        error: parsed,
+      }
+    : {
+        tag: "Parsed",
+        elmJson: parsed,
+      };
 }
 
 export function getSourceDirectories(

@@ -152,16 +152,20 @@ export function encodeWebSocketToClientMessage(
 }
 
 export function decodeWebSocketToClientMessage(
-  message: string
-): WebSocketToClientMessage {
+  data: unknown
+): Codec.DecoderError | WebSocketToClientMessage {
+  const message = Codec.parseUnknown(Codec.string, data);
+  if (message instanceof Error) {
+    return message;
+  }
   if (message.startsWith("//")) {
     const newlineIndexRaw = message.indexOf("\n");
     const newlineIndex =
       newlineIndexRaw === -1 ? message.length : newlineIndexRaw;
     const jsonString = message.slice(2, newlineIndex);
-    const parsed = SuccessfullyCompiled.decoder(JSON.parse(jsonString));
-    return { ...parsed, code: message };
+    const parsed = Codec.parse(SuccessfullyCompiled, jsonString);
+    return parsed instanceof Error ? parsed : { ...parsed, code: message };
   } else {
-    return WebSocketToClientMessage.decoder(JSON.parse(message));
+    return Codec.parse(WebSocketToClientMessage, message);
   }
 }

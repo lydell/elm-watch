@@ -1,27 +1,57 @@
+/* eslint-disable no-restricted-globals */
 // There are some things that cannot be implemented without `any`.
 // No `any` “leaks” when _using_ the library, though.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export type Codec<Decoded, Encoded = unknown> = {
+export type Codec<
+  Decoded,
+  Encoded = unknown,
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  Options extends CodecOptions = {}
+> = Options & {
   decoder: (value: unknown) => Decoded;
   encoder: (value: Decoded) => Encoded;
 };
 
-export type Infer<T extends Codec<any, any>> = ReturnType<T["decoder"]>;
+type CodecOptions = {
+  encodedFieldName?: string;
+  optional?: boolean;
+};
+
+type MergeOptions<A extends CodecOptions, B extends CodecOptions> = Expand<
+  A & B
+>;
+
+// Make VSCode show `{ a: string; b?: number }` instead of `{ a: string } & { b?: number }`.
+// https://stackoverflow.com/a/57683652/2010616
+type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
+
+export type Infer<T extends Codec<any>> = ReturnType<T["decoder"]>;
 
 export function parse<Decoded>(
-  codec: Codec<Decoded, any>,
+  codec: Codec<Decoded>,
   jsonString: string
-): Decoded | DecoderError | SyntaxError {
+): Decoded | DecoderError {
+  let json: unknown;
   try {
-    return codec.decoder(JSON.parse(jsonString));
+    json = JSON.parse(jsonString);
   } catch (error) {
-    return error instanceof SyntaxError ? error : DecoderError.at(error);
+    return new DecoderError({
+      tag: "custom",
+      message: error instanceof Error ? error.message : String(error),
+      got: jsonString,
+      cause: error,
+    });
+  }
+  try {
+    return codec.decoder(json);
+  } catch (error) {
+    return DecoderError.at(error);
   }
 }
 
 export function parseUnknown<Decoded>(
-  codec: Codec<Decoded, any>,
+  codec: Codec<Decoded>,
   value: unknown
 ): Decoded | DecoderError {
   try {
@@ -173,13 +203,7 @@ export function record<DecodedValue, EncodedValue>(
   };
 }
 
-type FieldsMapping = Record<
-  string,
-  Codec<any, any> & {
-    field?: string;
-    optional?: boolean;
-  }
->;
+type FieldsMapping = Record<string, Codec<any, any, CodecOptions>>;
 
 type InferFields<Mapping extends FieldsMapping> = Expand<
   // eslint-disable-next-line @typescript-eslint/sort-type-union-intersection-members
@@ -193,10 +217,6 @@ type InferFields<Mapping extends FieldsMapping> = Expand<
       : never]?: Infer<Mapping[Key]>;
   }
 >;
-
-// Make VSCode show `{ a: string; b?: number }` instead of `{ a: string } & { b?: number }`.
-// https://stackoverflow.com/a/57683652/2010616
-type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 
 export function fields<Mapping extends FieldsMapping, EncodedFieldValueUnion>(
   mapping: Mapping,
@@ -212,8 +232,12 @@ export function fields<Mapping extends FieldsMapping, EncodedFieldValueUnion>(
         if (key === "__proto__") {
           continue;
         }
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const { decoder, field = key, optional = false } = mapping[key]!;
+        const {
+          decoder,
+          encodedFieldName: field = key,
+          optional = false,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        } = mapping[key]!;
         if (field === "__proto__") {
           continue;
         }
@@ -248,8 +272,12 @@ export function fields<Mapping extends FieldsMapping, EncodedFieldValueUnion>(
         if (key === "__proto__") {
           continue;
         }
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const { encoder, field = key, optional = false } = mapping[key]!;
+        const {
+          encoder,
+          encodedFieldName: field = key,
+          optional = false,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        } = mapping[key]!;
         if (field === "__proto__") {
           continue;
         }
@@ -263,13 +291,16 @@ export function fields<Mapping extends FieldsMapping, EncodedFieldValueUnion>(
   };
 }
 
-type InferFieldsUnion<MappingsUnion extends Record<string, Codec<any, any>>> =
+type InferFieldsUnion<MappingsUnion extends FieldsMapping> =
   MappingsUnion extends any ? InferFields<MappingsUnion> : never;
 
 const tagSymbol: unique symbol = Symbol("fieldsUnion tag");
 
-type TagCodec<Name extends string> = Codec<Name, string> & {
-  field: string;
+type TagCodec<Name extends string> = Codec<
+  Name,
+  string,
+  { encodedFieldName: string }
+> & {
   _private: TagData;
 };
 
@@ -308,7 +339,7 @@ export function fieldsUnion<
     return {
       decoder: () => decodedName,
       encoder: () => encodedName,
-      field: encodedCommonField,
+      encodedFieldName: encodedCommonField,
       _private: {
         tag: tagSymbol,
         decodedName,
@@ -420,14 +451,23 @@ export function fieldsUnion<
 }
 
 // TODO: Good name
-export function named<T extends Codec<any, any>>(
+export function named<Decoded, Encoded, Options extends CodecOptions>(
   encodedFieldName: string,
-  codec: T
-): T & { field: string } {
+  codec: Codec<Decoded, Encoded, Options>
+): Codec<
+  Decoded,
+  Encoded,
+  MergeOptions<Options, { encodedFieldName: string }>
+> {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   return {
-    field: encodedFieldName,
     ...codec,
-  };
+    encodedFieldName,
+  } as Codec<
+    Decoded,
+    Encoded,
+    MergeOptions<Options, { encodedFieldName: string }>
+  >;
 }
 
 export function tuple<Decoded extends ReadonlyArray<unknown>, EncodedItem>(
@@ -627,10 +667,12 @@ void dictFoo;
 const age = named("AGE", optional(number));
 const page = optional(named("PAGE", number));
 
+type fieldsFoo = Infer<typeof fieldsFoo>;
 const fieldsFoo = fields({
   name: string,
   age,
   page,
+  sage: optional(string),
 });
 void fieldsFoo;
 
@@ -657,20 +699,44 @@ const personCodec: Codec<Person, Record<string, unknown>> = fields({
   friends: array(recursive(() => personCodec)),
 });
 
-export function optional<Decoded, Encoded>(
-  decoder: Codec<Decoded, Encoded>
-): Codec<Decoded | undefined, Encoded | undefined> & { optional: true };
+export function optional<Decoded, Encoded, Options extends CodecOptions>(
+  decoder: Codec<Decoded, Encoded, Options>
+): Codec<
+  Decoded | undefined,
+  Encoded | undefined,
+  MergeOptions<Options, { optional: true }>
+>;
 
-export function optional<Decoded, Encoded, Default>(
-  codec: Codec<Decoded, Encoded>,
+export function optional<
+  Decoded,
+  Encoded,
+  Options extends CodecOptions,
+  Default
+>(
+  codec: Codec<Decoded, Encoded, Options>,
   defaultValue: Default
-): Codec<Decoded | Default, Encoded | undefined> & { optional: true };
+): Codec<
+  Decoded | Default,
+  Encoded | undefined,
+  MergeOptions<Options, { optional: true }>
+>;
 
-export function optional<Decoded, Encoded, Default = undefined>(
-  codec: Codec<Decoded, Encoded>,
+export function optional<
+  Decoded,
+  Encoded,
+  Options extends CodecOptions,
+  Default = undefined
+>(
+  codec: Codec<Decoded, Encoded, Options>,
   defaultValue?: Default
-): Codec<Decoded | Default, Encoded | undefined> & { optional: true } {
+): Codec<
+  Decoded | Default,
+  Encoded | undefined,
+  MergeOptions<Options, { optional: true }>
+> {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   return {
+    ...codec,
     optional: true,
     decoder: function optionalDecoder(value) {
       if (value === undefined) {
@@ -691,24 +757,39 @@ export function optional<Decoded, Encoded, Default = undefined>(
         ? undefined
         : codec.encoder(value as Decoded);
     },
-  };
+  } as Codec<
+    Decoded | Default,
+    Encoded | undefined,
+    MergeOptions<Options, { optional: true }>
+  >;
 }
 
-export function nullable<Decoded, Encoded>(
-  decoder: Codec<Decoded, Encoded>
-): Codec<Decoded | null, Encoded | null>;
+export function nullable<Decoded, Encoded, Options extends CodecOptions>(
+  decoder: Codec<Decoded, Encoded, Options>
+): Codec<Decoded | null, Encoded | null, Options>;
 
-export function nullable<Decoded, Encoded, Default>(
-  codec: Codec<Decoded, Encoded>,
+export function nullable<
+  Decoded,
+  Encoded,
+  Default,
+  Options extends CodecOptions
+>(
+  codec: Codec<Decoded, Encoded, Options>,
   defaultValue: Default
-): Codec<Decoded | Default, Encoded | null>;
+): Codec<Decoded | Default, Encoded | null, Options>;
 
-export function nullable<Decoded, Encoded, Default = null>(
-  codec: Codec<Decoded, Encoded>,
+export function nullable<
+  Decoded,
+  Encoded,
+  Options extends CodecOptions,
+  Default = null
+>(
+  codec: Codec<Decoded, Encoded, Options>,
   ...rest: Array<unknown>
-): Codec<Decoded | Default, Encoded | null> {
+): Codec<Decoded | Default, Encoded | null, Options> {
   const defaultValue = rest.length === 0 ? null : rest[0];
   return {
+    ...codec,
     decoder: function nullableDecoder(value) {
       if (value === null) {
         return defaultValue as Decoded | Default;
@@ -729,14 +810,20 @@ export function nullable<Decoded, Encoded, Default = null>(
   };
 }
 
-export function chain<Decoded, Encoded, NewDecoded>(
-  codec: Codec<Decoded, Encoded>,
+export function chain<
+  Decoded,
+  Encoded,
+  Options extends CodecOptions,
+  NewDecoded
+>(
+  codec: Codec<Decoded, Encoded, Options>,
   transform: {
     decoder: (value: Decoded) => NewDecoded;
     encoder: (value: NewDecoded) => Decoded;
   }
-): Codec<NewDecoded, Encoded> {
+): Codec<NewDecoded, Encoded, Options> {
   return {
+    ...codec,
     decoder: function chainDecoder(value) {
       return transform.decoder(codec.decoder(value));
     },
@@ -745,6 +832,20 @@ export function chain<Decoded, Encoded, NewDecoded>(
     },
   };
 }
+
+const t1 = optional(string);
+const t2 = named("", string);
+const t3 = named("", optional(string));
+const t4 = optional(named("", string));
+const t5 = nullable(string);
+const t6 = optional(nullable(string));
+const t7 = nullable(optional(string));
+const t8 = chain(nullable(optional(named("", string))), {
+  decoder: (value) => value,
+  encoder: (value) => value,
+});
+const t9 = chain(string, named("", string));
+void [t1, t2, t3, t4, t5, t6, t7, t8, t9];
 
 export function singleField<Decoded, Encoded>(
   field: string,
@@ -877,12 +978,12 @@ export class DecoderError extends TypeError {
 
   optional: boolean;
 
-  constructor({
-    key,
-    ...params
-  }:
-    | { message: string; value: unknown; key?: Key }
-    | (DecoderErrorVariant & { key?: Key })) {
+  constructor(
+    options:
+      | { message: string; value: unknown; key?: Key; cause?: unknown }
+      | (DecoderErrorVariant & { key?: Key; cause?: unknown })
+  ) {
+    const { key, cause, ...params } = options;
     const variant: DecoderErrorVariant =
       "tag" in params
         ? params
@@ -893,7 +994,8 @@ export class DecoderError extends TypeError {
         // Default to sensitive so accidental uncaught errors don’t leak
         // anything. Explicit `.format()` defaults to non-sensitive.
         { sensitive: true }
-      )}\n\nFor better error messages, see https://github.com/lydell/tiny-decoders#error-messages`
+      )}\n\nFor better error messages, see https://github.com/lydell/tiny-decoders#error-messages`,
+      "cause" in options ? { cause } : {}
     );
     this.path = key === undefined ? [] : [key];
     this.variant = variant;
@@ -915,6 +1017,7 @@ export class DecoderError extends TypeError {
       message: error instanceof Error ? error.message : String(error),
       got: DecoderError.MISSING_VALUE,
       key,
+      cause: error,
     });
   }
 

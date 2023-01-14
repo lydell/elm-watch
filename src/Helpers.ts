@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "stream";
 
-import { DecoderError, repr } from "./Codec";
+import * as Codec from "./Codec";
 import { NonEmptyArray } from "./NonEmptyArray";
 
 export type ReadStream = Readable & {
@@ -50,6 +50,10 @@ export function cursorHorizontalAbsolute(n: number): string {
 
 function pad(number: number): string {
   return number.toString().padStart(2, "0");
+}
+
+export function quote(string: string): string {
+  return Codec.stringifyWithoutCodec(string);
 }
 
 export function formatDate(date: Date): string {
@@ -128,28 +132,10 @@ export const toError: ((arg: unknown) => NodeJS.ErrnoException) & {
         `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
       );
 
-export type JsonError = DecoderError | SyntaxError;
-
-export const toJsonError: ((arg: unknown) => JsonError) & {
-  jestWorkaround?: (arg: unknown) => JsonError;
-} = (arg) =>
-  // istanbul ignore next
-  arg instanceof DecoderError
-    ? arg
-    : toError.jestWorkaround !== undefined // See `toError.jestWorkaround`.
-    ? toError.jestWorkaround(arg)
-    : arg instanceof SyntaxError
-    ? arg
-    : new SyntaxError(
-        `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
-          arg
-        )}`
-      );
-
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
     ? (error as { stack: string }).stack
     : typeof (error as { message?: string } | undefined)?.message === "string"
     ? (error as { message: string }).message
-    : repr(error);
+    : Codec.repr(error);
 }

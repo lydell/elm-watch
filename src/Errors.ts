@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as url from "url";
 
-import { DecoderError } from "./Codec";
+import * as Codec from "./Codec";
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
@@ -12,7 +12,6 @@ import {
   bold as boldTerminal,
   dim as dimTerminal,
   join as joinString,
-  JsonError,
   RESET_COLOR,
   toError,
 } from "./Helpers";
@@ -72,8 +71,8 @@ function json(data: unknown, indent?: number): Piece {
     tag: "Text",
     text:
       indent === undefined
-        ? JSON.stringify(data)
-        : JSON.stringify(data, null, indent),
+        ? Codec.stringifyWithoutCodec(data)
+        : Codec.stringifyWithoutCodec(data, null, indent),
   };
 }
 
@@ -333,14 +332,14 @@ function renderErrorLocation(location: ErrorLocation): Piece {
   }
 }
 
-export function readElmWatchJsonAsJson(
+export function readElmWatchJson(
   elmWatchJsonPath: ElmWatchJsonPath,
   error: Error
 ): ErrorTemplate {
   return fancyError("TROUBLE READING elm-watch.json", elmWatchJsonPath)`
 I read inputs, outputs and options from ${elmWatchJson}.
 
-${bold("I had trouble reading it as JSON:")}
+${bold("I had trouble reading it:")}
 
 ${text(error.message)}
 `;
@@ -348,7 +347,7 @@ ${text(error.message)}
 
 export function decodeElmWatchJson(
   elmWatchJsonPath: ElmWatchJsonPath,
-  error: JsonError
+  error: Codec.DecoderError
 ): ErrorTemplate {
   return fancyError("INVALID elm-watch.json FORMAT", elmWatchJsonPath)`
 I read inputs, outputs and options from ${elmWatchJson}.
@@ -956,7 +955,7 @@ ${text(error)}
 
 export function elmMakeJsonParseError(
   outputPath: OutputPath | { tag: "NoLocation" },
-  error: JsonError,
+  error: Codec.DecoderError,
   errorFilePath: ErrorFilePath,
   command: Command
 ): ErrorTemplate {
@@ -1070,7 +1069,7 @@ ${text(message)}
 `;
 }
 
-export function readElmJsonAsJson(
+export function readElmJson(
   elmJsonPath: ElmJsonPath,
   error: Error
 ): ErrorTemplate {
@@ -1078,7 +1077,7 @@ export function readElmJsonAsJson(
 I read "source-directories" from ${elmJson} when figuring out all Elm files that
 your inputs depend on.
 
-${bold("I had trouble reading it as JSON:")}
+${bold("I had trouble reading it:")}
 
 ${text(error.message)}
 
@@ -1089,7 +1088,7 @@ and "postprocess" was not run.)
 
 export function decodeElmJson(
   elmJsonPath: ElmJsonPath,
-  error: JsonError
+  error: Codec.DecoderError
 ): ErrorTemplate {
   return fancyError("INVALID elm.json FORMAT", elmJsonPath)`
 I read "source-directories" from ${elmJson} when figuring out all Elm files that
@@ -1104,7 +1103,7 @@ and "postprocess" was not run.)
 `;
 }
 
-export function readElmWatchStuffJsonAsJson(
+export function readElmWatchStuffJson(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   error: Error
 ): ErrorTemplate {
@@ -1114,7 +1113,7 @@ export function readElmWatchStuffJsonAsJson(
   )`
 I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
-${bold("I had trouble reading it as JSON:")}
+${bold("I had trouble reading it:")}
 
 ${text(error.message)}
 
@@ -1125,7 +1124,7 @@ You could try removing that file (it contains nothing essential).
 
 export function decodeElmWatchStuffJson(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
-  error: JsonError
+  error: Codec.DecoderError
 ): ErrorTemplate {
   return fancyError(
     "INVALID elm-stuff/elm-watch/stuff.json FORMAT",
@@ -1352,7 +1351,7 @@ The web socket code I generate is supposed to always connect using a correct URL
 }
 
 export function webSocketParamsDecodeError(
-  error: JsonError,
+  error: Codec.DecoderError,
   actualUrlString: string
 ): string {
   return `
@@ -1451,7 +1450,7 @@ If you want to have this target compiled, restart elm-watch either with more CLI
   `.trim();
 }
 
-export function webSocketDecodeError(error: JsonError): string {
+export function webSocketDecodeError(error: Codec.DecoderError): string {
   return `
 The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
@@ -1493,7 +1492,7 @@ ${command}
 
 I ran the command with these extra environment variables:
 
-${JSON.stringify(env, null, 2)}
+${Codec.stringifyWithoutCodec(env, null, 2)}
 
 ${errorReason}
 
@@ -1738,8 +1737,8 @@ function truncate(string: string): string {
     : `${string.slice(0, half)}...${string.slice(-half)}`;
 }
 
-function printJsonError(error: JsonError): Piece {
-  return text(error instanceof DecoderError ? error.format() : error.message);
+function printJsonError(error: Codec.DecoderError): Piece {
+  return text(error.format());
 }
 
 export type ErrorFilePath =

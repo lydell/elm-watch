@@ -1380,7 +1380,7 @@ function statusChanged(
                     foregroundColor: status.foregroundColor,
                     backgroundColor: status.backgroundColor,
                   };
-                  const id = JSON.stringify(overlayError);
+                  const id = Codec.stringifyWithoutCodec(overlayError);
                   return [id, overlayError];
                 })
               ),
@@ -1660,27 +1660,16 @@ type ParseWebSocketMessageDataResult =
 function parseWebSocketMessageData(
   data: unknown
 ): ParseWebSocketMessageDataResult {
-  try {
-    return {
-      tag: "Success",
-      message: decodeWebSocketToClientMessage(Codec.string.decoder(data)),
-    };
-  } catch (unknownError) {
-    return {
-      tag: "Error",
-      message: `Failed to decode web socket message sent from the server:\n${possiblyDecodeErrorToString(
-        unknownError
-      )}`,
-    };
-  }
-}
-
-function possiblyDecodeErrorToString(unknownError: unknown): string {
-  return unknownError instanceof Codec.DecoderError
-    ? unknownError.format()
-    : unknownError instanceof Error
-    ? unknownError.message
-    : Codec.repr(unknownError);
+  const parsed = decodeWebSocketToClientMessage(data);
+  return parsed instanceof Codec.DecoderError
+    ? {
+        tag: "Error",
+        message: `Failed to decode web socket message sent from the server:\n${parsed.format()}`,
+      }
+    : {
+        tag: "Success",
+        message: parsed,
+      };
 }
 
 const FunctionToNull = {
@@ -1751,13 +1740,11 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
     return { tag: "MissingWindowElm" };
   }
 
-  let programTypes;
-  try {
-    programTypes = ProgramTypes.decoder(window);
-  } catch (unknownError) {
+  const programTypes = Codec.parseUnknown(ProgramTypes, window);
+  if (programTypes instanceof Codec.DecoderError) {
     return {
       tag: "DecodeError",
-      message: possiblyDecodeErrorToString(unknownError),
+      error: programTypes,
     };
   }
 
@@ -2975,7 +2962,7 @@ type InitializedElmAppsStatus =
     }
   | {
       tag: "DecodeError";
-      message: string;
+      error: Codec.DecoderError;
     }
   | {
       tag: "MissingWindowElm";
@@ -3034,7 +3021,7 @@ function viewCompilationModeChooser({
           {},
           "window.Elm does not look like expected! This is the error message:"
         ),
-        h(HTMLPreElement, {}, info.initializedElmAppsStatus.message),
+        h(HTMLPreElement, {}, info.initializedElmAppsStatus.error.format()),
       ];
 
     case "MissingWindowElm":
@@ -3461,11 +3448,11 @@ function renderMockStatuses(
         ...info,
         initializedElmAppsStatus: {
           tag: "DecodeError",
-          message: new Codec.DecoderError({
+          error: new Codec.DecoderError({
             tag: "object",
             got: 5,
             key: "Main",
-          }).format(),
+          }),
         },
       },
     },

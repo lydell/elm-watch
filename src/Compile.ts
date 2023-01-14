@@ -1,5 +1,6 @@
 import * as fs from "fs";
 
+import * as Codec from "./Codec";
 import * as ElmJson from "./ElmJson";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
@@ -592,7 +593,7 @@ export async function handleOutputAction({
         // istanbul ignore next
         case "make":
           throw new Error(
-            `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${JSON.stringify(
+            `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${Codec.stringifyWithoutCodec(
               action,
               null,
               2
@@ -1836,7 +1837,7 @@ function statusLine(
     case "ElmMakeCrashError":
     case "ElmMakeJsonParseError":
     case "ElmMakeError":
-    case "ElmJsonReadAsJsonError":
+    case "ElmJsonReadError":
     case "ElmJsonDecodeError":
     case "ImportWalkerFileSystemError":
     case "NeedsToWriteProxyFileReadError":
@@ -2233,8 +2234,8 @@ export function renderOutputErrors(
           );
       }
 
-    case "ElmJsonReadAsJsonError":
-      return [Errors.readElmJsonAsJson(status.elmJsonPath, status.error)];
+    case "ElmJsonReadError":
+      return [Errors.readElmJson(status.elmJsonPath, status.error)];
 
     case "ElmJsonDecodeError":
       return [Errors.decodeElmJson(status.elmJsonPath, status.error)];
@@ -2302,7 +2303,7 @@ function allRelatedElmFilePathsWithFallback(
     case "ImportWalkerFileSystemError":
       return walkerResult.relatedElmFilePathsUntilError;
 
-    case "ElmJsonReadAsJsonError":
+    case "ElmJsonReadError":
     case "ElmJsonDecodeError":
       return new Set(
         mapNonEmptyArray(

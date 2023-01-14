@@ -49,12 +49,9 @@ export async function run(
   const parseResult = ElmWatchJson.findReadAndParse(cwd);
 
   switch (parseResult.tag) {
-    case "ReadAsJsonError":
+    case "ReadError":
       logger.errorTemplate(
-        Errors.readElmWatchJsonAsJson(
-          parseResult.elmWatchJsonPath,
-          parseResult.error
-        )
+        Errors.readElmWatchJson(parseResult.elmWatchJsonPath, parseResult.error)
       );
       return handleElmWatchJsonError(
         logger,
@@ -157,9 +154,9 @@ export async function run(
               : undefined;
 
           switch (elmWatchStuffJsonParseResult?.tag) {
-            case "ElmWatchStuffJsonReadAsJsonError":
+            case "ElmWatchStuffJsonReadError":
               logger.errorTemplate(
-                Errors.readElmWatchStuffJsonAsJson(
+                Errors.readElmWatchStuffJson(
                   elmWatchStuffJsonPath,
                   elmWatchStuffJsonParseResult.error
                 )

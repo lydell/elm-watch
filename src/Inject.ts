@@ -1,4 +1,5 @@
 import * as ClientCode from "./ClientCode";
+import * as Codec from "./Codec";
 import { join } from "./Helpers";
 import { Port } from "./Port";
 import {
@@ -881,7 +882,7 @@ export function versionedIdentifier(
   targetName: string,
   webSocketPort: Port
 ): string {
-  return `// elm-watch hot ${JSON.stringify({
+  return `// elm-watch hot ${Codec.stringifyWithoutCodec({
     version: "%VERSION%",
     targetName,
     webSocketPort: webSocketPort.thePort,
