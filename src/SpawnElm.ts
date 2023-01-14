@@ -248,8 +248,7 @@ function parseActualElmMakeJson(
   extraError: string | undefined
 ): RunElmMakeResult {
   // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
-  const cleanedJsonString = jsonString.replace(/\t/g, "\\t");
-  const parsed = Codec.parse(ElmMakeError, cleanedJsonString);
+  const parsed = Codec.parse(ElmMakeError, jsonString.replace(/\t/g, "\\t"));
   return parsed instanceof Codec.DecoderError
     ? {
         tag: "ElmMakeJsonParseError",
@@ -261,7 +260,7 @@ function parseActualElmMakeJson(
             Errors.elmMakeJsonParseError(
               { tag: "NoLocation" },
               parsed,
-              { tag: "ErrorFileBadContent", content: cleanedJsonString },
+              { tag: "ErrorFileBadContent", content: jsonString },
               command
             )
           ),
