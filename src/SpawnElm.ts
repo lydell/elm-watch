@@ -251,46 +251,24 @@ function parseActualElmMakeJson(
   const cleanedJsonString = jsonString.replace(/\t/g, "\\t");
   const parsed = Codec.parse(ElmMakeError, cleanedJsonString);
   return parsed instanceof Codec.DecoderError
-    ? parsed.cause instanceof SyntaxError
-      ? {
-          tag: "ElmMakeJsonParseError",
-          error: parsed,
-          errorFilePath: Errors.tryWriteErrorFile({
-            cwd: command.options.cwd,
-            name: "ElmMakeJsonParseError",
-            content: Errors.toPlainString(
-              Errors.elmMakeJsonParseError(
-                { tag: "NoLocation" },
-                parsed,
-                { tag: "ErrorFileBadContent", content: cleanedJsonString },
-                command
-              )
-            ),
-            hash: jsonString,
-          }),
-          command,
-        }
-      : {
-          tag: "ElmMakeJsonParseError",
-          error: parsed,
-          errorFilePath: Errors.tryWriteErrorFile({
-            cwd: command.options.cwd,
-            name: "ElmMakeJsonParseError",
-            content: Errors.toPlainString(
-              Errors.elmMakeJsonParseError(
-                { tag: "NoLocation" },
-                parsed,
-                {
-                  tag: "ErrorFileBadContent",
-                  content: cleanedJsonString,
-                },
-                command
-              )
-            ),
-            hash: jsonString,
-          }),
-          command,
-        }
+    ? {
+        tag: "ElmMakeJsonParseError",
+        error: parsed,
+        errorFilePath: Errors.tryWriteErrorFile({
+          cwd: command.options.cwd,
+          name: "ElmMakeJsonParseError",
+          content: Errors.toPlainString(
+            Errors.elmMakeJsonParseError(
+              { tag: "NoLocation" },
+              parsed,
+              { tag: "ErrorFileBadContent", content: cleanedJsonString },
+              command
+            )
+          ),
+          hash: jsonString,
+        }),
+        command,
+      }
     : {
         tag: "ElmMakeError",
         error: parsed,
