@@ -71,10 +71,28 @@ export function stringify<Decoded, Encoded>(
 
 export const parseWithoutCodec: (
   text: string,
-  reviver?: Parameters<typeof JSON.parse>[1]
+  reviver?: (this: unknown, key: string, value: unknown) => unknown
 ) => unknown = JSON.parse;
 
-export const stringifyWithoutCodec = JSON.stringify;
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+export const stringifyWithoutCodec: {
+  (
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    value: Function | symbol | undefined,
+    replacer?: Array<number | string> | null,
+    space?: number | string
+  ): undefined;
+  (
+    value: unknown,
+    replacer?: Array<number | string> | null,
+    space?: number | string
+  ): string;
+  (
+    value: unknown,
+    replacer: (this: unknown, key: string, value: unknown) => unknown,
+    space?: number | string
+  ): string | undefined;
+} = JSON.stringify as any;
 
 function identity<T>(value: T): T {
   return value;
