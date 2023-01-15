@@ -75,16 +75,16 @@ npx elm-watch make --optimize
 
 elm-watch is only responsible for turning your Elm files into JS files. Like running `elm make src/Main.elm --output build/main.js` yourself. So that’s the mindset you need to have.
 
-**You are responsible for** creating an HTML file, link to the built JS and serve files.
+**You are responsible for** creating an HTML file, linking to the built JS, serving files and initializing the app.
 
 - If you’re just getting started, you can create an HTML file with a relative link to the built JS and double-click it to open it in a browser.
 
   ```html
   <!-- Relative URL to the built JS. -->
   <script src="./build/main.js"></script>
-  <!-- Launching Elm app. -->
+  <div id="root"></div>
   <script>
-    var app = Elm.Main.init({ node: document.getElementById("app") });
+    var app = Elm.Main.init({ node: document.getElementById("root") });
   </script>
   ```
 
@@ -95,9 +95,8 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
   ```html
   <!-- Absolute URL to the built JS. -->
   <script src="/build/main.js"></script>
-  <!-- Launching Elm app. -->
   <script>
-    var app = Elm.Main.init({ node: document.getElementById("app") });
+    var app = Elm.Main.init();
   </script>
   ```
 
