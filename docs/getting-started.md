@@ -84,7 +84,7 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
   <script src="./build/main.js"></script>
   <!-- Launching Elm app. -->
   <script>
-    var app = Elm.Main.init({node: document.getElementById("app")});
+    var app = Elm.Main.init({ node: document.getElementById("app") });
   </script>
   ```
 
@@ -97,7 +97,7 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
   <script src="/build/main.js"></script>
   <!-- Launching Elm app. -->
   <script>
-    var app = Elm.Main.init({node: document.getElementById("app")});
+    var app = Elm.Main.init({ node: document.getElementById("app") });
   </script>
   ```
 
