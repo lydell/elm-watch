@@ -82,6 +82,10 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
   ```html
   <!-- Relative URL to the built JS. -->
   <script src="./build/main.js"></script>
+  <!-- Launching Elm app. -->
+  <script>
+    var app = Elm.Main.init({node: document.getElementById("app")});
+  </script>
   ```
 
   👉 [Minimal example](https://github.com/lydell/elm-watch/tree/main/example-minimal#readme)
@@ -91,6 +95,10 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
   ```html
   <!-- Absolute URL to the built JS. -->
   <script src="/build/main.js"></script>
+  <!-- Launching Elm app. -->
+  <script>
+    var app = Elm.Main.init({node: document.getElementById("app")});
+  </script>
   ```
 
   👉 [Example CLI server tool](https://github.com/vercel/serve)
