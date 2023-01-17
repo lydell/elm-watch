@@ -16,7 +16,7 @@
     "@typescript-eslint/eslint-plugin": "5.48.2",
     "@typescript-eslint/parser": "5.48.2",
     "elm-tooling": "1.12.0",
-    "esbuild": "0.17.2",
+    "esbuild": "0.15.18",
     "esbuild-register": "3.4.2",
     "eslint": "8.32.0",
     "eslint-plugin-jest": "27.2.1",
