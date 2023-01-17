@@ -370,7 +370,7 @@ export function runHotReload({
     | "Sandbox"
     | "Worker";
   compilationMode: CompilationMode;
-  init?: (node: HTMLDivElement) => ReturnType<ElmModule["init"]> | undefined;
+  init?: (node: HTMLDivElement) => void;
   extraScripts?: Array<string>;
   extraElmWatchStuffJson?: ElmWatchStuffJsonWritable["targets"];
 }): {
@@ -453,22 +453,19 @@ export function runHotReload({
         keepElmStuffJson: true,
         ...sharedOptions,
         init:
-          init === undefined
-            ? (node) => {
-                app = window.Elm?.[name]?.init({ node });
-                if (app?.ports !== undefined) {
-                  const subscribe = app.ports.toJs?.subscribe;
-                  if (subscribe === undefined) {
-                    throw new Error("Failed to find 'toJs' subscribe port.");
-                  }
-                  subscribe((value: unknown) => {
-                    lastValueFromElm.value = value;
-                  });
-                }
+          init ??
+          ((node) => {
+            app = window.Elm?.[name]?.init({ node });
+            if (app?.ports !== undefined) {
+              const subscribe = app.ports.toJs?.subscribe;
+              if (subscribe === undefined) {
+                throw new Error("Failed to find 'toJs' subscribe port.");
               }
-            : (node) => {
-                app = init(node);
-              },
+              subscribe((value: unknown) => {
+                lastValueFromElm.value = value;
+              });
+            }
+          }),
         onIdle,
       });
     },

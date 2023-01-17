@@ -66,18 +66,6 @@
             ],
             "output": "build/InitChangeCmd.js"
         },
-        "AddPortUsedInUpdate": {
-            "inputs": [
-                "src/AddPortUsedInUpdate.elm"
-            ],
-            "output": "build/AddPortUsedInUpdate.js"
-        },
-        "AddPortUsedInSubscriptions": {
-            "inputs": [
-                "src/AddPortUsedInSubscriptions.elm"
-            ],
-            "output": "build/AddPortUsedInSubscriptions.js"
-        },
         "ChangeProgramType": {
             "inputs": [
                 "src/ChangeProgramType.elm"

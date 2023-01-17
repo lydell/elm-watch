@@ -1,7 +1,7 @@
 module AllProgramTypes.HtmlProgram exposing (main)
 
-import AllProgramTypes
 import Html
+import AllProgramTypes
 
 
 main =
