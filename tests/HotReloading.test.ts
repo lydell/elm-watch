@@ -975,6 +975,43 @@ describe("hot reloading", () => {
     }
   });
 
+  test("Add port used in update", async () => {
+    const { replace, lastValueFromElm, go } = runHotReload({
+      name: "AddPortUsedInUpdate",
+      programType: "Element",
+      compilationMode: "standard",
+    });
+
+    const { browserConsole } = await go(async ({ idle, main }) => {
+      switch (idle) {
+        case 1:
+          assert1();
+          replace((content) =>
+            content.replace("module", "port module").replace(/-- /g, "")
+          );
+          return "KeepGoing";
+        default:
+          main.click();
+          await waitOneFrame();
+          assert2();
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!
+      (target: AddPortUsedInUpdate)
+    `);
+
+    function assert1(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
+    }
+
+    function assert2(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent in update!`);
+    }
+  });
+
   test("Change program type", async () => {
     const { write, go } = runHotReload({
       name: "ChangeProgramType",
