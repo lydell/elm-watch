@@ -939,121 +939,118 @@ describe("hot reloading", () => {
     }
   });
 
-  // eslint-disable-next-line jest/no-commented-out-tests
-  // test("Init change cmd", async () => {
-  //   const { replace, lastValueFromElm, go } = runHotReload({
-  //     name: "InitChangeCmd",
-  //     programType: "Element",
-  //     compilationMode: "standard",
-  //   });
+  test("Init change cmd", async () => {
+    const { replace, lastValueFromElm, go } = runHotReload({
+      name: "InitChangeCmd",
+      programType: "Element",
+      compilationMode: "standard",
+    });
 
-  //   const { browserConsole } = await go(({ idle }) => {
-  //     switch (idle) {
-  //       case 1:
-  //         assert1();
-  //         replace((content) =>
-  //           content.replace("module", "port module").replace(/-- /g, "")
-  //         );
-  //         return "KeepGoing";
-  //       default:
-  //         assert2();
-  //         return "Stop";
-  //     }
-  //   });
+    const { browserConsole } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          assert1();
+          replace((content) =>
+            content.replace("module", "port module").replace(/-- /g, "")
+          );
+          return "KeepGoing";
+        default:
+          assert2();
+          return "Stop";
+      }
+    });
 
-  //   expect(browserConsole).toMatchInlineSnapshot(`
-  //     elm-watch: I did a full page reload because:
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because:
 
-  //     InitChangeCmd
-  //     - a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!
-  //     - \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
-  //   `);
+      InitChangeCmd
+      - a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!
+      - \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
+    `);
 
-  //   function assert1(): void {
-  //     expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
-  //   }
+    function assert1(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
+    }
 
-  //   function assert2(): void {
-  //     expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
-  //   }
-  // });
+    function assert2(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
+    }
+  });
 
-  // eslint-disable-next-line jest/no-commented-out-tests
-  // test("Add port used in update", async () => {
-  //   const { replace, lastValueFromElm, go } = runHotReload({
-  //     name: "AddPortUsedInUpdate",
-  //     programType: "Element",
-  //     compilationMode: "standard",
-  //   });
+  test("Add port used in update", async () => {
+    const { replace, lastValueFromElm, go } = runHotReload({
+      name: "AddPortUsedInUpdate",
+      programType: "Element",
+      compilationMode: "standard",
+    });
 
-  //   const { browserConsole } = await go(async ({ idle, main }) => {
-  //     switch (idle) {
-  //       case 1:
-  //         assert1();
-  //         replace((content) =>
-  //           content.replace("module", "port module").replace(/-- /g, "")
-  //         );
-  //         return "KeepGoing";
-  //       default:
-  //         main.click();
-  //         await waitOneFrame();
-  //         assert2();
-  //         return "Stop";
-  //     }
-  //   });
+    const { browserConsole } = await go(async ({ idle, main }) => {
+      switch (idle) {
+        case 1:
+          assert1();
+          replace((content) =>
+            content.replace("module", "port module").replace(/-- /g, "")
+          );
+          return "KeepGoing";
+        default:
+          main.click();
+          await waitOneFrame();
+          assert2();
+          return "Stop";
+      }
+    });
 
-  //   expect(browserConsole).toMatchInlineSnapshot(`
-  //     elm-watch: I did a full page reload because a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!
-  //     (target: AddPortUsedInUpdate)
-  //   `);
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!
+      (target: AddPortUsedInUpdate)
+    `);
 
-  //   function assert1(): void {
-  //     expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
-  //   }
+    function assert1(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
+    }
 
-  //   function assert2(): void {
-  //     expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent in update!`);
-  //   }
-  // });
+    function assert2(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent in update!`);
+    }
+  });
 
-  // eslint-disable-next-line jest/no-commented-out-tests
-  // test("Add port used in subscriptions", async () => {
-  //   const { replace, sendToElm, go } = runHotReload({
-  //     name: "AddPortUsedInSubscriptions",
-  //     programType: "Element",
-  //     compilationMode: "standard",
-  //     init: (node) => window.Elm?.AddPortUsedInSubscriptions?.init({ node }),
-  //   });
+  test("Add port used in subscriptions", async () => {
+    const { replace, sendToElm, go } = runHotReload({
+      name: "AddPortUsedInSubscriptions",
+      programType: "Element",
+      compilationMode: "standard",
+      init: (node) => window.Elm?.AddPortUsedInSubscriptions?.init({ node }),
+    });
 
-  //   const { browserConsole } = await go(async ({ idle, main }) => {
-  //     switch (idle) {
-  //       case 1:
-  //         assert1(main);
-  //         replace((content) =>
-  //           content.replace("module", "port module").replace(/-- /g, "")
-  //         );
-  //         return "KeepGoing";
-  //       default:
-  //         sendToElm(1337);
-  //         await waitOneFrame();
-  //         assert2(main);
-  //         return "Stop";
-  //     }
-  //   });
+    const { browserConsole } = await go(async ({ idle, main }) => {
+      switch (idle) {
+        case 1:
+          assert1(main);
+          replace((content) =>
+            content.replace("module", "port module").replace(/-- /g, "")
+          );
+          return "KeepGoing";
+        default:
+          sendToElm(1337);
+          await waitOneFrame();
+          assert2(main);
+          return "Stop";
+      }
+    });
 
-  //   expect(browserConsole).toMatchInlineSnapshot(`
-  //     elm-watch: I did a full page reload because a new port 'fromJs' was added. The idea is to give JavaScript code a chance to set it up!
-  //     (target: AddPortUsedInSubscriptions)
-  //   `);
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because a new port 'fromJs' was added. The idea is to give JavaScript code a chance to set it up!
+      (target: AddPortUsedInSubscriptions)
+    `);
 
-  //   function assert1(main: HTMLElement): void {
-  //     expect(main.outerHTML).toMatchInlineSnapshot(`<main>0</main>`);
-  //   }
+    function assert1(main: HTMLElement): void {
+      expect(main.outerHTML).toMatchInlineSnapshot(`<main>0</main>`);
+    }
 
-  //   function assert2(main: HTMLElement): void {
-  //     expect(main.outerHTML).toMatchInlineSnapshot(`<main>1337</main>`);
-  //   }
-  // });
+    function assert2(main: HTMLElement): void {
+      expect(main.outerHTML).toMatchInlineSnapshot(`<main>1337</main>`);
+    }
+  });
 
   test("Change program type", async () => {
     const { write, go } = runHotReload({
