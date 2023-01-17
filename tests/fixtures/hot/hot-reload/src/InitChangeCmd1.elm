@@ -8,13 +8,9 @@ import Html exposing (Html)
 -- port toJs : String -> Cmd msg
 
 
-type alias Model =
-    String
-
-
-init : () -> ( Model, Cmd () )
+init : () -> ( (), Cmd () )
 init () =
-    ( "init"
+    ( ()
     , Cmd.batch
         [ Cmd.none
 
@@ -23,11 +19,11 @@ init () =
     )
 
 
-main : Program () Model ()
+main : Program () () ()
 main =
     Browser.element
         { init = init
-        , update = \() model -> ( model, Cmd.none )
-        , subscriptions = always Sub.none
-        , view = Html.text
+        , update = \() () -> ( (), Cmd.none )
+        , subscriptions = \() -> Sub.none
+        , view = \() -> Html.text ""
         }

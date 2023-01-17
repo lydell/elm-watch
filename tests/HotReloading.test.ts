@@ -939,7 +939,7 @@ describe("hot reloading", () => {
     }
   });
 
-  test("Init change cmd", async () => {
+  test("Init change cmd / Add port used in init", async () => {
     const { replace, lastValueFromElm, go } = runHotReload({
       name: "InitChangeCmd",
       programType: "Element",
