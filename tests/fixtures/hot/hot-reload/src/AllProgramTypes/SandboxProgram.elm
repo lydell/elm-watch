@@ -1,8 +1,8 @@
 module AllProgramTypes.SandboxProgram exposing (main)
 
+import AllProgramTypes
 import Browser
 import Html
-import AllProgramTypes
 
 
 main =

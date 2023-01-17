@@ -74,13 +74,15 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
 		_Scheduler_enqueue = new_Scheduler_enqueue;
 
+		var reloadReasons = [];
+
 		for (var key in new_Platform_effectManagers) {
 			var manager = new_Platform_effectManagers[key];
 			if (!(key in _Platform_effectManagers)) {
 				_Platform_effectManagers[key] = manager;
 				managers[key] = _Platform_instantiateManager(manager, sendToApp);
 				if (manager.a) {
-					console.info("elm-watch: A new port '" + key + "' was added. You might want to reload the page!");
+					reloadReasons.push("a new port '" + key + "' was added. The idea is to give JavaScript code a chance to set it up!");
 					manager.a(key, sendToApp)
 				}
 			}
@@ -98,10 +100,10 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 
 		var newFlagResult = A2(_Json_run, newData.flagDecoder, flags);
 		if (!$elm$core$Result$isOk(newFlagResult)) {
-			return { tag: "ReloadPage", reason: "the flags type in \`" + moduleName + "\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\\nThis is the error:\\n" + _Json_errorToString(newFlagResult.a) };
+			return reloadReasons.concat("the flags type in \`" + moduleName + "\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\\nThis is the error:\\n" + _Json_errorToString(newFlagResult.a));
 		}
 		if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
-			return { tag: "ReloadPage", reason: "the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).' };
+			return reloadReasons.concat("the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).');
 		}
 		init = impl.%init% || impl._impl.%init%;
 		if (isDebug) {
@@ -110,13 +112,13 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		globalThis.__ELM_WATCH.INIT_URL = initUrl;
 		var newInitPair = init(newFlagResult.a);
 		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
-			return { tag: "ReloadPage", reason: "\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!" };
+			return reloadReasons.concat("\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!");
 		}
 
 		setUpdateAndSubscriptions();
 		stepper(model, true /* isSync */);
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
-		return { tag: "Success" };
+		return reloadReasons;
 	}
 
 	return Object.defineProperties(
@@ -246,7 +248,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 		var patches = _VirtualDom_diff(virtualNode, newData.virtualNode);
 		node = _VirtualDom_applyPatches(node, virtualNode, patches, sendToApp);
 		virtualNode = newData.virtualNode;
-		return { tag: "Success" };
+		return [];
 	}
 
 	return Object.defineProperties(
@@ -285,16 +287,9 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports)
 						if (app.__elmWatchProgramType !== data.programType) {
 							reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + data.programType + "\`.");
 						} else {
-							var result;
 							try {
-								result = app.__elmWatchHotReload(data, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
-								switch (result.tag) {
-									case "Success":
-										break;
-									case "ReloadPage":
-										reloadReasons.push(result.reason);
-										break;
-								}
+								var innerReasons = app.__elmWatchHotReload(data, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
+								reloadReasons = reloadReasons.concat(innerReasons);
 							} catch (error) {
 								reloadReasons.push("hot reload for \`" + moduleName + "\` failed, probably because of incompatible model changes.\\nThis is the error:\\n" + error + "\\n" + (error ? error.stack : ""));
 							}
