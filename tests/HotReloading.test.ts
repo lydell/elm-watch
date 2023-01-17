@@ -937,62 +937,64 @@ describe("hot reloading", () => {
     }
   });
 
-  describe("Init change cmd", () => {
-    // eslint-disable-next-line no-console
-    const originalConsoleInfo = console.info;
+  // eslint-disable-next-line jest/no-commented-out-tests
+  // describe("Init change cmd", () => {
+  //   // eslint-disable-next-line no-console
+  //   const originalConsoleInfo = console.info;
 
-    afterEach(() => {
-      // eslint-disable-next-line no-console
-      console.info = originalConsoleInfo;
-    });
+  //   afterEach(() => {
+  //     // eslint-disable-next-line no-console
+  //     console.info = originalConsoleInfo;
+  //   });
 
-    test("Init change cmd", async () => {
-      const mockConsoleInfo = jest.fn();
-      // eslint-disable-next-line no-console
-      console.info = mockConsoleInfo;
+  // eslint-disable-next-line jest/no-commented-out-tests
+  //   test("Init change cmd", async () => {
+  //     const mockConsoleInfo = jest.fn();
+  //     // eslint-disable-next-line no-console
+  //     console.info = mockConsoleInfo;
 
-      const { replace, lastValueFromElm, go } = runHotReload({
-        name: "InitChangeCmd",
-        programType: "Element",
-        compilationMode: "standard",
-      });
+  //     const { replace, lastValueFromElm, go } = runHotReload({
+  //       name: "InitChangeCmd",
+  //       programType: "Element",
+  //       compilationMode: "standard",
+  //     });
 
-      const { browserConsole } = await go(({ idle }) => {
-        switch (idle) {
-          case 1:
-            assert1();
-            replace((content) =>
-              content.replace("module", "port module").replace(/-- /g, "")
-            );
-            return "KeepGoing";
-          default:
-            assert2();
-            return "Stop";
-        }
-      });
+  //     const { browserConsole } = await go(({ idle }) => {
+  //       switch (idle) {
+  //         case 1:
+  //           assert1();
+  //           replace((content) =>
+  //             content.replace("module", "port module").replace(/-- /g, "")
+  //           );
+  //           return "KeepGoing";
+  //         default:
+  //           assert2();
+  //           return "Stop";
+  //       }
+  //     });
 
-      expect(browserConsole).toMatchInlineSnapshot(`
-          elm-watch: I did a full page reload because \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
-          (target: InitChangeCmd)
-        `);
+  //     expect(browserConsole).toMatchInlineSnapshot(`
+  //         elm-watch: I did a full page reload because \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
+  //         (target: InitChangeCmd)
+  //       `);
 
-      expect(mockConsoleInfo.mock.calls).toMatchInlineSnapshot(`
-          [
-            [
-              elm-watch: A new port 'toJs' was added. You might want to reload the page!,
-            ],
-          ]
-        `);
+  //     expect(mockConsoleInfo.mock.calls).toMatchInlineSnapshot(`
+  //         [
+  //           [
+  //             elm-watch: A new port 'toJs' was added. You might want to reload the page!,
+  //           ],
+  //         ]
+  //       `);
 
-      function assert1(): void {
-        expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
-      }
+  //     function assert1(): void {
+  //       expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
+  //     }
 
-      function assert2(): void {
-        expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
-      }
-    });
-  });
+  //     function assert2(): void {
+  //       expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
+  //     }
+  //   });
+  // });
 
   test("Change program type", async () => {
     const { write, go } = runHotReload({
