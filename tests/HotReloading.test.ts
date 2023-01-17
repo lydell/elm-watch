@@ -937,61 +937,42 @@ describe("hot reloading", () => {
     }
   });
 
-  describe("Init change cmd", () => {
-    // eslint-disable-next-line no-console
-    const originalConsoleInfo = console.info;
-
-    afterEach(() => {
-      // eslint-disable-next-line no-console
-      console.info = originalConsoleInfo;
+  test("Init change cmd", async () => {
+    const { replace, lastValueFromElm, go } = runHotReload({
+      name: "InitChangeCmd",
+      programType: "Element",
+      compilationMode: "standard",
     });
 
-    test("Init change cmd", async () => {
-      const mockConsoleInfo = jest.fn();
-      // eslint-disable-next-line no-console
-      console.info = mockConsoleInfo;
-
-      const { replace, lastValueFromElm, go } = runHotReload({
-        name: "InitChangeCmd",
-        programType: "Element",
-        compilationMode: "standard",
-      });
-
-      const { browserConsole } = await go(({ idle }) => {
-        switch (idle) {
-          case 1:
-            assert1();
-            replace((content) =>
-              content.replace("module", "port module").replace(/-- /g, "")
-            );
-            return "KeepGoing";
-          default:
-            assert2();
-            return "Stop";
-        }
-      });
-
-      expect(browserConsole).toMatchInlineSnapshot(`
-          elm-watch: I did a full page reload because \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
-          (target: InitChangeCmd)
-        `);
-
-      expect(mockConsoleInfo.mock.calls).toMatchInlineSnapshot(`
-          [
-            [
-              elm-watch: A new port 'toJs' was added. You might want to reload the page!,
-            ],
-          ]
-        `);
-
-      function assert1(): void {
-        expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
-      }
-
-      function assert2(): void {
-        expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
+    const { browserConsole } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          assert1();
+          replace((content) =>
+            content.replace("module", "port module").replace(/-- /g, "")
+          );
+          return "KeepGoing";
+        default:
+          assert2();
+          return "Stop";
       }
     });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because:
+
+      InitChangeCmd
+      - a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!
+      - \`Elm.InitChangeCmd.init\` returned something different than last time. Let's start fresh!
+    `);
+
+    function assert1(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`undefined`);
+    }
+
+    function assert2(): void {
+      expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent on init!`);
+    }
   });
 
   test("Change program type", async () => {
