@@ -598,6 +598,8 @@ describe("hot reloading", () => {
             send(null);
           };
           sendToWorker();
+
+          return undefined;
         },
       });
 
@@ -763,7 +765,7 @@ describe("hot reloading", () => {
       compilationMode: "standard",
       init: (node) => {
         initCount++;
-        window.Elm?.FlagsChange?.init({
+        return window.Elm?.FlagsChange?.init({
           node,
           flags: initCount === 1 ? { one: "one" } : { one: "one", two: 2 },
         });
@@ -1009,6 +1011,44 @@ describe("hot reloading", () => {
 
     function assert2(): void {
       expect(lastValueFromElm.value).toMatchInlineSnapshot(`sent in update!`);
+    }
+  });
+
+  test("Add port used in subscriptions", async () => {
+    const { replace, sendToElm, go } = runHotReload({
+      name: "AddPortUsedInSubscriptions",
+      programType: "Element",
+      compilationMode: "standard",
+      init: (node) => window.Elm?.AddPortUsedInSubscriptions?.init({ node }),
+    });
+
+    const { browserConsole } = await go(async ({ idle, main }) => {
+      switch (idle) {
+        case 1:
+          assert1(main);
+          replace((content) =>
+            content.replace("module", "port module").replace(/-- /g, "")
+          );
+          return "KeepGoing";
+        default:
+          sendToElm(1337);
+          await waitOneFrame();
+          assert2(main);
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because a new port 'fromJs' was added. The idea is to give JavaScript code a chance to set it up!
+      (target: AddPortUsedInSubscriptions)
+    `);
+
+    function assert1(main: HTMLElement): void {
+      expect(main.outerHTML).toMatchInlineSnapshot(`<main>0</main>`);
+    }
+
+    function assert2(main: HTMLElement): void {
+      expect(main.outerHTML).toMatchInlineSnapshot(`<main>1337</main>`);
     }
   });
 
@@ -1637,7 +1677,7 @@ describe("hot reloading", () => {
         const node2 = document.createElement("div");
         node.append(node1, node2);
         window.Elm?.MultipleTargets?.init({ node: node1 });
-        window.Elm?.MultipleTargetsOther1?.init({ node: node2 });
+        return window.Elm?.MultipleTargetsOther1?.init({ node: node2 });
       },
     });
 
@@ -2633,7 +2673,7 @@ describe("hot reloading", () => {
           const node2 = document.createElement("div");
           node.append(node1, node2);
           window.Elm?.App?.init({ node: node1 });
-          window.Elm?.AppOther?.init({ node: node2 });
+          return window.Elm?.AppOther?.init({ node: node2 });
         },
       });
 

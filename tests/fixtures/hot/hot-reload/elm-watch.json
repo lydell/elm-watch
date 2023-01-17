@@ -72,6 +72,12 @@
             ],
             "output": "build/AddPortUsedInUpdate.js"
         },
+        "AddPortUsedInSubscriptions": {
+            "inputs": [
+                "src/AddPortUsedInSubscriptions.elm"
+            ],
+            "output": "build/AddPortUsedInSubscriptions.js"
+        },
         "ChangeProgramType": {
             "inputs": [
                 "src/ChangeProgramType.elm"
