@@ -27,10 +27,6 @@ import {
 } from "../src/Helpers";
 import { IS_WINDOWS } from "../src/IsWindows";
 
-// Workaround for:
-// (node:1847) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 close listeners added to [Server].
-process.setMaxListeners(20);
-
 toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
 toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
 
