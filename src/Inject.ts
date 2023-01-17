@@ -248,7 +248,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 		var patches = _VirtualDom_diff(virtualNode, newData.virtualNode);
 		node = _VirtualDom_applyPatches(node, virtualNode, patches, sendToApp);
 		virtualNode = newData.virtualNode;
-		return { tag: "Success" };
+		return [];
 	}
 
 	return Object.defineProperties(
