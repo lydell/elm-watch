@@ -6,9 +6,10 @@
     <title>SandboxMain</title>
   </head>
   <body>
+    <div id="root"></div>
     <script src="build/SandboxMain.js"></script>
     <script>
-      Elm.SandboxMain.init({ node: document.body });
+      Elm.SandboxMain.init({ node: document.getElementById("root") });
     </script>
   </body>
 </html>

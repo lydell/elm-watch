@@ -6,9 +6,10 @@
     <title>Typo</title>
   </head>
   <body>
+    <div id="root"></div>
     <script src="build/ElementMain.js"></script>
     <script>
-      Elm.ElmentMain.init({ node: document.body });
+      Elm.ElmentMain.init({ node: document.getElementById("root") });
     </script>
   </body>
 </html>

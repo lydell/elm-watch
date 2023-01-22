@@ -6,9 +6,10 @@
     <title>ElementMain</title>
   </head>
   <body>
+    <div id="root"></div>
     <script src="build/ElementMain.js"></script>
     <script>
-      Elm.ElementMain.init({ node: document.body });
+      Elm.ElementMain.init({ node: document.getElementById("root") });
     </script>
   </body>
 </html>
