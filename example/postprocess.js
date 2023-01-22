@@ -17,6 +17,11 @@ export default async function postprocess({
 
     case "optimize":
       return minify(code, {
+        // `minimal: true` runs both UglifyJS and esbuild, which results in smaller output but is slow.
+        // `minimal: false` runs only esbuild, which is super fast but results in slightly larger output.
+        // This enables the `minimal` mode for _some_ targets, based on their names in elm-watch.json,
+        // as an example. For some apps, faster builds is more important than smaller output, and vice versa.
+        // Make your choice.
         minimal: !["Html", "Sandbox", "Element", "Document", "Worker"].includes(
           targetName
         ),
