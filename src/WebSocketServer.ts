@@ -5,7 +5,7 @@ import type { Duplex } from "stream";
 import * as util from "util";
 import WebSocket, { Server as WsServer } from "ws";
 
-import { CERTIFICATE } from "./Certificate";
+import { CERTIFICATE, CertificateChoice } from "./Certificate";
 import { Port, PortChoice } from "./Port";
 
 export type WebSocketServerMsg =
@@ -45,9 +45,14 @@ class PolyHttpServer {
 
   private http = http.createServer();
 
-  private https = https.createServer(CERTIFICATE);
+  private https: https.Server;
 
-  constructor() {
+  constructor(certificate: CertificateChoice) {
+    this.https = https.createServer(
+      certificate.tag === "CertificateFromConfig"
+        ? certificate.certificate
+        : CERTIFICATE
+    );
     this.net.on("connection", (socket) => {
       socket.once("data", (buffer) => {
         socket.pause();
@@ -116,7 +121,7 @@ class PolyHttpServer {
 }
 
 export class WebSocketServer {
-  private polyHttpServer = new PolyHttpServer();
+  private polyHttpServer: PolyHttpServer;
 
   private webSocketServer = new WsServer({ noServer: true });
 
@@ -128,7 +133,8 @@ export class WebSocketServer {
 
   listening: Promise<void>;
 
-  constructor(portChoice: PortChoice) {
+  constructor(portChoice: PortChoice, certificate: CertificateChoice) {
+    this.polyHttpServer = new PolyHttpServer(certificate);
     this.dispatch = this.dispatchToQueue;
 
     this.webSocketServer.on("connection", (webSocket, request) => {

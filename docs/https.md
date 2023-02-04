@@ -21,7 +21,7 @@ If you use `https://`, then the first time you visit your page you’ll see how 
 
 Click elm-watch’s [browser UI](../browser-ui/) to expand it. There’s a link there that goes to the WebSocket server. When you click it, your browser will show a scary-looking security screen. That’s because elm-watch uses a self-signed certificate, which isn’t secure. However, there’s no security to worry about here – elm-watch just needs a certificate to be able to use `wss://` (which is basically required on `https://` pages – more on that below). Click a few buttons to proceed to the page anyway. Once you’ve done that once, the browser remembers your choice. Go back to your page (and possibly refresh the page) and now the WebSocket should connect! If you’ve ever created a self-signed certificate yourself for development – that’s exactly what’s happening here. elm-watch ships with a generic self-signed certificate created with `openssl`.
 
-If you’d like to be able to configure the certificate used by elm-watch, let me know!
+If you’d like to be able to configure the certificate used by elm-watch, you can pass the PEM formatted `cert` and `key` in [`elm-watch.json`](../elm-watch.json/).
 
 Here are my findings from testing different combinations of http/s, ws/s, localhost vs not-localhost, and self-signed vs valid certificates:
 

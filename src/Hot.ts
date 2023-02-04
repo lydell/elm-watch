@@ -11,6 +11,7 @@ import {
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages";
+import { CertificateChoice } from "./Certificate";
 import * as Compile from "./Compile";
 import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
 import {
@@ -378,6 +379,7 @@ export async function run(
   webSocketState: WebSocketState | undefined,
   project: Project,
   portChoice: PortChoice,
+  certificateChoice: CertificateChoice,
   hotKillManager: HotKillManager
 ): Promise<HotRunResult> {
   const exitOnError = __ELM_WATCH_EXIT_ON_ERROR in env;
@@ -391,6 +393,7 @@ export async function run(
       webSocketState,
       project,
       portChoice,
+      certificateChoice,
       hotKillManager
     ),
     init: init(getNow(), restartReasons, project.elmJsonsErrors),
@@ -464,6 +467,7 @@ const initMutable =
     webSocketState: WebSocketState | undefined,
     project: Project,
     portChoice: PortChoice,
+    certificateChoice: CertificateChoice,
     hotKillManager: HotKillManager
   ) =>
   (
@@ -514,7 +518,7 @@ const initMutable =
     );
 
     const {
-      webSocketServer = new WebSocketServer(portChoice),
+      webSocketServer = new WebSocketServer(portChoice, certificateChoice),
       webSocketConnections = [],
     } = webSocketState ?? {};
 

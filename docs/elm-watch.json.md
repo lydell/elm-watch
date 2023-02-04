@@ -23,6 +23,10 @@ type ElmWatchJson = {
       output: string;
     };
   };
+  certificate?: {
+    cert: string;
+    key: string;
+  };
 };
 ```
 
@@ -47,6 +51,10 @@ Example:
             ],
             "output": "build/other/dist.js"
         }
+    },
+    "certificate": {
+        "cert": "./ssl/le-certs/foo.crt",
+        "key": "./ssl/le-certs/foo.key"
     }
 }
 ```
@@ -56,6 +64,7 @@ Example:
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
 | [postprocess](../postprocess/) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | WebSocket port for hot reloading. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
+| certificate | `Certificate` | A self-signed certificate for `localhost`. | WebSocket certificate for hot reloading. In case you can generate a trusted certificate. |
 
 ## targets
 

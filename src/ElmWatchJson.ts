@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
 
+import { Certificate } from "./Certificate";
 import { JsonError, toError, toJsonError } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 import {
@@ -92,6 +93,7 @@ const Config = Decode.fieldsAuto(
     targets: Decode.chain(Decode.record(Target), targetRecordHelper),
     postprocess: Decode.optional(NonEmptyArray(Decode.string)),
     port: Decode.optional(Port),
+    certificate: Decode.optional(Certificate),
   },
   { exact: "throw" }
 );

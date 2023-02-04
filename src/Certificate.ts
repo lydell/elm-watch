@@ -21,6 +21,38 @@ openssl req \
 
 Source: https://stackoverflow.com/a/64309893
 */
+
+import * as fs from "fs";
+import * as Decode from "tiny-decoders";
+
+const fileDecoder = Decode.chain(Decode.string, (filePath) => {
+  try {
+    return fs.readFileSync(filePath);
+  } catch (err) {
+    if (err instanceof Error) {
+      throw new Decode.DecoderError({
+        message: `File not found: ${err.message}`,
+        value: filePath,
+      });
+    } else {
+      throw new Decode.DecoderError({
+        message: `File not found`,
+        value: filePath,
+      });
+    }
+  }
+});
+
+export type Certificate = ReturnType<typeof Certificate>;
+export const Certificate = Decode.fieldsAuto({
+  key: fileDecoder,
+  cert: fileDecoder,
+});
+
+export type CertificateChoice =
+  | { tag: "CertificateFromConfig"; certificate: Certificate }
+  | { tag: "NoCertificate" };
+
 export const CERTIFICATE = {
   key: `-----BEGIN PRIVATE KEY-----
 MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQC012uZX87KEVJA
