@@ -514,7 +514,10 @@ const initMutable =
     );
 
     const {
-      webSocketServer = new WebSocketServer(portChoice),
+      webSocketServer = new WebSocketServer(
+        portChoice,
+        project.elmWatchJsonPath
+      ),
       webSocketConnections = [],
     } = webSocketState ?? {};
 

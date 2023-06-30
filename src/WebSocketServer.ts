@@ -1,12 +1,17 @@
+import * as fs from "fs";
 import * as http from "http";
 import * as https from "https";
 import * as net from "net";
+import * as path from "path";
 import type { Duplex } from "stream";
 import * as util from "util";
 import WebSocket, { Server as WsServer } from "ws";
 
 import { CERTIFICATE } from "./Certificate";
+import { join, toError } from "./Helpers";
+import { absoluteDirname } from "./PathHelpers";
 import { Port, PortChoice } from "./Port";
+import { ElmWatchJsonPath } from "./Types";
 
 export type WebSocketServerMsg =
   | {
@@ -128,7 +133,7 @@ export class WebSocketServer {
 
   listening: Promise<void>;
 
-  constructor(portChoice: PortChoice) {
+  constructor(portChoice: PortChoice, elmWatchJsonPath: ElmWatchJsonPath) {
     this.dispatch = this.dispatchToQueue;
 
     this.webSocketServer.on("connection", (webSocket, request) => {
@@ -183,7 +188,18 @@ export class WebSocketServer {
     });
 
     this.polyHttpServer.onRequest((isHttps) => (request, response) => {
-      response.end(html(isHttps, request));
+      if (request.method === "GET" && request.url === "/accept") {
+        response.writeHead(200, { "Content-Type": "text/html" });
+        response.end(acceptHtmlPage(isHttps, request));
+      } else {
+        try {
+          simpleStaticFileServer(elmWatchJsonPath)(request, response);
+        } catch (unknownError) {
+          const error = toError(unknownError);
+          response.writeHead(500);
+          response.end(error.message);
+        }
+      }
     });
 
     this.polyHttpServer.onUpgrade((request, socket, head) => {
@@ -235,15 +251,14 @@ export class WebSocketServer {
   }
 }
 
-function html(isHttps: boolean, request: http.IncomingMessage): string {
-  const { host, referer } = request.headers;
+function baseHtml(title: string, body: string): string {
   return `
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>elm-watch</title>
+    <title>${title} - elm-watch</title>
     <style>
       html {
         font-family: system-ui, sans-serif;
@@ -251,27 +266,221 @@ function html(isHttps: boolean, request: http.IncomingMessage): string {
     </style>
   </head>
   <body>
-    <p>ℹ️ This is the elm-watch WebSocket server.</p>
-    ${
-      request.url === "/accept"
-        ? isHttps
-          ? `<p>✅ Certificate accepted. You may now ${maybeLink(
-              referer !== undefined && new URL(referer).host !== host
-                ? referer
-                : undefined,
-              "return to your page"
-            )}.</p>`
-          : `<p>Did you mean to go to the ${maybeLink(
-              host !== undefined ? `https://${host}${request.url}` : undefined,
-              "HTTPS version of this page"
-            )} to accept elm-watch's self-signed certificate?</p>`
-        : `<p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>`
-    }
+    ${body.trim()}
+    <hr />
+    <p>ℹ️ This is the elm-watch WebSocket and simple HTTP server.</p>
   </body>
 </html>
   `.trim();
 }
 
+function indexHtml(url: string, entries: Array<fs.Dirent>): string {
+  return baseHtml(
+    url,
+    // TODO: esbuild new version is much nicer
+    `
+<h1>${escapeHtml(url)}</h1>
+<ul>
+${url === "/" ? "" : `<li><a href="..">..</a></li>`}
+${join(
+  entries.map(
+    (entry) =>
+      `<li><a href="${escapeHtml(entry.name)}">${escapeHtml(
+        entry.name
+      )}</a></li>`
+  ),
+  "\n"
+)}
+</ul>
+  `
+  );
+}
+
+function escapeHtml(string: string): string {
+  return string.replace(/[&<>"']/g, (match) => {
+    switch (match) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&apos;";
+      default:
+        throw new Error(`Unexpected escapeHtml character: ${match}`);
+    }
+  });
+}
+
+function acceptHtmlPage(
+  isHttps: boolean,
+  request: http.IncomingMessage
+): string {
+  const { host, referer } = request.headers;
+  return baseHtml(
+    "Certificate",
+    isHttps
+      ? `<p>✅ Certificate accepted. You may now ${maybeLink(
+          referer !== undefined && new URL(referer).host !== host
+            ? referer
+            : undefined,
+          "return to your page"
+        )}.</p>`
+      : `<p>Did you mean to go to the ${maybeLink(
+          host !== undefined && request.url !== undefined
+            ? `https://${host}${request.url}`
+            : undefined,
+          "HTTPS version of this page"
+        )} to accept elm-watch's self-signed certificate?</p>`
+  );
+}
+
 function maybeLink(href: string | undefined, text: string): string {
   return href === undefined ? text : `<a href="${href}">${text}</a>`;
+}
+
+// Note: This function may throw file system errors.
+function simpleStaticFileServer(
+  elmWatchJsonPath: ElmWatchJsonPath
+): http.RequestListener {
+  return (request, response) => {
+    switch (request.method) {
+      // TODO: Don’t send body for HEAD.
+      case "HEAD":
+      case "GET": {
+        // In my testing:
+        // - `request.url` always starts with a `/`.
+        // - Never contains `../` or `./` – those have already been resolved somewhere.
+        // - Mixing backslash and forward slash works fine on Windows.
+        const { url = "/" } = request;
+        const fsPath =
+          absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath).absolutePath +
+          url;
+
+        switch (statSync(fsPath)) {
+          case "NotFound":
+            // TODO: Add HTML to response.
+            response.writeHead(404);
+            response.end();
+            break;
+
+          case "File":
+            serveFile(fsPath)(request, response);
+            break;
+
+          case "Directory":
+            if (url.endsWith("/")) {
+              const indexFile = `${fsPath}index.html`;
+              switch (statSync(indexFile)) {
+                case "File":
+                  serveFile(indexFile)(request, response);
+                  break;
+
+                case "Directory":
+                case "Other":
+                case "NotFound": {
+                  const entries = fs.readdirSync(fsPath, {
+                    withFileTypes: true,
+                  });
+                  response.writeHead(200, { "Content-Type": "text/html" });
+                  response.end(indexHtml(url, entries));
+                  break;
+                }
+              }
+            } else {
+              response.writeHead(302, { Location: `${url}/` });
+              response.end();
+            }
+            break;
+
+          case "Other":
+            // TODO: Add HTML to response.
+            response.writeHead(404);
+            response.end();
+        }
+        break;
+      }
+
+      default:
+        // TODO: Add HTML to response.
+        response.writeHead(405, { Allow: "GET, HEAD" });
+        response.end();
+        break;
+    }
+  };
+}
+
+function statSync(fsPath: string): "Directory" | "File" | "NotFound" | "Other" {
+  try {
+    const stats = fs.statSync(fsPath);
+    return stats.isFile()
+      ? "File"
+      : stats.isDirectory()
+      ? "Directory"
+      : "Other";
+  } catch (unknownError) {
+    const error = toError(unknownError);
+    if (error.code === "ENOENT") {
+      return "NotFound";
+    }
+    throw error;
+  }
+}
+
+// Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
+const MIME_TYPES: Record<string, string> = {
+  // Text
+  ".css": "text/css; charset=utf-8",
+  ".htm": "text/html; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".markdown": "text/markdown; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".xhtml": "application/xhtml+xml; charset=utf-8",
+  ".xml": "text/xml; charset=utf-8",
+
+  // Images
+  ".avif": "image/avif",
+  ".gif": "image/gif",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+
+  // Fonts
+  ".eot": "application/vnd.ms-fontobject",
+  ".otf": "font/otf",
+  ".sfnt": "font/sfnt",
+  ".ttf": "font/ttf",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+
+  // Other
+  ".pdf": "application/pdf",
+  ".wasm": "application/wasm",
+  ".webmanifest": "application/manifest+json",
+};
+
+function serveFile(fsPath: string): http.RequestListener {
+  return (_request, response) => {
+    const readStream = fs.createReadStream(fsPath);
+    readStream.on("error", (error) => {
+      response.writeHead(500);
+      response.end(error.message);
+    });
+    readStream.on("open", () => {
+      response.writeHead(200, {
+        "Content-Type":
+          MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
+          "application/octet-stream",
+      });
+    });
+    readStream.pipe(response, { end: true });
+  };
 }
