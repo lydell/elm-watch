@@ -1,0 +1,283 @@
+import * as fs from "fs";
+import * as http from "http";
+import * as path from "path";
+
+import { join, toError } from "./Helpers";
+import { absoluteDirname } from "./PathHelpers";
+import { ElmWatchJsonPath } from "./Types";
+
+// Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
+const MIME_TYPES: Record<string, string> = {
+  // Text
+  ".css": "text/css; charset=utf-8",
+  ".htm": "text/html; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".markdown": "text/markdown; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".xhtml": "application/xhtml+xml; charset=utf-8",
+  ".xml": "text/xml; charset=utf-8",
+
+  // Images
+  ".avif": "image/avif",
+  ".gif": "image/gif",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+
+  // Fonts
+  ".eot": "application/vnd.ms-fontobject",
+  ".otf": "font/otf",
+  ".sfnt": "font/sfnt",
+  ".ttf": "font/ttf",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+
+  // Other
+  ".pdf": "application/pdf",
+  ".wasm": "application/wasm",
+  ".webmanifest": "application/manifest+json",
+};
+
+function baseHtml(title: string, body: string): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(title)} - elm-watch</title>
+    <style>
+      html {
+        font-family: system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    ${body.trim()}
+    <hr />
+    <p>ℹ️ This is the elm-watch WebSocket and simple HTTP server.</p>
+  </body>
+</html>
+  `.trim();
+}
+
+function indexHtml(url: string, entries: Array<fs.Dirent>): string {
+  return baseHtml(
+    url,
+    // TODO: esbuild new version is much nicer
+    `
+<h1>${escapeHtml(url)}</h1>
+<ul>
+${url === "/" ? "" : `<li><a href="..">..</a></li>`}
+${join(
+  entries.map(
+    (entry) =>
+      `<li><a href="${escapeHtml(entry.name)}">${escapeHtml(
+        entry.name
+      )}</a></li>`
+  ),
+  "\n"
+)}
+</ul>
+  `
+  );
+}
+
+export function acceptHtml(
+  isHttps: boolean,
+  request: http.IncomingMessage
+): string {
+  const { host, referer } = request.headers;
+  return baseHtml(
+    "Certificate",
+    isHttps
+      ? `<p>✅ Certificate accepted. You may now ${maybeLink(
+          referer !== undefined && new URL(referer).host !== host
+            ? referer
+            : undefined,
+          "return to your page"
+        )}.</p>`
+      : `<p>Did you mean to go to the ${maybeLink(
+          host !== undefined && request.url !== undefined
+            ? `https://${host}${request.url}`
+            : undefined,
+          "HTTPS version of this page"
+        )} to accept elm-watch's self-signed certificate?</p>`
+  );
+}
+
+export function errorHtml(errorMessage: string): string {
+  if (errorMessage.includes("\n")) {
+    const firstRow = errorMessage.split("\n").slice(0, 1).join("");
+    return baseHtml(
+      firstRow,
+      `<h1>${escapeHtml(firstRow)}</h1><pre>${escapeHtml(errorMessage)}</pre>`
+    );
+  } else {
+    return baseHtml(errorMessage, `<h1>${escapeHtml(errorMessage)}</h1>`);
+  }
+}
+
+function escapeHtml(string: string): string {
+  return string.replace(/[&<>"']/g, (match) => {
+    switch (match) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&apos;";
+      default:
+        throw new Error(`Unexpected escapeHtml character: ${match}`);
+    }
+  });
+}
+
+function maybeLink(href: string | undefined, text: string): string {
+  return href === undefined ? text : `<a href="${href}">${text}</a>`;
+}
+
+export function respondHtml(
+  response: http.ServerResponse,
+  statusCode: number,
+  html: string
+): void {
+  response.writeHead(statusCode, { "Content-Type": "text/html" });
+  response.end(html);
+}
+
+function respondNotFound(response: http.ServerResponse): void {
+  respondHtml(response, 404, errorHtml("404 - Not found"));
+}
+
+// Note: This function may throw file system errors.
+export function serveStatic(
+  elmWatchJsonPath: ElmWatchJsonPath
+): http.RequestListener {
+  return (request, response) => {
+    switch (request.method) {
+      case "HEAD":
+      case "GET": {
+        // In my testing:
+        // - `request.url` always starts with a `/`.
+        // - Never contains `../` or `./` – those have already been resolved somewhere.
+        // - Mixing backslash and forward slash works fine on Windows.
+        const { url = "/" } = request;
+        const fsPath =
+          absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath).absolutePath +
+          url;
+
+        switch (statSync(fsPath)) {
+          case "NotFound":
+            respondNotFound(response);
+            break;
+
+          case "File":
+            serveFile(fsPath, request.method, response);
+            break;
+
+          case "Directory":
+            if (url.endsWith("/")) {
+              const indexFile = `${fsPath}index.html`;
+              switch (statSync(indexFile)) {
+                case "File":
+                  serveFile(indexFile, request.method, response);
+                  break;
+
+                case "Directory":
+                case "Other":
+                case "NotFound": {
+                  const entries = fs.readdirSync(fsPath, {
+                    withFileTypes: true,
+                  });
+                  respondHtml(
+                    response,
+                    200,
+                    request.method === "HEAD" ? "" : indexHtml(url, entries)
+                  );
+                  break;
+                }
+              }
+            } else {
+              response.writeHead(302, { Location: `${url}/` });
+              response.end();
+            }
+            break;
+
+          case "Other":
+            respondNotFound(response);
+        }
+        break;
+      }
+
+      default:
+        response.writeHead(405, { Allow: "GET, HEAD" });
+        response.end(
+          errorHtml(
+            `Only GET and HEAD requests are supported. Got: ${
+              request.method ?? "(none)"
+            }`
+          )
+        );
+        break;
+    }
+  };
+}
+
+function serveFile(
+  fsPath: string,
+  method: "GET" | "HEAD",
+  response: http.ServerResponse
+): void {
+  const writeContentType = (): void => {
+    response.writeHead(200, {
+      "Content-Type":
+        MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
+        "application/octet-stream",
+    });
+  };
+  switch (method) {
+    case "HEAD":
+      writeContentType();
+      response.end();
+      break;
+
+    case "GET": {
+      const readStream = fs.createReadStream(fsPath);
+      readStream.on("error", (error) => {
+        respondHtml(response, 500, errorHtml(error.message));
+      });
+      readStream.on("open", () => {
+        writeContentType();
+      });
+      readStream.pipe(response, { end: true });
+      break;
+    }
+  }
+}
+
+function statSync(fsPath: string): "Directory" | "File" | "NotFound" | "Other" {
+  try {
+    const stats = fs.statSync(fsPath);
+    return stats.isFile()
+      ? "File"
+      : stats.isDirectory()
+      ? "Directory"
+      : "Other";
+  } catch (unknownError) {
+    const error = toError(unknownError);
+    if (error.code === "ENOENT") {
+      return "NotFound";
+    }
+    throw error;
+  }
+}
