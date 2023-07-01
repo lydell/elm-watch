@@ -1,6 +1,7 @@
 import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
 import { URLSearchParams } from "url";
@@ -2801,24 +2802,35 @@ function printMessageWithTimeAndEmoji({
 
 function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
+  const port = mutable.webSocketServer.port.thePort;
+  const networkIps = Object.values(os.networkInterfaces())
+    .flatMap((addresses = []) =>
+      addresses.filter(
+        (address) => address.family === "IPv4" && !address.internal
+      )
+    )
+    .map(({ address }) => address);
   return join(
     [
-      numWorkers > 0
-        ? `${dim(`${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
-        : undefined,
+      `${dim("server:")} http://localhost:${port}${join(
+        networkIps.map((ip) => `${dim(", network:")} http://${ip}:${port}`),
+        ""
+      )}`,
       `${dim("web socket connections:")} ${
         mutable.webSocketConnections.length
-      } ${dim(`(ws://0.0.0.0:${mutable.webSocketServer.port.thePort})`)}`,
-    ].flatMap((part) =>
-      part === undefined
-        ? []
-        : Compile.printStatusLine({
-            maxWidth: Infinity,
-            fancy: loggerConfig.fancy,
-            isTTY: loggerConfig.isTTY,
-            emojiName: "Stats",
-            string: part,
-          })
+      }${
+        numWorkers > 0
+          ? `${dim(`, ${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
+          : ""
+      }`,
+    ].map((part) =>
+      Compile.printStatusLine({
+        maxWidth: Infinity,
+        fancy: loggerConfig.fancy,
+        isTTY: loggerConfig.isTTY,
+        emojiName: "Stats",
+        string: part,
+      })
     ),
     "\n"
   );
