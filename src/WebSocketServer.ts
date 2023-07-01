@@ -189,15 +189,12 @@ export class WebSocketServer {
 
     this.polyHttpServer.onRequest((isHttps) => (request, response) => {
       if (request.method === "GET" && request.url === "/accept") {
-        response.writeHead(200, { "Content-Type": "text/html" });
-        response.end(acceptHtmlPage(isHttps, request));
+        respondHtml(response, 200, acceptHtmlPage(isHttps, request));
       } else {
         try {
           simpleStaticFileServer(elmWatchJsonPath)(request, response);
         } catch (unknownError) {
-          const error = toError(unknownError);
-          response.writeHead(500);
-          response.end(error.message);
+          respondHtml(response, 500, errorHtml(toError(unknownError).message));
         }
       }
     });
@@ -258,7 +255,7 @@ function baseHtml(title: string, body: string): string {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title} - elm-watch</title>
+    <title>${escapeHtml(title)} - elm-watch</title>
     <style>
       html {
         font-family: system-ui, sans-serif;
@@ -296,25 +293,6 @@ ${join(
   );
 }
 
-function escapeHtml(string: string): string {
-  return string.replace(/[&<>"']/g, (match) => {
-    switch (match) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      case "'":
-        return "&apos;";
-      default:
-        throw new Error(`Unexpected escapeHtml character: ${match}`);
-    }
-  });
-}
-
 function acceptHtmlPage(
   isHttps: boolean,
   request: http.IncomingMessage
@@ -338,8 +316,39 @@ function acceptHtmlPage(
   );
 }
 
+function errorHtml(errorMessage: string): string {
+  if (errorMessage.includes("\n")) {
+    const firstRow = errorMessage.split("\n").slice(0, 1).join("");
+    return baseHtml(
+      firstRow,
+      `<h1>${escapeHtml(firstRow)}</h1><pre>${escapeHtml(errorMessage)}</pre>`
+    );
+  } else {
+    return baseHtml(errorMessage, `<h1>${escapeHtml(errorMessage)}</h1>`);
+  }
+}
+
 function maybeLink(href: string | undefined, text: string): string {
   return href === undefined ? text : `<a href="${href}">${text}</a>`;
+}
+
+function escapeHtml(string: string): string {
+  return string.replace(/[&<>"']/g, (match) => {
+    switch (match) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&apos;";
+      default:
+        throw new Error(`Unexpected escapeHtml character: ${match}`);
+    }
+  });
 }
 
 // Note: This function may throw file system errors.
@@ -348,7 +357,6 @@ function simpleStaticFileServer(
 ): http.RequestListener {
   return (request, response) => {
     switch (request.method) {
-      // TODO: Don’t send body for HEAD.
       case "HEAD":
       case "GET": {
         // In my testing:
@@ -362,13 +370,11 @@ function simpleStaticFileServer(
 
         switch (statSync(fsPath)) {
           case "NotFound":
-            // TODO: Add HTML to response.
-            response.writeHead(404);
-            response.end();
+            respondNotFound(response);
             break;
 
           case "File":
-            serveFile(fsPath)(request, response);
+            serveFile(fsPath, request.method, response);
             break;
 
           case "Directory":
@@ -376,7 +382,7 @@ function simpleStaticFileServer(
               const indexFile = `${fsPath}index.html`;
               switch (statSync(indexFile)) {
                 case "File":
-                  serveFile(indexFile)(request, response);
+                  serveFile(indexFile, request.method, response);
                   break;
 
                 case "Directory":
@@ -385,8 +391,11 @@ function simpleStaticFileServer(
                   const entries = fs.readdirSync(fsPath, {
                     withFileTypes: true,
                   });
-                  response.writeHead(200, { "Content-Type": "text/html" });
-                  response.end(indexHtml(url, entries));
+                  respondHtml(
+                    response,
+                    200,
+                    request.method === "HEAD" ? "" : indexHtml(url, entries)
+                  );
                   break;
                 }
               }
@@ -397,17 +406,20 @@ function simpleStaticFileServer(
             break;
 
           case "Other":
-            // TODO: Add HTML to response.
-            response.writeHead(404);
-            response.end();
+            respondNotFound(response);
         }
         break;
       }
 
       default:
-        // TODO: Add HTML to response.
         response.writeHead(405, { Allow: "GET, HEAD" });
-        response.end();
+        response.end(
+          errorHtml(
+            `Only GET and HEAD requests are supported. Got: ${
+              request.method ?? "(none)"
+            }`
+          )
+        );
         break;
     }
   };
@@ -467,20 +479,47 @@ const MIME_TYPES: Record<string, string> = {
   ".webmanifest": "application/manifest+json",
 };
 
-function serveFile(fsPath: string): http.RequestListener {
-  return (_request, response) => {
-    const readStream = fs.createReadStream(fsPath);
-    readStream.on("error", (error) => {
-      response.writeHead(500);
-      response.end(error.message);
+function serveFile(
+  fsPath: string,
+  method: "GET" | "HEAD",
+  response: http.ServerResponse
+): void {
+  const writeContentType = (): void => {
+    response.writeHead(200, {
+      "Content-Type":
+        MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
+        "application/octet-stream",
     });
-    readStream.on("open", () => {
-      response.writeHead(200, {
-        "Content-Type":
-          MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
-          "application/octet-stream",
-      });
-    });
-    readStream.pipe(response, { end: true });
   };
+  switch (method) {
+    case "HEAD":
+      writeContentType();
+      response.end();
+      break;
+
+    case "GET": {
+      const readStream = fs.createReadStream(fsPath);
+      readStream.on("error", (error) => {
+        respondHtml(response, 500, errorHtml(error.message));
+      });
+      readStream.on("open", () => {
+        writeContentType();
+      });
+      readStream.pipe(response, { end: true });
+      break;
+    }
+  }
+}
+
+function respondHtml(
+  response: http.ServerResponse,
+  statusCode: number,
+  html: string
+): void {
+  response.writeHead(statusCode, { "Content-Type": "text/html" });
+  response.end(html);
+}
+
+function respondNotFound(response: http.ServerResponse): void {
+  respondHtml(response, 404, errorHtml("404 - Not found"));
 }
