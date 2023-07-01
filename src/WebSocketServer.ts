@@ -50,16 +50,19 @@ class PolyHttpServer {
 
   private https = https.createServer(CERTIFICATE);
 
+  private sockets = new Set<net.Socket>();
+
   constructor() {
     this.net.on("connection", (socket) => {
+      this.sockets.add(socket);
+      socket.once("close", () => {
+        this.sockets.delete(socket);
+      });
       socket.once("data", (buffer) => {
         socket.pause();
         const server = buffer[0] === 22 ? this.https : this.http;
         socket.unshift(buffer);
         server.emit("connection", socket);
-        server.on("close", () => {
-          socket.destroy();
-        });
         process.nextTick(() => socket.resume());
       });
     });
@@ -70,6 +73,10 @@ class PolyHttpServer {
   }
 
   async close(): Promise<void> {
+    for (const socket of this.sockets) {
+      socket.destroy();
+    }
+
     return new Promise((resolve, reject) => {
       let numClosed = 0;
       const callback = (
