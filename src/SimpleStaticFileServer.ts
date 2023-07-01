@@ -274,20 +274,15 @@ function serveFile(
   request: http.IncomingMessage,
   response: http.ServerResponse
 ): void {
-  const writeContentType = (
-    statusCode: number,
-    headers: http.OutgoingHttpHeaders = {}
-  ): void => {
-    response.writeHead(statusCode, {
-      "Content-Type":
-        MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
-        "application/octet-stream",
-      ...headers,
-    });
+  const contentType = {
+    "Content-Type":
+      MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
+      "application/octet-stream",
   };
+
   switch (request.method) {
     case "HEAD":
-      writeContentType(200);
+      response.writeHead(200, contentType);
       response.end();
       break;
 
@@ -302,9 +297,10 @@ function serveFile(
       });
       readStream.on("open", () => {
         if (maybeRange === undefined) {
-          writeContentType(200);
+          response.writeHead(200, contentType);
         } else {
-          writeContentType(206, {
+          response.writeHead(206, {
+            ...contentType,
             "Content-Range": `bytes ${range.start}-${range.end}/${fsSize}`,
             "Content-Length": range.end - range.start + 1,
           });
