@@ -50,37 +50,68 @@ function baseHtml(title: string, body: string): string {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(title)} - elm-watch</title>
+    <title>${escapeHtml(title)} – elm-watch</title>
     <style>
-      html {
-        font-family: system-ui, sans-serif;
+      html { font-family: system-ui, sans-serif; padding: clamp(0.5rem, 3vw, 2rem); }
+      h1 { margin-top: 0; }
+      ul { padding-left: 0; }
+      li { list-style: none; }
+      li::before { content: attr(data-marker) " "; }
+      a:not(:hover) { text-decoration: none; }
+      a { color: #0000ff; }
+      a:visited { color: #0070c1; }
+      @media (prefers-color-scheme: dark) {
+        html { color: #c8c8c8; background: #1e1e1e; }
+        a { color: #4fc1ff; }
+        a:visited { color: #569cd6; }
       }
     </style>
   </head>
   <body>
     ${body.trim()}
-    <hr />
-    <p>ℹ️ This is the elm-watch WebSocket and simple HTTP server.</p>
+    <p><small>ℹ️ This is the elm-watch WebSocket and simple HTTP server.</small></p>
   </body>
 </html>
   `.trim();
 }
 
 function indexHtml(url: string, entries: Array<fs.Dirent>): string {
+  const segments = url.split("/").slice(0, -1);
+  const lastIndex = segments.length - 1;
+  const title = join(
+    segments.map((segment, index) =>
+      index === lastIndex
+        ? `${escapeHtml(segment)}/`
+        : `<a href="${escapeHtml(
+            join(segments.slice(0, index + 1), "/")
+          )}/">${escapeHtml(segment)}/</a>`
+    ),
+    ""
+  );
   return baseHtml(
     url,
-    // TODO: esbuild new version is much nicer
     `
-<h1>${escapeHtml(url)}</h1>
+<h1>${title}</h1>
 <ul>
-${url === "/" ? "" : `<li><a href="..">..</a></li>`}
+${url === "/" ? "" : `<li data-marker="📁"><a href="..">../</a></li>`}
 ${join(
-  entries.map(
-    (entry) =>
-      `<li><a href="${escapeHtml(entry.name)}">${escapeHtml(
-        entry.name
-      )}</a></li>`
-  ),
+  entries
+    .flatMap((entry) =>
+      entry.isFile()
+        ? [
+            `<li data-marker="📄"><a href="${escapeHtml(
+              entry.name
+            )}">${escapeHtml(entry.name)}</a></li>`,
+          ]
+        : entry.isDirectory()
+        ? [
+            `<li data-marker="📁"><a href="${escapeHtml(
+              entry.name
+            )}">${escapeHtml(entry.name)}/</a></li>`,
+          ]
+        : []
+    )
+    .sort(),
   "\n"
 )}
 </ul>
@@ -107,13 +138,13 @@ export function acceptHtml(
             ? `https://${host}${request.url}`
             : undefined,
           "HTTPS version of this page"
-        )} to accept elm-watch's self-signed certificate?</p>`
+        )} to accept elm-watch’s self-signed certificate?</p>`
   );
 }
 
 export function errorHtml(errorMessage: string): string {
   if (errorMessage.includes("\n")) {
-    const firstRow = errorMessage.split("\n").slice(0, 1).join("");
+    const firstRow = join(errorMessage.split("\n").slice(0, 1), "");
     return baseHtml(
       firstRow,
       `<h1>${escapeHtml(firstRow)}</h1><pre>${escapeHtml(errorMessage)}</pre>`
@@ -151,7 +182,9 @@ export function respondHtml(
   statusCode: number,
   html: string
 ): void {
-  response.writeHead(statusCode, { "Content-Type": "text/html" });
+  response.writeHead(statusCode, {
+    "Content-Type": "text/html; charset=utf-8",
+  });
   response.end(html);
 }
 
