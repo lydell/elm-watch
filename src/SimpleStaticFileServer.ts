@@ -209,21 +209,23 @@ export function serveStatic(
           absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath).absolutePath +
           url;
 
-        switch (statSync(fsPath)) {
+        const stats = statSync(fsPath);
+        switch (stats.tag) {
           case "NotFound":
             respondNotFound(response);
             break;
 
           case "File":
-            serveFile(fsPath, request.method, response);
+            serveFile(fsPath, stats.size, request, response);
             break;
 
           case "Directory":
             if (url.endsWith("/")) {
               const indexFile = `${fsPath}index.html`;
-              switch (statSync(indexFile)) {
+              const indexStats = statSync(indexFile);
+              switch (indexStats.tag) {
                 case "File":
-                  serveFile(indexFile, request.method, response);
+                  serveFile(indexFile, indexStats.size, request, response);
                   break;
 
                 case "Directory":
@@ -268,29 +270,45 @@ export function serveStatic(
 
 function serveFile(
   fsPath: string,
-  method: "GET" | "HEAD",
+  fsSize: number,
+  request: http.IncomingMessage,
   response: http.ServerResponse
 ): void {
-  const writeContentType = (): void => {
-    response.writeHead(200, {
+  const writeContentType = (
+    statusCode: number,
+    headers: http.OutgoingHttpHeaders = {}
+  ): void => {
+    response.writeHead(statusCode, {
       "Content-Type":
         MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
         "application/octet-stream",
+      ...headers,
     });
   };
-  switch (method) {
+  switch (request.method) {
     case "HEAD":
-      writeContentType();
+      writeContentType(200);
       response.end();
       break;
 
-    case "GET": {
-      const readStream = fs.createReadStream(fsPath);
+    default: {
+      const rangeHeader = request.headers.range;
+      const maybeRange =
+        rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
+      const range = maybeRange ?? { start: 0, end: Infinity };
+      const readStream = fs.createReadStream(fsPath, range);
       readStream.on("error", (error) => {
         respondHtml(response, 500, errorHtml(error.message));
       });
       readStream.on("open", () => {
-        writeContentType();
+        if (maybeRange === undefined) {
+          writeContentType(200);
+        } else {
+          writeContentType(206, {
+            "Content-Range": `bytes ${range.start}-${range.end}/${fsSize}`,
+            "Content-Length": range.end - range.start + 1,
+          });
+        }
       });
       readStream.pipe(response, { end: true });
       break;
@@ -298,19 +316,40 @@ function serveFile(
   }
 }
 
-function statSync(fsPath: string): "Directory" | "File" | "NotFound" | "Other" {
+function statSync(
+  fsPath: string
+):
+  | { tag: "Directory" }
+  | { tag: "File"; size: number }
+  | { tag: "NotFound" }
+  | { tag: "Other" } {
   try {
     const stats = fs.statSync(fsPath);
     return stats.isFile()
-      ? "File"
+      ? { tag: "File", size: stats.size }
       : stats.isDirectory()
-      ? "Directory"
-      : "Other";
+      ? { tag: "Directory" }
+      : { tag: "Other" };
   } catch (unknownError) {
     const error = toError(unknownError);
     if (error.code === "ENOENT") {
-      return "NotFound";
+      return { tag: "NotFound" };
     }
     throw error;
   }
+}
+
+// This only supports what Safari sends when using the `<video>` element.
+// See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
+const RANGE_REGEX = /^bytes=(\d+)-(\d+)$/;
+
+function parseRangeHeader(
+  rangeHeader: string
+): { start: number; end: number } | undefined {
+  const match = RANGE_REGEX.exec(rangeHeader);
+  if (match === null) {
+    return undefined;
+  }
+  const [, start = "0", end = "Infinity"] = match;
+  return { start: Number(start), end: Number(end) };
 }
