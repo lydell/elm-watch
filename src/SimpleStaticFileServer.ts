@@ -184,6 +184,7 @@ export function respondHtml(
 ): void {
   response.writeHead(statusCode, {
     "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": Buffer.byteLength(html),
   });
   response.end(html);
 }
