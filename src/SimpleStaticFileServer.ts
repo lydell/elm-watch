@@ -296,7 +296,10 @@ function serveFile(
       });
       readStream.on("open", () => {
         if (range === undefined) {
-          response.writeHead(200, contentType);
+          response.writeHead(200, {
+            ...contentType,
+            "Content-Length": fsSize,
+          });
         } else {
           response.writeHead(206, {
             ...contentType,
