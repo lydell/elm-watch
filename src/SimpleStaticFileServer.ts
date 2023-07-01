@@ -288,15 +288,14 @@ function serveFile(
 
     default: {
       const rangeHeader = request.headers.range;
-      const maybeRange =
+      const range =
         rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
-      const range = maybeRange ?? { start: 0, end: Infinity };
       const readStream = fs.createReadStream(fsPath, range);
       readStream.on("error", (error) => {
         respondHtml(response, 500, errorHtml(error.message));
       });
       readStream.on("open", () => {
-        if (maybeRange === undefined) {
+        if (range === undefined) {
           response.writeHead(200, contentType);
         } else {
           response.writeHead(206, {
