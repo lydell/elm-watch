@@ -186,11 +186,6 @@ export class WebSocketServer {
     });
 
     this.polyHttpServer.onRequest((isHttps) => (request, response) => {
-      // Copied from: https://github.com/nodejs/node/issues/2642#issuecomment-1427461414
-      // Otherwise `httpServer.close()` never finishes (it waits for open connections).
-      response.on("finish", () => {
-        request.socket.destroy();
-      });
       if (request.method === "GET" && request.url === "/accept") {
         SimpleStaticFileServer.respondHtml(
           response,
