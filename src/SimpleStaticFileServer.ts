@@ -416,9 +416,7 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
                   break;
               }
             } else if (url.endsWith("/?")) {
-              const entries = fs.readdirSync(fsPath, {
-                withFileTypes: true,
-              });
+              const entries = fs.readdirSync(fsPath, { withFileTypes: true });
               respondHtml(
                 response,
                 200,
