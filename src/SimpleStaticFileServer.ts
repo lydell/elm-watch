@@ -77,7 +77,7 @@ function baseHtml(faviconEmoji: string, title: string, body: string): string {
   </head>
   <body>
     ${body.trim()}
-    <p style="margin-top: 2em"><small>ℹ️ This is the elm-watch WebSocket and simple HTTP server.</small></p>
+    <p style="margin-top: 2em"><small>ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small></p>
   </body>
 </html>
   `.trim();

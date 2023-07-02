@@ -36,6 +36,9 @@ npx elm-watch --help
 {: .info }  
 ℹ️ If you don’t already have an Elm project, create one by running `elm init`.
 
+{: .info }  
+ℹ️ Also make sure you have an HTML file. If it works with plain `elm make`, it works with elm-watch. See the next section for inspiration.
+
 Create a file called [elm-watch.json](../elm-watch.json/):
 
 ```
@@ -62,26 +65,27 @@ Start watching with hot reloading:
 npx elm-watch hot
 ```
 
+The command prints the link to a [local development HTTP server](./server) (which is completely optional to use, but easy to get started with).
+
 To build for production:
 
 ```
 npx elm-watch make --optimize
 ```
 
-{: .info }  
-ℹ️ elm-watch is _not_ a file server. See the next section.
-
-## Your responsibilities
+## HTML and other files
 
 elm-watch is only responsible for turning your Elm files into JS files. Like running `elm make src/Main.elm --output build/main.js` yourself. So that’s the mindset you need to have.
 
-**You are responsible for** creating an HTML file, linking to the built JS, serving files and initializing the app.
+**You are responsible for** creating an HTML file, linking to the built JS and initializing the app.
 
-- If you’re just getting started, you can create an HTML file with a relative link to the built JS and double-click it to open it in a browser.
+Here’s some HTML to get your started.
+
+- For `Browser.sandbox` and `Browser.element`:
 
   ```html
-  <!-- Relative URL to the built JS. -->
-  <script src="./build/main.js"></script>
+  <!-- Absolute URL to the built JS. -->
+  <script src="/build/main.js"></script>
   <div id="root"></div>
   <script>
     var app = Elm.Main.init({ node: document.getElementById("root") });
@@ -90,7 +94,7 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
 
   👉 [Minimal example](https://github.com/lydell/elm-watch/tree/main/example-minimal#readme)
 
-- …except if you use `Browser.application`. It doesn’t work on the `file://` protocol. There are plenty of quick little “please serve this directory on localhost” tools, though.
+- For `Browser.document` and `Browser.application`:
 
   ```html
   <!-- Absolute URL to the built JS. -->
@@ -99,8 +103,6 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
     var app = Elm.Main.init();
   </script>
   ```
-
-  👉 [Example CLI server tool](https://github.com/vercel/serve)
 
 - If you need TypeScript and CSS compilation, you need to set up another build tool alongside elm-watch.
 
