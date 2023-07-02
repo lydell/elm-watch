@@ -364,11 +364,7 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
           switch (htmlStats.tag) {
             case "File":
               // Bump the cookie expiration.
-              setHtmlFileCookie(
-                response,
-                htmlFileUrlFromCookie,
-                HTML_FILE_COOKIE_MAX_AGE
-              );
+              setHtmlFileCookie(response, htmlFileUrlFromCookie);
               serveFile(
                 htmlFsPath,
                 htmlStats.size,
@@ -412,13 +408,11 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
                     request,
                     response
                   );
-                  break;
+                  return;
 
                 case "Directory":
                 case "Other":
                 case "NotFound":
-                  response.writeHead(302, { Location: `${urlWithoutQuery}?` });
-                  response.end();
                   break;
               }
             } else if (url.endsWith("/?")) {
@@ -432,10 +426,15 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
                   ? ""
                   : indexHtml(urlWithoutQuery, htmlFileUrlFromCookie, entries)
               );
-            } else {
-              response.writeHead(302, { Location: `${urlWithoutQuery}/?` });
-              response.end();
+              return;
             }
+
+            response.writeHead(302, {
+              Location: urlWithoutQuery.endsWith("/")
+                ? `${urlWithoutQuery}?`
+                : `${urlWithoutQuery}/?`,
+            });
+            response.end();
             return;
         }
       }
@@ -567,7 +566,7 @@ function htmlFileCookieString(value: string, maxAge: number): string {
 function setHtmlFileCookie(
   response: http.ServerResponse,
   value: string,
-  maxAge: number
+  maxAge: number = HTML_FILE_COOKIE_MAX_AGE
 ): void {
   response.setHeader("Set-Cookie", htmlFileCookieString(value, maxAge));
 }
