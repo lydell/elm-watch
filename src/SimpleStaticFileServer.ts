@@ -195,9 +195,8 @@ function checkboxHtml(
   )} : ${JSON.stringify(htmlFileCookieString("x", 0))}' />
     <label for="htmlFileUrl">${label}</label>
     <small style="grid-column: 2">(except if URL ends with /?, saved in a cookie)</small>
-    <a href="${urlWithoutQuery.replace(
-      /\/\?$/,
-      ""
+    <a href="${escapeHtml(
+      urlWithoutQuery.replace(/\/\?$/, "")
     )}" style="grid-column: 2"><strong>Refresh</strong></a>
   </div>
   `;
@@ -241,7 +240,9 @@ export function errorHtml(errorMessage: string): string {
 }
 
 function maybeLink(href: string | undefined, text: string): string {
-  return href === undefined ? text : `<a href="${href}">${text}</a>`;
+  return href === undefined
+    ? text
+    : `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
 }
 
 function indexTitle(urlWithoutQuery: string): string {
@@ -275,7 +276,7 @@ function notFoundTitle(
     try {
       stats = statSync(fsPath);
     } catch {
-      html.push(`<del>${join(segments.slice(index), "/")}</del>`);
+      html.push(`<del>${escapeHtml(join(segments.slice(index), "/"))}</del>`);
       return html;
     }
 
@@ -287,7 +288,9 @@ function notFoundTitle(
           )}">${escapeHtml(segment)}</a>`
         );
         if (index < lastIndex) {
-          html.push(`<del>/${join(segments.slice(index + 1), "/")}</del>`);
+          html.push(
+            `<del>/${escapeHtml(join(segments.slice(index + 1), "/"))}</del>`
+          );
         }
         return html;
 
@@ -301,7 +304,7 @@ function notFoundTitle(
 
       case "Other":
       case "NotFound":
-        html.push(`<del>${join(segments.slice(index), "/")}</del>`);
+        html.push(`<del>${escapeHtml(join(segments.slice(index), "/"))}</del>`);
         return html;
     }
   }
