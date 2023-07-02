@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 
-import { join, toError } from "./Helpers";
+import { escapeHtml, join, toError } from "./Helpers";
 import { AbsolutePath } from "./Types";
 
 let lastHtmlFileUrlState: string | undefined = undefined;
@@ -238,25 +238,6 @@ export function errorHtml(errorMessage: string): string {
   } else {
     return baseHtml("🚨", errorMessage, `<h1>${escapeHtml(errorMessage)}</h1>`);
   }
-}
-
-function escapeHtml(string: string): string {
-  return string.replace(/[&<>"']/g, (match) => {
-    switch (match) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      case "'":
-        return "&apos;";
-      default:
-        throw new Error(`Unexpected escapeHtml character: ${match}`);
-    }
-  });
 }
 
 function maybeLink(href: string | undefined, text: string): string {

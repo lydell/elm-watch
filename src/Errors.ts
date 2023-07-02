@@ -11,6 +11,7 @@ import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
+  escapeHtml,
   join as joinString,
   JsonError,
   RESET_COLOR,
@@ -269,26 +270,6 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
     case "Text":
       return escapeHtml(piece.text);
   }
-}
-
-function escapeHtml(string: string): string {
-  return string.replace(/[&<>"']/g, (match) => {
-    switch (match) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      case "'":
-        return "&apos;";
-      // istanbul ignore next
-      default:
-        return match;
-    }
-  });
 }
 
 function fancyToPlainErrorLocation(
