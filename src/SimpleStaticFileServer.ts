@@ -3,8 +3,13 @@ import * as http from "http";
 import * as path from "path";
 
 import { join, toError } from "./Helpers";
-import { absoluteDirname } from "./PathHelpers";
-import { ElmWatchJsonPath } from "./Types";
+import { AbsolutePath } from "./Types";
+
+let lastHtmlFileUrlState: string | undefined = undefined;
+
+const HTML_FILE_COOKIE = "__elm-watch-html-file";
+const HTML_FILE_COOKIE_MAX_AGE = 31536000; // 1 year in seconds
+const ACCEPTABLE_HTML_FILE_URL = /^\/(?:[^.?]|\.(?!\.))+\.html?$/i;
 
 // Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
 const MIME_TYPES: Record<string, string> = {
@@ -65,35 +70,45 @@ function baseHtml(title: string, body: string): string {
         a { color: #4fc1ff; }
         a:visited { color: #569cd6; }
       }
+      input:not([checked]):not(:checked) ~ a,
+      input[checked]:checked ~ a { display: none; }
     </style>
   </head>
   <body>
     ${body.trim()}
-    <p><small>ℹ️ This is the elm-watch WebSocket and simple HTTP server.</small></p>
+    <p style="margin-top: 2em"><small>ℹ️ This is the elm-watch WebSocket and simple HTTP server.</small></p>
   </body>
 </html>
   `.trim();
 }
 
-function indexHtml(url: string, entries: Array<fs.Dirent>): string {
-  const segments = url.split("/").slice(0, -1);
-  const lastIndex = segments.length - 1;
-  const title = join(
-    segments.map((segment, index) =>
-      index === lastIndex
-        ? `${escapeHtml(segment)}/`
-        : `<a href="${escapeHtml(
-            join(segments.slice(0, index + 1), "/")
-          )}/">${escapeHtml(segment)}/</a>`
-    ),
-    ""
-  );
+function indexHtml(
+  urlWithoutQuery: string,
+  htmlFileUrlFromCookie: string | undefined,
+  entries: Array<fs.Dirent>
+): string {
   return baseHtml(
-    url,
+    urlWithoutQuery,
     `
-<h1>${title}</h1>
+<h1>${indexTitle(urlWithoutQuery)}</h1>
+${
+  htmlFileUrlFromCookie === undefined
+    ? ""
+    : checkboxHtml(
+        urlWithoutQuery,
+        htmlFileUrlFromCookie,
+        true,
+        `Serve on 404: <a href="${escapeHtml(
+          htmlFileUrlFromCookie
+        )}">${escapeHtml(htmlFileUrlFromCookie)}</a>`
+      )
+}
 <ul>
-${url === "/" ? "" : `<li data-marker="📁"><a href="..">../</a></li>`}
+${
+  urlWithoutQuery === "/"
+    ? ""
+    : `<li data-marker="📁"><a href="../?">../</a></li>`
+}
 ${join(
   entries
     .flatMap((entry) =>
@@ -107,7 +122,7 @@ ${join(
         ? [
             `<li data-marker="📁"><a href="${escapeHtml(
               entry.name
-            )}">${escapeHtml(entry.name)}/</a></li>`,
+            )}/?">${escapeHtml(entry.name)}/</a></li>`,
           ]
         : []
     )
@@ -117,6 +132,72 @@ ${join(
 </ul>
   `
   );
+}
+
+function notFoundHtml(
+  staticDir: AbsolutePath,
+  urlWithoutQuery: string,
+  htmlFileUrlFromCookie: string | undefined
+): string {
+  return baseHtml(
+    "Not Found",
+    `
+<h1>${notFoundTitle(staticDir, urlWithoutQuery)}</h1>
+<h2>404 – Not Found</h2>
+${notFoundHtmlFileWithCheckboxHtml(urlWithoutQuery, htmlFileUrlFromCookie)}
+    `
+  );
+}
+
+function notFoundHtmlFileWithCheckboxHtml(
+  urlWithoutQuery: string,
+  htmlFileUrlFromCookie: string | undefined
+): string {
+  return htmlFileUrlFromCookie === undefined
+    ? lastHtmlFileUrlState === undefined
+      ? ""
+      : `
+        <p>👉 Most recently served HTML file: <a href="${escapeHtml(
+          lastHtmlFileUrlState
+        )}">${escapeHtml(lastHtmlFileUrlState)}</a></p>
+        ${checkboxHtml(
+          urlWithoutQuery,
+          lastHtmlFileUrlState,
+          false,
+          "Always serve that file on 404"
+        )}
+      `
+    : checkboxHtml(
+        urlWithoutQuery,
+        htmlFileUrlFromCookie,
+        true,
+        `Serve on 404: <a href="${escapeHtml(
+          htmlFileUrlFromCookie
+        )}">${escapeHtml(htmlFileUrlFromCookie)}</a>`
+      );
+}
+
+function checkboxHtml(
+  urlWithoutQuery: string,
+  htmlFileUrl: string,
+  checked: boolean,
+  label: string
+): string {
+  return `
+  <div style="display: grid; grid-template-columns: min-content auto; gap: 0.125em 0.25em">
+    <input type="checkbox" id="htmlFileUrl" ${
+      checked ? "checked" : ""
+    } onchange='document.cookie = this.checked ? ${JSON.stringify(
+    htmlFileCookieString(htmlFileUrl, HTML_FILE_COOKIE_MAX_AGE)
+  )} : ${JSON.stringify(htmlFileCookieString("x", 0))}' />
+    <label for="htmlFileUrl">${label}</label>
+    <small style="grid-column: 2">(except if URL ends with /?, saved in a cookie)</small>
+    <a href="${urlWithoutQuery.replace(
+      /\/\?$/,
+      ""
+    )}" style="grid-column: 2"><strong>Refresh</strong></a>
+  </div>
+  `;
 }
 
 export function acceptHtml(
@@ -177,6 +258,67 @@ function maybeLink(href: string | undefined, text: string): string {
   return href === undefined ? text : `<a href="${href}">${text}</a>`;
 }
 
+function indexTitle(urlWithoutQuery: string): string {
+  const segments = urlWithoutQuery.split("/").slice(0, -1);
+  const lastIndex = segments.length - 1;
+  return join(
+    segments.map((segment, index) =>
+      index === lastIndex
+        ? `${escapeHtml(segment)}/`
+        : `<a href="${escapeHtml(
+            join(segments.slice(0, index + 1), "/")
+          )}/?">${escapeHtml(segment)}/</a>`
+    ),
+    ""
+  );
+}
+
+function notFoundTitle(
+  staticDir: AbsolutePath,
+  urlWithoutQuery: string
+): string {
+  const segments = urlWithoutQuery.split("/");
+  const lastIndex = segments.length - 1;
+  let html = "";
+
+  for (const [index, segment] of segments.entries()) {
+    const fsPath =
+      staticDir.absolutePath + join(segments.slice(0, index + 1), "/");
+
+    let stats;
+    try {
+      stats = statSync(fsPath);
+    } catch {
+      html += `<del>${join(segments.slice(index), "/")}</del>`;
+      return html;
+    }
+
+    switch (stats.tag) {
+      case "File":
+        html += `<a href="${escapeHtml(
+          join(segments.slice(0, index + 1), "/")
+        )}">${escapeHtml(segment)}</a>`;
+        if (index < lastIndex) {
+          html += `<del>/${join(segments.slice(index + 1), "/")}</del>`;
+        }
+        return html;
+
+      case "Directory":
+        html += `<a href="${escapeHtml(
+          join(segments.slice(0, index + 1), "/")
+        )}/?">${escapeHtml(segment)}/</a>`;
+        break;
+
+      case "Other":
+      case "NotFound":
+        html += `<del>${join(segments.slice(index), "/")}</del>`;
+        return html;
+    }
+  }
+
+  return html;
+}
+
 export function respondHtml(
   response: http.ServerResponse,
   statusCode: number,
@@ -189,14 +331,8 @@ export function respondHtml(
   response.end(html);
 }
 
-function respondNotFound(response: http.ServerResponse): void {
-  respondHtml(response, 404, errorHtml("404 - Not found"));
-}
-
 // Note: This function may throw file system errors.
-export function serveStatic(
-  elmWatchJsonPath: ElmWatchJsonPath
-): http.RequestListener {
+export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
   return (request, response) => {
     switch (request.method) {
       case "HEAD":
@@ -206,53 +342,110 @@ export function serveStatic(
         // - Never contains `../` or `./` – those have already been resolved somewhere.
         // - Mixing backslash and forward slash works fine on Windows.
         const { url = "/" } = request;
-        const fsPath =
-          absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath).absolutePath +
-          url;
-
+        const urlWithoutQuery = removeQuery(url);
+        const fsPath = staticDir.absolutePath + urlWithoutQuery;
         const stats = statSync(fsPath);
+        const htmlFileUrlFromCookieRaw =
+          request.headers.cookie === undefined
+            ? undefined
+            : getHtmlFileUrl(request.headers.cookie);
+
+        let htmlFileUrlFromCookie = undefined;
+        if (
+          htmlFileUrlFromCookieRaw !== undefined &&
+          ACCEPTABLE_HTML_FILE_URL.test(htmlFileUrlFromCookieRaw)
+        ) {
+          htmlFileUrlFromCookie = htmlFileUrlFromCookieRaw;
+        } else {
+          deleteHtmlFileCookie(response);
+        }
+
+        // Serve the saved HTML file for non-file requests.
+        if (
+          htmlFileUrlFromCookie !== undefined &&
+          request.method === "GET" &&
+          stats.tag !== "File" &&
+          !url.endsWith("/?") // Still allow index pages.
+        ) {
+          const htmlFsPath = staticDir.absolutePath + htmlFileUrlFromCookie;
+          const htmlStats = statSync(htmlFsPath);
+          switch (htmlStats.tag) {
+            case "File":
+              // Bump the cookie expiration.
+              setHtmlFileCookie(
+                response,
+                htmlFileUrlFromCookie,
+                HTML_FILE_COOKIE_MAX_AGE
+              );
+              serveFile(
+                htmlFsPath,
+                htmlStats.size,
+                htmlFileUrlFromCookie,
+                request,
+                response
+              );
+              return;
+
+            case "Directory":
+            case "Other":
+            case "NotFound":
+              deleteHtmlFileCookie(response);
+          }
+        }
+
         switch (stats.tag) {
           case "NotFound":
-            respondNotFound(response);
-            break;
+          case "Other":
+            respondHtml(
+              response,
+              404,
+              notFoundHtml(staticDir, urlWithoutQuery, htmlFileUrlFromCookie)
+            );
+            return;
 
           case "File":
-            serveFile(fsPath, stats.size, request, response);
-            break;
+            serveFile(fsPath, stats.size, urlWithoutQuery, request, response);
+            return;
 
           case "Directory":
             if (url.endsWith("/")) {
-              const indexFile = `${fsPath}index.html`;
-              const indexStats = statSync(indexFile);
+              const indexFsPath = `${fsPath}index.html`;
+              const indexStats = statSync(indexFsPath);
               switch (indexStats.tag) {
                 case "File":
-                  serveFile(indexFile, indexStats.size, request, response);
+                  serveFile(
+                    indexFsPath,
+                    indexStats.size,
+                    `${urlWithoutQuery}index.html`,
+                    request,
+                    response
+                  );
                   break;
 
                 case "Directory":
                 case "Other":
-                case "NotFound": {
-                  const entries = fs.readdirSync(fsPath, {
-                    withFileTypes: true,
-                  });
-                  respondHtml(
-                    response,
-                    200,
-                    request.method === "HEAD" ? "" : indexHtml(url, entries)
-                  );
+                case "NotFound":
+                  response.writeHead(302, { Location: `${urlWithoutQuery}?` });
+                  response.end();
                   break;
-                }
               }
+            } else if (url.endsWith("/?")) {
+              const entries = fs.readdirSync(fsPath, {
+                withFileTypes: true,
+              });
+              respondHtml(
+                response,
+                200,
+                request.method === "HEAD"
+                  ? ""
+                  : indexHtml(urlWithoutQuery, htmlFileUrlFromCookie, entries)
+              );
             } else {
-              response.writeHead(302, { Location: `${url}/` });
+              response.writeHead(302, { Location: `${urlWithoutQuery}/?` });
               response.end();
             }
-            break;
-
-          case "Other":
-            respondNotFound(response);
+            return;
         }
-        break;
       }
 
       default:
@@ -264,7 +457,7 @@ export function serveStatic(
             }`
           )
         );
-        break;
+        return;
     }
   };
 }
@@ -272,22 +465,28 @@ export function serveStatic(
 function serveFile(
   fsPath: string,
   fsSize: number,
+  actualUrl: string,
   request: http.IncomingMessage,
   response: http.ServerResponse
 ): void {
-  const contentType = {
-    "Content-Type":
-      MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
-      "application/octet-stream",
+  const contentType =
+    MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
+    "application/octet-stream";
+  const contentTypeHeader = {
+    "Content-Type": contentType,
   };
 
   switch (request.method) {
     case "HEAD":
-      response.writeHead(200, contentType);
+      response.writeHead(200, contentTypeHeader);
       response.end();
-      break;
+      return;
 
     default: {
+      if (contentType.startsWith("text/html;")) {
+        lastHtmlFileUrlState = actualUrl;
+      }
+
       const rangeHeader = request.headers.range;
       const range =
         rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
@@ -298,19 +497,19 @@ function serveFile(
       readStream.on("open", () => {
         if (range === undefined) {
           response.writeHead(200, {
-            ...contentType,
+            ...contentTypeHeader,
             "Content-Length": fsSize,
           });
         } else {
           response.writeHead(206, {
-            ...contentType,
+            ...contentTypeHeader,
             "Content-Range": `bytes ${range.start}-${range.end}/${fsSize}`,
             "Content-Length": range.end - range.start + 1,
           });
         }
       });
       readStream.pipe(response, { end: true });
-      break;
+      return;
     }
   }
 }
@@ -331,7 +530,7 @@ function statSync(
       : { tag: "Other" };
   } catch (unknownError) {
     const error = toError(unknownError);
-    if (error.code === "ENOENT") {
+    if (error.code === "ENOENT" || error.code === "ENOTDIR") {
       return { tag: "NotFound" };
     }
     throw error;
@@ -351,4 +550,52 @@ function parseRangeHeader(
   }
   const [, start = "0", end = "Infinity"] = match;
   return { start: Number(start), end: Number(end) };
+}
+
+function getHtmlFileUrl(cookieHeader: string): string | undefined {
+  const prefix = `${HTML_FILE_COOKIE}=`;
+  const value = cookieHeader
+    .split("; ")
+    .find((part) => part.startsWith(prefix));
+  return value === undefined
+    ? undefined
+    : decodeCookieValue(value.slice(prefix.length));
+}
+
+function htmlFileCookieString(value: string, maxAge: number): string {
+  return `${HTML_FILE_COOKIE}=${encodeCookieValue(
+    value
+  )}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+}
+
+function setHtmlFileCookie(
+  response: http.ServerResponse,
+  value: string,
+  maxAge: number
+): void {
+  response.setHeader("Set-Cookie", htmlFileCookieString(value, maxAge));
+}
+
+function deleteHtmlFileCookie(response: http.ServerResponse): void {
+  setHtmlFileCookie(response, "x", 0);
+}
+
+function decodeCookieValue(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function encodeCookieValue(value: string): string {
+  // Slashes are allowed unescaped, and makes it much easier to read the value as a human.
+  // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
+  return encodeURIComponent(value).replace(/%2F/g, "/");
+}
+
+const QUERY_REGEX = /\?[^]*$/;
+
+function removeQuery(url: string): string {
+  return url.replace(QUERY_REGEX, "");
 }

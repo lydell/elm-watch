@@ -7,6 +7,7 @@ import WebSocket, { Server as WsServer } from "ws";
 
 import { CERTIFICATE } from "./Certificate";
 import { toError } from "./Helpers";
+import { absoluteDirname } from "./PathHelpers";
 import { Port, PortChoice } from "./Port";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
 import { ElmWatchJsonPath } from "./Types";
@@ -201,10 +202,9 @@ export class WebSocketServer {
         );
       } else {
         try {
-          SimpleStaticFileServer.serveStatic(elmWatchJsonPath)(
-            request,
-            response
-          );
+          SimpleStaticFileServer.serveStatic(
+            absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath)
+          )(request, response);
         } catch (unknownError) {
           SimpleStaticFileServer.respondHtml(
             response,
