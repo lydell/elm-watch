@@ -79,7 +79,7 @@ elm-watch is only responsible for turning your Elm files into JS files. Like run
 
 **You are responsible for** creating an HTML file, linking to the built JS and initializing the app.
 
-Here’s some HTML to get your started.
+Here’s some HTML to get you started.
 
 - For `Browser.sandbox` and `Browser.element`:
 
