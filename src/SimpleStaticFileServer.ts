@@ -356,7 +356,6 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
         // Serve the saved HTML file for non-file requests.
         if (
           htmlFileUrlFromCookie !== undefined &&
-          request.method === "GET" &&
           stats.tag !== "File" &&
           !url.endsWith("/?") // Still allow index pages.
         ) {
