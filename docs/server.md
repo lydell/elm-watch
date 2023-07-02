@@ -40,4 +40,6 @@ If you want to delete that cookie and go back to getting 404s, add `/?` at the e
 
 Finally, a little hack you might find interesting. What if you have _two_ `Browser.application` programs, with different HTML files? In Firefox and Chrome, you can use subdomains for `localhost`, which each get their own cookies. So you could run one app on just `http://localhost` and another on `my-other-app.localhost`. However, this does not work in Safari or when using an IP address such as `http://192.168.0.1`. Either way, once you’ve got more than one app you might want to consider using your own dev server as mentioned in the previous section.
 
+**Note:** elm-watch’s server is _not_ for production use. If you want to deploy your app somewhere, use any file server of choice. Make sure to set it up to handle serving your HTML file so that reloading the page works.
+
 [example/]: https://github.com/lydell/elm-watch/tree/main/example#readme
