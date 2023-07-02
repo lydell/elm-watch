@@ -471,7 +471,11 @@ function serveFile(
 ): void {
   const contentType =
     MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
-    "application/octet-stream";
+    // esbuild defaults to `application/octet-stream`, but if you click a link
+    // to such a file, it causes a download which clutters your Downloads
+    // folder. This allows viewing the file instead, and it’s more likely to
+    // have plain text files than binary files in development repos.
+    "text/plain; charset=utf-8";
   const contentTypeHeader = {
     "Content-Type": contentType,
   };
