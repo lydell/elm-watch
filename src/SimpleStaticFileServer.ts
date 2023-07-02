@@ -12,6 +12,8 @@ const HTML_FILE_COOKIE_MAX_AGE = 31536000; // 1 year in seconds
 const ACCEPTABLE_HTML_FILE_URL = /^\/(?:[^.?]|\.(?!\.))+\.html?$/i;
 
 // Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
+// Removed markdown – otherwise that causes downloads in Firefox instead of
+// opening in the browser as plain text.
 const MIME_TYPES: Record<string, string> = {
   // Text
   ".css": "text/css; charset=utf-8",
@@ -19,8 +21,6 @@ const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".markdown": "text/markdown; charset=utf-8",
-  ".md": "text/markdown; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
   ".xhtml": "application/xhtml+xml; charset=utf-8",
   ".xml": "text/xml; charset=utf-8",
