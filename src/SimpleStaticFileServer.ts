@@ -142,7 +142,7 @@ function notFoundHtml(
   return baseHtml(
     "Not Found",
     `
-<h1>${notFoundTitle(staticDir, urlWithoutQuery)}</h1>
+<h1>${join(notFoundTitle(staticDir, urlWithoutQuery), "<wbr />")}</h1>
 <h2>404 – Not Found</h2>
 ${notFoundHtmlFileWithCheckboxHtml(urlWithoutQuery, htmlFileUrlFromCookie)}
     `
@@ -269,17 +269,17 @@ function indexTitle(urlWithoutQuery: string): string {
             join(segments.slice(0, index + 1), "/")
           )}/?">${escapeHtml(segment)}/</a>`
     ),
-    ""
+    "<wbr />"
   );
 }
 
 function notFoundTitle(
   staticDir: AbsolutePath,
   urlWithoutQuery: string
-): string {
+): Array<string> {
   const segments = urlWithoutQuery.split("/");
   const lastIndex = segments.length - 1;
-  let html = "";
+  const html: Array<string> = [];
 
   for (const [index, segment] of segments.entries()) {
     const fsPath =
@@ -289,29 +289,33 @@ function notFoundTitle(
     try {
       stats = statSync(fsPath);
     } catch {
-      html += `<del>${join(segments.slice(index), "/")}</del>`;
+      html.push(`<del>${join(segments.slice(index), "/")}</del>`);
       return html;
     }
 
     switch (stats.tag) {
       case "File":
-        html += `<a href="${escapeHtml(
-          join(segments.slice(0, index + 1), "/")
-        )}">${escapeHtml(segment)}</a>`;
+        html.push(
+          `<a href="${escapeHtml(
+            join(segments.slice(0, index + 1), "/")
+          )}">${escapeHtml(segment)}</a>`
+        );
         if (index < lastIndex) {
-          html += `<del>/${join(segments.slice(index + 1), "/")}</del>`;
+          html.push(`<del>/${join(segments.slice(index + 1), "/")}</del>`);
         }
         return html;
 
       case "Directory":
-        html += `<a href="${escapeHtml(
-          join(segments.slice(0, index + 1), "/")
-        )}/?">${escapeHtml(segment)}/</a>`;
+        html.push(
+          `<a href="${escapeHtml(
+            join(segments.slice(0, index + 1), "/")
+          )}/?">${escapeHtml(segment)}/</a>`
+        );
         break;
 
       case "Other":
       case "NotFound":
-        html += `<del>${join(segments.slice(index), "/")}</del>`;
+        html.push(`<del>${join(segments.slice(index), "/")}</del>`);
         return html;
     }
   }
