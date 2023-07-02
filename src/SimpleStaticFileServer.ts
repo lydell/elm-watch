@@ -395,7 +395,7 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
             serveFile(fsPath, stats.size, urlWithoutQuery, request, response);
             return;
 
-          case "Directory":
+          case "Directory": {
             if (url.endsWith("/")) {
               const indexFsPath = `${fsPath}index.html`;
               const indexStats = statSync(indexFsPath);
@@ -427,13 +427,23 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
               return;
             }
 
+            // When the URL path starts with two or more slashes,
+            // it’s necessary to specify the host, otherwise it gets treated as
+            // a protocol relative link.
+            // Example: http://localhost:1234//node_modules
+            // Bad: Location: //node_modules/?
+            // Good: Location: //localhost:1234//node_modules/?
+            const { host = "localhost" } = request.headers;
             response.writeHead(302, {
-              Location: urlWithoutQuery.endsWith("/")
-                ? `${urlWithoutQuery}?`
-                : `${urlWithoutQuery}/?`,
+              Location: `//${host}${
+                urlWithoutQuery.endsWith("/")
+                  ? `${urlWithoutQuery}?`
+                  : `${urlWithoutQuery}/?`
+              }`,
             });
             response.end();
             return;
+          }
         }
       }
 
