@@ -48,7 +48,7 @@ const MIME_TYPES: Record<string, string> = {
   ".webmanifest": "application/manifest+json",
 };
 
-function baseHtml(title: string, body: string): string {
+function baseHtml(faviconEmoji: string, title: string, body: string): string {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -56,6 +56,7 @@ function baseHtml(title: string, body: string): string {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escapeHtml(title)} – elm-watch</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 16 16'><text x='0' y='14'>${faviconEmoji}</text></svg>" />
     <style>
       html { font-family: system-ui, sans-serif; padding: clamp(0.5rem, 3vw, 2rem); }
       h1 { margin-top: 0; }
@@ -88,6 +89,7 @@ function indexHtml(
   entries: Array<fs.Dirent>
 ): string {
   return baseHtml(
+    "📂",
     urlWithoutQuery,
     `
 <h1>${indexTitle(urlWithoutQuery)}</h1>
@@ -140,6 +142,7 @@ function notFoundHtml(
   htmlFileUrlFromCookie: string | undefined
 ): string {
   return baseHtml(
+    "❓",
     "Not Found",
     `
 <h1>${join(notFoundTitle(staticDir, urlWithoutQuery), "<wbr />")}</h1>
@@ -206,6 +209,7 @@ export function acceptHtml(
 ): string {
   const { host, referer } = request.headers;
   return baseHtml(
+    isHttps ? "✅" : "👉",
     "Certificate",
     isHttps
       ? `<p>✅ Certificate accepted. You may now ${maybeLink(
@@ -214,7 +218,7 @@ export function acceptHtml(
             : undefined,
           "return to your page"
         )}.</p>`
-      : `<p>Did you mean to go to the ${maybeLink(
+      : `<p>👉 Did you mean to go to the ${maybeLink(
           host !== undefined && request.url !== undefined
             ? `https://${host}${request.url}`
             : undefined,
@@ -227,11 +231,12 @@ export function errorHtml(errorMessage: string): string {
   if (errorMessage.includes("\n")) {
     const firstRow = join(errorMessage.split("\n").slice(0, 1), "");
     return baseHtml(
+      "🚨",
       firstRow,
       `<h1>${escapeHtml(firstRow)}</h1><pre>${escapeHtml(errorMessage)}</pre>`
     );
   } else {
-    return baseHtml(errorMessage, `<h1>${escapeHtml(errorMessage)}</h1>`);
+    return baseHtml("🚨", errorMessage, `<h1>${escapeHtml(errorMessage)}</h1>`);
   }
 }
 
