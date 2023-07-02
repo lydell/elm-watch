@@ -288,6 +288,9 @@ type Cmd =
       killInstallDependencies: boolean;
     }
   | {
+      tag: "MaybePrintStats";
+    }
+  | {
       tag: "NoCmd";
     }
   | {
@@ -705,6 +708,7 @@ const init = (
   },
   [
     { tag: "ClearScreen" },
+    { tag: "MaybePrintStats" },
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
       (elmJsonError): Cmd => ({
@@ -1598,6 +1602,15 @@ const runCmd =
             },
             mutable.webSocketConnections
           );
+        }
+        return;
+
+      case "MaybePrintStats":
+        if (!logger.config.isTTY) {
+          // One tick is enough for the final port number to be available.
+          process.nextTick(() => {
+            logger.write(printStats(logger.config, mutable));
+          });
         }
         return;
 
@@ -2759,8 +2772,8 @@ function infoMessageWithTimeline({
 }): string {
   return join(
     [
-      "", // Empty line separator.
-      printStats(loggerConfig, mutable),
+      loggerConfig.isTTY ? "" : undefined, // Empty line separator.
+      loggerConfig.isTTY ? printStats(loggerConfig, mutable) : undefined,
       "",
       printTimeline(loggerConfig, events),
       printMessageWithTimeAndEmoji({
