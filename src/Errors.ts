@@ -7,7 +7,7 @@ import * as url from "url";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
-import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
+import { ELM_WATCH_HOST, ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
@@ -1298,6 +1298,30 @@ different program.
 
 You need to either find and stop that other thing, switch to another port or
 remove "port" from ${elmWatchJson} (which will use an arbitrary available port.)
+  `;
+}
+
+export function hostNotFound(host: string, error: Error): ErrorTemplate {
+  return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
+This environment variable is set:
+
+${text(ELM_WATCH_HOST)}=${text(host)}
+
+But that host was not found!
+
+It’s common to set it to the following to restrict elm-watch’s HTTP server to
+your computer:
+
+${text(ELM_WATCH_HOST)}=127.0.0.1
+
+If unset, the default host is 0.0.0.0, which exposes the HTTP server on the
+local network.
+
+Try setting the environment variable to something else, or remove it altogether.
+
+This is the error message I got:
+
+${text(error.message)}
   `;
 }
 

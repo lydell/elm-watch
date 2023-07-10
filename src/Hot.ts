@@ -45,12 +45,13 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
-import { PortChoice } from "./Port";
+import { Port, PortChoice } from "./Port";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
 import {
   ElmJsonErrorWithMetadata,
   getFlatOutputs,
+  getHost,
   OutputError,
   OutputState,
   Project,
@@ -520,7 +521,8 @@ const initMutable =
     const {
       webSocketServer = new WebSocketServer(
         portChoice,
-        project.elmWatchJsonPath
+        getHost(env),
+        project.staticFilesDir
       ),
       webSocketConnections = [],
     } = webSocketState ?? {};
@@ -1552,6 +1554,7 @@ const runCmd =
           loggerConfig: logger.config,
           date: getNow(),
           mutable,
+          host: getHost(env),
           message: cmd.message,
           events: filterLatestEvents(cmd.events),
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
@@ -1609,7 +1612,7 @@ const runCmd =
         if (!logger.config.isTTY) {
           // One tick is enough for the final port number to be available.
           process.nextTick(() => {
-            logger.write(printStats(logger.config, mutable));
+            logger.write(printStats(logger.config, mutable, getHost(env)));
           });
         }
         return;
@@ -1891,6 +1894,19 @@ function onWebSocketServerMsg(
                   portChoice,
                   msg.error.error
                 ),
+              });
+            })
+            .catch(rejectPromise);
+          return;
+        }
+
+        case "HostNotFound": {
+          const { host } = msg.error;
+          closeAll(logger, mutable)
+            .then(() => {
+              resolvePromise({
+                tag: "ExitOnHandledFatalError",
+                errorTemplate: Errors.hostNotFound(host, msg.error.error),
               });
             })
             .catch(rejectPromise);
@@ -2759,6 +2775,7 @@ function infoMessageWithTimeline({
   loggerConfig,
   date,
   mutable,
+  host,
   message,
   events,
   hasErrors,
@@ -2766,6 +2783,7 @@ function infoMessageWithTimeline({
   loggerConfig: LoggerConfig;
   date: Date;
   mutable: Mutable;
+  host: string;
   message: string;
   events: Array<LatestEvent>;
   hasErrors: boolean;
@@ -2773,7 +2791,7 @@ function infoMessageWithTimeline({
   return join(
     [
       loggerConfig.isTTY ? "" : undefined, // Empty line separator.
-      loggerConfig.isTTY ? printStats(loggerConfig, mutable) : undefined,
+      loggerConfig.isTTY ? printStats(loggerConfig, mutable, host) : undefined,
       "",
       printTimeline(loggerConfig, events),
       printMessageWithTimeAndEmoji({
@@ -2813,22 +2831,15 @@ function printMessageWithTimeAndEmoji({
   });
 }
 
-function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
+function printStats(
+  loggerConfig: LoggerConfig,
+  mutable: Mutable,
+  host: string
+): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
-  const port = mutable.webSocketServer.port.thePort;
-  const networkIps = Object.values(os.networkInterfaces())
-    .flatMap((addresses = []) =>
-      addresses.filter(
-        (address) => address.family === "IPv4" && !address.internal
-      )
-    )
-    .map(({ address }) => address);
   return join(
     [
-      `${dim("server:")} http://localhost:${port}${join(
-        networkIps.map((ip) => `${dim(", network:")} http://${ip}:${port}`),
-        ""
-      )}`,
+      printServerLinks(mutable.webSocketServer.port, host),
       `${dim("web socket connections:")} ${
         mutable.webSocketConnections.length
       }${
@@ -2847,6 +2858,27 @@ function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
     ),
     "\n"
   );
+}
+
+function printServerLinks(passedPort: Port, host: string): string {
+  const port = passedPort.thePort;
+
+  if (host !== "0.0.0.0") {
+    return `${dim("server:")} http://${host}:${port}`;
+  }
+
+  const networkIps = Object.values(os.networkInterfaces())
+    .flatMap((addresses = []) =>
+      addresses.filter(
+        (address) => address.family === "IPv4" && !address.internal
+      )
+    )
+    .map(({ address }) => address);
+
+  return `${dim("server:")} http://localhost:${port}${join(
+    networkIps.map((ip) => `${dim(", network:")} http://${ip}:${port}`),
+    ""
+  )}`;
 }
 
 export function printTimeline(

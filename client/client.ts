@@ -2917,7 +2917,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
           " You might need to ",
           h(
             HTMLAnchorElement,
-            { href: new URL(`https://${webSocketUrl.host}/accept`).href },
+            { href: new URL(`https://${webSocketUrl.host}/elm-watch-https-accept`).href },
             "accept elm-watch’s self-signed certificate"
           ),
           ". "

@@ -11,6 +11,7 @@ const project: Project = {
     tag: "AbsolutePath",
     absolutePath: "/Users/you/project",
   },
+  staticFilesDir: undefined,
   elmWatchJsonPath: {
     tag: "ElmWatchJsonPath",
     theElmWatchJsonPath: {

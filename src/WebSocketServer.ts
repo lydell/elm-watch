@@ -7,10 +7,9 @@ import WebSocket, { Server as WsServer } from "ws";
 
 import { CERTIFICATE } from "./Certificate";
 import { toError } from "./Helpers";
-import { absoluteDirname } from "./PathHelpers";
 import { Port, PortChoice } from "./Port";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
-import { ElmWatchJsonPath } from "./Types";
+import { StaticFilesDir } from "./Types";
 
 export type WebSocketServerMsg =
   | {
@@ -33,6 +32,11 @@ export type WebSocketServerMsg =
     };
 
 type WebSocketServerError =
+  | {
+      tag: "HostNotFound";
+      host: string;
+      error: Error;
+    }
   | {
       tag: "OtherError";
       error: Error;
@@ -69,8 +73,8 @@ class PolyHttpServer {
     });
   }
 
-  listen(port: number): void {
-    this.net.listen(port);
+  listen(port: number, host: string): void {
+    this.net.listen(port, host);
   }
 
   async close(): Promise<void> {
@@ -139,7 +143,11 @@ export class WebSocketServer {
 
   listening: Promise<void>;
 
-  constructor(portChoice: PortChoice, elmWatchJsonPath: ElmWatchJsonPath) {
+  constructor(
+    portChoice: PortChoice,
+    host: string,
+    staticFilesDirectory: StaticFilesDir | undefined
+  ) {
     this.dispatch = this.dispatchToQueue;
 
     this.webSocketServer.on("connection", (webSocket, request) => {
@@ -188,23 +196,29 @@ export class WebSocketServer {
         error:
           error.code === "EADDRINUSE"
             ? { tag: "PortConflict", portChoice, error }
+            : error.code === "ENOTFOUND"
+            ? { tag: "HostNotFound", host, error }
             : // istanbul ignore next
               { tag: "OtherError", error },
       });
     });
 
     this.polyHttpServer.onRequest((isHttps) => (request, response) => {
-      if (request.method === "GET" && request.url === "/accept") {
+      if (
+        request.method === "GET" &&
+        request.url === "/elm-watch-https-accept"
+      ) {
         SimpleStaticFileServer.respondHtml(
           response,
           200,
           SimpleStaticFileServer.acceptHtml(isHttps, request)
         );
-      } else {
+      } else if (staticFilesDirectory !== undefined) {
         try {
-          SimpleStaticFileServer.serveStatic(
-            absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath)
-          )(request, response);
+          SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
+            request,
+            response
+          );
         } catch (unknownError) {
           SimpleStaticFileServer.respondHtml(
             response,
@@ -212,6 +226,12 @@ export class WebSocketServer {
             SimpleStaticFileServer.errorHtml(toError(unknownError).message)
           );
         }
+      } else {
+        SimpleStaticFileServer.respondHtml(
+          response,
+          200,
+          SimpleStaticFileServer.staticFileNotEnabledHtml()
+        );
       }
     });
 
@@ -231,7 +251,8 @@ export class WebSocketServer {
 
     this.polyHttpServer.listen(
       // If `port` is 0, the operating system will assign an arbitrary unused port.
-      portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort
+      portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
+      host
     );
   }
 

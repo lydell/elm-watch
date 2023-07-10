@@ -27,6 +27,12 @@ export const BrowserUiPosition = Decode.stringUnion({
   BottomRight: null,
 });
 
+// If the user has enabled the simple static file server.
+export type StaticFilesDir = {
+  tag: "StaticFilesDir";
+  theStaticFilesDir: AbsolutePath;
+};
+
 // elm-watch.json
 export type ElmWatchJsonPath = {
   tag: "ElmWatchJsonPath";

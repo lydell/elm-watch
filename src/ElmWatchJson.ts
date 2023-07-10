@@ -92,6 +92,7 @@ const Config = Decode.fieldsAuto(
     targets: Decode.chain(Decode.record(Target), targetRecordHelper),
     postprocess: Decode.optional(NonEmptyArray(Decode.string)),
     port: Decode.optional(Port),
+    serve: Decode.optional(Decode.string),
   },
   { exact: "throw" }
 );

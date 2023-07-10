@@ -3,7 +3,7 @@ import * as os from "os";
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
-import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
+import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_HOST, Env } from "./Env";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
@@ -30,6 +30,7 @@ import type {
   GetNow,
   InputPath,
   OutputPath,
+  StaticFilesDir,
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
 } from "./Types";
@@ -37,6 +38,7 @@ import type {
 export type Project = {
   // Path to the longest ancestor of elm-watch.json and all elm.json.
   watchRoot: AbsolutePath;
+  staticFilesDir: StaticFilesDir | undefined;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: HashSet<OutputPath>;
@@ -478,6 +480,16 @@ export function initProject({
     tag: "Project",
     project: {
       watchRoot,
+      staticFilesDir:
+        config.serve === undefined
+          ? undefined
+          : {
+              tag: "StaticFilesDir",
+              theStaticFilesDir: absolutePathFromString(
+                absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+                config.serve
+              ),
+            },
       elmWatchJsonPath,
       elmWatchStuffJsonPath,
       disabledOutputs,
@@ -644,6 +656,10 @@ export function getFlatOutputs(project: Project): Array<{
         outputState,
       }))
   );
+}
+
+export function getHost(env: Env): string {
+  return env[ELM_WATCH_HOST] ?? "0.0.0.0";
 }
 
 export function projectToDebug(project: Project): unknown {

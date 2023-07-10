@@ -3,7 +3,7 @@ import * as http from "http";
 import * as path from "path";
 
 import { escapeHtml, join, toError } from "./Helpers";
-import { AbsolutePath } from "./Types";
+import { StaticFilesDir } from "./Types";
 
 let lastHtmlFileUrlState: string | undefined = undefined;
 
@@ -137,7 +137,7 @@ ${join(
 }
 
 function notFoundHtml(
-  staticDir: AbsolutePath,
+  staticFilesDir: StaticFilesDir,
   urlWithoutQuery: string,
   htmlFileUrlFromCookie: string | undefined
 ): string {
@@ -145,7 +145,7 @@ function notFoundHtml(
     "❓",
     "Not Found",
     `
-<h1>${join(notFoundTitle(staticDir, urlWithoutQuery), "<wbr />")}</h1>
+<h1>${join(notFoundTitle(staticFilesDir, urlWithoutQuery), "<wbr />")}</h1>
 <h2>404 – Not Found</h2>
 ${notFoundHtmlFileWithCheckboxHtml(urlWithoutQuery, htmlFileUrlFromCookie)}
     `
@@ -226,6 +226,22 @@ export function acceptHtml(
   );
 }
 
+export function staticFileNotEnabledHtml(): string {
+  return baseHtml(
+    "ℹ️",
+    "Enable static file server?",
+    `
+<h1>Enable static file server?</h1>
+<p>elm-watch needs an HTTP server for its WebSockets. WebSockets connect via HTTP and then switch over to the WebSocket protocol. But other than that the HTTP server doesn’t really do anything.</p>
+<p>If you want, you can enable a simple static file server for your project, by adding the following to your <strong>elm-watch.json</strong> file:</p>
+<pre><code>"serve": "./folder/you/want/to/serve/"</code></pre>
+<hr />
+<p>The simple HTTP server is just for convenience. elm-watch needs to run an HTTP server anyway, and you need one for <code>Browser.application</code> programs (which do no support the <code>file://</code> protocol). If you need anything more advanced, use <a href="https://lydell.github.io/elm-watch/server/">your own HTTP server</a>.</p>
+<p>By default, the HTTP server is exposed on the local network (so you can test on your phone on the same WiFi for example). If you are on a public WiFi, you can restrict the server to just your computer by setting an environment variable: <code>ELM_WATCH_HOST=127.0.0.1</code></p>
+  `
+  );
+}
+
 export function errorHtml(errorMessage: string): string {
   if (errorMessage.includes("\n")) {
     const firstRow = join(errorMessage.split("\n").slice(0, 1), "");
@@ -261,7 +277,7 @@ function indexTitle(urlWithoutQuery: string): string {
 }
 
 function notFoundTitle(
-  staticDir: AbsolutePath,
+  staticFilesDir: StaticFilesDir,
   urlWithoutQuery: string
 ): Array<string> {
   const segments = urlWithoutQuery.split("/");
@@ -270,7 +286,8 @@ function notFoundTitle(
 
   for (const [index, segment] of segments.entries()) {
     const fsPath =
-      staticDir.absolutePath + join(segments.slice(0, index + 1), "/");
+      staticFilesDir.theStaticFilesDir.absolutePath +
+      join(segments.slice(0, index + 1), "/");
 
     let stats;
     try {
@@ -325,7 +342,9 @@ export function respondHtml(
 }
 
 // Note: This function may throw file system errors.
-export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
+export function serveStatic(
+  staticFilesDir: StaticFilesDir
+): http.RequestListener {
   return (request, response) => {
     switch (request.method) {
       case "HEAD":
@@ -336,7 +355,8 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
         // - Mixing backslash and forward slash works fine on Windows.
         const { url = "/" } = request;
         const urlWithoutQuery = removeQuery(url);
-        const fsPath = staticDir.absolutePath + urlWithoutQuery;
+        const fsPath =
+          staticFilesDir.theStaticFilesDir.absolutePath + urlWithoutQuery;
         const stats = statSync(fsPath);
         const htmlFileUrlFromCookieRaw =
           request.headers.cookie === undefined
@@ -359,7 +379,9 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
           stats.tag !== "File" &&
           !url.endsWith("/?") // Still allow index pages.
         ) {
-          const htmlFsPath = staticDir.absolutePath + htmlFileUrlFromCookie;
+          const htmlFsPath =
+            staticFilesDir.theStaticFilesDir.absolutePath +
+            htmlFileUrlFromCookie;
           const htmlStats = statSync(htmlFsPath);
           switch (htmlStats.tag) {
             case "File":
@@ -387,7 +409,11 @@ export function serveStatic(staticDir: AbsolutePath): http.RequestListener {
             respondHtml(
               response,
               404,
-              notFoundHtml(staticDir, urlWithoutQuery, htmlFileUrlFromCookie)
+              notFoundHtml(
+                staticFilesDir,
+                urlWithoutQuery,
+                htmlFileUrlFromCookie
+              )
             );
             return;
 
