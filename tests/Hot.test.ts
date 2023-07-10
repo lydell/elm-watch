@@ -4644,13 +4644,17 @@ describe("hot", () => {
         variations = await Promise.all([
           httpGet(`https://localhost:${port}`),
           httpGet(`http://localhost:${port}/elm-watch-https-accept`),
-          httpGet(`http://localhost:${port}/elm-watch-https-accept`, { setHost: false }),
+          httpGet(`http://localhost:${port}/elm-watch-https-accept`, {
+            setHost: false,
+          }),
           httpGet(`https://localhost:${port}/elm-watch-https-accept`),
           httpGet(`https://localhost:${port}/elm-watch-https-accept`, {
             headers: { referer: `http://localhost:${port + 1}/page` },
           }),
           httpGet(`https://localhost:${port}/elm-watch-https-accept`, {
-            headers: { referer: `http://localhost:${port}/elm-watch-https-accept` },
+            headers: {
+              referer: `http://localhost:${port}/elm-watch-https-accept`,
+            },
           }),
         ]);
         return "Stop" as const;
