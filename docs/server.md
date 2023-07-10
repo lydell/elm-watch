@@ -19,7 +19,7 @@ For example:
 "serve": "./public/"
 ```
 
-By default, the HTTP server is exposed on the local network (so you can test on your phone on the same WiFi for example). If you are on a public WiFi, you can restrict the server to just your computer by setting an environment variable: `ELM_WATCH_HOST=127.0.0.1`. Beware that if you use `"serve": "."` you are leaking the source code of your project.
+By default, the HTTP server is exposed on the local network (so you can test on your phone on the same Wi-Fi for example). If you are on a public Wi-Fi, you can restrict the server to just your computer by setting an environment variable: `ELM_WATCH_HOST=127.0.0.1`. Beware that if you use `"serve": "."` you are leaking the source code of your project.
 
 Here are some things elm-watch’s simple HTTP server _won’t_ do, by design:
 

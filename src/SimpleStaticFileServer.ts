@@ -64,10 +64,13 @@ function baseHtml(faviconEmoji: string, title: string, body: string): string {
       a:not(:hover) { text-decoration: none; }
       a { color: #0000ff; }
       a:visited { color: #0070c1; }
+      pre { padding: 1em; background-color: #00000020; }
+      pre, code { font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; }
       @media (prefers-color-scheme: dark) {
         html { color: #c8c8c8; background: #1e1e1e; }
         a { color: #4fc1ff; }
         a:visited { color: #569cd6; }
+        pre { background-color: #c8c8c820; }
       }
       input:not([checked]):not(:checked) ~ a,
       input[checked]:checked ~ a { display: none; }
@@ -244,13 +247,14 @@ export function staticFileNotEnabledHtml(): string {
     "ℹ️",
     "Enable static file server?",
     `
-<h1>Enable static file server?</h1>
-<p>elm-watch needs an HTTP server for its WebSockets. WebSockets connect via HTTP and then switch over to the WebSocket protocol. But other than that the HTTP server doesn’t really do anything.</p>
-<p>If you want, you can enable a simple static file server for your project, by adding the following to your <strong>elm-watch.json</strong> file:</p>
-<pre><code>"serve": "./folder/you/want/to/serve/"</code></pre>
-<hr />
-<p>The simple HTTP server is just for convenience. elm-watch needs to run an HTTP server anyway, and you need one for <code>Browser.application</code> programs (which do no support the <code>file://</code> protocol). If you need anything more advanced, use <a href="https://lydell.github.io/elm-watch/server/">your own HTTP server</a>.</p>
-<p>By default, the HTTP server is exposed on the local network (so you can test on your phone on the same WiFi for example). If you are on a public WiFi, you can restrict the server to just your computer by setting an environment variable: <code>ELM_WATCH_HOST=127.0.0.1</code></p>
+<main style="max-width: 60ch">
+  <h1>Enable static file server?</h1>
+  <p>elm-watch needs an HTTP server for its WebSockets. WebSockets connect via HTTP and then switch over to the WebSocket protocol. But other than that the HTTP server doesn’t really do anything.</p>
+  <p>If you want, you can enable a simple static file server for your project, by adding the following to your <strong>elm-watch.json</strong> file:</p>
+  <pre><code>"serve": "./folder/you/want/to/serve/"</code></pre>
+  <p style="margin-top: 4em">ℹ️ The simple HTTP server is just for convenience. elm-watch needs to run an HTTP server anyway, and you need one for <code>Browser.application</code> programs (which do no support the <code>file://</code> protocol). If you need anything more advanced, use <a href="https://lydell.github.io/elm-watch/server/">your own HTTP server</a>.</p>
+  <p>❗️ By default, the HTTP server is exposed on the local network (so you can test on your phone on the same Wi-Fi for example). If you are on a public Wi-Fi, you can restrict the server to just your computer by setting an environment variable: <code>ELM_WATCH_HOST=127.0.0.1</code></p>
+</main>
   `
   );
 }

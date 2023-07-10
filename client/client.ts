@@ -110,7 +110,7 @@ if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
 __ELM_WATCH.MOCKED_TIMINGS ??= false;
 
 // In a browser on the same computer, sending a message and receiving a reply
-// takes around 2-4 ms. In iOS Safari via WiFi, I’ve seen it take up to 120 ms.
+// takes around 2-4 ms. In iOS Safari via Wi-Fi, I’ve seen it take up to 120 ms.
 // So 1 second should be plenty above the threshold, while not taking too long.
 __ELM_WATCH.WEBSOCKET_TIMEOUT ??= 1000;
 
