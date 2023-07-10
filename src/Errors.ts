@@ -17,6 +17,7 @@ import {
   RESET_COLOR,
   toError,
 } from "./Helpers";
+import { Host } from "./Host";
 import { IS_WINDOWS } from "./IsWindows";
 import { DEFAULT_COLUMNS } from "./Logger";
 import {
@@ -1301,7 +1302,10 @@ remove "port" from ${elmWatchJson} (which will use an arbitrary available port.)
   `;
 }
 
-export function hostNotFound(host: string, error: Error): ErrorTemplate {
+export function hostNotFound(
+  { theHost: host }: Host,
+  error: Error
+): ErrorTemplate {
   return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
 This environment variable is set:
 

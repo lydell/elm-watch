@@ -7,6 +7,7 @@ import WebSocket, { Server as WsServer } from "ws";
 
 import { CERTIFICATE } from "./Certificate";
 import { toError } from "./Helpers";
+import { Host } from "./Host";
 import { Port, PortChoice } from "./Port";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
 import { StaticFilesDir } from "./Types";
@@ -34,7 +35,7 @@ export type WebSocketServerMsg =
 type WebSocketServerError =
   | {
       tag: "HostNotFound";
-      host: string;
+      host: Host;
       error: Error;
     }
   | {
@@ -73,8 +74,8 @@ class PolyHttpServer {
     });
   }
 
-  listen(port: number, host: string): void {
-    this.net.listen(port, host);
+  listen(port: number, host: Host): void {
+    this.net.listen(port, host.theHost);
   }
 
   async close(): Promise<void> {
@@ -145,7 +146,7 @@ export class WebSocketServer {
 
   constructor(
     portChoice: PortChoice,
-    host: string,
+    host: Host,
     staticFilesDirectory: StaticFilesDir | undefined
   ) {
     this.dispatch = this.dispatchToQueue;

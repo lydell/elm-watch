@@ -3,7 +3,7 @@ import * as os from "os";
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
-import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_HOST, Env } from "./Env";
+import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
@@ -656,10 +656,6 @@ export function getFlatOutputs(project: Project): Array<{
         outputState,
       }))
   );
-}
-
-export function getHost(env: Env): string {
-  return env[ELM_WATCH_HOST] ?? "0.0.0.0";
 }
 
 export function projectToDebug(project: Project): unknown {

@@ -38,6 +38,7 @@ import {
   toError,
   toJsonError,
 } from "./Helpers";
+import { getHost, Host } from "./Host";
 import type { Logger, LoggerConfig } from "./Logger";
 import {
   isNonEmptyArray,
@@ -51,7 +52,6 @@ import { ELM_WATCH_NODE } from "./PostprocessShared";
 import {
   ElmJsonErrorWithMetadata,
   getFlatOutputs,
-  getHost,
   OutputError,
   OutputState,
   Project,
@@ -2783,7 +2783,7 @@ function infoMessageWithTimeline({
   loggerConfig: LoggerConfig;
   date: Date;
   mutable: Mutable;
-  host: string;
+  host: Host;
   message: string;
   events: Array<LatestEvent>;
   hasErrors: boolean;
@@ -2834,7 +2834,7 @@ function printMessageWithTimeAndEmoji({
 function printStats(
   loggerConfig: LoggerConfig,
   mutable: Mutable,
-  host: string
+  host: Host
 ): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
   return join(
@@ -2860,9 +2860,10 @@ function printStats(
   );
 }
 
-function printServerLinks(passedPort: Port, host: string): string {
-  const port = passedPort.thePort;
-
+function printServerLinks(
+  { thePort: port }: Port,
+  { theHost: host }: Host
+): string {
   if (host !== "0.0.0.0") {
     return `${dim("server:")} http://${host}:${port}`;
   }
