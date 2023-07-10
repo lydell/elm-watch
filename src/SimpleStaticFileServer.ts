@@ -5,8 +5,6 @@ import * as path from "path";
 import { escapeHtml, join, toError } from "./Helpers";
 import { StaticFilesDir } from "./Types";
 
-let lastHtmlFileUrlState: string | undefined = undefined;
-
 const HTML_FILE_COOKIE = "__elm-watch-html-file";
 const HTML_FILE_COOKIE_MAX_AGE = 31536000; // 1 year in seconds
 const ACCEPTABLE_HTML_FILE_URL = /^\/(?:[^.?]|\.(?!\.))+\.html?$/i;
@@ -136,36 +134,51 @@ ${join(
   );
 }
 
-function notFoundHtml(
-  staticFilesDir: StaticFilesDir,
-  urlWithoutQuery: string,
-  htmlFileUrlFromCookie: string | undefined
-): string {
+function notFoundHtml({
+  staticFilesDir,
+  urlWithoutQuery,
+  lastHtmlFileUrl,
+  htmlFileUrlFromCookie,
+}: {
+  staticFilesDir: StaticFilesDir;
+  urlWithoutQuery: string;
+  lastHtmlFileUrl: string | undefined;
+  htmlFileUrlFromCookie: string | undefined;
+}): string {
   return baseHtml(
     "❓",
     "Not Found",
     `
 <h1>${join(notFoundTitle(staticFilesDir, urlWithoutQuery), "<wbr />")}</h1>
 <h2>404 – Not Found</h2>
-${notFoundHtmlFileWithCheckboxHtml(urlWithoutQuery, htmlFileUrlFromCookie)}
+${notFoundHtmlFileWithCheckboxHtml({
+  urlWithoutQuery,
+  lastHtmlFileUrl,
+  htmlFileUrlFromCookie,
+})}
     `
   );
 }
 
-function notFoundHtmlFileWithCheckboxHtml(
-  urlWithoutQuery: string,
-  htmlFileUrlFromCookie: string | undefined
-): string {
+function notFoundHtmlFileWithCheckboxHtml({
+  urlWithoutQuery,
+  lastHtmlFileUrl,
+  htmlFileUrlFromCookie,
+}: {
+  urlWithoutQuery: string;
+  lastHtmlFileUrl: string | undefined;
+  htmlFileUrlFromCookie: string | undefined;
+}): string {
   return htmlFileUrlFromCookie === undefined
-    ? lastHtmlFileUrlState === undefined
+    ? lastHtmlFileUrl === undefined
       ? ""
       : `
         <p>👉 Most recently served HTML file: <a href="${escapeHtml(
-          lastHtmlFileUrlState
-        )}">${escapeHtml(lastHtmlFileUrlState)}</a></p>
+          lastHtmlFileUrl
+        )}">${escapeHtml(lastHtmlFileUrl)}</a></p>
         ${checkboxHtml(
           urlWithoutQuery,
-          lastHtmlFileUrlState,
+          lastHtmlFileUrl,
           false,
           "Always serve that file on 404"
         )}
@@ -343,7 +356,9 @@ export function respondHtml(
 
 // Note: This function may throw file system errors.
 export function serveStatic(
-  staticFilesDir: StaticFilesDir
+  staticFilesDir: StaticFilesDir,
+  lastHtmlFileUrl: string | undefined,
+  onLastHtmlFileUrlChanged: (lastHtmlFileUrl: string) => void
 ): http.RequestListener {
   return (request, response) => {
     switch (request.method) {
@@ -391,6 +406,7 @@ export function serveStatic(
                 htmlFsPath,
                 htmlStats.size,
                 htmlFileUrlFromCookie,
+                onLastHtmlFileUrlChanged,
                 request,
                 response
               );
@@ -400,6 +416,7 @@ export function serveStatic(
             case "Other":
             case "NotFound":
               deleteHtmlFileCookie(response);
+              htmlFileUrlFromCookie = undefined;
           }
         }
 
@@ -409,16 +426,24 @@ export function serveStatic(
             respondHtml(
               response,
               404,
-              notFoundHtml(
+              notFoundHtml({
                 staticFilesDir,
                 urlWithoutQuery,
-                htmlFileUrlFromCookie
-              )
+                lastHtmlFileUrl,
+                htmlFileUrlFromCookie,
+              })
             );
             return;
 
           case "File":
-            serveFile(fsPath, stats.size, urlWithoutQuery, request, response);
+            serveFile(
+              fsPath,
+              stats.size,
+              urlWithoutQuery,
+              onLastHtmlFileUrlChanged,
+              request,
+              response
+            );
             return;
 
           case "Directory": {
@@ -431,6 +456,7 @@ export function serveStatic(
                     indexFsPath,
                     indexStats.size,
                     `${urlWithoutQuery}index.html`,
+                    onLastHtmlFileUrlChanged,
                     request,
                     response
                   );
@@ -491,6 +517,7 @@ function serveFile(
   fsPath: string,
   fsSize: number,
   actualUrl: string,
+  onLastHtmlFileUrlChanged: (lastHtmlFileUrl: string) => void,
   request: http.IncomingMessage,
   response: http.ServerResponse
 ): void {
@@ -513,7 +540,7 @@ function serveFile(
 
     default: {
       if (contentType.startsWith("text/html;")) {
-        lastHtmlFileUrlState = actualUrl;
+        onLastHtmlFileUrlChanged(actualUrl);
       }
 
       const rangeHeader = request.headers.range;
