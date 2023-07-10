@@ -4,8 +4,8 @@ This is an example that uses:
 
 - elm-watch for Elm compilation
 - [esbuild] for TypeScript compilation, and for minification
-- [UglifyJS] for extra minification (`postprocess.js`)
-- A custom little Node.js dev server for routing and proxying, with no dependencies (`dev-server.js`)
+- [UglifyJS] for extra minification ([postprocess.js](./postprocess.js))
+- A custom little Node.js dev server for routing and proxying, with no dependencies ([dev-server.js](./dev-server.js))
 - [run-pty] to run the above with just one command
 - [elm-tooling] to install Elm and elm-format
 
