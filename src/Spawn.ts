@@ -41,7 +41,7 @@ export type Command = {
   stdin?: Buffer | string;
 };
 
-export function spawn(command: Command): {
+export function spawn(passedCommand: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
 } {
@@ -53,16 +53,17 @@ export function spawn(command: Command): {
   };
 
   const promise = (
-    actualSpawn: typeof childProcess.spawn
+    command: Command,
+    previousAttemptError?: Error
   ): Promise<SpawnResult> =>
-    new Promise((resolve) => {
+    new Promise((resolve, reject) => {
       // istanbul ignore if
       if (killed) {
         resolve({ tag: "Killed", command });
         return;
       }
 
-      const child = actualSpawn(command.command, command.args, {
+      const child = childProcess.spawn(command.command, command.args, {
         ...command.options,
         cwd: command.options.cwd.absolutePath,
       });
@@ -71,12 +72,27 @@ export function spawn(command: Command): {
       const stderr: Array<Buffer> = [];
 
       child.on("error", (error: Error & { code?: string }) => {
-        resolve(
-          // istanbul ignore next
-          error.code === "ENOENT"
-            ? { tag: "CommandNotFoundError", command }
-            : { tag: "OtherSpawnError", error, command }
-        );
+        // istanbul ignore else
+        if (error.code === "ENOENT") {
+          // istanbul ignore if
+          if (IS_WINDOWS && previousAttemptError === undefined) {
+            // On Windows, executing just `elm` works for `elm.exe`,
+            // but not for `elm.cmd` – then we need to explicitly say
+            // `.cmd`. When installing Elm via npm or elm-tooling a
+            // `.cmd` file is used (pointing to the `.exe` somewhere else).
+            promise({ ...command, command: `${command.command}.cmd` }, error)
+              .then(resolve)
+              .catch(reject);
+          } else {
+            resolve({ tag: "CommandNotFoundError", command });
+          }
+        } else {
+          resolve({
+            tag: "OtherSpawnError",
+            error: previousAttemptError ?? error,
+            command,
+          });
+        }
       });
 
       let stdinWriteError:
@@ -167,9 +183,7 @@ export function spawn(command: Command): {
 
   // istanbul ignore next
   return {
-    promise: IS_WINDOWS
-      ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
-      : promise(childProcess.spawn),
+    promise: promise(passedCommand),
     kill: () => {
       kill();
     },
