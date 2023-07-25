@@ -80,10 +80,11 @@ export function spawn(command: Command): {
       const stdout: Array<Buffer> = [];
       const stderr: Array<Buffer> = [];
 
+      // Having a test for `CommandNotFoundError` is good, but the rest is not
+      // possible to test. It’s the least messy to ignore coverage for the whole thing.
+      // istanbul ignore next
       child.on("error", (error: Error & { code?: string }) => {
-        // istanbul ignore else
         if (error.code === "ENOENT") {
-          // istanbul ignore if
           if (IS_WINDOWS && windowsPreviousAttemptError === undefined) {
             promise(error).then(resolve).catch(reject);
           } else {
