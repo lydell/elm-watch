@@ -41,7 +41,7 @@ export type Command = {
   stdin?: Buffer | string;
 };
 
-export function spawn(passedCommand: Command): {
+export function spawn(command: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
 } {
@@ -52,10 +52,7 @@ export function spawn(passedCommand: Command): {
     killed = true;
   };
 
-  const promise = (
-    command: Command,
-    previousAttemptError?: Error
-  ): Promise<SpawnResult> =>
+  const promise = (windowsPreviousAttemptError?: Error): Promise<SpawnResult> =>
     new Promise((resolve, reject) => {
       // istanbul ignore if
       if (killed) {
@@ -63,10 +60,22 @@ export function spawn(passedCommand: Command): {
         return;
       }
 
-      const child = childProcess.spawn(command.command, command.args, {
-        ...command.options,
-        cwd: command.options.cwd.absolutePath,
-      });
+      const child = childProcess.spawn(
+        // On Windows, executing just `elm` works for `elm.exe`, but not for
+        // `elm.cmd` – then we need to explicitly say `.cmd`. When installing
+        // Elm via npm or elm-tooling a `.cmd` file is used (pointing to the
+        // `.exe` somewhere else). So we try first with the original command,
+        // and then with `.cmd` appended.
+        // istanbul ignore next
+        windowsPreviousAttemptError === undefined
+          ? command.command
+          : `${command.command}.cmd`,
+        command.args,
+        {
+          ...command.options,
+          cwd: command.options.cwd.absolutePath,
+        }
+      );
 
       const stdout: Array<Buffer> = [];
       const stderr: Array<Buffer> = [];
@@ -75,21 +84,15 @@ export function spawn(passedCommand: Command): {
         // istanbul ignore else
         if (error.code === "ENOENT") {
           // istanbul ignore if
-          if (IS_WINDOWS && previousAttemptError === undefined) {
-            // On Windows, executing just `elm` works for `elm.exe`,
-            // but not for `elm.cmd` – then we need to explicitly say
-            // `.cmd`. When installing Elm via npm or elm-tooling a
-            // `.cmd` file is used (pointing to the `.exe` somewhere else).
-            promise({ ...command, command: `${command.command}.cmd` }, error)
-              .then(resolve)
-              .catch(reject);
+          if (IS_WINDOWS && windowsPreviousAttemptError === undefined) {
+            promise(error).then(resolve).catch(reject);
           } else {
             resolve({ tag: "CommandNotFoundError", command });
           }
         } else {
           resolve({
             tag: "OtherSpawnError",
-            error: previousAttemptError ?? error,
+            error: windowsPreviousAttemptError ?? error,
             command,
           });
         }
@@ -183,7 +186,7 @@ export function spawn(passedCommand: Command): {
 
   // istanbul ignore next
   return {
-    promise: promise(passedCommand),
+    promise: promise(),
     kill: () => {
       kill();
     },
