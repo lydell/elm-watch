@@ -229,7 +229,7 @@ type Msg =
     }
   | {
       tag: "ReloadAllCssDone";
-      result: ReloadAllCssResult;
+      didChange: boolean;
     }
   | {
       tag: "SleepBeforeReconnectDone";
@@ -1063,7 +1063,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "ReloadAllCssDone":
       return [
-        msg.result === "SomeUpdated"
+        msg.didChange
           ? // TODO: Make it flash here.
             // This hack didn’t work out.
             { ...model, previousStatusTag: "Busy" }
@@ -1522,8 +1522,8 @@ const runCmd =
 
       case "ReloadAllCssIfNeeded":
         reloadAllCssIfNeeded()
-          .then((result) => {
-            dispatch({ tag: "ReloadAllCssDone", result });
+          .then((didChange) => {
+            dispatch({ tag: "ReloadAllCssDone", didChange });
           })
           .catch(rejectPromise);
         return;
@@ -1850,10 +1850,8 @@ function reloadPageIfNeeded(): void {
   __ELM_WATCH.RELOAD_PAGE(message);
 }
 
-type ReloadAllCssResult = "NothingChanged" | "SomeFailed" | "SomeUpdated";
-
-async function reloadAllCssIfNeeded(): Promise<ReloadAllCssResult> {
-  return Promise.allSettled(
+async function reloadAllCssIfNeeded(): Promise<boolean> {
+  const results = await Promise.allSettled(
     Array.from(document.styleSheets).flatMap((styleSheet) => {
       if (styleSheet.href === null) {
         return [];
@@ -1875,12 +1873,9 @@ async function reloadAllCssIfNeeded(): Promise<ReloadAllCssResult> {
           );
         });
     })
-  ).then((results) =>
-    results.some((result) => result.status === "rejected")
-      ? "SomeFailed"
-      : results.some((result) => result.status === "fulfilled" && result.value)
-      ? "SomeUpdated"
-      : "NothingChanged"
+  );
+  return results.some(
+    (result) => result.status === "fulfilled" && result.value === true
   );
 }
 
