@@ -782,7 +782,12 @@ function update(
       return [
         model,
         msg.absolutePathString.endsWith(".css")
-          ? [{ tag: "WebSocketSendAll", message: { tag: "CssFileChanged" } }]
+          ? [
+              {
+                tag: "WebSocketSendAll",
+                message: { tag: "CssFileMayHaveChanged" },
+              },
+            ]
           : [],
       ];
 
@@ -1025,6 +1030,17 @@ function update(
     case "WebSocketConnected": {
       const result = msg.parseWebSocketConnectRequestUrlResult;
 
+      const cssCmd: Array<Cmd> =
+        project.staticFilesDir === undefined
+          ? []
+          : [
+              {
+                tag: "WebSocketSend",
+                webSocket: msg.webSocket,
+                message: { tag: "CssFileMayHaveChanged" },
+              },
+            ];
+
       switch (result.tag) {
         case "Success": {
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
@@ -1041,7 +1057,7 @@ function update(
               ...newModel,
               latestEvents: [...newModel.latestEvents, latestEvent],
             },
-            cmds,
+            [...cmds, ...cssCmd],
           ];
         }
 
@@ -1072,6 +1088,7 @@ function update(
                   },
                 },
               },
+              ...cssCmd,
             ],
           ];
         }
@@ -1100,6 +1117,7 @@ function update(
                   },
                 },
               },
+              ...cssCmd,
             ],
           ];
       }

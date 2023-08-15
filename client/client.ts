@@ -1219,7 +1219,7 @@ function onWebSocketToClientMessage(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
-    case "CssFileChanged":
+    case "CssFileMayHaveChanged":
       return [model, [{ tag: "ReloadAllCssIfNeeded" }]];
 
     case "FocusedTabAcknowledged":

@@ -2,8 +2,8 @@ import * as Decode from "tiny-decoders";
 
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
-const CssFileChanged = Decode.fieldsAuto({
-  tag: () => "CssFileChanged" as const,
+const CssFileMayHaveChanged = Decode.fieldsAuto({
+  tag: () => "CssFileMayHaveChanged" as const,
 });
 
 const FocusedTabAcknowledged = Decode.fieldsAuto({
@@ -101,7 +101,7 @@ export type WebSocketToClientMessage = ReturnType<
   typeof WebSocketToClientMessage
 >;
 export const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
-  CssFileChanged,
+  CssFileMayHaveChanged,
   FocusedTabAcknowledged,
   OpenEditorFailed,
   StatusChanged,
