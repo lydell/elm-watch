@@ -818,7 +818,21 @@ function update(
           ...newModel,
           nextAction: { tag: "NoAction" },
         },
-        cmds,
+        [
+          ...(model.latestEvents.some(
+            (event) =>
+              event.tag === "WatcherEvent" &&
+              event.file.absolutePath.endsWith(".css")
+          )
+            ? [
+                {
+                  tag: "WebSocketSendAll",
+                  message: { tag: "CssFileMayHaveChanged" },
+                } as const,
+              ]
+            : []),
+          ...cmds,
+        ],
       ];
     }
 
@@ -1159,19 +1173,13 @@ function onWatcherEvent(
       absolutePath: absolutePathString,
     })
   ) {
-    // TODO: Is sleeping necessary as well?
     return [
-      { tag: "NoAction" },
+      nextAction,
       {
         ...makeWatcherEvent(eventName, absolutePathString, now),
         affectsAnyTarget: true,
       },
-      [
-        {
-          tag: "WebSocketSendAll",
-          message: { tag: "CssFileMayHaveChanged" },
-        },
-      ],
+      [],
     ];
   }
 
