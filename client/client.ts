@@ -303,6 +303,9 @@ type Cmd =
       elmCompiledTimestamp: number;
     }
   | {
+      tag: "ReloadAllCssIfNeeded";
+    }
+  | {
       tag: "Render";
       model: Model;
       manageFocus: boolean;
@@ -1216,6 +1219,9 @@ function onWebSocketToClientMessage(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    case "CssFileChanged":
+      return [model, [{ tag: "ReloadAllCssIfNeeded" }]];
+
     case "FocusedTabAcknowledged":
       return [model, [{ tag: "WebSocketTimeoutClear" }]];
 
@@ -1495,6 +1501,10 @@ const runCmd =
           cmd.elmCompiledTimestamp,
           dispatch
         );
+        return;
+
+      case "ReloadAllCssIfNeeded":
+        reloadAllCssIfNeeded();
         return;
 
       case "Render": {
@@ -1817,6 +1827,91 @@ function reloadPageIfNeeded(): void {
       : `elm-watch: I did a full page reload because${separator}${reasonString}`;
   __ELM_WATCH.RELOAD_STATUSES = {};
   __ELM_WATCH.RELOAD_PAGE(message);
+}
+
+function reloadAllCssIfNeeded(): void {
+  for (const styleSheet of document.styleSheets) {
+    if (styleSheet.href === null) {
+      continue;
+    }
+    const url = new URL(styleSheet.href);
+    if (url.hostname !== window.location.hostname) {
+      continue;
+    }
+    url.searchParams.set("forceReload", Date.now().toString());
+    fetch(url.href)
+      .then((response) => response.text())
+      .then((newCss) => {
+        updateStyleSheetIfNeeded(styleSheet, newCss);
+      })
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(
+          "elm-watch: Failed to fetch CSS for reloading:",
+          url.href,
+          error
+        );
+      });
+  }
+}
+
+/**
+ * This function does nothing if the CSS is unchanged. That’s important because
+ * reloading the whole `<link>` tag can cause a flash of unstyled content, and
+ * reset any temporary changes you have done in the inspector. This is run when
+ * _any_ CSS file changes – which might not even be related to this page – or
+ * on `visibilitychange` which includes switching between tabs.
+ * The “diffing” algorithm is very simple: For identical CSS it does nothing.
+ * For a single changed rule (very common), only that rule is updated. In
+ * other cases it might replace more rules than strictly needed but it doesn't
+ * matter.
+ */
+function updateStyleSheetIfNeeded(
+  oldStyleSheet: CSSStyleSheet,
+  newCss: string
+): void {
+  const newStyleSheet = parseCss(newCss);
+  const length = Math.min(
+    oldStyleSheet.cssRules.length,
+    newStyleSheet.cssRules.length
+  );
+  /* eslint-disable @typescript-eslint/no-non-null-assertion */
+  let index = 0;
+  for (; index < length; index++) {
+    const oldRule = oldStyleSheet.cssRules[index]!;
+    const newRule = newStyleSheet.cssRules[index]!;
+    if (oldRule.cssText !== newRule.cssText) {
+      oldStyleSheet.deleteRule(index);
+      oldStyleSheet.insertRule(newRule.cssText, index);
+    }
+  }
+  while (index < oldStyleSheet.cssRules.length) {
+    oldStyleSheet.deleteRule(index);
+  }
+  for (; index < newStyleSheet.cssRules.length; index++) {
+    const newRule = newStyleSheet.cssRules[index]!;
+    oldStyleSheet.insertRule(newRule.cssText, index);
+  }
+  /* eslint-enable @typescript-eslint/no-non-null-assertion */
+}
+
+function parseCss(css: string): CSSStyleSheet {
+  try {
+    const styleSheet = new CSSStyleSheet();
+    styleSheet.replaceSync(css);
+    return styleSheet;
+  } catch {
+    // Safari does not support constructing `CSSStyleSheet`.
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.appendChild(style);
+    const { sheet } = style;
+    document.head.removeChild(style);
+    if (sheet === null) {
+      throw new Error("style.sheet is null");
+    }
+    return sheet;
+  }
 }
 
 function h<T extends HTMLElement>(

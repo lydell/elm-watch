@@ -123,6 +123,7 @@ export type LatestEvent =
 
 type Mutable = {
   watcher: chokidar.FSWatcher;
+  cssWatcher: chokidar.FSWatcher | undefined;
   postprocessWorkerPool: PostprocessWorkerPool;
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
@@ -163,6 +164,10 @@ type Msg =
   | {
       tag: "ExitRequested";
       date: Date;
+    }
+  | {
+      tag: "GotCssWatcherEvent";
+      absolutePathString: string;
     }
   | {
       tag: "GotWatcherEvent";
@@ -323,6 +328,10 @@ type Cmd =
   | {
       tag: "WebSocketSend";
       webSocket: WebSocket;
+      message: WebSocketToClientMessage;
+    }
+  | {
+      tag: "WebSocketSendAll";
       message: WebSocketToClientMessage;
     }
   | {
@@ -518,6 +527,36 @@ const initMutable =
       }
     );
 
+    let cssWatcher = undefined;
+
+    if (project.staticFilesDir !== undefined) {
+      cssWatcher = chokidar.watch(
+        project.staticFilesDir.theStaticFilesDir.absolutePath,
+        {
+          ignoreInitial: true,
+          disableGlobbing: true,
+        }
+      );
+
+      watcherOnAll(
+        watcher,
+        (error) => {
+          // TODO: What to do on error?
+          closeAll(logger, mutable)
+            .then(() => {
+              resolvePromise({
+                tag: "ExitOnHandledFatalError",
+                errorTemplate: Errors.watcherError(error),
+              });
+            })
+            .catch(rejectPromise);
+        },
+        (_eventName: WatcherEventName, absolutePathString: string): void => {
+          dispatch({ tag: "GotCssWatcherEvent", absolutePathString });
+        }
+      );
+    }
+
     const {
       webSocketServer = new WebSocketServer(
         portChoice,
@@ -529,6 +568,7 @@ const initMutable =
 
     const mutable: Mutable = {
       watcher,
+      cssWatcher,
       postprocessWorkerPool,
       webSocketServer,
       webSocketConnections,
@@ -738,6 +778,14 @@ function update(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    case "GotCssWatcherEvent":
+      return [
+        model,
+        msg.absolutePathString.endsWith(".css")
+          ? [{ tag: "WebSocketSendAll", message: { tag: "CssFileChanged" } }]
+          : [],
+      ];
+
     case "GotWatcherEvent": {
       const result = onWatcherEvent(
         msg.date,
@@ -1746,6 +1794,12 @@ const runCmd =
         webSocketSend(cmd.webSocket, cmd.message);
         return;
 
+      case "WebSocketSendAll":
+        for (const webSocketConnection of mutable.webSocketConnections) {
+          webSocketSend(webSocketConnection.webSocket, cmd.message);
+        }
+        return;
+
       case "WebSocketSendCompileErrorToOutput":
         Theme.getThemeFromTerminal(logger)
           .then((theme) => {
@@ -2009,6 +2063,7 @@ async function closeAll(
   mutable.webSocketServer.unsetDispatch();
   await Promise.all([
     mutable.watcher.close(),
+    mutable.cssWatcher?.close(),
     killWebSocketServer ? mutable.webSocketServer.close() : undefined,
     killPostprocessWorkerPool
       ? mutable.postprocessWorkerPool.terminate()
