@@ -228,6 +228,10 @@ type Msg =
       date: Date;
     }
   | {
+      tag: "ReloadAllCssDone";
+      result: ReloadAllCssResult;
+    }
+  | {
       tag: "SleepBeforeReconnectDone";
       date: Date;
     }
@@ -1057,6 +1061,16 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     case "PageVisibilityChangedToVisible":
       return reconnect(model, msg.date, { force: true });
 
+    case "ReloadAllCssDone":
+      return [
+        msg.result === "SomeUpdated"
+          ? // TODO: Make it flash here.
+            // This hack didn’t work out.
+            { ...model, previousStatusTag: "Busy" }
+          : model,
+        [],
+      ];
+
     case "SleepBeforeReconnectDone":
       return reconnect(model, msg.date, { force: false });
 
@@ -1220,7 +1234,10 @@ function onWebSocketToClientMessage(
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "CssFileMayHaveChanged":
-      return [model, [{ tag: "ReloadAllCssIfNeeded" }]];
+      return [
+        { ...model, status: { ...model.status, date } },
+        [{ tag: "ReloadAllCssIfNeeded" }],
+      ];
 
     case "FocusedTabAcknowledged":
       return [model, [{ tag: "WebSocketTimeoutClear" }]];
@@ -1504,7 +1521,11 @@ const runCmd =
         return;
 
       case "ReloadAllCssIfNeeded":
-        reloadAllCssIfNeeded();
+        reloadAllCssIfNeeded()
+          .then((result) => {
+            dispatch({ tag: "ReloadAllCssDone", result });
+          })
+          .catch(rejectPromise);
         return;
 
       case "Render": {
@@ -1829,30 +1850,38 @@ function reloadPageIfNeeded(): void {
   __ELM_WATCH.RELOAD_PAGE(message);
 }
 
-function reloadAllCssIfNeeded(): void {
-  for (const styleSheet of document.styleSheets) {
-    if (styleSheet.href === null) {
-      continue;
-    }
-    const url = new URL(styleSheet.href);
-    if (url.hostname !== window.location.hostname) {
-      continue;
-    }
-    url.searchParams.set("forceReload", Date.now().toString());
-    fetch(url.href)
-      .then((response) => response.text())
-      .then((newCss) => {
-        updateStyleSheetIfNeeded(styleSheet, newCss);
-      })
-      .catch((error) => {
-        // eslint-disable-next-line no-console
-        console.error(
-          "elm-watch: Failed to fetch CSS for reloading:",
-          url.href,
-          error
-        );
-      });
-  }
+type ReloadAllCssResult = "NothingChanged" | "SomeFailed" | "SomeUpdated";
+
+async function reloadAllCssIfNeeded(): Promise<ReloadAllCssResult> {
+  return Promise.allSettled(
+    Array.from(document.styleSheets).flatMap((styleSheet) => {
+      if (styleSheet.href === null) {
+        return [];
+      }
+      const url = new URL(styleSheet.href);
+      if (url.hostname !== window.location.hostname) {
+        return [];
+      }
+      url.searchParams.set("forceReload", Date.now().toString());
+      return fetch(url.href)
+        .then((response) => response.text())
+        .then((newCss) => updateStyleSheetIfNeeded(styleSheet, newCss))
+        .catch((error) => {
+          // eslint-disable-next-line no-console
+          console.error(
+            "elm-watch: Failed to fetch CSS for reloading:",
+            url.href,
+            error
+          );
+        });
+    })
+  ).then((results) =>
+    results.some((result) => result.status === "rejected")
+      ? "SomeFailed"
+      : results.some((result) => result.status === "fulfilled" && result.value)
+      ? "SomeUpdated"
+      : "NothingChanged"
+  );
 }
 
 /**
@@ -1869,7 +1898,8 @@ function reloadAllCssIfNeeded(): void {
 function updateStyleSheetIfNeeded(
   oldStyleSheet: CSSStyleSheet,
   newCss: string
-): void {
+): boolean {
+  let changed = false;
   const newStyleSheet = parseCss(newCss);
   const length = Math.min(
     oldStyleSheet.cssRules.length,
@@ -1883,16 +1913,20 @@ function updateStyleSheetIfNeeded(
     if (oldRule.cssText !== newRule.cssText) {
       oldStyleSheet.deleteRule(index);
       oldStyleSheet.insertRule(newRule.cssText, index);
+      changed = true;
     }
   }
   while (index < oldStyleSheet.cssRules.length) {
     oldStyleSheet.deleteRule(index);
+    changed = true;
   }
   for (; index < newStyleSheet.cssRules.length; index++) {
     const newRule = newStyleSheet.cssRules[index]!;
     oldStyleSheet.insertRule(newRule.cssText, index);
+    changed = true;
   }
   /* eslint-enable @typescript-eslint/no-non-null-assertion */
+  return changed;
 }
 
 function parseCss(css: string): CSSStyleSheet {
@@ -2228,6 +2262,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 }
 
 .${CLASS.root} {
+  all: initial;
   --grey: #767676;
   display: flex;
   align-items: start;

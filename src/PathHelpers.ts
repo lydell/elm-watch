@@ -1,12 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { getSetSingleton, join } from "./Helpers";
-import {
-  isNonEmptyArray,
-  mapNonEmptyArray,
-  NonEmptyArray,
-} from "./NonEmptyArray";
+import { NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath } from "./Types";
 
 export function absolutePathFromString(
@@ -49,28 +44,13 @@ export function findClosest(
     : findClosest(name, absoluteDirname(absoluteDir));
 }
 
-export function longestCommonAncestorPath(
-  paths: NonEmptyArray<AbsolutePath>
-): AbsolutePath | undefined {
-  const pathArrays = mapNonEmptyArray(paths, ({ absolutePath }) =>
-    absolutePath.split(path.sep)
-  );
-
-  const length = Math.min(...pathArrays.map((array) => array.length));
-  const commonSegments = [];
-
-  for (let index = 0; index < length; index++) {
-    const segmentsAtIndex = new Set(pathArrays.map((array) => array[index]));
-    const uniqueSegment = getSetSingleton(segmentsAtIndex);
-    if (uniqueSegment === undefined) {
-      break;
-    }
-    commonSegments.push(uniqueSegment);
-  }
-
-  return isNonEmptyArray(commonSegments)
-    ? { tag: "AbsolutePath", absolutePath: join(commonSegments, path.sep) }
-    : // On Windows, a `C:` path and a `D:` path has no common ancestor.
-      // istanbul ignore next
-      undefined;
+/**
+ * Returns whether `child` is contained inside `parent`.
+ */
+export function pathContains(
+  parent: AbsolutePath,
+  child: AbsolutePath
+): boolean {
+  const relative = path.relative(child.absolutePath, parent.absolutePath);
+  return relative.split(path.sep).every((piece) => piece === "..");
 }

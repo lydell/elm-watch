@@ -7,7 +7,7 @@ import { stringSnapshotSerializer } from "./Helpers";
 const getNow: GetNow = () => new Date();
 
 const project: Project = {
-  watchRoot: {
+  watchRoots: {
     tag: "AbsolutePath",
     absolutePath: "/Users/you/project",
   },

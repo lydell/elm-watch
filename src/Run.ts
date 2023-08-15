@@ -215,13 +215,6 @@ export async function run(
                     postprocessWorkerPool
                   );
 
-                // istanbul ignore next
-                case "NoCommonRoot":
-                  logger.errorTemplate(
-                    Errors.noCommonRoot(initProjectResult.paths)
-                  );
-                  return { tag: "Exit", exitCode: 1 };
-
                 case "Project": {
                   const { project } = initProjectResult;
 

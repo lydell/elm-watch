@@ -45,7 +45,11 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
+import {
+  absoluteDirname,
+  absolutePathFromString,
+  pathContains,
+} from "./PathHelpers";
 import { Port, PortChoice } from "./Port";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
@@ -123,7 +127,6 @@ export type LatestEvent =
 
 type Mutable = {
   watcher: chokidar.FSWatcher;
-  cssWatcher: chokidar.FSWatcher | undefined;
   postprocessWorkerPool: PostprocessWorkerPool;
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
@@ -164,10 +167,6 @@ type Msg =
   | {
       tag: "ExitRequested";
       date: Date;
-    }
-  | {
-      tag: "GotCssWatcherEvent";
-      absolutePathString: string;
     }
   | {
       tag: "GotWatcherEvent";
@@ -495,15 +494,18 @@ const initMutable =
       10000
     );
 
-    const watcher = chokidar.watch(project.watchRoot.absolutePath, {
-      ignoreInitial: true,
-      // Note: Forward slashes must be used here even on Windows. (Using
-      // backslashes on Windows never matches.) The trailing slash is important:
-      // It makes it possible to get notifications of a removed elm-stuff
-      // folder, while ignoring everything that happens _inside_ that folder.
-      ignored: /\/(elm-stuff|node_modules)\//,
-      disableGlobbing: true,
-    });
+    const watcher = chokidar.watch(
+      Array.from(project.watchRoots, (root) => root.absolutePath),
+      {
+        ignoreInitial: true,
+        // Note: Forward slashes must be used here even on Windows. (Using
+        // backslashes on Windows never matches.) The trailing slash is important:
+        // It makes it possible to get notifications of a removed elm-stuff
+        // folder, while ignoring everything that happens _inside_ that folder.
+        ignored: /\/(elm-stuff|node_modules)\//,
+        disableGlobbing: true,
+      }
+    );
 
     watcherOnAll(
       watcher,
@@ -527,36 +529,6 @@ const initMutable =
       }
     );
 
-    let cssWatcher = undefined;
-
-    if (project.staticFilesDir !== undefined) {
-      cssWatcher = chokidar.watch(
-        project.staticFilesDir.theStaticFilesDir.absolutePath,
-        {
-          ignoreInitial: true,
-          disableGlobbing: true,
-        }
-      );
-
-      watcherOnAll(
-        watcher,
-        (error) => {
-          // TODO: What to do on error?
-          closeAll(logger, mutable)
-            .then(() => {
-              resolvePromise({
-                tag: "ExitOnHandledFatalError",
-                errorTemplate: Errors.watcherError(error),
-              });
-            })
-            .catch(rejectPromise);
-        },
-        (_eventName: WatcherEventName, absolutePathString: string): void => {
-          dispatch({ tag: "GotCssWatcherEvent", absolutePathString });
-        }
-      );
-    }
-
     const {
       webSocketServer = new WebSocketServer(
         portChoice,
@@ -568,7 +540,6 @@ const initMutable =
 
     const mutable: Mutable = {
       watcher,
-      cssWatcher,
       postprocessWorkerPool,
       webSocketServer,
       webSocketConnections,
@@ -778,19 +749,6 @@ function update(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
-    case "GotCssWatcherEvent":
-      return [
-        model,
-        msg.absolutePathString.endsWith(".css")
-          ? [
-              {
-                tag: "WebSocketSendAll",
-                message: { tag: "CssFileMayHaveChanged" },
-              },
-            ]
-          : [],
-      ];
-
     case "GotWatcherEvent": {
       const result = onWatcherEvent(
         msg.date,
@@ -1191,6 +1149,30 @@ function onWatcherEvent(
       makeWatcherEvent(eventName, absolutePathString, now),
       nextAction
     );
+  }
+
+  if (
+    absolutePathString.endsWith(".css") &&
+    project.staticFilesDir !== undefined &&
+    pathContains(project.staticFilesDir.theStaticFilesDir, {
+      tag: "AbsolutePath",
+      absolutePath: absolutePathString,
+    })
+  ) {
+    // TODO: Is sleeping necessary as well?
+    return [
+      { tag: "NoAction" },
+      {
+        ...makeWatcherEvent(eventName, absolutePathString, now),
+        affectsAnyTarget: true,
+      },
+      [
+        {
+          tag: "WebSocketSendAll",
+          message: { tag: "CssFileMayHaveChanged" },
+        },
+      ],
+    ];
   }
 
   const basename = path.basename(absolutePathString);
@@ -2081,7 +2063,6 @@ async function closeAll(
   mutable.webSocketServer.unsetDispatch();
   await Promise.all([
     mutable.watcher.close(),
-    mutable.cssWatcher?.close(),
     killWebSocketServer ? mutable.webSocketServer.close() : undefined,
     killPostprocessWorkerPool
       ? mutable.postprocessWorkerPool.terminate()

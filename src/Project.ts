@@ -14,7 +14,7 @@ import {
   absolutePathFromString,
   absoluteRealpath,
   findClosest,
-  longestCommonAncestorPath,
+  pathContains
 } from "./PathHelpers";
 import { Postprocess } from "./Postprocess";
 import { PostprocessError } from "./PostprocessShared";
@@ -32,12 +32,14 @@ import type {
   OutputPath,
   StaticFilesDir,
   UncheckedInputPath,
-  WriteOutputErrorReasonForWriting,
+  WriteOutputErrorReasonForWriting
 } from "./Types";
 
 export type Project = {
-  // Path to the longest ancestor of elm-watch.json and all elm.json.
-  watchRoot: AbsolutePath;
+  // Path of the directories containing elm-watch.json and all elm.json,
+  // as well as the static files directory (if any), without duplicates
+  // and where each directory does not contain any other.
+  watchRoots: HashSet<AbsolutePath>;
   staticFilesDir: StaticFilesDir | undefined;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
@@ -113,12 +115,12 @@ export class OutputState {
         this._durations.push({
           tag: "ElmMake",
           elmDurationMs: this._status.elmDurationMs,
-          walkerDurationMs: this._status.walkerDurationMs,
+          walkerDurationMs: this._status.walkerDurationMs
         });
         if (this._status.injectDurationMs !== -1) {
           this._durations.push({
             tag: "Inject",
-            durationMs: this._status.injectDurationMs,
+            durationMs: this._status.injectDurationMs
           });
         }
         break;
@@ -127,7 +129,7 @@ export class OutputState {
         this._durations.push({
           tag: "ElmMakeTypecheckOnly",
           elmDurationMs: this._status.elmDurationMs,
-          walkerDurationMs: this._status.walkerDurationMs,
+          walkerDurationMs: this._status.walkerDurationMs
         });
         break;
 
@@ -136,7 +138,7 @@ export class OutputState {
       case "QueuedForPostprocess":
         this._durations.push({
           tag: this._status.tag,
-          durationMs: this._lastStartTimestamp - lastStartTimestamp,
+          durationMs: this._lastStartTimestamp - lastStartTimestamp
         });
         break;
 
@@ -151,45 +153,45 @@ export class OutputState {
 export type OutputStatus =
   | OutputError
   | {
-      tag: "ElmMake";
-      compilationMode: CompilationMode;
-      elmDurationMs: number;
-      walkerDurationMs: number;
-      injectDurationMs: number;
-      kill: (options: { force: boolean }) => void;
-    }
+  tag: "ElmMake";
+  compilationMode: CompilationMode;
+  elmDurationMs: number;
+  walkerDurationMs: number;
+  injectDurationMs: number;
+  kill: (options: { force: boolean }) => void;
+}
   | {
-      tag: "ElmMakeTypecheckOnly";
-      elmDurationMs: number;
-      walkerDurationMs: number;
-      kill: (options: { force: boolean }) => void;
-    }
+  tag: "ElmMakeTypecheckOnly";
+  elmDurationMs: number;
+  walkerDurationMs: number;
+  kill: (options: { force: boolean }) => void;
+}
   | {
-      tag: "Interrupted";
-    }
+  tag: "Interrupted";
+}
   | {
-      tag: "NotWrittenToDisk";
-    }
+  tag: "NotWrittenToDisk";
+}
   | {
-      tag: "Postprocess";
-      kill: () => Promise<void> | void;
-    }
+  tag: "Postprocess";
+  kill: () => Promise<void> | void;
+}
   | {
-      tag: "QueuedForElmMake";
-    }
+  tag: "QueuedForElmMake";
+}
   | {
-      tag: "QueuedForPostprocess";
-      postprocessArray: NonEmptyArray<string>;
-      code: Buffer | string;
-      elmCompiledTimestamp: number;
-      recordFields: Set<string> | undefined;
-    }
+  tag: "QueuedForPostprocess";
+  postprocessArray: NonEmptyArray<string>;
+  code: Buffer | string;
+  elmCompiledTimestamp: number;
+  recordFields: Set<string> | undefined;
+}
   | {
-      tag: "Success";
-      elmFileSize: number;
-      postprocessFileSize: number;
-      elmCompiledTimestamp: number;
-    };
+  tag: "Success";
+  elmFileSize: number;
+  postprocessFileSize: number;
+  elmCompiledTimestamp: number;
+};
 
 export type OutputError =
   | ElmJson.ParseError
@@ -200,59 +202,59 @@ export type OutputError =
 
 type OutputFsError =
   | {
-      tag: "NeedsToWriteProxyFileReadError";
-      error: Error;
-      triedPath: AbsolutePath;
-    }
+  tag: "NeedsToWriteProxyFileReadError";
+  error: Error;
+  triedPath: AbsolutePath;
+}
   | {
-      tag: "ReadOutputError";
-      error: Error;
-      triedPath: AbsolutePath;
-    }
+  tag: "ReadOutputError";
+  error: Error;
+  triedPath: AbsolutePath;
+}
   | {
-      tag: "WriteOutputError";
-      error: Error;
-      reasonForWriting: WriteOutputErrorReasonForWriting;
-    }
+  tag: "WriteOutputError";
+  error: Error;
+  reasonForWriting: WriteOutputErrorReasonForWriting;
+}
   | {
-      tag: "WriteProxyOutputError";
-      error: Error;
-    };
+  tag: "WriteProxyOutputError";
+  error: Error;
+};
 
 type ElmJsonError =
   | {
-      tag: "DuplicateInputs";
-      duplicates: NonEmptyArray<{
-        inputs: NonEmptyArray<InputPath>;
-        resolved: AbsolutePath;
-      }>;
-    }
+  tag: "DuplicateInputs";
+  duplicates: NonEmptyArray<{
+    inputs: NonEmptyArray<InputPath>;
+    resolved: AbsolutePath;
+  }>;
+}
   | {
-      tag: "ElmJsonNotFound";
-      elmJsonNotFound: NonEmptyArray<InputPath>;
-      foundElmJsonPaths: Array<{
-        inputPath: InputPath;
-        elmJsonPath: ElmJsonPath;
-      }>;
-    }
+  tag: "ElmJsonNotFound";
+  elmJsonNotFound: NonEmptyArray<InputPath>;
+  foundElmJsonPaths: Array<{
+    inputPath: InputPath;
+    elmJsonPath: ElmJsonPath;
+  }>;
+}
   | {
-      tag: "InputsFailedToResolve";
-      inputsFailedToResolve: NonEmptyArray<{
-        inputPath: UncheckedInputPath;
-        error: Error;
-      }>;
-    }
+  tag: "InputsFailedToResolve";
+  inputsFailedToResolve: NonEmptyArray<{
+    inputPath: UncheckedInputPath;
+    error: Error;
+  }>;
+}
   | {
-      tag: "InputsNotFound";
-      inputsNotFound: NonEmptyArray<UncheckedInputPath>;
-    }
+  tag: "InputsNotFound";
+  inputsNotFound: NonEmptyArray<UncheckedInputPath>;
+}
   | {
-      tag: "NonUniqueElmJsonPaths";
-      nonUniqueElmJsonPaths: NonEmptyArray<{
-        inputPath: InputPath;
-        elmJsonPath: ElmJsonPath;
-      }>;
-    };
+  tag: "NonUniqueElmJsonPaths";
+  nonUniqueElmJsonPaths: NonEmptyArray<{
+    inputPath: InputPath;
+    elmJsonPath: ElmJsonPath;
+  }>;
+};
 
 export type ElmJsonErrorWithMetadata = {
   outputPath: OutputPath;
@@ -264,60 +266,56 @@ export type ElmJsonErrorWithMetadata = {
 
 export type Duration =
   | {
-      tag: "ElmMake";
-      elmDurationMs: number;
-      walkerDurationMs: number;
-    }
+  tag: "ElmMake";
+  elmDurationMs: number;
+  walkerDurationMs: number;
+}
   | {
-      tag: "ElmMakeTypecheckOnly";
-      elmDurationMs: number;
-      walkerDurationMs: number;
-    }
+  tag: "ElmMakeTypecheckOnly";
+  elmDurationMs: number;
+  walkerDurationMs: number;
+}
   | {
-      tag: "Inject";
-      durationMs: number;
-    }
+  tag: "Inject";
+  durationMs: number;
+}
   | {
-      tag: "Postprocess";
-      durationMs: number;
-    }
+  tag: "Postprocess";
+  durationMs: number;
+}
   | {
-      tag: "QueuedForElmMake";
-      durationMs: number;
-    }
+  tag: "QueuedForElmMake";
+  durationMs: number;
+}
   | {
-      tag: "QueuedForPostprocess";
-      durationMs: number;
-    };
+  tag: "QueuedForPostprocess";
+  durationMs: number;
+};
 
 type InitProjectResult =
   | {
-      tag: "DuplicateOutputs";
-      duplicates: NonEmptyArray<{
-        originalOutputPathStrings: NonEmptyArray<string>;
-        absolutePath: AbsolutePath;
-      }>;
-    }
+  tag: "DuplicateOutputs";
+  duplicates: NonEmptyArray<{
+    originalOutputPathStrings: NonEmptyArray<string>;
+    absolutePath: AbsolutePath;
+  }>;
+}
   | {
-      tag: "NoCommonRoot";
-      paths: NonEmptyArray<AbsolutePath>;
-    }
-  | {
-      tag: "Project";
-      project: Project;
-    };
+  tag: "Project";
+  project: Project;
+};
 
 export function initProject({
-  env,
-  getNow,
-  compilationMode,
-  elmWatchJsonPath,
-  config,
-  enabledTargetsSubstrings,
-  elmWatchStuffDir,
-  elmWatchStuffJsonPath,
-  elmWatchStuffJson,
-}: {
+                              env,
+                              getNow,
+                              compilationMode,
+                              elmWatchJsonPath,
+                              config,
+                              enabledTargetsSubstrings,
+                              elmWatchStuffDir,
+                              elmWatchStuffJsonPath,
+                              elmWatchStuffJson
+                            }: {
   env: Env;
   getNow: GetNow;
   compilationMode: CompilationMode;
@@ -350,7 +348,7 @@ export function initProject({
         `${index}.js`
       ),
       originalString: target.output,
-      targetName,
+      targetName
     };
 
     const previousOutput = potentialOutputDuplicates.get(
@@ -358,7 +356,7 @@ export function initProject({
     );
     if (previousOutput === undefined) {
       potentialOutputDuplicates.set(outputPath.theOutputPath, [
-        outputPath.originalString,
+        outputPath.originalString
       ]);
     } else {
       previousOutput.push(outputPath.originalString);
@@ -378,7 +376,7 @@ export function initProject({
       const {
         compilationMode: thisCompilationMode = compilationMode,
         browserUiPosition = "BottomLeft",
-        openErrorOverlay = false,
+        openErrorOverlay = false
       } = persisted ?? {};
 
       switch (resolveElmJsonResult.tag) {
@@ -406,7 +404,7 @@ export function initProject({
             compilationMode: thisCompilationMode,
             browserUiPosition,
             openErrorOverlay,
-            error: resolveElmJsonResult,
+            error: resolveElmJsonResult
           });
           break;
       }
@@ -419,52 +417,67 @@ export function initProject({
     .filter(([, outputPaths]) => outputPaths.length >= 2)
     .map(([absolutePath, originalOutputPathStrings]) => ({
       originalOutputPathStrings,
-      absolutePath,
+      absolutePath
     }));
 
   if (isNonEmptyArray(duplicateOutputs)) {
     return {
       tag: "DuplicateOutputs",
-      duplicates: duplicateOutputs,
+      duplicates: duplicateOutputs
     };
   }
 
-  const paths: NonEmptyArray<AbsolutePath> = [
-    absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-    ...Array.from(elmJsons.keys()).flatMap(
-      (elmJsonPath): Array<AbsolutePath> => {
-        // This is a bit weird, but we can actually ignore errors here. Some facts:
-        // - We want to run Elm even if the elm.json is invalid, because Elm has
-        //   really nice error messages.
-        // - We run `ElmJson.readAndParse` again later and do report the errors then.
-        //   (But in practice you won’t see them because we show Elm’s errors instead.)
-        // - Regardless of whether we report the errors here we can’t know the
-        //   real watch root until it becomes valid. The best guess is to just
-        //   use the elm-watch.json and elm.json paths then.
-        const result = ElmJson.readAndParse(elmJsonPath);
-        switch (result.tag) {
-          case "Parsed":
-            return [
-              absoluteDirname(elmJsonPath.theElmJsonPath),
-              ...ElmJson.getSourceDirectories(elmJsonPath, result.elmJson).map(
-                (sourceDirectory) => sourceDirectory.theSourceDirectory
-              ),
-            ];
+  const staticFilesDir: StaticFilesDir | undefined =
+    config.serve === undefined
+      ? undefined
+      : {
+        tag: "StaticFilesDir",
+        theStaticFilesDir: absolutePathFromString(
+          absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+          config.serve
+        )
+      };
 
-          case "ElmJsonReadAsJsonError":
-          case "ElmJsonDecodeError":
-            return [absoluteDirname(elmJsonPath.theElmJsonPath)];
+  const watchRoots = new HashSet<AbsolutePath>(
+    [
+      absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+      ...(staticFilesDir === undefined
+        ? []
+        : [staticFilesDir.theStaticFilesDir]),
+      ...Array.from(elmJsons.keys()).flatMap(
+        (elmJsonPath): Array<AbsolutePath> => {
+          // This is a bit weird, but we can actually ignore errors here. Some facts:
+          // - We want to run Elm even if the elm.json is invalid, because Elm has
+          //   really nice error messages.
+          // - We run `ElmJson.readAndParse` again later and do report the errors then.
+          //   (But in practice you won’t see them because we show Elm’s errors instead.)
+          // - Regardless of whether we report the errors here we can’t know the
+          //   real watch root until it becomes valid. The best guess is to just
+          //   use the elm-watch.json and elm.json paths then.
+          const result = ElmJson.readAndParse(elmJsonPath);
+          switch (result.tag) {
+            case "Parsed":
+              return [
+                absoluteDirname(elmJsonPath.theElmJsonPath),
+                ...ElmJson.getSourceDirectories(
+                  elmJsonPath,
+                  result.elmJson
+                ).map((sourceDirectory) => sourceDirectory.theSourceDirectory)
+              ];
+
+            case "ElmJsonReadAsJsonError":
+            case "ElmJsonDecodeError":
+              return [absoluteDirname(elmJsonPath.theElmJsonPath)];
+          }
         }
-      }
-    ),
-  ];
-
-  const watchRoot = longestCommonAncestorPath(paths);
-
-  // istanbul ignore if
-  if (watchRoot === undefined) {
-    return { tag: "NoCommonRoot", paths };
-  }
+      )
+    ].filter((root, index, array) =>
+      // If any other root contains this one, discard this one.
+      array.every(
+        (root2, index2) => index === index2 || !pathContains(root2, root)
+      )
+    )
+  );
 
   const maxParallel = silentlyReadIntEnvValue(
     env[__ELM_WATCH_MAX_PARALLEL],
@@ -479,35 +492,26 @@ export function initProject({
   return {
     tag: "Project",
     project: {
-      watchRoot,
-      staticFilesDir:
-        config.serve === undefined
-          ? undefined
-          : {
-              tag: "StaticFilesDir",
-              theStaticFilesDir: absolutePathFromString(
-                absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-                config.serve
-              ),
-            },
+      watchRoots,
+      staticFilesDir,
       elmWatchJsonPath,
       elmWatchStuffJsonPath,
       disabledOutputs,
       elmJsonsErrors,
       elmJsons,
       maxParallel,
-      postprocess,
-    },
+      postprocess
+    }
   };
 }
 
 type ResolveElmJsonResult =
   | ElmJsonError
   | {
-      tag: "Success";
-      elmJsonPath: ElmJsonPath;
-      inputs: NonEmptyArray<InputPath>;
-    };
+  tag: "Success";
+  elmJsonPath: ElmJsonPath;
+  inputs: NonEmptyArray<InputPath>;
+};
 
 function resolveElmJson(
   elmWatchJsonPath: ElmWatchJsonPath,
@@ -528,7 +532,7 @@ function resolveElmJson(
         absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
         inputString
       ),
-      originalString: inputString,
+      originalString: inputString
     };
 
     let realpath;
@@ -548,7 +552,7 @@ function resolveElmJson(
       tag: "InputPath",
       theInputPath: uncheckedInputPath.theUncheckedInputPath,
       originalString: inputString,
-      realpath,
+      realpath
     };
 
     const previous = resolved.get(realpath);
@@ -564,14 +568,14 @@ function resolveElmJson(
   if (isNonEmptyArray(inputsNotFound)) {
     return {
       tag: "InputsNotFound",
-      inputsNotFound,
+      inputsNotFound
     };
   }
 
   if (isNonEmptyArray(inputsFailedToResolve)) {
     return {
       tag: "InputsFailedToResolve",
-      inputsFailedToResolve,
+      inputsFailedToResolve
     };
   }
 
@@ -579,13 +583,13 @@ function resolveElmJson(
     .filter(([, inputPaths]) => inputPaths.length >= 2)
     .map(([resolvedPath, inputPaths]) => ({
       resolved: resolvedPath,
-      inputs: inputPaths,
+      inputs: inputPaths
     }));
 
   if (isNonEmptyArray(duplicateInputs)) {
     return {
       tag: "DuplicateInputs",
-      duplicates: duplicateInputs,
+      duplicates: duplicateInputs
     };
   }
 
@@ -605,7 +609,7 @@ function resolveElmJson(
     } else {
       elmJsonPaths.push({
         inputPath,
-        elmJsonPath: { tag: "ElmJsonPath", theElmJsonPath: elmJsonPathRaw },
+        elmJsonPath: { tag: "ElmJsonPath", theElmJsonPath: elmJsonPathRaw }
       });
     }
   }
@@ -614,7 +618,7 @@ function resolveElmJson(
     return {
       tag: "ElmJsonNotFound",
       elmJsonNotFound,
-      foundElmJsonPaths: elmJsonPaths,
+      foundElmJsonPaths: elmJsonPaths
     };
   }
 
@@ -631,7 +635,7 @@ function resolveElmJson(
       nonUniqueElmJsonPaths: elmJsonPaths as NonEmptyArray<{
         inputPath: InputPath;
         elmJsonPath: ElmJsonPath;
-      }>,
+      }>
     };
   }
 
@@ -639,7 +643,7 @@ function resolveElmJson(
     tag: "Success",
     elmJsonPath: uniqueElmJsonPath,
     // At this point we know for sure that `inputs` must be non-empty.
-    inputs: inputs as NonEmptyArray<InputPath>,
+    inputs: inputs as NonEmptyArray<InputPath>
   };
 }
 
@@ -653,17 +657,17 @@ export function getFlatOutputs(project: Project): Array<{
       Array.from(outputs, ([outputPath, outputState]) => ({
         elmJsonPath,
         outputPath,
-        outputState,
+        outputState
       }))
   );
 }
 
 export function projectToDebug(project: Project): unknown {
   return {
-    watchRoot: project.watchRoot.absolutePath,
+    watchRoots: Array.from(project.watchRoots, (root) => root.absolutePath),
     elmWatchJson: project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
     elmWatchStuffJson:
-      project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,
+    project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,
     maxParallel: project.maxParallel,
     postprocess: project.postprocess,
     enabledTargets: Array.from(project.elmJsons.entries()).flatMap(
@@ -672,7 +676,7 @@ export function projectToDebug(project: Project): unknown {
           ...outputPathToDebug(outputPath),
           compilationMode: outputState.compilationMode,
           elmJson: elmJsonPath.theElmJsonPath.absolutePath,
-          inputs: outputState.inputs.map(inputPathToDebug),
+          inputs: outputState.inputs.map(inputPathToDebug)
         }))
     ),
     disabledTargets: Array.from(project.disabledOutputs, outputPathToDebug),
@@ -680,9 +684,9 @@ export function projectToDebug(project: Project): unknown {
       ({ outputPath, compilationMode, error }) => ({
         error: error.tag,
         ...outputPathToDebug(outputPath),
-        compilationMode,
+        compilationMode
       })
-    ),
+    )
   };
 }
 
@@ -691,7 +695,7 @@ function outputPathToDebug(outputPath: OutputPath): Record<string, unknown> {
     targetName: outputPath.targetName,
     output: outputPath.theOutputPath.absolutePath,
     temporaryOutput: outputPath.temporaryOutputPath.absolutePath,
-    originalString: outputPath.originalString,
+    originalString: outputPath.originalString
   };
 }
 
@@ -699,6 +703,6 @@ function inputPathToDebug(inputPath: InputPath): Record<string, unknown> {
   return {
     input: inputPath.theInputPath.absolutePath,
     realpath: inputPath.realpath.absolutePath,
-    originalString: inputPath.originalString,
+    originalString: inputPath.originalString
   };
 }
