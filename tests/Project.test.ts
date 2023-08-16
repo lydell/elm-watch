@@ -7,29 +7,31 @@ import { stringSnapshotSerializer } from "./Helpers";
 const getNow: GetNow = () => new Date();
 
 const project: Project = {
-  watchRoots: new HashSet([{
-    tag: "AbsolutePath",
-    absolutePath: "/Users/you/project"
-  }]),
+  watchRoots: new HashSet([
+    {
+      tag: "AbsolutePath",
+      absolutePath: "/Users/you/project",
+    },
+  ]),
   staticFilesDir: undefined,
   elmWatchJsonPath: {
     tag: "ElmWatchJsonPath",
     theElmWatchJsonPath: {
       tag: "AbsolutePath",
-      absolutePath: "/Users/you/project/elm-watch.json"
-    }
+      absolutePath: "/Users/you/project/elm-watch.json",
+    },
   },
   elmWatchStuffJsonPath: {
     tag: "ElmWatchStuffJsonPath",
     theElmWatchStuffJsonPath: {
       tag: "AbsolutePath",
-      absolutePath: "/Users/you/project/elm-stuff/elm-watch/stuff.json"
-    }
+      absolutePath: "/Users/you/project/elm-stuff/elm-watch/stuff.json",
+    },
   },
   maxParallel: 12,
   postprocess: {
     tag: "Postprocess",
-    postprocessArray: ["elm-watch-node", "postprocess.js"]
+    postprocessArray: ["elm-watch-node", "postprocess.js"],
   },
   disabledOutputs: new HashSet([
     {
@@ -38,12 +40,12 @@ const project: Project = {
       targetName: "Html",
       theOutputPath: {
         tag: "AbsolutePath",
-        absolutePath: "/Users/you/project/public/build/HtmlMain.js"
+        absolutePath: "/Users/you/project/public/build/HtmlMain.js",
       },
       temporaryOutputPath: {
         tag: "AbsolutePath",
-        absolutePath: "/Users/you/project/elm-stuff/elm-watch/1.js"
-      }
+        absolutePath: "/Users/you/project/elm-stuff/elm-watch/1.js",
+      },
     },
     {
       originalString: "public/submodules/azimutt/public/dist/elm.js",
@@ -52,13 +54,13 @@ const project: Project = {
       theOutputPath: {
         tag: "AbsolutePath",
         absolutePath:
-          "/Users/you/project/public/submodules/azimutt/public/dist/elm.js"
+          "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
       },
       temporaryOutputPath: {
         tag: "AbsolutePath",
-        absolutePath: "/Users/you/project/elm-stuff/elm-watch/2.js"
-      }
-    }
+        absolutePath: "/Users/you/project/elm-stuff/elm-watch/2.js",
+      },
+    },
   ]),
   elmJsonsErrors: [
     {
@@ -66,14 +68,14 @@ const project: Project = {
         tag: "OutputPath",
         theOutputPath: {
           tag: "AbsolutePath",
-          absolutePath: "/Users/you/project/public/build/SandboxMain.js"
+          absolutePath: "/Users/you/project/public/build/SandboxMain.js",
         },
         temporaryOutputPath: {
           tag: "AbsolutePath",
-          absolutePath: "/Users/you/project/elm-stuff/elm-watch/3.js"
+          absolutePath: "/Users/you/project/elm-stuff/elm-watch/3.js",
         },
         originalString: "public/build/SandboxMain.js",
-        targetName: "Sandbox"
+        targetName: "Sandbox",
       },
       compilationMode: "standard",
       browserUiPosition: "BottomLeft",
@@ -85,13 +87,13 @@ const project: Project = {
             tag: "UncheckedInputPath",
             theUncheckedInputPath: {
               tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/src/BandboxMain.elm"
+              absolutePath: "/Users/you/project/src/BandboxMain.elm",
             },
-            originalString: "src/BandboxMain.elm"
-          }
-        ]
-      }
-    }
+            originalString: "src/BandboxMain.elm",
+          },
+        ],
+      },
+    },
   ],
   elmJsons: new HashMap([
     [
@@ -99,8 +101,8 @@ const project: Project = {
         tag: "ElmJsonPath",
         theElmJsonPath: {
           tag: "AbsolutePath",
-          absolutePath: "/Users/you/project/elm.json"
-        }
+          absolutePath: "/Users/you/project/elm.json",
+        },
       },
       new HashMap([
         [
@@ -110,12 +112,12 @@ const project: Project = {
             targetName: "Element",
             theOutputPath: {
               tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/public/build/ElementMain.js"
+              absolutePath: "/Users/you/project/public/build/ElementMain.js",
             },
             temporaryOutputPath: {
               tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/elm-stuff/elm-watch/4.js"
-            }
+              absolutePath: "/Users/you/project/elm-stuff/elm-watch/4.js",
+            },
           },
           new OutputState(
             [
@@ -123,20 +125,20 @@ const project: Project = {
                 tag: "InputPath",
                 theInputPath: {
                   tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ElementMain.elm"
+                  absolutePath: "/Users/you/project/src/ElementMain.elm",
                 },
                 originalString: "src/ElementMain.elm",
                 realpath: {
                   tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ElementMain.elm"
-                }
-              }
+                  absolutePath: "/Users/you/project/src/ElementMain.elm",
+                },
+              },
             ],
             "optimize",
             "BottomLeft",
             false,
             getNow
-          )
+          ),
         ],
         [
           {
@@ -145,12 +147,12 @@ const project: Project = {
             targetName: "Frankenstein",
             theOutputPath: {
               tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/public/build/Frankenstein.js"
+              absolutePath: "/Users/you/project/public/build/Frankenstein.js",
             },
             temporaryOutputPath: {
               tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/elm-stuff/elm-watch/5.js"
-            }
+              absolutePath: "/Users/you/project/elm-stuff/elm-watch/5.js",
+            },
           },
           new OutputState(
             [
@@ -158,34 +160,34 @@ const project: Project = {
                 tag: "InputPath",
                 theInputPath: {
                   tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ApplicationMain.elm"
+                  absolutePath: "/Users/you/project/src/ApplicationMain.elm",
                 },
                 originalString: "src/ApplicationMain.elm",
                 realpath: {
                   tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ApplicationMain.elm"
-                }
+                  absolutePath: "/Users/you/project/src/ApplicationMain.elm",
+                },
               },
               {
                 tag: "InputPath",
                 theInputPath: {
                   tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/DocumentMain.elm"
+                  absolutePath: "/Users/you/project/src/DocumentMain.elm",
                 },
                 originalString: "src/DocumentMain.elm",
                 realpath: {
                   tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/DocumentMain.elm"
-                }
-              }
+                  absolutePath: "/Users/you/project/src/DocumentMain.elm",
+                },
+              },
             ],
             "standard",
             "BottomLeft",
             false,
             getNow
-          )
-        ]
-      ])
+          ),
+        ],
+      ]),
     ],
     [
       {
@@ -193,8 +195,8 @@ const project: Project = {
         theElmJsonPath: {
           tag: "AbsolutePath",
           absolutePath:
-            "/Users/you/project/public/submodules/concourse/web/elm/elm.json"
-        }
+            "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
+        },
       },
       new HashMap([
         [
@@ -205,12 +207,12 @@ const project: Project = {
             theOutputPath: {
               tag: "AbsolutePath",
               absolutePath:
-                "/Users/you/project/public/submodules/concourse/web/public/elm.min.js"
+                "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
             },
             temporaryOutputPath: {
               tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/elm-stuff/elm-watch/6.js"
-            }
+              absolutePath: "/Users/you/project/elm-stuff/elm-watch/6.js",
+            },
           },
           new OutputState(
             [
@@ -219,25 +221,25 @@ const project: Project = {
                 theInputPath: {
                   tag: "AbsolutePath",
                   absolutePath:
-                    "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm"
+                    "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
                 },
                 originalString: "src/ElementMain.elm",
                 realpath: {
                   tag: "AbsolutePath",
                   absolutePath:
-                    "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm"
-                }
-              }
+                    "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
+                },
+              },
             ],
             "optimize",
             "BottomLeft",
             false,
             getNow
-          )
-        ]
-      ])
-    ]
-  ])
+          ),
+        ],
+      ]),
+    ],
+  ]),
 };
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
