@@ -1871,11 +1871,12 @@ async function reloadAllCssIfNeeded(): Promise<boolean> {
             url.href,
             error
           );
+          return false;
         });
     })
   );
   return results.some(
-    (result) => result.status === "fulfilled" && result.value === true
+    (result) => result.status === "fulfilled" && result.value
   );
 }
 
