@@ -285,7 +285,6 @@ type UiMsg =
 
 type Model = {
   status: Status;
-  previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
   browserUiPosition: BrowserUiPosition;
   lastBrowserUiPositionChangeDate: Date | undefined;
@@ -298,6 +297,10 @@ type Cmd =
   | {
       tag: "Eval";
       code: string;
+    }
+  | {
+      tag: "Flash";
+      flashType: FlashType;
     }
   | {
       tag: "NoCmd";
@@ -484,12 +487,26 @@ function run(): void {
       const newModel: Model = modelChanged
         ? {
             ...updatedModel,
-            previousStatusTag: model.status.tag,
             uiExpanded: reloadTrouble ? true : updatedModel.uiExpanded,
           }
         : model;
       const oldErrorOverlay = getErrorOverlay(model.status);
       const newErrorOverlay = getErrorOverlay(newModel.status);
+      const statusType = statusToStatusType(newModel.status.tag);
+      const statusTypeChanged =
+        statusType !== statusToStatusType(model.status.tag);
+      const statusFlashType = getStatusFlashType({
+        statusType,
+        statusTypeChanged,
+        hasReceivedHotReload:
+          newModel.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
+        uiRelatedUpdate: msg.tag === "UiMsg",
+        errorOverlayVisible: elements !== undefined && !elements.overlay.hidden,
+      });
+      const flashCmd: Array<Cmd> =
+        statusFlashType === undefined || cmds.some((cmd) => cmd.tag === "Flash")
+          ? []
+          : [{ tag: "Flash", flashType: statusFlashType }];
       const allCmds: Array<Cmd> = modelChanged
         ? [
             ...cmds,
@@ -500,7 +517,7 @@ function run(): void {
             },
             // This needs to be done before Render, since it depends on whether
             // the error overlay is visible or not.
-            newModel.status.tag === newModel.previousStatusTag &&
+            newModel.status.tag === model.status.tag &&
             oldErrorOverlay?.openErrorOverlay ===
               newErrorOverlay?.openErrorOverlay
               ? { tag: "NoCmd" }
@@ -513,11 +530,17 @@ function run(): void {
                       : newErrorOverlay.errors,
                   sendKey: statusToSpecialCaseSendKey(newModel.status),
                 },
-            {
-              tag: "Render",
-              model: newModel,
-              manageFocus: msg.tag === "UiMsg",
-            },
+            ...(elements !== undefined ||
+            newModel.status.tag !== model.status.tag
+              ? [
+                  {
+                    tag: "Render",
+                    model: newModel,
+                    manageFocus: msg.tag === "UiMsg",
+                  } as const,
+                ]
+              : []),
+            ...flashCmd,
             model.browserUiPosition === newModel.browserUiPosition
               ? { tag: "NoCmd" }
               : {
@@ -528,7 +551,7 @@ function run(): void {
               ? { tag: "TriggerReachedIdleState", reason: "ReloadTrouble" }
               : { tag: "NoCmd" },
           ]
-        : cmds;
+        : [...cmds, ...flashCmd];
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
@@ -970,7 +993,6 @@ const init = (
 ): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
-    previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
     browserUiPosition,
     lastBrowserUiPositionChangeDate: undefined,
@@ -1039,14 +1061,17 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "FocusedTab":
       return [
-        // Force a re-render for the “Error” status type, so that the animation plays again.
-        statusToStatusType(model.status.tag) === "Error" ? { ...model } : model,
-        // Send these commands regardless of current status: We want to prioritize the target
-        // due to the focus no matter what, and after waking up on iOS we need to check the
-        // WebSocket connection no matter what as well. For example, it’s possible to lock
-        // the phone while Busy, and then we miss the “done” message, which makes us still
-        // have the Busy status when unlocking the phone.
+        model,
         [
+          // Replay the error animation.
+          ...(statusToStatusType(model.status.tag) === "Error"
+            ? [{ tag: "Flash", flashType: "error" } as const]
+            : []),
+          // Send these commands regardless of current status: We want to prioritize the target
+          // due to the focus no matter what, and after waking up on iOS we need to check the
+          // WebSocket connection no matter what as well. For example, it’s possible to lock
+          // the phone while Busy, and then we miss the “done” message, which makes us still
+          // have the Busy status when unlocking the phone.
           {
             tag: "SendMessage",
             message: { tag: "FocusedTab" },
@@ -1063,12 +1088,8 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "ReloadAllCssDone":
       return [
-        msg.didChange
-          ? // TODO: Make it flash here.
-            // This hack didn’t work out.
-            { ...model, previousStatusTag: "Busy" }
-          : model,
-        [],
+        model,
+        msg.didChange ? [{ tag: "Flash", flashType: "success" }] : [],
       ];
 
     case "SleepBeforeReconnectDone":
@@ -1509,6 +1530,12 @@ const runCmd =
         return;
       }
 
+      case "Flash":
+        if (elements !== undefined) {
+          flash(elements, cmd.flashType);
+        }
+        return;
+
       case "NoCmd":
         return;
 
@@ -1536,16 +1563,12 @@ const runCmd =
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
           initializedElmAppsStatus: checkInitializedElmAppsStatus(),
-          errorOverlayVisible:
-            elements !== undefined && !elements.overlay.hidden,
         };
         if (elements === undefined) {
-          if (model.status.tag !== model.previousStatusTag) {
-            const isError = statusToStatusType(model.status.tag) === "Error";
-            // eslint-disable-next-line no-console
-            const consoleMethod = isError ? console.error : console.info;
-            consoleMethod(renderWebWorker(model, info));
-          }
+          const isError = statusToStatusType(model.status.tag) === "Error";
+          // eslint-disable-next-line no-console
+          const consoleMethod = isError ? console.error : console.info;
+          consoleMethod(renderWebWorker(model, info));
         } else {
           const { targetRoot } = elements;
           render(getNow, targetRoot, dispatch, model, info, cmd.manageFocus);
@@ -2000,7 +2023,6 @@ type Info = {
   targetName: string;
   originalCompilationMode: CompilationModeWithProxy;
   initializedElmAppsStatus: InitializedElmAppsStatus;
-  errorOverlayVisible: boolean;
 };
 
 function renderWebWorker(model: Model, info: Info): string {
@@ -2024,8 +2046,7 @@ function render(
         dispatch({ tag: "UiMsg", date: getNow(), msg });
       },
       model,
-      info,
-      manageFocus
+      info
     )
   );
 
@@ -2048,8 +2069,7 @@ const CLASS = {
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
   expandedUiContainer: "expandedUiContainer",
-  flashError: "flashError",
-  flashSuccess: "flashSuccess",
+  flash: "flash",
   overlay: "overlay",
   overlayCloseButton: "overlayCloseButton",
   root: "root",
@@ -2059,7 +2079,7 @@ const CLASS = {
   targetRoot: "targetRoot",
 };
 
-function getStatusClass({
+function getStatusFlashType({
   statusType,
   statusTypeChanged,
   hasReceivedHotReload,
@@ -2071,22 +2091,30 @@ function getStatusClass({
   hasReceivedHotReload: boolean;
   uiRelatedUpdate: boolean;
   errorOverlayVisible: boolean;
-}): string | undefined {
+}): FlashType | undefined {
   switch (statusType) {
     case "Success":
-      return statusTypeChanged && hasReceivedHotReload
-        ? CLASS.flashSuccess
-        : undefined;
+      return statusTypeChanged && hasReceivedHotReload ? "success" : undefined;
     case "Error":
       return errorOverlayVisible
         ? statusTypeChanged && hasReceivedHotReload
-          ? CLASS.flashError
+          ? "error"
           : undefined
         : uiRelatedUpdate
         ? undefined
-        : CLASS.flashError;
+        : "error";
     case "Waiting":
       return undefined;
+  }
+}
+
+type FlashType = "error" | "success";
+
+function flash(elements: Elements, flashType: FlashType): void {
+  for (const element of elements.targetRoot.querySelectorAll(
+    `.${CLASS.flash}`
+  )) {
+    element.setAttribute("data-flash", flashType);
   }
 }
 
@@ -2390,8 +2418,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   gap: 0.25em;
 }
 
-.${CLASS.flashError}::before,
-.${CLASS.flashSuccess}::before {
+[data-flash]::before {
   content: "";
   position: absolute;
   margin-top: 0.5em;
@@ -2404,11 +2431,11 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   pointer-events: none;
 }
 
-.${CLASS.flashError}::before {
+[data-flash="error"]::before {
   background-color: #eb0000;
 }
 
-.${CLASS.flashSuccess}::before {
+[data-flash="success"]::before {
   background-color: #00b600;
 }
 
@@ -2435,8 +2462,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .${CLASS.flashError}::before,
-  .${CLASS.flashSuccess}::before {
+  [data-flash]::before {
     transform: translate(-50%, -50%);
     width: 2em;
     height: 2em;
@@ -2457,8 +2483,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
-  info: Info,
-  manageFocus: boolean
+  info: Info
 ): HTMLElement {
   const model: Model = __ELM_WATCH.MOCKED_TIMINGS
     ? {
@@ -2474,19 +2499,6 @@ function view(
     ...statusIconAndText(model, info),
     ...viewStatus(dispatch, model, info),
   };
-
-  const statusType = statusToStatusType(model.status.tag);
-  const statusTypeChanged =
-    statusType !== statusToStatusType(model.previousStatusTag);
-
-  const statusClass = getStatusClass({
-    statusType,
-    statusTypeChanged,
-    hasReceivedHotReload:
-      model.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
-    uiRelatedUpdate: manageFocus,
-    errorOverlayVisible: info.errorOverlayVisible,
-  });
 
   return h(
     HTMLDivElement,
@@ -2521,24 +2533,18 @@ function view(
         )
       ),
       compilationModeIcon(model.compilationMode),
-      icon(
-        statusData.icon,
-        statusData.status,
-        statusClass === undefined
-          ? {}
-          : {
-              className: statusClass,
-              onanimationend: (event) => {
-                // The animations are designed to work even without this (they
-                // stay on the last frame). We also have `pointer-events: none`.
-                // But remove the absolutely positioned animation element just
-                // in case.
-                if (event.currentTarget instanceof HTMLElement) {
-                  event.currentTarget.classList.remove(statusClass);
-                }
-              },
-            }
-      ),
+      icon(statusData.icon, statusData.status, {
+        className: CLASS.flash,
+        onanimationend: (event) => {
+          // The animations are designed to work even without this (they
+          // stay on the last frame). We also have `pointer-events: none`.
+          // But remove the absolutely positioned animation element just
+          // in case.
+          if (event.currentTarget instanceof HTMLElement) {
+            event.currentTarget.removeAttribute("data-flash");
+          }
+        },
+      }),
       h(
         HTMLTimeElement,
         { dateTime: model.status.date.toISOString() },
@@ -3453,7 +3459,6 @@ function renderMockStatuses(
       tag: "DebuggerModeStatus",
       status: { tag: "Enabled" },
     },
-    errorOverlayVisible: false,
   };
 
   const mockStatuses: Record<
@@ -3661,7 +3666,6 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     elements.root.append(targetRoot);
     const model: Model = {
       status,
-      previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
       browserUiPosition: "BottomLeft",
       lastBrowserUiPositionChangeDate: undefined,
