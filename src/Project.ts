@@ -36,9 +36,12 @@ import type {
 } from "./Types";
 
 export type Project = {
-  // Path of the directories containing elm-watch.json and all elm.json,
-  // as well as the static files directory (if any), without duplicates
-  // and where each directory does not contain any other.
+  // Path of the directories containing elm-watch.json, all elm.json, all source
+  // directories, as well as the static files directory (if any), without
+  // duplicates and where each directory does not contain any other. I tested
+  // watching both `folder/` and `folder/sub/` – when creating `folder/sub/file.txt`
+  // I got both a “created” and a “changed” event. When watching only `folder/` I
+  // only got “created” as expected.
   watchRoots: HashSet<AbsolutePath>;
   staticFilesDir: StaticFilesDir | undefined;
   elmWatchJsonPath: ElmWatchJsonPath;
