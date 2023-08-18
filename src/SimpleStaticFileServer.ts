@@ -111,6 +111,7 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
           }
           li::before {
             content: attr(data-marker) " ";
+            font-family: initial;
           }
           a:not(:hover) {
             text-decoration: none;
