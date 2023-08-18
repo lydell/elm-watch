@@ -46,94 +46,171 @@ const MIME_TYPES: Record<string, string> = {
   ".webmanifest": "application/manifest+json",
 };
 
-function baseHtml(faviconEmoji: string, title: string, body: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(title)} – elm-watch</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 16 16'><text x='0' y='14'>${faviconEmoji}</text></svg>" />
-    <style>
-      html { font-family: system-ui, sans-serif; padding: clamp(0.5rem, 3vw, 2rem); }
-      h1 { margin-top: 0; }
-      ul { padding-left: 0; }
-      li { list-style: none; }
-      li::before { content: attr(data-marker) " "; }
-      a:not(:hover) { text-decoration: none; }
-      a { color: #0000ff; }
-      a:visited { color: #0070c1; }
-      pre { padding: 1em; background-color: #00000020; }
-      pre, code { font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; }
-      @media (prefers-color-scheme: dark) {
-        html { color: #c8c8c8; background: #1e1e1e; }
-        a { color: #4fc1ff; }
-        a:visited { color: #569cd6; }
-        pre { background-color: #c8c8c820; }
-      }
-      input:not([checked]):not(:checked) ~ a,
-      input[checked]:checked ~ a { display: none; }
-    </style>
-  </head>
-  <body>
-    ${body.trim()}
-    <p style="margin-top: 2em"><small>ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small></p>
-  </body>
-</html>
-  `.trim();
+class Html {
+  constructor(private escapedHtml: string) {}
+
+  toString(): string {
+    return this.escapedHtml;
+  }
+}
+
+function html(
+  strings: ReadonlyArray<string>,
+  ...values: Array<Html | string>
+): Html {
+  return new Html(
+    join(
+      strings.flatMap((string, index) => {
+        const value = values[index] ?? "";
+        return [
+          string,
+          value instanceof Html ? value.toString() : escapeHtml(value),
+        ];
+      }),
+      ""
+    )
+  );
+}
+
+function joinHtml(array: Array<Html | string>, separator: Html): Html {
+  return html(
+    [
+      "",
+      ...Array.from({ length: array.length - 1 }, () => separator.toString()),
+      "",
+    ],
+    ...array
+  );
+}
+
+function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
+  return html`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>${title} – elm-watch</title>
+        <link
+          rel="icon"
+          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 16 16'><text x='0' y='14'>${faviconEmoji}</text></svg>"
+        />
+        <style>
+          html {
+            font-family: system-ui, sans-serif;
+            padding: clamp(0.5rem, 3vw, 2rem);
+          }
+          h1 {
+            margin-top: 0;
+          }
+          ul {
+            padding-left: 0;
+          }
+          li {
+            list-style: none;
+          }
+          li::before {
+            content: attr(data-marker) " ";
+          }
+          a:not(:hover) {
+            text-decoration: none;
+          }
+          a {
+            color: #0000ff;
+          }
+          a:visited {
+            color: #0070c1;
+          }
+          pre {
+            padding: 1em;
+            background-color: #00000020;
+          }
+          pre,
+          code {
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas,
+              Liberation Mono, monospace;
+          }
+          @media (prefers-color-scheme: dark) {
+            html {
+              color: #c8c8c8;
+              background: #1e1e1e;
+            }
+            a {
+              color: #4fc1ff;
+            }
+            a:visited {
+              color: #569cd6;
+            }
+            pre {
+              background-color: #c8c8c820;
+            }
+          }
+          input:not([checked]):not(:checked) ~ a,
+          input[checked]:checked ~ a {
+            display: none;
+          }
+        </style>
+      </head>
+      <body>
+        ${body}
+        <p style="margin-top: 2em">
+          <small
+            >ℹ️ This is the
+            <a href="https://lydell.github.io/elm-watch/server/"
+              >elm-watch server</a
+            >.</small
+          >
+        </p>
+      </body>
+    </html>
+  `;
 }
 
 function indexHtml(
   urlWithoutQuery: string,
   htmlFileUrlFromCookie: string | undefined,
   entries: Array<fs.Dirent>
-): string {
+): Html {
   return baseHtml(
     "📂",
     urlWithoutQuery,
+    html`
+      <h1>${indexTitle(urlWithoutQuery)}</h1>
+      ${htmlFileUrlFromCookie === undefined
+        ? ""
+        : checkboxHtml(
+            urlWithoutQuery,
+            htmlFileUrlFromCookie,
+            true,
+            html`Serve on 404:
+              <a href="${htmlFileUrlFromCookie}">${htmlFileUrlFromCookie}</a>`
+          )}
+      <ul>
+        ${urlWithoutQuery === "/"
+          ? ""
+          : html`<li data-marker="📁"><a href="../?">../</a></li>`}
+        ${joinHtml(
+          entries
+            .flatMap((entry) =>
+              entry.isFile()
+                ? [
+                    html`<li data-marker="📄">
+                      <a href="${entry.name}">${entry.name}</a>
+                    </li>`,
+                  ]
+                : entry.isDirectory()
+                ? [
+                    html`<li data-marker="📁">
+                      <a href="${entry.name}/?">${entry.name}/</a>
+                    </li>`,
+                  ]
+                : []
+            )
+            .sort(),
+          html``
+        )}
+      </ul>
     `
-<h1>${indexTitle(urlWithoutQuery)}</h1>
-${
-  htmlFileUrlFromCookie === undefined
-    ? ""
-    : checkboxHtml(
-        urlWithoutQuery,
-        htmlFileUrlFromCookie,
-        true,
-        `Serve on 404: <a href="${escapeHtml(
-          htmlFileUrlFromCookie
-        )}">${escapeHtml(htmlFileUrlFromCookie)}</a>`
-      )
-}
-<ul>
-${
-  urlWithoutQuery === "/"
-    ? ""
-    : `<li data-marker="📁"><a href="../?">../</a></li>`
-}
-${join(
-  entries
-    .flatMap((entry) =>
-      entry.isFile()
-        ? [
-            `<li data-marker="📄"><a href="${escapeHtml(
-              entry.name
-            )}">${escapeHtml(entry.name)}</a></li>`,
-          ]
-        : entry.isDirectory()
-        ? [
-            `<li data-marker="📁"><a href="${escapeHtml(
-              entry.name
-            )}/?">${escapeHtml(entry.name)}/</a></li>`,
-          ]
-        : []
-    )
-    .sort(),
-  "\n"
-)}
-</ul>
-  `
   );
 }
 
@@ -147,18 +224,23 @@ function notFoundHtml({
   urlWithoutQuery: string;
   lastHtmlFileUrl: string | undefined;
   htmlFileUrlFromCookie: string | undefined;
-}): string {
+}): Html {
   return baseHtml(
     "❓",
     "Not Found",
-    `
-<h1>${join(notFoundTitle(staticFilesDir, urlWithoutQuery), "<wbr />")}</h1>
-<h2>404 – Not Found</h2>
-${notFoundHtmlFileWithCheckboxHtml({
-  urlWithoutQuery,
-  lastHtmlFileUrl,
-  htmlFileUrlFromCookie,
-})}
+    html`
+      <h1>
+        ${joinHtml(
+          notFoundTitle(staticFilesDir, urlWithoutQuery),
+          html`<wbr />`
+        )}
+      </h1>
+      <h2>404 – Not Found</h2>
+      ${notFoundHtmlFileWithCheckboxHtml({
+        urlWithoutQuery,
+        lastHtmlFileUrl,
+        htmlFileUrlFromCookie,
+      })}
     `
   );
 }
@@ -171,28 +253,28 @@ function notFoundHtmlFileWithCheckboxHtml({
   urlWithoutQuery: string;
   lastHtmlFileUrl: string | undefined;
   htmlFileUrlFromCookie: string | undefined;
-}): string {
+}): Html {
   return htmlFileUrlFromCookie === undefined
     ? lastHtmlFileUrl === undefined
-      ? ""
-      : `
-        <p>👉 Most recently served HTML file: <a href="${escapeHtml(
-          lastHtmlFileUrl
-        )}">${escapeHtml(lastHtmlFileUrl)}</a></p>
-        ${checkboxHtml(
-          urlWithoutQuery,
-          lastHtmlFileUrl,
-          false,
-          "Always serve that file on 404"
-        )}
-      `
+      ? html``
+      : html`
+          <p>
+            👉 Most recently served HTML file:
+            <a href="${lastHtmlFileUrl}">${lastHtmlFileUrl}</a>
+          </p>
+          ${checkboxHtml(
+            urlWithoutQuery,
+            lastHtmlFileUrl,
+            false,
+            html`Always serve that file on 404`
+          )}
+        `
     : checkboxHtml(
         urlWithoutQuery,
         htmlFileUrlFromCookie,
         true,
-        `Serve on 404: <a href="${escapeHtml(
-          htmlFileUrlFromCookie
-        )}">${escapeHtml(htmlFileUrlFromCookie)}</a>`
+        html`Serve on 404:
+          <a href="${htmlFileUrlFromCookie}">${htmlFileUrlFromCookie}</a>`
       );
 }
 
@@ -200,106 +282,144 @@ function checkboxHtml(
   urlWithoutQuery: string,
   htmlFileUrl: string,
   checked: boolean,
-  label: string
-): string {
-  return `
-  <div style="display: grid; grid-template-columns: min-content auto; gap: 0.125em 0.25em">
-    <input type="checkbox" id="htmlFileUrl" ${
-      checked ? "checked" : ""
-    } onchange='document.cookie = this.checked ? ${JSON.stringify(
-    htmlFileCookieString(htmlFileUrl, HTML_FILE_COOKIE_MAX_AGE)
-  )} : ${JSON.stringify(htmlFileCookieString("x", 0))}' />
-    <label for="htmlFileUrl">${label}</label>
-    <small style="grid-column: 2">(except if URL ends with /?, saved in a cookie)</small>
-    <a href="${escapeHtml(
-      urlWithoutQuery.replace(/\/\?$/, "")
-    )}" style="grid-column: 2"><strong>Refresh</strong></a>
-  </div>
+  label: Html
+): Html {
+  return html`
+    <div
+      style="display: grid; grid-template-columns: min-content auto; gap: 0.125em 0.25em"
+    >
+      <input
+        type="checkbox"
+        id="htmlFileUrl"
+        ${checked ? "checked" : ""}
+        onchange="document.cookie = this.checked ? ${JSON.stringify(
+          htmlFileCookieString(htmlFileUrl, HTML_FILE_COOKIE_MAX_AGE)
+        )} : ${JSON.stringify(htmlFileCookieString("x", 0))}"
+      />
+      <label for="htmlFileUrl">${label}</label>
+      <small style="grid-column: 2"
+        >(except if URL ends with /?, saved in a cookie)</small
+      >
+      <a href="${urlWithoutQuery.replace(/\/\?$/, "")}" style="grid-column: 2"
+        ><strong>Refresh</strong></a
+      >
+    </div>
   `;
 }
 
 export function acceptHtml(
   isHttps: boolean,
   request: http.IncomingMessage
-): string {
+): Html {
   const { host, referer } = request.headers;
   return baseHtml(
     isHttps ? "✅" : "👉",
     "Certificate",
     isHttps
-      ? `<p>✅ Certificate accepted. You may now ${maybeLink(
-          referer !== undefined && new URL(referer).host !== host
-            ? referer
-            : undefined,
-          "return to your page"
-        )}.</p>`
-      : `<p>👉 Did you mean to go to the ${maybeLink(
-          host !== undefined && request.url !== undefined
-            ? `https://${host}${request.url}`
-            : undefined,
-          "HTTPS version of this page"
-        )} to accept elm-watch’s self-signed certificate?</p>`
+      ? html`<p>
+          ✅ Certificate accepted. You may now
+          ${maybeLink(
+            referer !== undefined && new URL(referer).host !== host
+              ? referer
+              : undefined,
+            "return to your page"
+          )}.
+        </p>`
+      : html`<p>
+          👉 Did you mean to go to the
+          ${maybeLink(
+            host !== undefined && request.url !== undefined
+              ? `https://${host}${request.url}`
+              : undefined,
+            "HTTPS version of this page"
+          )}
+          to accept elm-watch’s self-signed certificate?
+        </p>`
   );
 }
 
-export function staticFileNotEnabledHtml(): string {
+export function staticFileNotEnabledHtml(): Html {
   return baseHtml(
     "ℹ️",
     "Enable static file server?",
+    html`
+      <main style="max-width: 60ch">
+        <h1>Enable static file server?</h1>
+        <p>
+          elm-watch needs an HTTP server for its WebSockets. WebSockets connect
+          via HTTP and then switch over to the WebSocket protocol. But other
+          than that the HTTP server doesn’t really do anything.
+        </p>
+        <p>
+          If you want, you can enable a simple static file server for your
+          project, by adding the following to your
+          <strong>elm-watch.json</strong> file:
+        </p>
+        <pre><code>"serve": "./folder/you/want/to/serve/"</code></pre>
+        <p style="margin-top: 4em">
+          ℹ️ The simple HTTP server is just for convenience. elm-watch needs to
+          run an HTTP server anyway, and you need one for
+          <code>Browser.application</code> programs (which do no support the
+          <code>file://</code> protocol). If you need anything more advanced,
+          use
+          <a href="https://lydell.github.io/elm-watch/server/"
+            >your own HTTP server</a
+          >.
+        </p>
+        <p>
+          ❗️ By default, the HTTP server is exposed on the local network (so
+          you can test on your phone on the same Wi-Fi for example). If you are
+          on a public Wi-Fi, you can restrict the server to just your computer
+          by setting an environment variable:
+          <code>ELM_WATCH_HOST=127.0.0.1</code>
+        </p>
+      </main>
     `
-<main style="max-width: 60ch">
-  <h1>Enable static file server?</h1>
-  <p>elm-watch needs an HTTP server for its WebSockets. WebSockets connect via HTTP and then switch over to the WebSocket protocol. But other than that the HTTP server doesn’t really do anything.</p>
-  <p>If you want, you can enable a simple static file server for your project, by adding the following to your <strong>elm-watch.json</strong> file:</p>
-  <pre><code>"serve": "./folder/you/want/to/serve/"</code></pre>
-  <p style="margin-top: 4em">ℹ️ The simple HTTP server is just for convenience. elm-watch needs to run an HTTP server anyway, and you need one for <code>Browser.application</code> programs (which do no support the <code>file://</code> protocol). If you need anything more advanced, use <a href="https://lydell.github.io/elm-watch/server/">your own HTTP server</a>.</p>
-  <p>❗️ By default, the HTTP server is exposed on the local network (so you can test on your phone on the same Wi-Fi for example). If you are on a public Wi-Fi, you can restrict the server to just your computer by setting an environment variable: <code>ELM_WATCH_HOST=127.0.0.1</code></p>
-</main>
-  `
   );
 }
 
-export function errorHtml(errorMessage: string): string {
+export function errorHtml(errorMessage: string): Html {
   if (errorMessage.includes("\n")) {
     const firstRow = join(errorMessage.split("\n").slice(0, 1), "");
     return baseHtml(
       "🚨",
       firstRow,
-      `<h1>${escapeHtml(firstRow)}</h1><pre>${escapeHtml(errorMessage)}</pre>`
+      html`<h1>${firstRow}</h1>
+        <pre>${errorMessage}</pre>`
     );
   } else {
-    return baseHtml("🚨", errorMessage, `<h1>${escapeHtml(errorMessage)}</h1>`);
+    return baseHtml("🚨", errorMessage, html`<h1>${errorMessage}</h1>`);
   }
 }
 
-function maybeLink(href: string | undefined, text: string): string {
+function maybeLink(href: string | undefined, text: string): Html {
   return href === undefined
-    ? text
-    : `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
+    ? html`${text}`
+    : html`<a href="${href}">${text}</a>`;
 }
 
-function indexTitle(urlWithoutQuery: string): string {
+function indexTitle(urlWithoutQuery: string): Html {
   const segments = urlWithoutQuery.split("/").slice(0, -1);
   const lastIndex = segments.length - 1;
-  return join(
+  return joinHtml(
     segments.map((segment, index) =>
       index === lastIndex
-        ? `${escapeHtml(segment)}/`
-        : `<a href="${escapeHtml(
-            join(segments.slice(0, index + 1), "/")
-          )}/?">${escapeHtml(segment)}/</a>`
+        ? html`${segment}/`
+        : html`<a href="${join(segments.slice(0, index + 1), "/")}/?"
+            >${segment}/</a
+          >`
     ),
-    "<wbr />"
+    html`<wbr />`
   );
 }
 
 function notFoundTitle(
   staticFilesDir: StaticFilesDir,
   urlWithoutQuery: string
-): Array<string> {
+): Array<Html> {
   const segments = urlWithoutQuery.split("/");
   const lastIndex = segments.length - 1;
-  const html: Array<string> = [];
+  const htmlList: Array<Html> = [];
 
   for (const [index, segment] of segments.entries()) {
     const fsPath =
@@ -310,52 +430,53 @@ function notFoundTitle(
     try {
       stats = statSync(fsPath);
     } catch {
-      html.push(`<del>${escapeHtml(join(segments.slice(index), "/"))}</del>`);
-      return html;
+      htmlList.push(html`<del>${join(segments.slice(index), "/")}</del>`);
+      return htmlList;
     }
 
     switch (stats.tag) {
       case "File":
-        html.push(
-          `<a href="${escapeHtml(
-            join(segments.slice(0, index + 1), "/")
-          )}">${escapeHtml(segment)}</a>`
+        htmlList.push(
+          html`<a href="${join(segments.slice(0, index + 1), "/")}"
+            >${segment}</a
+          >`
         );
         if (index < lastIndex) {
-          html.push(
-            `<del>/${escapeHtml(join(segments.slice(index + 1), "/"))}</del>`
+          htmlList.push(
+            html`<del>/${join(segments.slice(index + 1), "/")}</del>`
           );
         }
-        return html;
+        return htmlList;
 
       case "Directory":
-        html.push(
-          `<a href="${escapeHtml(
-            join(segments.slice(0, index + 1), "/")
-          )}/?">${escapeHtml(segment)}/</a>`
+        htmlList.push(
+          html`<a href="${join(segments.slice(0, index + 1), "/")}/?"
+            >${segment}/</a
+          >`
         );
         break;
 
       case "Other":
       case "NotFound":
-        html.push(`<del>${escapeHtml(join(segments.slice(index), "/"))}</del>`);
-        return html;
+        htmlList.push(html`<del>${join(segments.slice(index), "/")}</del>`);
+        return htmlList;
     }
   }
 
-  return html;
+  return htmlList;
 }
 
 export function respondHtml(
   response: http.ServerResponse,
   statusCode: number,
-  html: string
+  htmlValue: Html
 ): void {
+  const htmlString = htmlValue.toString().replace(/\s+/g, " ").trim();
   response.writeHead(statusCode, {
     "Content-Type": "text/html; charset=utf-8",
-    "Content-Length": Buffer.byteLength(html),
+    "Content-Length": Buffer.byteLength(htmlString),
   });
-  response.end(html);
+  response.end(htmlString);
 }
 
 // Note: This function may throw file system errors.
@@ -477,7 +598,7 @@ export function serveStatic(
                 response,
                 200,
                 request.method === "HEAD"
-                  ? ""
+                  ? html``
                   : indexHtml(urlWithoutQuery, htmlFileUrlFromCookie, entries)
               );
               return;
