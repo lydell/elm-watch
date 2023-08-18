@@ -190,28 +190,41 @@ function indexHtml(
           ? ""
           : html`<li data-marker="📁"><a href="../?">../</a></li>`}
         ${joinHtml(
-          entries
-            .flatMap((entry) =>
-              entry.isFile()
-                ? [
-                    html`<li data-marker="📄">
-                      <a href="${entry.name}">${entry.name}</a>
-                    </li>`,
-                  ]
-                : entry.isDirectory()
-                ? [
-                    html`<li data-marker="📁">
-                      <a href="${entry.name}/?">${entry.name}/</a>
-                    </li>`,
-                  ]
-                : []
-            )
-            .sort(),
+          entries.sort(compareEntries).flatMap((entry) => {
+            const isHtml = /\.html?$/.test(entry.name);
+            return entry.isFile()
+              ? [
+                  html`<li
+                    data-marker="${isHtml ? "▶️" : "📄"}"
+                    style="font-weight: ${isHtml ? "bold" : "normal"}"
+                  >
+                    <a href="${entry.name}">${entry.name}</a>
+                  </li>`,
+                ]
+              : entry.isDirectory()
+              ? [
+                  html`<li data-sort="a:${entry.name}" data-marker="📁">
+                    <a href="${entry.name}/?">${entry.name}/</a>
+                  </li>`,
+                ]
+              : [];
+          }),
           html``
         )}
       </ul>
     `
   );
+}
+
+function compareEntries(a: fs.Dirent, b: fs.Dirent): number {
+  return (
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    direntTypeNumber(a) - direntTypeNumber(b) || a.name.localeCompare(b.name)
+  );
+}
+
+function direntTypeNumber(entry: fs.Dirent): number {
+  return entry.isDirectory() ? 0 : 1;
 }
 
 function notFoundHtml({
