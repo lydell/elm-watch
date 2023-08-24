@@ -1073,7 +1073,7 @@ function update(
                   tag: "StatusChanged",
                   status: {
                     tag: "ClientError",
-                    message: Errors.webSocketDecodeError(result.error),
+                    message: Errors.webSocketDecodeError(result.errors),
                   },
                 },
               },
@@ -2131,23 +2131,29 @@ const WebSocketConnectedParams = Codec.fields(
   {
     elmWatchVersion: Codec.string,
     targetName: Codec.string,
-    elmCompiledTimestamp: Codec.chain(Codec.string, {
-      decoder(string) {
+    elmCompiledTimestamp: Codec.flatMap(Codec.string, {
+      decoder: (string) => {
         const number = Number(string);
-        if (Number.isFinite(number)) {
-          return number;
-        }
-        throw new Codec.DecoderError({
-          message: "Expected a number",
-          value: string,
-        });
+        return Number.isFinite(number)
+          ? { tag: "Valid", value: number }
+          : {
+              tag: "DecoderError",
+              errors: [
+                {
+                  tag: "custom",
+                  message: "Expected a number",
+                  got: string,
+                  path: [],
+                },
+              ],
+            };
       },
       encoder:
         // istanbul ignore next
         (value) => value.toString(),
     }),
   },
-  { exact: "throw" }
+  { disallowExtraFields: true }
 );
 
 type ParseWebSocketConnectRequestUrlResult =
@@ -2172,7 +2178,7 @@ type ParseWebSocketConnectRequestUrlError =
     }
   | {
       tag: "ParamsDecodeError";
-      error: Codec.DecoderError;
+      errors: NonEmptyArray<Codec.DecoderError>;
       actualUrlString: string;
     }
   | {
@@ -2215,17 +2221,17 @@ function parseWebSocketConnectRequestUrl(
     urlString.slice(WEBSOCKET_URL_EXPECTED_START.length)
   );
 
-  const webSocketConnectedParams = Codec.parseUnknown(
-    WebSocketConnectedParams,
+  const webSocketConnectedParamsResult = WebSocketConnectedParams.decoder(
     Object.fromEntries(params)
   );
-  if (webSocketConnectedParams instanceof Codec.DecoderError) {
+  if (webSocketConnectedParamsResult.tag === "DecoderError") {
     return {
       tag: "ParamsDecodeError",
-      error: webSocketConnectedParams,
+      errors: webSocketConnectedParamsResult.errors,
       actualUrlString: urlString,
     };
   }
+  const webSocketConnectedParams = webSocketConnectedParamsResult.value;
 
   if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
     return {
@@ -2309,7 +2315,7 @@ function webSocketConnectRequestUrlErrorToString(
 
     case "ParamsDecodeError":
       return Errors.webSocketParamsDecodeError(
-        error.error,
+        error.errors,
         error.actualUrlString
       );
 
@@ -2338,7 +2344,7 @@ function webSocketConnectRequestUrlErrorToString(
 type ParseWebSocketToServerMessageResult =
   | {
       tag: "DecodeError";
-      error: Codec.DecoderError;
+      errors: NonEmptyArray<Codec.DecoderError>;
     }
   | {
       tag: "Success";
@@ -2359,9 +2365,12 @@ function parseWebSocketToServerMessage(
       : data.toString("utf8");
 
   const parsed = Codec.parse(WebSocketToServerMessage, stringData);
-  return parsed instanceof Codec.DecoderError
-    ? { tag: "DecodeError", error: parsed }
-    : { tag: "Success", message: parsed };
+  switch (parsed.tag) {
+    case "DecoderError":
+      return { tag: "DecodeError", errors: parsed.errors };
+    case "Valid":
+      return { tag: "Success", message: parsed.value };
+  }
 }
 
 function onWebSocketConnected(

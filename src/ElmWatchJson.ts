@@ -36,57 +36,78 @@ type Target = Codec.Infer<typeof Target>;
 const Target = Codec.fields(
   {
     inputs: NonEmptyArray(
-      Codec.chain(Codec.string, {
-        decoder(string) {
-          if (isValidInputName(string)) {
-            return string;
-          }
-          throw new Codec.DecoderError({
-            message: "Inputs must have a valid module name and end with .elm",
-            value: string,
-          });
-        },
+      Codec.flatMap(Codec.string, {
+        decoder: (string) =>
+          isValidInputName(string)
+            ? { tag: "Valid", value: string }
+            : {
+                tag: "DecoderError",
+                errors: [
+                  {
+                    tag: "custom",
+                    message:
+                      "Inputs must have a valid module name and end with .elm",
+                    got: string,
+                    path: [],
+                  },
+                ],
+              },
         encoder: (value) => value,
       })
     ),
-    output: Codec.chain(Codec.string, {
-      decoder(output) {
-        if (isValidOutputName(output)) {
-          return output;
-        }
-        throw new Codec.DecoderError({
-          message: "Outputs must end with .js",
-          value: Codec.DecoderError.MISSING_VALUE,
-        });
-      },
+    output: Codec.flatMap(Codec.string, {
+      decoder: (output) =>
+        isValidOutputName(output)
+          ? { tag: "Valid", value: output }
+          : {
+              tag: "DecoderError",
+              errors: [
+                {
+                  tag: "custom",
+                  message: "Outputs must end with .js",
+                  got: output,
+                  path: [],
+                },
+              ],
+            },
       encoder: (value) => value,
     }),
   },
-  { exact: "throw" }
+  { disallowExtraFields: true }
 );
 
 const TargetRecordHelper = {
-  decoder(record: Record<string, Target>): Record<string, Target> {
-    const entries = Object.entries(record);
-    if (!isNonEmptyArray(entries)) {
-      throw new Codec.DecoderError({
-        message: "Expected a non-empty object",
-        value: record,
-      });
-    }
-    return Object.fromEntries(
-      entries.map(([key, value]) => {
-        if (isValidTargetName(key)) {
-          return [key, value];
-        }
-        throw new Codec.DecoderError({
-          message:
-            "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
-          value: Codec.DecoderError.MISSING_VALUE,
-          key,
-        });
-      })
+  decoder(
+    record: Record<string, Target>
+  ): Codec.DecoderResult<Record<string, Target>> {
+    const keys = Object.keys(record);
+    const errors: Array<Codec.DecoderError> = keys.flatMap((key) =>
+      isValidTargetName(key)
+        ? []
+        : {
+            tag: "custom",
+            message:
+              "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
+            got: key,
+            path: [],
+          }
     );
+
+    return isNonEmptyArray(errors)
+      ? { tag: "DecoderError", errors }
+      : isNonEmptyArray(keys)
+      ? { tag: "Valid", value: record }
+      : {
+          tag: "DecoderError",
+          errors: [
+            {
+              tag: "custom",
+              message: "Expected a non-empty object",
+              got: record,
+              path: [],
+            },
+          ],
+        };
   },
   encoder: (value: Record<string, Target>) => value,
 };
@@ -94,18 +115,18 @@ const TargetRecordHelper = {
 export type Config = Codec.Infer<typeof Config>;
 const Config = Codec.fields(
   {
-    targets: Codec.chain(Codec.record(Target), TargetRecordHelper),
+    targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
     postprocess: Codec.optional(NonEmptyArray(Codec.string)),
     port: Codec.optional(Port),
   },
-  { exact: "throw" }
+  { disallowExtraFields: true }
 );
 
 type ParseResult =
   | {
       tag: "DecodeError";
       elmWatchJsonPath: ElmWatchJsonPath;
-      error: Codec.DecoderError;
+      errors: NonEmptyArray<Codec.DecoderError>;
     }
   | {
       tag: "ElmWatchJsonNotFound";
@@ -141,7 +162,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
       return {
         tag: "DecodeError",
         elmWatchJsonPath,
-        error: parsed.error,
+        errors: parsed.errors,
       };
     case "ReadError":
       return {

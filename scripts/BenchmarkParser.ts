@@ -25,7 +25,11 @@ async function run(args: Array<string>): Promise<void> {
     );
   }
 
-  const strategy = Strategy.decoder(strategyRaw);
+  const strategyResult = Strategy.decoder(strategyRaw);
+  if (strategyResult.tag === "DecoderError") {
+    throw new KnownError(Codec.formatAll(strategyResult.errors));
+  }
+  const strategy = strategyResult.value;
 
   const cwd: Cwd = {
     tag: "Cwd",
@@ -205,11 +209,5 @@ function findElmFiles(dir: AbsolutePath): Array<AbsolutePath> {
 }
 
 run(process.argv.slice(2)).catch((error) => {
-  console.error(
-    error instanceof Codec.DecoderError
-      ? error.format()
-      : error instanceof KnownError
-      ? error.message
-      : error
-  );
+  console.error(error instanceof KnownError ? error.message : error);
 });

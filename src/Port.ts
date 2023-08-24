@@ -10,20 +10,29 @@ export type Port = {
   thePort: number;
 };
 
-export const Port = Codec.chain(Codec.number, {
-  decoder(number): Port {
+export const Port = Codec.flatMap(Codec.number, {
+  decoder(number) {
     const min = 1;
     const max = 65535;
-    if (Number.isInteger(number) && min <= number && number <= max) {
-      return {
-        tag: "Port",
-        thePort: number,
-      };
-    }
-    throw new Codec.DecoderError({
-      message: `Expected an integer where ${min} <= port <= ${max}`,
-      value: number,
-    });
+    return Number.isInteger(number) && min <= number && number <= max
+      ? {
+          tag: "Valid",
+          value: {
+            tag: "Port" as const,
+            thePort: number,
+          },
+        }
+      : {
+          tag: "DecoderError",
+          errors: [
+            {
+              tag: "custom",
+              message: `Expected an integer where ${min} <= port <= ${max}`,
+              got: number,
+              path: [],
+            },
+          ],
+        };
   },
   encoder: ({ thePort }) => thePort,
 });

@@ -8,13 +8,13 @@ import {
 import { ElmJsonPath, SourceDirectory } from "./Types";
 
 export type ElmJson = Codec.Infer<typeof ElmJson>;
-export const ElmJson = Codec.fieldsUnion("type", (tag) => [
+export const ElmJson = Codec.fieldsUnion("tag", [
   {
-    tag: tag("Application", "application"),
+    tag: Codec.field("type", Codec.tag("Application", "application")),
     "source-directories": NonEmptyArray(Codec.string),
   },
   {
-    tag: tag("Package", "package"),
+    tag: Codec.field("type", Codec.tag("Package", "package")),
   },
 ]);
 
@@ -29,7 +29,7 @@ export type ParseError =
   | {
       tag: "ElmJsonDecodeError";
       elmJsonPath: ElmJsonPath;
-      error: Codec.DecoderError;
+      errors: NonEmptyArray<Codec.DecoderError>;
     }
   | {
       tag: "ElmJsonReadError";
@@ -44,7 +44,7 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
       return {
         tag: "ElmJsonDecodeError",
         elmJsonPath,
-        error: parsed.error,
+        errors: parsed.errors,
       };
     case "ReadError":
       return {

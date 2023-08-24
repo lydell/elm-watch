@@ -1,31 +1,32 @@
 import * as Codec from "../src/Codec";
+import { NonEmptyArray } from "../src/NonEmptyArray";
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
 export type OpenEditorError = Codec.Infer<typeof OpenEditorError>;
-const OpenEditorError = Codec.fieldsUnion("tag", (tag) => [
+const OpenEditorError = Codec.fieldsUnion("tag", [
   {
-    tag: tag("EnvNotSet"),
+    tag: Codec.tag("EnvNotSet"),
   },
   {
-    tag: tag("CommandFailed"),
+    tag: Codec.tag("CommandFailed"),
     message: Codec.string,
   },
 ]);
 
 export type ErrorLocation = Codec.Infer<typeof ErrorLocation>;
-const ErrorLocation = Codec.fieldsUnion("tag", (tag) => [
+const ErrorLocation = Codec.fieldsUnion("tag", [
   {
-    tag: tag("FileOnly"),
+    tag: Codec.tag("FileOnly"),
     file: AbsolutePath,
   },
   {
-    tag: tag("FileWithLineAndColumn"),
+    tag: Codec.tag("FileWithLineAndColumn"),
     file: AbsolutePath,
     line: Codec.number,
     column: Codec.number,
   },
   {
-    tag: tag("Target"),
+    tag: Codec.tag("Target"),
     targetName: Codec.string,
   },
 ]);
@@ -38,19 +39,19 @@ const CompileError = Codec.fields({
 });
 
 export type StatusChange = Codec.Infer<typeof StatusChange>;
-const StatusChange = Codec.fieldsUnion("tag", (tag) => [
+const StatusChange = Codec.fieldsUnion("tag", [
   {
-    tag: tag("AlreadyUpToDate"),
+    tag: Codec.tag("AlreadyUpToDate"),
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
   },
   {
-    tag: tag("Busy"),
+    tag: Codec.tag("Busy"),
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
   },
   {
-    tag: tag("CompileError"),
+    tag: Codec.tag("CompileError"),
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
     openErrorOverlay: Codec.boolean,
@@ -59,11 +60,11 @@ const StatusChange = Codec.fieldsUnion("tag", (tag) => [
     backgroundColor: Codec.string,
   },
   {
-    tag: tag("ElmJsonError"),
+    tag: Codec.tag("ElmJsonError"),
     error: Codec.string,
   },
   {
-    tag: tag("ClientError"),
+    tag: Codec.tag("ClientError"),
     message: Codec.string,
   },
 ]);
@@ -75,9 +76,9 @@ const SuccessfullyCompiledFields = {
   browserUiPosition: BrowserUiPosition,
 };
 
-const SuccessfullyCompiled = Codec.fieldsUnion("tag", (tag) => [
+const SuccessfullyCompiled = Codec.fieldsUnion("tag", [
   {
-    tag: tag("SuccessfullyCompiled"),
+    tag: Codec.tag("SuccessfullyCompiled"),
     ...SuccessfullyCompiledFields,
   },
 ]);
@@ -85,48 +86,48 @@ const SuccessfullyCompiled = Codec.fieldsUnion("tag", (tag) => [
 export type WebSocketToClientMessage = Codec.Infer<
   typeof WebSocketToClientMessage
 >;
-export const WebSocketToClientMessage = Codec.fieldsUnion("tag", (tag) => [
+export const WebSocketToClientMessage = Codec.fieldsUnion("tag", [
   {
-    tag: tag("FocusedTabAcknowledged"),
+    tag: Codec.tag("FocusedTabAcknowledged"),
   },
   {
-    tag: tag("OpenEditorFailed"),
+    tag: Codec.tag("OpenEditorFailed"),
     error: OpenEditorError,
   },
   {
-    tag: tag("StatusChanged"),
+    tag: Codec.tag("StatusChanged"),
     status: StatusChange,
   },
   {
-    tag: tag("SuccessfullyCompiled"),
+    tag: Codec.tag("SuccessfullyCompiled"),
     ...SuccessfullyCompiledFields,
   },
   {
-    tag: tag("SuccessfullyCompiledButRecordFieldsChanged"),
+    tag: Codec.tag("SuccessfullyCompiledButRecordFieldsChanged"),
   },
 ]);
 
 export type WebSocketToServerMessage = Codec.Infer<
   typeof WebSocketToServerMessage
 >;
-export const WebSocketToServerMessage = Codec.fieldsUnion("tag", (tag) => [
+export const WebSocketToServerMessage = Codec.fieldsUnion("tag", [
   {
-    tag: tag("ChangedCompilationMode"),
+    tag: Codec.tag("ChangedCompilationMode"),
     compilationMode: CompilationMode,
   },
   {
-    tag: tag("ChangedBrowserUiPosition"),
+    tag: Codec.tag("ChangedBrowserUiPosition"),
     browserUiPosition: BrowserUiPosition,
   },
   {
-    tag: tag("ChangedOpenErrorOverlay"),
+    tag: Codec.tag("ChangedOpenErrorOverlay"),
     openErrorOverlay: Codec.boolean,
   },
   {
-    tag: tag("FocusedTab"),
+    tag: Codec.tag("FocusedTab"),
   },
   {
-    tag: tag("PressedOpenEditor"),
+    tag: Codec.tag("PressedOpenEditor"),
     file: AbsolutePath,
     line: Codec.number,
     column: Codec.number,
@@ -153,20 +154,24 @@ export function encodeWebSocketToClientMessage(
 
 export function decodeWebSocketToClientMessage(
   data: unknown
-): Codec.DecoderError | WebSocketToClientMessage {
-  const message = Codec.parseUnknown(Codec.string, data);
-  if (message instanceof Codec.DecoderError) {
-    return message;
+): NonEmptyArray<Codec.DecoderError> | WebSocketToClientMessage {
+  const messageResult = Codec.string.decoder(data);
+  if (messageResult.tag === "DecoderError") {
+    return messageResult.errors;
   }
+  const message = messageResult.value;
   if (message.startsWith("//")) {
     const newlineIndexRaw = message.indexOf("\n");
     const newlineIndex =
       newlineIndexRaw === -1 ? message.length : newlineIndexRaw;
     const jsonString = message.slice(2, newlineIndex);
     const parsed = Codec.parse(SuccessfullyCompiled, jsonString);
-    return parsed instanceof Codec.DecoderError
-      ? parsed
-      : { ...parsed, code: message };
+    switch (parsed.tag) {
+      case "DecoderError":
+        return parsed.errors;
+      case "Valid":
+        return { ...parsed.value, code: message };
+    }
   } else {
     return Codec.parse(WebSocketToClientMessage, message);
   }

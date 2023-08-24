@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 
+import * as Codec from "../src/Codec";
 import * as ElmJson from "../src/ElmJson";
 import { HashSet } from "../src/HashSet";
 import { getSetSingleton } from "../src/Helpers";
@@ -74,7 +75,7 @@ function run(args: Array<string>): void {
   const elmJsonResult = ElmJson.readAndParse(elmJsonPath);
   switch (elmJsonResult.tag) {
     case "ElmJsonDecodeError":
-      console.error(elmJsonResult.error.format());
+      console.error(Codec.formatAll(elmJsonResult.errors));
       process.exit(1);
     case "ElmJsonReadError":
       console.error(elmJsonResult.error.message);

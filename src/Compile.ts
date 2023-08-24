@@ -2208,7 +2208,7 @@ export function renderOutputErrors(
       return [
         Errors.elmMakeJsonParseError(
           outputPath,
-          status.error,
+          status.errors,
           status.errorFilePath,
           status.command
         ),
@@ -2238,7 +2238,7 @@ export function renderOutputErrors(
       return [Errors.readElmJson(status.elmJsonPath, status.error)];
 
     case "ElmJsonDecodeError":
-      return [Errors.decodeElmJson(status.elmJsonPath, status.error)];
+      return [Errors.decodeElmJson(status.elmJsonPath, status.errors)];
 
     case "ImportWalkerFileSystemError":
       return [Errors.importWalkerFileSystemError(outputPath, status.error)];

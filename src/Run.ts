@@ -65,7 +65,7 @@ export async function run(
       logger.errorTemplate(
         Errors.decodeElmWatchJson(
           parseResult.elmWatchJsonPath,
-          parseResult.error
+          parseResult.errors
         )
       );
       return handleElmWatchJsonError(
@@ -158,7 +158,7 @@ export async function run(
               logger.errorTemplate(
                 Errors.readElmWatchStuffJson(
                   elmWatchStuffJsonPath,
-                  elmWatchStuffJsonParseResult.error
+                  elmWatchStuffJsonParseResult.errors
                 )
               );
               return { tag: "Exit", exitCode: 1 };
@@ -167,7 +167,7 @@ export async function run(
               logger.errorTemplate(
                 Errors.decodeElmWatchStuffJson(
                   elmWatchStuffJsonPath,
-                  elmWatchStuffJsonParseResult.error
+                  elmWatchStuffJsonParseResult.errors
                 )
               );
               return { tag: "Exit", exitCode: 1 };

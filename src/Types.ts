@@ -1,9 +1,9 @@
 import * as Codec from "./Codec";
 
 export type AbsolutePath = Codec.Infer<typeof AbsolutePath>;
-export const AbsolutePath = Codec.fieldsUnion("tag", (tag) => [
+export const AbsolutePath = Codec.fieldsUnion("tag", [
   {
-    tag: tag("AbsolutePath"),
+    tag: Codec.tag("AbsolutePath"),
     absolutePath: Codec.string,
   },
 ]);

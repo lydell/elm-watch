@@ -1,4 +1,5 @@
 import * as Codec from "./Codec";
+import { NonEmptyArray } from "./NonEmptyArray";
 import { readJsonFile } from "./PathHelpers";
 import { Port } from "./Port";
 import {
@@ -42,11 +43,11 @@ type ParseResult =
 type ParseError =
   | {
       tag: "ElmWatchStuffJsonDecodeError";
-      error: Codec.DecoderError;
+      errors: NonEmptyArray<Codec.DecoderError>;
     }
   | {
       tag: "ElmWatchStuffJsonReadError";
-      error: Error;
+      errors: Error;
     };
 
 export function readAndParse(
@@ -60,7 +61,7 @@ export function readAndParse(
     case "DecodeError":
       return {
         tag: "ElmWatchStuffJsonDecodeError",
-        error: parsed.error,
+        errors: parsed.errors,
       };
     case "ReadError":
       return parsed.error.code === "ENOENT"
@@ -70,7 +71,7 @@ export function readAndParse(
           }
         : {
             tag: "ElmWatchStuffJsonReadError",
-            error: parsed.error,
+            errors: parsed.error,
           };
     case "Success":
       return {

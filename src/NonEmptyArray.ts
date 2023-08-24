@@ -5,16 +5,21 @@ export type NonEmptyArray<T> = [T, ...Array<T>];
 export function NonEmptyArray<Decoded, Encoded>(
   decoder: Codec.Codec<Decoded, Encoded>
 ): Codec.Codec<NonEmptyArray<Decoded>, Array<Encoded>> {
-  return Codec.chain(Codec.array(decoder), {
-    decoder(array) {
-      if (isNonEmptyArray(array)) {
-        return array;
-      }
-      throw new Codec.DecoderError({
-        message: "Expected a non-empty array",
-        value: array,
-      });
-    },
+  return Codec.flatMap(Codec.array(decoder), {
+    decoder: (array) =>
+      isNonEmptyArray(array)
+        ? { tag: "Valid", value: array }
+        : {
+            tag: "DecoderError",
+            errors: [
+              {
+                tag: "custom",
+                message: "Expected a non-empty array",
+                got: array,
+                path: [],
+              },
+            ],
+          },
     encoder: (array) => array,
   });
 }

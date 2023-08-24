@@ -36,7 +36,7 @@ export type RunElmMakeError =
     }
   | {
       tag: "ElmMakeJsonParseError";
-      error: Codec.DecoderError;
+      errors: NonEmptyArray<Codec.DecoderError>;
       errorFilePath: Errors.ErrorFilePath;
       command: Command;
     }
@@ -249,17 +249,18 @@ function parseActualElmMakeJson(
 ): RunElmMakeResult {
   // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
   const parsed = Codec.parse(ElmMakeError, jsonString.replace(/\t/g, "\\t"));
-  return parsed instanceof Codec.DecoderError
-    ? {
+  switch (parsed.tag) {
+    case "DecoderError":
+      return {
         tag: "ElmMakeJsonParseError",
-        error: parsed,
+        errors: parsed.errors,
         errorFilePath: Errors.tryWriteErrorFile({
           cwd: command.options.cwd,
           name: "ElmMakeJsonParseError",
           content: Errors.toPlainString(
             Errors.elmMakeJsonParseError(
               { tag: "NoLocation" },
-              parsed,
+              parsed.errors,
               { tag: "ErrorFileBadContent", content: jsonString },
               command
             )
@@ -267,12 +268,15 @@ function parseActualElmMakeJson(
           hash: jsonString,
         }),
         command,
-      }
-    : {
+      };
+
+    case "Valid":
+      return {
         tag: "ElmMakeError",
-        error: parsed,
+        error: parsed.value,
         extraError,
       };
+  }
 }
 
 type ElmInstallResult =

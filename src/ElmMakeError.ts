@@ -25,11 +25,12 @@ const Color = Codec.stringUnion([
   "WHITE",
 ]);
 
-const StyledText = Codec.chain(
+type StyledText = Codec.Infer<typeof StyledText>;
+const StyledText = Codec.map(
   Codec.fields({
     bold: Codec.boolean,
     underline: Codec.boolean,
-    color: Codec.chain(Codec.nullable(Color), {
+    color: Codec.map(Codec.nullOr(Color), {
       decoder: (value) => value ?? undefined,
       encoder: (value) => value ?? null,
     }),
@@ -43,13 +44,18 @@ const StyledText = Codec.chain(
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L394-L409
 export type MessageChunk = Codec.Infer<typeof MessageChunk>;
-const MessageChunk = Codec.chain(Codec.multi(["string", "object"]), {
-  decoder(value) {
+const MessageChunk = Codec.flatMap(Codec.multi(["string", "object"]), {
+  decoder(
+    value
+  ): Codec.DecoderResult<StyledText | { tag: "UnstyledText"; string: string }> {
     switch (value.type) {
       case "string":
         return {
-          tag: "UnstyledText" as const,
-          string: value.value,
+          tag: "Valid",
+          value: {
+            tag: "UnstyledText" as const,
+            string: value.value,
+          },
         };
       case "object":
         return StyledText.decoder(value.value);
@@ -95,7 +101,7 @@ const Problem = Codec.fields({
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Error.hs#L175-L185
 const CompileError = Codec.fields({
   // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Error.hs#L42
-  path: Codec.chain(Codec.string, {
+  path: Codec.map(Codec.string, {
     decoder: (string): AbsolutePath => ({
       tag: "AbsolutePath",
       absolutePath: string,
@@ -106,9 +112,9 @@ const CompileError = Codec.fields({
   problems: NonEmptyArray(Problem),
 });
 
-const GeneralErrorPath = Codec.chain(
-  Codec.nullable(
-    Codec.chain(Codec.stringUnion(["elm.json"]), {
+const GeneralErrorPath = Codec.map(
+  Codec.nullOr(
+    Codec.map(Codec.stringUnion(["elm.json"]), {
       decoder: (tag) => ({ tag }),
       encoder: ({ tag }) => tag,
     })
@@ -123,16 +129,16 @@ export type GeneralError = Extract<ElmMakeError, { tag: "GeneralError" }>;
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/builder/src/Reporting/Exit/Help.hs#L94-L109
 export type ElmMakeError = Codec.Infer<typeof ElmMakeError>;
-export const ElmMakeError = Codec.fieldsUnion("type", (tag) => [
+export const ElmMakeError = Codec.fieldsUnion("tag", [
   {
-    tag: tag("GeneralError", "error"),
+    tag: Codec.field("type", Codec.tag("GeneralError", "error")),
     // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
     path: GeneralErrorPath,
     title: Codec.string,
     message: Codec.array(MessageChunk),
   },
   {
-    tag: tag("CompileErrors", "compile-errors"),
+    tag: Codec.field("type", Codec.tag("CompileErrors", "compile-errors")),
     errors: NonEmptyArray(CompileError),
   },
 ]);

@@ -18,7 +18,11 @@ function run(args: Array<string>): void {
     );
   }
 
-  const compilationMode = CompilationMode.decoder(compilationModeRaw);
+  const compilationModeResult = CompilationMode.decoder(compilationModeRaw);
+  if (compilationModeResult.tag === "DecoderError") {
+    throw new KnownError(Codec.formatAll(compilationModeResult.errors));
+  }
+  const compilationMode = compilationModeResult.value;
 
   const cwd: Cwd = {
     tag: "Cwd",
@@ -42,11 +46,5 @@ function run(args: Array<string>): void {
 new Promise(() => {
   run(process.argv.slice(2));
 }).catch((error) => {
-  console.error(
-    error instanceof Codec.DecoderError
-      ? error.format()
-      : error instanceof KnownError
-      ? error.message
-      : error
-  );
+  console.error(error instanceof KnownError ? error.message : error);
 });

@@ -347,14 +347,14 @@ ${text(error.message)}
 
 export function decodeElmWatchJson(
   elmWatchJsonPath: ElmWatchJsonPath,
-  error: Codec.DecoderError
+  errors: NonEmptyArray<Codec.DecoderError>
 ): ErrorTemplate {
   return fancyError("INVALID elm-watch.json FORMAT", elmWatchJsonPath)`
 I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("I had trouble with the JSON inside:")}
 
-${printJsonError(error)}
+${printJsonErrors(errors)}
 `;
 }
 
@@ -955,7 +955,7 @@ ${text(error)}
 
 export function elmMakeJsonParseError(
   outputPath: OutputPath | { tag: "NoLocation" },
-  error: Codec.DecoderError,
+  errors: NonEmptyArray<Codec.DecoderError>,
   errorFilePath: ErrorFilePath,
   command: Command
 ): ErrorTemplate {
@@ -967,7 +967,7 @@ ${printCommand(command)}
 I seem to have gotten some JSON back as expected,
 but I ran into an error when decoding it:
 
-${printJsonError(error)}
+${printJsonErrors(errors)}
 
 ${printErrorFilePath(errorFilePath)}
 `;
@@ -1088,7 +1088,7 @@ and "postprocess" was not run.)
 
 export function decodeElmJson(
   elmJsonPath: ElmJsonPath,
-  error: Codec.DecoderError
+  errors: NonEmptyArray<Codec.DecoderError>
 ): ErrorTemplate {
   return fancyError("INVALID elm.json FORMAT", elmJsonPath)`
 I read "source-directories" from ${elmJson} when figuring out all Elm files that
@@ -1096,7 +1096,7 @@ your inputs depend on.
 
 ${bold("I had trouble with the JSON inside:")}
 
-${printJsonError(error)}
+${printJsonErrors(errors)}
 
 (I still managed to compile your code, but the watcher will not work properly
 and "postprocess" was not run.)
@@ -1124,7 +1124,7 @@ You could try removing that file (it contains nothing essential).
 
 export function decodeElmWatchStuffJson(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
-  error: Codec.DecoderError
+  errors: NonEmptyArray<Codec.DecoderError>
 ): ErrorTemplate {
   return fancyError(
     "INVALID elm-stuff/elm-watch/stuff.json FORMAT",
@@ -1134,7 +1134,7 @@ I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble with the JSON inside:")}
 
-${printJsonError(error)}
+${printJsonErrors(errors)}
 
 This file is created by elm-watch, so reading it should never fail really.
 You could try removing that file (it contains nothing essential).
@@ -1351,13 +1351,13 @@ The web socket code I generate is supposed to always connect using a correct URL
 }
 
 export function webSocketParamsDecodeError(
-  error: Codec.DecoderError,
+  errors: NonEmptyArray<Codec.DecoderError>,
   actualUrlString: string
 ): string {
   return `
 I ran into trouble parsing the web socket connection URL parameters:
 
-${printJsonError(error).text}
+${printJsonErrors(errors).text}
 
 The URL looks like this:
 
@@ -1450,11 +1450,13 @@ If you want to have this target compiled, restart elm-watch either with more CLI
   `.trim();
 }
 
-export function webSocketDecodeError(error: Codec.DecoderError): string {
+export function webSocketDecodeError(
+  errors: NonEmptyArray<Codec.DecoderError>
+): string {
   return `
 The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
-${printJsonError(error).text}
+${printJsonErrors(errors).text}
 
 The web socket code I generate is supposed to always send correct messages, so something is up here.
   `.trim();
@@ -1737,8 +1739,8 @@ function truncate(string: string): string {
     : `${string.slice(0, half)}...${string.slice(-half)}`;
 }
 
-function printJsonError(error: Codec.DecoderError): Piece {
-  return text(error.format());
+function printJsonErrors(errors: NonEmptyArray<Codec.DecoderError>): Piece {
+  return text(Codec.formatAll(errors));
 }
 
 export type ErrorFilePath =

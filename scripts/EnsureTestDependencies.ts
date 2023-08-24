@@ -57,7 +57,10 @@ function checkFile(file: AbsolutePath): void {
       console.info(`Skipping: ${relativeFile}:`, parsed.error.message);
       return;
     case "DecodeError":
-      console.info(`Skipping: ${relativeFile}:`, parsed.error.format());
+      console.info(
+        `Skipping: ${relativeFile}:`,
+        Codec.formatAll(parsed.errors)
+      );
       return;
     case "Success":
     // Keep going.

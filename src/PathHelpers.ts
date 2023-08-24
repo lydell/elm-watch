@@ -79,7 +79,7 @@ export function longestCommonAncestorPath(
 type ReadJsonFileResult<T> =
   | {
       tag: "DecodeError";
-      error: Codec.DecoderError;
+      errors: NonEmptyArray<Codec.DecoderError>;
     }
   | {
       tag: "ReadError";
@@ -101,7 +101,10 @@ export function readJsonFile<T>(
     return { tag: "ReadError", error: toError(error) };
   }
   const parsed = Codec.parse(codec, content);
-  return parsed instanceof Codec.DecoderError
-    ? { tag: "DecodeError", error: parsed }
-    : { tag: "Success", value: parsed };
+  switch (parsed.tag) {
+    case "DecoderError":
+      return { tag: "DecodeError", errors: parsed.errors };
+    case "Valid":
+      return { tag: "Success", value: parsed.value };
+  }
 }
