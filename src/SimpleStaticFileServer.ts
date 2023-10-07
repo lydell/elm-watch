@@ -508,7 +508,7 @@ export function serveStatic(
         // - Never contains `../` or `./` – those have already been resolved somewhere.
         // - Mixing backslash and forward slash works fine on Windows.
         const { url = "/" } = request;
-        const urlWithoutQuery = removeQuery(url);
+        const urlWithoutQuery = decodePercentageEscapes(removeQuery(url));
         const fsPath =
           staticFilesDir.theStaticFilesDir.absolutePath + urlWithoutQuery;
         const stats = statSync(fsPath);
@@ -793,4 +793,12 @@ const QUERY_REGEX = /\?[^]*$/;
 
 function removeQuery(url: string): string {
   return url.replace(QUERY_REGEX, "");
+}
+
+function decodePercentageEscapes(url: string): string {
+  try {
+    return decodeURIComponent(url);
+  } catch {
+    return url;
+  }
 }
