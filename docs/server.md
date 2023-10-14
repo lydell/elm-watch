@@ -5,6 +5,9 @@ nav_order: 10
 
 # Server
 
+{: .warning }  
+⚠️ This is a beta feature! You need to install `elm-watch@beta` to be able to use it.
+
 If you want, you can enable a simple static file server for your project, by adding the following to your `elm-watch.json` file:
 
 ```json
