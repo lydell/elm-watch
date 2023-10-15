@@ -15,6 +15,7 @@
     "@types/ws": "8.5.4",
     "@typescript-eslint/eslint-plugin": "5.48.2",
     "@typescript-eslint/parser": "5.48.2",
+    "cross-spawn": "7.0.3",
     "elm-tooling": "1.12.0",
     "esbuild": "0.15.18",
     "esbuild-register": "3.4.2",
@@ -31,7 +32,6 @@
   },
   "dependencies": {
     "chokidar": "^3.5.3",
-    "cross-spawn": "^7.0.3",
     "tiny-decoders": "^7.0.1",
     "ws": "^8.12.0"
   }

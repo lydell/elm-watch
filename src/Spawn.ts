@@ -52,31 +52,51 @@ export function spawn(command: Command): {
     killed = true;
   };
 
-  const promise = (
-    actualSpawn: typeof childProcess.spawn
-  ): Promise<SpawnResult> =>
-    new Promise((resolve) => {
+  const promise = (windowsPreviousAttemptError?: Error): Promise<SpawnResult> =>
+    new Promise((resolve, reject) => {
       // istanbul ignore if
       if (killed) {
         resolve({ tag: "Killed", command });
         return;
       }
 
-      const child = actualSpawn(command.command, command.args, {
-        ...command.options,
-        cwd: command.options.cwd.absolutePath,
-      });
+      const child = childProcess.spawn(
+        // On Windows, executing just `elm` works for `elm.exe`, but not for
+        // `elm.cmd` – then we need to explicitly say `.cmd`. When installing
+        // Elm via npm or elm-tooling a `.cmd` file is used (pointing to the
+        // `.exe` somewhere else). So we try first with the original command,
+        // and then with `.cmd` appended.
+        // istanbul ignore next
+        windowsPreviousAttemptError === undefined
+          ? command.command
+          : `${command.command}.cmd`,
+        command.args,
+        {
+          ...command.options,
+          cwd: command.options.cwd.absolutePath,
+        }
+      );
 
       const stdout: Array<Buffer> = [];
       const stderr: Array<Buffer> = [];
 
+      // Having a test for `CommandNotFoundError` is good, but the rest is not
+      // possible to test. It’s the least messy to ignore coverage for the whole thing.
+      // istanbul ignore next
       child.on("error", (error: Error & { code?: string }) => {
-        resolve(
-          // istanbul ignore next
-          error.code === "ENOENT"
-            ? { tag: "CommandNotFoundError", command }
-            : { tag: "OtherSpawnError", error, command }
-        );
+        if (error.code === "ENOENT") {
+          if (IS_WINDOWS && windowsPreviousAttemptError === undefined) {
+            promise(error).then(resolve).catch(reject);
+          } else {
+            resolve({ tag: "CommandNotFoundError", command });
+          }
+        } else {
+          resolve({
+            tag: "OtherSpawnError",
+            error: windowsPreviousAttemptError ?? error,
+            command,
+          });
+        }
       });
 
       let stdinWriteError:
@@ -167,9 +187,7 @@ export function spawn(command: Command): {
 
   // istanbul ignore next
   return {
-    promise: IS_WINDOWS
-      ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
-      : promise(childProcess.spawn),
+    promise: promise(),
     kill: () => {
       kill();
     },
