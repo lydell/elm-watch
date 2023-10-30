@@ -4,7 +4,7 @@
 import * as fs from "fs";
 import * as fsPromises from "fs/promises";
 
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { isNonEmptyArray } from "../src/NonEmptyArray";
 import * as Parser from "../src/Parser";
 import { absolutePathFromString } from "../src/PathHelpers";
@@ -27,7 +27,7 @@ async function run(args: Array<string>): Promise<void> {
 
   const strategyResult = Strategy.decoder(strategyRaw);
   if (strategyResult.tag === "DecoderError") {
-    throw new KnownError(Codec.formatAll(strategyResult.errors));
+    throw new KnownError(Codec.format(strategyResult.error));
   }
   const strategy = strategyResult.value;
 
@@ -49,7 +49,7 @@ async function run(args: Array<string>): Promise<void> {
 }
 
 type Strategy = Codec.Infer<typeof Strategy>;
-const Strategy = Codec.stringUnion([
+const Strategy = Codec.primitiveUnion([
   "readFileSync",
   "readFile",
   "readSync",

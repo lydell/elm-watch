@@ -1,7 +1,7 @@
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 
 export type AbsolutePath = Codec.Infer<typeof AbsolutePath>;
-export const AbsolutePath = Codec.fieldsUnion("tag", [
+export const AbsolutePath = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("AbsolutePath"),
     absolutePath: Codec.string,
@@ -13,7 +13,7 @@ export type Cwd = { tag: "Cwd"; path: AbsolutePath };
 export type RunMode = "hot" | "make";
 
 export type CompilationMode = Codec.Infer<typeof CompilationMode>;
-export const CompilationMode = Codec.stringUnion([
+export const CompilationMode = Codec.primitiveUnion([
   "debug",
   "standard",
   "optimize",
@@ -22,7 +22,7 @@ export const CompilationMode = Codec.stringUnion([
 export type CompilationModeWithProxy = CompilationMode | "proxy";
 
 export type BrowserUiPosition = Codec.Infer<typeof BrowserUiPosition>;
-export const BrowserUiPosition = Codec.stringUnion([
+export const BrowserUiPosition = Codec.primitiveUnion([
   "TopLeft",
   "TopRight",
   "BottomLeft",

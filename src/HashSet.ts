@@ -1,6 +1,6 @@
 import * as util from "util";
 
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 
 /**
  * Like a `Set`, but the items are looked up by structure instead of by
@@ -50,7 +50,7 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 
   *keys(): IterableIterator<V> {
     for (const value of this._set.keys()) {
-      yield Codec.parseWithoutCodec(value) as V;
+      yield Codec.JSON.parse(Codec.unknown, value) as unknown as V;
     }
   }
 
@@ -77,7 +77,8 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 }
 
 function hash(value: Record<string, unknown>): string {
-  return Codec.stringifyWithoutCodec(
+  return Codec.JSON.stringify(
+    Codec.unknown,
     Object.fromEntries(
       Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1))
     )

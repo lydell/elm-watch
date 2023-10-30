@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "stream";
 
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import { NonEmptyArray } from "./NonEmptyArray";
 
 export type ReadStream = Readable & {
@@ -53,7 +53,7 @@ function pad(number: number): string {
 }
 
 export function quote(string: string): string {
-  return Codec.stringifyWithoutCodec(string);
+  return Codec.JSON.stringify(Codec.string, string);
 }
 
 export function formatDate(date: Date): string {

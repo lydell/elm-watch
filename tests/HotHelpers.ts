@@ -7,7 +7,7 @@ import {
   UppercaseLetter,
 } from "../client/client";
 import { elmWatchCli } from "../src";
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";
@@ -441,7 +441,7 @@ export function runHotReload({
       fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), { recursive: true });
       fs.writeFileSync(
         elmWatchStuffJsonPath,
-        Codec.stringify(ElmWatchStuffJson, elmWatchStuffJson)
+        Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson)
       );
       write(1);
 

@@ -61,11 +61,11 @@ export async function run(
         postprocessWorkerPool
       );
 
-    case "DecodeError":
+    case "DecoderError":
       logger.errorTemplate(
         Errors.decodeElmWatchJson(
           parseResult.elmWatchJsonPath,
-          parseResult.errors
+          parseResult.error
         )
       );
       return handleElmWatchJsonError(
@@ -167,7 +167,7 @@ export async function run(
               logger.errorTemplate(
                 Errors.decodeElmWatchStuffJson(
                   elmWatchStuffJsonPath,
-                  elmWatchStuffJsonParseResult.errors
+                  elmWatchStuffJsonParseResult.error
                 )
               );
               return { tag: "Exit", exitCode: 1 };

@@ -1,4 +1,4 @@
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,
@@ -8,13 +8,19 @@ import {
 import { ElmJsonPath, SourceDirectory } from "./Types";
 
 export type ElmJson = Codec.Infer<typeof ElmJson>;
-export const ElmJson = Codec.fieldsUnion("tag", [
+export const ElmJson = Codec.taggedUnion("tag", [
   {
-    tag: Codec.field("type", Codec.tag("Application", "application")),
+    tag: Codec.tag("Application", {
+      renameTagFrom: "application",
+      renameFieldFrom: "type",
+    }),
     "source-directories": NonEmptyArray(Codec.string),
   },
   {
-    tag: Codec.field("type", Codec.tag("Package", "package")),
+    tag: Codec.tag("Package", {
+      renameTagFrom: "package",
+      renameFieldFrom: "type",
+    }),
   },
 ]);
 
@@ -29,7 +35,7 @@ export type ParseError =
   | {
       tag: "ElmJsonDecodeError";
       elmJsonPath: ElmJsonPath;
-      errors: NonEmptyArray<Codec.DecoderError>;
+      error: Codec.DecoderError;
     }
   | {
       tag: "ElmJsonReadError";
@@ -40,11 +46,11 @@ export type ParseError =
 export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
   const parsed = readJsonFile(elmJsonPath.theElmJsonPath, ElmJson);
   switch (parsed.tag) {
-    case "DecodeError":
+    case "DecoderError":
       return {
         tag: "ElmJsonDecodeError",
         elmJsonPath,
-        errors: parsed.errors,
+        error: parsed.error,
       };
     case "ReadError":
       return {
@@ -52,7 +58,7 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
         elmJsonPath,
         error: parsed.error,
       };
-    case "Success":
+    case "Valid":
       return {
         tag: "Parsed",
         elmJson: parsed.value,

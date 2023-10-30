@@ -1,4 +1,4 @@
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { ElmMakeError } from "../src/ElmMakeError";
 import { stringSnapshotSerializer } from "./Helpers";
 
@@ -25,7 +25,7 @@ describe("ElmMakeError", () => {
       ],
     };
 
-    const jsonString = Codec.stringify(ElmMakeError, fixture, 2);
+    const jsonString = Codec.JSON.stringify(ElmMakeError, fixture, 2);
 
     expect(jsonString).toMatchInlineSnapshot(`
       {
@@ -44,7 +44,7 @@ describe("ElmMakeError", () => {
       }
     `);
 
-    const decoded = Codec.parse(ElmMakeError, jsonString);
+    const decoded = Codec.JSON.parse(ElmMakeError, jsonString);
 
     expect(decoded).toStrictEqual(fixture);
   });
@@ -57,7 +57,7 @@ describe("ElmMakeError", () => {
       message: [],
     };
 
-    const jsonString = Codec.stringify(ElmMakeError, fixture, 2);
+    const jsonString = Codec.JSON.stringify(ElmMakeError, fixture, 2);
 
     expect(jsonString).toMatchInlineSnapshot(`
       {
@@ -68,7 +68,7 @@ describe("ElmMakeError", () => {
       }
     `);
 
-    const decoded = Codec.parse(ElmMakeError, jsonString);
+    const decoded = Codec.JSON.parse(ElmMakeError, jsonString);
 
     expect(decoded).toStrictEqual(fixture);
   });
@@ -115,7 +115,7 @@ describe("ElmMakeError", () => {
       ],
     };
 
-    const jsonString = Codec.stringify(ElmMakeError, fixture, 2);
+    const jsonString = Codec.JSON.stringify(ElmMakeError, fixture, 2);
 
     expect(jsonString).toMatchInlineSnapshot(`
       {
@@ -153,7 +153,7 @@ describe("ElmMakeError", () => {
       }
     `);
 
-    const decoded = Codec.parse(ElmMakeError, jsonString);
+    const decoded = Codec.JSON.parse(ElmMakeError, jsonString);
 
     expect(decoded).toStrictEqual(fixture);
   });

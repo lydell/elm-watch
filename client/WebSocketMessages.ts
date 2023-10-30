@@ -1,9 +1,9 @@
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { NonEmptyArray } from "../src/NonEmptyArray";
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
 export type OpenEditorError = Codec.Infer<typeof OpenEditorError>;
-const OpenEditorError = Codec.fieldsUnion("tag", [
+const OpenEditorError = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("EnvNotSet"),
   },
@@ -14,7 +14,7 @@ const OpenEditorError = Codec.fieldsUnion("tag", [
 ]);
 
 export type ErrorLocation = Codec.Infer<typeof ErrorLocation>;
-const ErrorLocation = Codec.fieldsUnion("tag", [
+const ErrorLocation = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("FileOnly"),
     file: AbsolutePath,
@@ -34,12 +34,12 @@ const ErrorLocation = Codec.fieldsUnion("tag", [
 export type CompileError = Codec.Infer<typeof CompileError>;
 const CompileError = Codec.fields({
   title: Codec.string,
-  location: Codec.optional(ErrorLocation),
+  location: Codec.field(ErrorLocation, { optional: true }),
   htmlContent: Codec.string,
 });
 
 export type StatusChange = Codec.Infer<typeof StatusChange>;
-const StatusChange = Codec.fieldsUnion("tag", [
+const StatusChange = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("AlreadyUpToDate"),
     compilationMode: CompilationMode,
@@ -76,7 +76,7 @@ const SuccessfullyCompiledFields = {
   browserUiPosition: BrowserUiPosition,
 };
 
-const SuccessfullyCompiled = Codec.fieldsUnion("tag", [
+const SuccessfullyCompiled = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("SuccessfullyCompiled"),
     ...SuccessfullyCompiledFields,
@@ -86,7 +86,7 @@ const SuccessfullyCompiled = Codec.fieldsUnion("tag", [
 export type WebSocketToClientMessage = Codec.Infer<
   typeof WebSocketToClientMessage
 >;
-export const WebSocketToClientMessage = Codec.fieldsUnion("tag", [
+export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("FocusedTabAcknowledged"),
   },
@@ -110,7 +110,7 @@ export const WebSocketToClientMessage = Codec.fieldsUnion("tag", [
 export type WebSocketToServerMessage = Codec.Infer<
   typeof WebSocketToServerMessage
 >;
-export const WebSocketToServerMessage = Codec.fieldsUnion("tag", [
+export const WebSocketToServerMessage = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("ChangedCompilationMode"),
     compilationMode: CompilationMode,
@@ -142,22 +142,22 @@ export function encodeWebSocketToClientMessage(
     // With a large Elm app, `JSON.stringify` + `JSON.parse` can time ~40 ms.
     case "SuccessfullyCompiled": {
       const shortMessage = { ...message, code: "" };
-      return `//${Codec.stringify(SuccessfullyCompiled, shortMessage)}\n${
+      return `//${Codec.JSON.stringify(SuccessfullyCompiled, shortMessage)}\n${
         message.code
       }`;
     }
 
     default:
-      return Codec.stringify(WebSocketToClientMessage, message);
+      return Codec.JSON.stringify(WebSocketToClientMessage, message);
   }
 }
 
 export function decodeWebSocketToClientMessage(
   data: unknown
-): NonEmptyArray<Codec.DecoderError> | WebSocketToClientMessage {
+): Codec.DecoderResult<WebSocketToClientMessage> {
   const messageResult = Codec.string.decoder(data);
   if (messageResult.tag === "DecoderError") {
-    return messageResult.errors;
+    return messageResult;
   }
   const message = messageResult.value;
   if (message.startsWith("//")) {
@@ -165,14 +165,14 @@ export function decodeWebSocketToClientMessage(
     const newlineIndex =
       newlineIndexRaw === -1 ? message.length : newlineIndexRaw;
     const jsonString = message.slice(2, newlineIndex);
-    const parsed = Codec.parse(SuccessfullyCompiled, jsonString);
-    switch (parsed.tag) {
+    const parseResult = Codec.JSON.parse(SuccessfullyCompiled, jsonString);
+    switch (parseResult.tag) {
       case "DecoderError":
-        return parsed.errors;
+        return parseResult;
       case "Valid":
-        return { ...parsed.value, code: message };
+        return { tag: "Valid", value: { ...parseResult.value, code: message } };
     }
   } else {
-    return Codec.parse(WebSocketToClientMessage, message);
+    return Codec.JSON.parse(WebSocketToClientMessage, message);
   }
 }

@@ -1,4 +1,4 @@
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { readJsonFile } from "./PathHelpers";
 import { Port } from "./Port";
@@ -17,9 +17,9 @@ import {
 
 export type Target = Codec.Infer<typeof Target>;
 const Target = Codec.fields({
-  compilationMode: Codec.optional(CompilationMode),
-  browserUiPosition: Codec.optional(BrowserUiPosition),
-  openErrorOverlay: Codec.optional(Codec.boolean),
+  compilationMode: Codec.field(CompilationMode, { optional: true }),
+  browserUiPosition: Codec.field(BrowserUiPosition, { optional: true }),
+  openErrorOverlay: Codec.field(Codec.boolean, { optional: true }),
 });
 
 export type ElmWatchStuffJson = Codec.Infer<typeof ElmWatchStuffJson>;
@@ -43,7 +43,7 @@ type ParseResult =
 type ParseError =
   | {
       tag: "ElmWatchStuffJsonDecodeError";
-      errors: NonEmptyArray<Codec.DecoderError>;
+      error: Codec.DecoderError;
     }
   | {
       tag: "ElmWatchStuffJsonReadError";
@@ -58,10 +58,10 @@ export function readAndParse(
     ElmWatchStuffJson
   );
   switch (parsed.tag) {
-    case "DecodeError":
+    case "DecoderError":
       return {
         tag: "ElmWatchStuffJsonDecodeError",
-        errors: parsed.errors,
+        error: parsed.error,
       };
     case "ReadError":
       return parsed.error.code === "ENOENT"
@@ -73,7 +73,7 @@ export function readAndParse(
             tag: "ElmWatchStuffJsonReadError",
             errors: parsed.error,
           };
-    case "Success":
+    case "Valid":
       return {
         tag: "Parsed",
         elmWatchStuffJsonPath,

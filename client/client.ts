@@ -1,4 +1,4 @@
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
@@ -425,16 +425,15 @@ function logDebug(...args: Array<unknown>): void {
   }
 }
 
-const BrowserUiPositionWithFallback: Codec.Codec<BrowserUiPosition> = {
-  decoder(value: unknown): BrowserUiPosition {
-    try {
-      return BrowserUiPosition.decoder(value);
-    } catch {
+function BrowserUiPositionWithFallback(value: unknown): BrowserUiPosition {
+  const decoderResult = BrowserUiPosition.decoder(value);
+  switch (decoderResult.tag) {
+    case "DecoderError":
       return ORIGINAL_BROWSER_UI_POSITION;
-    }
-  },
-  encoder: (value) => value,
-};
+    case "Valid":
+      return decoderResult.value;
+  }
+}
 
 function run(): void {
   let elmCompiledTimestampBeforeReload: number | undefined = undefined;
@@ -462,9 +461,7 @@ function run(): void {
   const browserUiPosition =
     elements === undefined
       ? ORIGINAL_BROWSER_UI_POSITION
-      : BrowserUiPositionWithFallback.decoder(
-          elements.container.dataset.position
-        );
+      : BrowserUiPositionWithFallback(elements.container.dataset.position);
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
@@ -784,6 +781,16 @@ function setBrowserUiPosition(
   );
 }
 
+export function singleField<Decoded, Encoded>(
+  fieldName: string,
+  codec: Codec.Codec<Decoded, Encoded>
+): Codec.Codec<Decoded, Record<string, Encoded>> {
+  return Codec.map(Codec.fields({ [fieldName]: codec }), {
+    decoder: (value) => value[fieldName],
+    encoder: (value) => ({}), // ({ [fieldName]: value } as Decoded),
+  }) as Codec.Codec<Decoded, Record<string, Encoded>>;
+}
+
 const initMutable =
   (getNow: GetNow, elements: Elements | undefined) =>
   (
@@ -838,10 +845,9 @@ const initMutable =
                   (event) => {
                     dispatch({
                       tag: "BrowserUiMoved",
-                      browserUiPosition: Codec.singleField(
-                        "detail",
-                        BrowserUiPositionWithFallback
-                      ).decoder(event),
+                      browserUiPosition: BrowserUiPositionWithFallback(
+                        (event as CustomEvent).detail
+                      ),
                     });
                   }
                 ),
@@ -1380,7 +1386,7 @@ function statusChanged(
                     foregroundColor: status.foregroundColor,
                     backgroundColor: status.backgroundColor,
                   };
-                  const id = Codec.stringifyWithoutCodec(overlayError);
+                  const id = Codec.JSON.stringify(Codec.unknown, overlayError);
                   return [id, overlayError];
                 })
               ),
@@ -1528,7 +1534,10 @@ const runCmd =
       }
 
       case "SendMessage": {
-        const json = Codec.stringify(WebSocketToServerMessage, cmd.message);
+        const json = Codec.JSON.stringify(
+          WebSocketToServerMessage,
+          cmd.message
+        );
         try {
           mutable.webSocket.send(json);
         } catch (error) {
@@ -1660,29 +1669,25 @@ type ParseWebSocketMessageDataResult =
 function parseWebSocketMessageData(
   data: unknown
 ): ParseWebSocketMessageDataResult {
-  const parsed = decodeWebSocketToClientMessage(data);
-  return parsed instanceof Codec.DecoderError
-    ? {
+  const decoderResult = decodeWebSocketToClientMessage(data);
+  switch (decoderResult.tag) {
+    case "DecoderError":
+      return {
         tag: "Error",
-        message: `Failed to decode web socket message sent from the server:\n${parsed.format()}`,
-      }
-    : {
-        tag: "Success",
-        message: parsed,
+        message: `Failed to decode web socket message sent from the server:\n${Codec.format(
+          decoderResult.error
+        )}`,
       };
+    case "Valid":
+      return {
+        tag: "Success",
+        message: decoderResult.value,
+      };
+  }
 }
 
-const FunctionToNull = {
-  decoder(value: unknown): unknown {
-    return typeof value === "function" ? null : value;
-  },
-  encoder(value: unknown): unknown {
-    return value;
-  },
-};
-
 type ProgramType = Codec.Infer<typeof ProgramType>;
-const ProgramType = Codec.stringUnion([
+const ProgramType = Codec.primitiveUnion([
   "Platform.worker",
   "Browser.sandbox",
   "Browser.element",
@@ -1691,26 +1696,23 @@ const ProgramType = Codec.stringUnion([
   "Html",
 ]);
 
-const ElmModule: Codec.Codec<Array<ProgramType>> = Codec.chain(
+const ElmModule: Codec.Codec<Array<ProgramType>> = Codec.map(
   Codec.record(
-    Codec.chain(
-      FunctionToNull,
-      Codec.chain(Codec.multi(["null", "array", "object"]), {
-        decoder(value) {
-          switch (value.type) {
-            case "null":
-              return [];
-            case "array":
-              return Codec.array(
-                Codec.singleField("__elmWatchProgramType", ProgramType)
-              ).decoder(value.value);
-            case "object":
-              return ElmModule.decoder(value.value);
-          }
-        },
-        encoder: () => ({ type: "null" as const, value: null }),
-      })
-    )
+    Codec.flatMap(Codec.multi(["function", "array", "object"]), {
+      decoder: (value) => {
+        switch (value.type) {
+          case "function":
+            return { tag: "Valid", value: [] };
+          case "array":
+            return Codec.array(
+              singleField("__elmWatchProgramType", ProgramType)
+            ).decoder(value.value);
+          case "object":
+            return ElmModule.decoder(value.value);
+        }
+      },
+      encoder: () => ({ type: "function" as const, value: Function.prototype }),
+    })
   ),
   {
     decoder: (record: Record<string, Array<ProgramType>>) =>
@@ -1719,7 +1721,7 @@ const ElmModule: Codec.Codec<Array<ProgramType>> = Codec.chain(
   }
 );
 
-const ProgramTypes = Codec.singleField("Elm", ElmModule);
+const ProgramTypes = singleField("Elm", ElmModule);
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   // If this target is a proxy, or if another one is, it’s not safe to touch
@@ -1740,13 +1742,15 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
     return { tag: "MissingWindowElm" };
   }
 
-  const programTypes = Codec.parseUnknown(ProgramTypes, window);
-  if (programTypes instanceof Codec.DecoderError) {
+  const programTypesResult = ProgramTypes.decoder(window);
+  if (programTypesResult.tag === "DecoderError") {
     return {
-      tag: "DecodeError",
-      error: programTypes,
+      tag: "DecoderError",
+      error: programTypesResult.error,
     };
   }
+
+  const programTypes = programTypesResult.value;
 
   if (programTypes.length === 0) {
     return { tag: "NoProgramsAtAll" };
@@ -2878,7 +2882,7 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
 
 function idleIcon(status: InitializedElmAppsStatus): string {
   switch (status.tag) {
-    case "DecodeError":
+    case "DecoderError":
     case "MissingWindowElm":
       return "❌";
 
@@ -2961,7 +2965,7 @@ type InitializedElmAppsStatus =
       status: Toggled;
     }
   | {
-      tag: "DecodeError";
+      tag: "DecoderError";
       error: Codec.DecoderError;
     }
   | {
@@ -3014,14 +3018,18 @@ function viewCompilationModeChooser({
   info: Info;
 }): Array<HTMLElement> {
   switch (info.initializedElmAppsStatus.tag) {
-    case "DecodeError":
+    case "DecoderError":
       return [
         h(
           HTMLParagraphElement,
           {},
           "window.Elm does not look like expected! This is the error message:"
         ),
-        h(HTMLPreElement, {}, info.initializedElmAppsStatus.error.format()),
+        h(
+          HTMLPreElement,
+          {},
+          Codec.format(info.initializedElmAppsStatus.error)
+        ),
       ];
 
     case "MissingWindowElm":
@@ -3447,12 +3455,12 @@ function renderMockStatuses(
       info: {
         ...info,
         initializedElmAppsStatus: {
-          tag: "DecodeError",
-          error: new Codec.DecoderError({
+          tag: "DecoderError",
+          error: {
             tag: "object",
             got: 5,
-            key: "Main",
-          }),
+            path: ["Main"],
+          },
         },
       },
     },

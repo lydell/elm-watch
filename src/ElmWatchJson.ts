@@ -1,6 +1,6 @@
 import * as path from "path";
 
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
@@ -42,15 +42,13 @@ const Target = Codec.fields(
             ? { tag: "Valid", value: string }
             : {
                 tag: "DecoderError",
-                errors: [
-                  {
-                    tag: "custom",
-                    message:
-                      "Inputs must have a valid module name and end with .elm",
-                    got: string,
-                    path: [],
-                  },
-                ],
+                error: {
+                  tag: "custom",
+                  message:
+                    "Inputs must have a valid module name and end with .elm",
+                  got: string,
+                  path: [],
+                },
               },
         encoder: (value) => value,
       })
@@ -61,52 +59,49 @@ const Target = Codec.fields(
           ? { tag: "Valid", value: output }
           : {
               tag: "DecoderError",
-              errors: [
-                {
-                  tag: "custom",
-                  message: "Outputs must end with .js",
-                  got: output,
-                  path: [],
-                },
-              ],
+              error: {
+                tag: "custom",
+                message: "Outputs must end with .js",
+                got: output,
+                path: [],
+              },
             },
       encoder: (value) => value,
     }),
   },
-  { disallowExtraFields: true }
+  { allowExtraFields: false }
 );
 
 const TargetRecordHelper = {
-  decoder(
+  decoder: (
     record: Record<string, Target>
-  ): Codec.DecoderResult<Record<string, Target>> {
+  ): Codec.DecoderResult<Record<string, Target>> => {
     const keys = Object.keys(record);
-    const errors: Array<Codec.DecoderError> = keys.flatMap((key) =>
-      isValidTargetName(key)
-        ? []
-        : {
+    for (const key of keys) {
+      if (!isValidTargetName(key)) {
+        return {
+          tag: "DecoderError",
+          error: {
             tag: "custom",
             message:
               "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
             got: key,
-            path: [],
-          }
-    );
+            path: [key],
+          },
+        };
+      }
+    }
 
-    return isNonEmptyArray(errors)
-      ? { tag: "DecoderError", errors }
-      : isNonEmptyArray(keys)
+    return isNonEmptyArray(keys)
       ? { tag: "Valid", value: record }
       : {
           tag: "DecoderError",
-          errors: [
-            {
-              tag: "custom",
-              message: "Expected a non-empty object",
-              got: record,
-              path: [],
-            },
-          ],
+          error: {
+            tag: "custom",
+            message: "Expected a non-empty object",
+            got: record,
+            path: [],
+          },
         };
   },
   encoder: (value: Record<string, Target>) => value,
@@ -116,17 +111,17 @@ export type Config = Codec.Infer<typeof Config>;
 const Config = Codec.fields(
   {
     targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
-    postprocess: Codec.optional(NonEmptyArray(Codec.string)),
-    port: Codec.optional(Port),
+    postprocess: Codec.field(NonEmptyArray(Codec.string), { optional: true }),
+    port: Codec.field(Port, { optional: true }),
   },
-  { disallowExtraFields: true }
+  { allowExtraFields: false }
 );
 
 type ParseResult =
   | {
-      tag: "DecodeError";
+      tag: "DecoderError";
       elmWatchJsonPath: ElmWatchJsonPath;
-      errors: NonEmptyArray<Codec.DecoderError>;
+      error: Codec.DecoderError;
     }
   | {
       tag: "ElmWatchJsonNotFound";
@@ -158,11 +153,11 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
   const parsed = readJsonFile(elmWatchJsonPathRaw, Config);
 
   switch (parsed.tag) {
-    case "DecodeError":
+    case "DecoderError":
       return {
-        tag: "DecodeError",
+        tag: "DecoderError",
         elmWatchJsonPath,
-        errors: parsed.errors,
+        error: parsed.error,
       };
     case "ReadError":
       return {
@@ -170,7 +165,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
         elmWatchJsonPath,
         error: parsed.error,
       };
-    case "Success":
+    case "Valid":
       return {
         tag: "Parsed",
         elmWatchJsonPath,
@@ -208,7 +203,7 @@ export function example(
     },
   };
 
-  return Codec.stringify(Config, json, 4);
+  return Codec.JSON.stringify(Config, json, 4);
 }
 
 function toUnixPath(filePath: string): string {

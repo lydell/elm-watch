@@ -2,7 +2,7 @@ import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
 
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 
 const DIR = path.dirname(__dirname);
 const BUILD = path.join(DIR, "build");
@@ -16,9 +16,10 @@ type Package = {
 function readPackage(name: string): Package {
   // Not using a Codec because we want to include all other fields and it felt
   // overkill making a Codec for that.
-  return Codec.parseWithoutCodec(
+  return Codec.JSON.parse(
+    Codec.unknown,
     fs.readFileSync(path.join(DIR, name), "utf8")
-  ) as Package;
+  ) as unknown as Package;
 }
 
 const PACKAGE = readPackage("package.json");
@@ -56,9 +57,9 @@ async function run(): Promise<void> {
 
   fs.writeFileSync(
     path.join(BUILD, "package.json"),
-    Codec.stringifyWithoutCodec(
+    Codec.JSON.stringify(
+      Codec.unknown,
       { ...PACKAGE_REAL, dependencies: PACKAGE.dependencies },
-      null,
       2
     )
   );

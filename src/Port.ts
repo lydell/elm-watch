@@ -1,4 +1,4 @@
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 
 export type PortChoice =
   | { tag: "NoPort" }
@@ -11,7 +11,7 @@ export type Port = {
 };
 
 export const Port = Codec.flatMap(Codec.number, {
-  decoder(number) {
+  decoder: (number) => {
     const min = 1;
     const max = 65535;
     return Number.isInteger(number) && min <= number && number <= max
@@ -24,14 +24,12 @@ export const Port = Codec.flatMap(Codec.number, {
         }
       : {
           tag: "DecoderError",
-          errors: [
-            {
-              tag: "custom",
-              message: `Expected an integer where ${min} <= port <= ${max}`,
-              got: number,
-              path: [],
-            },
-          ],
+          error: {
+            tag: "custom",
+            message: `Expected an integer where ${min} <= port <= ${max}`,
+            got: number,
+            path: [],
+          },
         };
   },
   encoder: ({ thePort }) => thePort,

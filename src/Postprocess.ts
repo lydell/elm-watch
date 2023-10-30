@@ -1,7 +1,7 @@
 import * as path from "path";
 import { Worker } from "worker_threads";
 
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import { Env } from "./Env";
 import { quote, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
@@ -322,7 +322,8 @@ class PostprocessWorker {
       // istanbul ignore next
       case "Terminated":
         throw new Error(
-          `Cannot call PostprocessWorker#postprocess because \`this.status === ${Codec.stringifyWithoutCodec(
+          `Cannot call PostprocessWorker#postprocess because \`this.status === ${Codec.JSON.stringify(
+            Codec.unknown,
             this.status
           )}\` instead of the expected "Idle".`
         );

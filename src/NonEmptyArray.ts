@@ -1,4 +1,4 @@
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 
 export type NonEmptyArray<T> = [T, ...Array<T>];
 
@@ -11,14 +11,12 @@ export function NonEmptyArray<Decoded, Encoded>(
         ? { tag: "Valid", value: array }
         : {
             tag: "DecoderError",
-            errors: [
-              {
-                tag: "custom",
-                message: "Expected a non-empty array",
-                got: array,
-                path: [],
-              },
-            ],
+            error: {
+              tag: "custom",
+              message: "Expected a non-empty array",
+              got: array,
+              path: [],
+            },
           },
     encoder: (array) => array,
   });

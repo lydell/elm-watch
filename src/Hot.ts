@@ -10,7 +10,7 @@ import {
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages";
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import * as Compile from "./Compile";
 import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
 import {
@@ -646,7 +646,7 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
     fs.writeFileSync(
       mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath
         .absolutePath,
-      `${Codec.stringify(ElmWatchStuffJson, json, 4)}\n`
+      `${Codec.JSON.stringify(ElmWatchStuffJson, json, 4)}\n`
     );
     mutable.elmWatchStuffJsonWriteError = undefined;
   } catch (unknownError) {
@@ -1062,7 +1062,7 @@ function update(
             result.message
           );
 
-        case "DecodeError":
+        case "DecoderError":
           return [
             model,
             [
@@ -1073,7 +1073,7 @@ function update(
                   tag: "StatusChanged",
                   status: {
                     tag: "ClientError",
-                    message: Errors.webSocketDecodeError(result.errors),
+                    message: Errors.webSocketDecodeError(result.error),
                   },
                 },
               },
@@ -2138,14 +2138,12 @@ const WebSocketConnectedParams = Codec.fields(
           ? { tag: "Valid", value: number }
           : {
               tag: "DecoderError",
-              errors: [
-                {
-                  tag: "custom",
-                  message: "Expected a number",
-                  got: string,
-                  path: [],
-                },
-              ],
+              error: {
+                tag: "custom",
+                message: "Expected a number",
+                got: string,
+                path: [],
+              },
             };
       },
       encoder:
@@ -2153,7 +2151,7 @@ const WebSocketConnectedParams = Codec.fields(
         (value) => value.toString(),
     }),
   },
-  { disallowExtraFields: true }
+  { allowExtraFields: false }
 );
 
 type ParseWebSocketConnectRequestUrlResult =
@@ -2178,7 +2176,7 @@ type ParseWebSocketConnectRequestUrlError =
     }
   | {
       tag: "ParamsDecodeError";
-      errors: NonEmptyArray<Codec.DecoderError>;
+      error: Codec.DecoderError;
       actualUrlString: string;
     }
   | {
@@ -2227,7 +2225,7 @@ function parseWebSocketConnectRequestUrl(
   if (webSocketConnectedParamsResult.tag === "DecoderError") {
     return {
       tag: "ParamsDecodeError",
-      errors: webSocketConnectedParamsResult.errors,
+      error: webSocketConnectedParamsResult.error,
       actualUrlString: urlString,
     };
   }
@@ -2315,7 +2313,7 @@ function webSocketConnectRequestUrlErrorToString(
 
     case "ParamsDecodeError":
       return Errors.webSocketParamsDecodeError(
-        error.errors,
+        error.error,
         error.actualUrlString
       );
 
@@ -2343,8 +2341,8 @@ function webSocketConnectRequestUrlErrorToString(
 
 type ParseWebSocketToServerMessageResult =
   | {
-      tag: "DecodeError";
-      errors: NonEmptyArray<Codec.DecoderError>;
+      tag: "DecoderError";
+      error: Codec.DecoderError;
     }
   | {
       tag: "Success";
@@ -2364,10 +2362,10 @@ function parseWebSocketToServerMessage(
       ? new TextDecoder("utf8").decode(data)
       : data.toString("utf8");
 
-  const parsed = Codec.parse(WebSocketToServerMessage, stringData);
+  const parsed = Codec.JSON.parse(WebSocketToServerMessage, stringData);
   switch (parsed.tag) {
     case "DecoderError":
-      return { tag: "DecodeError", errors: parsed.errors };
+      return { tag: "DecoderError", error: parsed.error };
     case "Valid":
       return { tag: "Success", message: parsed.value };
   }

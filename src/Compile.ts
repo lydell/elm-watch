@@ -1,6 +1,6 @@
 import * as fs from "fs";
 
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import * as ElmJson from "./ElmJson";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
@@ -593,9 +593,9 @@ export async function handleOutputAction({
         // istanbul ignore next
         case "make":
           throw new Error(
-            `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${Codec.stringifyWithoutCodec(
+            `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${Codec.JSON.stringify(
+              Codec.unknown,
               action,
-              null,
               2
             )}`
           );
@@ -2208,7 +2208,7 @@ export function renderOutputErrors(
       return [
         Errors.elmMakeJsonParseError(
           outputPath,
-          status.errors,
+          status.error,
           status.errorFilePath,
           status.command
         ),
@@ -2238,7 +2238,7 @@ export function renderOutputErrors(
       return [Errors.readElmJson(status.elmJsonPath, status.error)];
 
     case "ElmJsonDecodeError":
-      return [Errors.decodeElmJson(status.elmJsonPath, status.errors)];
+      return [Errors.decodeElmJson(status.elmJsonPath, status.error)];
 
     case "ImportWalkerFileSystemError":
       return [Errors.importWalkerFileSystemError(outputPath, status.error)];

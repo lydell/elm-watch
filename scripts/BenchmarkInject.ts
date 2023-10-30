@@ -2,7 +2,7 @@
 
 import * as fs from "fs";
 
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { inject } from "../src/Inject";
 import { absolutePathFromString } from "../src/PathHelpers";
 import { CompilationMode, Cwd } from "../src/Types";
@@ -20,7 +20,7 @@ function run(args: Array<string>): void {
 
   const compilationModeResult = CompilationMode.decoder(compilationModeRaw);
   if (compilationModeResult.tag === "DecoderError") {
-    throw new KnownError(Codec.formatAll(compilationModeResult.errors));
+    throw new KnownError(Codec.format(compilationModeResult.error));
   }
   const compilationMode = compilationModeResult.value;
 

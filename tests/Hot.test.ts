@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import {
   __ELM_WATCH_ELM_TIMEOUT_MS,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
@@ -4627,7 +4627,13 @@ describe("hot", () => {
     const elmWatchJson: unknown = JSON.parse(
       fs.readFileSync(elmWatchJsonPath, "utf8")
     );
-    const port = Codec.singleField("port", Codec.number).decoder(elmWatchJson);
+    const portResult = Codec.fields({ port: Codec.number }).decoder(
+      elmWatchJson
+    );
+    if (portResult.tag === "DecoderError") {
+      throw new Error(Codec.format(portResult.error));
+    }
+    const { port } = portResult.value;
 
     let mainHtml = "(not set)";
     let variations: Array<string> = ["(not set)"];

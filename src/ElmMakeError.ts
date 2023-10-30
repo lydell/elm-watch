@@ -1,4 +1,4 @@
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath } from "./Types";
 
@@ -6,7 +6,7 @@ import { AbsolutePath } from "./Types";
 // Lowercase means “dull” and uppercase means “vivid”:
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L369-L391
 export type Color = Codec.Infer<typeof Color>;
-const Color = Codec.stringUnion([
+const Color = Codec.primitiveUnion([
   "red",
   "RED",
   "magenta",
@@ -45,9 +45,11 @@ const StyledText = Codec.map(
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L394-L409
 export type MessageChunk = Codec.Infer<typeof MessageChunk>;
 const MessageChunk = Codec.flatMap(Codec.multi(["string", "object"]), {
-  decoder(
+  decoder: (
     value
-  ): Codec.DecoderResult<StyledText | { tag: "UnstyledText"; string: string }> {
+  ): Codec.DecoderResult<
+    StyledText | { tag: "UnstyledText"; string: string }
+  > => {
     switch (value.type) {
       case "string":
         return {
@@ -61,7 +63,7 @@ const MessageChunk = Codec.flatMap(Codec.multi(["string", "object"]), {
         return StyledText.decoder(value.value);
     }
   },
-  encoder(value) {
+  encoder: (value) => {
     switch (value.tag) {
       case "UnstyledText":
         return {
@@ -114,7 +116,7 @@ const CompileError = Codec.fields({
 
 const GeneralErrorPath = Codec.map(
   Codec.nullOr(
-    Codec.map(Codec.stringUnion(["elm.json"]), {
+    Codec.map(Codec.primitiveUnion(["elm.json"]), {
       decoder: (tag) => ({ tag }),
       encoder: ({ tag }) => tag,
     })
@@ -129,16 +131,22 @@ export type GeneralError = Extract<ElmMakeError, { tag: "GeneralError" }>;
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/builder/src/Reporting/Exit/Help.hs#L94-L109
 export type ElmMakeError = Codec.Infer<typeof ElmMakeError>;
-export const ElmMakeError = Codec.fieldsUnion("tag", [
+export const ElmMakeError = Codec.taggedUnion("tag", [
   {
-    tag: Codec.field("type", Codec.tag("GeneralError", "error")),
+    tag: Codec.tag("GeneralError", {
+      renameTagFrom: "error",
+      renameFieldFrom: "type",
+    }),
     // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
     path: GeneralErrorPath,
     title: Codec.string,
     message: Codec.array(MessageChunk),
   },
   {
-    tag: Codec.field("type", Codec.tag("CompileErrors", "compile-errors")),
+    tag: Codec.tag("CompileErrors", {
+      renameTagFrom: "compile-errors",
+      renameFieldFrom: "type",
+    }),
     errors: NonEmptyArray(CompileError),
   },
 ]);

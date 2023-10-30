@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { quote } from "../src/Helpers";
 import { absolutePathFromString, readJsonFile } from "../src/PathHelpers";
 import { AbsolutePath } from "../src/Types";
@@ -56,13 +56,10 @@ function checkFile(file: AbsolutePath): void {
     case "ReadError":
       console.info(`Skipping: ${relativeFile}:`, parsed.error.message);
       return;
-    case "DecodeError":
-      console.info(
-        `Skipping: ${relativeFile}:`,
-        Codec.formatAll(parsed.errors)
-      );
+    case "DecoderError":
+      console.info(`Skipping: ${relativeFile}:`, Codec.format(parsed.error));
       return;
-    case "Success":
+    case "Valid":
     // Keep going.
   }
   const json = parsed.value;

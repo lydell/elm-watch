@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as url from "url";
 
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
@@ -71,8 +71,8 @@ function json(data: unknown, indent?: number): Piece {
     tag: "Text",
     text:
       indent === undefined
-        ? Codec.stringifyWithoutCodec(data)
-        : Codec.stringifyWithoutCodec(data, null, indent),
+        ? Codec.JSON.stringify(Codec.unknown, data)
+        : Codec.JSON.stringify(Codec.unknown, data, indent),
   };
 }
 
@@ -347,14 +347,14 @@ ${text(error.message)}
 
 export function decodeElmWatchJson(
   elmWatchJsonPath: ElmWatchJsonPath,
-  errors: NonEmptyArray<Codec.DecoderError>
+  error: Codec.DecoderError
 ): ErrorTemplate {
   return fancyError("INVALID elm-watch.json FORMAT", elmWatchJsonPath)`
 I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("I had trouble with the JSON inside:")}
 
-${printJsonErrors(errors)}
+${printJsonError(error)}
 `;
 }
 
@@ -955,7 +955,7 @@ ${text(error)}
 
 export function elmMakeJsonParseError(
   outputPath: OutputPath | { tag: "NoLocation" },
-  errors: NonEmptyArray<Codec.DecoderError>,
+  error: Codec.DecoderError,
   errorFilePath: ErrorFilePath,
   command: Command
 ): ErrorTemplate {
@@ -967,7 +967,7 @@ ${printCommand(command)}
 I seem to have gotten some JSON back as expected,
 but I ran into an error when decoding it:
 
-${printJsonErrors(errors)}
+${printJsonError(error)}
 
 ${printErrorFilePath(errorFilePath)}
 `;
@@ -1088,7 +1088,7 @@ and "postprocess" was not run.)
 
 export function decodeElmJson(
   elmJsonPath: ElmJsonPath,
-  errors: NonEmptyArray<Codec.DecoderError>
+  error: Codec.DecoderError
 ): ErrorTemplate {
   return fancyError("INVALID elm.json FORMAT", elmJsonPath)`
 I read "source-directories" from ${elmJson} when figuring out all Elm files that
@@ -1096,7 +1096,7 @@ your inputs depend on.
 
 ${bold("I had trouble with the JSON inside:")}
 
-${printJsonErrors(errors)}
+${printJsonError(error)}
 
 (I still managed to compile your code, but the watcher will not work properly
 and "postprocess" was not run.)
@@ -1124,7 +1124,7 @@ You could try removing that file (it contains nothing essential).
 
 export function decodeElmWatchStuffJson(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
-  errors: NonEmptyArray<Codec.DecoderError>
+  error: Codec.DecoderError
 ): ErrorTemplate {
   return fancyError(
     "INVALID elm-stuff/elm-watch/stuff.json FORMAT",
@@ -1134,7 +1134,7 @@ I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble with the JSON inside:")}
 
-${printJsonErrors(errors)}
+${printJsonError(error)}
 
 This file is created by elm-watch, so reading it should never fail really.
 You could try removing that file (it contains nothing essential).
@@ -1351,13 +1351,13 @@ The web socket code I generate is supposed to always connect using a correct URL
 }
 
 export function webSocketParamsDecodeError(
-  errors: NonEmptyArray<Codec.DecoderError>,
+  error: Codec.DecoderError,
   actualUrlString: string
 ): string {
   return `
 I ran into trouble parsing the web socket connection URL parameters:
 
-${printJsonErrors(errors).text}
+${printJsonError(error).text}
 
 The URL looks like this:
 
@@ -1450,13 +1450,11 @@ If you want to have this target compiled, restart elm-watch either with more CLI
   `.trim();
 }
 
-export function webSocketDecodeError(
-  errors: NonEmptyArray<Codec.DecoderError>
-): string {
+export function webSocketDecodeError(error: Codec.DecoderError): string {
   return `
 The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
-${printJsonErrors(errors).text}
+${printJsonError(error).text}
 
 The web socket code I generate is supposed to always send correct messages, so something is up here.
   `.trim();
@@ -1494,7 +1492,7 @@ ${command}
 
 I ran the command with these extra environment variables:
 
-${Codec.stringifyWithoutCodec(env, null, 2)}
+${Codec.JSON.stringify(Codec.unknown, env, 2)}
 
 ${errorReason}
 
@@ -1739,8 +1737,8 @@ function truncate(string: string): string {
     : `${string.slice(0, half)}...${string.slice(-half)}`;
 }
 
-function printJsonErrors(errors: NonEmptyArray<Codec.DecoderError>): Piece {
-  return text(Codec.formatAll(errors));
+function printJsonError(error: Codec.DecoderError): Piece {
+  return text(Codec.format(error));
 }
 
 export type ErrorFilePath =

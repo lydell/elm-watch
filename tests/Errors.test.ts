@@ -4,7 +4,7 @@ import * as http from "http";
 import * as path from "path";
 
 import { elmWatchCli } from "../src";
-import * as Codec from "../src/Codec";
+import * as Codec from "tiny-decoders";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
@@ -2978,7 +2978,7 @@ describe("errors", () => {
         rm(elmWatchStuffJsonPath);
         fs.writeFileSync(
           elmWatchStuffJsonPath,
-          Codec.stringify(ElmWatchStuffJson, elmWatchStuffJson),
+          Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
           { mode: "0444" } // readonly
         );
       } catch {

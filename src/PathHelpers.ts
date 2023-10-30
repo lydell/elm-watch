@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import * as Codec from "./Codec";
+import * as Codec from "tiny-decoders";
 import { getSetSingleton, join, toError } from "./Helpers";
 import {
   isNonEmptyArray,
@@ -77,17 +77,10 @@ export function longestCommonAncestorPath(
 }
 
 type ReadJsonFileResult<T> =
-  | {
-      tag: "DecodeError";
-      errors: NonEmptyArray<Codec.DecoderError>;
-    }
+  | Codec.DecoderResult<T>
   | {
       tag: "ReadError";
       error: NodeJS.ErrnoException;
-    }
-  | {
-      tag: "Success";
-      value: T;
     };
 
 export function readJsonFile<T>(
@@ -100,11 +93,5 @@ export function readJsonFile<T>(
   } catch (error) {
     return { tag: "ReadError", error: toError(error) };
   }
-  const parsed = Codec.parse(codec, content);
-  switch (parsed.tag) {
-    case "DecoderError":
-      return { tag: "DecodeError", errors: parsed.errors };
-    case "Valid":
-      return { tag: "Success", value: parsed.value };
-  }
+  return Codec.JSON.parse(codec, content);
 }
