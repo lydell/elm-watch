@@ -1,6 +1,5 @@
-import * as util from "util";
-
 import * as Codec from "tiny-decoders";
+import * as util from "util";
 
 /**
  * Like a `Map`, but the keys are looked up by structure instead of by

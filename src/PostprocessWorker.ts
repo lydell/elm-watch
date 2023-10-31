@@ -1,8 +1,8 @@
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 import * as url from "url";
 import { MessagePort, parentPort } from "worker_threads";
 
-import * as Codec from "tiny-decoders";
 import { unknownErrorToString } from "./Helpers";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import {

@@ -1,4 +1,5 @@
 import * as Codec from "tiny-decoders";
+
 import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
@@ -787,7 +788,7 @@ export function singleField<Decoded, Encoded>(
 ): Codec.Codec<Decoded, Record<string, Encoded>> {
   return Codec.map(Codec.fields({ [fieldName]: codec }), {
     decoder: (value) => value[fieldName],
-    encoder: (value) => ({}), // ({ [fieldName]: value } as Decoded),
+    encoder: () => ({}),
   }) as Codec.Codec<Decoded, Record<string, Encoded>>;
 }
 

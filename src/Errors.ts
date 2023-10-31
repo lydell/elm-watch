@@ -2,9 +2,9 @@ import { ExecException } from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 import * as url from "url";
 
-import * as Codec from "tiny-decoders";
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";

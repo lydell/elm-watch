@@ -2,6 +2,7 @@ import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
@@ -10,7 +11,6 @@ import {
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages";
-import * as Codec from "tiny-decoders";
 import * as Compile from "./Compile";
 import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
 import {

@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
 import * as Codec from "tiny-decoders";
+
 import * as ElmJson from "../src/ElmJson";
 import { HashSet } from "../src/HashSet";
 import { getSetSingleton } from "../src/Helpers";

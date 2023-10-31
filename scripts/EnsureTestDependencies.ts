@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 import * as fs from "fs";
 import * as path from "path";
-
 import * as Codec from "tiny-decoders";
+
 import { quote } from "../src/Helpers";
 import { absolutePathFromString, readJsonFile } from "../src/PathHelpers";
 import { AbsolutePath } from "../src/Types";

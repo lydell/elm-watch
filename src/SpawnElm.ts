@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
-
 import * as Codec from "tiny-decoders";
+
 import { ElmMakeError } from "./ElmMakeError";
 import { __ELM_WATCH_ELM_TIMEOUT_MS, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";

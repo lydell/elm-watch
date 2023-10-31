@@ -1,5 +1,6 @@
-import * as ClientCode from "./ClientCode";
 import * as Codec from "tiny-decoders";
+
+import * as ClientCode from "./ClientCode";
 import { join } from "./Helpers";
 import { Port } from "./Port";
 import {

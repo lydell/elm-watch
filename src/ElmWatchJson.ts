@@ -1,6 +1,6 @@
 import * as path from "path";
-
 import * as Codec from "tiny-decoders";
+
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,

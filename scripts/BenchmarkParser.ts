@@ -3,8 +3,8 @@
 
 import * as fs from "fs";
 import * as fsPromises from "fs/promises";
-
 import * as Codec from "tiny-decoders";
+
 import { isNonEmptyArray } from "../src/NonEmptyArray";
 import * as Parser from "../src/Parser";
 import { absolutePathFromString } from "../src/PathHelpers";

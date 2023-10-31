@@ -1,6 +1,6 @@
 import * as fs from "fs";
-
 import * as Codec from "tiny-decoders";
+
 import * as ElmJson from "./ElmJson";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";

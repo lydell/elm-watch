@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 
 import {
   ElmModule,
@@ -7,7 +8,6 @@ import {
   UppercaseLetter,
 } from "../client/client";
 import { elmWatchCli } from "../src";
-import * as Codec from "tiny-decoders";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";

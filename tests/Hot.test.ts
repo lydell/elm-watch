@@ -3,9 +3,9 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
-import * as Codec from "tiny-decoders";
 import {
   __ELM_WATCH_ELM_TIMEOUT_MS,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,

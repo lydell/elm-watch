@@ -1,6 +1,5 @@
-import * as util from "util";
-
 import * as Codec from "tiny-decoders";
+import * as util from "util";
 
 /**
  * Like a `Set`, but the items are looked up by structure instead of by

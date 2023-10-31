@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
-
 import * as Codec from "tiny-decoders";
+
 import { getSetSingleton, join, toError } from "./Helpers";
 import {
   isNonEmptyArray,

@@ -1,7 +1,7 @@
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 import { Worker } from "worker_threads";
 
-import * as Codec from "tiny-decoders";
 import { Env } from "./Env";
 import { quote, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";

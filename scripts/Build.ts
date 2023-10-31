@@ -1,7 +1,6 @@
 import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
-
 import * as Codec from "tiny-decoders";
 
 const DIR = path.dirname(__dirname);

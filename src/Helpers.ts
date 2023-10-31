@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "stream";
-
 import * as Codec from "tiny-decoders";
+
 import { NonEmptyArray } from "./NonEmptyArray";
 
 export type ReadStream = Readable & {

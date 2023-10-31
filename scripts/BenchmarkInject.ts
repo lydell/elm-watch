@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 
 import * as fs from "fs";
-
 import * as Codec from "tiny-decoders";
+
 import { inject } from "../src/Inject";
 import { absolutePathFromString } from "../src/PathHelpers";
 import { CompilationMode, Cwd } from "../src/Types";

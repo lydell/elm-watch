@@ -2,9 +2,9 @@ import spawn from "cross-spawn";
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 
 import { elmWatchCli } from "../src";
-import * as Codec from "tiny-decoders";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,

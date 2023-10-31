@@ -1,4 +1,5 @@
 import * as Codec from "tiny-decoders";
+
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import {
   absoluteDirname,

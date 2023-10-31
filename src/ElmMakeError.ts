@@ -1,4 +1,5 @@
 import * as Codec from "tiny-decoders";
+
 import { NonEmptyArray } from "./NonEmptyArray";
 import { AbsolutePath } from "./Types";
 
