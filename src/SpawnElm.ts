@@ -169,7 +169,7 @@ function delayKill(
   );
   const elapsed = getNow().getTime() - startTime;
   const timeoutId = setTimeout(kill, Math.max(0, timeout - elapsed));
-  promise.finally(() => {
+  void promise.finally(() => {
     clearTimeout(timeoutId);
   });
 }

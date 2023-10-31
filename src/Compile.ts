@@ -1752,7 +1752,7 @@ function statusLine(
     emojiName: EmojiName,
     start: string
   ): string => {
-    const strings = extra.flatMap((item) => (item === undefined ? [] : item));
+    const strings = extra.flatMap((item) => item ?? []);
     // istanbul ignore if
     if (!isNonEmptyArray(strings)) {
       return helper(emojiName, start);

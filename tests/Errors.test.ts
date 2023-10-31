@@ -63,12 +63,10 @@ async function runAbsolute(
     cwd: dir,
     env: {
       ...(exitHotOnError ? { [__ELM_WATCH_EXIT_ON_ERROR]: "" } : {}),
-      ...(env === undefined
-        ? {
-            ...process.env,
-            ...TEST_ENV,
-          }
-        : env),
+      ...(env ?? {
+        ...process.env,
+        ...TEST_ENV,
+      }),
     },
     stdin: new SilentReadStream(),
     stdout,
