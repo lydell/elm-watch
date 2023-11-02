@@ -1,4 +1,4 @@
-import * as Codec from "tiny-decoders";
+/* eslint-disable no-restricted-globals */
 import * as util from "util";
 
 /**
@@ -49,7 +49,7 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 
   *keys(): IterableIterator<V> {
     for (const value of this._set.keys()) {
-      yield Codec.JSON.parse(Codec.unknown, value) as unknown as V;
+      yield JSON.parse(value);
     }
   }
 
@@ -76,8 +76,7 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 }
 
 function hash(value: Record<string, unknown>): string {
-  return Codec.JSON.stringify(
-    Codec.unknown,
+  return JSON.stringify(
     Object.fromEntries(
       Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1))
     )

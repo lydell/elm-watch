@@ -5,6 +5,16 @@ import { stringSnapshotSerializer } from "./Helpers";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
+function decode(jsonString: string): ElmMakeError {
+  const result = Codec.JSON.parse(ElmMakeError, jsonString);
+  switch (result.tag) {
+    case "Valid":
+      return result.value;
+    case "DecoderError":
+      throw new Error(Codec.format(result.error));
+  }
+}
+
 describe("ElmMakeError", () => {
   test("GeneralError, NoPath", () => {
     const fixture: ElmMakeError = {
@@ -45,9 +55,7 @@ describe("ElmMakeError", () => {
       }
     `);
 
-    const decoded = Codec.JSON.parse(ElmMakeError, jsonString);
-
-    expect(decoded).toStrictEqual(fixture);
+    expect(decode(jsonString)).toStrictEqual(fixture);
   });
 
   test("GeneralError, elm.json", () => {
@@ -69,9 +77,7 @@ describe("ElmMakeError", () => {
       }
     `);
 
-    const decoded = Codec.JSON.parse(ElmMakeError, jsonString);
-
-    expect(decoded).toStrictEqual(fixture);
+    expect(decode(jsonString)).toStrictEqual(fixture);
   });
 
   test("CompileErrors", () => {
@@ -154,8 +160,6 @@ describe("ElmMakeError", () => {
       }
     `);
 
-    const decoded = Codec.JSON.parse(ElmMakeError, jsonString);
-
-    expect(decoded).toStrictEqual(fixture);
+    expect(decode(jsonString)).toStrictEqual(fixture);
   });
 });
