@@ -16,12 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
-        node-version: [14, 16, 18]
-        exclude:
-          # Some tests fail on Node.js 14 on Windows, both locally and in CI.
-          # I think it’s not worth it trying to fix that.
-          - os: windows-latest
-            node-version: 14
+        node-version: [16, 18, 20]
 
     env:
       ELM_HOME: "${{ github.workspace }}/elm-stuff/elm-home"

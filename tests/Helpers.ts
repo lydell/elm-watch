@@ -511,9 +511,9 @@ export function clean(string: string): string {
   // Replace start of absolute paths with hardcoded stuff so the tests pass on
   // more than one computer. Replace automatic port numbers with a fixed one.
   // Replace colors for snapshots. Replace backslashes with slashes for Windows
-  // That can be extra ticky since we sometimes prints JSON strings where the
+  // That can be extra tricky since we sometimes print JSON strings where the
   // backslashes end up escaped with another backslash. Normalize some error
-  // messages between Windows and others.
+  // messages between Windows and others, and between Node.js versions.
   return string
     .split(path.dirname(__dirname))
     .join(project)
@@ -538,6 +538,11 @@ export function clean(string: string): string {
     )
     .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
     .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
+    .replace(
+      /Expected .+ in JSON at position \d+|Unexpected token . in JSON at position \d+|Unexpected end of JSON input/g,
+      "(JSON syntax error)"
+    )
+    .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
     .replace(/EOF/g, "EPIPE");
 }

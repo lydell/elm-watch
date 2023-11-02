@@ -1544,8 +1544,7 @@ describe("hot", () => {
       ⧙I had trouble with the JSON inside:⧘
 
       At root:
-      Unexpected end of JSON input
-      Got: "{\\n    \\"postprocess\\": [\\"elm-watch-node\\", \\"po…      \\"output\\": \\"build/HtmlMain.js\\"\\n        "
+      (JSON syntax error)
 
       🚨 ⧙1⧘ error found
       ⏳ Dependencies
