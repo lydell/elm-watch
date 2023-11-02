@@ -6,9 +6,10 @@
     <title>example-minimal</title>
   </head>
   <body>
+    <div id="root"></div>
     <script src="./build/main.js"></script>
     <script>
-      Elm.Main.init({ node: document.body });
+      Elm.Main.init({ node: document.getElementById("root") });
     </script>
   </body>
 </html>

@@ -1,11 +1,11 @@
 ---
 title: window.Elm
-nav_order: 11
+nav_order: 12
 ---
 
 # window.Elm
 
-elm-watch is basically just `elm-watch make`, so the output format is using the good old `window.Elm` global.
+elm-watch is basically just `elm make` in watch mode, so the output format is using the good old `window.Elm` global.
 
 elm-watch even _requires `window.Elm` to exist._ That global variable is key to make [hot reloading](../hot-reloading/) work. (Technically, `globalThis.Elm` is required to exist. See below.)
 
