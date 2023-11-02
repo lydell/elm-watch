@@ -139,3 +139,26 @@ export function unknownErrorToString(error: unknown): string {
     ? (error as { message: string }).message
     : Codec.repr(error);
 }
+
+export function codecCatcher<Decoded, Encoded>(
+  codec: Codec.Codec<Decoded, Encoded>
+): Codec.Codec<Decoded, Encoded> {
+  return {
+    decoder: (value) => {
+      try {
+        return codec.decoder(value);
+      } catch (error) {
+        return {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            // istanbul ignore next
+            message: error instanceof Error ? error.message : String(error),
+            path: [],
+          },
+        };
+      }
+    },
+    encoder: codec.encoder,
+  };
+}

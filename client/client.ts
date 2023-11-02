@@ -1,6 +1,6 @@
 import * as Codec from "tiny-decoders";
 
-import { formatDate, formatTime } from "../src/Helpers";
+import { codecCatcher, formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
   AbsolutePath,
@@ -1722,7 +1722,8 @@ const ElmModule: Codec.Codec<Array<ProgramType>> = Codec.map(
   }
 );
 
-const ProgramTypes = singleField("Elm", ElmModule);
+// Reading fields might throw errors.
+const ProgramTypes = codecCatcher(singleField("Elm", ElmModule));
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   // If this target is a proxy, or if another one is, it’s not safe to touch
