@@ -1543,7 +1543,7 @@ describe("hot", () => {
 
       ⧙I had trouble reading it as JSON:⧘
 
-      Unexpected end of JSON input
+      (JSON syntax error)
 
       🚨 ⧙1⧘ error found
       ⏳ Dependencies

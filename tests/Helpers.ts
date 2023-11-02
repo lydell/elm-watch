@@ -546,7 +546,7 @@ export function clean(string: string): string {
     .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
     .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
     .replace(
-      /Expected property name or '.' in JSON at position \d+|Unexpected token . in JSON at position \d+|Unexpected end of JSON input/g,
+      /Expected .+ in JSON at position \d+|Unexpected token . in JSON at position \d+|Unexpected end of JSON input/g,
       "(JSON syntax error)"
     )
     .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
