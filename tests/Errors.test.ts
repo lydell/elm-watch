@@ -186,8 +186,7 @@ describe("errors", () => {
       ⧙I had trouble with the JSON inside:⧘
 
       At root:
-      Unexpected end of JSON input
-      Got: "{\\n"
+      SyntaxError: Unexpected end of JSON input
     `);
   });
 
@@ -223,6 +222,7 @@ describe("errors", () => {
           At root["targets"]["-main"]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "-main"
         `);
       });
 
@@ -242,6 +242,7 @@ describe("errors", () => {
           At root["targets"]["\\tmain"]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "\\tmain"
         `);
       });
 
@@ -259,6 +260,7 @@ describe("errors", () => {
           At root["targets"]["main\\ntarget"]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "main\\ntarget"
         `);
       });
 
@@ -278,6 +280,7 @@ describe("errors", () => {
           At root["targets"]["main "]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "main "
         `);
       });
     });
@@ -295,6 +298,7 @@ describe("errors", () => {
 
         At root["targets"]["index"]["output"]:
         Outputs must end with .js
+        Got: "index.html"
       `);
     });
 
@@ -315,6 +319,7 @@ describe("errors", () => {
 
         At root["targets"]["main"]["output"]:
         Outputs must end with .js
+        Got: ".js"
       `);
     });
 
@@ -330,6 +335,7 @@ describe("errors", () => {
 
         At root["targets"]["main"]["output"]:
         Outputs must end with .js
+        Got: "/dev/null"
       `);
     });
 
@@ -344,8 +350,11 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root["targets"]["main"]:
-        Expected only these fields: "inputs", "output"
-        Found extra fields: "mode"
+        Expected only these fields:
+          "inputs",
+          "output"
+        Found extra fields:
+          "mode"
       `);
     });
 
@@ -409,7 +418,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["port"] (optional):
+        At root["port"]:
         Expected an integer where 1 <= port <= 65535
         Got: 0
       `);
@@ -425,7 +434,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["port"] (optional):
+        At root["port"]:
         Expected an integer where 1 <= port <= 65535
         Got: 65536
       `);
@@ -1006,8 +1015,7 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root:
-        Unexpected end of JSON input
-        Got: "{\\n"
+        SyntaxError: Unexpected end of JSON input
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
@@ -1039,7 +1047,9 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root["type"]:
-        Expected one of these tags: "application", "package"
+        Expected one of these tags:
+          "application",
+          "package"
         Got: "hackage"
 
         (I still managed to compile your code, but the watcher will not work properly
@@ -1328,8 +1338,7 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root:
-        Unexpected end of JSON input
-        Got: "{"
+        SyntaxError: Unexpected end of JSON input
 
         I wrote that to this file so you can inspect it:
 
@@ -1352,8 +1361,7 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root:
-        Unexpected end of JSON input
-        Got: "{"
+        SyntaxError: Unexpected end of JSON input
 
         I wrote this error to a file so you can inspect and possibly report it more easily.
 
@@ -1383,7 +1391,9 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root["type"]:
-        Expected one of these tags: "error", "compile-errors"
+        Expected one of these tags:
+          "error",
+          "compile-errors"
         Got: "laser-error"
 
         I wrote that to this file so you can inspect it:
@@ -1407,7 +1417,9 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root["type"]:
-        Expected one of these tags: "error", "compile-errors"
+        Expected one of these tags:
+          "error",
+          "compile-errors"
         Got: "laser-error"
 
         I wrote this error to a file so you can inspect and possibly report it more easily.
@@ -1435,8 +1447,7 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root:
-        Unexpected token { in JSON at position 1
-        Got: "{{{"
+        SyntaxError: Unexpected token { in JSON at position 1
 
         I tried to write that to this file:
 
@@ -2043,7 +2054,8 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm
+        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
         🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
@@ -2658,7 +2670,10 @@ describe("errors", () => {
 
         But that resulted in this error:
 
-        [null, "error"]
+        [
+          null,
+          "error"
+        ]
 
         STDOUT:
         My debug message 1337
@@ -2690,7 +2705,9 @@ describe("errors", () => {
 
         ⧙imported⧘ is:
 
-        {"default": {}}
+        {
+          "default": {}
+        }
 
         Here is a sample function to get you started:
 
@@ -2729,7 +2746,10 @@ describe("errors", () => {
 
         ⧙imported⧘ is:
 
-        {"default": Object(1), "postprocess": function "postprocess"}
+        {
+          "default": Object(1),
+          "postprocess": function "postprocess"
+        }
 
         Here is a sample function to get you started:
 
@@ -2930,8 +2950,7 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root:
-        Unexpected end of JSON input
-        Got: "{\\n"
+        SyntaxError: Unexpected end of JSON input
 
         This file is created by elm-watch, so reading it should never fail really.
         You could try removing that file (it contains nothing essential).
@@ -2948,8 +2967,11 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["Main"]["compilationMode"] (optional):
-        Expected one of these variants: "debug", "standard", "optimize"
+        At root["targets"]["Main"]["compilationMode"]:
+        Expected one of these variants:
+          "debug",
+          "standard",
+          "optimize"
         Got: "normal"
 
         This file is created by elm-watch, so reading it should never fail really.
