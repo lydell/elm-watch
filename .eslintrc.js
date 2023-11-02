@@ -69,7 +69,6 @@ module.exports = {
     "object-shorthand": warn,
     "prefer-arrow-callback": warn,
     "prefer-const": warn,
-    "prefer-destructuring": [warn, { object: true, array: false }],
     "prefer-exponentiation-operator": warn,
     "prefer-numeric-literals": warn,
     "prefer-object-spread": warn,
@@ -121,6 +120,7 @@ module.exports = {
         "@typescript-eslint/no-base-to-string": error,
         "@typescript-eslint/no-confusing-void-expression": error,
         "@typescript-eslint/no-dupe-class-members": error,
+        "@typescript-eslint/no-duplicate-type-constituents": error,
         "@typescript-eslint/no-empty-function": warn,
         "@typescript-eslint/no-empty-interface": warn,
         "@typescript-eslint/no-explicit-any": warn,
@@ -150,6 +150,7 @@ module.exports = {
         "@typescript-eslint/no-unsafe-assignment": error,
         "@typescript-eslint/no-unsafe-call": error,
         "@typescript-eslint/no-unsafe-declaration-merging": error,
+        "@typescript-eslint/no-unsafe-enum-comparison": error,
         "@typescript-eslint/no-unsafe-member-access": error,
         "@typescript-eslint/no-unsafe-return": error,
         "@typescript-eslint/no-unused-expressions": error,
@@ -160,6 +161,10 @@ module.exports = {
         "@typescript-eslint/no-useless-empty-export": warn,
         "@typescript-eslint/no-var-requires": error,
         "@typescript-eslint/prefer-as-const": warn,
+        "@typescript-eslint/prefer-destructuring": [
+          warn,
+          { object: true, array: false },
+        ],
         "@typescript-eslint/prefer-for-of": warn,
         "@typescript-eslint/prefer-function-type": warn,
         "@typescript-eslint/prefer-includes": warn,
@@ -176,7 +181,7 @@ module.exports = {
         "@typescript-eslint/restrict-plus-operands": error,
         "@typescript-eslint/restrict-template-expressions": error,
         "@typescript-eslint/return-await": error,
-        "@typescript-eslint/sort-type-union-intersection-members": warn,
+        "@typescript-eslint/sort-type-constituents": warn,
         "@typescript-eslint/strict-boolean-expressions": [
           error,
           {
