@@ -1,2 +1,2 @@
-console.log("My debug message", 1337);
+console.log("My debug message");
 throw [null, "error"];
