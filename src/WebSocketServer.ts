@@ -144,8 +144,6 @@ export class WebSocketServer {
 
   listening: Promise<void>;
 
-  private lastHtmlFileUrl: string | undefined = undefined;
-
   constructor(
     portChoice: PortChoice,
     host: Host,
@@ -218,13 +216,10 @@ export class WebSocketServer {
         );
       } else if (staticFilesDirectory !== undefined) {
         try {
-          SimpleStaticFileServer.serveStatic(
-            staticFilesDirectory,
-            this.lastHtmlFileUrl,
-            (lastHtmlFileUrl) => {
-              this.lastHtmlFileUrl = lastHtmlFileUrl;
-            }
-          )(request, response);
+          SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
+            request,
+            response
+          );
         } catch (unknownError) {
           SimpleStaticFileServer.respondHtml(
             response,
