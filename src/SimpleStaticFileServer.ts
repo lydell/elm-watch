@@ -352,6 +352,10 @@ export function serveStatic(
                     "elm-watch-index-html",
                     indexFsPath.replace(HEADER_CHAR_REGEX, "?")
                   );
+                  response.setHeader(
+                    "elm-watch-link",
+                    "https://lydell.github.io/elm-watch/server/#TODO"
+                  );
                   serveFile(indexFsPath, indexStats.size, request, response);
                   return;
 
