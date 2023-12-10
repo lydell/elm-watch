@@ -92,9 +92,6 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
           h1 {
             margin-top: 0;
           }
-          main p {
-            max-width: 60ch;
-          }
           a:not(:hover) {
             text-decoration: none;
           }
@@ -107,8 +104,7 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
           pre {
             padding: 1em;
             background-color: #00000020;
-            overflow-x: auto;
-            display: inline-block;
+            width: max-content;
           }
           pre,
           code {
@@ -256,63 +252,16 @@ export function staticFileNotEnabledHtml(): Html {
     "ℹ️",
     "Enable static file server?",
     html`
-      <main>
-        <h1>Enable static file server?</h1>
-        <p>
-          elm-watch needs an HTTP server for its WebSockets. WebSockets connect
-          via HTTP and then switch over to the WebSocket protocol. But other
-          than that the HTTP server doesn’t really do anything.
-        </p>
-        <p>
-          If you want, you can enable a simple static file server for your
-          project, by adding the following to your
-          <strong>elm-watch.json</strong> file:
-        </p>
-        <pre><code>"serve": "./folder/you/want/to/serve/"</code></pre>
-        <p>Then create <code>./folder/you/want/to/serve/index.html</code>:</p>
-        <pre><code>${exampleHtml}</code></pre>
-        <p style="margin-top: 4em">
-          ℹ️ The simple HTTP server is just for convenience. elm-watch needs to
-          run an HTTP server anyway, and you need one for
-          <code>Browser.application</code> programs (which do no support the
-          <code>file://</code> protocol). If you need anything more advanced,
-          use
-          <a href="https://lydell.github.io/elm-watch/server/"
-            >your own HTTP server</a
-          >.
-        </p>
-        <p>
-          ❗️ By default, the HTTP server is exposed on the local network (so
-          you can test on your phone on the same Wi-Fi for example). If you are
-          on a public Wi-Fi, you can restrict the server to just your computer
-          by setting an environment variable:
-          <code>ELM_WATCH_HOST=127.0.0.1</code>
-        </p>
-      </main>
+      <h1>Enable elm-watch static file server?</h1>
+      <p>
+        If you want, you can enable a simple static file server for your
+        project.
+      </p>
+      <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
+      <pre><code>"serve": "./folder/to/serve/"</code></pre>
     `
   );
 }
-
-const exampleHtml = `
-<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Elm App</title>
-  </head>
-  <body>
-    <!-- Absolute URL to the built JS. -->
-    <script src="/build/main.js"></script>
-    <div id="root"></div>
-    <script>
-      var app = Elm.Main.init({ node: document.getElementById("root") });
-      // If you're using Browser.document or Browser.application:
-      // var app = Elm.Main.init();
-    </script>
-  </body>
-</html>
-`.trim();
 
 export function errorHtml(errorMessage: string): Html {
   if (errorMessage.includes("\n")) {
