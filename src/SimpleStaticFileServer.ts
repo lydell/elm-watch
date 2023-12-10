@@ -147,23 +147,77 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
   `;
 }
 
-function notFoundHtml({
-  staticFilesDir,
-  urlWithoutQuery,
-}: {
-  staticFilesDir: StaticFilesDir;
-  urlWithoutQuery: string;
-}): Html {
-  return baseHtml(
-    "❓",
-    "Not Found",
-    html`
-      <h1>${urlWithoutQuery}</h1>
-      <h2>404 – Not Found</h2>
-      <p>TODO: I think this is where index.html instructions will go!</p>
-      <p>${staticFilesDir.theStaticFilesDir.absolutePath}</p>
-    `
-  );
+function notFoundHtml(
+  fsPath: string,
+  statsTag: "Directory" | "NotFound" | "Other"
+): Html {
+  switch (statsTag) {
+    case "Directory":
+      return baseHtml(
+        "📁",
+        "Directory",
+        html`
+          <h1>Directory</h1>
+          <p>
+            The URL you requested points to a directory. elm-watch only serves
+            files.
+          </p>
+          <p>Suggestion: Create an <code>index.html</code> file.</p>
+          <p>
+            👉
+            <a href="https://lydell.github.io/elm-watch/server/#TODO"
+              >How index.html files work</a
+            >
+          </p>
+          <p>This is the absolute file path the URL resolves to:</p>
+          <pre>${fsPath}</pre>
+        `
+      );
+
+    case "NotFound":
+      return baseHtml(
+        "❓",
+        "Not Found",
+        html`
+          <h1>404 – Not Found</h1>
+          <p>The URL you requested does not point to any existing file.</p>
+          ${getContentType(fsPath) === undefined
+            ? html`
+                <p>
+                  👉
+                  <a href="https://lydell.github.io/elm-watch/server/#TODO"
+                    >How index.html files work</a
+                  >
+                  (for <code>Browser.application</code> programs)
+                </p>
+              `
+            : ""}
+          <p>
+            👉
+            <a href="https://lydell.github.io/elm-watch/server/#TODO"
+              >File not found troubleshooting</a
+            >
+          </p>
+          <p>This is the absolute file path the URL resolves to:</p>
+          <pre>${fsPath}</pre>
+        `
+      );
+
+    case "Other":
+      return baseHtml(
+        "🚨",
+        "Unsupported",
+        html`
+          <h1>Unsupported file system object</h1>
+          <p>
+            The URL you requested points to a something that is neither or file
+            nor a directory. elm-watch only serves files.
+          </p>
+          <p>This is the absolute file path the URL resolves to:</p>
+          <pre>${fsPath}</pre>
+        `
+      );
+  }
 }
 
 export function acceptHtml(
@@ -312,6 +366,10 @@ export function serveStatic(
         const stats = statSync(fsPath);
 
         switch (stats.tag) {
+          case "File":
+            serveFile(fsPath, stats.size, request, response);
+            return;
+
           case "NotFound":
           case "Other":
           case "Directory": {
@@ -354,20 +412,10 @@ export function serveStatic(
                   break;
               }
             }
-            respondHtml(
-              response,
-              404,
-              notFoundHtml({
-                staticFilesDir,
-                urlWithoutQuery,
-              })
-            );
+
+            respondHtml(response, 404, notFoundHtml(fsPath, stats.tag));
             return;
           }
-
-          case "File":
-            serveFile(fsPath, stats.size, request, response);
-            return;
         }
       }
 
@@ -385,6 +433,10 @@ export function serveStatic(
   };
 }
 
+function getContentType(fsPath: string): string | undefined {
+  return MIME_TYPES[path.extname(fsPath).toLowerCase()];
+}
+
 function serveFile(
   fsPath: string,
   fsSize: number,
@@ -392,7 +444,7 @@ function serveFile(
   response: http.ServerResponse
 ): void {
   const contentType =
-    MIME_TYPES[path.extname(fsPath).toLowerCase()] ??
+    getContentType(fsPath) ??
     // esbuild defaults to `application/octet-stream`, but if you click a link
     // to such a file, it causes a download which clutters your Downloads
     // folder. This allows viewing the file instead, and it’s more likely to
