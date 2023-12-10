@@ -42,6 +42,10 @@ const MIME_TYPES: Record<string, string> = {
   ".webmanifest": "application/manifest+json",
 };
 
+// Copied from Node.js’ validation code for `setHeader`:
+// https://github.com/nodejs/node/blob/f801b58e7753dd5abd492ad2076686f5ec63d897/lib/_http_common.js#L216C1-L216C51
+const HEADER_CHAR_REGEX = /[^\t\x20-\x7e\x80-\xff]/g;
+
 class Html {
   constructor(private escapedHtml: string) {}
 
@@ -333,8 +337,14 @@ export function serveStatic(
               const indexStats = statSync(indexFsPath);
               switch (indexStats.tag) {
                 case "File":
-                  // TODO: Add header that explains that it was truly a 404
-                  // and which file was actually served.
+                  response.setHeader(
+                    "elm-watch-404",
+                    fsPath.replace(HEADER_CHAR_REGEX, "?")
+                  );
+                  response.setHeader(
+                    "elm-watch-index-html",
+                    indexFsPath.replace(HEADER_CHAR_REGEX, "?")
+                  );
                   serveFile(indexFsPath, indexStats.size, request, response);
                   return;
 
