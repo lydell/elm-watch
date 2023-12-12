@@ -448,10 +448,7 @@ function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
 // so that it does not take space in the element inspector (it is only
 // supposed to be read when viewing the source).
 function removeElmWatchIndexHtmlComment(): void {
-  let node: ChildNode = document.documentElement;
-  while (node.previousSibling !== null) {
-    node = node.previousSibling;
-  }
+  const node = document.firstChild;
   if (
     node instanceof Comment &&
     node.data.trimStart().startsWith("elm-watch debug information:")
