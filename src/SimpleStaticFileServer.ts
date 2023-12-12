@@ -46,6 +46,9 @@ const MIME_TYPES: Record<string, string> = {
 // https://github.com/nodejs/node/blob/f801b58e7753dd5abd492ad2076686f5ec63d897/lib/_http_common.js#L216C1-L216C51
 const HEADER_CHAR_REGEX = /[^\t\x20-\x7e\x80-\xff]/g;
 
+const DOCS_LINK = "https://lydell.github.io/elm-watch/server/";
+const DOCS_LINK_INDEX_HTML = `${DOCS_LINK}#indexhtml`;
+
 class Html {
   constructor(private escapedHtml: string) {}
 
@@ -132,10 +135,7 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
         ${body}
         <p style="margin-top: 2em">
           <small
-            >ℹ️ This is the
-            <a href="https://lydell.github.io/elm-watch/server/"
-              >elm-watch server</a
-            >.</small
+            >ℹ️ This is the <a href="${DOCS_LINK}">elm-watch server</a>.</small
           >
         </p>
       </body>
@@ -158,9 +158,7 @@ function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
           <p>Suggestion: Create an <code>index.html</code> file.</p>
           <p>
             👉
-            <a href="https://lydell.github.io/elm-watch/server/#TODO"
-              >How index.html files work</a
-            >
+            <a href="${DOCS_LINK_INDEX_HTML}">How index.html files work</a>
           </p>
           <p>This is the absolute file path the URL resolves to:</p>
           <pre>${fsPath}</pre>
@@ -178,19 +176,20 @@ function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
             ? html`
                 <p>
                   👉
-                  <a href="https://lydell.github.io/elm-watch/server/#TODO"
+                  <a href="${DOCS_LINK_INDEX_HTML}"
                     >How index.html files work</a
                   >
                   (for <code>Browser.application</code> programs)
                 </p>
               `
-            : ""}
-          <p>
-            👉
-            <a href="https://lydell.github.io/elm-watch/server/#TODO"
-              >File not found troubleshooting</a
-            >
-          </p>
+            : html`
+                <p>
+                  👉
+                  <a href="${DOCS_LINK_INDEX_HTML}"
+                    >File not found troubleshooting</a
+                  >
+                </p>
+              `}
           <p>This is the absolute file path the URL resolves to:</p>
           <pre>${fsPath}</pre>
         `
@@ -221,13 +220,11 @@ function indexHtmlInfo(
   headers: Record<string, string>;
   comment: string;
 } {
-  const link = "https://lydell.github.io/elm-watch/server/#TODO";
-
   return {
     headers: {
       "elm-watch-404": fsPath,
       "elm-watch-index-html": indexFsPath,
-      "elm-watch-learn-more": link,
+      "elm-watch-learn-more": DOCS_LINK_INDEX_HTML,
     },
     // If you change the first line, also update the code in client.ts that removes this comment.
     comment: `<!-- elm-watch debug information:
@@ -237,7 +234,7 @@ hacky_hint If_you_see_this_in_a_JS_syntax_error_then_your_JS_file_was_not_found_
 ${indexHtmlDescription(fsPath, indexFsPath, statsTag)}
 
 Learn more:
-${link}
+${DOCS_LINK_INDEX_HTML}
 
 -->
 `,

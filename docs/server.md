@@ -56,6 +56,17 @@ See the [example/] folder for inspiration on how to make your own dev server.
 
 Remember that elm-watch’s HTTP server does _not_ provide any magic for hot reloading to work or anything like that. It just serves files. So if you serve your files some other way, that’s totally fine. As long as the generated Elm JS can connect via WebSocket to elm-watch hot reloading works fine.
 
+## index.html
+
+This section is about:
+
+- How to deal with files not found
+- How index.html files work
+
+Those two things are closely related!
+
+TODO: Document
+
 ## Browser.application
 
 `Browser.application` programs can change the URL and has some things to note:
