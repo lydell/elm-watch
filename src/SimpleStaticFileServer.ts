@@ -438,8 +438,40 @@ export function serveStatic(
               }
             }
 
-            respondHtml(response, 404, notFoundHtml(fsPath, stats.tag));
-            return;
+            const staticFilesDirStats = statSync(
+              staticFilesDir.theStaticFilesDir.absolutePath
+            );
+            switch (staticFilesDirStats.tag) {
+              case "Directory":
+                respondHtml(response, 404, notFoundHtml(fsPath, stats.tag));
+                return;
+
+              case "File":
+              case "NotFound":
+              case "Other":
+                respondHtml(
+                  response,
+                  404,
+                  baseHtml(
+                    "🚨",
+                    "Static files directory not found",
+                    html`
+                      <h1>Static files directory not found</h1>
+                      <p>
+                        You have configured a static files directory in
+                        elm-watch.json which resolves to:
+                      </p>
+                      <pre>
+${staticFilesDir.theStaticFilesDir.absolutePath}</pre
+                      >
+                      <p>
+                        ${staticFilesDirDescription(staticFilesDirStats.tag)}
+                      </p>
+                    `
+                  )
+                );
+                return;
+            }
           }
         }
       }
@@ -448,14 +480,27 @@ export function serveStatic(
         response.writeHead(405, { Allow: "GET, HEAD" });
         response.end(
           errorHtml(
-            `Only GET and HEAD requests are supported. Got: ${
-              request.method ?? "(none)"
-            }`
+            `Unsupported method
+
+Only GET and HEAD requests are supported. Got: ${request.method ?? "(none)"}`
           )
         );
         return;
     }
   };
+}
+
+function staticFilesDirDescription(
+  statsTag: "File" | "NotFound" | "Other"
+): string {
+  switch (statsTag) {
+    case "File":
+      return "However, that is a file, not a directory!";
+    case "NotFound":
+      return "However, that directory does not exist.";
+    case "Other":
+      return "However, that is neither a file nor a directory.";
+  }
 }
 
 function getContentType(fsPath: string): string | undefined {
@@ -492,7 +537,11 @@ function serveFile(
         rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
       const readStream = fs.createReadStream(fsPath, range);
       readStream.on("error", (error) => {
-        respondHtml(response, 500, errorHtml(error.message));
+        respondHtml(
+          response,
+          500,
+          errorHtml(`Failed to read file\n\n${error.message}`)
+        );
       });
       readStream.on("open", () => {
         if (range === undefined) {
