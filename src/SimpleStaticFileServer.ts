@@ -143,10 +143,7 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
   `;
 }
 
-function notFoundHtml(
-  fsPath: string,
-  statsTag: "Directory" | "NotFound" | "Other"
-): Html {
+function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
   switch (statsTag) {
     case "Directory":
       return baseHtml(
@@ -213,6 +210,82 @@ function notFoundHtml(
           <pre>${fsPath}</pre>
         `
       );
+  }
+}
+
+function indexHtmlInfo(
+  fsPath: string,
+  indexFsPath: string,
+  statsTag: NotFileStat
+): {
+  headers: Record<string, string>;
+  comment: string;
+} {
+  const link = "https://lydell.github.io/elm-watch/server/#TODO";
+
+  return {
+    headers: {
+      "elm-watch-404": fsPath,
+      "elm-watch-index-html": indexFsPath,
+      "elm-watch-learn-more": link,
+    },
+    // If you change the first line, also update the code in client.ts that removes this comment.
+    comment: `<!-- elm-watch debug information:
+
+hacky_hint If_you_see_this_in_a_JS_syntax_error_then_your_JS_file_was_not_found___Click_the_file_name_to_the_right_for_more_information /*
+
+${indexHtmlDescription(fsPath, indexFsPath, statsTag)}
+
+Learn more:
+${link}
+
+-->
+`,
+  };
+}
+
+function indexHtmlDescription(
+  fsPath: string,
+  indexFsPath: string,
+  statsTag: NotFileStat
+): string {
+  switch (statsTag) {
+    case "Directory":
+      return `
+The URL you requested points to a directory. elm-watch only serves files.
+
+The closest index.html file was served instead:
+${indexFsPath}
+
+This is the directory:
+${fsPath}
+`.trim();
+
+    case "NotFound":
+      return `
+This response could have been served as a 404 (Not Found),
+but was served as 200 (OK) instead, because an index.html file was found.
+This is for supporting Browser.application programs.
+
+If you expected a file to served rather than this HTML,
+make sure the URL is correct or that this file exists:
+${fsPath}
+
+This is the closest index.html file, which was served instead:
+${indexFsPath}
+`.trim();
+
+    case "Other":
+      return `
+The URL you requested points to a something that is neither or file
+nor a directory. elm-watch only serves files.
+
+This is the absolute file path the URL resolves to:
+${fsPath}
+
+This is the closest index.html file, which was served instead:
+${indexFsPath}
+`.trim();
   }
 }
 
@@ -343,21 +416,23 @@ export function serveStatic(
               );
               const indexStats = statSync(indexFsPath);
               switch (indexStats.tag) {
-                case "File":
-                  response.setHeader(
-                    "elm-watch-404",
-                    fsPath.replace(HEADER_CHAR_REGEX, "?")
+                case "File": {
+                  const info = indexHtmlInfo(fsPath, indexFsPath, stats.tag);
+                  for (const [name, value] of Object.entries(info.headers)) {
+                    response.setHeader(
+                      name,
+                      value.replace(HEADER_CHAR_REGEX, "?")
+                    );
+                  }
+                  serveFile(
+                    indexFsPath,
+                    indexStats.size,
+                    request,
+                    response,
+                    info.comment
                   );
-                  response.setHeader(
-                    "elm-watch-index-html",
-                    indexFsPath.replace(HEADER_CHAR_REGEX, "?")
-                  );
-                  response.setHeader(
-                    "elm-watch-link",
-                    "https://lydell.github.io/elm-watch/server/#TODO"
-                  );
-                  serveFile(indexFsPath, indexStats.size, request, response);
                   return;
+                }
 
                 case "Directory":
                 case "Other":
@@ -394,7 +469,8 @@ function serveFile(
   fsPath: string,
   fsSize: number,
   request: http.IncomingMessage,
-  response: http.ServerResponse
+  response: http.ServerResponse,
+  extraContent?: string
 ): void {
   const contentType =
     getContentType(fsPath) ??
@@ -425,8 +501,15 @@ function serveFile(
         if (range === undefined) {
           response.writeHead(200, {
             ...contentTypeHeader,
-            "Content-Length": fsSize,
+            "Content-Length":
+              fsSize +
+              (extraContent === undefined
+                ? 0
+                : Buffer.byteLength(extraContent)),
           });
+          if (extraContent !== undefined) {
+            response.write(extraContent);
+          }
         } else {
           response.writeHead(206, {
             ...contentTypeHeader,
@@ -441,13 +524,11 @@ function serveFile(
   }
 }
 
+type NotFileStat = "Directory" | "NotFound" | "Other";
+
 function statSync(
   fsPath: string
-):
-  | { tag: "Directory" }
-  | { tag: "File"; size: number }
-  | { tag: "NotFound" }
-  | { tag: "Other" } {
+): { tag: "File"; size: number } | { tag: NotFileStat } {
   try {
     const stats = fs.statSync(fsPath);
     return stats.isFile()

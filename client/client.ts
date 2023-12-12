@@ -444,6 +444,22 @@ function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
   }
 }
 
+// Removes the information comment added by SimpleStaticFileServer.ts
+// so that it does not take space in the element inspector (it is only
+// supposed to be read when viewing the source).
+function removeElmWatchIndexHtmlComment(): void {
+  let node: ChildNode = document.documentElement;
+  while (node.previousSibling !== null) {
+    node = node.previousSibling;
+  }
+  if (
+    node instanceof Comment &&
+    node.data.trimStart().startsWith("elm-watch debug information:")
+  ) {
+    node.remove();
+  }
+}
+
 function run(): void {
   let elmCompiledTimestampBeforeReload: number | undefined = undefined;
   try {
@@ -472,6 +488,10 @@ function run(): void {
       ? ORIGINAL_BROWSER_UI_POSITION
       : parseBrowseUiPositionWithFallback(elements.container.dataset.position);
   const getNow: GetNow = () => new Date();
+
+  if (!IS_WEB_WORKER) {
+    removeElmWatchIndexHtmlComment();
+  }
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, elements),
