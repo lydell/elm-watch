@@ -71,7 +71,7 @@ Full examples:
 - bash/zsh with VSCode: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
 - fish with Rider: `set -Ux ELM_WATCH_OPEN_EDITOR 'rider --line "$line" "$file"'`
 
-Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contains digits, but it doesn’t hurt to quote them too.)
+Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contain digits, but it doesn’t hurt to quote them too.)
 
 - ✅ `"$file"`, `"%file%"`
 - ❌ `$file`, `%file%`
