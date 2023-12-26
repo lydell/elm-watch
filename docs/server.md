@@ -26,7 +26,7 @@ For example:
 ## What does the simple static file server do?
 
 - Serves files in a directory.
-- Serves the closest [index.html](#indexhtml) file can the URL does not point to any file, for `Browser.application` programs.
+- Serves the closest [index.html](#indexhtml) file if the URL does not point to any file, for `Browser.application` programs.
 - Hot reloads CSS – when `.css` files in the static files directory that is served change, elm-watch reloads them in the browser.
 
 ## Why?
