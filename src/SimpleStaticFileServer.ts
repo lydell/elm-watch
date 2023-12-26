@@ -212,6 +212,58 @@ function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
   }
 }
 
+function staticDirNotFoundHtml(
+  staticFilesDir: StaticFilesDir,
+  statsTag: "File" | "NotFound" | "Other"
+): Html {
+  return baseHtml(
+    "🚨",
+    "Static files directory not found",
+    html`
+      <h1>Static files directory not found</h1>
+      <p>
+        You have configured a static files directory in elm-watch.json which
+        resolves to:
+      </p>
+      <pre>${staticFilesDir.theStaticFilesDir.absolutePath}</pre>
+      <p>${staticFilesDirDescription(statsTag)}</p>
+    `
+  );
+}
+
+function staticFilesDirDescription(
+  statsTag: "File" | "NotFound" | "Other"
+): string {
+  switch (statsTag) {
+    case "File":
+      return "However, that is a file, not a directory!";
+    case "NotFound":
+      return "However, that directory does not exist.";
+    case "Other":
+      return "However, that is neither a file nor a directory.";
+  }
+}
+
+function forbiddenHtml(staticFilesDir: StaticFilesDir, fsPath: string): Html {
+  return baseHtml(
+    "⛔️",
+    "Forbidden",
+    html`
+      <h1>Forbidden</h1>
+      <p>
+        You have configured a static files directory in elm-watch.json which
+        resolves to:
+      </p>
+      <pre>${staticFilesDir.theStaticFilesDir.absolutePath}</pre>
+      <p>
+        However, the URL you requested points to a file outside of that
+        directory:
+      </p>
+      <pre>${fsPath}</pre>
+    `
+  );
+}
+
 function indexHtmlInfo(
   fsPath: string,
   indexFsPath: string,
@@ -374,14 +426,25 @@ export function serveStatic(
     switch (request.method) {
       case "HEAD":
       case "GET": {
-        // In my testing:
-        // - `request.url` always starts with a `/`.
-        // - Never contains `../` or `./` – those have already been resolved somewhere.
-        // - Mixing backslash and forward slash works fine on Windows.
         const { url = "/" } = request;
         const urlWithoutQuery = decodePercentageEscapes(removeQuery(url));
-        const fsPath =
-          staticFilesDir.theStaticFilesDir.absolutePath + urlWithoutQuery;
+        const fsPath = path.normalize(
+          staticFilesDir.theStaticFilesDir.absolutePath +
+            path.sep +
+            urlWithoutQuery
+        );
+
+        // Protect against reading files outside the static files dir.
+        // For example: curl http://localhost:8000/%2e%2e/secret.txt
+        if (
+          !fsPath.startsWith(
+            staticFilesDir.theStaticFilesDir.absolutePath + path.sep
+          )
+        ) {
+          respondHtml(response, 403, forbiddenHtml(staticFilesDir, fsPath));
+          return;
+        }
+
         const stats = statSync(fsPath);
 
         switch (stats.tag) {
@@ -452,23 +515,7 @@ export function serveStatic(
                 respondHtml(
                   response,
                   404,
-                  baseHtml(
-                    "🚨",
-                    "Static files directory not found",
-                    html`
-                      <h1>Static files directory not found</h1>
-                      <p>
-                        You have configured a static files directory in
-                        elm-watch.json which resolves to:
-                      </p>
-                      <pre>
-${staticFilesDir.theStaticFilesDir.absolutePath}</pre
-                      >
-                      <p>
-                        ${staticFilesDirDescription(staticFilesDirStats.tag)}
-                      </p>
-                    `
-                  )
+                  staticDirNotFoundHtml(staticFilesDir, staticFilesDirStats.tag)
                 );
                 return;
             }
@@ -488,19 +535,6 @@ Only GET and HEAD requests are supported. Got: ${request.method ?? "(none)"}`
         return;
     }
   };
-}
-
-function staticFilesDirDescription(
-  statsTag: "File" | "NotFound" | "Other"
-): string {
-  switch (statsTag) {
-    case "File":
-      return "However, that is a file, not a directory!";
-    case "NotFound":
-      return "However, that directory does not exist.";
-    case "Other":
-      return "However, that is neither a file nor a directory.";
-  }
 }
 
 function getContentType(fsPath: string): string | undefined {
