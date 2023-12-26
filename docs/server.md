@@ -89,9 +89,9 @@ Here are some URLs and what is served:
 | URL | File | Comment |
 | --- | --- | --- |
 | `/` | `public/index.html` | Directory, use `index.html` |
-| `/blog/2023/elm-tips` | `public/index.html` | Not such file, use closest `index.html` |
+| `/blog/2023/elm-tips` | `public/index.html` | No such file, use closest `index.html` |
 | `/admin` | `public/admin/index.html` | Directory, use `index.html` |
-| `/admin/blog/2023/elm-tips` | `public/admin/index.html` | Not such file, use closest `index.html` (`admin/index.html` is closer this time) |
+| `/admin/blog/2023/elm-tips` | `public/admin/index.html` | No such file, use closest `index.html` (`admin/index.html` is closer this time) |
 | `/main.js` | `public/main.js` | File exists, serve it |
 | `/admin/admin.js` | `public/admin/admin.js` | File exists, serve it |
 | `/mani.js` (typo) | `public/index.html` | (!) No such file, serve closest `index.html` |
