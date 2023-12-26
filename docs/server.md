@@ -27,7 +27,7 @@ For example:
 
 - Serves files in a directory.
 - Serves the closest [index.html](#indexhtml) file can the URL does not point to any file, for `Browser.application` programs.
-- Hot reloads CSS – when `.css` files in the static files directory that is served changes, elm-watch reloads them in the browser.
+- Hot reloads CSS – when `.css` files in the static files directory that is served change, elm-watch reloads them in the browser.
 
 ## Why?
 
