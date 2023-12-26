@@ -3,7 +3,7 @@ import * as http from "http";
 import * as path from "path";
 
 import { escapeHtml, join, toError } from "./Helpers";
-import { StaticFilesDir } from "./Types";
+import { AbsolutePath, StaticFilesDir } from "./Types";
 
 // Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
 // Removed markdown – otherwise that causes downloads in Firefox instead of
@@ -143,7 +143,7 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
   `;
 }
 
-function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
+function notFoundHtml(fsPath: FsPath, statsTag: NotFileStat): Html {
   switch (statsTag) {
     case "Directory":
       return baseHtml(
@@ -161,7 +161,7 @@ function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
             <a href="${DOCS_LINK_INDEX_HTML}">How index.html files work</a>
           </p>
           <p>This is the absolute file path the URL resolves to:</p>
-          <pre>${fsPath}</pre>
+          <pre>${fsPath.theFsPath.absolutePath}</pre>
         `
       );
 
@@ -191,7 +191,7 @@ function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
                 </p>
               `}
           <p>This is the absolute file path the URL resolves to:</p>
-          <pre>${fsPath}</pre>
+          <pre>${fsPath.theFsPath.absolutePath}</pre>
         `
       );
 
@@ -206,7 +206,7 @@ function notFoundHtml(fsPath: string, statsTag: NotFileStat): Html {
             nor a directory. elm-watch only serves files.
           </p>
           <p>This is the absolute file path the URL resolves to:</p>
-          <pre>${fsPath}</pre>
+          <pre>${fsPath.theFsPath.absolutePath}</pre>
         `
       );
   }
@@ -244,7 +244,10 @@ function staticFilesDirDescription(
   }
 }
 
-function forbiddenHtml(staticFilesDir: StaticFilesDir, fsPath: string): Html {
+function forbiddenHtml(
+  staticFilesDir: StaticFilesDir,
+  forbiddenPath: AbsolutePath
+): Html {
   return baseHtml(
     "⛔️",
     "Forbidden",
@@ -259,14 +262,14 @@ function forbiddenHtml(staticFilesDir: StaticFilesDir, fsPath: string): Html {
         However, the URL you requested points to a file outside of that
         directory:
       </p>
-      <pre>${fsPath}</pre>
+      <pre>${forbiddenPath.absolutePath}</pre>
     `
   );
 }
 
 function indexHtmlInfo(
-  fsPath: string,
-  indexFsPath: string,
+  fsPath: FsPath,
+  indexFsPath: IndexFsPath,
   statsTag: NotFileStat
 ): {
   headers: Record<string, string>;
@@ -274,8 +277,8 @@ function indexHtmlInfo(
 } {
   return {
     headers: {
-      "elm-watch-404": fsPath,
-      "elm-watch-index-html": indexFsPath,
+      "elm-watch-404": fsPath.theFsPath.absolutePath,
+      "elm-watch-index-html": indexFsPath.theIndexFsPath.absolutePath,
       "elm-watch-learn-more": DOCS_LINK_INDEX_HTML,
     },
     // If you change the first line, also update the code in client.ts that removes this comment.
@@ -294,8 +297,8 @@ ${DOCS_LINK_INDEX_HTML}
 }
 
 function indexHtmlDescription(
-  fsPath: string,
-  indexFsPath: string,
+  fsPath: FsPath,
+  indexFsPath: IndexFsPath,
   statsTag: NotFileStat
 ): string {
   switch (statsTag) {
@@ -304,10 +307,10 @@ function indexHtmlDescription(
 The URL you requested points to a directory. elm-watch only serves files.
 
 The closest index.html file was served instead:
-${indexFsPath}
+${indexFsPath.theIndexFsPath.absolutePath}
 
 This is the directory:
-${fsPath}
+${fsPath.theFsPath.absolutePath}
 `.trim();
 
     case "NotFound":
@@ -318,10 +321,10 @@ This is for supporting Browser.application programs.
 
 If you expected a file to served rather than this HTML,
 make sure the URL is correct or that this file exists:
-${fsPath}
+${fsPath.theFsPath.absolutePath}
 
 This is the closest index.html file, which was served instead:
-${indexFsPath}
+${indexFsPath.theIndexFsPath.absolutePath}
 `.trim();
 
     case "Other":
@@ -330,10 +333,10 @@ The URL you requested points to a something that is neither or file
 nor a directory. elm-watch only serves files.
 
 This is the absolute file path the URL resolves to:
-${fsPath}
+${fsPath.theFsPath.absolutePath}
 
 This is the closest index.html file, which was served instead:
-${indexFsPath}
+${indexFsPath.theIndexFsPath.absolutePath}
 `.trim();
   }
 }
@@ -427,25 +430,18 @@ export function serveStatic(
       case "HEAD":
       case "GET": {
         const { url = "/" } = request;
-        const urlWithoutQuery = decodePercentageEscapes(removeQuery(url));
-        const fsPath = path.normalize(
-          staticFilesDir.theStaticFilesDir.absolutePath +
-            path.sep +
-            urlWithoutQuery
-        );
+        const fsPath = toFsPath(staticFilesDir, url);
 
-        // Protect against reading files outside the static files dir.
-        // For example: curl http://localhost:8000/%2e%2e/secret.txt
-        if (
-          !fsPath.startsWith(
-            staticFilesDir.theStaticFilesDir.absolutePath + path.sep
-          )
-        ) {
-          respondHtml(response, 403, forbiddenHtml(staticFilesDir, fsPath));
+        if (fsPath.tag === "Forbidden") {
+          respondHtml(
+            response,
+            403,
+            forbiddenHtml(staticFilesDir, fsPath.forbiddenPath)
+          );
           return;
         }
 
-        const stats = statSync(fsPath);
+        const stats = statSync(fsPath.theFsPath);
 
         switch (stats.tag) {
           case "File":
@@ -455,26 +451,9 @@ export function serveStatic(
           case "NotFound":
           case "Other":
           case "Directory": {
-            const segments = (
-              urlWithoutQuery.endsWith("/")
-                ? urlWithoutQuery
-                : `${urlWithoutQuery}/`
-            )
-              .split("/")
-              // The array always starts and ends with an empty string since the
-              // string we’re splitting always starts and ends with a slash.
-              .slice(1, -1);
-
-            for (let i = segments.length; i >= 0; i--) {
-              const indexFsPath = join(
-                [
-                  staticFilesDir.theStaticFilesDir.absolutePath,
-                  ...segments.slice(0, i),
-                  "index.html",
-                ],
-                "/"
-              );
-              const indexStats = statSync(indexFsPath);
+            for (let i = fsPath.segments.length; i >= 0; i--) {
+              const indexFsPath = toIndexFsPath(staticFilesDir, fsPath, i);
+              const indexStats = statSync(indexFsPath.theIndexFsPath);
               switch (indexStats.tag) {
                 case "File": {
                   const info = indexHtmlInfo(fsPath, indexFsPath, stats.tag);
@@ -502,7 +481,7 @@ export function serveStatic(
             }
 
             const staticFilesDirStats = statSync(
-              staticFilesDir.theStaticFilesDir.absolutePath
+              staticFilesDir.theStaticFilesDir
             );
             switch (staticFilesDirStats.tag) {
               case "Directory":
@@ -537,12 +516,23 @@ Only GET and HEAD requests are supported. Got: ${request.method ?? "(none)"}`
   };
 }
 
-function getContentType(fsPath: string): string | undefined {
-  return MIME_TYPES[path.extname(fsPath).toLowerCase()];
+function getContentType(fsPath: FsPath | IndexFsPath): string | undefined {
+  return MIME_TYPES[
+    path.extname(toAbsolutePath(fsPath).absolutePath).toLowerCase()
+  ];
+}
+
+function toAbsolutePath(fsPath: FsPath | IndexFsPath): AbsolutePath {
+  switch (fsPath.tag) {
+    case "FsPath":
+      return fsPath.theFsPath;
+    case "IndexFsPath":
+      return fsPath.theIndexFsPath;
+  }
 }
 
 function serveFile(
-  fsPath: string,
+  fsPath: FsPath | IndexFsPath,
   fsSize: number,
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -569,7 +559,10 @@ function serveFile(
       const rangeHeader = request.headers.range;
       const range =
         rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
-      const readStream = fs.createReadStream(fsPath, range);
+      const readStream = fs.createReadStream(
+        toAbsolutePath(fsPath).absolutePath,
+        range
+      );
       readStream.on("error", (error) => {
         respondHtml(
           response,
@@ -607,10 +600,10 @@ function serveFile(
 type NotFileStat = "Directory" | "NotFound" | "Other";
 
 function statSync(
-  fsPath: string
+  absolutePath: AbsolutePath
 ): { tag: "File"; size: number } | { tag: NotFileStat } {
   try {
-    const stats = fs.statSync(fsPath);
+    const stats = fs.statSync(absolutePath.absolutePath);
     return stats.isFile()
       ? { tag: "File", size: stats.size }
       : stats.isDirectory()
@@ -638,6 +631,79 @@ function parseRangeHeader(
   }
   const [, start = "0", end = "Infinity"] = match;
   return { start: Number(start), end: Number(end) };
+}
+
+type FsPath = {
+  tag: "FsPath";
+  theFsPath: AbsolutePath;
+  segments: Array<string>;
+};
+
+type IndexFsPath = {
+  tag: "IndexFsPath";
+  theIndexFsPath: AbsolutePath;
+};
+
+function toFsPath(
+  staticFilesDir: StaticFilesDir,
+  url: string
+): FsPath | { tag: "Forbidden"; forbiddenPath: AbsolutePath } {
+  const urlWithoutQuery = decodePercentageEscapes(removeQuery(url));
+
+  // Not using `absolutePathFromString` here since it uses `path.resolve`
+  // but we need `path.join` (otherwise all URLs would resolve to the root of the file system).
+  const fsPathStringRaw = path.join(
+    staticFilesDir.theStaticFilesDir.absolutePath,
+    urlWithoutQuery
+  );
+
+  const fsPathString = fsPathStringRaw.endsWith(path.sep)
+    ? fsPathStringRaw.slice(0, -path.sep.length)
+    : fsPathStringRaw;
+
+  const absoluteFsPath: AbsolutePath = {
+    tag: "AbsolutePath",
+    absolutePath: fsPathString,
+  };
+
+  const prefix = staticFilesDir.theStaticFilesDir.absolutePath + path.sep;
+
+  // Protect against reading files outside the static files dir.
+  // For example: curl http://localhost:8000/%2e%2e/secret.txt
+  return fsPathString === staticFilesDir.theStaticFilesDir.absolutePath
+    ? {
+        tag: "FsPath",
+        theFsPath: absoluteFsPath,
+        segments: [],
+      }
+    : fsPathString.startsWith(prefix)
+    ? {
+        tag: "FsPath",
+        theFsPath: absoluteFsPath,
+        segments: fsPathString.slice(prefix.length).split(path.sep),
+      }
+    : {
+        tag: "Forbidden",
+        forbiddenPath: absoluteFsPath,
+      };
+}
+
+function toIndexFsPath(
+  staticFilesDir: StaticFilesDir,
+  fsPath: FsPath,
+  numSegments: number
+): IndexFsPath {
+  return {
+    tag: "IndexFsPath",
+    theIndexFsPath: {
+      tag: "AbsolutePath",
+      absolutePath: path.join(
+        staticFilesDir.theStaticFilesDir.absolutePath,
+        ...fsPath.segments.slice(0, numSegments),
+        "index.html"
+      ),
+    },
+  };
 }
 
 const QUERY_REGEX = /\?[^]*$/;
