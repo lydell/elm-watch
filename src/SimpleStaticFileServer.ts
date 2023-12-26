@@ -143,7 +143,10 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
   `;
 }
 
-function notFoundHtml(fsPath: FsPath, statsTag: NotFileStat): Html {
+function notFoundHtml(
+  fsPath: FsPath,
+  statsTag: NotFileStat | "FileWithTrailingSlash"
+): Html {
   switch (statsTag) {
     case "Directory":
       return baseHtml(
@@ -205,6 +208,23 @@ function notFoundHtml(fsPath: FsPath, statsTag: NotFileStat): Html {
             The URL you requested points to a something that is neither or file
             nor a directory. elm-watch only serves files.
           </p>
+          <p>This is the absolute file path the URL resolves to:</p>
+          <pre>${fsPath.theFsPath.absolutePath}</pre>
+        `
+      );
+
+    case "FileWithTrailingSlash":
+      return baseHtml(
+        "🚯",
+        "Trailing slash",
+        html`
+          <h1>File with trailing slash</h1>
+          <p>
+            The URL you requested points to a file, but the URL has a trailing
+            slash.
+          </p>
+          <p>Servers typically don't allow trailing slashes on files.</p>
+          <p>Suggestion: Remove the trailing slash from the URL.</p>
           <p>This is the absolute file path the URL resolves to:</p>
           <pre>${fsPath.theFsPath.absolutePath}</pre>
         `
@@ -445,7 +465,15 @@ export function serveStatic(
 
         switch (stats.tag) {
           case "File":
-            serveFile(fsPath, stats.size, request, response);
+            if (fsPath.hadTrailingSlash) {
+              respondHtml(
+                response,
+                404,
+                notFoundHtml(fsPath, "FileWithTrailingSlash")
+              );
+            } else {
+              serveFile(fsPath, stats.size, request, response);
+            }
             return;
 
           case "NotFound":
@@ -636,6 +664,7 @@ function parseRangeHeader(
 type FsPath = {
   tag: "FsPath";
   theFsPath: AbsolutePath;
+  hadTrailingSlash: boolean;
   segments: Array<string>;
 };
 
@@ -657,7 +686,9 @@ function toFsPath(
     urlWithoutQuery
   );
 
-  const fsPathString = fsPathStringRaw.endsWith(path.sep)
+  const hadTrailingSlash = fsPathStringRaw.endsWith(path.sep);
+
+  const fsPathString = hadTrailingSlash
     ? fsPathStringRaw.slice(0, -path.sep.length)
     : fsPathStringRaw;
 
@@ -674,12 +705,14 @@ function toFsPath(
     ? {
         tag: "FsPath",
         theFsPath: absoluteFsPath,
+        hadTrailingSlash,
         segments: [],
       }
     : fsPathString.startsWith(prefix)
     ? {
         tag: "FsPath",
         theFsPath: absoluteFsPath,
+        hadTrailingSlash,
         segments: fsPathString.slice(prefix.length).split(path.sep),
       }
     : {
