@@ -69,7 +69,7 @@ Those two things are closely related!
 
 There’s an old convention in static file servers that when the URL points to a _directory,_ the server looks for an `index.html` file in that directory and serves that.
 
-_Single page applications_ (which `Browser.applications` programs are) brings another convention: Serving the same HTML files for basically all URLs, letting the frontend app handle the URL.
+_Single page applications_ (which `Browser.application` programs are) brings another convention: Serving the same HTML files for basically all URLs, letting the frontend app handle the URL.
 
 elm-watch’s static file server combines both conventions: Whenever no file can be found for a URL, elm-watch looks for the closest `index.html` and serves it.
 
