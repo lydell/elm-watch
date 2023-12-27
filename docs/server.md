@@ -134,7 +134,7 @@ I recommend always creating an `index.html` directly in your static files direct
 
 `Browser.application` programs can change the URL and have some things to note:
 
-- It _requires_ an HTTP server. (The `file://` protocol is not supported by `Browser.application`, so you can’t just double-click the HTML file to open it in a browser. That’s why getting a simple static server from elm-watch is very convenient.)
+- They _require_ an HTTP server. (The `file://` protocol is not supported by `Browser.application`, so you can’t just double-click the HTML file to open it in a browser. That’s why getting a simple static server from elm-watch is very convenient.)
 - The HTTP server you use needs to be smart to handle page reloads. That’s why elm-watch has its [index.html](#indexhtml) conventions.
 
 **Note:** elm-watch’s server is _not_ for production use. If you want to deploy your app somewhere, use any file server of choice. Make sure to set it up to handle serving your HTML file so that reloading the page works.
