@@ -1890,17 +1890,106 @@ function reloadPageIfNeeded(): void {
   __ELM_WATCH.RELOAD_PAGE(message);
 }
 
-async function reloadAllCssIfNeeded(): Promise<boolean> {
+function cacheBust(url: URL): void {
+  url.searchParams.set("forceReload", Date.now().toString());
+}
+
+function reloadImageAudioVideoSrc(changedFileUrlPaths: Array<string>): boolean {
+  let changed = false;
+  for (const element of document.querySelectorAll("img, audio, video")) {
+    const media = element as HTMLImageElement | HTMLMediaElement;
+    const src = media.currentSrc;
+    if (src === "") {
+      continue;
+    }
+    const url = new URL(src);
+    if (
+      url.hostname !== window.location.hostname ||
+      !changedFileUrlPaths.includes(url.pathname)
+    ) {
+      continue;
+    }
+    changed = true;
+    // We don’t try to update the `src` and `srcset` attributes and the `source`
+    // elements. Instead, we reload `currentSrc` manually and then tell the
+    // browser to update the element.
+    // In Chrome, doing `.src = src` seems to reload.
+    // In Safari, that works if you first `fetch(src, { cache: "reload" })`.
+    // In Firefox, only this `iframe` trick works.
+    const iframe = document.createElement("iframe");
+    iframe.onload = () => {
+      document.head.removeChild(iframe);
+      // This updates the element, even if the `src` attribute wasn’t used
+      // (since something from `srcset` was used instead for example).
+      media.src = src;
+    };
+    iframe.src = src;
+    document.head.appendChild(iframe);
+  }
+  return changed;
+}
+
+function reloadVideoPosters(changedFileUrlPaths: Array<string>): boolean {
+  let changed = false;
+  for (const video of document.querySelectorAll("video")) {
+    const src = video.poster;
+    if (src === "") {
+      continue;
+    }
+    const url = new URL(src);
+    if (
+      url.hostname !== window.location.hostname ||
+      !changedFileUrlPaths.includes(url.pathname)
+    ) {
+      continue;
+    }
+    cacheBust(url);
+    video.poster = url.href;
+    changed = true;
+  }
+  return changed;
+}
+
+function reloadFavicon(changedFileUrlPaths: Array<string>): boolean {
+  let changed = false;
+  // `rel~=` handles both `rel="icon"` and `rel="shortcut icon"`, and even ICON
+  // uppercase. It does not match `rel="apple-touch-icon"` which is good.
+  for (const element of document.querySelectorAll("link[rel~='icon']")) {
+    const link = element as HTMLLinkElement;
+    const url = new URL(link.href);
+    if (
+      url.hostname !== window.location.hostname ||
+      !changedFileUrlPaths.includes(url.pathname)
+    ) {
+      continue;
+    }
+    cacheBust(url);
+    link.href = url.href;
+    changed = true;
+  }
+  return changed;
+}
+
+async function reloadAllCssIfNeeded(
+  changedFileUrlPaths: Array<string>
+): Promise<boolean> {
+  // TODO: Case insensitive?
+  if (!changedFileUrlPaths.some((path) => path.endsWith(".css"))) {
+    return false;
+  }
   const results = await Promise.allSettled(
     Array.from(document.styleSheets).flatMap((styleSheet) => {
       if (styleSheet.href === null) {
         return [];
       }
       const url = new URL(styleSheet.href);
+      // We don’t check that the CSS file this style sheet points to actually
+      // has changed, due to `@import`: It might need reloading even if it
+      // hasn’t changed itself.
       if (url.hostname !== window.location.hostname) {
         return [];
       }
-      url.searchParams.set("forceReload", Date.now().toString());
+      cacheBust(url);
       return fetch(url.href)
         .then((response) => response.text())
         .then((newCss) => updateStyleSheetIfNeeded(styleSheet, newCss))
