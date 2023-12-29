@@ -73,11 +73,11 @@ import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
 type WatcherEventName = "added" | "changed" | "removed";
 
-type WatcherEvent = {
+type WatcherEvent<File = AbsolutePath | StaticFilesDirPath> = {
   tag: "WatcherEvent";
   date: Date;
   eventName: WatcherEventName;
-  file: AbsolutePath | StaticFilesDirPath;
+  file: File;
 };
 
 type StaticFilesDirPath = {
@@ -1312,7 +1312,7 @@ function onWatcherEvent(
 
 function onElmFileWatcherEvent(
   project: Project,
-  event: WatcherEvent,
+  event: WatcherEvent<AbsolutePath>,
   nextAction: NextAction
 ): [NextAction, LatestEvent, Array<Cmd>] | undefined {
   const elmFile = event.file;
@@ -1755,6 +1755,7 @@ const runCmd =
           switch (event.tag) {
             case "WatcherEvent":
               return (
+                event.file.tag === "AbsolutePath" &&
                 path.basename(event.file.absolutePath) === "elm-watch.json"
               );
             // istanbul ignore next
@@ -2113,7 +2114,7 @@ function makeWatcherEvent(
   eventName: WatcherEventName,
   absolutePathString: string,
   date: Date
-): WatcherEvent {
+): WatcherEvent<AbsolutePath> {
   return {
     tag: "WatcherEvent",
     date,
@@ -3010,7 +3011,12 @@ function printEvent(loggerConfig: LoggerConfig, event: LatestEvent): string {
 function printEventMessage(event: LatestEvent): string {
   switch (event.tag) {
     case "WatcherEvent":
-      return `${capitalize(event.eventName)} ${event.file.absolutePath}`;
+      // TODO: Don’t really want to print changes to files in static dir?
+      return `${capitalize(event.eventName)} ${
+        event.file.tag === "AbsolutePath"
+          ? event.file.absolutePath
+          : event.file.urlPath
+      }`;
 
     case "WebSocketClosed":
       return `Web socket disconnected for: ${
