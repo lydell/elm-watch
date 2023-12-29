@@ -1940,17 +1940,6 @@ function reloadVideoPosters(changedFileUrlPaths: Array<string>): boolean {
   });
 }
 
-function reloadTracks(changedFileUrlPaths: Array<string>): boolean {
-  return reloadSrc<HTMLTrackElement>({
-    elements: document.querySelectorAll("track"),
-    getSrc: (track) => track.src,
-    setSrc: (track, newSrc) => {
-      track.src = newSrc;
-    },
-    changedFileUrlPaths,
-  });
-}
-
 function reloadFavicon(changedFileUrlPaths: Array<string>): boolean {
   return reloadSrc<HTMLLinkElement>({
     // `rel~=` handles both `rel="icon"` and `rel="shortcut icon"`, and even ICON
@@ -1964,12 +1953,23 @@ function reloadFavicon(changedFileUrlPaths: Array<string>): boolean {
   });
 }
 
-function reloadInputImages(changedFileUrlPaths: Array<string>): boolean {
-  return reloadSrc<HTMLInputElement>({
-    elements: document.querySelectorAll("input[type='image']"),
-    getSrc: (input) => input.src,
-    setSrc: (input, newSrc) => {
-      input.src = newSrc;
+function reloadObjects(changedFileUrlPaths: Array<string>): boolean {
+  return reloadSrc({
+    elements: document.querySelectorAll("object"),
+    getSrc: (object) => object.data,
+    setSrc: (object, newSrc) => {
+      object.data = newSrc;
+    },
+    changedFileUrlPaths,
+  });
+}
+
+function reloadElementsWithSrc(changedFileUrlPaths: Array<string>): boolean {
+  return reloadSrc<HTMLIFrameElement | HTMLInputElement | HTMLTrackElement>({
+    elements: document.querySelectorAll("iframe, input[type='image'], track"),
+    getSrc: (track) => track.src,
+    setSrc: (track, newSrc) => {
+      track.src = newSrc;
     },
     changedFileUrlPaths,
   });
