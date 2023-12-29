@@ -1909,7 +1909,6 @@ function reloadImageAudioVideoSrc(changedFileUrlPaths: Array<string>): boolean {
     ) {
       continue;
     }
-    changed = true;
     // We don’t try to update the `src` and `srcset` attributes and the `source`
     // elements. Instead, we reload `currentSrc` manually and then tell the
     // browser to update the element.
@@ -1918,53 +1917,85 @@ function reloadImageAudioVideoSrc(changedFileUrlPaths: Array<string>): boolean {
     // In Firefox, only this `iframe` trick works.
     const iframe = document.createElement("iframe");
     iframe.onload = () => {
-      document.head.removeChild(iframe);
+      iframe.remove();
       // This updates the element, even if the `src` attribute wasn’t used
       // (since something from `srcset` was used instead for example).
       media.src = src;
     };
     iframe.src = src;
     document.head.appendChild(iframe);
+    changed = true;
   }
   return changed;
 }
 
 function reloadVideoPosters(changedFileUrlPaths: Array<string>): boolean {
+  return reloadSrc<HTMLVideoElement>({
+    elements: document.querySelectorAll("video"),
+    getSrc: (video) => video.poster,
+    setSrc: (video, newSrc) => {
+      video.poster = newSrc;
+    },
+    changedFileUrlPaths,
+  });
+}
+
+function reloadTracks(changedFileUrlPaths: Array<string>): boolean {
+  return reloadSrc<HTMLTrackElement>({
+    elements: document.querySelectorAll("track"),
+    getSrc: (track) => track.src,
+    setSrc: (track, newSrc) => {
+      track.src = newSrc;
+    },
+    changedFileUrlPaths,
+  });
+}
+
+function reloadFavicon(changedFileUrlPaths: Array<string>): boolean {
+  return reloadSrc<HTMLLinkElement>({
+    // `rel~=` handles both `rel="icon"` and `rel="shortcut icon"`, and even ICON
+    // uppercase. It does not match `rel="apple-touch-icon"` which is good.
+    elements: document.querySelectorAll("link[rel~='icon']"),
+    getSrc: (element) => element.href,
+    setSrc: (element, newSrc) => {
+      element.href = newSrc;
+    },
+    changedFileUrlPaths,
+  });
+}
+
+function reloadInputImages(changedFileUrlPaths: Array<string>): boolean {
+  return reloadSrc<HTMLInputElement>({
+    elements: document.querySelectorAll("input[type='image']"),
+    getSrc: (input) => input.src,
+    setSrc: (input, newSrc) => {
+      input.src = newSrc;
+    },
+    changedFileUrlPaths,
+  });
+}
+
+function reloadSrc<T extends Node>(config: {
+  elements: NodeListOf<T>;
+  getSrc: (element: T) => string;
+  setSrc: (element: T, newSrc: string) => void;
+  changedFileUrlPaths: Array<string>;
+}): boolean {
   let changed = false;
-  for (const video of document.querySelectorAll("video")) {
-    const src = video.poster;
+  for (const element of config.elements) {
+    const src = config.getSrc(element);
     if (src === "") {
       continue;
     }
     const url = new URL(src);
     if (
       url.hostname !== window.location.hostname ||
-      !changedFileUrlPaths.includes(url.pathname)
+      !config.changedFileUrlPaths.includes(url.pathname)
     ) {
       continue;
     }
     cacheBust(url);
-    video.poster = url.href;
-    changed = true;
-  }
-  return changed;
-}
-
-function reloadFavicon(changedFileUrlPaths: Array<string>): boolean {
-  let changed = false;
-  // `rel~=` handles both `rel="icon"` and `rel="shortcut icon"`, and even ICON
-  // uppercase. It does not match `rel="apple-touch-icon"` which is good.
-  for (const element of document.querySelectorAll("link[rel~='icon']")) {
-    const link = element as HTMLLinkElement;
-    const url = new URL(link.href);
-    if (
-      url.hostname !== window.location.hostname ||
-      !changedFileUrlPaths.includes(url.pathname)
-    ) {
-      continue;
-    }
-    cacheBust(url);
-    link.href = url.href;
+    config.setSrc(element, url.href);
     changed = true;
   }
   return changed;
