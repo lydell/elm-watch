@@ -43,14 +43,3 @@ export function findClosest(
     ? undefined
     : findClosest(name, absoluteDirname(absoluteDir));
 }
-
-/**
- * Returns whether `child` is contained inside `parent`.
- */
-export function pathContains(
-  parent: AbsolutePath,
-  child: AbsolutePath
-): boolean {
-  const relative = path.relative(child.absolutePath, parent.absolutePath);
-  return relative.split(path.sep).every((piece) => piece === "..");
-}

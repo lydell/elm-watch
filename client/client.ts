@@ -1,6 +1,7 @@
 import * as Decode from "tiny-decoders";
 
 import { formatDate, formatTime } from "../src/Helpers";
+import { NonEmptyArray } from "../src/NonEmptyArray";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
   AbsolutePath,
@@ -228,7 +229,7 @@ type Msg =
       date: Date;
     }
   | {
-      tag: "ReloadAllCssDone";
+      tag: "ReloadStatelessResourcesDone";
       didChange: boolean;
     }
   | {
@@ -310,7 +311,8 @@ type Cmd =
       elmCompiledTimestamp: number;
     }
   | {
-      tag: "ReloadAllCssIfNeeded";
+      tag: "ReloadStatelessResourcesIfNeeded";
+      changedFileUrlPaths: NonEmptyArray<string>;
     }
   | {
       tag: "Render";
@@ -1103,7 +1105,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     case "PageVisibilityChangedToVisible":
       return reconnect(model, msg.date, { force: true });
 
-    case "ReloadAllCssDone":
+    case "ReloadStatelessResourcesDone":
       return [
         model,
         msg.didChange ? [{ tag: "Flash", flashType: "success" }] : [],
@@ -1271,12 +1273,6 @@ function onWebSocketToClientMessage(
   model: Model
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
-    case "CssFileMayHaveChanged":
-      return [
-        { ...model, status: { ...model.status, date } },
-        [{ tag: "ReloadAllCssIfNeeded" }],
-      ];
-
     case "FocusedTabAcknowledged":
       return [model, [{ tag: "WebSocketTimeoutClear" }]];
 
@@ -1294,6 +1290,26 @@ function onWebSocketToClientMessage(
             tag: "TriggerReachedIdleState",
             reason: "OpenEditorFailed",
           },
+        ],
+      ];
+
+    case "StaticFilesChanged":
+      return [
+        { ...model, status: { ...model.status, date } },
+        [
+          {
+            tag: "ReloadStatelessResourcesIfNeeded",
+            changedFileUrlPaths: msg.changedFileUrlPaths,
+          },
+        ],
+      ];
+
+    case "StaticFilesMayHaveChangedWhileDisconnected":
+      // TODO: Only do stuff on reconnect.
+      return [
+        { ...model, status: { ...model.status, date } },
+        [
+          // { tag: "ReloadStatelessResourcesIfNeeded" }
         ],
       ];
 
@@ -1564,10 +1580,15 @@ const runCmd =
         );
         return;
 
-      case "ReloadAllCssIfNeeded":
-        reloadAllCssIfNeeded()
+      case "ReloadStatelessResourcesIfNeeded":
+        // TODO: First dispatch DOM event about changed files.
+        // Note: This should be done in co-operation with other targets
+        // on the same page, so that we don’t get identical duplicate events.
+        // Maybe by storing the last changed files for a short while and filtering
+        // away what’s already there.
+        reloadStatelessResourcesIfNeeded(cmd.changedFileUrlPaths)
           .then((didChange) => {
-            dispatch({ tag: "ReloadAllCssDone", didChange });
+            dispatch({ tag: "ReloadStatelessResourcesDone", didChange });
           })
           .catch(rejectPromise);
         return;
@@ -1890,6 +1911,45 @@ function reloadPageIfNeeded(): void {
   __ELM_WATCH.RELOAD_PAGE(message);
 }
 
+async function reloadStatelessResourcesIfNeeded(
+  changedFileUrlPaths: Array<string>
+): Promise<boolean> {
+  return [
+    reloadImageAudioVideoSrc(changedFileUrlPaths),
+    reloadVideoPosters(changedFileUrlPaths),
+    reloadFavicon(changedFileUrlPaths),
+    reloadObjects(changedFileUrlPaths),
+    reloadElementsWithSrc(changedFileUrlPaths),
+    await reloadAllCssIfNeeded(changedFileUrlPaths),
+  ].some((changed) => changed);
+}
+
+function reloadSrc<T extends Node>(config: {
+  elements: NodeListOf<T>;
+  getSrc: (element: T) => string;
+  setSrc: (element: T, newSrc: string) => void;
+  changedFileUrlPaths: Array<string>;
+}): boolean {
+  let changed = false;
+  for (const element of config.elements) {
+    const src = config.getSrc(element);
+    if (src === "") {
+      continue;
+    }
+    const url = new URL(src);
+    if (
+      url.hostname !== window.location.hostname ||
+      !config.changedFileUrlPaths.includes(url.pathname)
+    ) {
+      continue;
+    }
+    cacheBust(url);
+    config.setSrc(element, url.href);
+    changed = true;
+  }
+  return changed;
+}
+
 function cacheBust(url: URL): void {
   url.searchParams.set("forceReload", Date.now().toString());
 }
@@ -1975,37 +2035,12 @@ function reloadElementsWithSrc(changedFileUrlPaths: Array<string>): boolean {
   });
 }
 
-function reloadSrc<T extends Node>(config: {
-  elements: NodeListOf<T>;
-  getSrc: (element: T) => string;
-  setSrc: (element: T, newSrc: string) => void;
-  changedFileUrlPaths: Array<string>;
-}): boolean {
-  let changed = false;
-  for (const element of config.elements) {
-    const src = config.getSrc(element);
-    if (src === "") {
-      continue;
-    }
-    const url = new URL(src);
-    if (
-      url.hostname !== window.location.hostname ||
-      !config.changedFileUrlPaths.includes(url.pathname)
-    ) {
-      continue;
-    }
-    cacheBust(url);
-    config.setSrc(element, url.href);
-    changed = true;
-  }
-  return changed;
-}
-
 async function reloadAllCssIfNeeded(
   changedFileUrlPaths: Array<string>
 ): Promise<boolean> {
-  // TODO: Case insensitive?
-  if (!changedFileUrlPaths.some((path) => path.endsWith(".css"))) {
+  if (
+    !changedFileUrlPaths.some((path) => path.toLowerCase().endsWith(".css"))
+  ) {
     return false;
   }
   const results = await Promise.allSettled(

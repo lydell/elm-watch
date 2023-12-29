@@ -1,4 +1,5 @@
 import * as os from "os";
+import * as path from "path";
 
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
@@ -14,7 +15,6 @@ import {
   absolutePathFromString,
   absoluteRealpath,
   findClosest,
-  pathContains,
 } from "./PathHelpers";
 import { Postprocess } from "./Postprocess";
 import { PostprocessError } from "./PostprocessShared";
@@ -475,9 +475,12 @@ export function initProject({
         }
       ),
     ].filter((root, index, array) =>
-      // If any other root contains this one, discard this one.
       array.every(
-        (root2, index2) => index === index2 || !pathContains(root2, root)
+        (root2, index2) =>
+          // Don’t compare to self.
+          index === index2 ||
+          // If any other root contains this one, discard this one.
+          !root.absolutePath.startsWith(root2.absolutePath + path.sep)
       )
     )
   );

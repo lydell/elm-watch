@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
+import * as url from "url";
 import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
@@ -45,11 +46,7 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import {
-  absoluteDirname,
-  absolutePathFromString,
-  pathContains,
-} from "./PathHelpers";
+import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Port, PortChoice } from "./Port";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
@@ -80,7 +77,12 @@ type WatcherEvent = {
   tag: "WatcherEvent";
   date: Date;
   eventName: WatcherEventName;
-  file: AbsolutePath;
+  file: AbsolutePath | StaticFilesDirPath;
+};
+
+type StaticFilesDirPath = {
+  tag: "StaticFilesDirPath";
+  urlPath: string;
 };
 
 type WebSocketRelatedEvent =
@@ -812,6 +814,11 @@ function update(
       }
 
     case "SleepBeforeNextActionDone": {
+      const staticFilesDirPaths = model.latestEvents.flatMap((event) =>
+        event.tag === "WatcherEvent" && event.file.tag === "StaticFilesDirPath"
+          ? [event.file.urlPath]
+          : []
+      );
       const [newModel, cmds] = runNextAction(msg.date, project, model);
       return [
         {
@@ -819,15 +826,14 @@ function update(
           nextAction: { tag: "NoAction" },
         },
         [
-          ...(model.latestEvents.some(
-            (event) =>
-              event.tag === "WatcherEvent" &&
-              event.file.absolutePath.endsWith(".css")
-          )
+          ...(isNonEmptyArray(staticFilesDirPaths)
             ? [
                 {
                   tag: "WebSocketSendAll",
-                  message: { tag: "CssFileMayHaveChanged" },
+                  message: {
+                    tag: "StaticFilesChanged",
+                    changedFileUrlPaths: staticFilesDirPaths,
+                  },
                 } as const,
               ]
             : []),
@@ -1009,7 +1015,7 @@ function update(
               {
                 tag: "WebSocketSend",
                 webSocket: msg.webSocket,
-                message: { tag: "CssFileMayHaveChanged" },
+                message: { tag: "StaticFilesMayHaveChangedWhileDisconnected" },
               },
             ];
 
@@ -1165,24 +1171,6 @@ function onWatcherEvent(
     );
   }
 
-  if (
-    absolutePathString.endsWith(".css") &&
-    project.staticFilesDir !== undefined &&
-    pathContains(project.staticFilesDir.theStaticFilesDir, {
-      tag: "AbsolutePath",
-      absolutePath: absolutePathString,
-    })
-  ) {
-    return [
-      nextAction,
-      {
-        ...makeWatcherEvent(eventName, absolutePathString, now),
-        affectsAnyTarget: true,
-      },
-      [],
-    ];
-  }
-
   const basename = path.basename(absolutePathString);
 
   switch (basename) {
@@ -1283,13 +1271,42 @@ function onWatcherEvent(
               ];
             }
           }
-          return undefined;
+          break;
         }
 
         case "NoPostprocess":
-          // Ignore other types of files.
-          return undefined;
+          break;
       }
+
+      if (project.staticFilesDir !== undefined) {
+        const prefix =
+          project.staticFilesDir.theStaticFilesDir.absolutePath + path.sep;
+        if (
+          absolutePathString.startsWith(prefix) &&
+          !getFlatOutputs(project).some(
+            ({ outputPath }) =>
+              absolutePathString === outputPath.theOutputPath.absolutePath
+          )
+        ) {
+          return [
+            nextAction,
+            {
+              ...makeWatcherEvent(eventName, absolutePathString, now),
+              affectsAnyTarget: true,
+              file: {
+                tag: "StaticFilesDirPath",
+                urlPath: url.pathToFileURL(
+                  path.sep + absolutePathString.slice(prefix.length)
+                ).pathname,
+              },
+            },
+            [],
+          ];
+        }
+      }
+
+      // Ignore other types of files.
+      return undefined;
   }
 }
 
