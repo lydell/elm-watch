@@ -1915,11 +1915,11 @@ async function reloadStatelessResourcesIfNeeded(
   changedFileUrlPaths: Array<string>
 ): Promise<boolean> {
   return [
-    reloadImageAudioVideoSrc(changedFileUrlPaths),
     reloadVideoPosters(changedFileUrlPaths),
     reloadFavicon(changedFileUrlPaths),
     reloadObjects(changedFileUrlPaths),
     reloadElementsWithSrc(changedFileUrlPaths),
+    reloadElementsWithSrcset(changedFileUrlPaths),
     await reloadAllCssIfNeeded(changedFileUrlPaths),
   ].some((changed) => changed);
 }
@@ -1938,7 +1938,7 @@ function reloadSrc<T extends Node>(config: {
     }
     const url = new URL(src);
     if (
-      url.hostname !== window.location.hostname ||
+      url.host !== window.location.host ||
       !config.changedFileUrlPaths.includes(url.pathname)
     ) {
       continue;
@@ -1954,47 +1954,12 @@ function cacheBust(url: URL): void {
   url.searchParams.set("forceReload", Date.now().toString());
 }
 
-function reloadImageAudioVideoSrc(changedFileUrlPaths: Array<string>): boolean {
-  let changed = false;
-  for (const element of document.querySelectorAll("img, audio, video")) {
-    const media = element as HTMLImageElement | HTMLMediaElement;
-    const src = media.currentSrc;
-    if (src === "") {
-      continue;
-    }
-    const url = new URL(src);
-    if (
-      url.hostname !== window.location.hostname ||
-      !changedFileUrlPaths.includes(url.pathname)
-    ) {
-      continue;
-    }
-    // We don’t try to update the `src` and `srcset` attributes and the `source`
-    // elements. Instead, we reload `currentSrc` manually and then tell the
-    // browser to update the element.
-    // In Chrome, doing `.src = src` seems to reload.
-    // In Safari, that works if you first `fetch(src, { cache: "reload" })`.
-    // In Firefox, only this `iframe` trick works.
-    const iframe = document.createElement("iframe");
-    iframe.onload = () => {
-      iframe.remove();
-      // This updates the element, even if the `src` attribute wasn’t used
-      // (since something from `srcset` was used instead for example).
-      media.src = src;
-    };
-    iframe.src = src;
-    document.head.appendChild(iframe);
-    changed = true;
-  }
-  return changed;
-}
-
 function reloadVideoPosters(changedFileUrlPaths: Array<string>): boolean {
   return reloadSrc<HTMLVideoElement>({
     elements: document.querySelectorAll("video"),
-    getSrc: (video) => video.poster,
-    setSrc: (video, newSrc) => {
-      video.poster = newSrc;
+    getSrc: (element) => element.poster,
+    setSrc: (element, newSrc) => {
+      element.poster = newSrc;
     },
     changedFileUrlPaths,
   });
@@ -2016,23 +1981,77 @@ function reloadFavicon(changedFileUrlPaths: Array<string>): boolean {
 function reloadObjects(changedFileUrlPaths: Array<string>): boolean {
   return reloadSrc({
     elements: document.querySelectorAll("object"),
-    getSrc: (object) => object.data,
-    setSrc: (object, newSrc) => {
-      object.data = newSrc;
+    getSrc: (element) => element.data,
+    setSrc: (element, newSrc) => {
+      element.data = newSrc;
     },
     changedFileUrlPaths,
   });
 }
 
 function reloadElementsWithSrc(changedFileUrlPaths: Array<string>): boolean {
-  return reloadSrc<HTMLIFrameElement | HTMLInputElement | HTMLTrackElement>({
-    elements: document.querySelectorAll("iframe, input[type='image'], track"),
-    getSrc: (track) => track.src,
-    setSrc: (track, newSrc) => {
-      track.src = newSrc;
+  return reloadSrc<
+    | HTMLAudioElement
+    | HTMLIFrameElement
+    | HTMLInputElement
+    | HTMLSourceElement
+    | HTMLTrackElement
+    | HTMLVideoElement
+  >({
+    elements: document.querySelectorAll(
+      "audio, iframe, input[type='image'], source, track, video"
+    ),
+    getSrc: (element) => element.src,
+    setSrc: (element, newSrc) => {
+      element.src = newSrc;
     },
     changedFileUrlPaths,
   });
+}
+
+function reloadElementsWithSrcset(changedFileUrlPaths: Array<string>): boolean {
+  let changed = false;
+  for (const node of document.querySelectorAll("img, source")) {
+    const element = node as HTMLImageElement | HTMLSourceElement;
+
+    const newSrcset = element.srcset
+      .split(/(\s+|,)/)
+      .map((segment) =>
+        // Image URLs always have a dot (such as in `.jpg` or `.png`, otherwise
+        // elm-watch can’t know the content type). Whitespace, commas, `200w`
+        // and `2x` all don’t include a dot.
+        segment.includes(".")
+          ? updateMaybeRelativeUrl(changedFileUrlPaths, segment)
+          : segment
+      )
+      .join("");
+
+    if (newSrcset !== element.srcset) {
+      changed = true;
+      element.srcset = newSrcset;
+    }
+  }
+  return changed;
+}
+
+function updateMaybeRelativeUrl(
+  changedFileUrlPaths: Array<string>,
+  maybeRelativeUrl: string
+): string {
+  let url;
+  try {
+    url = new URL(maybeRelativeUrl, window.location.href);
+  } catch {
+    return maybeRelativeUrl;
+  }
+  if (
+    url.host !== window.location.host ||
+    !changedFileUrlPaths.includes(url.pathname)
+  ) {
+    return maybeRelativeUrl;
+  }
+  cacheBust(url);
+  return url.href;
 }
 
 async function reloadAllCssIfNeeded(
@@ -2052,7 +2071,7 @@ async function reloadAllCssIfNeeded(
       // We don’t check that the CSS file this style sheet points to actually
       // has changed, due to `@import`: It might need reloading even if it
       // hasn’t changed itself.
-      if (url.hostname !== window.location.hostname) {
+      if (url.host !== window.location.host) {
         return [];
       }
       cacheBust(url);
