@@ -1584,9 +1584,19 @@ const runCmd =
         if (cmd.changedFileUrlPaths === "AnyFileMayHaveChanged") {
           shouldReloadCss = true;
         } else {
+          const wasEmpty = __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.size === 0;
+
+          for (const path of cmd.changedFileUrlPaths) {
+            if (path.toLowerCase().endsWith(".css")) {
+              shouldReloadCss = true;
+            } else {
+              __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.add(path);
+            }
+          }
+
           // There might be several targets on the page, all receiving the same
           // changed file url paths. This fires the event only once per batch.
-          if (__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.size === 0) {
+          if (wasEmpty && __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.size > 0) {
             setTimeout(() => {
               window.dispatchEvent(
                 new CustomEvent(ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT, {
@@ -1595,13 +1605,6 @@ const runCmd =
               );
               __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.clear();
             }, ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT_MS);
-          }
-
-          for (const path of cmd.changedFileUrlPaths) {
-            __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.add(path);
-            if (path.toLowerCase().endsWith(".css")) {
-              shouldReloadCss = true;
-            }
           }
         }
 

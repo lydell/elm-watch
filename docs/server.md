@@ -140,3 +140,33 @@ I recommend always creating a `index.html` directly in your static files directo
 **Note:** elm-watch’s server is _not_ for production use. If you want to deploy your app somewhere, use any file server of choice. Make sure to set it up to handle serving your HTML file so that reloading the page works.
 
 [example/]: https://github.com/lydell/elm-watch/tree/main/example#readme
+
+## Reacting to changed files
+
+When `.elm` files change, elm-watch automatically compiles to `.js` and hot reloads the application.
+
+When `.css` files inside the directory to serve change, elm-watch automatically hot reloads them.
+
+When other files inside the directory to serve change, elm-watch dispatches a DOM event that you can listen to, if you want to (hot) reload for other types of files. You can listen for the event like so:
+
+```js
+window.addEventListener("elm-watch:changed-file-url-paths", (event) => {
+  // This logs a `Set` of strings. A string can look like this: `"/your/file.js"`.
+  // The strings always start with a slash.
+  console.log("Just changed file URL paths:", event.detail);
+});
+```
+
+For example, if you only have a single application you might want to reload the page whenever a JavaScript file, HTML file or image file etc. changes:
+
+```js
+window.addEventListener("elm-watch:changed-file-url-paths", () => {
+  // Reload the page whenever a non-Elm and non-CSS file inside the directory to
+  // be served is changed.
+  window.location.reload();
+});
+```
+
+If you have multiple applications you might want to inspect the `event.detail` set of url paths to changed files and only reload the page if something related to the current application has changed.
+
+Why doesn’t elm-watch do that by default? elm-watch only reloads when it can be near perfect, so that you can rely on it always working.
