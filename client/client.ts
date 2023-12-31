@@ -30,6 +30,7 @@ const IS_WEB_WORKER = window.window === undefined;
 type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
+  JUST_CHANGED_FILE_URL_PATHS: Set<string>;
   RELOAD_STATUSES: Record<string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
   ON_INIT: () => void;
@@ -127,6 +128,8 @@ __ELM_WATCH.ON_REACHED_IDLE_STATE ??= () => {
   // Do nothing.
 };
 
+__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS ??= new Set();
+
 __ELM_WATCH.RELOAD_STATUSES ??= {};
 
 const RELOAD_MESSAGE_KEY = "__elmWatchReloadMessage";
@@ -187,6 +190,11 @@ const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
 const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
+// Public events:
+const ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT =
+  "elm-watch:changed-file-url-paths";
+const ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT_MS = 10;
+// Internal events:
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
 const CLOSE_ALL_ERROR_OVERLAYS_EVENT = "CLOSE_ALL_ERROR_OVERLAYS_EVENT";
 
@@ -229,7 +237,7 @@ type Msg =
       date: Date;
     }
   | {
-      tag: "ReloadStatelessResourcesDone";
+      tag: "ReloadAllCssDone";
       didChange: boolean;
     }
   | {
@@ -304,15 +312,15 @@ type Cmd =
       flashType: FlashType;
     }
   | {
+      tag: "HandleStaticFilesChanged";
+      changedFileUrlPaths: NonEmptyArray<string> | "AnyFileMayHaveChanged";
+    }
+  | {
       tag: "NoCmd";
     }
   | {
       tag: "Reconnect";
       elmCompiledTimestamp: number;
-    }
-  | {
-      tag: "ReloadStatelessResourcesIfNeeded";
-      changedFileUrlPaths: NonEmptyArray<string>;
     }
   | {
       tag: "Render";
@@ -1105,7 +1113,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     case "PageVisibilityChangedToVisible":
       return reconnect(model, msg.date, { force: true });
 
-    case "ReloadStatelessResourcesDone":
+    case "ReloadAllCssDone":
       return [
         model,
         msg.didChange ? [{ tag: "Flash", flashType: "success" }] : [],
@@ -1298,18 +1306,20 @@ function onWebSocketToClientMessage(
         { ...model, status: { ...model.status, date } },
         [
           {
-            tag: "ReloadStatelessResourcesIfNeeded",
+            tag: "HandleStaticFilesChanged",
             changedFileUrlPaths: msg.changedFileUrlPaths,
           },
         ],
       ];
 
     case "StaticFilesMayHaveChangedWhileDisconnected":
-      // TODO: Only do stuff on reconnect.
       return [
         { ...model, status: { ...model.status, date } },
         [
-          // { tag: "ReloadStatelessResourcesIfNeeded" }
+          {
+            tag: "HandleStaticFilesChanged",
+            changedFileUrlPaths: "AnyFileMayHaveChanged",
+          },
         ],
       ];
 
@@ -1569,6 +1579,43 @@ const runCmd =
         }
         return;
 
+      case "HandleStaticFilesChanged": {
+        let shouldReloadCss = false;
+        if (cmd.changedFileUrlPaths === "AnyFileMayHaveChanged") {
+          shouldReloadCss = true;
+        } else {
+          // There might be several targets on the page, all receiving the same
+          // changed file url paths. This fires the event only once per batch.
+          if (__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.size === 0) {
+            setTimeout(() => {
+              window.dispatchEvent(
+                new CustomEvent(ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT, {
+                  detail: new Set(__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS),
+                })
+              );
+              __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.clear();
+            }, ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT_MS);
+          }
+
+          for (const path of cmd.changedFileUrlPaths) {
+            __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.add(path);
+            if (path.toLowerCase().endsWith(".css")) {
+              shouldReloadCss = true;
+            }
+          }
+        }
+
+        if (shouldReloadCss) {
+          reloadAllCssIfNeeded()
+            .then((didChange) => {
+              dispatch({ tag: "ReloadAllCssDone", didChange });
+            })
+            .catch(rejectPromise);
+        }
+
+        return;
+      }
+
       case "NoCmd":
         return;
 
@@ -1578,19 +1625,6 @@ const runCmd =
           cmd.elmCompiledTimestamp,
           dispatch
         );
-        return;
-
-      case "ReloadStatelessResourcesIfNeeded":
-        // TODO: First dispatch DOM event about changed files.
-        // Note: This should be done in co-operation with other targets
-        // on the same page, so that we don’t get identical duplicate events.
-        // Maybe by storing the last changed files for a short while and filtering
-        // away what’s already there.
-        reloadStatelessResourcesIfNeeded(cmd.changedFileUrlPaths)
-          .then((didChange) => {
-            dispatch({ tag: "ReloadStatelessResourcesDone", didChange });
-          })
-          .catch(rejectPromise);
         return;
 
       case "Render": {
@@ -1911,157 +1945,7 @@ function reloadPageIfNeeded(): void {
   __ELM_WATCH.RELOAD_PAGE(message);
 }
 
-async function reloadStatelessResourcesIfNeeded(
-  changedFileUrlPaths: Array<string>
-): Promise<boolean> {
-  return [
-    reloadVideoPosters(changedFileUrlPaths),
-    reloadFavicon(changedFileUrlPaths),
-    reloadObjects(changedFileUrlPaths),
-    reloadElementsWithSrc(changedFileUrlPaths),
-    reloadElementsWithSrcset(changedFileUrlPaths),
-    await reloadAllCssIfNeeded(changedFileUrlPaths),
-  ].some((changed) => changed);
-}
-
-function reloadSrc<T extends Node>(config: {
-  elements: NodeListOf<T>;
-  getSrc: (element: T) => string;
-  setSrc: (element: T, newSrc: string) => void;
-  changedFileUrlPaths: Array<string>;
-}): boolean {
-  let changed = false;
-  for (const element of config.elements) {
-    const src = config.getSrc(element);
-    if (src === "") {
-      continue;
-    }
-    const url = new URL(src);
-    if (
-      url.host !== window.location.host ||
-      !config.changedFileUrlPaths.includes(url.pathname)
-    ) {
-      continue;
-    }
-    cacheBust(url);
-    config.setSrc(element, url.href);
-    changed = true;
-  }
-  return changed;
-}
-
-function cacheBust(url: URL): void {
-  url.searchParams.set("forceReload", Date.now().toString());
-}
-
-function reloadVideoPosters(changedFileUrlPaths: Array<string>): boolean {
-  return reloadSrc<HTMLVideoElement>({
-    elements: document.querySelectorAll("video"),
-    getSrc: (element) => element.poster,
-    setSrc: (element, newSrc) => {
-      element.poster = newSrc;
-    },
-    changedFileUrlPaths,
-  });
-}
-
-function reloadFavicon(changedFileUrlPaths: Array<string>): boolean {
-  return reloadSrc<HTMLLinkElement>({
-    // `rel~=` handles both `rel="icon"` and `rel="shortcut icon"`, and even ICON
-    // uppercase. It does not match `rel="apple-touch-icon"` which is good.
-    elements: document.querySelectorAll("link[rel~='icon']"),
-    getSrc: (element) => element.href,
-    setSrc: (element, newSrc) => {
-      element.href = newSrc;
-    },
-    changedFileUrlPaths,
-  });
-}
-
-function reloadObjects(changedFileUrlPaths: Array<string>): boolean {
-  return reloadSrc({
-    elements: document.querySelectorAll("object"),
-    getSrc: (element) => element.data,
-    setSrc: (element, newSrc) => {
-      element.data = newSrc;
-    },
-    changedFileUrlPaths,
-  });
-}
-
-function reloadElementsWithSrc(changedFileUrlPaths: Array<string>): boolean {
-  return reloadSrc<
-    | HTMLAudioElement
-    | HTMLIFrameElement
-    | HTMLInputElement
-    | HTMLSourceElement
-    | HTMLTrackElement
-    | HTMLVideoElement
-  >({
-    elements: document.querySelectorAll(
-      "audio, iframe, input[type='image'], source, track, video"
-    ),
-    getSrc: (element) => element.src,
-    setSrc: (element, newSrc) => {
-      element.src = newSrc;
-    },
-    changedFileUrlPaths,
-  });
-}
-
-function reloadElementsWithSrcset(changedFileUrlPaths: Array<string>): boolean {
-  let changed = false;
-  for (const node of document.querySelectorAll("img, source")) {
-    const element = node as HTMLImageElement | HTMLSourceElement;
-
-    const newSrcset = element.srcset
-      .split(/(\s+|,)/)
-      .map((segment) =>
-        // Image URLs always have a dot (such as in `.jpg` or `.png`, otherwise
-        // elm-watch can’t know the content type). Whitespace, commas, `200w`
-        // and `2x` all don’t include a dot.
-        segment.includes(".")
-          ? updateMaybeRelativeUrl(changedFileUrlPaths, segment)
-          : segment
-      )
-      .join("");
-
-    if (newSrcset !== element.srcset) {
-      changed = true;
-      element.srcset = newSrcset;
-    }
-  }
-  return changed;
-}
-
-function updateMaybeRelativeUrl(
-  changedFileUrlPaths: Array<string>,
-  maybeRelativeUrl: string
-): string {
-  let url;
-  try {
-    url = new URL(maybeRelativeUrl, window.location.href);
-  } catch {
-    return maybeRelativeUrl;
-  }
-  if (
-    url.host !== window.location.host ||
-    !changedFileUrlPaths.includes(url.pathname)
-  ) {
-    return maybeRelativeUrl;
-  }
-  cacheBust(url);
-  return url.href;
-}
-
-async function reloadAllCssIfNeeded(
-  changedFileUrlPaths: Array<string>
-): Promise<boolean> {
-  if (
-    !changedFileUrlPaths.some((path) => path.toLowerCase().endsWith(".css"))
-  ) {
-    return false;
-  }
+async function reloadAllCssIfNeeded(): Promise<boolean> {
   const results = await Promise.allSettled(
     Array.from(document.styleSheets).flatMap((styleSheet) => {
       if (styleSheet.href === null) {
@@ -2074,7 +1958,7 @@ async function reloadAllCssIfNeeded(
       if (url.host !== window.location.host) {
         return [];
       }
-      cacheBust(url);
+      url.searchParams.set("forceReload", Date.now().toString());
       return fetch(url.href)
         .then((response) => response.text())
         .then((newCss) => updateStyleSheetIfNeeded(styleSheet, newCss))
