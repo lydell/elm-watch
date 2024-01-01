@@ -1,16 +1,14 @@
-import * as http from "http";
 import * as https from "https";
-import * as net from "net";
+import type { AddressInfo } from "net";
 import type { Duplex } from "stream";
 import * as util from "util";
 import WebSocket, { Server as WsServer } from "ws";
 
-import { CERTIFICATE } from "./Certificate";
 import { toError } from "./Helpers";
 import { Host } from "./Host";
 import { Port, PortChoice } from "./Port";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
-import { StaticFilesDir } from "./Types";
+import { CreateServer, StaticFilesDir } from "./Types";
 
 export type WebSocketServerMsg =
   | {
@@ -48,93 +46,14 @@ type WebSocketServerError =
       error: Error;
     };
 
-// Inspired by: https://stackoverflow.com/a/42019773
-class PolyHttpServer {
-  private net = net.createServer();
-
-  private http = http.createServer();
-
-  private https = https.createServer(CERTIFICATE);
-
-  private sockets = new Set<net.Socket>();
-
-  constructor() {
-    this.net.on("connection", (socket) => {
-      this.sockets.add(socket);
-      socket.once("close", () => {
-        this.sockets.delete(socket);
-      });
-      socket.once("data", (buffer) => {
-        socket.pause();
-        const server = buffer[0] === 22 ? this.https : this.http;
-        socket.unshift(buffer);
-        server.emit("connection", socket);
-        process.nextTick(() => socket.resume());
-      });
-    });
-  }
-
-  listen(port: number, host: Host): void {
-    this.net.listen(port, host.theHost);
-  }
-
-  async close(): Promise<void> {
-    for (const socket of this.sockets) {
-      socket.destroy();
-    }
-
-    return new Promise((resolve, reject) => {
-      let numClosed = 0;
-      const callback = (
-        error: (Error & { code?: string }) | undefined
-      ): void => {
-        numClosed++;
-        // istanbul ignore if
-        if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
-          reject(error);
-        } else if (numClosed === 3) {
-          resolve();
-        }
-      };
-      this.net.close(callback);
-      this.http.close(callback);
-      this.https.close(callback);
-    });
-  }
-
-  onRequest(listener: (isHttps: boolean) => http.RequestListener): void {
-    this.http.on("request", listener(false));
-    this.https.on("request", listener(true));
-  }
-
-  onUpgrade(
-    listener: (
-      req: InstanceType<typeof http.IncomingMessage>,
-      socket: Duplex,
-      head: Buffer
-    ) => void
-  ): void {
-    this.http.on("upgrade", listener);
-    this.https.on("upgrade", listener);
-  }
-
-  onError(listener: (error: Error & { code?: string }) => void): void {
-    this.net.on("error", listener);
-    this.http.on("error", listener);
-    this.https.on("error", listener);
-  }
-
-  onceListening(listener: (address: net.AddressInfo) => void): void {
-    this.net.once("listening", () => {
-      listener(this.net.address() as net.AddressInfo);
-    });
-  }
-}
-
 export class WebSocketServer {
-  private polyHttpServer = new PolyHttpServer();
+  private polyHttpServer: ReturnType<CreateServer>;
 
   private webSocketServer = new WsServer({ noServer: true });
+
+  private sockets = new Set<Duplex>();
+
+  isHTTPS: boolean;
 
   port: Port;
 
@@ -145,10 +64,48 @@ export class WebSocketServer {
   listening: Promise<void>;
 
   constructor(
+    createServer: CreateServer,
     portChoice: PortChoice,
     host: Host,
     staticFilesDirectory: StaticFilesDir | undefined
   ) {
+    this.polyHttpServer = createServer({
+      onRequest: (request, response) => {
+        if (staticFilesDirectory !== undefined) {
+          try {
+            SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
+              request,
+              response
+            );
+          } catch (unknownError) {
+            SimpleStaticFileServer.respondHtml(
+              response,
+              500,
+              SimpleStaticFileServer.errorHtml(toError(unknownError).message)
+            );
+          }
+        } else {
+          SimpleStaticFileServer.respondHtml(
+            response,
+            200,
+            SimpleStaticFileServer.staticFileNotEnabledHtml()
+          );
+        }
+      },
+      onUpgrade: (request, socket, head) => {
+        this.webSocketServer.handleUpgrade(
+          request,
+          socket,
+          head,
+          (webSocket) => {
+            this.webSocketServer.emit("connection", webSocket, request);
+          }
+        );
+      },
+    });
+
+    this.isHTTPS = this.polyHttpServer instanceof https.Server;
+
     this.dispatch = this.dispatchToQueue;
 
     this.webSocketServer.on("connection", (webSocket, request) => {
@@ -191,7 +148,7 @@ export class WebSocketServer {
       });
     });
 
-    this.polyHttpServer.onError((error) => {
+    this.polyHttpServer.on("error", (error: NodeJS.ErrnoException) => {
       this.dispatch({
         tag: "WebSocketServerError",
         error:
@@ -204,47 +161,17 @@ export class WebSocketServer {
       });
     });
 
-    this.polyHttpServer.onRequest((isHttps) => (request, response) => {
-      if (
-        request.method === "GET" &&
-        request.url === "/elm-watch-https-accept"
-      ) {
-        SimpleStaticFileServer.respondHtml(
-          response,
-          200,
-          SimpleStaticFileServer.acceptHtml(isHttps, request)
-        );
-      } else if (staticFilesDirectory !== undefined) {
-        try {
-          SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
-            request,
-            response
-          );
-        } catch (unknownError) {
-          SimpleStaticFileServer.respondHtml(
-            response,
-            500,
-            SimpleStaticFileServer.errorHtml(toError(unknownError).message)
-          );
-        }
-      } else {
-        SimpleStaticFileServer.respondHtml(
-          response,
-          200,
-          SimpleStaticFileServer.staticFileNotEnabledHtml()
-        );
-      }
-    });
-
-    this.polyHttpServer.onUpgrade((request, socket, head) => {
-      this.webSocketServer.handleUpgrade(request, socket, head, (webSocket) => {
-        this.webSocketServer.emit("connection", webSocket, request);
+    this.polyHttpServer.on("connection", (socket) => {
+      this.sockets.add(socket);
+      socket.once("close", () => {
+        this.sockets.delete(socket);
       });
     });
 
     this.port = { tag: "Port", thePort: 0 };
     this.listening = new Promise((resolve) => {
-      this.polyHttpServer.onceListening((address) => {
+      this.polyHttpServer.once("listening", () => {
+        const address = this.polyHttpServer.address() as AddressInfo;
         this.port.thePort = address.port;
         resolve();
       });
@@ -253,7 +180,7 @@ export class WebSocketServer {
     this.polyHttpServer.listen(
       // If `port` is 0, the operating system will assign an arbitrary unused port.
       portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
-      host
+      host.theHost
     );
   }
 
@@ -279,7 +206,18 @@ export class WebSocketServer {
     this.unsetDispatch();
     // This terminates all connections.
     this.webSocketServer.close();
-    await this.polyHttpServer.close();
+    for (const socket of this.sockets) {
+      socket.destroy();
+    }
+    await new Promise<void>((resolve, reject) => {
+      this.polyHttpServer.close((error: NodeJS.ErrnoException | undefined) => {
+        if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
     for (const webSocket of this.webSocketServer.clients) {
       webSocket.close();
     }

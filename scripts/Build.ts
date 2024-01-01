@@ -118,7 +118,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
       case "index.js": {
         const replaced = output.text
           .slice(
-            secondIndexOf(output.text, "//"),
+            output.text.indexOf("module.exports"),
             output.text.lastIndexOf("//")
           )
           .replace(toModuleRegex, "$1")
@@ -143,13 +143,6 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         throw new Error(`Unexpected output: ${output.path}`);
     }
   }
-}
-
-function secondIndexOf(string: string, substring: string): number {
-  const first = string.indexOf(substring);
-  return first === -1
-    ? -1
-    : string.indexOf(substring, first + substring.length);
 }
 
 export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {

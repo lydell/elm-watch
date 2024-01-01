@@ -47,7 +47,7 @@ import {
   NonEmptyArray,
 } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
-import { Port, PortChoice } from "./Port";
+import { PortChoice } from "./Port";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
 import {
@@ -63,6 +63,7 @@ import {
   AbsolutePath,
   BrowserUiPosition,
   CompilationMode,
+  CreateServer,
   ElmJsonPath,
   ElmWatchJsonPath,
   equalsInputPath,
@@ -388,6 +389,7 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
+  createServer: CreateServer,
   restartReasons: Array<LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
@@ -402,6 +404,7 @@ export async function run(
       env,
       logger,
       getNow,
+      createServer,
       postprocessWorkerPool,
       webSocketState,
       project,
@@ -475,6 +478,7 @@ const initMutable =
     env: Env,
     logger: Logger,
     getNow: GetNow,
+    createServer: CreateServer,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
     project: Project,
@@ -533,6 +537,7 @@ const initMutable =
 
     const {
       webSocketServer = new WebSocketServer(
+        createServer,
         portChoice,
         getHost(env),
         project.staticFilesDir
@@ -2919,7 +2924,7 @@ function printStats(
   const numWorkers = mutable.postprocessWorkerPool.getSize();
   return join(
     [
-      printServerLinks(mutable.webSocketServer.port, host),
+      printServerLinks(mutable.webSocketServer, host),
       `${dim("web socket connections:")} ${
         mutable.webSocketConnections.length
       }${
@@ -2941,11 +2946,14 @@ function printStats(
 }
 
 function printServerLinks(
-  { thePort: port }: Port,
+  webSocketServer: WebSocketServer,
   { theHost: host }: Host
 ): string {
+  const protocol = webSocketServer.isHTTPS ? "https" : "http";
+  const port = webSocketServer.port.thePort;
+
   if (host !== "0.0.0.0") {
-    return `${dim("server:")} http://${host}:${port}`;
+    return `${dim("server:")} ${protocol}://${host}:${port}`;
   }
 
   const networkIps = Object.values(os.networkInterfaces())
@@ -2956,8 +2964,8 @@ function printServerLinks(
     )
     .map(({ address }) => address);
 
-  return `${dim("server:")} http://localhost:${port}${join(
-    networkIps.map((ip) => `${dim(", network:")} http://${ip}:${port}`),
+  return `${dim("server:")} ${protocol}://localhost:${port}${join(
+    networkIps.map((ip) => `${dim(", network:")} ${protocol}://${ip}:${port}`),
     ""
   )}`;
 }

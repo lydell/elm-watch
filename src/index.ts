@@ -1,3 +1,5 @@
+import * as http from "http";
+
 import { Env } from "./Env";
 import * as Help from "./Help";
 import { ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
@@ -7,7 +9,7 @@ import { makeLogger } from "./Logger";
 import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { run } from "./Run";
-import { CliArg, Cwd, GetNow } from "./Types";
+import { CliArg, CreateServer, Cwd, GetNow } from "./Types";
 
 type Options = {
   cwd: string;
@@ -16,6 +18,7 @@ type Options = {
   stdout: WriteStream;
   stderr: WriteStream;
   logDebug: (message: string) => void;
+  createServer: CreateServer;
   hotKillManager?: HotKillManager;
 };
 
@@ -28,6 +31,7 @@ export async function elmWatchCli(
     stdout,
     stderr,
     logDebug,
+    createServer,
     hotKillManager = { kill: undefined },
   }: Options
 ): Promise<number> {
@@ -81,6 +85,7 @@ export async function elmWatchCli(
               env,
               logger,
               getNow,
+              createServer,
               runMode,
               restArgs,
               result === undefined ? [] : result.restartReasons,
@@ -116,6 +121,8 @@ if (require.main === module) {
     stdout: process.stdout,
     stderr: process.stderr,
     logDebug: (message) => process.stderr.write(`${message}\n`),
+    createServer: ({ onRequest, onUpgrade }) =>
+      http.createServer(onRequest).on("upgrade", onUpgrade),
   })
     .then((exitCode) => {
       // Let the process exit with this exit code when the event loop is empty.

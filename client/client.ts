@@ -3121,24 +3121,11 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
           {},
           h(HTMLElement, { localName: "strong" }, "Having trouble connecting?")
         ),
+        h(HTMLParagraphElement, {}, "Setting up HTTPS can be a bit tricky."),
         h(
           HTMLParagraphElement,
           {},
-          " You might need to ",
-          h(
-            HTMLAnchorElement,
-            {
-              href: new URL(
-                `https://${webSocketUrl.host}/elm-watch-https-accept`
-              ).href,
-            },
-            "accept elm-watch’s self-signed certificate"
-          ),
-          ". "
-        ),
-        h(
-          HTMLParagraphElement,
-          {},
+          "Read all about ",
           h(
             HTMLAnchorElement,
             {
@@ -3146,7 +3133,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
               target: "_blank",
               rel: "noreferrer",
             },
-            "More information"
+            "HTTPS with elm-watch"
           ),
           "."
         ),

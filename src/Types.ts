@@ -1,3 +1,10 @@
+import type {
+  createServer as createHttpServer,
+  IncomingMessage,
+  RequestListener,
+} from "http";
+import type { createServer as createHttpsServer } from "https";
+import type { Duplex } from "stream";
 import * as Decode from "tiny-decoders";
 
 export type AbsolutePath = ReturnType<typeof AbsolutePath>;
@@ -107,6 +114,17 @@ export type WriteOutputErrorReasonForWriting =
   | "Postprocess";
 
 export type GetNow = () => Date;
+
+export type CreateServer = (listeners: {
+  onRequest: RequestListener;
+  onUpgrade: (
+    req: InstanceType<typeof IncomingMessage>,
+    socket: Duplex,
+    head: Buffer
+  ) => void;
+}) =>
+  | ReturnType<typeof createHttpServer>
+  | ReturnType<typeof createHttpsServer>;
 
 export function equalsInputPath(
   elmFile: AbsolutePath,

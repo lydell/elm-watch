@@ -361,37 +361,6 @@ ${indexFsPath.theIndexFsPath.absolutePath}
   }
 }
 
-export function acceptHtml(
-  isHttps: boolean,
-  request: http.IncomingMessage
-): Html {
-  const { host, referer } = request.headers;
-  return baseHtml(
-    isHttps ? "✅" : "👉",
-    "Certificate",
-    isHttps
-      ? html`<p>
-          ✅ Certificate accepted. You may now
-          ${maybeLink(
-            referer !== undefined && new URL(referer).host !== host
-              ? referer
-              : undefined,
-            "return to your page"
-          )}.
-        </p>`
-      : html`<p>
-          👉 Did you mean to go to the
-          ${maybeLink(
-            host !== undefined && request.url !== undefined
-              ? `https://${host}${request.url}`
-              : undefined,
-            "HTTPS version of this page"
-          )}
-          to accept elm-watch’s self-signed certificate?
-        </p>`
-  );
-}
-
 export function staticFileNotEnabledHtml(): Html {
   return baseHtml(
     "ℹ️",
@@ -420,12 +389,6 @@ export function errorHtml(errorMessage: string): Html {
   } else {
     return baseHtml("🚨", errorMessage, html`<h1>${errorMessage}</h1>`);
   }
-}
-
-function maybeLink(href: string | undefined, text: string): Html {
-  return href === undefined
-    ? html`${text}`
-    : html`<a href="${href}">${text}</a>`;
 }
 
 export function respondHtml(
