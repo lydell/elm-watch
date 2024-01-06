@@ -30,8 +30,8 @@ const IS_WEB_WORKER = window.window === undefined;
 type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
-  JUST_CHANGED_CSS: boolean;
-  JUST_CHANGED_FILE_URL_PATHS: Set<string>;
+  CHANGED_CSS: Date;
+  CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
   RELOAD_STATUSES: Record<string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
@@ -124,9 +124,9 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
     // Do nothing.
   },
 
-  JUST_CHANGED_CSS: false,
+  CHANGED_CSS: new Date(0),
 
-  JUST_CHANGED_FILE_URL_PATHS: new Set(),
+  CHANGED_FILE_URL_PATHS: { timestamp: new Date(0), changed: new Set() },
 
   ORIGINAL_STYLES: new WeakMap(),
 
@@ -211,7 +211,7 @@ const ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT =
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
 const CLOSE_ALL_ERROR_OVERLAYS_EVENT = "CLOSE_ALL_ERROR_OVERLAYS_EVENT";
 
-const ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT = 10;
+const ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME = 10;
 
 // A compilation after moving the browser UI on a big app takes around 700 ms
 // for me. So more than double that should be plenty.
@@ -1595,48 +1595,59 @@ const runCmd =
         return;
 
       case "HandleStaticFilesChanged": {
+        const now = getNow();
         let shouldReloadCss = false;
         if (cmd.changedFileUrlPaths === "AnyFileMayHaveChanged") {
           shouldReloadCss = true;
         } else {
+          if (
+            now.getTime() -
+              __ELM_WATCH.CHANGED_FILE_URL_PATHS.timestamp.getTime() >
+            ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME
+          ) {
+            __ELM_WATCH.CHANGED_FILE_URL_PATHS = {
+              timestamp: now,
+              changed: new Set(),
+            };
+          }
+
           const justChangedFileUrlPaths = new Set<string>();
 
           for (const path of cmd.changedFileUrlPaths) {
             if (path.toLowerCase().endsWith(".css")) {
               shouldReloadCss = true;
-            } else if (!__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.has(path)) {
+            } else if (!__ELM_WATCH.CHANGED_FILE_URL_PATHS.changed.has(path)) {
               justChangedFileUrlPaths.add(path);
             }
           }
 
           // There might be several targets on the page, all receiving the same
           // changed file url paths. This fires the event only once per batch.
+          // (Every target most likely gets the same paths.)
           if (justChangedFileUrlPaths.size > 0) {
             for (const path of justChangedFileUrlPaths) {
-              __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.add(path);
+              __ELM_WATCH.CHANGED_FILE_URL_PATHS.changed.add(path);
             }
             window.dispatchEvent(
               new CustomEvent(ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT, {
                 detail: justChangedFileUrlPaths,
               })
             );
-            setTimeout(() => {
-              __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.clear();
-            }, ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT);
           }
         }
 
         // Same thing here: Every target does not need to reload CSS.
-        if (shouldReloadCss && !__ELM_WATCH.JUST_CHANGED_CSS) {
-          __ELM_WATCH.JUST_CHANGED_CSS = true;
+        if (
+          shouldReloadCss &&
+          now.getTime() - __ELM_WATCH.CHANGED_CSS.getTime() >
+            ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME
+        ) {
+          __ELM_WATCH.CHANGED_CSS = now;
           reloadAllCssIfNeeded()
             .then((didChange) => {
               dispatch({ tag: "ReloadAllCssDone", didChange });
             })
             .catch(rejectPromise);
-          setTimeout(() => {
-            __ELM_WATCH.JUST_CHANGED_CSS = false;
-          }, ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT);
         }
 
         return;
@@ -1990,6 +2001,7 @@ async function reloadCssIfNeeded(styleSheet: CSSStyleSheet): Promise<boolean> {
     return false;
   }
 
+  // TODO: Check again if this is needed for Safari
   url.searchParams.set("forceReload", Date.now().toString());
   const response = await fetch(url);
   if (!response.ok) {
