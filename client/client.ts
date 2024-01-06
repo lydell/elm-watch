@@ -1950,35 +1950,110 @@ function reloadPageIfNeeded(): void {
 
 async function reloadAllCssIfNeeded(): Promise<boolean> {
   const results = await Promise.allSettled(
-    Array.from(document.styleSheets).flatMap((styleSheet) => {
-      if (styleSheet.href === null) {
-        return [];
-      }
-      const url = new URL(styleSheet.href);
-      // We don’t check that the CSS file this style sheet points to actually
-      // has changed, due to `@import`: It might need reloading even if it
-      // hasn’t changed itself.
-      if (url.host !== window.location.host) {
-        return [];
-      }
-      url.searchParams.set("forceReload", Date.now().toString());
-      return fetch(url.href)
-        .then((response) => response.text())
-        .then((newCss) => updateStyleSheetIfNeeded(styleSheet, newCss))
-        .catch((error) => {
-          // eslint-disable-next-line no-console
-          console.error(
-            "elm-watch: Failed to fetch CSS for reloading:",
-            url.href,
-            error
-          );
-          return false;
-        });
-    })
+    Array.from(document.styleSheets, reloadCssIfNeeded)
   );
   return results.some(
     (result) => result.status === "fulfilled" && result.value
   );
+}
+
+async function reloadCssIfNeeded(styleSheet: CSSStyleSheet): Promise<boolean> {
+  if (styleSheet.href === null) {
+    return false;
+  }
+
+  const url = makeUrl(styleSheet.href);
+  if (url === undefined) {
+    return false;
+  }
+
+  const response = await fetch(url, { cache: "reload" });
+  if (!response.ok) {
+    return false;
+  }
+
+  const newCss = await response.text();
+  let newStyleSheet: CSSStyleSheet | undefined;
+
+  const isFirefox = "MozAppearance" in document.documentElement.style;
+  if (isFirefox) {
+    // We cannot support `@import` due to the below “restricted” bug,
+    // and it’s difficult to bust Firefox’s cache (`fetch(url, {cache:
+    // "reload"})`} does not help).
+    if (/@import\b/i.test(newCss)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "elm-watch: Reloading CSS with @import is not possible in Firefox (not even in a comment or string). Style sheet:",
+        url.href
+      );
+      return false;
+    }
+    // We can’t use `parseCssWithImports`, because Firefox has a bug where
+    // things in the style sheet become “restricted” if devtools are open.
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1873290
+    newStyleSheet = new CSSStyleSheet();
+    await newStyleSheet.replace(newCss);
+  } else {
+    const importUrls = getAllCssImports(url, styleSheet);
+    await Promise.allSettled(
+      importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" }))
+    );
+    newStyleSheet = await parseCssWithImports(newCss);
+  }
+
+  return newStyleSheet === undefined
+    ? false
+    : updateStyleSheetIfNeeded(styleSheet, newStyleSheet);
+}
+
+// Note: It might seem possible to parse using:
+// `const styleSheet = new CSSStyleSheet(); styleSheet.replaceSync(css);`
+// However, that does not support `@import`:
+// https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588362382
+// Also, at the time of writing, Safari did not support constructing
+// `CSSStyleSheet`.
+async function parseCssWithImports(
+  css: string
+): Promise<CSSStyleSheet | undefined> {
+  return new Promise((resolve) => {
+    const style = document.createElement("style");
+    style.media = "print";
+    style.textContent = css;
+    // The "load" event fires when all the CSS has been parsed, including
+    // `@import`s. Chrome and Safari make `style.sheet` available immediately,
+    // with `.styleSheet` on `@import` rules set to `null` until it loads,
+    // while Firefox does not make `style.sheet` available until the "load"
+    // event. Chrome always fires the "load" event, even if an `@import` fails,
+    // while Safari fires the "error" event instead.
+    style.onerror = style.onload = () => {
+      resolve(style.sheet ?? undefined);
+      style.remove();
+    };
+    document.head.append(style);
+  });
+}
+
+function makeUrl(urlString: string, base?: URL): URL | undefined {
+  try {
+    return new URL(urlString, base);
+  } catch {
+    return undefined;
+  }
+}
+
+function getAllCssImports(
+  styleSheetUrl: URL,
+  styleSheet: CSSStyleSheet
+): Array<URL> {
+  return Array.from(styleSheet.cssRules).flatMap((rule) => {
+    if (rule instanceof CSSImportRule) {
+      const url = makeUrl(rule.href, styleSheetUrl);
+      if (url !== undefined) {
+        return [url, ...getAllCssImports(url, rule.styleSheet)];
+      }
+    }
+    return [];
+  });
 }
 
 /**
@@ -1993,11 +2068,10 @@ async function reloadAllCssIfNeeded(): Promise<boolean> {
  * matter.
  */
 function updateStyleSheetIfNeeded(
-  oldStyleSheet: CSSStyleSheet,
-  newCss: string
+  oldStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">,
+  newStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">
 ): boolean {
   let changed = false;
-  const newStyleSheet = parseCss(newCss);
   const length = Math.min(
     oldStyleSheet.cssRules.length,
     newStyleSheet.cssRules.length
@@ -2007,7 +2081,58 @@ function updateStyleSheetIfNeeded(
   for (; index < length; index++) {
     const oldRule = oldStyleSheet.cssRules[index]!;
     const newRule = newStyleSheet.cssRules[index]!;
-    if (oldRule.cssText !== newRule.cssText) {
+    if (oldRule instanceof CSSStyleRule && newRule instanceof CSSStyleRule) {
+      if (oldRule.selectorText !== newRule.selectorText) {
+        oldRule.selectorText = newRule.selectorText;
+        changed = true;
+      }
+      const styleChanged = updateStyleIfNeeded(oldRule.style, newRule.style);
+      if (styleChanged) {
+        changed = true;
+      }
+      // @ts-expect-error TypeScript does not know that `CSSStyleRule extends CSSGroupingRule` yet.
+      const nestedChanged = updateStyleSheetIfNeeded(oldRule, newRule);
+      if (nestedChanged) {
+        changed = true;
+      }
+    } else if (
+      oldRule instanceof CSSImportRule &&
+      newRule instanceof CSSImportRule &&
+      oldRule.cssText === newRule.cssText
+    ) {
+      const nestedChanged = updateStyleSheetIfNeeded(
+        oldRule.styleSheet,
+        newRule.styleSheet
+      );
+      if (nestedChanged) {
+        changed = true;
+        // Workaround for Chrome: Only the first update to the imported style
+        // sheet is reflected otherwise.
+        // @ts-expect-error TypeScript says `.media` is readonly, but it’s fine
+        // to set it.
+        oldRule.media = oldRule.media;
+      }
+    } else if (
+      // @media, @supports and @container:
+      (oldRule instanceof CSSConditionRule &&
+        newRule instanceof CSSConditionRule &&
+        oldRule.conditionText === newRule.conditionText) ||
+      // @layer:
+      (oldRule instanceof CSSLayerBlockRule &&
+        newRule instanceof CSSLayerBlockRule &&
+        oldRule.name === newRule.name) ||
+      // @page:
+      (oldRule instanceof CSSPageRule &&
+        newRule instanceof CSSPageRule &&
+        oldRule.selectorText === newRule.selectorText)
+    ) {
+      // @ ts-expect-error TypeScript does not know that `CSSStyleRule extends CSSGroupingRule` yet.
+      const nestedChanged = updateStyleSheetIfNeeded(oldRule, newRule);
+      if (nestedChanged) {
+        changed = true;
+      }
+      // The fallback below works for any rule, but is more destructive.
+    } else if (oldRule.cssText !== newRule.cssText) {
       oldStyleSheet.deleteRule(index);
       oldStyleSheet.insertRule(newRule.cssText, index);
       changed = true;
@@ -2026,23 +2151,42 @@ function updateStyleSheetIfNeeded(
   return changed;
 }
 
-function parseCss(css: string): CSSStyleSheet {
-  try {
-    const styleSheet = new CSSStyleSheet();
-    styleSheet.replaceSync(css);
-    return styleSheet;
-  } catch {
-    // Safari does not support constructing `CSSStyleSheet`.
-    const style = document.createElement("style");
-    style.textContent = css;
-    document.head.appendChild(style);
-    const { sheet } = style;
-    document.head.removeChild(style);
-    if (sheet === null) {
-      throw new Error("style.sheet is null");
+function updateStyleIfNeeded(
+  oldStyle: CSSStyleDeclaration,
+  newStyle: CSSStyleDeclaration
+): boolean {
+  let changed = false;
+  const oldProperties = new Set(oldStyle);
+  const newProperties = new Set(newStyle);
+  for (const property of oldProperties) {
+    if (!newProperties.has(property)) {
+      oldStyle.removeProperty(property);
+      changed = true;
+    } else if (
+      oldStyle.getPropertyValue(property) !==
+        newStyle.getPropertyValue(property) ||
+      oldStyle.getPropertyPriority(property) !==
+        newStyle.getPropertyPriority(property)
+    ) {
+      oldStyle.setProperty(
+        property,
+        newStyle.getPropertyValue(property),
+        newStyle.getPropertyPriority(property)
+      );
+      changed = true;
     }
-    return sheet;
   }
+  for (const property of newProperties) {
+    if (!oldProperties.has(property)) {
+      oldStyle.setProperty(
+        property,
+        newStyle.getPropertyValue(property),
+        newStyle.getPropertyPriority(property)
+      );
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 function h<T extends HTMLElement>(
