@@ -2001,9 +2001,7 @@ async function reloadCssIfNeeded(styleSheet: CSSStyleSheet): Promise<boolean> {
     return false;
   }
 
-  // TODO: Check again if this is needed for Safari
-  url.searchParams.set("forceReload", Date.now().toString());
-  const response = await fetch(url);
+  const response = await fetch(url, { cache: "reload" });
   if (!response.ok) {
     return false;
   }
