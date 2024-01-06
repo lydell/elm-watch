@@ -101,79 +101,87 @@ type ReloadStatus =
       reasons: Array<string>;
     };
 
+const RELOAD_MESSAGE_KEY = "__elmWatchReloadMessage";
+const RELOAD_TARGET_NAME_KEY_PREFIX = "__elmWatchReloadTarget__";
+
+const DEFAULT_ELM_WATCH: __ELM_WATCH = {
+  MOCKED_TIMINGS: false,
+
+  // In a browser on the same computer, sending a message and receiving a reply
+  // takes around 2-4 ms. In iOS Safari via Wi-Fi, I’ve seen it take up to 120 ms.
+  // So 1 second should be plenty above the threshold, while not taking too long.
+  WEBSOCKET_TIMEOUT: 1000,
+
+  ON_INIT: () => {
+    // Do nothing.
+  },
+
+  ON_RENDER: () => {
+    // Do nothing.
+  },
+
+  ON_REACHED_IDLE_STATE: () => {
+    // Do nothing.
+  },
+
+  JUST_CHANGED_CSS: false,
+
+  JUST_CHANGED_FILE_URL_PATHS: new Set(),
+
+  ORIGINAL_STYLES: new WeakMap(),
+
+  RELOAD_STATUSES: {},
+
+  RELOAD_PAGE: (message) => {
+    if (message !== undefined) {
+      try {
+        window.sessionStorage.setItem(RELOAD_MESSAGE_KEY, message);
+      } catch {
+        // Ignore failing to write to sessionStorage.
+      }
+    }
+    if (IS_WEB_WORKER) {
+      if (message !== undefined) {
+        // eslint-disable-next-line no-console
+        console.info(message);
+      }
+      // eslint-disable-next-line no-console
+      console.error(
+        message === undefined
+          ? "elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I can’t do it for you."
+          : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`
+      );
+    } else {
+      window.location.reload();
+    }
+  },
+
+  KILL_MATCHING: (): Promise<void> => Promise.resolve(),
+
+  DISCONNECT: (): void => {
+    // Do nothing.
+  },
+
+  LOG_DEBUG:
+    // eslint-disable-next-line no-console
+    console.debug,
+};
+
 let { __ELM_WATCH } = window;
 
 if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
-  // Each property is defined later below.
+  // Each property is added later below.
   __ELM_WATCH = {} as unknown as __ELM_WATCH;
   // Using `Object.defineProperty` makes `__ELM_WATCH` not appear when
   // you type just `window.` in the Chrome browser console.
   Object.defineProperty(window, "__ELM_WATCH", { value: __ELM_WATCH });
 }
 
-__ELM_WATCH.MOCKED_TIMINGS ??= false;
-
-// In a browser on the same computer, sending a message and receiving a reply
-// takes around 2-4 ms. In iOS Safari via Wi-Fi, I’ve seen it take up to 120 ms.
-// So 1 second should be plenty above the threshold, while not taking too long.
-__ELM_WATCH.WEBSOCKET_TIMEOUT ??= 1000;
-
-__ELM_WATCH.ON_INIT ??= () => {
-  // Do nothing.
-};
-
-__ELM_WATCH.ON_RENDER ??= () => {
-  // Do nothing.
-};
-
-__ELM_WATCH.ON_REACHED_IDLE_STATE ??= () => {
-  // Do nothing.
-};
-
-__ELM_WATCH.JUST_CHANGED_CSS ??= false;
-
-__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS ??= new Set();
-
-__ELM_WATCH.ORIGINAL_STYLES ??= new WeakMap();
-
-__ELM_WATCH.RELOAD_STATUSES ??= {};
-
-const RELOAD_MESSAGE_KEY = "__elmWatchReloadMessage";
-const RELOAD_TARGET_NAME_KEY_PREFIX = "__elmWatchReloadTarget__";
-
-__ELM_WATCH.RELOAD_PAGE ??= (message) => {
-  if (message !== undefined) {
-    try {
-      window.sessionStorage.setItem(RELOAD_MESSAGE_KEY, message);
-    } catch {
-      // Ignore failing to write to sessionStorage.
-    }
+for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
+  if (__ELM_WATCH[key as keyof __ELM_WATCH] === undefined) {
+    (__ELM_WATCH as Record<string, unknown>)[key] = value;
   }
-  if (IS_WEB_WORKER) {
-    if (message !== undefined) {
-      // eslint-disable-next-line no-console
-      console.info(message);
-    }
-    // eslint-disable-next-line no-console
-    console.error(
-      message === undefined
-        ? "elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I can’t do it for you."
-        : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`
-    );
-  } else {
-    window.location.reload();
-  }
-};
-
-__ELM_WATCH.KILL_MATCHING ??= (): Promise<void> => Promise.resolve();
-
-__ELM_WATCH.DISCONNECT ??= (): void => {
-  // Do nothing.
-};
-
-__ELM_WATCH.LOG_DEBUG ??=
-  // eslint-disable-next-line no-console
-  console.debug;
+}
 
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
