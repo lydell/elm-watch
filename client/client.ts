@@ -1997,7 +1997,7 @@ async function reloadCssIfNeeded(styleSheet: CSSStyleSheet): Promise<boolean> {
   }
 
   const url = makeUrl(styleSheet.href);
-  if (url === undefined) {
+  if (url === undefined || url.host !== window.location.host) {
     return false;
   }
 
@@ -2082,7 +2082,7 @@ function getAllCssImports(
   return Array.from(styleSheet.cssRules).flatMap((rule) => {
     if (rule instanceof CSSImportRule) {
       const url = makeUrl(rule.href, styleSheetUrl);
-      if (url !== undefined) {
+      if (url !== undefined && url.host === styleSheetUrl.host) {
         return [url, ...getAllCssImports(url, rule.styleSheet)];
       }
     }
