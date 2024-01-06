@@ -2178,7 +2178,6 @@ function updateStyleSheetIfNeeded(
         newRule instanceof CSSPageRule &&
         oldRule.selectorText === newRule.selectorText)
     ) {
-      // @ ts-expect-error TypeScript does not know that `CSSStyleRule extends CSSGroupingRule` yet.
       const nestedChanged = updateStyleSheetIfNeeded(oldRule, newRule);
       if (nestedChanged) {
         changed = true;
