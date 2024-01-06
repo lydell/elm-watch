@@ -31,7 +31,7 @@ type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
   JUST_CHANGED_FILE_URL_PATHS: Set<string>;
-  ORIGINAL_STYLES: WeakMap<CSSStyleRule, Map<string, PropertyValueAndPriority>>;
+  ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
   RELOAD_STATUSES: Record<string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
   ON_INIT: () => void;
@@ -2093,24 +2093,30 @@ function updateStyleSheetIfNeeded(
       }
       let originals = __ELM_WATCH.ORIGINAL_STYLES.get(oldRule);
       if (originals === undefined) {
-        originals = extractProperties(oldRule.style);
+        originals = oldRule.style.cssText;
         __ELM_WATCH.ORIGINAL_STYLES.set(oldRule, originals);
       }
-      const styleChanged = updateStyleIfNeeded(
-        originals,
-        oldRule.style,
-        newRule.style
-      );
-      if (styleChanged) {
+      // We compare the original CSS, not the current CSS, because the current
+      // CSS might have been changed by the user in the devtools.
+      if (originals !== newRule.style.cssText) {
+        oldStyleSheet.deleteRule(index);
+        oldStyleSheet.insertRule(newRule.cssText, index);
+        __ELM_WATCH.ORIGINAL_STYLES.set(
+          oldStyleSheet.cssRules[index] as CSSStyleRule,
+          newRule.style.cssText
+        );
         changed = true;
-      }
-      const nestedChanged = updateStyleSheetIfNeeded(
-        // @ts-expect-error TypeScript does not know that `CSSStyleRule extends CSSGroupingRule` yet.
-        oldRule,
-        newRule
-      );
-      if (nestedChanged) {
-        changed = true;
+      } else {
+        const nestedChanged = updateStyleSheetIfNeeded(
+          // @ts-expect-error TypeScript does not know that `CSSStyleRule extends CSSGroupingRule` yet.
+          oldRule,
+          newRule
+        );
+        if (nestedChanged) {
+          changed = true;
+          // Workaround for Chrome: Nested rules are not updated otherwise.
+          oldRule.selectorText = oldRule.selectorText;
+        }
       }
     } else if (
       oldRule instanceof CSSImportRule &&
@@ -2166,80 +2172,6 @@ function updateStyleSheetIfNeeded(
   }
   /* eslint-enable @typescript-eslint/no-non-null-assertion */
   return changed;
-}
-
-function updateStyleIfNeeded(
-  originals: Map<string, PropertyValueAndPriority>,
-  oldStyle: CSSStyleDeclaration,
-  newStyle: CSSStyleDeclaration
-): boolean {
-  let changed = false;
-  const oldProperties = new Set(oldStyle);
-  const newProperties = new Set(newStyle);
-  for (const property of oldProperties) {
-    const oldValue =
-      originals.get(property) ??
-      getPropertyValueAndPriority(oldStyle, property);
-    const newValue = getPropertyValueAndPriority(newStyle, property);
-    if (!newProperties.has(property)) {
-      if (originals.has(property)) {
-        console.log("remove", property);
-        oldStyle.removeProperty(property);
-        originals.delete(property);
-        changed = true;
-      }
-    } else if (
-      oldValue.value !== newValue.value ||
-      oldValue.priority !== newValue.priority
-    ) {
-      console.log("change", property, oldValue.value, "->", newValue.value);
-      oldStyle.setProperty(property, newValue.value, newValue.priority);
-      originals.set(property, newValue);
-      changed = true;
-    }
-  }
-  for (const property of newProperties) {
-    if (!oldProperties.has(property)) {
-      const original = originals.get(property);
-      const newValue = getPropertyValueAndPriority(newStyle, property);
-      if (
-        original === undefined ||
-        original.value !== newValue.value ||
-        original.priority !== newValue.priority
-      ) {
-        console.log("add", property, newValue.value);
-        oldStyle.setProperty(property, newValue.value, newValue.priority);
-        originals.set(property, newValue);
-        changed = true;
-      }
-    }
-  }
-  return changed;
-}
-
-type PropertyValueAndPriority = {
-  value: string;
-  priority: string;
-};
-
-function getPropertyValueAndPriority(
-  style: CSSStyleDeclaration,
-  property: string
-): PropertyValueAndPriority {
-  return {
-    value: style.getPropertyValue(property),
-    priority: style.getPropertyPriority(property),
-  };
-}
-
-function extractProperties(
-  style: CSSStyleDeclaration
-): Map<string, PropertyValueAndPriority> {
-  const properties = new Map<string, PropertyValueAndPriority>();
-  for (const property of style) {
-    properties.set(property, getPropertyValueAndPriority(style, property));
-  }
-  return properties;
 }
 
 function h<T extends HTMLElement>(
