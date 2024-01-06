@@ -1971,7 +1971,8 @@ async function reloadCssIfNeeded(styleSheet: CSSStyleSheet): Promise<boolean> {
     return false;
   }
 
-  const response = await fetch(url, { cache: "reload" });
+  url.searchParams.set("forceReload", Date.now().toString());
+  const response = await fetch(url);
   if (!response.ok) {
     return false;
   }
@@ -2176,35 +2177,41 @@ function updateStyleIfNeeded(
   const oldProperties = new Set(oldStyle);
   const newProperties = new Set(newStyle);
   for (const property of oldProperties) {
-    const original = originals.get(property);
-    const oldValue = getPropertyValueAndPriority(oldStyle, property);
+    const oldValue =
+      originals.get(property) ??
+      getPropertyValueAndPriority(oldStyle, property);
     const newValue = getPropertyValueAndPriority(newStyle, property);
-    if (
-      original === undefined ||
-      original.value !== oldValue.value ||
-      original.priority !== oldValue.priority
-    ) {
-      continue;
-    }
     if (!newProperties.has(property)) {
-      oldStyle.removeProperty(property);
-      originals.delete(property);
-      changed = true;
+      if (originals.has(property)) {
+        console.log("remove", property);
+        oldStyle.removeProperty(property);
+        originals.delete(property);
+        changed = true;
+      }
     } else if (
       oldValue.value !== newValue.value ||
       oldValue.priority !== newValue.priority
     ) {
+      console.log("change", property, oldValue.value, "->", newValue.value);
       oldStyle.setProperty(property, newValue.value, newValue.priority);
       originals.set(property, newValue);
       changed = true;
     }
   }
   for (const property of newProperties) {
-    if (!oldProperties.has(property) && !originals.has(property)) {
+    if (!oldProperties.has(property)) {
+      const original = originals.get(property);
       const newValue = getPropertyValueAndPriority(newStyle, property);
-      oldStyle.setProperty(property, newValue.value, newValue.priority);
-      originals.set(property, newValue);
-      changed = true;
+      if (
+        original === undefined ||
+        original.value !== newValue.value ||
+        original.priority !== newValue.priority
+      ) {
+        console.log("add", property, newValue.value);
+        oldStyle.setProperty(property, newValue.value, newValue.priority);
+        originals.set(property, newValue);
+        changed = true;
+      }
     }
   }
   return changed;
