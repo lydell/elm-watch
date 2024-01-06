@@ -30,6 +30,7 @@ const IS_WEB_WORKER = window.window === undefined;
 type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
+  JUST_CHANGED_CSS: boolean;
   JUST_CHANGED_FILE_URL_PATHS: Set<string>;
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
   RELOAD_STATUSES: Record<string, ReloadStatus>;
@@ -129,6 +130,8 @@ __ELM_WATCH.ON_REACHED_IDLE_STATE ??= () => {
   // Do nothing.
 };
 
+__ELM_WATCH.JUST_CHANGED_CSS ??= false;
+
 __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS ??= new Set();
 
 __ELM_WATCH.ORIGINAL_STYLES ??= new WeakMap();
@@ -196,10 +199,11 @@ const DEBUG = String("%DEBUG%") === "true";
 // Public events:
 const ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT =
   "elm-watch:changed-file-url-paths";
-const ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT_MS = 10;
 // Internal events:
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
 const CLOSE_ALL_ERROR_OVERLAYS_EVENT = "CLOSE_ALL_ERROR_OVERLAYS_EVENT";
+
+const ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT = 10;
 
 // A compilation after moving the browser UI on a big app takes around 700 ms
 // for me. So more than double that should be plenty.
@@ -1587,37 +1591,44 @@ const runCmd =
         if (cmd.changedFileUrlPaths === "AnyFileMayHaveChanged") {
           shouldReloadCss = true;
         } else {
-          const wasEmpty = __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.size === 0;
+          const justChangedFileUrlPaths = new Set<string>();
 
           for (const path of cmd.changedFileUrlPaths) {
             if (path.toLowerCase().endsWith(".css")) {
               shouldReloadCss = true;
-            } else {
-              __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.add(path);
+            } else if (!__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.has(path)) {
+              justChangedFileUrlPaths.add(path);
             }
           }
 
           // There might be several targets on the page, all receiving the same
           // changed file url paths. This fires the event only once per batch.
-          if (wasEmpty && __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.size > 0) {
+          if (justChangedFileUrlPaths.size > 0) {
+            for (const path of justChangedFileUrlPaths) {
+              __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.add(path);
+            }
+            window.dispatchEvent(
+              new CustomEvent(ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT, {
+                detail: justChangedFileUrlPaths,
+              })
+            );
             setTimeout(() => {
-              window.dispatchEvent(
-                new CustomEvent(ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT, {
-                  detail: new Set(__ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS),
-                })
-              );
               __ELM_WATCH.JUST_CHANGED_FILE_URL_PATHS.clear();
-            }, ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT_MS);
+            }, ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT);
           }
         }
 
-        // TODO: If several targets on the page, it’s wasteful to reload all CSS in each target.
-        if (shouldReloadCss) {
+        // Same thing here: Every target does not need to reload CSS.
+        if (shouldReloadCss && !__ELM_WATCH.JUST_CHANGED_CSS) {
+          __ELM_WATCH.JUST_CHANGED_CSS = true;
           reloadAllCssIfNeeded()
             .then((didChange) => {
               dispatch({ tag: "ReloadAllCssDone", didChange });
             })
             .catch(rejectPromise);
+          setTimeout(() => {
+            __ELM_WATCH.JUST_CHANGED_CSS = false;
+          }, ELM_WATCH_CHANGED_FILE_URL_PATHS_TIMEOUT);
         }
 
         return;
