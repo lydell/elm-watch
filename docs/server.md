@@ -170,3 +170,9 @@ window.addEventListener("elm-watch:changed-file-url-paths", () => {
 If you have multiple applications you might want to inspect the `event.detail` set of url paths to changed files and only reload the page if something related to the current application has changed.
 
 Why doesn’t elm-watch do that by default? elm-watch only reloads when it can be near perfect, so that you can rely on it always working.
+
+- Elm files can reloaded near perfectly, as described in [Hot reloading](../hot-reloading/).
+- CSS is stateless and somewhat easy to reload.
+- Images _sound_ like they can be hot reloaded if they change, but it’s very difficult to reload images set by CSS `background-image`, so elm-watch does not reload any images. In practice images don’t change that much during development anyway.
+- JS is full of state and can’t be hot reloaded in general. It’s possible to instead reload the page. However, due to `import` and other JS loading techniques it’s difficult to know which JS files should reload which pages. Therefore elm-watch does not reload the page by default, but you can do it yourself as mentioned above, given the constraints of your given project.
+- HTML could also be refreshed by reloading the page, but I figured it would be easier to remember how hot reloading works if elm-watch never reloads the page (except a few cases for reloading Elm that make a lot of sense).
