@@ -62,12 +62,10 @@ async function runAbsolute(
     cwd: dir,
     env: {
       ...(exitHotOnError ? { [__ELM_WATCH_EXIT_ON_ERROR]: "" } : {}),
-      ...(env === undefined
-        ? {
-            ...process.env,
-            ...TEST_ENV,
-          }
-        : env),
+      ...(env ?? {
+        ...process.env,
+        ...TEST_ENV,
+      }),
     },
     stdin: new SilentReadStream(),
     stdout,
@@ -186,7 +184,7 @@ describe("errors", () => {
 
       ⧙I had trouble reading it as JSON:⧘
 
-      Unexpected end of JSON input
+      (JSON syntax error)
     `);
   });
 
@@ -1004,7 +1002,7 @@ describe("errors", () => {
 
         ⧙I had trouble reading it as JSON:⧘
 
-        Unexpected end of JSON input
+        (JSON syntax error)
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
@@ -1324,7 +1322,7 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
-        Unexpected end of JSON input
+        (JSON syntax error)
 
         I wrote that to this file so you can inspect it:
 
@@ -1346,7 +1344,7 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
-        Unexpected end of JSON input
+        (JSON syntax error)
 
         I wrote this error to a file so you can inspect and possibly report it more easily.
 
@@ -1429,7 +1427,7 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
-        Unexpected token { in JSON at position 1
+        (JSON syntax error)
 
         I tried to write that to this file:
 
@@ -2654,7 +2652,7 @@ describe("errors", () => {
         [null, "error"]
 
         STDOUT:
-        My debug message 1337
+        My debug message
 
         STDERR:
 
@@ -2922,7 +2920,7 @@ describe("errors", () => {
 
         ⧙I had trouble reading it as JSON:⧘
 
-        Unexpected end of JSON input
+        (JSON syntax error)
 
         This file is created by elm-watch, so reading it should never fail really.
         You could try removing that file (it contains nothing essential).

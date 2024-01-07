@@ -2899,7 +2899,7 @@ function infoMessageWithTimeline({
         dateHighlight: bold,
         message,
       }),
-    ].flatMap((part) => (part === undefined ? [] : part)),
+    ].flatMap((part) => part ?? []),
     "\n"
   );
 }

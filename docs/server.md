@@ -30,8 +30,8 @@ The file server is completely optional. It only serves files. So if you serve yo
 ## What does the simple static file server do?
 
 - Serves files in a directory.
-- Serves the closest [index.html](#indexhtml) file can the URL does not point to any file, for `Browser.application` programs.
-- Hot reloads CSS – when `.css` files in the static files directory that is served changes, elm-watch reloads them in the browser.
+- Serves the closest [index.html](#indexhtml) file if the URL does not point to any file, for `Browser.application` programs.
+- Hot reloads CSS – when `.css` files in the static files directory that is served change, elm-watch reloads them in the browser.
 
 ## Why?
 
@@ -48,7 +48,7 @@ The file server is completely optional. It only serves files. So if you serve yo
 Here are some more advanced dev server needs, that elm-watch simple HTTP server doesn’t do out of the box, but that you can set up yourself:
 
 - Routing.
-- Proxying API requests.
+- Proxying API requests. TODO: Create example.
 - HTML templating.
 - On-the-fly compilation of CSS and TypeScript.
 - HTTPS.
@@ -74,7 +74,7 @@ Those two things are closely related!
 
 There’s an old convention in static file servers that when the URL points to a _directory,_ the server looks for an `index.html` file in that directory and serves that.
 
-_Single page applications_ (which `Browser.applications` programs are) brings another convention: Serving the same HTML files for basically all URLs, letting the frontend app handle the URL.
+_Single page applications_ (which `Browser.application` programs are) brings another convention: Serving the same HTML files for basically all URLs, letting the frontend app handle the URL.
 
 elm-watch’s static file server combines both conventions: Whenever no file can be found for a URL, elm-watch looks for the closest `index.html` and serves it.
 
@@ -94,9 +94,9 @@ Here are some URLs and what is served:
 | URL | File | Comment |
 | --- | --- | --- |
 | `/` | `public/index.html` | Directory, use `index.html` |
-| `/blog/2023/elm-tips` | `public/index.html` | Not such file, use closest `index.html` |
+| `/blog/2023/elm-tips` | `public/index.html` | No such file, use closest `index.html` |
 | `/admin` | `public/admin/index.html` | Directory, use `index.html` |
-| `/admin/blog/2023/elm-tips` | `public/admin/index.html` | Not such file, use closest `index.html` (`admin/index.html` is closer this time) |
+| `/admin/blog/2023/elm-tips` | `public/admin/index.html` | No such file, use closest `index.html` (`admin/index.html` is closer this time) |
 | `/main.js` | `public/main.js` | File exists, serve it |
 | `/admin/admin.js` | `public/admin/admin.js` | File exists, serve it |
 | `/mani.js` (typo) | `public/index.html` | (!) No such file, serve closest `index.html` |
@@ -133,13 +133,13 @@ Note that `index.html` files must be called exactly `index.html`. Not `index.htm
 
 What would happen if you named `public/admin/index.html` just `public/admin.html` instead? There’s nothing stopping you from doing it. You would need to go to `/admin.html` to access it. Which would probably render a 404-style page in your `Browser.application` program, since you most likely have no route matching `/admin.html`. And if the `Browser.application` program ever changes the URL, refreshing the page won’t work. So stick to `index.html` files for `Browser.application` programs. Then you get the right page when you Elm app starts, and refreshing the page works.
 
-I recommend always creating a `index.html` directly in your static files directory. elm-watch prints a link to the static file server on start up, and if you have a root `index.html` file, that link will take you somewhere useful from the get go.
+I recommend always creating an `index.html` directly in your static files directory. elm-watch prints a link to the static file server on start up, and if you have a root `index.html` file, that link will take you somewhere useful from the get go.
 
 ## Browser.application
 
-`Browser.application` programs can change the URL and has some things to note:
+`Browser.application` programs can change the URL and have some things to note:
 
-- It _requires_ an HTTP server. (The `file://` protocol is not supported by `Browser.application`, so you can’t just double-click the HTML file to open it in a browser. That’s why getting a simple static server from elm-watch is very convenient.)
+- They _require_ an HTTP server. (The `file://` protocol is not supported by `Browser.application`, so you can’t just double-click the HTML file to open it in a browser. That’s why getting a simple static server from elm-watch is very convenient.)
 - The HTTP server you use needs to be smart to handle page reloads. That’s why elm-watch has its [index.html](#indexhtml) conventions.
 
 **Note:** elm-watch’s server is _not_ for production use. If you want to deploy your app somewhere, use any file server of choice. Make sure to set it up to handle serving your HTML file so that reloading the page works.
