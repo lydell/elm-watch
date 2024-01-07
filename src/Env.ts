@@ -18,6 +18,12 @@ export const ELM_WATCH_EXIT_ON_STDIN_END = "ELM_WATCH_EXIT_ON_STDIN_END";
 // Type: IP address.
 export const ELM_WATCH_HOST = "ELM_WATCH_HOST";
 
+// This lets you override "webSocketUrl" in elm-watch.json, for cases where you
+// need to set it dynamically. For example, you might want to set a certain port
+// but keep the host name dynamic (if you run a remote dev container).
+// Type: URL starting with ws: or wss:.
+export const ELM_WATCH_WEBSOCKET_URL = "ELM_WATCH_WEBSOCKET_URL";
+
 // If the `ELM_WATCH_OPEN_EDITOR` takes this long, it is killed.
 // Type: Number.
 export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS =

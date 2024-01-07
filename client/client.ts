@@ -201,7 +201,7 @@ const ORIGINAL_COMPILATION_MODE =
 // as things change.
 const ORIGINAL_BROWSER_UI_POSITION =
   "%ORIGINAL_BROWSER_UI_POSITION%" as BrowserUiPosition;
-const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
+const WEBSOCKET_CONNECTION = "%WEBSOCKET_CONNECTION%";
 const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
@@ -1000,7 +1000,11 @@ function initWebSocket(
   const hostname =
     window.location.hostname === "" ? "localhost" : window.location.hostname;
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/elm-watch`);
+  const url = new URL(
+    /^\d+$/.test(WEBSOCKET_CONNECTION)
+      ? `${protocol}://${hostname}:${WEBSOCKET_CONNECTION}/elm-watch`
+      : WEBSOCKET_CONNECTION
+  );
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
@@ -3048,7 +3052,7 @@ function printWebSocketUrl(url: URL): string {
   const hostname = url.hostname.endsWith(".localhost")
     ? "localhost"
     : url.hostname;
-  return `${url.protocol}//${hostname}:${url.port}`;
+  return `${url.protocol}//${hostname}:${url.port}${url.pathname}`;
 }
 
 function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {

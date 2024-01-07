@@ -4,7 +4,7 @@ import * as path from "path";
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
-import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
+import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_WEBSOCKET_URL, Env } from "./Env";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
@@ -34,6 +34,7 @@ import type {
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
 } from "./Types";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 export type Project = {
   // Path of the directories containing elm-watch.json, all elm.json, all source
@@ -51,6 +52,7 @@ export type Project = {
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   maxParallel: number;
   postprocess: Postprocess;
+  webSocketUrl: WebSocketUrl | undefined;
 };
 
 // The code base leans towards pure functions, but this data structure is going
@@ -495,6 +497,16 @@ export function initProject({
       ? { tag: "NoPostprocess" }
       : { tag: "Postprocess", postprocessArray: config.postprocess };
 
+  let { webSocketUrl } = config;
+  const envWebSocketUrlString = env[ELM_WATCH_WEBSOCKET_URL];
+  if (envWebSocketUrlString !== undefined) {
+    try {
+      webSocketUrl = WebSocketUrl("Env")(envWebSocketUrlString);
+    } catch {
+      // Invalid environment variables are silently ignored.
+    }
+  }
+
   return {
     tag: "Project",
     project: {
@@ -507,6 +519,7 @@ export function initProject({
       elmJsons,
       maxParallel,
       postprocess,
+      webSocketUrl,
     },
   };
 }

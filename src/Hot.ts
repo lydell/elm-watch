@@ -71,6 +71,7 @@ import {
   OutputPath,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 type WatcherEventName = "added" | "changed" | "removed";
 
@@ -1096,7 +1097,10 @@ function update(
                   tag: "StatusChanged",
                   status: {
                     tag: "ClientError",
-                    message: webSocketConnectRequestUrlErrorToString(result),
+                    message: webSocketConnectRequestUrlErrorToString(
+                      project.webSocketUrl,
+                      result
+                    ),
                   },
                 },
               },
@@ -1519,7 +1523,10 @@ const runCmd =
               getNow,
               runMode: {
                 tag: "hot",
-                webSocketPort: mutable.webSocketServer.port,
+                webSocketConnection: mutable.project.webSocketUrl ?? {
+                  tag: "AutomaticUrl",
+                  port: mutable.webSocketServer.port,
+                },
               },
               elmWatchJsonPath: mutable.project.elmWatchJsonPath,
               total: outputActions.total,
@@ -2415,14 +2422,20 @@ function webSocketConnectRequestUrlResultToOutputPath(
 }
 
 function webSocketConnectRequestUrlErrorToString(
+  webSocketUrl: WebSocketUrl | undefined,
   error: ParseWebSocketConnectRequestUrlError
 ): string {
   switch (error.tag) {
     case "BadUrl":
-      return Errors.webSocketBadUrl(error.expectedStart, error.actualUrlString);
+      return Errors.webSocketBadUrl(
+        webSocketUrl,
+        error.expectedStart,
+        error.actualUrlString
+      );
 
     case "ParamsDecodeError":
       return Errors.webSocketParamsDecodeError(
+        webSocketUrl,
         error.error,
         error.actualUrlString
       );

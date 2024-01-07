@@ -7,7 +7,12 @@ import * as url from "url";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
-import { ELM_WATCH_HOST, ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
+import {
+  ELM_WATCH_HOST,
+  ELM_WATCH_OPEN_EDITOR,
+  ELM_WATCH_WEBSOCKET_URL,
+  Env,
+} from "./Env";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
@@ -48,6 +53,7 @@ import {
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
 } from "./Types";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 function bold(string: string): Piece {
   return { tag: "Bold", text: string };
@@ -1329,11 +1335,12 @@ ${text(error.message)}
 }
 
 export function webSocketBadUrl(
+  webSocketUrl: WebSocketUrl | undefined,
   expectedStart: string,
   actualUrlString: string
 ): string {
   return `
-I expected the web socket connection URL to start with:
+I expected the web socket connection URL path to start with:
 
 ${expectedStart}
 
@@ -1341,11 +1348,36 @@ But it looks like this:
 
 ${actualUrlString}
 
-The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
+${
+  webSocketUrl === undefined
+    ? "The web socket code I generate is supposed to always connect using a correct URL, so something is up here."
+    : webSocketUrlDescription(webSocketUrl)
+}
   `.trim();
 }
 
+function webSocketUrlDescription(webSocketUrl: WebSocketUrl): string {
+  const description = webSocketUrlSourceDescription(webSocketUrl.source);
+  return `
+You have configured the web socket URL ${description} to:
+
+${webSocketUrl.url.href}
+
+Check if that URL is correct! If it goes to a proxy, make sure the proxy forwards to the correct URL.
+  `.trim();
+}
+
+function webSocketUrlSourceDescription(source: WebSocketUrl["source"]): string {
+  switch (source) {
+    case "elm-watch.json":
+      return "in elm-watch.json";
+    case "Env":
+      return `using the ${ELM_WATCH_WEBSOCKET_URL} environment variable`;
+  }
+}
+
 export function webSocketParamsDecodeError(
+  webSocketUrl: WebSocketUrl | undefined,
   error: JsonError,
   actualUrlString: string
 ): string {
@@ -1358,7 +1390,13 @@ The URL looks like this:
 
 ${actualUrlString}
 
-The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+${
+  webSocketUrl === undefined
+    ? "The web socket code I generate is supposed to always connect using a correct URL, so something is up here."
+    : webSocketUrlDescription(webSocketUrl)
+}
+
+Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
   `;
 }
 
