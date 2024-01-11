@@ -35,7 +35,7 @@ There are many CLI programs that let you watch for file changes and then run a g
 
 elm-watch grew out of my frustration with [Parcel], and also [webpack]. Support for other languages than JavaScript and TypeScript always feels a bit like an afterthought in such tools.
 
-[elm-live] and [elm-go] are really cool. Built for Elm and work out of the box so you can get started in no time. I’ve had trouble with bugs, though, and I’ve also outgrown them in bigger projects, with multiple Elm apps.
+[elm-live] and [elm-go] are really cool. Built for Elm and work out of the box so you can get started in no time. I’ve had trouble with bugs, though, and I’ve also outgrown them in bigger projects, with multiple Elm apps. These days, elm-watch can do everything that elm-live can, with the difference that some things that you can configure in elm-live you need to write a couple of lines of code for with elm-watch.
 
 [esbuild] has an Elm plugin, but not with hot reloading.
 
