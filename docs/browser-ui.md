@@ -40,6 +40,11 @@ In the error overlay you can click error locations to open them in your editor!
 
 There’s no universal way of doing that, though, so you’ll have to set it up. It’s not that complicated: You need to set the `ELM_WATCH_OPEN_EDITOR` environment variable to some shell script code.
 
+TL;DR examples:
+
+- bash/zsh with VSCode: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
+- fish with Rider on macOS: `set -Ux ELM_WATCH_OPEN_EDITOR '/Applications/Rider.app/Contents/MacOS/rider --line "$line" --column "$((column - 1))" "$file"'`
+
 Here’s how to set it in different shells:
 
 | Shell | Config file | Code |
@@ -56,20 +61,20 @@ And here are some commands for a few editors:
 | Editor | Command | Windows command |
 | --- | --- | --- |
 | [VSCode] | `code --goto "$file:$line:$column"` | `code --goto "%file%:%line%:%column%"` |
-| [IntelliJ IDEA] | `idea --line "$line" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
-| [Rider] | `rider --line "$line" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
+| [IntelliJ IDEA] | `idea --line "$line" --column "$((column - 1))" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
+| [Rider] | `rider --line "$line" --column "$((column - 1))" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
 | [Sublime Text] | `subl "$file:$line:$column"` § | `subl "%file%:%line%:%column%"` § † |
 
-\* Neither IntelliJ IDEA nor Rider come with a command line interface out of the box. Go to `Tools > Create Command-line Launcher…` to activate them. Chances are other [JetBrains] IDEs work similarly, just with different names.
+\* Neither IntelliJ IDEA nor Rider come with a command in PATH out of the box (at least on macOS). The easiest to it supply the full path. For example:
 
-† I haven’t tested IntelliJ IDEA, Rider or Sublime Text on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
+- IntelliJ IDEA on macOS: `"/Applications/IntelliJ IDEA.app/Contents/MacOS/idea" --line "$line" --column "$((column - 1))" "$file"`
+- Rider on macOS: `/Applications/Rider.app/Contents/MacOS/rider --line "$line" --column "$((column - 1))" "$file"`
+- Chances are other [JetBrains] IDEs work similarly, just with different names.
+- Linux and Windows: If you use the JetBrains Toolbox to install, see [JetBrains Toolbox install locations].
+
+† I haven’t tested IntelliJ IDEA, Rider or Sublime Text on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work! Also note that I don’t know how to subtract 1 from the column on Windows, so the column might be off by one.
 
 § For Sublime Text, you might need to [enable the `subl` command][subl].
-
-Full examples:
-
-- bash/zsh with VSCode: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
-- fish with Rider: `set -Ux ELM_WATCH_OPEN_EDITOR 'rider --line "$line" "$file"'`
 
 Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contain digits, but it doesn’t hurt to quote them too.)
 
@@ -90,6 +95,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 [child_process.exec]: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
 [direnv]: https://direnv.net/
 [intellij idea]: https://www.jetbrains.com/idea/
+[jetbrains toolbox install locations]: https://toolbox-support.jetbrains.com/hc/en-us/articles/115000978804-Where-are-the-IDEs-located-on-my-hard-drive-
 [jetbrains]: https://www.jetbrains.com/
 [rider]: https://www.jetbrains.com/rider/
 [subl]: https://www.sublimetext.com/docs/command_line.html
