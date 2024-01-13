@@ -72,6 +72,12 @@ This section is about:
 
 Those two things are closely related!
 
+**TL;DR**
+
+- elm-watch serves the closest index.html file (if any) when the URL is not found, for `Browser.application`.
+- And it then attaches some debug information to help you when you actually 404:ed.
+- Prefer linking to scripts, styles and images with URLs starting with a `/` so they work on any page.
+
 There’s an old convention in static file servers that when the URL points to a _directory,_ the server looks for an `index.html` file in that directory and serves that.
 
 _Single page applications_ (which `Browser.application` programs are) brings another convention: Serving the same HTML files for basically all URLs, letting the frontend app handle the URL.
@@ -89,6 +95,8 @@ public/
    └── index.html
 ```
 
+Note how there are two `index.html` files!
+
 Here are some URLs and what is served:
 
 | URL | File | Comment |
@@ -96,7 +104,7 @@ Here are some URLs and what is served:
 | `/` | `public/index.html` | Directory, use `index.html` |
 | `/blog/2023/elm-tips` | `public/index.html` | No such file, use closest `index.html` |
 | `/admin` | `public/admin/index.html` | Directory, use `index.html` |
-| `/admin/blog/2023/elm-tips` | `public/admin/index.html` | No such file, use closest `index.html` (`admin/index.html` is closer this time) |
+| `/admin/blog/2023/elm-tips` | `public/admin/index.html` | No such file, use closest `index.html` |
 | `/main.js` | `public/main.js` | File exists, serve it |
 | `/admin/admin.js` | `public/admin/admin.js` | File exists, serve it |
 | `/mani.js` (typo) | `public/index.html` | (!) No such file, serve closest `index.html` |
@@ -116,18 +124,19 @@ elm-watch also adds an HTML comment starting with `<!-- elm-watch debug informat
 
 Here’s a tip for fixing a broken URL to a file:
 
-1. Copy the absolute file path that actually was tried to be read from the `elm-watch-404` header or the HTML comment (or an actual 404 page if there was no closest `index.html`).
+1. Copy the absolute file path that actually was tried to be read from the `elm-watch-404` header or the HTML comment (or an actual 404 page if there was no closest `index.html`). Paste it in a temporary place.
 
-2. Open the file you intended to link to, using your editor or a file explorer and copy the absolute path of the file.
+2. Open the file you intended to link to, using your editor or a file explorer and copy the absolute path of the file. Paste it next to file path in step 1.
 
-3. Paste them next to each other, like so:
+3. Compare the two file paths to spot differences:
 
    ```
    /Users/you/project/public/mani.js
    /Users/you/project/public/main.js
+                               ^^
    ```
 
-4. Compare them to spot differences. Update the URL, or rename or move the file.
+4. Update the URL, or rename or move the file.
 
    Beware that relative URLs can be tricky! If you have `<script src="main.js">` it might seem to work at first, when you visit the root (`/`). `main.js` is a relative URL, which also can be written as `./main.js`. If you are on `/` it resolves to `/main.js`. But if your Elm application then changes the URL to `/blog/posts` and you reload the page, the relative URL is now resolving to `/blog/main.js` which probably doesn’t exist!
 
