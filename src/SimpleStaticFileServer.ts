@@ -602,7 +602,11 @@ function statSync(
       : { tag: "Other" };
   } catch (unknownError) {
     const error = toError(unknownError);
-    if (error.code === "ENOENT" || error.code === "ENOTDIR") {
+    if (
+      error.code === "ENOENT" || // No such file or (parent) directory
+      error.code === "ENOTDIR" || // Some parent is not a directory
+      error.code === "ENAMETOOLONG" // Some part of the path is >255 characters
+    ) {
       return { tag: "NotFound" };
     }
     throw error;
