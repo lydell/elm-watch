@@ -129,6 +129,10 @@ Here’s a tip for fixing a broken URL to a file:
 
 4. Compare them to spot differences. Update the URL, or rename or move the file.
 
+   Beware that relative URLs can be tricky! If you have `<script src="main.js">` it might seem to work at first, when you visit the root (`/`). `main.js` is a relative URL, which also can be written as `./main.js`. If you are on `/` it resolves to `/main.js`. But if your Elm application then changes the URL to `/blog/posts` and you reload the page, the relative URL is now resolving to `/blog/main.js` which probably doesn’t exist!
+
+   When using a static file server, I recommend always starting your URLs with a `/`, like so: `<script src="/main.js">`. Then they work on any page.
+
 Note that `index.html` files must be called exactly `index.html`. Not `index.htm` or `INDEX.HTML`.
 
 What would happen if you named `public/admin/index.html` just `public/admin.html` instead? There’s nothing stopping you from doing it. You would need to go to `/admin.html` to access it. Which would probably render a 404-style page in your `Browser.application` program, since you most likely have no route matching `/admin.html`. And if the `Browser.application` program ever changes the URL, refreshing the page won’t work. So stick to `index.html` files for `Browser.application` programs. Then you get the right page when you Elm app starts, and refreshing the page works.
