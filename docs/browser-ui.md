@@ -78,7 +78,7 @@ And here are some commands for a few editors:
 
 § For Sublime Text, you might need to [enable the `subl` command][subl].
 
-‡ For Zed, you will need run `cli: install` from the command palette before this will work.
+‡ For Zed, you will need to run `cli: install` from the command palette before this will work.
 
 Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contain digits, but it doesn’t hurt to quote them too.)
 
