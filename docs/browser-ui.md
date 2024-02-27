@@ -64,6 +64,8 @@ And here are some commands for a few editors:
 | [IntelliJ IDEA] | `idea --line "$line" --column "$((column - 1))" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
 | [Rider] | `rider --line "$line" --column "$((column - 1))" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
 | [Sublime Text] | `subl "$file:$line:$column"` § | `subl "%file%:%line%:%column%"` § † |
+| [Zed] | `zed "$file:$line:$column"` | n/a ([Zed is macOS-only for now]) |
+| [Emacs] | `emacsclient --no-wait +$line:$column $file` | `emacsclient --no-wait +$line:$column $file` † |
 
 \* Neither IntelliJ IDEA nor Rider come with a command in PATH out of the box (at least on macOS). The easiest to it supply the full path. For example:
 
@@ -72,9 +74,11 @@ And here are some commands for a few editors:
 - Chances are other [JetBrains] IDEs work similarly, just with different names.
 - Linux and Windows: If you use the JetBrains Toolbox to install, see [JetBrains Toolbox install locations].
 
-† I haven’t tested IntelliJ IDEA, Rider or Sublime Text on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work! Also note that I don’t know how to subtract 1 from the column on Windows, so the column might be off by one.
+† I haven’t tested IntelliJ IDEA, Rider, Sublime Text, or Emacs on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work! Also note that I don’t know how to subtract 1 from the column on Windows, so the column might be off by one.
 
 § For Sublime Text, you might need to [enable the `subl` command][subl].
+
+‡ For Zed, you will need run `cli: install` from the command palette before this will work.
 
 Don’t forget quotes around the `file` variable, in case it contains spaces! (`line` and `column` only contain digits, but it doesn’t hurt to quote them too.)
 
@@ -101,3 +105,6 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 [subl]: https://www.sublimetext.com/docs/command_line.html
 [sublime text]: https://www.sublimetext.com/
 [vscode]: https://code.visualstudio.com/
+[Zed]: https://zed.dev/
+[Zed is macOS-only for now]: https://github.com/zed-industries/zed/issues/5391
+[emacs]: https://www.gnu.org/software/emacs/
