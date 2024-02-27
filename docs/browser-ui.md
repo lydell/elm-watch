@@ -64,7 +64,7 @@ And here are some commands for a few editors:
 | [IntelliJ IDEA] | `idea --line "$line" --column "$((column - 1))" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
 | [Rider] | `rider --line "$line" --column "$((column - 1))" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
 | [Sublime Text] | `subl "$file:$line:$column"` § | `subl "%file%:%line%:%column%"` § † |
-| [Zed] | `zed "$file:$line:$column"` | n/a ([Zed is macOS-only for now]) |
+| [Zed] | `zed "$file:$line:$column"` ‡ | n/a ([Zed is macOS-only for now]) |
 | [Emacs] | `emacsclient --no-wait +$line:$column $file` | `emacsclient --no-wait +$line:$column $file` † |
 
 \* Neither IntelliJ IDEA nor Rider come with a command in PATH out of the box (at least on macOS). The easiest to it supply the full path. For example:
