@@ -98,6 +98,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 
 [child_process.exec]: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
 [direnv]: https://direnv.net/
+[emacs]: https://www.gnu.org/software/emacs/
 [intellij idea]: https://www.jetbrains.com/idea/
 [jetbrains toolbox install locations]: https://toolbox-support.jetbrains.com/hc/en-us/articles/115000978804-Where-are-the-IDEs-located-on-my-hard-drive-
 [jetbrains]: https://www.jetbrains.com/
@@ -105,6 +106,5 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 [subl]: https://www.sublimetext.com/docs/command_line.html
 [sublime text]: https://www.sublimetext.com/
 [vscode]: https://code.visualstudio.com/
-[Zed]: https://zed.dev/
 [Zed is macOS-only for now]: https://github.com/zed-industries/zed/issues/5391
-[emacs]: https://www.gnu.org/software/emacs/
+[Zed]: https://zed.dev/
