@@ -6,6 +6,14 @@ const warn = process.argv.includes("--report-unused-disable-directives")
   ? "error"
   : "warn";
 
+const restrictedGlobals = [
+  {
+    name: "JSON",
+    message:
+      "Import JSON from tiny-decoders and use its JSON.parse and JSON.stringify with a codec instead.",
+  },
+];
+
 module.exports = {
   root: true,
   plugins: ["@typescript-eslint", "simple-import-sort", "jest"],
@@ -201,6 +209,7 @@ module.exports = {
       rules: {
         "no-restricted-globals": [
           error,
+          ...restrictedGlobals,
           ...new Set(
             [
               ...Object.keys(globals.browser),
@@ -219,6 +228,7 @@ module.exports = {
         "no-restricted-imports": [error, ...builtinModules],
         "no-restricted-globals": [
           error,
+          ...restrictedGlobals,
           ...new Set(
             [...Object.keys(globals.node), ...Object.keys(globals.jest)].filter(
               (name) =>

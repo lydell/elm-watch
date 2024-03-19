@@ -18,17 +18,10 @@ import {
   WT_SESSION,
 } from "../src/Env";
 import { printStdio } from "../src/Errors";
-import {
-  JsonError,
-  ReadStream,
-  toError,
-  toJsonError,
-  WriteStream,
-} from "../src/Helpers";
+import { ReadStream, toError, WriteStream } from "../src/Helpers";
 import { IS_WINDOWS } from "../src/IsWindows";
 
 toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
-toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
 
 const { JEST_RETRIES } = process.env;
 if (JEST_RETRIES !== undefined) {

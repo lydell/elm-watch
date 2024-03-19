@@ -1593,7 +1593,7 @@ describe("hot reloading", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         window.Elm does not look like expected! This is the error message:
-        At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+        At root:
         Very unexpected error
         ↑↗
         ·→
@@ -1605,7 +1605,7 @@ describe("hot reloading", () => {
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         window.Elm does not look like expected! This is the error message:
-        At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+        At root:
         Very unexpected error
         ↑↗
         ·→
@@ -1668,8 +1668,6 @@ describe("hot reloading", () => {
       extraElmWatchStuffJson: {
         MultipleTargetsOther1: {
           compilationMode: "debug",
-          browserUiPosition: "BottomLeft",
-          openErrorOverlay: false,
         },
       },
       init: (node) => {

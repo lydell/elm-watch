@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals */
 import * as util from "util";
 
 /**
@@ -54,7 +55,7 @@ export class HashMap<K extends Record<string, unknown>, V>
 
   *keys(): IterableIterator<K> {
     for (const key of this.map.keys()) {
-      yield JSON.parse(key) as K;
+      yield JSON.parse(key) as unknown as K;
     }
   }
 
@@ -64,7 +65,7 @@ export class HashMap<K extends Record<string, unknown>, V>
 
   *entries(): IterableIterator<[K, V]> {
     for (const [key, value] of this.map.entries()) {
-      yield [JSON.parse(key) as K, value];
+      yield [JSON.parse(key), value];
     }
   }
 

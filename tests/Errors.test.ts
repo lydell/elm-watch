@@ -2,9 +2,10 @@ import spawn from "cross-spawn";
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 
 import { elmWatchCli } from "../src";
-import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
+import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_MAX_PARALLEL,
@@ -168,7 +169,7 @@ describe("errors", () => {
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙I had trouble reading it as JSON:⧘
+      ⧙I had trouble reading it:⧘
 
       EISDIR: illegal operation on a directory, read
     `);
@@ -177,14 +178,15 @@ describe("errors", () => {
   test("elm-watch.json bad json", async () => {
     expect(await run("elm-watch-json-bad-json", ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
+      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-json/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙I had trouble reading it as JSON:⧘
+      ⧙I had trouble with the JSON inside:⧘
 
-      (JSON syntax error)
+      At root:
+     SyntaxError: (JSON syntax error)
     `);
   });
 
@@ -220,6 +222,7 @@ describe("errors", () => {
           At root["targets"]["-main"]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "-main"
         `);
       });
 
@@ -239,6 +242,7 @@ describe("errors", () => {
           At root["targets"]["\\tmain"]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "\\tmain"
         `);
       });
 
@@ -256,6 +260,7 @@ describe("errors", () => {
           At root["targets"]["main\\ntarget"]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "main\\ntarget"
         `);
       });
 
@@ -275,6 +280,7 @@ describe("errors", () => {
           At root["targets"]["main "]:
           Target names must start with a non-whitespace character except \`-\`,
           cannot contain newlines and must end with a non-whitespace character
+          Got: "main "
         `);
       });
     });
@@ -292,6 +298,7 @@ describe("errors", () => {
 
         At root["targets"]["index"]["output"]:
         Outputs must end with .js
+        Got: "index.html"
       `);
     });
 
@@ -312,6 +319,7 @@ describe("errors", () => {
 
         At root["targets"]["main"]["output"]:
         Outputs must end with .js
+        Got: ".js"
       `);
     });
 
@@ -327,6 +335,7 @@ describe("errors", () => {
 
         At root["targets"]["main"]["output"]:
         Outputs must end with .js
+        Got: "/dev/null"
       `);
     });
 
@@ -341,8 +350,11 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root["targets"]["main"]:
-        Expected only these fields: "inputs", "output"
-        Found extra fields: "mode"
+        Expected only these fields:
+          "inputs",
+          "output"
+        Found extra fields:
+          "mode"
       `);
     });
 
@@ -406,7 +418,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["port"] (optional):
+        At root["port"]:
         Expected an integer where 1 <= port <= 65535
         Got: 0
       `);
@@ -422,7 +434,7 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["port"] (optional):
+        At root["port"]:
         Expected an integer where 1 <= port <= 65535
         Got: 65536
       `);
@@ -969,7 +981,7 @@ describe("errors", () => {
         I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
         your inputs depend on.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble reading it:⧘
 
         EISDIR: illegal operation on a directory, read
 
@@ -994,15 +1006,16 @@ describe("errors", () => {
         ✅ Dependencies
         🚨 Main
 
-        ⧙-- TROUBLE READING elm.json ----------------------------------------------------⧘
+        ⧙-- INVALID elm.json FORMAT -----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-json-bad-json/elm.json
 
         I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
         your inputs depend on.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble with the JSON inside:⧘
 
-        (JSON syntax error)
+        At root:
+       SyntaxError: (JSON syntax error)
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
@@ -1034,7 +1047,9 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root["type"]:
-        Expected one of these tags: "application", "package"
+        Expected one of these tags:
+          "application",
+          "package"
         Got: "hackage"
 
         (I still managed to compile your code, but the watcher will not work properly
@@ -1322,7 +1337,8 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
-        (JSON syntax error)
+        At root:
+       SyntaxError: (JSON syntax error)
 
         I wrote that to this file so you can inspect it:
 
@@ -1344,7 +1360,8 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
-        (JSON syntax error)
+        At root:
+       SyntaxError: (JSON syntax error)
 
         I wrote this error to a file so you can inspect and possibly report it more easily.
 
@@ -1374,7 +1391,9 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root["type"]:
-        Expected one of these tags: "error", "compile-errors"
+        Expected one of these tags:
+          "error",
+          "compile-errors"
         Got: "laser-error"
 
         I wrote that to this file so you can inspect it:
@@ -1398,16 +1417,16 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root["type"]:
-        Expected one of these tags: "error", "compile-errors"
+        Expected one of these tags:
+          "error",
+          "compile-errors"
         Got: "laser-error"
 
         I wrote this error to a file so you can inspect and possibly report it more easily.
 
         This is the data that caused the error:
 
-        {
-          "type": "laser-error"
-        }
+        {"type":"laser-error"}
       `);
     });
 
@@ -1427,7 +1446,8 @@ describe("errors", () => {
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
 
-        (JSON syntax error)
+        At root:
+       SyntaxError: (JSON syntax error)
 
         I tried to write that to this file:
 
@@ -2034,7 +2054,8 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm
+        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
         🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
@@ -2649,7 +2670,10 @@ describe("errors", () => {
 
         But that resulted in this error:
 
-        [null, "error"]
+        [
+          null,
+          "error"
+        ]
 
         STDOUT:
         My debug message
@@ -2681,7 +2705,9 @@ describe("errors", () => {
 
         ⧙imported⧘ is:
 
-        {"default": {}}
+        {
+          "default": {}
+        }
 
         Here is a sample function to get you started:
 
@@ -2720,7 +2746,10 @@ describe("errors", () => {
 
         ⧙imported⧘ is:
 
-        {"default": Object(1), "postprocess": function "postprocess"}
+        {
+          "default": Object(1),
+          "postprocess": function "postprocess"
+        }
 
         Here is a sample function to get you started:
 
@@ -2901,7 +2930,7 @@ describe("errors", () => {
 
         I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble reading it:⧘
 
         EISDIR: illegal operation on a directory, read
 
@@ -2913,14 +2942,15 @@ describe("errors", () => {
     test("bad json", async () => {
       expect(await run("elm-watch-stuff-json-bad-json", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        ⧙-- INVALID elm-stuff/elm-watch/stuff.json FORMAT -------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch/stuff.json
 
         I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
-        ⧙I had trouble reading it as JSON:⧘
+        ⧙I had trouble with the JSON inside:⧘
 
-        (JSON syntax error)
+        At root:
+       SyntaxError: (JSON syntax error)
 
         This file is created by elm-watch, so reading it should never fail really.
         You could try removing that file (it contains nothing essential).
@@ -2937,8 +2967,11 @@ describe("errors", () => {
 
         ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["Main"]["compilationMode"] (optional):
-        Expected one of these variants: "debug", "standard", "optimize"
+        At root["targets"]["Main"]["compilationMode"]:
+        Expected one of these variants:
+          "debug",
+          "standard",
+          "optimize"
         Got: "normal"
 
         This file is created by elm-watch, so reading it should never fail really.
@@ -2948,8 +2981,8 @@ describe("errors", () => {
 
     test("write error", async () => {
       const dir = path.join(FIXTURES_DIR, "elm-watch-stuff-json-write-error");
-      const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
-        port: 59999,
+      const elmWatchStuffJson: ElmWatchStuffJson = {
+        port: { tag: "Port", thePort: 59999 },
         targets: {},
       };
       const elmWatchStuffJsonPath = path.join(
@@ -2965,7 +2998,7 @@ describe("errors", () => {
         rm(elmWatchStuffJsonPath);
         fs.writeFileSync(
           elmWatchStuffJsonPath,
-          JSON.stringify(elmWatchStuffJson),
+          Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
           { mode: "0444" } // readonly
         );
       } catch {

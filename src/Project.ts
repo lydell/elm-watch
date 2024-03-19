@@ -449,7 +449,7 @@ export function initProject({
               ),
             ];
 
-          case "ElmJsonReadAsJsonError":
+          case "ElmJsonReadError":
           case "ElmJsonDecodeError":
             return [absoluteDirname(elmJsonPath.theElmJsonPath)];
         }

@@ -3,7 +3,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
@@ -1237,7 +1237,12 @@ describe("hot", () => {
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
-        Expected one of these tags: "ChangedCompilationMode", "ChangedBrowserUiPosition", "ChangedOpenErrorOverlay", "FocusedTab", "PressedOpenEditor"
+        Expected one of these tags:
+         "ChangedCompilationMode",
+         "ChangedBrowserUiPosition",
+         "ChangedOpenErrorOverlay",
+         "FocusedTab",
+         "PressedOpenEditor"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
@@ -1536,14 +1541,15 @@ describe("hot", () => {
       ⧙ℹ️ 13:10:05 Web socket disconnected for: HtmlMain
       ℹ️ 13:10:05 Web socket connected for: HtmlMain⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
-      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
+      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙I had trouble reading it as JSON:⧘
+      ⧙I had trouble with the JSON inside:⧘
 
-      (JSON syntax error)
+      At root:
+     SyntaxError: (JSON syntax error)
 
       🚨 ⧙1⧘ error found
       ⏳ Dependencies
@@ -4625,9 +4631,13 @@ describe("hot", () => {
     const elmWatchJson: unknown = JSON.parse(
       fs.readFileSync(elmWatchJsonPath, "utf8")
     );
-    const port = Decode.fields((field) => field("port", Decode.number))(
+    const portResult = Codec.fields({ port: Codec.number }).decoder(
       elmWatchJson
     );
+    if (portResult.tag === "DecoderError") {
+      throw new Error(Codec.format(portResult.error));
+    }
+    const { port } = portResult.value;
 
     let mainHtml = "(not set)";
     let variations: Array<string> = ["(not set)"];
