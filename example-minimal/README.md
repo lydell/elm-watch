@@ -10,11 +10,11 @@ This is a minimal example of how to use elm-watch.
 4. Run `cd example-minimal` to go into this folder.
 5. Run `npm ci` to install dependencies for this example.
 6. Run `npx elm-watch hot` or `npm start` to start elm-watch for development.
-7. Open `index.html` in the browser.
+7. The previous command prints a link to elm-watch’s server. Open it in a browser.
 8. Edit `src/Main.elm` and watch the browser be automatically updated.
 9. Stop `elm-watch`.
 10. Run `npx elm-watch make --optimize` or `npm run build` to build for production. (Since this is a minimal example, there’s no minification, just Elm’s `--optimize` mode.)
-11. Refresh `index.html` in the browser to try out the production build.
+11. Double-click `index.html` to open it straight in a browser to try out the production build.
 
 The example uses [elm-tooling] to install Elm and elm-format, but you can of course install them in any way you want.
 

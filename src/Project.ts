@@ -1,9 +1,10 @@
 import * as os from "os";
+import * as path from "path";
 
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
-import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
+import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_WEBSOCKET_URL, Env } from "./Env";
 import { HashMap } from "./HashMap";
 import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
@@ -14,7 +15,6 @@ import {
   absolutePathFromString,
   absoluteRealpath,
   findClosest,
-  longestCommonAncestorPath,
 } from "./PathHelpers";
 import { Postprocess } from "./Postprocess";
 import { PostprocessError } from "./PostprocessShared";
@@ -30,13 +30,21 @@ import type {
   GetNow,
   InputPath,
   OutputPath,
+  StaticFilesDir,
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
 } from "./Types";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 export type Project = {
-  // Path to the longest ancestor of elm-watch.json and all elm.json.
-  watchRoot: AbsolutePath;
+  // Path of the directories containing elm-watch.json, all elm.json, all source
+  // directories, as well as the static files directory (if any), without
+  // duplicates and where each directory does not contain any other. I tested
+  // watching both `folder/` and `folder/sub/` – when creating `folder/sub/file.txt`
+  // I got both a “created” and a “changed” event. When watching only `folder/` I
+  // only got “created” as expected.
+  watchRoots: HashSet<AbsolutePath>;
+  staticFilesDir: StaticFilesDir | undefined;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: HashSet<OutputPath>;
@@ -44,6 +52,7 @@ export type Project = {
   elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   maxParallel: number;
   postprocess: Postprocess;
+  webSocketUrl: WebSocketUrl | undefined;
 };
 
 // The code base leans towards pure functions, but this data structure is going
@@ -297,10 +306,6 @@ type InitProjectResult =
       }>;
     }
   | {
-      tag: "NoCommonRoot";
-      paths: NonEmptyArray<AbsolutePath>;
-    }
-  | {
       tag: "Project";
       project: Project;
     };
@@ -427,42 +432,60 @@ export function initProject({
     };
   }
 
-  const paths: NonEmptyArray<AbsolutePath> = [
-    absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-    ...Array.from(elmJsons.keys()).flatMap(
-      (elmJsonPath): Array<AbsolutePath> => {
-        // This is a bit weird, but we can actually ignore errors here. Some facts:
-        // - We want to run Elm even if the elm.json is invalid, because Elm has
-        //   really nice error messages.
-        // - We run `ElmJson.readAndParse` again later and do report the errors then.
-        //   (But in practice you won’t see them because we show Elm’s errors instead.)
-        // - Regardless of whether we report the errors here we can’t know the
-        //   real watch root until it becomes valid. The best guess is to just
-        //   use the elm-watch.json and elm.json paths then.
-        const result = ElmJson.readAndParse(elmJsonPath);
-        switch (result.tag) {
-          case "Parsed":
-            return [
-              absoluteDirname(elmJsonPath.theElmJsonPath),
-              ...ElmJson.getSourceDirectories(elmJsonPath, result.elmJson).map(
-                (sourceDirectory) => sourceDirectory.theSourceDirectory
-              ),
-            ];
+  const staticFilesDir: StaticFilesDir | undefined =
+    config.serve === undefined
+      ? undefined
+      : {
+          tag: "StaticFilesDir",
+          theStaticFilesDir: absolutePathFromString(
+            absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+            config.serve
+          ),
+        };
 
-          case "ElmJsonReadAsJsonError":
-          case "ElmJsonDecodeError":
-            return [absoluteDirname(elmJsonPath.theElmJsonPath)];
+  const watchRoots = new HashSet<AbsolutePath>(
+    [
+      absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+      ...(staticFilesDir === undefined
+        ? []
+        : [staticFilesDir.theStaticFilesDir]),
+      ...Array.from(elmJsons.keys()).flatMap(
+        (elmJsonPath): Array<AbsolutePath> => {
+          // This is a bit weird, but we can actually ignore errors here. Some facts:
+          // - We want to run Elm even if the elm.json is invalid, because Elm has
+          //   really nice error messages.
+          // - We run `ElmJson.readAndParse` again later and do report the errors then.
+          //   (But in practice you won’t see them because we show Elm’s errors instead.)
+          // - Regardless of whether we report the errors here we can’t know the
+          //   real watch root until it becomes valid. The best guess is to just
+          //   use the elm-watch.json and elm.json paths then.
+          const result = ElmJson.readAndParse(elmJsonPath);
+          switch (result.tag) {
+            case "Parsed":
+              return [
+                absoluteDirname(elmJsonPath.theElmJsonPath),
+                ...ElmJson.getSourceDirectories(
+                  elmJsonPath,
+                  result.elmJson
+                ).map((sourceDirectory) => sourceDirectory.theSourceDirectory),
+              ];
+
+            case "ElmJsonReadAsJsonError":
+            case "ElmJsonDecodeError":
+              return [absoluteDirname(elmJsonPath.theElmJsonPath)];
+          }
         }
-      }
-    ),
-  ];
-
-  const watchRoot = longestCommonAncestorPath(paths);
-
-  // istanbul ignore if
-  if (watchRoot === undefined) {
-    return { tag: "NoCommonRoot", paths };
-  }
+      ),
+    ].filter((root, index, array) =>
+      array.every(
+        (root2, index2) =>
+          // Don’t compare to self.
+          index === index2 ||
+          // If any other root contains this one, discard this one.
+          !root.absolutePath.startsWith(root2.absolutePath + path.sep)
+      )
+    )
+  );
 
   const maxParallel = silentlyReadIntEnvValue(
     env[__ELM_WATCH_MAX_PARALLEL],
@@ -474,10 +497,21 @@ export function initProject({
       ? { tag: "NoPostprocess" }
       : { tag: "Postprocess", postprocessArray: config.postprocess };
 
+  let { webSocketUrl } = config;
+  const envWebSocketUrlString = env[ELM_WATCH_WEBSOCKET_URL];
+  if (envWebSocketUrlString !== undefined) {
+    try {
+      webSocketUrl = WebSocketUrl("Env")(envWebSocketUrlString);
+    } catch {
+      // Invalid environment variables are silently ignored.
+    }
+  }
+
   return {
     tag: "Project",
     project: {
-      watchRoot,
+      watchRoots,
+      staticFilesDir,
       elmWatchJsonPath,
       elmWatchStuffJsonPath,
       disabledOutputs,
@@ -485,6 +519,7 @@ export function initProject({
       elmJsons,
       maxParallel,
       postprocess,
+      webSocketUrl,
     },
   };
 }
@@ -648,7 +683,7 @@ export function getFlatOutputs(project: Project): Array<{
 
 export function projectToDebug(project: Project): unknown {
   return {
-    watchRoot: project.watchRoot.absolutePath,
+    watchRoots: Array.from(project.watchRoots, (root) => root.absolutePath),
     elmWatchJson: project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
     elmWatchStuffJson:
       project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,

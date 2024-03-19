@@ -14,6 +14,7 @@ import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
 import {
   CliArg,
+  CreateServer,
   Cwd,
   ElmWatchJsonPath,
   ElmWatchStuffDir,
@@ -39,6 +40,7 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
+  createServer: CreateServer,
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.LatestEvent>,
@@ -215,13 +217,6 @@ export async function run(
                     postprocessWorkerPool
                   );
 
-                // istanbul ignore next
-                case "NoCommonRoot":
-                  logger.errorTemplate(
-                    Errors.noCommonRoot(initProjectResult.paths)
-                  );
-                  return { tag: "Exit", exitCode: 1 };
-
                 case "Project": {
                   const { project } = initProjectResult;
 
@@ -264,6 +259,7 @@ export async function run(
                         env,
                         logger,
                         getNow,
+                        createServer,
                         restartReasons,
                         postprocessWorkerPool,
                         webSocketState,

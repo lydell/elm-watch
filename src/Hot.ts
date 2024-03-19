@@ -1,8 +1,10 @@
 import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
+import * as url from "url";
 import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
@@ -37,6 +39,7 @@ import {
   toError,
   toJsonError,
 } from "./Helpers";
+import { getHost, Host } from "./Host";
 import type { Logger, LoggerConfig } from "./Logger";
 import {
   isNonEmptyArray,
@@ -60,6 +63,7 @@ import {
   AbsolutePath,
   BrowserUiPosition,
   CompilationMode,
+  CreateServer,
   ElmJsonPath,
   ElmWatchJsonPath,
   equalsInputPath,
@@ -67,14 +71,20 @@ import {
   OutputPath,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 type WatcherEventName = "added" | "changed" | "removed";
 
-type WatcherEvent = {
+type WatcherEvent<File = AbsolutePath | StaticFilesDirPath> = {
   tag: "WatcherEvent";
   date: Date;
   eventName: WatcherEventName;
-  file: AbsolutePath;
+  file: File;
+};
+
+type StaticFilesDirPath = {
+  tag: "StaticFilesDirPath";
+  urlPath: string;
 };
 
 type WebSocketRelatedEvent =
@@ -287,6 +297,9 @@ type Cmd =
       killInstallDependencies: boolean;
     }
   | {
+      tag: "MaybePrintStats";
+    }
+  | {
       tag: "NoCmd";
     }
   | {
@@ -318,6 +331,10 @@ type Cmd =
   | {
       tag: "WebSocketSend";
       webSocket: WebSocket;
+      message: WebSocketToClientMessage;
+    }
+  | {
+      tag: "WebSocketSendAll";
       message: WebSocketToClientMessage;
     }
   | {
@@ -373,6 +390,7 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
+  createServer: CreateServer,
   restartReasons: Array<LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
@@ -387,6 +405,7 @@ export async function run(
       env,
       logger,
       getNow,
+      createServer,
       postprocessWorkerPool,
       webSocketState,
       project,
@@ -460,6 +479,7 @@ const initMutable =
     env: Env,
     logger: Logger,
     getNow: GetNow,
+    createServer: CreateServer,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
     project: Project,
@@ -481,15 +501,18 @@ const initMutable =
       10000
     );
 
-    const watcher = chokidar.watch(project.watchRoot.absolutePath, {
-      ignoreInitial: true,
-      // Note: Forward slashes must be used here even on Windows. (Using
-      // backslashes on Windows never matches.) The trailing slash is important:
-      // It makes it possible to get notifications of a removed elm-stuff
-      // folder, while ignoring everything that happens _inside_ that folder.
-      ignored: /\/(elm-stuff|node_modules)\//,
-      disableGlobbing: true,
-    });
+    const watcher = chokidar.watch(
+      Array.from(project.watchRoots, (root) => root.absolutePath),
+      {
+        ignoreInitial: true,
+        // Note: Forward slashes must be used here even on Windows. (Using
+        // backslashes on Windows never matches.) The trailing slash is important:
+        // It makes it possible to get notifications of a removed elm-stuff
+        // folder, while ignoring everything that happens _inside_ that folder.
+        ignored: /\/(elm-stuff|node_modules)\//,
+        disableGlobbing: true,
+      }
+    );
 
     watcherOnAll(
       watcher,
@@ -514,7 +537,12 @@ const initMutable =
     );
 
     const {
-      webSocketServer = new WebSocketServer(portChoice),
+      webSocketServer = new WebSocketServer(
+        createServer,
+        portChoice,
+        getHost(env),
+        project.staticFilesDir
+      ),
       webSocketConnections = [],
     } = webSocketState ?? {};
 
@@ -701,6 +729,7 @@ const init = (
   },
   [
     { tag: "ClearScreen" },
+    { tag: "MaybePrintStats" },
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
       (elmJsonError): Cmd => ({
@@ -791,13 +820,31 @@ function update(
       }
 
     case "SleepBeforeNextActionDone": {
+      const staticFilesDirPaths = model.latestEvents.flatMap((event) =>
+        event.tag === "WatcherEvent" && event.file.tag === "StaticFilesDirPath"
+          ? [event.file.urlPath]
+          : []
+      );
       const [newModel, cmds] = runNextAction(msg.date, project, model);
       return [
         {
           ...newModel,
           nextAction: { tag: "NoAction" },
         },
-        cmds,
+        [
+          ...(isNonEmptyArray(staticFilesDirPaths)
+            ? [
+                {
+                  tag: "WebSocketSendAll",
+                  message: {
+                    tag: "StaticFilesChanged",
+                    changedFileUrlPaths: staticFilesDirPaths,
+                  },
+                } as const,
+              ]
+            : []),
+          ...cmds,
+        ],
       ];
     }
 
@@ -967,6 +1014,17 @@ function update(
     case "WebSocketConnected": {
       const result = msg.parseWebSocketConnectRequestUrlResult;
 
+      const cssCmd: Array<Cmd> =
+        project.staticFilesDir === undefined
+          ? []
+          : [
+              {
+                tag: "WebSocketSend",
+                webSocket: msg.webSocket,
+                message: { tag: "StaticFilesMayHaveChangedWhileDisconnected" },
+              },
+            ];
+
       switch (result.tag) {
         case "Success": {
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
@@ -983,7 +1041,7 @@ function update(
               ...newModel,
               latestEvents: [...newModel.latestEvents, latestEvent],
             },
-            cmds,
+            [...cmds, ...cssCmd],
           ];
         }
 
@@ -1014,6 +1072,7 @@ function update(
                   },
                 },
               },
+              ...cssCmd,
             ],
           ];
         }
@@ -1038,10 +1097,14 @@ function update(
                   tag: "StatusChanged",
                   status: {
                     tag: "ClientError",
-                    message: webSocketConnectRequestUrlErrorToString(result),
+                    message: webSocketConnectRequestUrlErrorToString(
+                      project.webSocketUrl,
+                      result
+                    ),
                   },
                 },
               },
+              ...cssCmd,
             ],
           ];
       }
@@ -1217,19 +1280,48 @@ function onWatcherEvent(
               ];
             }
           }
-          return undefined;
+          break;
         }
 
         case "NoPostprocess":
-          // Ignore other types of files.
-          return undefined;
+          break;
       }
+
+      if (project.staticFilesDir !== undefined) {
+        const prefix =
+          project.staticFilesDir.theStaticFilesDir.absolutePath + path.sep;
+        if (
+          absolutePathString.startsWith(prefix) &&
+          !getFlatOutputs(project).some(
+            ({ outputPath }) =>
+              absolutePathString === outputPath.theOutputPath.absolutePath
+          )
+        ) {
+          return [
+            nextAction,
+            {
+              ...makeWatcherEvent(eventName, absolutePathString, now),
+              affectsAnyTarget: true,
+              file: {
+                tag: "StaticFilesDirPath",
+                urlPath: url.pathToFileURL(
+                  path.sep + absolutePathString.slice(prefix.length)
+                ).pathname,
+              },
+            },
+            [],
+          ];
+        }
+      }
+
+      // Ignore other types of files.
+      return undefined;
   }
 }
 
 function onElmFileWatcherEvent(
   project: Project,
-  event: WatcherEvent,
+  event: WatcherEvent<AbsolutePath>,
   nextAction: NextAction
 ): [NextAction, LatestEvent, Array<Cmd>] | undefined {
   const elmFile = event.file;
@@ -1431,7 +1523,10 @@ const runCmd =
               getNow,
               runMode: {
                 tag: "hot",
-                webSocketPort: mutable.webSocketServer.port,
+                webSocketConnection: mutable.project.webSocketUrl ?? {
+                  tag: "AutomaticUrl",
+                  port: mutable.webSocketServer.port,
+                },
               },
               elmWatchJsonPath: mutable.project.elmWatchJsonPath,
               total: outputActions.total,
@@ -1544,6 +1639,7 @@ const runCmd =
           loggerConfig: logger.config,
           date: getNow(),
           mutable,
+          host: getHost(env),
           message: cmd.message,
           events: filterLatestEvents(cmd.events),
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
@@ -1594,6 +1690,15 @@ const runCmd =
             },
             mutable.webSocketConnections
           );
+        }
+        return;
+
+      case "MaybePrintStats":
+        if (!logger.config.isTTY) {
+          // One tick is enough for the final port number to be available.
+          process.nextTick(() => {
+            logger.write(printStats(logger.config, mutable, getHost(env)));
+          });
         }
         return;
 
@@ -1662,6 +1767,7 @@ const runCmd =
           switch (event.tag) {
             case "WatcherEvent":
               return (
+                event.file.tag === "AbsolutePath" &&
                 path.basename(event.file.absolutePath) === "elm-watch.json"
               );
             // istanbul ignore next
@@ -1724,6 +1830,12 @@ const runCmd =
 
       case "WebSocketSend":
         webSocketSend(cmd.webSocket, cmd.message);
+        return;
+
+      case "WebSocketSendAll":
+        for (const webSocketConnection of mutable.webSocketConnections) {
+          webSocketSend(webSocketConnection.webSocket, cmd.message);
+        }
         return;
 
       case "WebSocketSendCompileErrorToOutput":
@@ -1880,6 +1992,19 @@ function onWebSocketServerMsg(
           return;
         }
 
+        case "HostNotFound": {
+          const { host } = msg.error;
+          closeAll(logger, mutable)
+            .then(() => {
+              resolvePromise({
+                tag: "ExitOnHandledFatalError",
+                errorTemplate: Errors.hostNotFound(host, msg.error.error),
+              });
+            })
+            .catch(rejectPromise);
+          return;
+        }
+
         // istanbul ignore next
         case "OtherError":
           rejectPromise(msg.error.error);
@@ -2001,7 +2126,7 @@ function makeWatcherEvent(
   eventName: WatcherEventName,
   absolutePathString: string,
   date: Date
-): WatcherEvent {
+): WatcherEvent<AbsolutePath> {
   return {
     tag: "WatcherEvent",
     date,
@@ -2297,14 +2422,20 @@ function webSocketConnectRequestUrlResultToOutputPath(
 }
 
 function webSocketConnectRequestUrlErrorToString(
+  webSocketUrl: WebSocketUrl | undefined,
   error: ParseWebSocketConnectRequestUrlError
 ): string {
   switch (error.tag) {
     case "BadUrl":
-      return Errors.webSocketBadUrl(error.expectedStart, error.actualUrlString);
+      return Errors.webSocketBadUrl(
+        webSocketUrl,
+        error.expectedStart,
+        error.actualUrlString
+      );
 
     case "ParamsDecodeError":
       return Errors.webSocketParamsDecodeError(
+        webSocketUrl,
         error.error,
         error.actualUrlString
       );
@@ -2742,6 +2873,7 @@ function infoMessageWithTimeline({
   loggerConfig,
   date,
   mutable,
+  host,
   message,
   events,
   hasErrors,
@@ -2749,14 +2881,15 @@ function infoMessageWithTimeline({
   loggerConfig: LoggerConfig;
   date: Date;
   mutable: Mutable;
+  host: Host;
   message: string;
   events: Array<LatestEvent>;
   hasErrors: boolean;
 }): string {
   return join(
     [
-      "", // Empty line separator.
-      printStats(loggerConfig, mutable),
+      loggerConfig.isTTY ? "" : undefined, // Empty line separator.
+      loggerConfig.isTTY ? printStats(loggerConfig, mutable, host) : undefined,
       "",
       printTimeline(loggerConfig, events),
       printMessageWithTimeAndEmoji({
@@ -2796,29 +2929,58 @@ function printMessageWithTimeAndEmoji({
   });
 }
 
-function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
+function printStats(
+  loggerConfig: LoggerConfig,
+  mutable: Mutable,
+  host: Host
+): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
   return join(
     [
-      numWorkers > 0
-        ? `${dim(`${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
-        : undefined,
+      printServerLinks(mutable.webSocketServer, host),
       `${dim("web socket connections:")} ${
         mutable.webSocketConnections.length
-      } ${dim(`(ws://0.0.0.0:${mutable.webSocketServer.port.thePort})`)}`,
-    ].flatMap((part) =>
-      part === undefined
-        ? []
-        : Compile.printStatusLine({
-            maxWidth: Infinity,
-            fancy: loggerConfig.fancy,
-            isTTY: loggerConfig.isTTY,
-            emojiName: "Stats",
-            string: part,
-          })
+      }${
+        numWorkers > 0
+          ? `${dim(`, ${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
+          : ""
+      }`,
+    ].map((part) =>
+      Compile.printStatusLine({
+        maxWidth: Infinity,
+        fancy: loggerConfig.fancy,
+        isTTY: loggerConfig.isTTY,
+        emojiName: "Stats",
+        string: part,
+      })
     ),
     "\n"
   );
+}
+
+function printServerLinks(
+  webSocketServer: WebSocketServer,
+  { theHost: host }: Host
+): string {
+  const protocol = webSocketServer.isHTTPS ? "https" : "http";
+  const port = webSocketServer.port.thePort;
+
+  if (host !== "0.0.0.0") {
+    return `${dim("server:")} ${protocol}://${host}:${port}`;
+  }
+
+  const networkIps = Object.values(os.networkInterfaces())
+    .flatMap((addresses = []) =>
+      addresses.filter(
+        (address) => address.family === "IPv4" && !address.internal
+      )
+    )
+    .map(({ address }) => address);
+
+  return `${dim("server:")} ${protocol}://localhost:${port}${join(
+    networkIps.map((ip) => `${dim(", network:")} ${protocol}://${ip}:${port}`),
+    ""
+  )}`;
 }
 
 export function printTimeline(
@@ -2870,7 +3032,12 @@ function printEvent(loggerConfig: LoggerConfig, event: LatestEvent): string {
 function printEventMessage(event: LatestEvent): string {
   switch (event.tag) {
     case "WatcherEvent":
-      return `${capitalize(event.eventName)} ${event.file.absolutePath}`;
+      // TODO: Don’t really want to print changes to files in static dir?
+      return `${capitalize(event.eventName)} ${
+        event.file.tag === "AbsolutePath"
+          ? event.file.absolutePath
+          : event.file.urlPath
+      }`;
 
     case "WebSocketClosed":
       return `Web socket disconnected for: ${
