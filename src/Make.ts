@@ -29,6 +29,7 @@ export async function run(
   switch (installResult.tag) {
     case "Error":
     case "Killed":
+      await postprocessWorkerPool.terminate();
       return { tag: "Error" };
 
     case "Success":
