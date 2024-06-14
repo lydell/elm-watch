@@ -1,5 +1,6 @@
 import * as Decode from "tiny-decoders";
 
+import { NonEmptyArray } from "../src/NonEmptyArray";
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
 const FocusedTabAcknowledged = Decode.fieldsAuto({
@@ -45,6 +46,15 @@ const CompileError = Decode.fieldsAuto({
   title: Decode.string,
   location: Decode.optional(ErrorLocation),
   htmlContent: Decode.string,
+});
+
+const StaticFilesChanged = Decode.fieldsAuto({
+  tag: () => "StaticFilesChanged" as const,
+  changedFileUrlPaths: NonEmptyArray(Decode.string),
+});
+
+const StaticFilesMayHaveChangedWhileDisconnected = Decode.fieldsAuto({
+  tag: () => "StaticFilesMayHaveChangedWhileDisconnected" as const,
 });
 
 export type StatusChanged = ReturnType<typeof StatusChanged>;
@@ -99,6 +109,8 @@ export type WebSocketToClientMessage = ReturnType<
 export const WebSocketToClientMessage = Decode.fieldsUnion("tag", {
   FocusedTabAcknowledged,
   OpenEditorFailed,
+  StaticFilesChanged,
+  StaticFilesMayHaveChangedWhileDisconnected,
   StatusChanged,
   SuccessfullyCompiled,
   SuccessfullyCompiledButRecordFieldsChanged,

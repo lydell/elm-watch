@@ -7,10 +7,13 @@ import { stringSnapshotSerializer } from "./Helpers";
 const getNow: GetNow = () => new Date();
 
 const project: Project = {
-  watchRoot: {
-    tag: "AbsolutePath",
-    absolutePath: "/Users/you/project",
-  },
+  watchRoots: new HashSet([
+    {
+      tag: "AbsolutePath",
+      absolutePath: "/Users/you/project",
+    },
+  ]),
+  staticFilesDir: undefined,
   elmWatchJsonPath: {
     tag: "ElmWatchJsonPath",
     theElmWatchJsonPath: {

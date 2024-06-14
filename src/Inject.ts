@@ -1,12 +1,15 @@
 import * as ClientCode from "./ClientCode";
 import { join } from "./Helpers";
-import { Port } from "./Port";
 import {
   BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
   OutputPath,
 } from "./Types";
+import {
+  WebSocketConnection,
+  webSocketConnectionToPrimitive,
+} from "./WebSocketUrl";
 
 // This matches full functions, declared either with `function name(` or `var name =`.
 // NOTE: All function names in the regex must also be mentioned in the
@@ -831,7 +834,7 @@ export function proxyFile(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
   browserUiPosition: BrowserUiPosition,
-  webSocketPort: Port,
+  webSocketConnection: WebSocketConnection,
   debug: boolean
 ): string {
   return `${clientCode(
@@ -839,7 +842,7 @@ export function proxyFile(
     elmCompiledTimestamp,
     "proxy",
     browserUiPosition,
-    webSocketPort,
+    webSocketConnection,
     debug
   )}\n${ClientCode.proxy}`;
 }
@@ -849,7 +852,7 @@ export function clientCode(
   elmCompiledTimestamp: number,
   compilationMode: CompilationModeWithProxy,
   browserUiPosition: BrowserUiPosition,
-  webSocketPort: Port,
+  webSocketConnection: WebSocketConnection,
   debug: boolean
 ): string {
   const replacements: Record<string, string> = {
@@ -857,11 +860,12 @@ export function clientCode(
     INITIAL_ELM_COMPILED_TIMESTAMP: elmCompiledTimestamp.toString(),
     ORIGINAL_COMPILATION_MODE: compilationMode,
     ORIGINAL_BROWSER_UI_POSITION: browserUiPosition,
-    WEBSOCKET_PORT: webSocketPort.thePort.toString(),
+    WEBSOCKET_CONNECTION:
+      webSocketConnectionToPrimitive(webSocketConnection).toString(),
     DEBUG: debug.toString(),
   };
   return (
-    versionedIdentifier(outputPath.targetName, webSocketPort) +
+    versionedIdentifier(outputPath.targetName, webSocketConnection) +
     ClientCode.client.replace(
       new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
       (match: string, name: string) =>
@@ -876,15 +880,15 @@ export function clientCode(
 // - And it was created by `elm-watch hot`. (`elm-watch make` output does not contain WebSocket stuff).
 // - And it was created by the same version of `elm-watch`. (Older versions could have bugs.)
 // - And it has the same target name. (It might have changed, and needs to match.)
-// - And it used the same WebSocket port. (Otherwise it will never connect to us.)
+// - And it used the same WebSocket url or port. (Otherwise it will never connect to us.)
 export function versionedIdentifier(
   targetName: string,
-  webSocketPort: Port
+  webSocketConnection: WebSocketConnection
 ): string {
   return `// elm-watch hot ${JSON.stringify({
     version: "%VERSION%",
     targetName,
-    webSocketPort: webSocketPort.thePort,
+    webSocketConnection: webSocketConnectionToPrimitive(webSocketConnection),
   })}\n`;
 }
 

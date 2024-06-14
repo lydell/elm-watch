@@ -105,6 +105,26 @@ export function capitalize(string: string): string {
   return string.slice(0, 1).toUpperCase() + string.slice(1);
 }
 
+export function escapeHtml(string: string): string {
+  return string.replace(/[&<>"']/g, (match) => {
+    switch (match) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&apos;";
+      // istanbul ignore next
+      default:
+        return match;
+    }
+  });
+}
+
 export function silentlyReadIntEnvValue(
   value: string | undefined,
   defaultValue: number

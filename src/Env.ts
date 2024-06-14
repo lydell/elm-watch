@@ -12,6 +12,18 @@ export const ELM_WATCH_OPEN_EDITOR = "ELM_WATCH_OPEN_EDITOR";
 // Type: Check if defined and ignore value.
 export const ELM_WATCH_EXIT_ON_STDIN_END = "ELM_WATCH_EXIT_ON_STDIN_END";
 
+// By default, elm-watch’s HTTP server is run on `0.0.0.0` which exposes the
+// server on the local network. By setting this variable to `127.0.0.1` you can
+// restrict it to just your computer.
+// Type: IP address.
+export const ELM_WATCH_HOST = "ELM_WATCH_HOST";
+
+// This lets you override "webSocketUrl" in elm-watch.json, for cases where you
+// need to set it dynamically. For example, you might want to set a certain port
+// but keep the host name dynamic (if you run a remote dev container).
+// Type: URL starting with ws: or wss:.
+export const ELM_WATCH_WEBSOCKET_URL = "ELM_WATCH_WEBSOCKET_URL";
+
 // If the `ELM_WATCH_OPEN_EDITOR` takes this long, it is killed.
 // Type: Number.
 export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS =
