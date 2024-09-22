@@ -4,6 +4,7 @@
   "type": "commonjs",
   "scripts": {
     "postinstall": "elm-tooling install",
+    "install-test-elm-dependencies": "node -r esbuild-register scripts/InstallTestDependencies.ts",
     "pretest": "run-pty --auto-exit % prettier --check . % eslint . --report-unused-disable-directives % tsc % node -r esbuild-register scripts/EnsureTestDependencies.ts % npm run build",
     "test": "jest --coverage",
     "build": "node -r esbuild-register scripts/Build.ts"
