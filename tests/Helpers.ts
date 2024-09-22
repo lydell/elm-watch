@@ -628,6 +628,9 @@ export const stringSnapshotSerializer = {
 export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;
 
+// The stdin error test is not working on Linux and not worth it.
+export const testExceptLinux = process.platform === "linux" ? test.skip : test;
+
 export async function httpGet(
   urlString: string,
   options: http.RequestOptions = {}

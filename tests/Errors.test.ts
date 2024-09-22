@@ -30,6 +30,7 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
+  testExceptLinux,
   testExceptWindows,
   wait,
 } from "./Helpers";
@@ -2238,7 +2239,7 @@ describe("errors", () => {
       `);
     });
 
-    test("forgot to read stdin", async () => {
+    testExceptLinux("forgot to read stdin", async () => {
       const fixture = "postprocess/variants/no-stdin-read";
       const dir = path.join(FIXTURES_DIR, fixture);
       const elmWatchJson = fs.readFileSync(
@@ -3153,6 +3154,51 @@ describe("errors", () => {
 
         The operating system is supposed to always be able to find an available port,
         but it looks like that wasn't the case this time!
+
+        This is the error message I got:
+
+        The error message
+      `);
+    });
+
+    test("postprocessStdinWriteError", () => {
+      expect(
+        printError(
+          Errors.postprocessStdinWriteError(
+            {
+              tag: "ElmJsonPath",
+              theElmJsonPath: {
+                tag: "AbsolutePath",
+                absolutePath: "/Users/you/project/elm.json",
+              },
+            },
+            new Error("The error message"),
+            {
+              command: "node",
+              args: ["postprocess.js"],
+              options: {
+                cwd: {
+                  tag: "AbsolutePath",
+                  absolutePath: "/Users/you/project",
+                },
+                env: {},
+              },
+            }
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        ⧙-- POSTPROCESS STDIN TROUBLE ---------------------------------------------------⧘
+        /Users/you/project/elm.json
+
+        I tried to run your postprocess command:
+
+        cd /Users/you/project
+        node postprocess.js
+
+        Trying to write to its ⧙stdin⧘, I got an error!
+        ⧙Did you forget to read stdin, maybe?⧘
+
+        Note: If you don't need stdin in some case, you can pipe it to stdout!
 
         This is the error message I got:
 

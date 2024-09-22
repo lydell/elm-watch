@@ -2127,6 +2127,8 @@ export function renderOutputErrors(
         ),
       ];
 
+    // This is covered on macOS and Windows, but not Linux.
+    // istanbul ignore next
     case "PostprocessStdinWriteError":
       return [
         Errors.postprocessStdinWriteError(

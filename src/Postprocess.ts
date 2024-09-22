@@ -82,6 +82,8 @@ export function runPostprocess({
       case "OtherSpawnError":
         return spawnResult;
 
+      // This is covered on macOS and Windows, but not Linux.
+      // istanbul ignore next
       case "StdinWriteError":
         return {
           tag: "PostprocessStdinWriteError",

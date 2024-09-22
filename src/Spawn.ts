@@ -137,17 +137,21 @@ export function spawn(command: Command): {
       child.on("exit", (exitCode, signal) => {
         if (killed) {
           // Ignore after killed.
-        } else if (exitCode === 0 && stdinWriteError !== undefined) {
-          clearTimeout(stdinWriteError.timeoutId);
-          resolve(stdinWriteError.result);
         } else {
-          resolve({
-            tag: "Exit",
-            exitReason: exitReason(exitCode, signal),
-            stdout: Buffer.concat(stdout),
-            stderr: Buffer.concat(stderr),
-            command,
-          });
+          // This is covered on macOS and Windows, but not Linux.
+          // istanbul ignore if
+          if (exitCode === 0 && stdinWriteError !== undefined) {
+            clearTimeout(stdinWriteError.timeoutId);
+            resolve(stdinWriteError.result);
+          } else {
+            resolve({
+              tag: "Exit",
+              exitReason: exitReason(exitCode, signal),
+              stdout: Buffer.concat(stdout),
+              stderr: Buffer.concat(stderr),
+              command,
+            });
+          }
         }
       });
 
