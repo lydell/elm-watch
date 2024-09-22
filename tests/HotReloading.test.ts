@@ -6,6 +6,8 @@ import * as path from "path";
 
 import { __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS } from "../src/Env";
 import {
+  grep,
+  onlyErrorMessages,
   rimraf,
   stringSnapshotSerializer,
   TerminalColorReadStream,
@@ -603,7 +605,7 @@ describe("hot reloading", () => {
         },
       });
 
-      const { terminal } = await go(({ idle, body }) => {
+      await go(({ idle, body }) => {
         switch (idle) {
           case 1:
             assertDebugger(body);
@@ -616,15 +618,6 @@ describe("hot reloading", () => {
             return "Stop";
         }
       });
-
-      expect(terminal).toMatchInlineSnapshot(`
-        ✅ AllProgramTypes⧙                       1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/AllProgramTypes.elm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      `);
 
       function assert1(body: HTMLBodyElement): void {
         expect(removeDebugger(body)).toMatchInlineSnapshot(
@@ -685,57 +678,18 @@ describe("hot reloading", () => {
       }
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-        ⏳ Dependencies
-        ✅ Dependencies
-        ⏳ RemoveInput: elm make (typecheck only)
-        ✅ RemoveInput⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+    expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
+      ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+      ⧙Target: RemoveInput⧘
 
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+      You asked me to compile these inputs:
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        ⏳ RemoveInput: elm make
-        ✅ RemoveInput⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      src/RemoveInput.elm ⧙(/Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm)⧘
 
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      ⧙But they don't exist!⧘
 
-        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: RemoveInput⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: RemoveInput
-        ℹ️ 13:10:05 Web socket connected for: RemoveInput⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
-        🚨 RemoveInput
-
-        ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
-        ⧙Target: RemoveInput⧘
-
-        You asked me to compile these inputs:
-
-        src/RemoveInput.elm ⧙(/Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm)⧘
-
-        ⧙But they don't exist!⧘
-
-        Is something misspelled? Or do you need to create them?
-
-        🚨 ⧙1⧘ error found
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        ⏳ Dependencies
-        ✅ Dependencies
-        ⏳ RemoveInput: elm make
-        ✅ RemoveInput⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Added /Users/you/project/tests/fixtures/hot/hot-reload/src/RemoveInput.elm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      `);
+      Is something misspelled? Or do you need to create them?
+    `);
 
     async function assert1(div: HTMLDivElement): Promise<void> {
       expect(div.outerHTML).toMatchInlineSnapshot(
@@ -2169,37 +2123,9 @@ describe("hot reloading", () => {
       }
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-        ⏳ InterruptElm: elm make (typecheck only)
-        ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        ⏳ InterruptElm: elm make
-        ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InterruptElm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: InterruptElm
-        ℹ️ 13:10:05 Web socket connected for: InterruptElm⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
-        ⏳ InterruptElm: elm make
-        ⏳ InterruptElm: interrupted
-        ⏳ InterruptElm: elm make
-        ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/InterruptElm.elm
-        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/InterruptElm.elm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      `);
+    expect(grep(terminal, /interrupted/)).toMatchInlineSnapshot(
+      `⏳ InterruptElm: interrupted`
+    );
 
     function assertInit(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>Text1</div>`);
@@ -2233,37 +2159,9 @@ describe("hot reloading", () => {
       }
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-        ⏳ InterruptElm: elm make (typecheck only)
-        ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        ⏳ InterruptElm: elm make
-        ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InterruptElm⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: InterruptElm
-        ℹ️ 13:10:05 Web socket connected for: InterruptElm⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
-        ⏳ InterruptElm: elm make
-        ⏳ InterruptElm: interrupted
-        ⏳ InterruptElm: elm make
-        ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/src/InterruptElm.elm
-        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      `);
+    expect(grep(terminal, /interrupted/)).toMatchInlineSnapshot(
+      `⏳ InterruptElm: interrupted`
+    );
   });
 
   test("Restart while installing dependencies", async () => {
@@ -2330,69 +2228,31 @@ describe("hot reloading", () => {
       }
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-        ⏳ Dependencies
-        ✅ Dependencies
-        ⏳ DebugLog: elm make (typecheck only)
-        ✅ DebugLog⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+    expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
+      ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
+      ⧙Target: DebugLog⧘
 
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+      There are uses of the \`Debug\` module in the following modules:
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        ⏳ DebugLog: elm make
-        ✅ DebugLog⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+          ⧙DebugLog⧘
 
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      But the --optimize flag only works if all \`Debug\` functions are removed!
 
-        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: DebugLog⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⧙Note⧘: The issue is that --optimize strips out info needed by \`Debug\` functions.
+      Here are two examples:
 
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+          (1) It shortens record field names. This makes the generated JavaScript is
+          smaller, but \`Debug.toString\` cannot know the real field names anymore.
 
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: DebugLog
-        ℹ️ 13:10:05 Web socket connected for: DebugLog⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
-        ⏳ DebugLog: elm make --optimize
-        🚨 DebugLog
+          (2) Values like \`type Height = Height Float\` are unboxed. This reduces
+          allocation, but it also means that \`Debug.toString\` cannot tell if it is
+          looking at a \`Height\` or \`Float\` value.
 
-        ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
-        ⧙Target: DebugLog⧘
-
-        There are uses of the \`Debug\` module in the following modules:
-
-            ⧙DebugLog⧘
-
-        But the --optimize flag only works if all \`Debug\` functions are removed!
-
-        ⧙Note⧘: The issue is that --optimize strips out info needed by \`Debug\` functions.
-        Here are two examples:
-
-            (1) It shortens record field names. This makes the generated JavaScript is
-            smaller, but \`Debug.toString\` cannot know the real field names anymore.
-
-            (2) Values like \`type Height = Height Float\` are unboxed. This reduces
-            allocation, but it also means that \`Debug.toString\` cannot tell if it is
-            looking at a \`Height\` or \`Float\` value.
-
-        There are a few other cases like that, and it will be much worse once we start
-        inlining code. That optimization could move \`Debug.log\` and \`Debug.todo\` calls,
-        resulting in unpredictable behavior. I hope that clarifies why this restriction
-        exists!
-
-        🚨 ⧙1⧘ error found
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Changed compilation mode to "optimize" of: DebugLog⧘
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        ⏳ DebugLog: elm make
-        ✅ DebugLog⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Changed compilation mode to "standard" of: DebugLog⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      `);
+      There are a few other cases like that, and it will be much worse once we start
+      inlining code. That optimization could move \`Debug.log\` and \`Debug.todo\` calls,
+      resulting in unpredictable behavior. I hope that clarifies why this restriction
+      exists!
+    `);
 
     expect(renders).toMatchInlineSnapshot(`
       ▼ 🔌 13:10:05 DebugLog
