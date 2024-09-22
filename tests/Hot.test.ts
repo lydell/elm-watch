@@ -1957,9 +1957,16 @@ describe("hot", () => {
       },
     });
 
-    expect(grep(terminal, /Changed|FYI/)).toMatchInlineSnapshot(`
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File1.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File2.elm⧘
+    // The order in which the files are detected by the watcher
+    // is not defined when they happen so close to each other.
+    const adjustedTerminal = grep(terminal, /Changed|FYI/).replace(
+      /\w+\.elm/g,
+      "File.elm"
+    );
+
+    expect(adjustedTerminal).toMatchInlineSnapshot(`
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
       ✅ ⧙13:10:05⧘ FYI: The above Elm files are not imported by any of the enabled targets. Nothing to do!
     `);
 
@@ -2027,7 +2034,11 @@ describe("hot", () => {
       },
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
+    // The order in which the files are detected by the watcher
+    // is not defined when they happen so close to each other.
+    const adjustedTerminal = terminal.replace(/\w+\.elm/g, "File.elm");
+
+    expect(adjustedTerminal).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Html: elm make (typecheck only)
@@ -2059,8 +2070,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/HtmlMain.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/Worker.elm⧘
+      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm
+      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
