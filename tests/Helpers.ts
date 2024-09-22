@@ -558,7 +558,7 @@ export function onlyErrorMessages(terminal: string): string {
   const output = [];
   let lines = terminal.split("\n");
   while (lines.length > 0) {
-    const start = lines.findIndex((line) => /-- [\w\s.-]+ --/.test(line));
+    const start = lines.findIndex((line) => /-- \S+(?:\s\S+)* --/.test(line));
     if (start === -1) {
       break;
     }

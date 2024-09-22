@@ -22,6 +22,7 @@ import {
   describeExceptWindows,
   logDebug,
   MemoryWriteStream,
+  onlyErrorMessages,
   prependPATH,
   rimraf,
   rm,
@@ -38,7 +39,12 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 async function run(
   fixture: string,
   args: Array<string>,
-  options?: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean }
+  options?: {
+    env?: Env;
+    isTTY?: boolean;
+    exitHotOnError?: boolean;
+    originalStdout?: boolean;
+  }
 ): Promise<string> {
   return runAbsolute(path.join(FIXTURES_DIR, fixture), args, options);
 }
@@ -50,7 +56,13 @@ async function runAbsolute(
     env,
     isTTY = true,
     exitHotOnError = false,
-  }: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean } = {}
+    originalStdout = false,
+  }: {
+    env?: Env;
+    isTTY?: boolean;
+    exitHotOnError?: boolean;
+    originalStdout?: boolean;
+  } = {}
 ): Promise<string> {
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();
@@ -78,7 +90,7 @@ async function runAbsolute(
   assertExitCode(1, exitCode, stdoutString, stderr.content);
   expect(stderr.content).toBe("");
 
-  return stdoutString;
+  return originalStdout ? stdoutString : onlyErrorMessages(stdoutString);
 }
 
 const elmBinAlwaysSucceedEnv = {
@@ -155,9 +167,9 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("errors", () => {
   test("unknown command", async () => {
-    expect(await run("wherever", ["nope"])).toMatchInlineSnapshot(
-      `Unknown command: nope`
-    );
+    expect(
+      await run("wherever", ["nope"], { originalStdout: true })
+    ).toMatchInlineSnapshot(`Unknown command: nope`);
   });
 
   test("elm-watch.json is a folder", async () => {
@@ -698,8 +710,6 @@ describe("errors", () => {
   describe("inputs errors", () => {
     test("inputs not found", async () => {
       expect(await run("inputs-not-found", ["make"])).toMatchInlineSnapshot(`
-        🚨 main
-
         ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -711,10 +721,6 @@ describe("errors", () => {
         ⧙But they don't exist!⧘
 
         Is something misspelled? Or do you need to create them?
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -741,8 +747,6 @@ describe("errors", () => {
 
       test("make", async () => {
         expect(await run(fixture, ["make"])).toMatchInlineSnapshot(`
-          🚨 main
-
           ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
           ⧙Target: main⧘
 
@@ -753,17 +757,11 @@ describe("errors", () => {
           ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
 
           ⧙That's all I know, unfortunately!⧘
-
-          🚨 ⧙1⧘ error found
-
-          🚨 Compilation finished in ⧙123 ms⧘.
         `);
       });
 
       test("hot", async () => {
         expect(await run(fixture, ["hot"])).toMatchInlineSnapshot(`
-          🚨 main
-
           ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
           ⧙Target: main⧘
 
@@ -775,11 +773,8 @@ describe("errors", () => {
 
           ⧙That's all I know, unfortunately!⧘
 
-          🚨 ⧙1⧘ error found
+          …
 
-          📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
           ⧙-- WATCHER ERROR ---------------------------------------------------------------⧘
 
           The file watcher encountered an error, which means that it cannot continue.
@@ -798,33 +793,22 @@ describe("errors", () => {
     test("hot failure to read previous output file", async () => {
       expect(await run("output-is-folder", ["hot"], { exitHotOnError: true }))
         .toMatchInlineSnapshot(`
-          ✅ Dependencies
-          🚨 Main
+        ⧙-- TROUBLE CHECKING OUTPUT -----------------------------------------------------⧘
+        ⧙Target: Main⧘
 
-          ⧙-- TROUBLE CHECKING OUTPUT -----------------------------------------------------⧘
-          ⧙Target: Main⧘
+        I managed to typecheck your code. Then I tried to read part of the previous output,
+        to see if I need to write a dummy output file there:
 
-          I managed to typecheck your code. Then I tried to read part of the previous output,
-          to see if I need to write a dummy output file there:
+        /Users/you/project/tests/fixtures/errors/output-is-folder/output/Main.js
 
-          /Users/you/project/tests/fixtures/errors/output-is-folder/output/Main.js
+        Doing so I encountered this error:
 
-          Doing so I encountered this error:
-
-          EISDIR: illegal operation on a directory, read
-
-          🚨 ⧙1⧘ error found
-
-          📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-          🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        `);
+        EISDIR: illegal operation on a directory, read
+      `);
     });
 
     test("duplicate inputs", async () => {
       expect(await run("duplicate-inputs", ["make"])).toMatchInlineSnapshot(`
-        🚨 main
-
         ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -835,18 +819,12 @@ describe("errors", () => {
         -> /Users/you/project/tests/fixtures/errors/duplicate-inputs/Main.elm
 
         Make sure every input is listed just once!
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     testExceptWindows("duplicate inputs with symlinks", async () => {
       expect(await run("duplicate-inputs-with-symlinks", ["make"]))
         .toMatchInlineSnapshot(`
-        🚨 main
-
         ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -864,10 +842,6 @@ describe("errors", () => {
         Make sure every input is listed just once!
 
         Note that at least one of the inputs seems to be a symlink. They can be tricky!
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -875,8 +849,6 @@ describe("errors", () => {
   describe("elm.json errors", () => {
     test("elm.json not found, with long target name", async () => {
       expect(await run("elm-json-not-found", ["make"])).toMatchInlineSnapshot(`
-        🚨 yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooo…
-
         ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
         ⧙Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo⧘
 
@@ -886,10 +858,6 @@ describe("errors", () => {
         pages/About.elm
 
         Has it gone missing? Maybe run ⧙elm init⧘ to create one?
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -903,8 +871,6 @@ describe("errors", () => {
           },
         })
       ).toMatchInlineSnapshot(`
-        yoooooooooooooooooooooooooooolooooooooooooooooooooooooooooooooooooooooooooooo...
-
         -- elm.json NOT FOUND ----------------------------------------------------------
         Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 
@@ -929,8 +895,6 @@ describe("errors", () => {
 
     test("non unique elm.json", async () => {
       expect(await run("non-unique-elm-json", ["make"])).toMatchInlineSnapshot(`
-        🚨 main
-
         ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -946,10 +910,6 @@ describe("errors", () => {
 
         Either split this target, or move the inputs to the same project with the same
         ⧙elm.json⧘.
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -960,9 +920,6 @@ describe("errors", () => {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Main
-
         ⧙-- TROUBLE READING elm.json ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-json-is-folder/elm.json
 
@@ -975,12 +932,6 @@ describe("errors", () => {
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
-
-        🚨 ⧙1⧘ error found
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -991,9 +942,6 @@ describe("errors", () => {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Main
-
         ⧙-- TROUBLE READING elm.json ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-json-bad-json/elm.json
 
@@ -1006,12 +954,6 @@ describe("errors", () => {
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
-
-        🚨 ⧙1⧘ error found
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1022,9 +964,6 @@ describe("errors", () => {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Main
-
         ⧙-- INVALID elm.json FORMAT -----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-json-decode-error/elm.json
 
@@ -1039,12 +978,6 @@ describe("errors", () => {
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
-
-        🚨 ⧙1⧘ error found
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -1061,8 +994,6 @@ describe("errors", () => {
           },
         })
       ).toMatchInlineSnapshot(`
-        🚨 Dependencies
-
         ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
@@ -1085,21 +1016,19 @@ describe("errors", () => {
     testExceptWindows("undefined PATH", async () => {
       expect(await run("valid", ["make", "app"], { env: {} }))
         .toMatchInlineSnapshot(`
-          🚨 Dependencies
+        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/valid/elm.json
 
-          ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
-          /Users/you/project/tests/fixtures/errors/valid/elm.json
+        I tried to execute ⧙elm⧘, but it does not appear to exist!
 
-          I tried to execute ⧙elm⧘, but it does not appear to exist!
+        I can't find any program, because process.env.PATH is undefined!
 
-          I can't find any program, because process.env.PATH is undefined!
+        Is Elm installed?
 
-          Is Elm installed?
-
-          Note: If you have installed Elm locally (for example using npm or elm-tooling),
-          execute elm-watch using npx to make elm-watch automatically pick up that local
-          installation: ⧙npx elm-watch⧘
-        `);
+        Note: If you have installed Elm locally (for example using npm or elm-tooling),
+        execute elm-watch using npx to make elm-watch automatically pick up that local
+        installation: ⧙npx elm-watch⧘
+      `);
     });
 
     const printPATHWindows = (env: Env): string =>
@@ -1164,6 +1093,7 @@ describe("errors", () => {
             ...TEST_ENV,
             [__ELM_WATCH_TMP_DIR]: tmpDir,
           },
+          originalStdout: true, // Check that we get "🚨 Dependencies" below (one test is enough).
         })
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
@@ -1180,8 +1110,6 @@ describe("errors", () => {
 
     test("elm install error", async () => {
       expect(await runWithBadElmBin("install-error")).toMatchInlineSnapshot(`
-        🚨 Dependencies
-
         ⧙-- PROBLEM LOADING PACKAGE LIST ------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
@@ -1204,8 +1132,6 @@ describe("errors", () => {
     test("elm install error – hot", async () => {
       expect(await runWithBadElmBin("install-error", { exitHotOnError: true }))
         .toMatchInlineSnapshot(`
-        🚨 Dependencies
-
         ⧙-- PROBLEM LOADING PACKAGE LIST ------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
@@ -1229,8 +1155,6 @@ describe("errors", () => {
       test("exit 0 + stderr", async () => {
         expect(await runWithBadElmBin("exit-0-stderr-install"))
           .toMatchInlineSnapshot(`
-          🚨 Dependencies
-
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
           /Users/you/project/tests/fixtures/errors/valid/elm.json
 
@@ -1253,8 +1177,6 @@ describe("errors", () => {
       test("exit 1 + stderr not matching", async () => {
         expect(await runWithBadElmBin("exit-1-stderr-not-install-error-match"))
           .toMatchInlineSnapshot(`
-          🚨 Dependencies
-
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
           /Users/you/project/tests/fixtures/errors/valid/elm.json
 
@@ -1280,8 +1202,6 @@ describe("errors", () => {
       test("exit 2 + no output", async () => {
         expect(await runWithBadElmBin("exit-2-no-output-install"))
           .toMatchInlineSnapshot(`
-          🚨 Dependencies
-
           ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
           /Users/you/project/tests/fixtures/errors/valid/elm.json
 
@@ -1309,8 +1229,6 @@ describe("errors", () => {
       );
 
       expect(output).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1327,10 +1245,6 @@ describe("errors", () => {
         I wrote that to this file so you can inspect it:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96.txt
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
 
       expect(writtenError).toMatchInlineSnapshot(`
@@ -1360,8 +1274,6 @@ describe("errors", () => {
       );
 
       expect(output).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1380,10 +1292,6 @@ describe("errors", () => {
         I wrote that to this file so you can inspect it:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-9e9d3029b9417772915e06e1add0feb00f6b8db2f9bc1ce17979df8b8db666c5.txt
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
 
       expect(writtenError).toMatchInlineSnapshot(`
@@ -1414,8 +1322,6 @@ describe("errors", () => {
     test("error failed to write", async () => {
       expect(await runWithBadElmBin("json-error-failed-write"))
         .toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1436,10 +1342,6 @@ describe("errors", () => {
         ⧙But that failed too:⧘
 
         EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.txt'
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -1447,8 +1349,6 @@ describe("errors", () => {
   describe("unexpected `elm make` output", () => {
     test("exit 0 + stdout", async () => {
       expect(await runWithBadElmBin("exit-0-stdout")).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1465,17 +1365,11 @@ describe("errors", () => {
         exit 0
         some output
         on stdout
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("exit 0 + stderr", async () => {
       expect(await runWithBadElmBin("exit-0-stderr")).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1492,17 +1386,11 @@ describe("errors", () => {
         exit 0
         some output
         on stderr
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("exit 1 + stdout", async () => {
       expect(await runWithBadElmBin("exit-1-stdout")).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1519,18 +1407,12 @@ describe("errors", () => {
         exit 1
         some output
         on stdout
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("exit 1 + stderr that isn’t json", async () => {
       expect(await runWithBadElmBin("exit-1-stderr-not-{"))
         .toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1554,17 +1436,11 @@ describe("errors", () => {
             --output=elm.js
             --output=index.html
             --output=/dev/null
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("exit 2 + no output", async () => {
       expect(await runWithBadElmBin("exit-2-no-output")).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1580,18 +1456,12 @@ describe("errors", () => {
 
         exit 2
         ⧙(no output)⧘
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("exit 2 + both stdout and stderr", async () => {
       expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
         .toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1612,10 +1482,6 @@ describe("errors", () => {
 
         STDERR:
         stuff on stderr
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -1623,9 +1489,6 @@ describe("errors", () => {
   describe("elm compilation errors", () => {
     test('wrong "type" in elm.json', async () => {
       expect(await run("wrong-elm-json-type", ["make"])).toMatchInlineSnapshot(`
-        ⛔️ Dependencies
-        🚨 main
-
         ⧙-- UNEXPECTED TYPE -------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/wrong-elm-json-type/elm.json
 
@@ -1637,10 +1500,6 @@ describe("errors", () => {
         3|⧙>⧘}
 
         Try changing the "type" to ⧙"application"⧘ or ⧙"package"⧘ instead.
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1648,9 +1507,6 @@ describe("errors", () => {
       // Elm’s message is a bit odd.
       expect(await run("compilation-errors", ["make", "Dir"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Dir
-
         ⧙-- FILE NOT FOUND --------------------------------------------------------------⧘
         ⧙Target: Dir⧘
 
@@ -1663,19 +1519,12 @@ describe("errors", () => {
         ⧙Note⧘: If you are just getting started, try working through the examples in the
         official guide https://guide.elm-lang.org to get an idea of the kinds of things
         that typically go in a src/Main.elm file.
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("Elm syntax error", async () => {
       expect(await run("compilation-errors", ["make", "SyntaxError"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 SyntaxError
-
         ⧙-- UNFINISHED MODULE DECLARATION -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/compilation-errors/src/SyntaxError.elm:1:28
 
@@ -1691,19 +1540,12 @@ describe("errors", () => {
         I generally recommend using an explicit exposing list. I can skip compiling a
         bunch of files when the public interface of a module stays the same, so exposing
         fewer values can help improve compile times!
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("Elm syntax error – tabs", async () => {
       expect(await run("compilation-errors", ["make", "Tabs"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Tabs
-
         ⧙-- NO TABS ---------------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/compilation-errors/src/Tabs.elm:6:1
 
@@ -1712,19 +1554,12 @@ describe("errors", () => {
         6| 	Html.text "Hello"
            ⧙^⧘
         Replace the tab with spaces.
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("module name and file name mismatch", async () => {
       expect(await run("compilation-errors", ["make", "ModuleNameMismatch"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 ModuleNameMismatch
-
         ⧙-- MODULE NAME MISMATCH --------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/compilation-errors/src/ModuleNameMismatch.elm:1:8
 
@@ -1740,19 +1575,12 @@ describe("errors", () => {
         ⧙Note⧘: I require that module names correspond to file paths. This makes it much
         easier to explore unfamiliar codebases! So if you want to keep the current
         module name, try renaming the file instead.
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("type error", async () => {
       expect(await run("compilation-errors", ["make", "TypeError"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 TypeError
-
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
 
@@ -1763,19 +1591,12 @@ describe("errors", () => {
         The (+) operator only works with ⧙Int⧘ and ⧙Float⧘ values.
 
         ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("missing main", async () => {
       expect(await run("compilation-errors", ["make", "MissingMain"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 MissingMain
-
         ⧙-- NO MAIN ---------------------------------------------------------------------⧘
         ⧙Target: MissingMain⧘
 
@@ -1795,10 +1616,6 @@ describe("errors", () => {
 
         Or use https://package.elm-lang.org/packages/elm/core/latest/Platform#worker to
         make a \`main\` with no user interface.
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1806,9 +1623,6 @@ describe("errors", () => {
       expect(
         await run("compilation-errors", ["make", "DebugLog", "--optimize"])
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 DebugLog
-
         ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
         ⧙Target: DebugLog⧘
 
@@ -1832,10 +1646,6 @@ describe("errors", () => {
         inlining code. That optimization could move \`Debug.log\` and \`Debug.todo\` calls,
         resulting in unpredictable behavior. I hope that clarifies why this restriction
         exists!
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1865,9 +1675,6 @@ describe("errors", () => {
       }
       fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
       expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
-        ⛔️ Dependencies
-        🚨 Main
-
         ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
         ⧙Target: Main⧘
 
@@ -1887,17 +1694,11 @@ describe("errors", () => {
         ⧙Note⧘: This almost certainly means that a 3rd party tool (or editor plugin) is
         causing problems your the elm-stuff/ directory. Try disabling 3rd party tools
         one by one until you figure out which it is!
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("Elm crash immediately", async () => {
       expect(await runWithBadElmBin("elm-crash")).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1911,17 +1712,11 @@ describe("errors", () => {
         elm: Map.!: given key is not an element in the map
         CallStack (from HasCallStack):
           error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("Elm crash half-way through printing JSON", async () => {
       expect(await runWithBadElmBin("elm-crash-json")).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1935,17 +1730,11 @@ describe("errors", () => {
         elm: Map.!: given key is not an element in the map
         CallStack (from HasCallStack):
           error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("Elm crash with non-JSON printed before", async () => {
       expect(await runWithBadElmBin("elm-crash-extra")).toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -1963,10 +1752,6 @@ describe("errors", () => {
         elm: Map.!: given key is not an element in the map
         CallStack (from HasCallStack):
           error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -1991,6 +1776,7 @@ describe("errors", () => {
             ...badElmBinEnv(path.join(dir, "bad-bin")),
             [__ELM_WATCH_EXIT_ON_ERROR]: "",
           },
+          originalStdout: true,
         }),
         (async () => {
           while (fs.readFileSync(lock, "utf8") !== "typecheck-only-started") {
@@ -2034,7 +1820,8 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
+        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm
+        ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
         🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
@@ -2042,8 +1829,6 @@ describe("errors", () => {
 
   test("fail to read the size of Elm’s output", async () => {
     expect(await runWithBadElmBin("exit-0-no-write")).toMatchInlineSnapshot(`
-      🚨 app
-
       ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
       ⧙Target: app⧘
 
@@ -2054,10 +1839,6 @@ describe("errors", () => {
       Doing so I encountered this error:
 
       ENOENT: no such file or directory, stat '/Users/you/project/tests/fixtures/errors/valid/build/app.js'
-
-      🚨 ⧙1⧘ error found
-
-      🚨 Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -2065,8 +1846,6 @@ describe("errors", () => {
     test("fail to read Elm’s output", async () => {
       expect(await runWithBadElmBin("exit-0-no-write", { postprocess: true }))
         .toMatchInlineSnapshot(`
-        🚨 app
-
         ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
         ⧙Target: app⧘
 
@@ -2077,10 +1856,6 @@ describe("errors", () => {
         Doing so I encountered this error:
 
         ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js'
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2091,9 +1866,6 @@ describe("errors", () => {
       rm(readonlyFile);
       fs.writeFileSync(readonlyFile, "", { mode: "0444" }); // readonly
       expect(await run(fixture, ["make"])).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Main
-
         ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
         ⧙Target: Main⧘
 
@@ -2108,10 +1880,6 @@ describe("errors", () => {
         But I encountered this error:
 
         EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/readonly-output/readonly.js'
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2126,9 +1894,6 @@ describe("errors", () => {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 Main
-
         ⧙-- TROUBLE WRITING DUMMY OUTPUT ------------------------------------------------⧘
         ⧙Target: Main⧘
 
@@ -2140,12 +1905,6 @@ describe("errors", () => {
         Doing so I encountered this error:
 
         EACCES: permission denied, open '/Users/you/project/tests/fixtures/errors/readonly-output/readonly.js'
-
-        🚨 ⧙1⧘ error found
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2157,9 +1916,6 @@ describe("errors", () => {
       expect(
         output.replace(/PATH(.*:\n\n)(.+\n)+/i, "PATH$1/some/fake/bin/path\n")
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- COMMAND NOT FOUND -----------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -2170,19 +1926,12 @@ describe("errors", () => {
         /some/fake/bin/path
 
         Is ⧙nope⧘ installed?
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("exit 1 + stdout", async () => {
       expect(await run("postprocess/variants/exit-1-stdout", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -2295,10 +2044,6 @@ describe("errors", () => {
         99 | stdout line
         100 | stdout line
         ⧙1 more line⧘
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2306,9 +2051,6 @@ describe("errors", () => {
       expect(
         await run("postprocess/variants/exit-2-stderr", ["make", "--debug"])
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -2421,10 +2163,6 @@ describe("errors", () => {
         99 | stderr line
         100 | stderr line
         ⧙2 more lines⧘
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2435,9 +2173,6 @@ describe("errors", () => {
           "--optimize",
         ])
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -2450,10 +2185,6 @@ describe("errors", () => {
 
         exit 3
         ⧙(no output)⧘
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2463,9 +2194,6 @@ describe("errors", () => {
           "make",
         ])
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -2484,19 +2212,12 @@ describe("errors", () => {
         1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
         1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 ⧙2 more characters⧘
         ⧙1 more line⧘
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
     test("exit 5 + tricky args", async () => {
       expect(await run("postprocess/variants/exit-5-tricky-args", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -2509,10 +2230,6 @@ describe("errors", () => {
 
         exit 5
         ⧙(no output)⧘
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
 
@@ -2535,9 +2252,6 @@ describe("errors", () => {
       fs.writeFileSync(path.join(dir, "elm-watch.json"), newElmWatchJson);
       const output = (await run(fixture, ["make"])).replace("true", "echo");
       expect(output).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS STDIN TROUBLE ---------------------------------------------------⧘
         ⧙Target: main⧘
 
@@ -2554,10 +2268,6 @@ describe("errors", () => {
         This is the error message I got:
 
         write EPIPE
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘.
       `);
     });
   });
@@ -2566,9 +2276,6 @@ describe("errors", () => {
     test("missing script", async () => {
       expect(await run("postprocess/variants/missing-script", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- MISSING POSTPROCESS SCRIPT --------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/missing-script/elm-watch.json
 
@@ -2579,19 +2286,12 @@ describe("errors", () => {
         You need to specify a JavaScript file to run as well, like so:
 
         "postprocess": ["elm-watch-node", "postprocess.js"]
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("script not found", async () => {
       expect(await run("postprocess/variants/script-not-found", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js
 
@@ -2602,19 +2302,12 @@ describe("errors", () => {
         But that resulted in this error:
 
         Cannot find module '/Users/you/project/tests/fixtures/errors/postprocess/variants/script-not-found/not-found.js' imported from /Users/you/project/src/PostprocessWorker.ts
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("throw at import", async () => {
       expect(await run("postprocess/variants/throw-at-import", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-at-import/postprocess.js
 
@@ -2626,10 +2319,6 @@ describe("errors", () => {
 
         Error: Failed to initialize!
             at fake/stacktrace.js
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
@@ -2637,9 +2326,6 @@ describe("errors", () => {
       expect(
         await run("postprocess/variants/throw-non-error-at-import", ["make"])
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-non-error-at-import/postprocess.js
 
@@ -2655,19 +2341,12 @@ describe("errors", () => {
         My debug message
 
         STDERR:
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("empty file", async () => {
       expect(await run("postprocess/variants/empty-file", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js
 
@@ -2694,19 +2373,12 @@ describe("errors", () => {
         export default async function postprocess({ code, targetName, compilationMode }) {
           return code;
         };
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("wrong default export, with console.log and console.error", async () => {
       expect(await run("postprocess/variants/wrong-default-export", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.js
 
@@ -2740,19 +2412,12 @@ describe("errors", () => {
 
         STDERR:
         This is stderr
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("throw error, with process.stdout.write", async () => {
       expect(await run("postprocess/variants/throw-error", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-error/postprocess.js
 
@@ -2779,19 +2444,12 @@ describe("errors", () => {
         Some debug message
 
         STDERR:
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("throw null", async () => {
       expect(await run("postprocess/variants/throw-null", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/throw-null/postprocess.js
 
@@ -2812,19 +2470,12 @@ describe("errors", () => {
         But that resulted in this error:
 
         null
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("reject promise", async () => {
       expect(await run("postprocess/variants/reject-promise", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- POSTPROCESS RUN ERROR -------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/reject-promise/postprocess.js
 
@@ -2845,19 +2496,12 @@ describe("errors", () => {
         But that resulted in this error:
 
         "rejected!"
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
 
     test("return undefined, with process.stderr.write", async () => {
       expect(await run("postprocess/variants/return-undefined", ["make"]))
         .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        🚨 main
-
         ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/return-undefined/postprocess.js
 
@@ -2884,10 +2528,6 @@ describe("errors", () => {
 
         STDERR:
         Stderr!
-
-        🚨 ⧙1⧘ error found
-
-        🚨 Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
       `);
     });
   });
@@ -2977,9 +2617,6 @@ describe("errors", () => {
           exitHotOnError: true,
         })
       ).toMatchInlineSnapshot(`
-        ✅ Dependencies
-        ✅ Main⧙                                             1 ms Q | 765 ms T ¦  50 ms W⧘
-
         ⧙-- TROUBLE WRITING elm-stuff/elm-watch/stuff.json ------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch/stuff.json
 
@@ -3005,9 +2642,6 @@ describe("errors", () => {
         exitHotOnError: true,
       })
     ).toMatchInlineSnapshot(`
-      ✅ Dependencies
-      🚨 Main
-
       ⧙-- TROUBLE READING ELM FILES ---------------------------------------------------⧘
       ⧙Target: Main⧘
 
@@ -3018,12 +2652,6 @@ describe("errors", () => {
 
       (I still managed to compile your code, but the watcher will not work properly
       and "postprocess" was not run.)
-
-      🚨 ⧙1⧘ error found
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
@@ -3097,8 +2725,12 @@ describe("errors", () => {
   });
 
   test("typecheck only should mark only relevant targets with errors", async () => {
-    expect(await run("typecheck-only", ["hot"], { exitHotOnError: true }))
-      .toMatchInlineSnapshot(`
+    expect(
+      await run("typecheck-only", ["hot"], {
+        exitHotOnError: true,
+        originalStdout: true,
+      })
+    ).toMatchInlineSnapshot(`
       ✅ Dependencies
       ✅ Main1⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
       🚨 Main2
@@ -3130,7 +2762,7 @@ describe("errors", () => {
       rm(appPath);
 
       // Note: Postprocess is skipped when there are `elm make` errors.
-      expect(await run("ci", ["make"], { isTTY: false }))
+      expect(await run("ci", ["make"], { isTTY: false, originalStdout: true }))
         .toMatchInlineSnapshot(`
         ⏳ Dependencies
         ✅ Dependencies
@@ -3179,6 +2811,7 @@ describe("errors", () => {
       expect(
         await run("ci", ["make", "postprocess-error"], {
           isTTY: false,
+          originalStdout: true,
         })
       ).toMatchInlineSnapshot(`
         ⏳ Dependencies
@@ -3219,6 +2852,7 @@ describe("errors", () => {
             [NO_COLOR]: "",
           },
           isTTY: false,
+          originalStdout: true,
         })
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
@@ -3273,6 +2907,7 @@ describe("errors", () => {
             [NO_COLOR]: "",
           },
           isTTY: false,
+          originalStdout: true,
         })
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
@@ -3310,6 +2945,7 @@ describe("errors", () => {
           ...TEST_ENV,
           [__ELM_WATCH_MAX_PARALLEL]: "0",
         },
+        originalStdout: true,
       })
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
