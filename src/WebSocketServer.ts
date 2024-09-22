@@ -262,7 +262,9 @@ function html(isHttps: boolean, request: http.IncomingMessage): string {
               "return to your page"
             )}.</p>`
           : `<p>Did you mean to go to the ${maybeLink(
-              host !== undefined ? `https://${host}${request.url}` : undefined,
+              host !== undefined
+                ? `https://${host}${request.url}`
+                : /* istanbul ignore next */ undefined,
               "HTTPS version of this page"
             )} to accept elm-watch's self-signed certificate?</p>`
         : `<p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>`

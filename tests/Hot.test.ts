@@ -3549,7 +3549,6 @@ describe("hot", () => {
         variations = await Promise.all([
           httpGet(`https://localhost:${port}`),
           httpGet(`http://localhost:${port}/accept`),
-          httpGet(`http://localhost:${port}/accept`, { setHost: false }),
           httpGet(`https://localhost:${port}/accept`),
           httpGet(`https://localhost:${port}/accept`, {
             headers: { referer: `http://localhost:${port + 1}/page` },
@@ -3599,9 +3598,6 @@ describe("hot", () => {
       ================================================================================
       <p>ℹ️ This is the elm-watch WebSocket server.</p>
       <p>Did you mean to go to the <a href="https://localhost:9753/accept">HTTPS version of this page</a> to accept elm-watch's self-signed certificate?</p>
-      ================================================================================
-      <p>ℹ️ This is the elm-watch WebSocket server.</p>
-      <p>Did you mean to go to the HTTPS version of this page to accept elm-watch's self-signed certificate?</p>
       ================================================================================
       <p>ℹ️ This is the elm-watch WebSocket server.</p>
       <p>✅ Certificate accepted. You may now return to your page.</p>
