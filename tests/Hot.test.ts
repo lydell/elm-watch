@@ -1216,7 +1216,7 @@ describe("hot", () => {
         ·→
         ▲ ✅ 13:10:05 Reconnect
       `);
-    }, 9000); // This test sometimes reaches the default 5000 limit.
+    });
 
     test("outdated timestamp", async () => {
       modifyUrl((url) => {

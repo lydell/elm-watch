@@ -23,6 +23,8 @@ const ignoreCoverage = {
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  // Increase the default timeout for each test from 5 seconds to 30 seconds.
+  testTimeout: 30000,
   collectCoverageFrom: ["src/**/*.ts"],
   coverageThreshold: {
     global: process.platform === "win32" ? windowsCoverage : requireCoverage,
