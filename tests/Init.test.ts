@@ -35,7 +35,7 @@ async function initSuccessHelper(
     logDebug,
   });
 
-  assertExitCode(0, exitCode, stdout.content, stderr.content);
+  assertExitCode(0, exitCode, stdout.content, stderr.content, dir);
   expect(stderr.content).toBe("");
 
   return {
@@ -62,7 +62,7 @@ async function initFailHelper(
     logDebug,
   });
 
-  assertExitCode(1, exitCode, stdout.content, stderr.content);
+  assertExitCode(1, exitCode, stdout.content, stderr.content, dir);
   expect(stdout.content).toBe("");
 
   return clean(stderr.content);

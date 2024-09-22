@@ -588,8 +588,10 @@ export function assertExitCode(
   expectedExitCode: number,
   actualExitCode: number,
   stdout: string,
-  stderr: string
+  stderr: string,
+  dir: string
 ): void {
+  maybeClearElmStuff(stdout, dir);
   if (expectedExitCode !== actualExitCode) {
     throw new Error(
       `
@@ -598,6 +600,19 @@ exit ${actualExitCode} (expected ${expectedExitCode})
 ${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
       `.trim()
     );
+  }
+}
+
+export function maybeClearElmStuff(stdout: string, dir: string): void {
+  // In CI we retry failing tests. If a test got the “CORRUPT CACHE” error
+  // from Elm, try to make the next attempt more successful by removing
+  // elm-stuff/. We only remove elm-stuff/0.19.1/ because in some tests have
+  // fixtures in other parts of elm-stuff/.
+  if (stdout.includes("CORRUPT CACHE")) {
+    fs.rmSync(path.join(dir, "elm-stuff", "0.19.1"), {
+      recursive: true,
+      force: true,
+    });
   }
 }
 

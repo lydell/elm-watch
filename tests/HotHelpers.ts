@@ -18,6 +18,7 @@ import {
   clean,
   CursorWriteStream,
   logDebug,
+  maybeClearElmStuff,
   MemoryWriteStream,
   rimraf,
   rm,
@@ -341,10 +342,13 @@ export async function run({
       .catch(reject);
   });
 
+  const stdoutString = clean(stdout.getOutput());
+
+  maybeClearElmStuff(stdoutString, dir);
   expect(stderr.content).toBe("");
 
   return {
-    terminal: clean(stdout.getOutput()),
+    terminal: stdoutString,
     browserConsole: browserConsole.join("\n\n"),
     renders: joinRenders(renders),
     onlyExpandedRenders: joinRenders(

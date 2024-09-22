@@ -87,7 +87,7 @@ async function runAbsolute(
 
   const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(1, exitCode, stdoutString, stderr.content);
+  assertExitCode(1, exitCode, stdoutString, stderr.content, dir);
   expect(stderr.content).toBe("");
 
   return originalStdout ? stdoutString : onlyErrorMessages(stdoutString);
