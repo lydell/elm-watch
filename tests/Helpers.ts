@@ -605,10 +605,10 @@ ${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
 
 export function maybeClearElmStuff(stdout: string, dir: string): void {
   // In CI we retry failing tests. If a test got the “CORRUPT CACHE” error
-  // from Elm, try to make the next attempt more successful by removing
+  // from Elm (or similar), try to make the next attempt more successful by removing
   // elm-stuff/. We only remove elm-stuff/0.19.1/ because in some tests have
   // fixtures in other parts of elm-stuff/.
-  if (stdout.includes("CORRUPT CACHE")) {
+  if (stdout.includes("elm-stuff")) {
     fs.rmSync(path.join(dir, "elm-stuff", "0.19.1"), {
       recursive: true,
       force: true,
