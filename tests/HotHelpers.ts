@@ -120,6 +120,7 @@ export async function run({
   terminal: string;
   browserConsole: string;
   renders: string;
+  onlyExpandedRenders: string;
   div: HTMLDivElement;
 }> {
   // eslint-disable-next-line no-console
@@ -345,9 +346,16 @@ export async function run({
   return {
     terminal: clean(stdout.getOutput()),
     browserConsole: browserConsole.join("\n\n"),
-    renders: clean(renders.join(`\n${"=".repeat(80)}\n`)),
+    renders: joinRenders(renders),
+    onlyExpandedRenders: joinRenders(
+      renders.filter((render) => render.includes("▲"))
+    ),
     div: outerDiv,
   };
+}
+
+function joinRenders(renders: Array<string>): string {
+  return clean(renders.join(`\n${"=".repeat(80)}\n`));
 }
 
 export function runHotReload({

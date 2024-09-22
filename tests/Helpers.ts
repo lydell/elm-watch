@@ -554,6 +554,36 @@ export function clean(string: string): string {
     .replace(/EOF/g, "EPIPE");
 }
 
+export function onlyErrorMessages(terminal: string): string {
+  const output = [];
+  let lines = terminal.split("\n");
+  while (lines.length > 0) {
+    const start = lines.findIndex((line) => /-- [\w\s.-]+ --/.test(line));
+    if (start === -1) {
+      break;
+    }
+    lines = lines.slice(start);
+    const end = lines.findIndex((line) => line.includes("🚨"));
+    if (end <= 0) {
+      output.push(lines);
+      break;
+    } else {
+      output.push(lines.slice(0, end - 1));
+      lines = lines.slice(end + 1);
+    }
+  }
+  return output.length === 0
+    ? `NO ERROR MESSAGES FOUND!\n${terminal}`
+    : output.map((chunk) => chunk.join("\n")).join("\n\n…\n\n");
+}
+
+export function grep(string: string, pattern: RegExp): string {
+  return string
+    .split("\n")
+    .filter((line) => pattern.test(line))
+    .join("\n");
+}
+
 export function assertExitCode(
   expectedExitCode: number,
   actualExitCode: number,
