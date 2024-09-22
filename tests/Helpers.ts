@@ -653,7 +653,11 @@ export async function httpGet(
               new Error(
                 `GET ${urlString} – expected status code 200 but got ${
                   res.statusCode ?? "(no status code)"
-                }:\n\n${body}`
+                }\n\nOptions:\n${JSON.stringify(
+                  options,
+                  null,
+                  2
+                )}\nResponse:\n${body === "" ? "(none)" : body}`
               )
             );
           }
