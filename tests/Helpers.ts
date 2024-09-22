@@ -554,12 +554,44 @@ export function clean(string: string): string {
     .replace(/EOF/g, "EPIPE");
 }
 
+export function onlyErrorMessages(terminal: string): string {
+  const output = [];
+  let lines = terminal.split("\n");
+  while (lines.length > 0) {
+    const start = lines.findIndex((line) => /-- \S+(?:\s\S+)* --/.test(line));
+    if (start === -1) {
+      break;
+    }
+    lines = lines.slice(start);
+    const end = lines.findIndex((line) => line.includes("🚨"));
+    if (end <= 0) {
+      output.push(lines);
+      break;
+    } else {
+      output.push(lines.slice(0, end - 1));
+      lines = lines.slice(end + 1);
+    }
+  }
+  return output.length === 0
+    ? `NO ERROR MESSAGES FOUND!\n${terminal}`
+    : output.map((chunk) => chunk.join("\n")).join("\n\n…\n\n");
+}
+
+export function grep(string: string, pattern: RegExp): string {
+  return string
+    .split("\n")
+    .filter((line) => pattern.test(line))
+    .join("\n");
+}
+
 export function assertExitCode(
   expectedExitCode: number,
   actualExitCode: number,
   stdout: string,
-  stderr: string
+  stderr: string,
+  dir: string
 ): void {
+  maybeClearElmStuff(stdout, dir);
   if (expectedExitCode !== actualExitCode) {
     throw new Error(
       `
@@ -568,6 +600,19 @@ exit ${actualExitCode} (expected ${expectedExitCode})
 ${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
       `.trim()
     );
+  }
+}
+
+export function maybeClearElmStuff(stdout: string, dir: string): void {
+  // In CI we retry failing tests. If a test got the “CORRUPT CACHE” error
+  // from Elm (or similar), try to make the next attempt more successful by removing
+  // elm-stuff/. We only remove elm-stuff/0.19.1/ because in some tests have
+  // fixtures in other parts of elm-stuff/.
+  if (stdout.includes("elm-stuff")) {
+    fs.rmSync(path.join(dir, "elm-stuff", "0.19.1"), {
+      recursive: true,
+      force: true,
+    });
   }
 }
 
@@ -582,6 +627,9 @@ export const stringSnapshotSerializer = {
 // For things like symlinks and readonly files/folders that aren’t really a thing on Windows.
 export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;
+
+// The stdin error test is not working on Linux and not worth it.
+export const testExceptLinux = process.platform === "linux" ? test.skip : test;
 
 export async function httpGet(
   urlString: string,
@@ -605,7 +653,11 @@ export async function httpGet(
               new Error(
                 `GET ${urlString} – expected status code 200 but got ${
                   res.statusCode ?? "(no status code)"
-                }:\n\n${body}`
+                }\n\nOptions:\n${JSON.stringify(
+                  options,
+                  null,
+                  2
+                )}\nResponse:\n${body === "" ? "(none)" : body}`
               )
             );
           }

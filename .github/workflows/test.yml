@@ -59,7 +59,7 @@ jobs:
       # fixtures, so that nothing needs to be downloaded while the tests
       # run, which could result in flaky tests.
       - name: fill ELM_HOME with packages
-        run: npx elm make Main.elm --output=/dev/null
+        run: npm run install-test-elm-dependencies
         working-directory: tests/install-packages
 
       # Use `--forceExit` to avoid test runs “hanging” when tests are failing

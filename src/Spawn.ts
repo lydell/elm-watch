@@ -83,13 +83,10 @@ export function spawn(command: Command): {
         | { result: SpawnResult; timeoutId: NodeJS.Timeout }
         | undefined = undefined;
 
+      // istanbul ignore next
       child.stdin.on("error", (error: Error & { code?: string }) => {
         // EPIPE on Windows and macOS, EOF on Windows.
-        // istanbul ignore else
-        if (
-          error.code === "EPIPE" ||
-          /* istanbul ignore next */ error.code === "EOF"
-        ) {
+        if (error.code === "EPIPE" || error.code === "EOF") {
           // The postprocess program can exit before we have managed to write all
           // the stdin. The stdin write error happens before the "exit" event.
           // It’s more important to get to know the exit code and stdout/stderr
@@ -102,14 +99,9 @@ export function spawn(command: Command): {
           };
           stdinWriteError = {
             result,
-            timeoutId: setTimeout(
-              // This is covered on macOS, but not on Linux.
-              // istanbul ignore next
-              () => {
-                resolve(result);
-              },
-              500
-            ),
+            timeoutId: setTimeout(() => {
+              resolve(result);
+            }, 500),
           };
         } else {
           resolve({ tag: "OtherSpawnError", error, command });
@@ -137,17 +129,21 @@ export function spawn(command: Command): {
       child.on("exit", (exitCode, signal) => {
         if (killed) {
           // Ignore after killed.
-        } else if (exitCode === 0 && stdinWriteError !== undefined) {
-          clearTimeout(stdinWriteError.timeoutId);
-          resolve(stdinWriteError.result);
         } else {
-          resolve({
-            tag: "Exit",
-            exitReason: exitReason(exitCode, signal),
-            stdout: Buffer.concat(stdout),
-            stderr: Buffer.concat(stderr),
-            command,
-          });
+          // This is covered on macOS and Windows, but not Linux.
+          // istanbul ignore if
+          if (exitCode === 0 && stdinWriteError !== undefined) {
+            clearTimeout(stdinWriteError.timeoutId);
+            resolve(stdinWriteError.result);
+          } else {
+            resolve({
+              tag: "Exit",
+              exitReason: exitReason(exitCode, signal),
+              stdout: Buffer.concat(stdout),
+              stderr: Buffer.concat(stderr),
+              command,
+            });
+          }
         }
       });
 

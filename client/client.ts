@@ -873,21 +873,25 @@ const initMutable =
     const originalKillMatching = __ELM_WATCH.KILL_MATCHING;
     __ELM_WATCH.KILL_MATCHING = (targetName) =>
       new Promise((resolve, reject) => {
-        if (
-          targetName.test(TARGET_NAME) &&
-          mutable.webSocket.readyState !== WebSocket.CLOSED
-        ) {
-          mutable.webSocket.addEventListener("close", () => {
-            originalKillMatching(targetName).then(resolve).catch(reject);
-          });
+        if (targetName.test(TARGET_NAME)) {
+          const needsToCloseWebSocket =
+            mutable.webSocket.readyState !== WebSocket.CLOSED;
+          if (needsToCloseWebSocket) {
+            mutable.webSocket.addEventListener("close", () => {
+              originalKillMatching(targetName).then(resolve).catch(reject);
+            });
+            mutable.webSocket.close();
+          }
           mutable.removeListeners();
-          mutable.webSocket.close();
           if (mutable.webSocketTimeoutId !== undefined) {
             clearTimeout(mutable.webSocketTimeoutId);
             mutable.webSocketTimeoutId = undefined;
           }
           elements?.targetRoot.remove();
           resolvePromise(undefined);
+          if (!needsToCloseWebSocket) {
+            originalKillMatching(targetName).then(resolve).catch(reject);
+          }
         } else {
           originalKillMatching(targetName).then(resolve).catch(reject);
         }

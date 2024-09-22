@@ -234,7 +234,12 @@ module.exports = {
       rules: {
         "jest/no-standalone-expect": [
           "error",
-          { additionalTestBlockFunctions: ["testExceptWindows"] },
+          {
+            additionalTestBlockFunctions: [
+              "testExceptWindows",
+              "testExceptLinux",
+            ],
+          },
         ],
       },
     },

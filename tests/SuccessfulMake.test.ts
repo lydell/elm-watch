@@ -51,7 +51,7 @@ async function run(
 
   const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(0, exitCode, stdoutString, stderr.content);
+  assertExitCode(0, exitCode, stdoutString, stderr.content, dir);
   expect(stderr.content).toBe("");
 
   return stdoutString;

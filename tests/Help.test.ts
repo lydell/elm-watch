@@ -32,7 +32,7 @@ async function helpHelper(
 
   const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(0, exitCode, stdoutString, stderr.content);
+  assertExitCode(0, exitCode, stdoutString, stderr.content, __dirname);
   expect(stderr.content).toBe("");
 
   return stdoutString;
