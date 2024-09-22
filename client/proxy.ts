@@ -43,6 +43,11 @@ const elmProxy = new Proxy(existingObject ?? {}, {
       return true;
     }
     const has = Reflect.has(target, property);
+    // Jest tries to read `_isMockFunction`.
+    // There shouldn’t ever be anything starting with an underscore in `window.Elm` so whatever.
+    if (property.toString().startsWith("_")) {
+      return has;
+    }
     if (has) {
       return true;
     }
