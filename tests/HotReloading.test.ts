@@ -2178,7 +2178,7 @@ describe("hot reloading", () => {
     const [{ terminal }] = await Promise.all([
       go(() => "Stop"),
       (async () => {
-        await wait(60);
+        await wait(160);
         touch(elmJsonPath);
       })(),
     ]);
