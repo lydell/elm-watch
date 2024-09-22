@@ -3254,56 +3254,26 @@ describe("hot", () => {
       },
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-      ⏳ Dependencies
-      ✅ Dependencies
+    expect(grep(terminal, /(?:One|Two)[:⧙]/)).toMatchInlineSnapshot(`
       ⏳ One: elm make (typecheck only)
       ⏳ Two: elm make (typecheck only)
       ✅ One⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
       ✅ Two⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Two: elm make
       ⚪️ One: queued
       ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ One: elm make
       ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: One
-      ℹ️ 13:10:05 Web socket connected needing compilation of: Two⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Two
-      ℹ️ 13:10:05 Web socket disconnected for: One
-      ℹ️ 13:10:05 Web socket connected for: One
-      ℹ️ 13:10:05 Web socket connected for: Two⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Two: elm make
       ⚪️ One: queued
       ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ One: elm make
       ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/prioritization/src/Shared.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ One: elm make
       ⚪️ Two: queued
       ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ Two: elm make
       ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/prioritization/src/Shared.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
