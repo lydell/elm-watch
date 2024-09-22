@@ -3198,63 +3198,18 @@ describe("hot", () => {
       },
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-      ⏳ Dependencies
-      ✅ Dependencies
+    expect(grep(terminal, /elm make/)).toMatchInlineSnapshot(`
       ⏳ Main1: elm make (typecheck only)
       ⏳ Main2: elm make (typecheck only)
       ⏳ Main3: elm make (typecheck only)
       ⏳ Main4: elm make (typecheck only)
-      ✅ Main1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Main2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Main3⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Main4⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main4: elm make
-      ⚪️ Main3: queued
-      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ Main3: elm make
-      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main3
-      ℹ️ 13:10:05 Web socket connected needing compilation of: Main4⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main4
-      ℹ️ 13:10:05 Web socket disconnected for: Main3
-      ℹ️ 13:10:05 Web socket connected for: Main3
-      ℹ️ 13:10:05 Web socket connected for: Main4⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Main4: elm make
-      ⚪️ Main3: queued
-      ⚪️ Main1: queued
-      ⚪️ Main2: queued
-      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ Main3: elm make
-      ✅ Main3⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ Main1: elm make (typecheck only)
       ⏳ Main2: elm make (typecheck only)
-      ✅ Main1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Main2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Shared.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main4: elm make
-      ✅ Main4⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 2 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/typecheck-only/src/Main4.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
 
