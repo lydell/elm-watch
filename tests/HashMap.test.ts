@@ -1,3 +1,5 @@
+import { describe, expect, test } from "vitest";
+
 import { HashMap } from "../src/HashMap";
 
 type Id = { id: number };

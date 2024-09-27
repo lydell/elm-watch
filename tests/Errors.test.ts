@@ -2,6 +2,7 @@ import spawn from "cross-spawn";
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { elmWatchCli } from "../src";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";

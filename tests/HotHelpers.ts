@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { expect } from "vitest";
 
 import {
   ElmModule,
@@ -181,7 +182,7 @@ export async function run({
           // Copying the script does a couple of things:
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
-          // - Lets us make a few replacements for Jest.
+          // - Lets us make a few replacements for Vitest.
           const newScript = numberedScript(script, loads);
           const content =
             loads > 2 && simulateHttpCacheOnReload

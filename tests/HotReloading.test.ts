@@ -1,8 +1,15 @@
-/**
- * @jest-environment jsdom
- */
+// @vitest-environment jsdom
 import * as fs from "fs";
 import * as path from "path";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import { __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS } from "../src/Env";
 import {
@@ -1213,7 +1220,7 @@ describe("hot reloading", () => {
     });
 
     test("Html.Lazy", async () => {
-      const mockConsoleLog = jest.fn();
+      const mockConsoleLog = vi.fn();
       // eslint-disable-next-line no-console
       console.log = (...args) => {
         if (
@@ -1417,7 +1424,7 @@ describe("hot reloading", () => {
     test("Unexpected/unhandled error at eval", async () => {
       const error = new Error("Very unexpected error");
 
-      const mockPromiseReject = jest.fn();
+      const mockPromiseReject = vi.fn();
 
       Promise.reject = <T>(reason: unknown): Promise<T> => {
         if (reason === error) {

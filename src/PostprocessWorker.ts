@@ -155,10 +155,10 @@ function importErrorToString(error: unknown): string {
   const code: unknown = (error as { code: unknown } | undefined)?.code;
   // `import()` is used for real (since it supports both CJS and MJS).
   // In Jest tests it seems to be impossible to use `import()` so we have to
-  // support `require()` too.
-  return code === "ERR_MODULE_NOT_FOUND" || // `import()`
-    code === "MODULE_NOT_FOUND" // `require()`
-    ? (error as { message: string }).message
+  // support `require()` too. TODO: Can we remove it now with vitest?
+  return code === "ERR_MODULE_NOT_FOUND" // `import()`
+    ? // || code === "MODULE_NOT_FOUND" // `require()`
+      (error as { message: string }).message
     : unknownErrorToString(error);
 }
 

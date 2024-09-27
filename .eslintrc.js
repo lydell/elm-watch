@@ -8,7 +8,7 @@ const warn = process.argv.includes("--report-unused-disable-directives")
 
 module.exports = {
   root: true,
-  plugins: ["@typescript-eslint", "simple-import-sort", "jest"],
+  plugins: ["@typescript-eslint", "simple-import-sort"],
   reportUnusedDisableDirectives: true,
   env: {
     es2020: true,
@@ -204,7 +204,8 @@ module.exports = {
           ...new Set(
             [
               ...Object.keys(globals.browser),
-              ...Object.keys(globals.jest),
+              // TODO: Something needed for vitest?
+              // ...Object.keys(globals.jest),
             ].filter(
               (name) =>
                 !Object.prototype.hasOwnProperty.call(globals.node, name)
@@ -220,26 +221,15 @@ module.exports = {
         "no-restricted-globals": [
           error,
           ...new Set(
-            [...Object.keys(globals.node), ...Object.keys(globals.jest)].filter(
+            [
+              ...Object.keys(globals.node),
+              // TODO: Here too.
+              // ...Object.keys(globals.jest),
+            ].filter(
               (name) =>
                 !Object.prototype.hasOwnProperty.call(globals.browser, name)
             )
           ),
-        ],
-      },
-    },
-    {
-      files: "tests/**/*.ts",
-      extends: ["plugin:jest/recommended", "plugin:jest/style"],
-      rules: {
-        "jest/no-standalone-expect": [
-          "error",
-          {
-            additionalTestBlockFunctions: [
-              "testExceptWindows",
-              "testExceptLinux",
-            ],
-          },
         ],
       },
     },

@@ -5,6 +5,7 @@ import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
 import * as url from "url";
+import { describe, test } from "vitest";
 
 import { EMOJI } from "../src/Compile";
 import {
@@ -18,22 +19,14 @@ import {
   WT_SESSION,
 } from "../src/Env";
 import { printStdio } from "../src/Errors";
-import {
-  JsonError,
-  ReadStream,
-  toError,
-  toJsonError,
-  WriteStream,
-} from "../src/Helpers";
+import { ReadStream, WriteStream } from "../src/Helpers";
 import { IS_WINDOWS } from "../src/IsWindows";
 
-toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
-toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
-
-const { JEST_RETRIES } = process.env;
-if (JEST_RETRIES !== undefined) {
-  jest.retryTimes(Number(JEST_RETRIES), { logErrorsBeforeRetry: true });
-}
+// TODO: Remove or replace for Vitest.
+// const { JEST_RETRIES } = process.env;
+// if (JEST_RETRIES !== undefined) {
+//   jest.retryTimes(Number(JEST_RETRIES), { logErrorsBeforeRetry: true });
+// }
 
 // Print date and time in UTC in snapshots.
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -45,6 +38,7 @@ Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
 Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
 /* eslint-enable @typescript-eslint/unbound-method */
 
+// TODO: How does this behave in Vitest?
 // This uses `console` rather than `process.stdout` so Jest can capture it.
 // And `.log` instead of `.error`, because Jest colors `.error` red.
 // eslint-disable-next-line no-console

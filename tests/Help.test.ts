@@ -1,3 +1,5 @@
+import { describe, expect, test } from "vitest";
+
 import { elmWatchCli } from "../src";
 import { Env, NO_COLOR } from "../src/Env";
 import {

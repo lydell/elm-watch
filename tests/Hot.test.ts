@@ -1,9 +1,8 @@
-/**
- * @jest-environment jsdom
- */
+// @vitest-environment jsdom
 import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {

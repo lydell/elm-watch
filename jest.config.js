@@ -1,3 +1,4 @@
+// TODO: Port the needed parts of this file to Vitest.
 const requireCoverage = {
   branches: 100,
   functions: 100,

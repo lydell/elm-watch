@@ -62,10 +62,12 @@ jobs:
         run: npm run install-test-elm-dependencies
         working-directory: tests/install-packages
 
+      # TODO: Does vitest have --forceExit? Is it needed?
       # Use `--forceExit` to avoid test runs “hanging” when tests are failing
       # so that elm-watch isn’t shut down properly.
       # Retry failing tests, as a stopgap while fixing flaky tests.
-      - name: Jest
-        run: npx jest --coverage --forceExit
-        env:
-          JEST_RETRIES: 4
+      - name: Vitest
+        run: npx vitest --coverage --forceExit
+        # TODO: Specify this for vitest? Probably, right?
+        # env:
+        #   JEST_RETRIES: 4
