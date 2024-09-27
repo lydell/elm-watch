@@ -3,7 +3,7 @@ import * as https from "https";
 import * as net from "net";
 import type { Duplex } from "stream";
 import * as util from "util";
-import WebSocket, { Server as WsServer } from "ws";
+import WebSocket, { WebSocketServer as WsServer } from "ws";
 
 import { CERTIFICATE } from "./Certificate";
 import { Port, PortChoice } from "./Port";
