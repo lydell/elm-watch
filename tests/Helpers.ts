@@ -521,6 +521,7 @@ export function clean(string: string): string {
     )
     .split(os.tmpdir())
     .join(path.join(root, "tmp", "fake"))
+    .replace(/\/private\//g, "/") // Ends up before `os.tmpdir()` on macOS in `fs` errors.
     .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘")

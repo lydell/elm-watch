@@ -769,7 +769,7 @@ describe("errors", () => {
           but doing so resulted in errors!
 
           Main.elm:
-          ELOOP: too many symbolic links encountered, stat '/private/tmp/fake/elm-watch-symlink-loop/Main.elm'
+          ELOOP: too many symbolic links encountered, stat '/tmp/fake/elm-watch-symlink-loop/Main.elm'
 
           ⧙That's all I know, unfortunately!⧘
         `);
