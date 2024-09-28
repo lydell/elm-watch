@@ -2528,6 +2528,7 @@ describe("hot", () => {
       env: {
         [__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS]: "150",
         [__ELM_WATCH_EXIT_ON_WORKER_LIMIT]: "",
+        [NO_COLOR]: "",
       },
       init: (node) => {
         const node1 = document.createElement("div");
@@ -2547,14 +2548,14 @@ describe("hot", () => {
       },
     });
 
-    expect(grep(terminal, /worker/)).toMatchInlineSnapshot(`
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙elm-watch-node workers:⧘ 1
-      ⧙ℹ️ 13:10:05 Terminated 1 superfluous worker⧘
-    `);
+    // Remove duplicate lines.
+    expect(grep(terminal, /worker/).replace(/\n(.+)(?:\n\1)+/g, "\n$1"))
+      .toMatchInlineSnapshot(`
+        elm-watch-node workers: 1
+        elm-watch-node workers: 2
+        elm-watch-node workers: 1
+        13:10:05 Terminated 1 superfluous worker
+      `);
   });
 
   test("persisted compilation mode", async () => {
