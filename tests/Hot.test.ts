@@ -1309,7 +1309,7 @@ describe("hot", () => {
             fs.unlinkSync(elmWatchJsonPath2);
             return "KeepGoing";
           case 3:
-            assert2(div);
+            assert3(div);
             fs.unlinkSync(elmWatchJsonPath);
             return "KeepGoing";
           default:
@@ -1372,6 +1372,10 @@ describe("hot", () => {
     }
 
     function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+    }
+
+    function assert3(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
     }
   });
@@ -1819,7 +1823,7 @@ describe("hot", () => {
             fs.writeFileSync(postprocessPath, postprocessString);
             return "KeepGoing";
           default:
-            assert1(div);
+            assert3(div);
             return "Stop";
         }
       },
@@ -1859,6 +1863,10 @@ describe("hot", () => {
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>the text!</div>`);
+    }
+
+    function assert3(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>THE TEXT!</div>`);
     }
   });
 
