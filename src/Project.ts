@@ -81,7 +81,7 @@ export class OutputState {
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
     openErrorOverlay: boolean,
-    private getNow: GetNow
+    private getNow: GetNow,
   ) {
     this.inputs = inputs;
     this.compilationMode = compilationMode;
@@ -335,24 +335,24 @@ export function initProject({
   >();
 
   for (const [index, [targetName, target]] of Object.entries(
-    config.targets
+    config.targets,
   ).entries()) {
     const outputPath: OutputPath = {
       tag: "OutputPath",
       theOutputPath: absolutePathFromString(
         absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-        target.output
+        target.output,
       ),
       temporaryOutputPath: absolutePathFromString(
         elmWatchStuffDir.theElmWatchStuffDir,
-        `${index}.js`
+        `${index}.js`,
       ),
       originalString: target.output,
       targetName,
     };
 
     const previousOutput = potentialOutputDuplicates.get(
-      outputPath.theOutputPath
+      outputPath.theOutputPath,
     );
     if (previousOutput === undefined) {
       potentialOutputDuplicates.set(outputPath.theOutputPath, [
@@ -364,12 +364,12 @@ export function initProject({
 
     if (
       enabledTargetsSubstrings.some((substring) =>
-        targetName.includes(substring)
+        targetName.includes(substring),
       )
     ) {
       const resolveElmJsonResult = resolveElmJson(
         elmWatchJsonPath,
-        target.inputs
+        target.inputs,
       );
 
       const persisted = elmWatchStuffJson?.targets[targetName];
@@ -391,8 +391,8 @@ export function initProject({
               thisCompilationMode,
               browserUiPosition,
               openErrorOverlay,
-              getNow
-            )
+              getNow,
+            ),
           );
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
           break;
@@ -445,7 +445,7 @@ export function initProject({
             return [
               absoluteDirname(elmJsonPath.theElmJsonPath),
               ...ElmJson.getSourceDirectories(elmJsonPath, result.elmJson).map(
-                (sourceDirectory) => sourceDirectory.theSourceDirectory
+                (sourceDirectory) => sourceDirectory.theSourceDirectory,
               ),
             ];
 
@@ -453,7 +453,7 @@ export function initProject({
           case "ElmJsonDecodeError":
             return [absoluteDirname(elmJsonPath.theElmJsonPath)];
         }
-      }
+      },
     ),
   ];
 
@@ -467,7 +467,7 @@ export function initProject({
 
   const maxParallel = silentlyReadIntEnvValue(
     env[__ELM_WATCH_MAX_PARALLEL],
-    os.cpus().length
+    os.cpus().length,
   );
 
   const postprocess: Postprocess =
@@ -500,7 +500,7 @@ type ResolveElmJsonResult =
 
 function resolveElmJson(
   elmWatchJsonPath: ElmWatchJsonPath,
-  inputStrings: NonEmptyArray<string>
+  inputStrings: NonEmptyArray<string>,
 ): ResolveElmJsonResult {
   const inputs: Array<InputPath> = [];
   const inputsNotFound: Array<UncheckedInputPath> = [];
@@ -515,7 +515,7 @@ function resolveElmJson(
       tag: "UncheckedInputPath",
       theUncheckedInputPath: absolutePathFromString(
         absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-        inputString
+        inputString,
       ),
       originalString: inputString,
     };
@@ -587,7 +587,7 @@ function resolveElmJson(
   for (const inputPath of inputs) {
     const elmJsonPathRaw = findClosest(
       "elm.json",
-      absoluteDirname(inputPath.theInputPath)
+      absoluteDirname(inputPath.theInputPath),
     );
     if (elmJsonPathRaw === undefined) {
       elmJsonNotFound.push(inputPath);
@@ -608,7 +608,7 @@ function resolveElmJson(
   }
 
   const elmJsonPathsSet = new HashSet(
-    elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath)
+    elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath),
   );
 
   const uniqueElmJsonPath = getSetSingleton(elmJsonPathsSet);
@@ -643,7 +643,7 @@ export function getFlatOutputs(project: Project): Array<{
         elmJsonPath,
         outputPath,
         outputState,
-      }))
+      })),
   );
 }
 
@@ -662,7 +662,7 @@ export function projectToDebug(project: Project): unknown {
           compilationMode: outputState.compilationMode,
           elmJson: elmJsonPath.theElmJsonPath.absolutePath,
           inputs: outputState.inputs.map(inputPathToDebug),
-        }))
+        })),
     ),
     disabledTargets: Array.from(project.disabledOutputs, outputPathToDebug),
     erroredTargets: project.elmJsonsErrors.map(
@@ -670,7 +670,7 @@ export function projectToDebug(project: Project): unknown {
         error: error.tag,
         ...outputPathToDebug(outputPath),
         compilationMode,
-      })
+      }),
     ),
   };
 }

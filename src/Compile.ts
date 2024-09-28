@@ -72,7 +72,7 @@ export function installDependencies(
   env: Env,
   logger: Logger,
   getNow: GetNow,
-  project: Project
+  project: Project,
 ): {
   promise: Promise<InstallDependenciesResult>;
   kill: (options: { force: boolean }) => void;
@@ -82,13 +82,13 @@ export function installDependencies(
 
   const loadingMessageDelay = silentlyReadIntEnvValue(
     env[__ELM_WATCH_LOADING_MESSAGE_DELAY],
-    100
+    100,
   );
 
   const printStatusLineHelper = (
     emojiName: EmojiName,
     message: string,
-    nonFancy: string
+    nonFancy: string,
   ): string =>
     printStatusLine({
       maxWidth: logger.config.columns,
@@ -111,7 +111,7 @@ export function installDependencies(
       const loadingMessage = printStatusLineHelper(
         "Busy",
         message,
-        "in progress"
+        "in progress",
       );
 
       // Avoid printing `loadingMessage` if there’s nothing to download.
@@ -129,7 +129,7 @@ export function installDependencies(
       };
 
       const onError = (
-        error: Errors.ErrorTemplate
+        error: Errors.ErrorTemplate,
       ): InstallDependenciesResult => {
         clearLoadingMessage();
         logger.write(printStatusLineHelper("Error", message, "error"));
@@ -185,13 +185,13 @@ export function installDependencies(
         /* v8 ignore start */
         case "OtherSpawnError":
           return onError(
-            Errors.otherSpawnError(elmJsonPath, result.error, result.command)
+            Errors.otherSpawnError(elmJsonPath, result.error, result.command),
           );
         /* v8 ignore stop */
 
         case "ElmInstallError":
           return onError(
-            Errors.elmInstallError(elmJsonPath, result.title, result.message)
+            Errors.elmInstallError(elmJsonPath, result.title, result.message),
           );
 
         case "UnexpectedElmInstallOutput":
@@ -201,8 +201,8 @@ export function installDependencies(
               result.exitReason,
               result.stdout,
               result.stderr,
-              result.command
-            )
+              result.command,
+            ),
           );
       }
     }
@@ -404,7 +404,7 @@ export function getOutputActions({
     runMode,
     elmMakeActions,
     elmMakeTypecheckOnlyActions,
-    postprocessActions
+    postprocessActions,
   );
 
   const actions: Array<
@@ -491,7 +491,7 @@ function prioritizeActions(
   runMode: RunMode,
   elmMakeActions: Array<NeedsElmMakeOutputAction>,
   elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction>,
-  postprocessActions: Array<NeedsPostprocessOutputAction>
+  postprocessActions: Array<NeedsPostprocessOutputAction>,
 ): Array<
   | NeedsElmMakeOutputAction
   | NeedsElmMakeTypecheckOnlyOutputAction
@@ -520,7 +520,7 @@ function prioritizeActions(
 }
 
 function sortByPriority<T extends { priority: number }>(
-  array: Array<T>
+  array: Array<T>,
 ): Array<T> {
   return array.slice().sort((a, b) => b.priority - a.priority);
 }
@@ -597,8 +597,8 @@ export async function handleOutputAction({
             `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${JSON.stringify(
               action,
               null,
-              2
-            )}`
+              2,
+            )}`,
           );
         /* v8 ignore stop */
 
@@ -729,7 +729,7 @@ async function compileOneOutput({
           // dirty by default anyway and will get compiled.
           const result = getAllRelatedElmFilePaths(
             elmJsonPath,
-            outputState.inputs
+            outputState.inputs,
           );
           outputStatus.walkerDurationMs = getNow().getTime() - startTimestamp;
           return result;
@@ -746,12 +746,12 @@ async function compileOneOutput({
 
   outputState.allRelatedElmFilePaths = allRelatedElmFilePathsWithFallback(
     allRelatedElmFilePathsResult,
-    outputState
+    outputState,
   );
 
   const combinedResult = combineResults(
     elmMakeResult,
-    allRelatedElmFilePathsResult
+    allRelatedElmFilePathsResult,
   );
 
   switch (combinedResult.tag) {
@@ -765,7 +765,7 @@ async function compileOneOutput({
         outputPath,
         outputState,
         outputStatus,
-        postprocess
+        postprocess,
       );
 
     case "elm make success + walker failure":
@@ -810,7 +810,7 @@ function onCompileSuccess(
   outputPath: OutputPath,
   outputState: OutputState,
   outputStatus: Extract<OutputStatus, { tag: "ElmMake" }>,
-  postprocess: Postprocess
+  postprocess: Postprocess,
 ): HandleOutputActionResult {
   const elmCompiledTimestamp = getNow().getTime();
 
@@ -850,7 +850,7 @@ function onCompileSuccess(
           let buffer;
           try {
             buffer = fs.readFileSync(
-              outputPath.temporaryOutputPath.absolutePath
+              outputPath.temporaryOutputPath.absolutePath,
             );
           } catch (unknownError) {
             const error = toError(unknownError);
@@ -884,7 +884,7 @@ function onCompileSuccess(
       try {
         code = fs.readFileSync(
           outputPath.temporaryOutputPath.absolutePath,
-          "utf8"
+          "utf8",
         );
       } catch (unknownError) {
         const error = toError(unknownError);
@@ -904,7 +904,7 @@ function onCompileSuccess(
 
       const recordFields = Inject.getRecordFields(
         outputState.compilationMode,
-        code
+        code,
       );
       const newCode = Inject.inject(outputState.compilationMode, code);
 
@@ -915,7 +915,7 @@ function onCompileSuccess(
           try {
             fs.mkdirSync(
               absoluteDirname(outputPath.theOutputPath).absolutePath,
-              { recursive: true }
+              { recursive: true },
             );
             fs.writeFileSync(
               outputPath.theOutputPath.absolutePath,
@@ -933,8 +933,8 @@ function onCompileSuccess(
                 outputState.compilationMode,
                 outputState.browserUiPosition,
                 runMode.webSocketPort,
-                loggerConfig.debug
-              ) + newCode
+                loggerConfig.debug,
+              ) + newCode,
             );
           } catch (unknownError) {
             const error = toError(unknownError);
@@ -953,7 +953,7 @@ function onCompileSuccess(
           }
           const recordFieldsChanged = Inject.recordFieldsChanged(
             outputState.recordFields,
-            recordFields
+            recordFields,
           );
           const fileSize = Buffer.byteLength(newCode);
           outputState.recordFields = recordFields;
@@ -1008,7 +1008,7 @@ type NeedsToWriteProxyFileResult =
 
 function needsToWriteProxyFile(
   outputPath: AbsolutePath,
-  versionedIdentifier: Buffer
+  versionedIdentifier: Buffer,
 ): NeedsToWriteProxyFileResult {
   let handle;
   try {
@@ -1111,7 +1111,7 @@ async function postprocessHelper({
           case "make":
             fs.writeFileSync(
               outputPath.theOutputPath.absolutePath,
-              postprocessResult.code
+              postprocessResult.code,
             );
             break;
           case "hot": {
@@ -1121,7 +1121,7 @@ async function postprocessHelper({
               outputState.compilationMode,
               outputState.browserUiPosition,
               runMode.webSocketPort,
-              logger.config.debug
+              logger.config.debug,
             );
             fs.writeFileSync(
               outputPath.theOutputPath.absolutePath,
@@ -1130,7 +1130,7 @@ async function postprocessHelper({
                 : Buffer.concat([
                     Buffer.from(clientCode),
                     postprocessResult.code,
-                  ])
+                  ]),
             );
             break;
           }
@@ -1152,7 +1152,7 @@ async function postprocessHelper({
       }
       const recordFieldsChanged = Inject.recordFieldsChanged(
         outputState.recordFields,
-        recordFields
+        recordFields,
       );
       outputState.recordFields = recordFields;
       outputState.setStatus({
@@ -1227,8 +1227,8 @@ async function typecheck({
     inputs: nonEmptyArrayUniqueBy(
       (inputPath) => inputPath.realpath.absolutePath,
       flattenNonEmptyArray(
-        mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs)
-      )
+        mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs),
+      ),
     ),
     outputPath: { tag: "NullOutputPath" },
     env,
@@ -1266,7 +1266,7 @@ async function typecheck({
     Promise.resolve().then(() =>
       outputsWithStatus.map(
         (
-          output
+          output,
         ): {
           index: number;
           outputPath: OutputPath;
@@ -1276,7 +1276,7 @@ async function typecheck({
           const thisStartTimestamp = getNow().getTime();
           const allRelatedElmFilePathsResult = getAllRelatedElmFilePaths(
             elmJsonPath,
-            output.outputState.inputs
+            output.outputState.inputs,
           );
           output.outputStatus.walkerDurationMs =
             getNow().getTime() - thisStartTimestamp;
@@ -1284,8 +1284,8 @@ async function typecheck({
             ...output,
             allRelatedElmFilePathsResult,
           };
-        }
-      )
+        },
+      ),
     ),
   ]);
 
@@ -1310,19 +1310,19 @@ async function typecheck({
 
     outputState.allRelatedElmFilePaths = allRelatedElmFilePathsWithFallback(
       allRelatedElmFilePathsResult,
-      outputState
+      outputState,
     );
 
     const combinedResult = combineResults(
       onlyElmMakeErrorsRelatedToOutput(outputState, elmMakeResult),
-      allRelatedElmFilePathsResult
+      allRelatedElmFilePathsResult,
     );
 
     const proxyFileResult = needsToWriteProxyFile(
       outputPath.theOutputPath,
       Buffer.from(
-        Inject.versionedIdentifier(outputPath.targetName, webSocketPort)
-      )
+        Inject.versionedIdentifier(outputPath.targetName, webSocketPort),
+      ),
     );
 
     switch (proxyFileResult.tag) {
@@ -1338,8 +1338,8 @@ async function typecheck({
               getNow().getTime(),
               outputState.browserUiPosition,
               webSocketPort,
-              logger.config.debug
-            )
+              logger.config.debug,
+            ),
           );
           // The proxy file doesn’t count as writing to disk…
           outputState.setStatus({ tag: "NotWrittenToDisk" });
@@ -1396,7 +1396,7 @@ async function typecheck({
 
 function onlyElmMakeErrorsRelatedToOutput(
   outputState: OutputState,
-  elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>
+  elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>,
 ): Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }> {
   if (
     !(
@@ -1417,7 +1417,7 @@ function onlyElmMakeErrorsRelatedToOutput(
   }
 
   const errors = elmMakeResult.error.errors.filter((error) =>
-    outputState.allRelatedElmFilePaths.has(error.path.absolutePath)
+    outputState.allRelatedElmFilePaths.has(error.path.absolutePath),
   );
 
   return isNonEmptyArray(errors)
@@ -1451,7 +1451,7 @@ type CombinedResult =
 
 function combineResults(
   elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>,
-  allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult
+  allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult,
 ): CombinedResult {
   switch (elmMakeResult.tag) {
     case "Success":
@@ -1495,7 +1495,7 @@ function combineResults(
 export function printSpaceForOutputs(
   logger: Logger,
   runMode: RunMode,
-  outputActions: OutputActions
+  outputActions: OutputActions,
 ): void {
   if (!logger.config.isTTY) {
     return;
@@ -1503,7 +1503,7 @@ export function printSpaceForOutputs(
   if (isNonEmptyArray(outputActions.outputsWithoutAction)) {
     for (let index = 0; index < outputActions.total; index++) {
       const output = outputActions.outputsWithoutAction.find(
-        (output2) => output2.index === index
+        (output2) => output2.index === index,
       );
       if (output === undefined) {
         writeNewLines(logger, 1);
@@ -1513,8 +1513,8 @@ export function printSpaceForOutputs(
             logger.config,
             runMode,
             output.outputPath,
-            output.outputState
-          )
+            output.outputState,
+          ),
         );
       }
     }
@@ -1622,7 +1622,7 @@ export function emojiWidthFix({
 // function.
 function targetNameEmojiTweak(
   loggerConfig: LoggerConfig,
-  targetName: string
+  targetName: string,
 ): { targetName: string; delta: number } {
   const match = STARTS_WITH_EMOJI_REGEX.exec(targetName);
 
@@ -1655,12 +1655,12 @@ function targetNameEmojiTweak(
 
 export function printStatusLinesForElmJsonsErrors(
   logger: Logger,
-  project: Project
+  project: Project,
 ): void {
   for (const { outputPath } of project.elmJsonsErrors) {
     const { targetName, delta } = targetNameEmojiTweak(
       logger.config,
-      outputPath.targetName
+      outputPath.targetName,
     );
     logger.write(
       printStatusLine({
@@ -1669,14 +1669,14 @@ export function printStatusLinesForElmJsonsErrors(
         isTTY: logger.config.isTTY,
         emojiName: "Error",
         string: logger.config.fancy ? targetName : `${targetName}: error`,
-      })
+      }),
     );
   }
 }
 
 export function printErrors(
   logger: Logger,
-  errors: NonEmptyArray<Errors.ErrorTemplate>
+  errors: NonEmptyArray<Errors.ErrorTemplate>,
 ): void {
   const errorStrings = Array.from(
     new Set(
@@ -1684,10 +1684,10 @@ export function printErrors(
         Errors.toTerminalString(
           template,
           logger.config.columns,
-          logger.config.noColor
-        )
-      )
-    )
+          logger.config.noColor,
+        ),
+      ),
+    ),
   );
 
   logger.write("");
@@ -1706,7 +1706,7 @@ export function printNumErrors(logger: Logger, numErrors: number): void {
       string: `${bold(numErrors.toString())} error${
         numErrors === 1 ? "" : "s"
       } found`,
-    })
+    }),
   );
 }
 
@@ -1714,13 +1714,13 @@ function statusLine(
   loggerConfig: LoggerConfig,
   runMode: RunMode,
   outputPath: OutputPath,
-  outputState: OutputState
+  outputState: OutputState,
 ): string {
   const { status } = outputState;
 
   const { targetName, delta } = targetNameEmojiTweak(
     loggerConfig,
-    outputPath.targetName
+    outputPath.targetName,
   );
 
   const helper = (emojiName: EmojiName, string: string): string =>
@@ -1735,7 +1735,7 @@ function statusLine(
   const withExtraDetailsAtEnd = (
     extra: Array<string | undefined>,
     emojiName: EmojiName,
-    start: string
+    start: string,
   ): string => {
     const strings = extra.flatMap((item) => item ?? []);
     /* v8 ignore start */
@@ -1757,7 +1757,7 @@ function statusLine(
     // `dim` color.
     return helper(
       emojiName,
-      `${start}\0${" ".repeat(padding - 1)}${end}`
+      `${start}\0${" ".repeat(padding - 1)}${end}`,
     ).replace(/\0(.*)$/, dim(" $1"));
   };
 
@@ -1766,7 +1766,7 @@ function statusLine(
       return withExtraDetailsAtEnd(
         [maybePrintDurations(loggerConfig, outputState.flushDurations())],
         "Success",
-        loggerConfig.fancy ? targetName : `${targetName}: success`
+        loggerConfig.fancy ? targetName : `${targetName}: success`,
       );
     }
 
@@ -1783,7 +1783,7 @@ function statusLine(
           maybePrintDurations(loggerConfig, outputState.flushDurations()),
         ],
         "Success",
-        loggerConfig.fancy ? targetName : `${targetName}: success`
+        loggerConfig.fancy ? targetName : `${targetName}: success`,
       );
     }
 
@@ -1832,7 +1832,7 @@ function statusLine(
     case "WriteProxyOutputError":
       return helper(
         "Error",
-        loggerConfig.fancy ? targetName : `${targetName}: error`
+        loggerConfig.fancy ? targetName : `${targetName}: error`,
       );
   }
 }
@@ -1873,9 +1873,9 @@ export function printStatusLine({
   return length <= maxWidth
     ? stringWithEmoji
     : fancy
-    ? // Again, account for the emoji.
-      `${emojiString} ${string.slice(0, maxWidth - 4)}…`
-    : `${string.slice(0, maxWidth - 3)}...`;
+      ? // Again, account for the emoji.
+        `${emojiString} ${string.slice(0, maxWidth - 4)}…`
+      : `${string.slice(0, maxWidth - 3)}...`;
 }
 
 function maybePrintFileSize({
@@ -1916,14 +1916,14 @@ function maybePrintFileSize({
 
 function maybePrintDurations(
   loggerConfig: LoggerConfig,
-  durations: Array<Duration>
+  durations: Array<Duration>,
 ): string | undefined {
   if (!isNonEmptyArray(durations)) {
     return undefined;
   }
 
   const newDurations: NonEmptyArray<Duration> = durations.some(
-    (duration) => duration.tag === "QueuedForElmMake"
+    (duration) => duration.tag === "QueuedForElmMake",
   )
     ? durations
     : [{ tag: "QueuedForElmMake", durationMs: 0 }, ...durations];
@@ -1933,10 +1933,10 @@ function maybePrintDurations(
       printDuration(
         /* v8 ignore next */
         loggerConfig.mockedTimings ? mockDuration(duration) : duration,
-        loggerConfig.fancy
-      )
+        loggerConfig.fancy,
+      ),
     ),
-    " | "
+    " | ",
   );
 }
 
@@ -1953,7 +1953,7 @@ function printDuration(duration: Duration, fancy: boolean): string {
         duration.walkerDurationMs === -1
           ? ""
           : ` ${fancy ? "¦" : "/"} ${printDurationMs(
-              duration.walkerDurationMs
+              duration.walkerDurationMs,
             )} W`
       }`;
 
@@ -2020,9 +2020,9 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
           elmJsonPath,
           outputPath,
           status,
-          true
-        )
-      )
+          true,
+        ),
+      ),
     ),
   ];
 }
@@ -2036,13 +2036,13 @@ export function renderElmJsonError({
       return Errors.elmJsonNotFound(
         outputPath,
         error.elmJsonNotFound,
-        error.foundElmJsonPaths
+        error.foundElmJsonPaths,
       );
 
     case "NonUniqueElmJsonPaths":
       return Errors.nonUniqueElmJsonPaths(
         outputPath,
-        error.nonUniqueElmJsonPaths
+        error.nonUniqueElmJsonPaths,
       );
 
     case "InputsNotFound":
@@ -2051,7 +2051,7 @@ export function renderElmJsonError({
     case "InputsFailedToResolve":
       return Errors.inputsFailedToResolve(
         outputPath,
-        error.inputsFailedToResolve
+        error.inputsFailedToResolve,
       );
 
     case "DuplicateInputs":
@@ -2064,7 +2064,7 @@ export function renderOutputErrors(
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   status: OutputStatus,
-  includeStuckInProgressState = false
+  includeStuckInProgressState = false,
 ): Array<Errors.ErrorTemplate> {
   switch (status.tag) {
     case "NotWrittenToDisk":
@@ -2108,7 +2108,7 @@ export function renderOutputErrors(
           status.exitReason,
           status.stdout,
           status.stderr,
-          status.command
+          status.command,
         ),
       ];
 
@@ -2119,7 +2119,7 @@ export function renderOutputErrors(
         Errors.postprocessStdinWriteError(
           outputPath,
           status.error,
-          status.command
+          status.command,
         ),
       ];
     /* v8 ignore stop */
@@ -2131,7 +2131,7 @@ export function renderOutputErrors(
           status.exitReason,
           status.stdout,
           status.stderr,
-          status.command
+          status.command,
         ),
       ];
 
@@ -2144,7 +2144,7 @@ export function renderOutputErrors(
           status.scriptPath,
           status.error,
           status.stdout,
-          status.stderr
+          status.stderr,
         ),
       ];
 
@@ -2155,7 +2155,7 @@ export function renderOutputErrors(
           status.imported,
           status.typeofDefault,
           status.stdout,
-          status.stderr
+          status.stderr,
         ),
       ];
 
@@ -2166,7 +2166,7 @@ export function renderOutputErrors(
           status.args,
           status.error,
           status.stdout,
-          status.stderr
+          status.stderr,
         ),
       ];
 
@@ -2177,7 +2177,7 @@ export function renderOutputErrors(
           status.args,
           status.returnValue,
           status.stdout,
-          status.stderr
+          status.stderr,
         ),
       ];
 
@@ -2187,7 +2187,7 @@ export function renderOutputErrors(
           outputPath,
           status.beforeError,
           status.error,
-          status.command
+          status.command,
         ),
       ];
 
@@ -2197,7 +2197,7 @@ export function renderOutputErrors(
           outputPath,
           status.error,
           status.errorFilePath,
-          status.command
+          status.command,
         ),
       ];
 
@@ -2209,15 +2209,15 @@ export function renderOutputErrors(
               outputPath,
               elmJsonPath,
               status.error,
-              status.extraError
+              status.extraError,
             ),
           ];
 
         case "CompileErrors":
           return status.error.errors.flatMap((error) =>
             error.problems.map((problem) =>
-              Errors.elmMakeProblem(error.path, problem, status.extraError)
-            )
+              Errors.elmMakeProblem(error.path, problem, status.extraError),
+            ),
           );
       }
 
@@ -2235,7 +2235,7 @@ export function renderOutputErrors(
         Errors.needsToWriteProxyFileReadError(
           outputPath,
           status.error,
-          status.triedPath
+          status.triedPath,
         ),
       ];
 
@@ -2249,7 +2249,7 @@ export function renderOutputErrors(
         Errors.writeOutputError(
           outputPath,
           status.error,
-          status.reasonForWriting
+          status.reasonForWriting,
         ),
       ];
 
@@ -2263,7 +2263,7 @@ type GetAllRelatedElmFilePathsError = ElmJson.ParseError | WalkImportsError;
 
 function getAllRelatedElmFilePaths(
   elmJsonPath: ElmJsonPath,
-  inputs: NonEmptyArray<InputPath>
+  inputs: NonEmptyArray<InputPath>,
 ): GetAllRelatedElmFilePathsResult {
   const parseResult = ElmJson.readAndParse(elmJsonPath);
 
@@ -2271,7 +2271,7 @@ function getAllRelatedElmFilePaths(
     case "Parsed":
       return walkImports(
         ElmJson.getSourceDirectories(elmJsonPath, parseResult.elmJson),
-        inputs
+        inputs,
       );
 
     default:
@@ -2281,7 +2281,7 @@ function getAllRelatedElmFilePaths(
 
 function allRelatedElmFilePathsWithFallback(
   walkerResult: GetAllRelatedElmFilePathsResult,
-  outputState: OutputState
+  outputState: OutputState,
 ): Set<string> {
   switch (walkerResult.tag) {
     case "Success":
@@ -2295,8 +2295,8 @@ function allRelatedElmFilePathsWithFallback(
       return new Set(
         mapNonEmptyArray(
           outputState.inputs,
-          (inputPath) => inputPath.realpath.absolutePath
-        )
+          (inputPath) => inputPath.realpath.absolutePath,
+        ),
       );
   }
 }
@@ -2310,13 +2310,13 @@ function allRelatedElmFilePathsWithFallback(
 // from the regular code paths. We’re already in an edge case.
 export function ensureAllRelatedElmFilePaths(
   elmJsonPath: ElmJsonPath,
-  outputState: OutputState
+  outputState: OutputState,
 ): void {
   if (outputState.allRelatedElmFilePaths.size === 0) {
     const result = getAllRelatedElmFilePaths(elmJsonPath, outputState.inputs);
     outputState.allRelatedElmFilePaths = allRelatedElmFilePathsWithFallback(
       result,
-      outputState
+      outputState,
     );
   }
 }

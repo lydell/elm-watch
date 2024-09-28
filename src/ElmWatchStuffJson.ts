@@ -57,15 +57,15 @@ type ParseError =
     };
 
 export function readAndParse(
-  elmWatchStuffJsonPath: ElmWatchStuffJsonPath
+  elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
 ): ParseResult {
   let json: unknown = undefined;
   try {
     json = JSON.parse(
       fs.readFileSync(
         elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,
-        "utf-8"
-      )
+        "utf-8",
+      ),
     );
   } catch (unknownError) {
     const error = toError(unknownError);

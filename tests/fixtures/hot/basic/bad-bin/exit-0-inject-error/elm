@@ -19,7 +19,7 @@ child.on("exit", (exitCode) => {
     const content = fs.readFileSync(file, "utf8");
     const newContent = content.replace(
       /^var _Platform_worker =.+\s*\{/gm,
-      "$& console.log('Not supposed to be here!');"
+      "$& console.log('Not supposed to be here!');",
     );
     fs.writeFileSync(file, newContent);
   }

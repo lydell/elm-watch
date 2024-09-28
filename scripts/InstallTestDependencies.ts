@@ -7,7 +7,7 @@ const INSTALL_PACKAGES_DIR = path.join(
   __dirname,
   "..",
   "tests",
-  "install-packages"
+  "install-packages",
 );
 
 async function install(): Promise<void> {
@@ -39,7 +39,7 @@ async function run(): Promise<void> {
     } catch (error) {
       console.warn(
         `Attempt ${attempt}/${maxRetries}:`,
-        error instanceof Error ? error.message : error
+        error instanceof Error ? error.message : error,
       );
       fs.rmSync(path.join(INSTALL_PACKAGES_DIR, "elm-stuff"), {
         recursive: true,

@@ -15,7 +15,7 @@ export async function run(
   logger: Logger,
   getNow: GetNow,
   project: Project,
-  postprocessWorkerPool: PostprocessWorkerPool
+  postprocessWorkerPool: PostprocessWorkerPool,
 ): Promise<MakeResult> {
   const startTimestamp = getNow().getTime();
 
@@ -23,7 +23,7 @@ export async function run(
     env,
     logger,
     getNow,
-    project
+    project,
   ).promise;
 
   switch (installResult.tag) {
@@ -105,7 +105,7 @@ export async function run(
       duration,
       numWorkers,
       hasErrors: failed,
-    })
+    }),
   );
 
   return failed ? { tag: "Error" } : { tag: "Success" };
@@ -123,7 +123,7 @@ function getNextOutputActions(project: Project): Compile.OutputActions {
     ? {
         ...nextOutputActions,
         actions: nextOutputActions.actions.filter(
-          (action2) => action2.tag !== "NeedsPostprocess"
+          (action2) => action2.tag !== "NeedsPostprocess",
         ),
       }
     : nextOutputActions;
@@ -145,7 +145,7 @@ function compileFinishedMessage({
       ? dim(
           ` (using ${numWorkers} ${ELM_WATCH_NODE} ${
             numWorkers === 1 ? "worker" : "workers"
-          }).`
+          }).`,
         )
       : ".";
 
@@ -156,8 +156,8 @@ function compileFinishedMessage({
     emojiName: hasErrors ? "Error" : "Success",
     string: `Compilation finished in ${bold(
       printDurationMs(
-        loggerConfig.mockedTimings ? 123 : /* v8 ignore next */ duration
-      ).trim()
+        loggerConfig.mockedTimings ? 123 : /* v8 ignore next */ duration,
+      ).trim(),
     )}${workersString}`,
   });
 }

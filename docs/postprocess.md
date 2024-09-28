@@ -183,7 +183,7 @@ export default function postprocess({ code, compilationMode }) {
 
     default:
       throw new Error(
-        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`
+        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`,
       );
   }
 }

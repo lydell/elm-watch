@@ -104,7 +104,7 @@ export type GetNow = () => Date;
 
 export function equalsInputPath(
   elmFile: AbsolutePath,
-  inputPath: InputPath
+  inputPath: InputPath,
 ): boolean {
   return (
     inputPath.theInputPath.absolutePath === elmFile.absolutePath ||

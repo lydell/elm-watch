@@ -40,7 +40,7 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
   let json: unknown = undefined;
   try {
     json = JSON.parse(
-      fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf-8")
+      fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf-8"),
     );
   } catch (unknownError) {
     const error = toError(unknownError);
@@ -68,7 +68,7 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
 
 export function getSourceDirectories(
   elmJsonPath: ElmJsonPath,
-  elmJson: ElmJson
+  elmJson: ElmJson,
 ): NonEmptyArray<SourceDirectory> {
   const base = absoluteDirname(elmJsonPath.theElmJsonPath);
 

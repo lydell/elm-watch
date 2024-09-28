@@ -70,7 +70,7 @@ const CompileError = Decode.fieldsAuto({
     (string): AbsolutePath => ({
       tag: "AbsolutePath",
       absolutePath: string,
-    })
+    }),
   ),
   name: Decode.string,
   problems: NonEmptyArray(Problem),
@@ -85,9 +85,9 @@ const GeneralError = Decode.fieldsAuto({
       Decode.stringUnion({
         "elm.json": null,
       }),
-      (tag) => ({ tag })
+      (tag) => ({ tag }),
     ),
-    { tag: "NoPath" as const }
+    { tag: "NoPath" as const },
   ),
   title: Decode.string,
   message: Decode.array(MessageChunk),

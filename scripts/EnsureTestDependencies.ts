@@ -47,8 +47,8 @@ function checkFile(file: string): void {
       error instanceof Decode.DecoderError
         ? error.format().replace(/\n/g, " | ")
         : error instanceof Error
-        ? error.message
-        : error
+          ? error.message
+          : error,
     );
     return;
   }
@@ -65,10 +65,10 @@ function checkFile(file: string): void {
     if (version !== versionToInstall) {
       throw new Error(
         `This file includes \`${JSON.stringify(name)}: ${JSON.stringify(
-          version
+          version,
         )}\`, but the elm.json we install includes: \`${JSON.stringify(
-          name
-        )}: ${JSON.stringify(versionToInstall)}\``
+          name,
+        )}: ${JSON.stringify(versionToInstall)}\``,
       );
     }
   }

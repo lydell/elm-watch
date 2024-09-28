@@ -21,7 +21,7 @@
     "eslint": "8.52.0",
     "eslint-plugin-simple-import-sort": "10.0.0",
     "globals": "13.23.0",
-    "prettier": "2.8.3",
+    "prettier": "3.3.3",
     "run-pty": "5.0.0",
     "typescript": "5.2.2",
     "vitest": "2.1.1"

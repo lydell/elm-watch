@@ -3,7 +3,7 @@ if (require("../elm-install")) {
   process.stderr.write(
     `elm: Map.!: given key is not an element in the map
 CallStack (from HasCallStack):
-  error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal`
+  error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal`,
   );
   process.exit(1);
 }

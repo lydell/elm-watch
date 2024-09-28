@@ -46,7 +46,7 @@ const Target = Decode.fieldsAuto(
           message: "Inputs must have a valid module name and end with .elm",
           value: string,
         });
-      })
+      }),
     ),
     output: Decode.chain(Decode.string, (output) => {
       if (isValidOutputName(output)) {
@@ -58,11 +58,11 @@ const Target = Decode.fieldsAuto(
       });
     }),
   },
-  { exact: "throw" }
+  { exact: "throw" },
 );
 
 function targetRecordHelper(
-  record: Record<string, Target>
+  record: Record<string, Target>,
 ): Record<string, Target> {
   const entries = Object.entries(record);
   if (!isNonEmptyArray(entries)) {
@@ -82,7 +82,7 @@ function targetRecordHelper(
         value: Decode.DecoderError.MISSING_VALUE,
         key,
       });
-    })
+    }),
   );
 }
 
@@ -93,7 +93,7 @@ const Config = Decode.fieldsAuto(
     postprocess: Decode.optional(NonEmptyArray(Decode.string)),
     port: Decode.optional(Port),
   },
-  { exact: "throw" }
+  { exact: "throw" },
 );
 
 type ParseResult =
@@ -132,7 +132,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
   let json: unknown = undefined;
   try {
     json = JSON.parse(
-      fs.readFileSync(elmWatchJsonPathRaw.absolutePath, "utf-8")
+      fs.readFileSync(elmWatchJsonPathRaw.absolutePath, "utf-8"),
     );
   } catch (unknownError) {
     const error = toError(unknownError);
@@ -162,7 +162,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
 export function example(
   cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
-  elmMakeParsed: ElmMakeParsed
+  elmMakeParsed: ElmMakeParsed,
 ): string {
   const { elmFiles, output = "build/main.js" } = elmMakeParsed;
 
@@ -176,11 +176,11 @@ export function example(
               toUnixPath(
                 path.relative(
                   path.dirname(
-                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath
+                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
                   ),
-                  path.resolve(cwd.path.absolutePath, file)
-                )
-              )
+                  path.resolve(cwd.path.absolutePath, file),
+                ),
+              ),
             )
           : ["src/Main.elm"],
         output,
@@ -238,6 +238,6 @@ export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
       elmFiles: [],
       output: undefined,
       justSawOutputFlag: false,
-    }
+    },
   );
 }

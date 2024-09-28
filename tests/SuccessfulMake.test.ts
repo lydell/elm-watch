@@ -22,7 +22,7 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures");
 async function run(
   fixture: string,
   args: Array<string>,
-  { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {}
+  { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {},
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
@@ -94,7 +94,7 @@ describe("successful make", () => {
     expect(
       await run("successful-make", ["make"], {
         bin: "installed-packages-output-bin",
-      })
+      }),
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
          ● elm/html 1.0.0
@@ -112,7 +112,7 @@ describe("successful make", () => {
 
   test("CI", async () => {
     expect(
-      await run("successful-make", ["make", "--optimize"], { isTTY: false })
+      await run("successful-make", ["make", "--optimize"], { isTTY: false }),
     ).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies
@@ -130,7 +130,7 @@ describe("successful make", () => {
       await run("successful-make", ["make", "--optimize"], {
         isTTY: false,
         env: { [NO_COLOR]: "" },
-      })
+      }),
     ).toMatchInlineSnapshot(`
       Dependencies: in progress
       Dependencies: success
@@ -264,7 +264,7 @@ describe("successful make", () => {
     expect(
       await run("emoji", ["make"], {
         env: { [NO_COLOR]: "" },
-      })
+      }),
     ).toMatchInlineSnapshot(`
       Dependencies: success
       No emoji: success                                              1 ms Q | 1.23 s E
@@ -283,7 +283,7 @@ describe("successful make", () => {
     expect(
       await run("emoji", ["make"], {
         isTTY: false,
-      })
+      }),
     ).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies

@@ -132,7 +132,7 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
 });
 
 export function encodeWebSocketToClientMessage(
-  message: WebSocketToClientMessage
+  message: WebSocketToClientMessage,
 ): string {
   switch (message.tag) {
     // Optimization: Avoid encoding megabytes of JS code as a JSON string.
@@ -148,7 +148,7 @@ export function encodeWebSocketToClientMessage(
 }
 
 export function decodeWebSocketToClientMessage(
-  message: string
+  message: string,
 ): WebSocketToClientMessage {
   if (message.startsWith("//")) {
     const newlineIndexRaw = message.indexOf("\n");

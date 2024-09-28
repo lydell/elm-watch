@@ -136,7 +136,7 @@ const project: Project = {
             "optimize",
             "BottomLeft",
             false,
-            getNow
+            getNow,
           ),
         ],
         [
@@ -183,7 +183,7 @@ const project: Project = {
             "standard",
             "BottomLeft",
             false,
-            getNow
+            getNow,
           ),
         ],
       ]),
@@ -233,7 +233,7 @@ const project: Project = {
             "optimize",
             "BottomLeft",
             false,
-            getNow
+            getNow,
           ),
         ],
       ]),

@@ -27,12 +27,12 @@ export type WalkImportsError = {
 // to be recompiled.
 export function walkImports(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
-  inputPaths: NonEmptyArray<InputPath>
+  inputPaths: NonEmptyArray<InputPath>,
 ): WalkImportsResult {
   const allRelatedElmFilePaths = new Set(
     inputPaths.flatMap((inputPath) =>
-      initialRelatedElmFilePaths(sourceDirectories, inputPath)
-    )
+      initialRelatedElmFilePaths(sourceDirectories, inputPath),
+    ),
   );
 
   // Workaround for: https://github.com/nodejs/node/issues/42933
@@ -57,7 +57,7 @@ export function walkImports(
         })),
         inputPath.realpath.absolutePath,
         allRelatedElmFilePaths,
-        visitedModules
+        visitedModules,
       );
     }
   } catch (unknownError) {
@@ -81,7 +81,7 @@ function walkImportsHelper(
   sourceDirectories: NonEmptyArray<SourceDirectoryWithChildren>,
   elmFilePath: string,
   allRelatedElmFilePaths: Set<string>,
-  visitedModules: Set<string>
+  visitedModules: Set<string>,
 ): void {
   // This is much faster than `try-catch` around `parse` and checking for ENOENT.
   if (!fs.existsSync(elmFilePath)) {
@@ -114,7 +114,7 @@ function walkImportsHelper(
             sourceDirectories,
             newElmFilePath,
             allRelatedElmFilePaths,
-            visitedModules
+            visitedModules,
           );
         }
       }
@@ -154,7 +154,7 @@ function parse(elmFilePath: string): Array<Parser.ModuleName> {
 // a name not matching the file name (which of course is invalid, but still).)
 function initialRelatedElmFilePaths(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
-  inputPath: InputPath
+  inputPath: InputPath,
 ): NonEmptyArray<string> {
   // Inputs are allowed to be symlinks. If there’s an error in the input, Elm
   // shows the resolved path in the error message rather than the original path
@@ -170,7 +170,7 @@ function initialRelatedElmFilePaths(
             (sourceDirectory2) =>
               sourceDirectory2.theSourceDirectory.absolutePath +
               path.sep +
-              inputPathString.slice(prefix.length)
+              inputPathString.slice(prefix.length),
           )
         : [];
     }),

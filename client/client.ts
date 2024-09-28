@@ -148,7 +148,7 @@ __ELM_WATCH.RELOAD_PAGE ??= (message) => {
     console.error(
       message === undefined
         ? "elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I can’t do it for you."
-        : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`
+        : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`,
     );
   } else {
     window.location.reload();
@@ -168,7 +168,7 @@ __ELM_WATCH.LOG_DEBUG ??=
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
 const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-  "%INITIAL_ELM_COMPILED_TIMESTAMP%"
+  "%INITIAL_ELM_COMPILED_TIMESTAMP%",
 );
 // Note: The JS code running is compiled in `ORIGINAL_COMPILATION_MODE`. But
 // that does not necessarily match the selected compilation mode for the target.
@@ -417,7 +417,7 @@ export type ReachedIdleStateReason =
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
 const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
-  "This value is supposed to only be obtained via `Status`."
+  "This value is supposed to only be obtained via `Status`.",
 );
 
 function logDebug(...args: Array<unknown>): void {
@@ -643,7 +643,7 @@ function getOrCreateTargetRoot(): Elements {
 
   if (shadowRoot === null) {
     throw new Error(
-      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`
+      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`,
     );
   }
 
@@ -657,7 +657,7 @@ function getOrCreateTargetRoot(): Elements {
   }
 
   let overlayCloseButton = shadowRoot.querySelector(
-    `.${CLASS.overlayCloseButton}`
+    `.${CLASS.overlayCloseButton}`,
   );
   if (overlayCloseButton === null) {
     const closeAllErrorOverlays = (): void => {
@@ -682,7 +682,7 @@ function getOrCreateTargetRoot(): Elements {
           closeAllErrorOverlays();
         }
       },
-      true
+      true,
     );
   }
 
@@ -724,7 +724,7 @@ type PositionCss<Position> = {
 };
 
 function browserUiPositionToCss(
-  browserUiPosition: BrowserUiPosition
+  browserUiPosition: BrowserUiPosition,
 ): PositionCss<"-1px" | "auto"> {
   switch (browserUiPosition) {
     case "TopLeft":
@@ -739,7 +739,7 @@ function browserUiPositionToCss(
 }
 
 function browserUiPositionToCssForChooser(
-  browserUiPosition: BrowserUiPosition
+  browserUiPosition: BrowserUiPosition,
 ): PositionCss<"0" | "auto"> {
   switch (browserUiPosition) {
     case "TopLeft":
@@ -755,7 +755,7 @@ function browserUiPositionToCssForChooser(
 
 function setBrowserUiPosition(
   browserUiPosition: BrowserUiPosition,
-  elements: Elements
+  elements: Elements,
 ): void {
   // Only the first target is in charge of the browser UI position.
   const isFirstTargetRoot = elements.targetRoot.previousElementSibling === null;
@@ -766,7 +766,7 @@ function setBrowserUiPosition(
   elements.container.dataset.position = browserUiPosition;
 
   for (const [key, value] of Object.entries(
-    browserUiPositionToCss(browserUiPosition)
+    browserUiPositionToCss(browserUiPosition),
   )) {
     elements.container.style.setProperty(key, value);
   }
@@ -776,7 +776,7 @@ function setBrowserUiPosition(
   elements.root.classList.toggle(CLASS.rootBottomHalf, isInBottomHalf);
 
   elements.shadowRoot.dispatchEvent(
-    new CustomEvent(BROWSER_UI_MOVED_EVENT, { detail: browserUiPosition })
+    new CustomEvent(BROWSER_UI_MOVED_EVENT, { detail: browserUiPosition }),
   );
 }
 
@@ -784,7 +784,7 @@ const initMutable =
   (getNow: GetNow, elements: Elements | undefined) =>
   (
     dispatch: (msg: Msg) => void,
-    resolvePromise: (result: undefined) => void
+    resolvePromise: (result: undefined) => void,
   ): Mutable => {
     let removeListeners: Array<() => void> = [];
 
@@ -797,7 +797,7 @@ const initMutable =
       webSocket: initWebSocket(
         getNow,
         INITIAL_ELM_COMPILED_TIMESTAMP,
-        dispatch
+        dispatch,
       ),
       webSocketTimeoutId: undefined,
     };
@@ -835,10 +835,10 @@ const initMutable =
                     dispatch({
                       tag: "BrowserUiMoved",
                       browserUiPosition: Decode.fields((field) =>
-                        field("detail", parseBrowseUiPositionWithFallback)
+                        field("detail", parseBrowseUiPositionWithFallback),
                       )(event),
                     });
-                  }
+                  },
                 ),
                 addEventListener(
                   elements.shadowRoot,
@@ -852,12 +852,12 @@ const initMutable =
                         openErrorOverlay: false,
                       },
                     });
-                  }
+                  },
                 ),
               ]),
         ];
       },
-      { once: true }
+      { once: true },
     );
 
     __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = {
@@ -915,7 +915,7 @@ const initMutable =
 function addEventListener<EventName extends string>(
   target: EventTarget,
   eventName: EventName,
-  listener: (event: Event) => void
+  listener: (event: Event) => void,
 ): () => void {
   target.addEventListener(eventName, listener);
   return () => {
@@ -926,7 +926,7 @@ function addEventListener<EventName extends string>(
 function initWebSocket(
   getNow: GetNow,
   elmCompiledTimestamp: number,
-  dispatch: (msg: Msg) => void
+  dispatch: (msg: Msg) => void,
 ): WebSocket {
   const hostname =
     window.location.hostname === "" ? "localhost" : window.location.hostname;
@@ -963,7 +963,7 @@ function initWebSocket(
 const init = (
   date: Date,
   browserUiPosition: BrowserUiPosition,
-  elmCompiledTimestampBeforeReload: number | undefined
+  elmCompiledTimestampBeforeReload: number | undefined,
 ): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
@@ -1217,7 +1217,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
 function onWebSocketToClientMessage(
   date: Date,
   msg: WebSocketToClientMessage,
-  model: Model
+  model: Model,
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "FocusedTabAcknowledged":
@@ -1308,7 +1308,7 @@ function onWebSocketToClientMessage(
 function statusChanged(
   date: Date,
   { status }: StatusChanged,
-  model: Model
+  model: Model,
 ): [Model, Array<Cmd>] {
   switch (status.tag) {
     case "AlreadyUpToDate":
@@ -1381,7 +1381,7 @@ function statusChanged(
                   };
                   const id = JSON.stringify(overlayError);
                   return [id, overlayError];
-                })
+                }),
               ),
               openErrorOverlay: status.openErrorOverlay,
             },
@@ -1417,7 +1417,7 @@ function statusChanged(
 function reconnect(
   model: Model,
   date: Date,
-  { force }: { force: boolean }
+  { force }: { force: boolean },
 ): [Model, Array<Cmd>] {
   // We never clear reconnect `setTimeout`s. Instead, check that the required
   // amount of time has passed. This is needed since we have the “Reconnect now”
@@ -1461,7 +1461,7 @@ const runCmd =
     mutable: Mutable,
     dispatch: (msg: Msg) => void,
     _resolvePromise: (result: undefined) => void,
-    rejectPromise: (error: Error) => void
+    rejectPromise: (error: Error) => void,
   ): void => {
     switch (cmd.tag) {
       case "Eval": {
@@ -1497,7 +1497,7 @@ const runCmd =
         mutable.webSocket = initWebSocket(
           getNow,
           cmd.elmCompiledTimestamp,
-          dispatch
+          dispatch,
         );
         return;
 
@@ -1578,7 +1578,7 @@ const runCmd =
             cmd.sendKey,
             cmd.errors,
             elements.overlay,
-            elements.overlayCloseButton
+            elements.overlayCloseButton,
           );
         }
         return;
@@ -1593,7 +1593,7 @@ const runCmd =
             try {
               window.sessionStorage.setItem(
                 RELOAD_TARGET_NAME_KEY_PREFIX + TARGET_NAME,
-                cmd.elmCompiledTimestamp.toString()
+                cmd.elmCompiledTimestamp.toString(),
               );
             } catch {
               // Ignore failing to write to sessionStorage.
@@ -1657,7 +1657,7 @@ type ParseWebSocketMessageDataResult =
     };
 
 function parseWebSocketMessageData(
-  data: unknown
+  data: unknown,
 ): ParseWebSocketMessageDataResult {
   try {
     return {
@@ -1668,7 +1668,7 @@ function parseWebSocketMessageData(
     return {
       tag: "Error",
       message: `Failed to decode web socket message sent from the server:\n${possiblyDecodeErrorToString(
-        unknownError
+        unknownError,
       )}`,
     };
   }
@@ -1678,8 +1678,8 @@ function possiblyDecodeErrorToString(unknownError: unknown): string {
   return unknownError instanceof Decode.DecoderError
     ? unknownError.format()
     : unknownError instanceof Error
-    ? unknownError.message
-    : Decode.repr(unknownError);
+      ? unknownError.message
+      : Decode.repr(unknownError);
 }
 
 function functionToNull(value: unknown): unknown {
@@ -1703,13 +1703,13 @@ const ElmModule: Decode.Decoder<Array<ProgramType>> = Decode.chain(
       Decode.multi({
         null: () => [],
         array: Decode.array(
-          Decode.fields((field) => field("__elmWatchProgramType", ProgramType))
+          Decode.fields((field) => field("__elmWatchProgramType", ProgramType)),
         ),
         object: (value) => ElmModule(value),
-      })
-    )
+      }),
+    ),
   ),
-  (record) => Object.values(record).flat()
+  (record) => Object.values(record).flat(),
 );
 
 const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
@@ -1780,7 +1780,7 @@ function reloadPageIfNeeded(): void {
   const reasons: Array<[string, Array<string>]> = [];
 
   for (const [targetName, reloadStatus] of Object.entries(
-    __ELM_WATCH.RELOAD_STATUSES
+    __ELM_WATCH.RELOAD_STATUSES,
   )) {
     switch (reloadStatus.tag) {
       case "MightWantToReload":
@@ -1811,7 +1811,7 @@ function reloadPageIfNeeded(): void {
               [
                 targetName,
                 ...subReasons.map((subReason) => `- ${subReason}`),
-              ].join("\n")
+              ].join("\n"),
             )
             .join("\n\n"),
         ];
@@ -1845,7 +1845,7 @@ function h<T extends HTMLElement>(
         .replace("Anchor", "a")
         .replace("Paragraph", "p")
         .replace(/^([DOU])List$/, "$1l")
-        .toLowerCase()
+        .toLowerCase(),
   ) as T;
 
   Object.assign(element, props);
@@ -1865,7 +1865,7 @@ function h<T extends HTMLElement>(
   for (const child of children) {
     if (child !== undefined) {
       element.append(
-        typeof child === "string" ? document.createTextNode(child) : child
+        typeof child === "string" ? document.createTextNode(child) : child,
       );
     }
   }
@@ -1885,7 +1885,7 @@ type Info = {
 function renderWebWorker(model: Model, info: Info): string {
   const statusData = statusIconAndText(model, info);
   return `${statusData.icon} elm-watch: ${statusData.status} ${formatTime(
-    model.status.date
+    model.status.date,
   )} (${info.targetName})`;
 }
 
@@ -1895,7 +1895,7 @@ function render(
   dispatch: (msg: Msg) => void,
   model: Model,
   info: Info,
-  manageFocus: boolean
+  manageFocus: boolean,
 ): void {
   targetRoot.replaceChildren(
     view(
@@ -1904,8 +1904,8 @@ function render(
       },
       model,
       info,
-      manageFocus
-    )
+      manageFocus,
+    ),
   );
 
   const firstFocusableElement = targetRoot.querySelector(`button, [tabindex]`);
@@ -1962,8 +1962,8 @@ function getStatusClass({
           ? CLASS.flashError
           : undefined
         : uiRelatedUpdate
-        ? undefined
-        : CLASS.flashError;
+          ? undefined
+          : CLASS.flashError;
     case "Waiting":
       return undefined;
   }
@@ -2336,7 +2336,7 @@ function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
   info: Info,
-  manageFocus: boolean
+  manageFocus: boolean,
 ): HTMLElement {
   const model: Model = __ELM_WATCH.MOCKED_TIMINGS
     ? {
@@ -2375,7 +2375,7 @@ function view(
           statusData,
           info,
           model.browserUiPosition,
-          dispatch
+          dispatch,
         )
       : undefined,
     h(
@@ -2395,8 +2395,8 @@ function view(
         },
         icon(
           model.uiExpanded ? CHEVRON_UP : CHEVRON_DOWN,
-          model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch"
-        )
+          model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch",
+        ),
       ),
       compilationModeIcon(model.compilationMode),
       icon(
@@ -2415,27 +2415,27 @@ function view(
                   event.currentTarget.classList.remove(statusClass);
                 }
               },
-            }
+            },
       ),
       h(
         HTMLTimeElement,
         { dateTime: model.status.date.toISOString() },
-        formatTime(model.status.date)
+        formatTime(model.status.date),
       ),
-      h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
-    )
+      h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME),
+    ),
   );
 }
 
 function icon(
   emoji: string,
   alt: string,
-  props?: Partial<HTMLSpanElement>
+  props?: Partial<HTMLSpanElement>,
 ): HTMLElement {
   return h(
     HTMLSpanElement,
     { attrs: { "aria-label": alt }, ...props },
-    h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, emoji)
+    h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, emoji),
   );
 }
 
@@ -2444,7 +2444,7 @@ function viewExpandedUi(
   statusData: StatusData,
   info: Info,
   browserUiPosition: BrowserUiPosition,
-  dispatch: (msg: UiMsg) => void
+  dispatch: (msg: UiMsg) => void,
 ): HTMLElement {
   const items: Array<[string, HTMLElement | string]> = [
     ["target", info.targetName],
@@ -2458,7 +2458,7 @@ function viewExpandedUi(
           dateTime: status.date.toISOString(),
           attrs: { "data-format": "2044-04-30 04:44:44" },
         },
-        `${formatDate(status.date)} ${formatTime(status.date)}`
+        `${formatDate(status.date)} ${formatTime(status.date)}`,
       ),
     ],
     ["status", statusData.status],
@@ -2483,7 +2483,7 @@ function viewExpandedUi(
       ...items.flatMap(([key, value]) => [
         h(HTMLElement, { localName: "dt" }, key),
         h(HTMLElement, { localName: "dd" }, value),
-      ])
+      ]),
     ),
     ...statusData.content,
     browserUiPositionSendKey === undefined
@@ -2491,8 +2491,8 @@ function viewExpandedUi(
       : viewBrowserUiPositionChooser(
           browserUiPosition,
           dispatch,
-          browserUiPositionSendKey
-        )
+          browserUiPositionSendKey,
+        ),
   );
 }
 
@@ -2506,7 +2506,7 @@ const allBrowserUiPositionsInOrder: Array<BrowserUiPosition> = [
 function viewBrowserUiPositionChooser(
   currentPosition: BrowserUiPosition,
   dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey
+  sendKey: SendKey,
 ): HTMLElement {
   const arrows = getBrowserUiPositionArrows(currentPosition);
   return h(
@@ -2532,9 +2532,9 @@ function viewBrowserUiPositionChooser(
                 });
               },
             },
-            arrow
+            arrow,
           );
-    })
+    }),
   );
 }
 
@@ -2594,7 +2594,7 @@ type StatusData = {
 
 function statusIconAndText(
   model: Model,
-  info: Info
+  info: Info,
 ): Pick<StatusData, "icon" | "status"> {
   switch (model.status.tag) {
     case "Busy":
@@ -2662,7 +2662,7 @@ function statusIconAndText(
 function viewStatus(
   dispatch: (msg: UiMsg) => void,
   model: Model,
-  info: Info
+  info: Info,
 ): Pick<StatusData, "content" | "dl"> {
   const { status, compilationMode } = model;
   switch (status.tag) {
@@ -2729,7 +2729,7 @@ function viewStatus(
           h(
             HTMLParagraphElement,
             {},
-            "Check the console in the browser developer tools to see errors!"
+            "Check the console in the browser developer tools to see errors!",
           ),
         ],
       };
@@ -2761,7 +2761,7 @@ function viewStatus(
                 dispatch({ tag: "PressedReconnectNow" });
               },
             },
-            "Reconnect web socket now"
+            "Reconnect web socket now",
           ),
         ],
       };
@@ -2773,7 +2773,7 @@ function viewStatus(
           h(
             HTMLParagraphElement,
             {},
-            "I ran into an unexpected error! This is the error message:"
+            "I ran into an unexpected error! This is the error message:",
           ),
           h(HTMLPreElement, {}, status.message),
         ],
@@ -2788,7 +2788,7 @@ function viewStatus(
                 "A while ago I reloaded the page to get new compiled JavaScript.",
                 "But it looks like after the last page reload I got the same JavaScript as before, instead of new stuff!",
                 `The old JavaScript was compiled ${new Date(
-                  model.elmCompiledTimestamp
+                  model.elmCompiledTimestamp,
                 ).toLocaleString()}, and so was the JavaScript currently running.`,
                 "I currently need to reload the page again, but fear a reload loop if I try.",
                 "Do you have accidental HTTP caching enabled maybe?",
@@ -2801,7 +2801,7 @@ function viewStatus(
 
 function viewErrorOverlayToggleButton(
   dispatch: (msg: UiMsg) => void,
-  errorOverlay: ErrorOverlay
+  errorOverlay: ErrorOverlay,
 ): HTMLElement {
   return h(
     HTMLButtonElement,
@@ -2818,7 +2818,7 @@ function viewErrorOverlayToggleButton(
         });
       },
     },
-    errorOverlay.openErrorOverlay ? "Hide errors" : "Show errors"
+    errorOverlay.openErrorOverlay ? "Hide errors" : "Show errors",
   );
 }
 
@@ -2832,7 +2832,7 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
           h(
             HTMLParagraphElement,
             {},
-            "ℹ️ Clicking error locations only works if you set it up."
+            "ℹ️ Clicking error locations only works if you set it up.",
           ),
           h(
             HTMLParagraphElement,
@@ -2848,10 +2848,10 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
               h(
                 HTMLElement,
                 { localName: "strong" },
-                "Clickable error locations"
-              )
-            )
-          )
+                "Clickable error locations",
+              ),
+            ),
+          ),
         ),
       ];
 
@@ -2863,8 +2863,8 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
           h(
             HTMLElement,
             { localName: "strong" },
-            "Opening the location in your editor failed!"
-          )
+            "Opening the location in your editor failed!",
+          ),
         ),
         h(HTMLPreElement, {}, error.message),
       ];
@@ -2886,7 +2886,7 @@ function idleIcon(status: InitializedElmAppsStatus): string {
 }
 
 function compilationModeIcon(
-  compilationMode: CompilationModeWithProxy
+  compilationMode: CompilationModeWithProxy,
 ): HTMLElement | undefined {
   switch (compilationMode) {
     case "proxy":
@@ -2913,7 +2913,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
         h(
           HTMLParagraphElement,
           {},
-          h(HTMLElement, { localName: "strong" }, "Having trouble connecting?")
+          h(HTMLElement, { localName: "strong" }, "Having trouble connecting?"),
         ),
         h(
           HTMLParagraphElement,
@@ -2922,9 +2922,9 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
           h(
             HTMLAnchorElement,
             { href: new URL(`https://${webSocketUrl.host}/accept`).href },
-            "accept elm-watch’s self-signed certificate"
+            "accept elm-watch’s self-signed certificate",
           ),
-          ". "
+          ". ",
         ),
         h(
           HTMLParagraphElement,
@@ -2936,9 +2936,9 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
               target: "_blank",
               rel: "noreferrer",
             },
-            "More information"
+            "More information",
           ),
-          "."
+          ".",
         ),
       ]
     : [];
@@ -2980,7 +2980,7 @@ const noDebuggerYetReason = "The Elm debugger isn't available at this point.";
 function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
   return `The Elm debugger isn't supported by ${humanList(
     Array.from(noDebuggerProgramTypes, (programType) => `\`${programType}\``),
-    "and"
+    "and",
   )} programs.`;
 }
 
@@ -2989,10 +2989,10 @@ function humanList(list: Array<string>, joinWord: string): string {
   return length <= 1
     ? list.join("")
     : length === 2
-    ? list.join(` ${joinWord} `)
-    : `${list.slice(0, length - 2).join(", ")}, ${list
-        .slice(-2)
-        .join(` ${joinWord} `)}`;
+      ? list.join(` ${joinWord} `)
+      : `${list.slice(0, length - 2).join(", ")}, ${list
+          .slice(-2)
+          .join(` ${joinWord} `)}`;
 }
 
 function viewCompilationModeChooser({
@@ -3014,7 +3014,7 @@ function viewCompilationModeChooser({
         h(
           HTMLParagraphElement,
           {},
-          "window.Elm does not look like expected! This is the error message:"
+          "window.Elm does not look like expected! This is the error message:",
         ),
         h(HTMLPreElement, {}, info.initializedElmAppsStatus.message),
       ];
@@ -3032,9 +3032,9 @@ function viewCompilationModeChooser({
               target: "_blank",
               rel: "noreferrer",
             },
-            "window.Elm"
+            "window.Elm",
           ),
-          " to exist, but it is undefined!"
+          " to exist, but it is undefined!",
         ),
       ];
 
@@ -3043,7 +3043,7 @@ function viewCompilationModeChooser({
         h(
           HTMLParagraphElement,
           {},
-          "It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!"
+          "It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!",
         ),
       ];
 
@@ -3068,7 +3068,7 @@ function viewCompilationModeChooser({
               HTMLSpanElement,
               { className: CLASS.compilationModeWithIcon },
               name,
-              mode === selectedMode ? compilationModeIcon(mode) : undefined
+              mode === selectedMode ? compilationModeIcon(mode) : undefined,
             );
 
             return h(
@@ -3101,16 +3101,16 @@ function viewCompilationModeChooser({
                       ? h(
                           HTMLElement,
                           { localName: "small" },
-                          `Note: The code currently running is in ${ORIGINAL_COMPILATION_MODE} mode.`
+                          `Note: The code currently running is in ${ORIGINAL_COMPILATION_MODE} mode.`,
                         )
                       : undefined,
                   ]
                 : [
                     nameWithIcon,
                     h(HTMLElement, { localName: "small" }, status.reason),
-                  ])
+                  ]),
             );
-          })
+          }),
         ),
       ];
     }
@@ -3125,7 +3125,7 @@ function updateErrorOverlay(
   sendKey: SendKey | undefined,
   errors: Map<string, OverlayError>,
   overlay: HTMLElement,
-  overlayCloseButton: HTMLElement
+  overlayCloseButton: HTMLElement,
 ): void {
   const existingErrorElements = new Map<
     string,
@@ -3136,11 +3136,11 @@ function updateErrorOverlay(
       {
         targetNames: new Set(
           // Newline is not a valid target name character.
-          (element.getAttribute(DATA_TARGET_NAMES) ?? "").split("\n")
+          (element.getAttribute(DATA_TARGET_NAMES) ?? "").split("\n"),
         ),
         element,
       },
-    ])
+    ]),
   );
 
   for (const [id, { targetNames, element }] of existingErrorElements) {
@@ -3164,7 +3164,7 @@ function updateErrorOverlay(
         dispatch,
         sendKey,
         id,
-        error
+        error,
       );
       if (previousElement === undefined) {
         overlay.prepend(element);
@@ -3174,18 +3174,18 @@ function updateErrorOverlay(
       overlay.style.backgroundColor = error.backgroundColor;
       overlayCloseButton.style.setProperty(
         "--foregroundColor",
-        error.foregroundColor
+        error.foregroundColor,
       );
       overlayCloseButton.style.setProperty(
         "--backgroundColor",
-        error.backgroundColor
+        error.backgroundColor,
       );
       previousElement = element;
     } else {
       if (!maybeExisting.targetNames.has(targetName)) {
         maybeExisting.element.setAttribute(
           DATA_TARGET_NAMES,
-          [...maybeExisting.targetNames, targetName].join("\n")
+          [...maybeExisting.targetNames, targetName].join("\n"),
         );
       }
       previousElement = maybeExisting.element;
@@ -3207,7 +3207,7 @@ function viewOverlayError(
   dispatch: (msg: UiMsg) => void,
   sendKey: SendKey | undefined,
   id: string,
-  error: OverlayError
+  error: OverlayError,
 ): HTMLElement {
   return h(
     HTMLDetailsElement,
@@ -3233,24 +3233,24 @@ function viewOverlayError(
             backgroundColor: error.backgroundColor,
           },
         },
-        error.title
+        error.title,
       ),
       error.location === undefined
         ? undefined
         : h(
             HTMLParagraphElement,
             {},
-            viewErrorLocation(dispatch, sendKey, error.location)
-          )
+            viewErrorLocation(dispatch, sendKey, error.location),
+          ),
     ),
-    h(HTMLPreElement, { innerHTML: error.htmlContent })
+    h(HTMLPreElement, { innerHTML: error.htmlContent }),
   );
 }
 
 function viewErrorLocation(
   dispatch: (msg: UiMsg) => void,
   sendKey: SendKey | undefined,
-  location: ErrorLocation
+  location: ErrorLocation,
 ): HTMLElement | string {
   switch (location.tag) {
     case "FileOnly":
@@ -3262,7 +3262,7 @@ function viewErrorLocation(
           line: 1,
           column: 1,
         },
-        location.file.absolutePath
+        location.file.absolutePath,
       );
 
     case "FileWithLineAndColumn": {
@@ -3270,7 +3270,7 @@ function viewErrorLocation(
         dispatch,
         sendKey,
         location,
-        `${location.file.absolutePath}:${location.line}:${location.column}`
+        `${location.file.absolutePath}:${location.line}:${location.column}`,
       );
     }
 
@@ -3287,7 +3287,7 @@ function viewErrorLocationButton(
     line: number;
     column: number;
   },
-  text: string
+  text: string,
 ): HTMLButtonElement | string {
   return sendKey === undefined
     ? text
@@ -3305,13 +3305,13 @@ function viewErrorLocationButton(
             });
           },
         },
-        text
+        text,
       );
 }
 
 function renderMockStatuses(
   getNow: GetNow,
-  elements: Elements | undefined
+  elements: Elements | undefined,
 ): void {
   if (elements === undefined) {
     return;
@@ -3359,7 +3359,7 @@ function renderMockStatuses(
       info: {
         ...info,
         webSocketUrl: new URL(
-          "ws://development.admin.example.com.localhost:53167"
+          "ws://development.admin.example.com.localhost:53167",
         ),
       },
     },
@@ -3551,7 +3551,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       },
       model,
       { ...(status.info ?? info), targetName },
-      false
+      false,
     );
   }
 }

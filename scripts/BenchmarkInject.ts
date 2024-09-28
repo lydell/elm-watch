@@ -14,7 +14,7 @@ function run(args: Array<string>): void {
 
   if (args.length !== 2 || elmFileRaw === undefined) {
     throw new KnownError(
-      `You must pass the compilation mode as well as the path to a single Elm file.`
+      `You must pass the compilation mode as well as the path to a single Elm file.`,
     );
   }
 
@@ -35,7 +35,7 @@ function run(args: Array<string>): void {
   console.log(
     `Success! Before: ${code.length}. After: ${newCode.length}. Diff: ${
       newCode.length - code.length
-    }`
+    }`,
   );
 }
 
@@ -46,7 +46,7 @@ new Promise(() => {
     error instanceof Decode.DecoderError
       ? error.format()
       : error instanceof KnownError
-      ? error.message
-      : error
+        ? error.message
+        : error,
   );
 });

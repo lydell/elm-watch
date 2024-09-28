@@ -16,7 +16,7 @@ type ParseArgsResult =
 
 export function parseArgs(
   runMode: RunMode,
-  args: Array<CliArg>
+  args: Array<CliArg>,
 ): ParseArgsResult {
   let debug = false;
   let optimize = false;

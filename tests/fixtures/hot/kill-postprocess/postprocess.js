@@ -26,20 +26,20 @@ async function run() {
   switch (n) {
     case 1:
       process.stdout.write(
-        code.replace("REPLACE_ME", "postprocess content before")
+        code.replace("REPLACE_ME", "postprocess content before"),
       );
       break;
 
     case 2:
       await wait(10000);
       process.stdout.write(
-        code.replace("REPLACE_ME", "postprocess should have been killed")
+        code.replace("REPLACE_ME", "postprocess should have been killed"),
       );
       break;
 
     default:
       process.stdout.write(
-        code.replace("REPLACE_ME", "postprocess content after")
+        code.replace("REPLACE_ME", "postprocess content after"),
       );
       break;
   }
@@ -52,5 +52,5 @@ run(process.argv.slice(2)).then(
   (error) => {
     console.error("Uncaught error:", error);
     process.exit(1);
-  }
+  },
 );

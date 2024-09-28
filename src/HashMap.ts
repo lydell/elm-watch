@@ -85,7 +85,7 @@ export class HashMap<K extends Record<string, unknown>, V>
 function hash(value: Record<string, unknown>): string {
   return JSON.stringify(
     Object.fromEntries(
-      Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1))
-    )
+      Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1)),
+    ),
   );
 }

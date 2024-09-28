@@ -54,7 +54,7 @@ export function spawn(command: Command): {
   /* v8 ignore stop */
 
   const promise = (
-    actualSpawn: typeof childProcess.spawn
+    actualSpawn: typeof childProcess.spawn,
   ): Promise<SpawnResult> =>
     new Promise((resolve) => {
       /* v8 ignore start */
@@ -77,7 +77,7 @@ export function spawn(command: Command): {
           /* v8 ignore start */
           error.code === "ENOENT"
             ? { tag: "CommandNotFoundError", command }
-            : { tag: "OtherSpawnError", error, command }
+            : { tag: "OtherSpawnError", error, command },
           /* v8 ignore stop */
         );
       });
@@ -194,13 +194,13 @@ export type ExitReason =
 
 function exitReason(
   exitCode: number | null,
-  signal: NodeJS.Signals | null
+  signal: NodeJS.Signals | null,
 ): ExitReason {
   /* v8 ignore start */
   return exitCode !== null
     ? { tag: "ExitCode", exitCode }
     : signal !== null
-    ? { tag: "Signal", signal }
-    : { tag: "Unknown" };
+      ? { tag: "Signal", signal }
+      : { tag: "Unknown" };
   /* v8 ignore stop */
 }

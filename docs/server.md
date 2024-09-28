@@ -291,7 +291,7 @@ function localhostProxy(request, response, port) {
   proxyRequest.on("error", (error) => {
     response.writeHead(503);
     response.end(
-      `Failed to proxy to localhost:${port}. Is nothing running there?\n\n${error.stack}`
+      `Failed to proxy to localhost:${port}. Is nothing running there?\n\n${error.stack}`,
     );
   });
 

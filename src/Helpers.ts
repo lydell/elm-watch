@@ -55,14 +55,14 @@ function pad(number: number): string {
 export function formatDate(date: Date): string {
   return join(
     [pad(date.getFullYear()), pad(date.getMonth() + 1), pad(date.getDate())],
-    "-"
+    "-",
   );
 }
 
 export function formatTime(date: Date): string {
   return join(
     [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())],
-    ":"
+    ":",
   );
 }
 
@@ -107,7 +107,7 @@ export function capitalize(string: string): string {
 
 export function silentlyReadIntEnvValue(
   value: string | undefined,
-  defaultValue: number
+  defaultValue: number,
 ): number {
   return /^\d+$/.test(value ?? "") ? Number(value) : defaultValue;
 }
@@ -117,7 +117,7 @@ export const toError: (arg: unknown) => NodeJS.ErrnoException = (arg) =>
   arg instanceof Error
     ? arg
     : new Error(
-        `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
+        `Caught error not instanceof Error: ${unknownErrorToString(arg)}`,
       );
 /* v8 ignore stop */
 
@@ -128,18 +128,18 @@ export const toJsonError: (arg: unknown) => JsonError = (arg) =>
   arg instanceof DecoderError
     ? arg
     : arg instanceof SyntaxError
-    ? arg
-    : new SyntaxError(
-        `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
-          arg
-        )}`
-      );
+      ? arg
+      : new SyntaxError(
+          `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
+            arg,
+          )}`,
+        );
 /* v8 ignore stop */
 
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
     ? (error as { stack: string }).stack
     : typeof (error as { message?: string } | undefined)?.message === "string"
-    ? (error as { message: string }).message
-    : repr(error);
+      ? (error as { message: string }).message
+      : repr(error);
 }

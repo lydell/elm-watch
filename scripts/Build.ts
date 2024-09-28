@@ -41,7 +41,7 @@ async function run(): Promise<void> {
     if (transform !== undefined) {
       fs.writeFileSync(
         path.join(BUILD, dest),
-        transform(fs.readFileSync(path.join(DIR, src), "utf8"))
+        transform(fs.readFileSync(path.join(DIR, src), "utf8")),
       );
     } else {
       fs.copyFileSync(path.join(DIR, src), path.join(BUILD, dest));
@@ -53,8 +53,8 @@ async function run(): Promise<void> {
     JSON.stringify(
       { ...PACKAGE_REAL, dependencies: PACKAGE.dependencies },
       null,
-      2
-    )
+      2,
+    ),
   );
 
   fs.writeFileSync(
@@ -64,7 +64,7 @@ const fs = require("fs");
 const path = require("path");
 exports.client = fs.readFileSync(path.join(__dirname, "client.js"), "utf8");
 exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
-    `.trim()
+    `.trim(),
   );
 
   const clientResult = await esbuild.build(clientEsbuildOptions);
@@ -75,7 +75,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
       case "proxy.js":
         fs.writeFileSync(
           output.path,
-          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version)
+          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version),
         );
         break;
 
@@ -104,7 +104,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
             {
               filter: /^\.\/ClientCode$/,
             },
-            (args) => ({ path: args.path, external: true })
+            (args) => ({ path: args.path, external: true }),
           );
         },
       },
@@ -120,7 +120,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         const replaced = output.text
           .slice(
             secondIndexOf(output.text, "//"),
-            output.text.lastIndexOf("//")
+            output.text.lastIndexOf("//"),
           )
           .replace(toModuleRegex, "$1")
           .replace(exportsRegex, "")
@@ -136,7 +136,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
           output.path,
           output.text
             .slice(output.text.indexOf("//"))
-            .replace(toModuleRegex, "$1")
+            .replace(toModuleRegex, "$1"),
         );
         break;
 

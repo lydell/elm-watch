@@ -24,7 +24,7 @@ ${join(
       isTTY: loggerConfig.isTTY,
     })} ${description}`;
   }),
-  "\n"
+  "\n",
 )}
 `
     : "";

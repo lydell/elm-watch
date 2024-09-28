@@ -37,7 +37,7 @@ function run(args: Array<string>): void {
       theInputPath: absolutePathFromString(cwd.path, elmFilePathRaw),
       originalString: elmFilePathRaw,
       realpath: absolutePathFromString(cwd.path, elmFilePathRaw),
-    })
+    }),
   );
 
   const elmJsonPathsRaw = new HashSet(
@@ -47,8 +47,8 @@ function run(args: Array<string>): void {
         findClosest("elm.json", absoluteDirname(inputPath.theInputPath)) ?? {
           tag: "NotFound" as const,
           inputPath,
-        }
-    )
+        },
+    ),
   );
 
   const uniqueElmJsonPathRaw = getSetSingleton(elmJsonPathsRaw);
@@ -56,7 +56,7 @@ function run(args: Array<string>): void {
   if (uniqueElmJsonPathRaw === undefined) {
     console.error(
       "Could not find (a unique) elm.json for all of the input paths:",
-      inputPaths
+      inputPaths,
     );
     process.exit(1);
   }
@@ -64,7 +64,7 @@ function run(args: Array<string>): void {
   if (uniqueElmJsonPathRaw.tag === "NotFound") {
     console.error(
       "Could not find elm.json for:",
-      uniqueElmJsonPathRaw.inputPath
+      uniqueElmJsonPathRaw.inputPath,
     );
     process.exit(1);
   }
@@ -78,16 +78,16 @@ function run(args: Array<string>): void {
   try {
     elmJson = ElmJson(
       JSON.parse(
-        fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf8")
-      )
+        fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf8"),
+      ),
     );
   } catch (error) {
     console.error(
       error instanceof Decode.DecoderError
         ? error.format()
         : error instanceof Error
-        ? error.message
-        : error
+          ? error.message
+          : error,
     );
     process.exit(1);
   }
@@ -98,8 +98,8 @@ function run(args: Array<string>): void {
     "Elm file(s):",
     mapNonEmptyArray(
       inputPaths,
-      (inputPath) => inputPath.theInputPath.absolutePath
-    )
+      (inputPath) => inputPath.theInputPath.absolutePath,
+    ),
   );
   console.log("elm.json:", elmJsonPath.theElmJsonPath.absolutePath);
   console.time("Run");
