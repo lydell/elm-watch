@@ -202,11 +202,7 @@ module.exports = {
         "no-restricted-globals": [
           error,
           ...new Set(
-            [
-              ...Object.keys(globals.browser),
-              // TODO: Something needed for vitest?
-              // ...Object.keys(globals.jest),
-            ].filter(
+            [...Object.keys(globals.browser)].filter(
               (name) =>
                 !Object.prototype.hasOwnProperty.call(globals.node, name)
             )
@@ -221,11 +217,7 @@ module.exports = {
         "no-restricted-globals": [
           error,
           ...new Set(
-            [
-              ...Object.keys(globals.node),
-              // TODO: Here too.
-              // ...Object.keys(globals.jest),
-            ].filter(
+            [...Object.keys(globals.node)].filter(
               (name) =>
                 !Object.prototype.hasOwnProperty.call(globals.browser, name)
             )

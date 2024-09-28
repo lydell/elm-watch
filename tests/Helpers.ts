@@ -22,12 +22,6 @@ import { printStdio } from "../src/Errors";
 import { ReadStream, WriteStream } from "../src/Helpers";
 import { IS_WINDOWS } from "../src/IsWindows";
 
-// TODO: Remove or replace for Vitest.
-// const { JEST_RETRIES } = process.env;
-// if (JEST_RETRIES !== undefined) {
-//   jest.retryTimes(Number(JEST_RETRIES), { logErrorsBeforeRetry: true });
-// }
-
 // Print date and time in UTC in snapshots.
 /* eslint-disable @typescript-eslint/unbound-method */
 Date.prototype.getFullYear = Date.prototype.getUTCFullYear;
@@ -38,11 +32,9 @@ Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
 Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
 /* eslint-enable @typescript-eslint/unbound-method */
 
-// TODO: How does this behave in Vitest?
-// This uses `console` rather than `process.stdout` so Jest can capture it.
-// And `.log` instead of `.error`, because Jest colors `.error` red.
+// This uses `console` rather than `process.stderr` so Vitest can capture it.
 // eslint-disable-next-line no-console
-export const logDebug = console.log;
+export const logDebug = console.error;
 
 // Read file with normalized line endings to make snapshotting easier
 // cross-platform.

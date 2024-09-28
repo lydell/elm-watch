@@ -24,13 +24,7 @@ const existingObject =
 const elmProxy = new Proxy(existingObject ?? {}, {
   get(target, property, receiver) {
     const value = Reflect.get(target, property, receiver) as unknown;
-    // Jest tries to read `_isMockFunction`.
-    // There shouldn’t ever be anything starting with an underscore in `window.Elm` so whatever.
-    if (
-      value !== undefined
-      // TODO: Is this needed with vitest?
-      // || property.toString().startsWith("_")
-    ) {
+    if (value !== undefined) {
       return value;
     }
     throw error;
@@ -47,12 +41,6 @@ const elmProxy = new Proxy(existingObject ?? {}, {
       return true;
     }
     const has = Reflect.has(target, property);
-    // Jest tries to read `_isMockFunction`.
-    // There shouldn’t ever be anything starting with an underscore in `window.Elm` so whatever.
-    // TODO: Is this needed with vitest?
-    // if (property.toString().startsWith("_")) {
-    //   return has;
-    // }
     if (has) {
       return true;
     }

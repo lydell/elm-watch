@@ -66,8 +66,6 @@ jobs:
       # Use `--forceExit` to avoid test runs “hanging” when tests are failing
       # so that elm-watch isn’t shut down properly.
       # Retry failing tests, as a stopgap while fixing flaky tests.
+      # TODO: Add `--retry=4`?
       - name: Vitest
         run: npx vitest --coverage
-        # TODO: Specify this for vitest? Probably, right?
-        # env:
-        #   JEST_RETRIES: 4
