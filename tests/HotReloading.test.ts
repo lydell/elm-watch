@@ -15,6 +15,7 @@ import { __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS } from "../src/Env";
 import {
   grep,
   onlyErrorMessages,
+  removeIndents,
   rimraf,
   stringSnapshotSerializer,
   TerminalColorReadStream,
@@ -41,8 +42,6 @@ import {
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
-// Note: These tests excessively use snapshots, since they don’t stop execution on failure.
-// That results in a much better debugging experience (fewer timeouts).
 describe("hot reloading", () => {
   afterEach(cleanupAfterEachTest);
 
@@ -199,22 +198,20 @@ describe("hot reloading", () => {
     `);
 
     function assertInit(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(
+      expect(div.outerHTML).toStrictEqual(
         `<div><h1 class="probe">hot reload</h1></div>`
       );
       probe = div.querySelector(".probe");
-      expect(probe?.outerHTML).toMatchInlineSnapshot(
+      expect(probe?.outerHTML).toStrictEqual(
         `<h1 class="probe">hot reload</h1>`
       );
     }
 
     function assertHotReload(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(
+      expect(div.outerHTML).toStrictEqual(
         `<div><h1 class="probe">simple text change</h1></div>`
       );
-      expect(div.querySelector(".probe") === probe).toMatchInlineSnapshot(
-        `true`
-      );
+      expect(div.querySelector(".probe")).toBe(probe);
     }
   });
 
@@ -266,48 +263,54 @@ describe("hot reloading", () => {
       });
 
       async function assertInit(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 0
             newButtonClicked: 0
             </pre></main>
-          `);
+          `)
+        );
 
         probe = main.querySelector(".probe");
-        expect(probe?.outerHTML).toMatchInlineSnapshot(
-          `<h1 class="probe">Before hot reload</h1>`
+        expect(probe?.outerHTML).toStrictEqual(
+          removeIndents(`<h1 class="probe">Before hot reload</h1>`)
         );
 
         click(main, "button");
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">Before hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 1
             newButtonClicked: 0
             </pre></main>
-          `);
+          `)
+        );
       }
 
       async function assertHotReload(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">After hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 1
             newButtonClicked: 0
             </pre></main>
-          `);
-
-        expect(main.querySelector(".probe") === probe).toMatchInlineSnapshot(
-          `true`
+          `)
         );
+
+        expect(main.querySelector(".probe")).toBe(probe);
 
         click(main, "button");
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">After hot reload</h1><button>Button</button><pre>
             originalButtonClicked: 1
             newButtonClicked: 1
             </pre></main>
-          `);
+          `)
+        );
       }
     }
   );
@@ -345,7 +348,8 @@ describe("hot reloading", () => {
       });
 
       async function assertInit(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
             url: http://localhost/
             originalUrlRequested: 0
@@ -353,11 +357,13 @@ describe("hot reloading", () => {
             newUrlRequested: 0
             newUrlChanged: 0
             </pre></main>
-          `);
+          `)
+        );
 
         click(main, "a");
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
             url: http://localhost/link
             originalUrlRequested: 1
@@ -365,11 +371,13 @@ describe("hot reloading", () => {
             newUrlRequested: 0
             newUrlChanged: 0
             </pre></main>
-          `);
+          `)
+        );
 
         click(main, "button");
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">Before hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
             url: http://localhost/push
             originalUrlRequested: 1
@@ -377,11 +385,13 @@ describe("hot reloading", () => {
             newUrlRequested: 0
             newUrlChanged: 0
             </pre></main>
-          `);
+          `)
+        );
       }
 
       async function assertHotReload(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
             url: http://localhost/push
             originalUrlRequested: 1
@@ -389,11 +399,13 @@ describe("hot reloading", () => {
             newUrlRequested: 0
             newUrlChanged: 0
             </pre></main>
-          `);
+          `)
+        );
 
         click(main, "a");
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
             url: http://localhost/link
             originalUrlRequested: 1
@@ -401,11 +413,13 @@ describe("hot reloading", () => {
             newUrlRequested: 1
             newUrlChanged: 1
             </pre></main>
-          `);
+          `)
+        );
 
         click(main, "button");
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`
+        expect(main.outerHTML).toStrictEqual(
+          removeIndents(`
             <main><h1 class="probe">After hot reload</h1><a href="/link">Link</a><button>Button</button><pre>
             url: http://localhost/push
             originalUrlRequested: 1
@@ -413,7 +427,8 @@ describe("hot reloading", () => {
             newUrlRequested: 1
             newUrlChanged: 2
             </pre></main>
-          `);
+          `)
+        );
       }
     }
   );
@@ -454,16 +469,16 @@ describe("hot reloading", () => {
     async function assertInit(): Promise<void> {
       sendToElm(1);
       await waitOneFrame();
-      expect(lastValueFromElm.value).toMatchInlineSnapshot(
-        `Before hot reload: [1]`
+      expect(lastValueFromElm.value).toStrictEqual(
+        removeIndents(`Before hot reload: [1]`)
       );
     }
 
     async function assertHotReload(): Promise<void> {
       sendToElm(2);
       await waitOneFrame();
-      expect(lastValueFromElm.value).toMatchInlineSnapshot(
-        `Before: [1]. After hot reload: [2]`
+      expect(lastValueFromElm.value).toStrictEqual(
+        removeIndents(`Before: [1]. After hot reload: [2]`)
       );
     }
   });
@@ -512,38 +527,40 @@ describe("hot reloading", () => {
       }
 
       function assertBrowserConsole(): void {
-        expect(browserConsole).toMatchInlineSnapshot(``);
+        expect(browserConsole).toStrictEqual("");
       }
 
       function assertBrowserConsoleOptimize(): void {
-        expect(browserConsole).toMatchInlineSnapshot(`
+        expect(browserConsole).toStrictEqual(
+          removeIndents(`
             elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
             (target: AddSubscription)
-          `);
+          `)
+        );
       }
 
       async function assertInit(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>0</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>0</main>`);
 
         main.click();
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>-1</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>-1</main>`);
       }
 
       async function assertHotReload(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>-1</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>-1</main>`);
 
         main.click();
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>8</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>8</main>`);
       }
 
       async function assertReloadForOptimize(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>0</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>0</main>`);
 
         main.click();
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>9</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>9</main>`);
       }
     }
   );
@@ -799,35 +816,37 @@ describe("hot reloading", () => {
       }
 
       function assertBrowserConsole(): void {
-        expect(browserConsole).toMatchInlineSnapshot(``);
+        expect(browserConsole).toStrictEqual("");
       }
 
       function assertBrowserConsoleDebug(): void {
-        expect(browserConsole).toMatchInlineSnapshot(`
+        expect(browserConsole).toStrictEqual(
+          removeIndents(`
             elm-watch: I did a full page reload because the message type in \`Elm.AddMsg\` changed in debug mode ("debug metadata" changed).
             (target: AddMsg)
-          `);
+          `)
+        );
       }
 
       async function assert1(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>init</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>init</main>`);
         main.click();
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>Msg1</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>Msg1</main>`);
       }
 
       async function assert2(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>Msg1</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>Msg1</main>`);
         main.click();
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>AddedMsg</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>AddedMsg</main>`);
       }
 
       async function assert2Debug(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>init</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>init</main>`);
         main.click();
         await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(`<main>AddedMsg</main>`);
+        expect(main.outerHTML).toStrictEqual(`<main>AddedMsg</main>`);
       }
     }
   );
@@ -1445,7 +1464,7 @@ describe("hot reloading", () => {
       const { renders } = await go(({ idle, div }) => {
         switch (idle) {
           case 1:
-            assertInit(div);
+            assert1(div);
             Object.defineProperty(window.Elm?.HtmlMain, "__elmWatchApps", {
               get() {
                 throw error;
@@ -1456,7 +1475,7 @@ describe("hot reloading", () => {
             );
             return "KeepGoing";
           default:
-            assertInit(div);
+            assert2(div);
             return "Stop";
         }
       });
@@ -1589,7 +1608,13 @@ describe("hot reloading", () => {
           ]
         `);
 
-      function assertInit(div: HTMLDivElement): void {
+      function assert1(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><h1 class="probe">hot reload</h1></div>`
+        );
+      }
+
+      function assert2(div: HTMLDivElement): void {
         expect(div.outerHTML).toMatchInlineSnapshot(
           `<div><h1 class="probe">hot reload</h1></div>`
         );
@@ -1642,7 +1667,7 @@ describe("hot reloading", () => {
       },
     });
 
-    const { renders, browserConsole } = await go(({ idle }) => {
+    const { browserConsole } = await go(({ idle }) => {
       switch (idle) {
         case 1:
           return "KeepGoing"; // First script has loaded.
@@ -1667,444 +1692,6 @@ describe("hot reloading", () => {
         MultipleTargetsOther1
         - the message type in \`Elm.MultipleTargetsOther1\` changed in debug mode ("debug metadata" changed).
       `);
-
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 MultipleTargets
-      ================================================================================
-      ▼ 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛 The Elm debugger isn't available at this point.
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for reload
-      Waiting for other targets…
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      ================================================================================
-      ▼ 🐛 🔌 13:10:05 MultipleTargets
-      ================================================================================
-      ▼ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◉ Debug 🐛
-      ◯ Standard
-      ◯ Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ✅ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◉ Debug 🐛
-      ◯ Standard
-      ◯ Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ✅ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◉ Debug 🐛
-      ◯ Standard
-      ◯ Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ✅ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ✅ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ✅ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for reload
-      Waiting for other targets…
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      ================================================================================
-      ▼ 🐛 🔌 13:10:05 MultipleTargets
-      ================================================================================
-      ▼ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🐛 🔌 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◉ (disabled) Debug 🐛
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ⏳ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◉ Debug 🐛
-      ◯ Standard
-      ◯ Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ✅ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 🔌 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◉ Debug 🐛
-      ◯ Standard
-      ◯ Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ✅ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ⏳ 13:10:05 MultipleTargetsOther1
-      ================================================================================
-      target MultipleTargets
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◉ Debug 🐛
-      ◯ Standard
-      ◯ Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ✅ 13:10:05 MultipleTargets
-      --------------------------------------------------------------------------------
-      ▼ 🐛 ✅ 13:10:05 MultipleTargetsOther1
-    `);
   });
 
   test("Change Elm file while `elm make` is running", async () => {
@@ -2546,7 +2133,7 @@ describe("hot reloading", () => {
 
       const overlays: Array<string> = [];
 
-      const { renders } = await go(({ idle }) => {
+      await go(({ idle }) => {
         switch (idle) {
           case 1:
             return "KeepGoing"; // The first script has loaded.
@@ -2607,290 +2194,6 @@ describe("hot reloading", () => {
             return "Stop";
         }
       });
-
-      expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 App
-        ================================================================================
-        ▼ 🔌 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        ================================================================================
-        ▼ 🔌 13:10:05 App
-        ================================================================================
-        ▼ 🔌 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ 🔌 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ 🔌 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ 🔌 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ 🔌 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ ✅ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🔌 13:10:05 AppOther
-        ================================================================================
-        ▼ ✅ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 AppOther
-        ================================================================================
-        ▼ ✅ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ✅ 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ✅ 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ✅ 13:10:05 AppOther
-        ================================================================================
-        target App
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Show errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ✅ 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ✅ 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ✅ 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        target AppOther
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Show errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ ⏳ 13:10:05 AppOther
-        ================================================================================
-        ▼ ⏳ 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        target App
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Hide errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        target AppOther
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Hide errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        target App
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Show errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        target App
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Show errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        target AppOther
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Show errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        target AppOther
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        [Show errors]
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-        ================================================================================
-        ▼ 🚨 13:10:05 App
-        --------------------------------------------------------------------------------
-        ▼ 🚨 13:10:05 AppOther
-      `);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
         <overlay hidden style="">

@@ -578,6 +578,10 @@ export function grep(string: string, pattern: RegExp): string {
     .join("\n");
 }
 
+export function removeIndents(string: string): string {
+  return string.trim().replace(/^\s+/gm, "");
+}
+
 export function assertExitCode(
   expectedExitCode: number,
   actualExitCode: number,
