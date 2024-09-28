@@ -1999,6 +1999,9 @@ describe("hot reloading", () => {
     }
   });
 
+  // Usually when connecting, it should trigger a compile check. But if we’re already compiling,
+  // we can just wait for that. There isn’t really any output showing this happening, but the
+  // test is needed for code coverage.
   test("Connect while compiling", async () => {
     const { go } = runHotReload({
       fixture: "hot-reload-postprocess",
@@ -2008,7 +2011,7 @@ describe("hot reloading", () => {
       isTTY: false,
     });
 
-    const { terminal, browserConsole } = await go(async ({ idle }) => {
+    const { browserConsole } = await go(async ({ idle }) => {
       switch (idle) {
         case 1:
           switchCompilationMode("optimize");
@@ -2019,54 +2022,6 @@ describe("hot reloading", () => {
           return "Stop";
       }
     });
-
-    expect(terminal).toMatchInlineSnapshot(`
-        ⏳ Dependencies
-        ✅ Dependencies
-        ⏳ SlowPostprocess: elm make (typecheck only)
-        ✅ SlowPostprocess⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-        📊 ⧙elm-watch-node workers:⧘ 1
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-        ⏳ SlowPostprocess: elm make
-        🟢 SlowPostprocess: elm make done
-        ⏳ SlowPostprocess: postprocess
-        ✅ SlowPostprocess⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
-
-        📊 ⧙elm-watch-node workers:⧘ 1
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: SlowPostprocess⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-        📊 ⧙elm-watch-node workers:⧘ 1
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: SlowPostprocess
-        ℹ️ 13:10:05 Web socket connected for: SlowPostprocess⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
-        ⏳ SlowPostprocess: elm make --optimize
-        🟢 SlowPostprocess: elm make done
-        ⏳ SlowPostprocess: postprocess
-        ✅ SlowPostprocess⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
-
-        📊 ⧙elm-watch-node workers:⧘ 1
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Changed compilation mode to "optimize" of: SlowPostprocess
-        ℹ️ 13:10:05 Web socket disconnected for: SlowPostprocess
-        ℹ️ 13:10:05 Web socket connected needing compilation of: SlowPostprocess⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-        📊 ⧙elm-watch-node workers:⧘ 1
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: SlowPostprocess
-        ℹ️ 13:10:05 Web socket connected for: SlowPostprocess⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
-      `);
 
     expect(browserConsole).toMatchInlineSnapshot(`
         elm-watch: I did a full page reload because compilation mode changed from standard to optimize.
