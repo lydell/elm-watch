@@ -1,9 +1,12 @@
 import spawn from "cross-spawn";
 import * as fs from "fs";
 import * as http from "http";
+import * as os from "os";
 import * as path from "path";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { elmWatchCli } from "../src";
+import * as ElmWatchJson from "../src/ElmWatchJson";
 import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
@@ -26,7 +29,6 @@ import {
   prependPATH,
   rimraf,
   rm,
-  rmSymlink,
   SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
@@ -726,28 +728,40 @@ describe("errors", () => {
     });
 
     describeExceptWindows("symlink loop", () => {
-      const fixture = "symlink-loop";
-      const dir = path.join(FIXTURES_DIR, fixture);
+      // This has to be done in a directory outside the repo,
+      // to avoid Vitest’s watcher crashing when it tries to stat the symlinks.
+      const dir = path.join(os.tmpdir(), "elm-watch-symlink-loop");
       const symlink1 = path.join(dir, "Main.elm");
       const symlink2 = path.join(dir, "Other.elm");
+      const elmWatchJsonFile = path.join(dir, "elm-watch.json");
+      const elmWatchJson: ElmWatchJson.Config = {
+        targets: {
+          main: {
+            inputs: ["Main.elm"],
+            output: "main.js",
+          },
+        },
+      };
 
-      function deleteSymlinks(): void {
-        rmSymlink(symlink1);
-        rmSymlink(symlink2);
+      async function deleteTempDir(): Promise<void> {
+        await rimraf(dir);
       }
 
-      beforeEach(() => {
-        deleteSymlinks();
+      beforeEach(async () => {
+        await deleteTempDir();
+        fs.mkdirSync(dir);
+        fs.writeFileSync(
+          elmWatchJsonFile,
+          JSON.stringify(elmWatchJson, null, 2)
+        );
         fs.symlinkSync(symlink1, symlink2);
         fs.symlinkSync(symlink2, symlink1);
       });
 
-      // The symlink loop is deleted when done to avoid this error sometimes happening in other tests:
-      // ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Other.elm'
-      afterEach(deleteSymlinks);
+      afterEach(deleteTempDir);
 
       test("make", async () => {
-        expect(await run(fixture, ["make"])).toMatchInlineSnapshot(`
+        expect(await runAbsolute(dir, ["make"])).toMatchInlineSnapshot(`
           ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
           ⧙Target: main⧘
 
@@ -755,14 +769,14 @@ describe("errors", () => {
           but doing so resulted in errors!
 
           Main.elm:
-          ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+          ELOOP: too many symbolic links encountered, stat '/tmp/fake/elm-watch-symlink-loop/Main.elm'
 
           ⧙That's all I know, unfortunately!⧘
         `);
       });
 
       test("hot", async () => {
-        expect(await run(fixture, ["hot"])).toMatchInlineSnapshot(`
+        expect(await runAbsolute(dir, ["hot"])).toMatchInlineSnapshot(`
           ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
           ⧙Target: main⧘
 
@@ -770,7 +784,7 @@ describe("errors", () => {
           but doing so resulted in errors!
 
           Main.elm:
-          ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+          ELOOP: too many symbolic links encountered, stat '/tmp/fake/elm-watch-symlink-loop/Main.elm'
 
           ⧙That's all I know, unfortunately!⧘
 
@@ -786,7 +800,7 @@ describe("errors", () => {
 
           This is the error message I got:
 
-          ELOOP: too many symbolic links encountered, stat '/Users/you/project/tests/fixtures/errors/symlink-loop/Main.elm'
+          ELOOP: too many symbolic links encountered, stat '/tmp/fake/elm-watch-symlink-loop/Main.elm'
         `);
       });
     });

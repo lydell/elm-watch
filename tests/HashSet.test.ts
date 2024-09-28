@@ -1,3 +1,5 @@
+import { describe, expect, test } from "vitest";
+
 import { HashSet } from "../src/HashSet";
 
 type Id = { id: number };

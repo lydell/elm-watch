@@ -68,9 +68,10 @@ export function longestCommonAncestorPath(
     commonSegments.push(uniqueSegment);
   }
 
+  /* v8 ignore start */
   return isNonEmptyArray(commonSegments)
     ? { tag: "AbsolutePath", absolutePath: join(commonSegments, path.sep) }
     : // On Windows, a `C:` path and a `D:` path has no common ancestor.
-      // istanbul ignore next
       undefined;
+  /* v8 ignore stop */
 }

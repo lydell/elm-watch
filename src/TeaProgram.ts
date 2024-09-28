@@ -21,10 +21,11 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     let killed = false;
 
     const dispatch = (dispatchedMsg: Msg): void => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (killed) {
         return;
       }
+      /* v8 ignore stop */
       const alreadyRunning = msgQueue.length > 0;
       msgQueue.push(dispatchedMsg);
       if (alreadyRunning) {
@@ -49,17 +50,19 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
             killed = true;
             resolve(result);
           },
-          // istanbul ignore next
+          /* v8 ignore start */
           (error) => {
             cmds.length = 0;
             killed = true;
             reject(error);
           }
+          /* v8 ignore stop */
         );
-        // istanbul ignore next
+        /* v8 ignore start */
         if (killed) {
           break;
         }
+        /* v8 ignore stop */
       }
     };
 
@@ -69,11 +72,12 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
         killed = true;
         resolve(result);
       },
-      // istanbul ignore next
+      /* v8 ignore start */
       (error) => {
         killed = true;
         reject(error);
       }
+      /* v8 ignore stop */
     );
 
     runCmds(initialCmds);

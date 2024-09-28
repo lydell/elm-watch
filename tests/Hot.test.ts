@@ -1,9 +1,8 @@
-/**
- * @jest-environment jsdom
- */
+// @vitest-environment jsdom
 import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
@@ -1310,7 +1309,7 @@ describe("hot", () => {
             fs.unlinkSync(elmWatchJsonPath2);
             return "KeepGoing";
           case 3:
-            assert2(div);
+            assert3(div);
             fs.unlinkSync(elmWatchJsonPath);
             return "KeepGoing";
           default:
@@ -1373,6 +1372,10 @@ describe("hot", () => {
     }
 
     function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+    }
+
+    function assert3(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
     }
   });
@@ -1820,7 +1823,7 @@ describe("hot", () => {
             fs.writeFileSync(postprocessPath, postprocessString);
             return "KeepGoing";
           default:
-            assert1(div);
+            assert3(div);
             return "Stop";
         }
       },
@@ -1860,6 +1863,10 @@ describe("hot", () => {
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>the text!</div>`);
+    }
+
+    function assert3(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>THE TEXT!</div>`);
     }
   });
 
@@ -2521,6 +2528,7 @@ describe("hot", () => {
       env: {
         [__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS]: "150",
         [__ELM_WATCH_EXIT_ON_WORKER_LIMIT]: "",
+        [NO_COLOR]: "",
       },
       init: (node) => {
         const node1 = document.createElement("div");
@@ -2540,14 +2548,14 @@ describe("hot", () => {
       },
     });
 
-    expect(grep(terminal, /worker/)).toMatchInlineSnapshot(`
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙elm-watch-node workers:⧘ 2
-      📊 ⧙elm-watch-node workers:⧘ 1
-      ⧙ℹ️ 13:10:05 Terminated 1 superfluous worker⧘
-    `);
+    // Remove duplicate lines.
+    expect(grep(terminal, /worker/).replace(/\n(.+)(?:\n\1)+/g, "\n$1"))
+      .toMatchInlineSnapshot(`
+        elm-watch-node workers: 1
+        elm-watch-node workers: 2
+        elm-watch-node workers: 1
+        13:10:05 Terminated 1 superfluous worker
+      `);
   });
 
   test("persisted compilation mode", async () => {

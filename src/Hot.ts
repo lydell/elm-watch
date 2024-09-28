@@ -564,7 +564,7 @@ const initMutable =
       .catch(rejectPromise);
 
     const kill = async (): Promise<void> => {
-      // istanbul ignore next
+      /* v8 ignore start */
       try {
         if (mutable.killInstallDependencies !== undefined) {
           mutable.killInstallDependencies({ force: true });
@@ -581,6 +581,7 @@ const initMutable =
         const error = toError(unknownError);
         rejectPromise(toError(error));
       }
+      /* v8 ignore stop */
 
       delete hotKillManager.kill;
     };
@@ -754,7 +755,7 @@ function update(
     }
 
     case "ExitRequested":
-      // istanbul ignore if
+      /* v8 ignore start */
       if (model.hotState.tag !== "Idle") {
         return [
           model,
@@ -768,11 +769,11 @@ function update(
           ],
         ];
       }
+      /* v8 ignore stop */
 
       switch (model.nextAction.tag) {
-        // istanbul ignore next
+        /* v8 ignore start */
         case "Restart":
-        // istanbul ignore next
         case "Compile":
           return [
             model,
@@ -785,6 +786,7 @@ function update(
               },
             ],
           ];
+        /* v8 ignore end */
 
         case "NoAction":
           return runNextAction(msg.date, project, model);
@@ -811,9 +813,8 @@ function update(
       });
 
       switch (model.hotState.tag) {
-        // istanbul ignore next
+        /* v8 ignore start */
         case "Dependencies":
-        // istanbul ignore next
         case "Idle":
           return [
             model,
@@ -826,6 +827,7 @@ function update(
               },
             ],
           ];
+        /* v8 ignore stop */
 
         case "Compiling": {
           const duration = msg.date.getTime() - model.hotState.start.getTime();
@@ -879,9 +881,11 @@ function update(
         }
 
         case "Restarting":
+          /* v8 ignore start */
           return outputActions.numExecuting === 0
             ? [model, [{ tag: "Restart", restartReasons: model.latestEvents }]]
-            : /* istanbul ignore next */ [model, []];
+            : [model, []];
+        /* v8 ignore stop */
       }
     }
 
@@ -892,11 +896,8 @@ function update(
             case "Error":
               return [
                 { ...model, hotState: { tag: "Idle" } },
-                [
-                  exitOnError
-                    ? { tag: "ExitOnIdle" }
-                    : /* istanbul ignore next */ { tag: "NoCmd" },
-                ],
+                /* v8 ignore next */
+                [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
               ];
 
             // We only kill installing dependencies when a restart is needed.
@@ -931,9 +932,8 @@ function update(
             [{ tag: "Restart", restartReasons: model.latestEvents }],
           ];
 
-        // istanbul ignore next
+        /* v8 ignore start */
         case "Idle":
-        // istanbul ignore next
         case "Compiling":
           return [
             model,
@@ -946,6 +946,7 @@ function update(
               },
             ],
           ];
+        /* v8 ignore stop */
       }
 
     case "WebSocketClosed":
@@ -1297,9 +1298,10 @@ function runNextAction(
           return [{ ...model, hotState: { tag: "Restarting" } }, []];
         }
 
-        // istanbul ignore next
+        /* v8 ignore start */
         case "Restarting":
           return [model, []];
+        /* v8 ignore stop */
       }
 
     case "Compile":
@@ -1332,11 +1334,11 @@ function runNextAction(
             ],
           ];
 
-        // istanbul ignore next
+        /* v8 ignore start */
         case "Dependencies":
-        // istanbul ignore next
         case "Restarting":
           return [model, []];
+        /* v8 ignore stop */
       }
 
     case "NoAction":
@@ -1469,7 +1471,6 @@ const runCmd =
           // Retry writing it.
           writeElmWatchStuffJson(mutable);
           // If still an error, print it.
-          // istanbul ignore else
           if (mutable.elmWatchStuffJsonWriteError !== undefined) {
             logger.write("");
             logger.errorTemplate(
@@ -1478,7 +1479,6 @@ const runCmd =
                 mutable.elmWatchStuffJsonWriteError
               )
             );
-            // istanbul ignore else
             if (exitOnError) {
               closeAll(logger, mutable)
                 .then(() => {
@@ -1664,9 +1664,10 @@ const runCmd =
               return (
                 path.basename(event.file.absolutePath) === "elm-watch.json"
               );
-            // istanbul ignore next
+            /* v8 ignore start */
             default:
               return false;
+            /* v8 ignore stop */
           }
         });
         closeAll(logger, mutable, {
@@ -1717,10 +1718,11 @@ const runCmd =
         }, cmd.sleepMs);
         return;
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "Throw":
         rejectPromise(cmd.error);
         return;
+      /* v8 ignore stop */
 
       case "WebSocketSend":
         webSocketSend(cmd.webSocket, cmd.message);
@@ -1819,9 +1821,11 @@ function onWebSocketServerMsg(
         tag: "WebSocketClosed",
         date: now,
         outputPath:
+          /* v8 ignore start */
           removedConnection === undefined
-            ? /* istanbul ignore next */ { tag: "OutputPathError" }
+            ? { tag: "OutputPathError" }
             : removedConnection.outputPath,
+        /* v8 ignore stop */
       });
       return;
     }
@@ -1831,7 +1835,7 @@ function onWebSocketServerMsg(
         ({ webSocket }) => webSocket === msg.webSocket
       );
 
-      // istanbul ignore if
+      /* v8 ignore start */
       if (webSocketConnection === undefined) {
         rejectPromise(
           new Error(
@@ -1842,6 +1846,7 @@ function onWebSocketServerMsg(
         );
         return;
       }
+      /* v8 ignore stop */
 
       const flatOutputs = getFlatOutputs(mutable.project);
       const output = flatOutputs.find(({ outputPath }) =>
@@ -1880,10 +1885,11 @@ function onWebSocketServerMsg(
           return;
         }
 
-        // istanbul ignore next
+        /* v8 ignore start */
         case "OtherError":
           rejectPromise(msg.error.error);
           return;
+        /* v8 ignore stop */
       }
   }
 }
@@ -1894,9 +1900,10 @@ function portChoiceError(
   error: Error
 ): Errors.ErrorTemplate {
   switch (portChoice.tag) {
-    // istanbul ignore next
+    /* v8 ignore start */
     case "NoPort":
       return Errors.portConflictForNoPort(error);
+    /* v8 ignore stop */
 
     case "PersistedPort":
       return Errors.portConflictForPersistedPort(
@@ -1965,14 +1972,19 @@ async function closeAll(
   { killWebSocketServer = true, killPostprocessWorkerPool = true } = {}
 ): Promise<void> {
   logger.reset();
-  // istanbul ignore if
+
+  /* v8 ignore start */
   if (mutable.workerLimitTimeoutId !== undefined) {
     clearTimeout(mutable.workerLimitTimeoutId);
   }
-  // istanbul ignore if
+  /* v8 ignore stop */
+
+  /* v8 ignore start */
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
   }
+  /* v8 ignore stop */
+
   mutable.webSocketServer.unsetDispatch();
   await Promise.all([
     mutable.watcher.close(),
@@ -1989,7 +2001,7 @@ function makePrioritizedOutputs(
   const map = new HashMap<OutputPath, number>();
   for (const { outputPath, priority } of webSocketConnections) {
     if (outputPath.tag !== "OutputPathError") {
-      // istanbul ignore next
+      /* v8 ignore next */
       const previous = map.get(outputPath) ?? 0;
       map.set(outputPath, Math.max(priority, previous));
     }
@@ -2061,13 +2073,14 @@ function isElmFileRelatedToElmJsonsErrors(
       // The only way I’ve found to trigger this is by a symlink loop.
       // However, that causes the watcher to error out and we have to exit so
       // this is never hit.
-      // istanbul ignore next
+      /* v8 ignore start */
       case "InputsFailedToResolve":
         return error.inputsFailedToResolve.some(
           ({ inputPath }) =>
             inputPath.theUncheckedInputPath.absolutePath ===
             elmFile.absolutePath
         );
+      /* v8 ignore stop */
 
       case "InputsNotFound":
         return error.inputsNotFound.some(
@@ -2344,7 +2357,7 @@ type ParseWebSocketToServerMessageResult =
 function parseWebSocketToServerMessage(
   data: WebSocket.Data
 ): ParseWebSocketToServerMessageResult {
-  // istanbul ignore next
+  /* v8 ignore start */
   const stringData =
     typeof data === "string"
       ? data
@@ -2353,6 +2366,7 @@ function parseWebSocketToServerMessage(
       : data instanceof ArrayBuffer
       ? new TextDecoder("utf8").decode(data)
       : data.toString("utf8");
+  /* v8 ignore stop */
 
   try {
     return {
@@ -2390,11 +2404,11 @@ function onWebSocketConnected(
   };
 
   switch (model.hotState.tag) {
-    // istanbul ignore next
+    /* v8 ignore start */
     case "Restarting":
-    // istanbul ignore next
     case "Dependencies":
       return [model, event, []];
+    /* v8 ignore stop */
 
     case "Idle":
     case "Compiling":
@@ -2430,16 +2444,17 @@ function onWebSocketConnected(
         case "ElmMakeTypecheckOnly":
           return recompileNeeded();
 
-        // istanbul ignore next
+        /* v8 ignore next */
         case "ElmMake":
         case "Postprocess":
         case "Interrupted":
         case "QueuedForElmMake":
         case "QueuedForPostprocess":
           switch (model.hotState.tag) {
-            // istanbul ignore next
+            /* v8 ignore start */
             case "Idle":
               return recompileNeeded();
+            /* v8 ignore stop */
 
             case "Compiling":
               return [model, event, []];
@@ -2479,11 +2494,11 @@ function onChangedCompilationModeOrBrowserUiPosition(
   outputState: OutputState
 ): [Model, Array<Cmd>] {
   switch (model.hotState.tag) {
-    // istanbul ignore next
+    /* v8 ignore start */
     case "Restarting":
-    // istanbul ignore next
     case "Dependencies":
       return [model, []];
+    /* v8 ignore stop */
 
     case "Idle":
     case "Compiling":
@@ -2497,9 +2512,10 @@ function onWebSocketRecompileNeeded(
   outputState: OutputState
 ): [Model, Array<Cmd>] {
   switch (model.nextAction.tag) {
-    // istanbul ignore next
+    /* v8 ignore start */
     case "Restart":
       return [model, []];
+    /* v8 ignore stop */
 
     case "Compile":
     case "NoAction":
@@ -2521,7 +2537,7 @@ function onWebSocketRecompileNeeded(
 
 function compileNextAction(nextAction: NextAction): NextAction {
   switch (nextAction.tag) {
-    // istanbul ignore next
+    /* v8 ignore next */
     case "Restart":
     case "Compile":
       return nextAction;
@@ -2633,6 +2649,7 @@ function onWebSocketToServerMessage(
                 outputState: output.outputState,
                 openErrorOverlay: message.openErrorOverlay,
               },
+              /* v8 ignore start */
               isNonEmptyArray(errors)
                 ? {
                     tag: "WebSocketSendCompileErrorToOutput",
@@ -2642,8 +2659,8 @@ function onWebSocketToServerMessage(
                     openErrorOverlay: message.openErrorOverlay,
                     errors,
                   }
-                : // istanbul ignore next
-                  { tag: "NoCmd" },
+                : { tag: "NoCmd" },
+              /* v8 ignore stop */
             ],
           ];
         }
@@ -2900,9 +2917,8 @@ function printEventMessage(event: LatestEvent): string {
 
     case "WorkersLimitedAfterWebSocketClosed":
       return `Terminated ${event.numTerminatedWorkers} superfluous ${
-        event.numTerminatedWorkers === 1
-          ? "worker"
-          : /* istanbul ignore next */ "workers"
+        /* v8 ignore next */
+        event.numTerminatedWorkers === 1 ? "worker" : "workers"
       }`;
   }
 }
@@ -2913,7 +2929,7 @@ function compileFinishedMessage(
 ): string {
   return `Compilation finished in ${bold(
     printDurationMs(
-      loggerConfig.mockedTimings ? 123 : /* istanbul ignore next */ duration
+      loggerConfig.mockedTimings ? 123 : /* v8 ignore next */ duration
     ).trim()
   )}.`;
 }

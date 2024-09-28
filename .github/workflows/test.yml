@@ -62,10 +62,7 @@ jobs:
         run: npm run install-test-elm-dependencies
         working-directory: tests/install-packages
 
-      # Use `--forceExit` to avoid test runs “hanging” when tests are failing
-      # so that elm-watch isn’t shut down properly.
       # Retry failing tests, as a stopgap while fixing flaky tests.
-      - name: Jest
-        run: npx jest --coverage --forceExit
-        env:
-          JEST_RETRIES: 4
+      # However, retry is useless until this bug is fixed: https://github.com/vitest-dev/vitest/issues/6589
+      - name: Vitest
+        run: npx vitest --coverage # --retry=4

@@ -47,20 +47,22 @@ export function spawn(command: Command): {
 } {
   let killed = false;
 
-  // istanbul ignore next
+  /* v8 ignore start */
   let kill = (): void => {
     killed = true;
   };
+  /* v8 ignore stop */
 
   const promise = (
     actualSpawn: typeof childProcess.spawn
   ): Promise<SpawnResult> =>
     new Promise((resolve) => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (killed) {
         resolve({ tag: "Killed", command });
         return;
       }
+      /* v8 ignore stop */
 
       const child = actualSpawn(command.command, command.args, {
         ...command.options,
@@ -72,10 +74,11 @@ export function spawn(command: Command): {
 
       child.on("error", (error: Error & { code?: string }) => {
         resolve(
-          // istanbul ignore next
+          /* v8 ignore start */
           error.code === "ENOENT"
             ? { tag: "CommandNotFoundError", command }
             : { tag: "OtherSpawnError", error, command }
+          /* v8 ignore stop */
         );
       });
 
@@ -83,7 +86,7 @@ export function spawn(command: Command): {
         | { result: SpawnResult; timeoutId: NodeJS.Timeout }
         | undefined = undefined;
 
-      // istanbul ignore next
+      /* v8 ignore start */
       child.stdin.on("error", (error: Error & { code?: string }) => {
         // EPIPE on Windows and macOS, EOF on Windows.
         if (error.code === "EPIPE" || error.code === "EOF") {
@@ -107,16 +110,19 @@ export function spawn(command: Command): {
           resolve({ tag: "OtherSpawnError", error, command });
         }
       });
+      /* v8 ignore stop */
 
-      // istanbul ignore next
+      /* v8 ignore start */
       child.stdout.on("error", (error: Error) => {
         resolve({ tag: "OtherSpawnError", error, command });
       });
+      /* v8 ignore stop */
 
-      // istanbul ignore next
+      /* v8 ignore start */
       child.stderr.on("error", (error: Error) => {
         resolve({ tag: "OtherSpawnError", error, command });
       });
+      /* v8 ignore stop */
 
       child.stdout.on("data", (chunk: Buffer) => {
         stdout.push(chunk);
@@ -131,7 +137,7 @@ export function spawn(command: Command): {
           // Ignore after killed.
         } else {
           // This is covered on macOS and Windows, but not Linux.
-          // istanbul ignore if
+          /* v8 ignore start */
           if (exitCode === 0 && stdinWriteError !== undefined) {
             clearTimeout(stdinWriteError.timeoutId);
             resolve(stdinWriteError.result);
@@ -144,11 +150,11 @@ export function spawn(command: Command): {
               command,
             });
           }
+          /* v8 ignore stop */
         }
       });
 
       kill = () => {
-        // istanbul ignore else
         if (!killed) {
           child.kill();
           resolve({ tag: "Killed", command });
@@ -161,7 +167,7 @@ export function spawn(command: Command): {
       }
     });
 
-  // istanbul ignore next
+  /* v8 ignore start */
   return {
     promise: IS_WINDOWS
       ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
@@ -170,6 +176,7 @@ export function spawn(command: Command): {
       kill();
     },
   };
+  /* v8 ignore stop */
 }
 
 export type ExitReason =
@@ -189,10 +196,11 @@ function exitReason(
   exitCode: number | null,
   signal: NodeJS.Signals | null
 ): ExitReason {
-  // istanbul ignore next
+  /* v8 ignore start */
   return exitCode !== null
     ? { tag: "ExitCode", exitCode }
     : signal !== null
     ? { tag: "Signal", signal }
     : { tag: "Unknown" };
+  /* v8 ignore stop */
 }

@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { expect } from "vitest";
 
 import {
   ElmModule,
@@ -181,7 +182,7 @@ export async function run({
           // Copying the script does a couple of things:
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
-          // - Lets us make a few replacements for Jest.
+          // - Lets us make a few replacements for Vitest.
           const newScript = numberedScript(script, loads);
           const content =
             loads > 2 && simulateHttpCacheOnReload
@@ -651,7 +652,7 @@ export function assertCompilationMode(compilationMode: CompilationMode): void {
   withShadowRoot((shadowRoot) => {
     const radio = shadowRoot?.querySelector(`input[type="radio"]:checked`);
     if (radio instanceof HTMLInputElement) {
-      expect(radio.value).toMatchInlineSnapshot(compilationMode);
+      expect(radio.value).toStrictEqual(compilationMode);
     } else {
       throw new Error(
         `Could not find a checked radio button (expecting to be ${compilationMode}).`
@@ -665,7 +666,7 @@ export function assertDebugDisabled(): void {
   withShadowRoot((shadowRoot) => {
     const radio = shadowRoot?.querySelector('input[type="radio"]');
     if (radio instanceof HTMLInputElement) {
-      expect(radio.disabled).toMatchInlineSnapshot(`true`);
+      expect(radio.disabled).toBe(true);
     } else {
       throw new Error(`Could not find any radio button!`);
     }
@@ -676,11 +677,7 @@ export function assertDebugDisabled(): void {
 export function assertDebugger(body: HTMLBodyElement): void {
   expect(
     Array.from(body.querySelectorAll("svg"), (element) => element.localName)
-  ).toMatchInlineSnapshot(`
-    [
-      svg,
-    ]
-  `);
+  ).toStrictEqual(["svg"]);
 }
 
 function getTextContent(element: Node): string {

@@ -106,7 +106,7 @@ export async function elmWatchCli(
   }
 }
 
-// istanbul ignore if
+/* v8 ignore start */
 if (require.main === module) {
   process.title = "elm-watch";
   elmWatchCli(process.argv.slice(2), {
@@ -146,3 +146,4 @@ if (require.main === module) {
       process.exit(1);
     });
 }
+/* v8 ignore stop */

@@ -181,11 +181,12 @@ export function installDependencies(
         case "ElmNotFoundError":
           return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
 
-        // istanbul ignore next
+        /* v8 ignore start */
         case "OtherSpawnError":
           return onError(
             Errors.otherSpawnError(elmJsonPath, result.error, result.command)
           );
+        /* v8 ignore stop */
 
         case "ElmInstallError":
           return onError(
@@ -348,7 +349,7 @@ export function getOutputActions({
             output,
             postprocessArray: outputState.status.postprocessArray,
             priority:
-              // istanbul ignore next
+              /* v8 ignore next */
               priority ?? 0,
             code: outputState.status.code,
             elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
@@ -589,7 +590,7 @@ export async function handleOutputAction({
 
     case "NeedsElmMakeTypecheckOnly":
       switch (runMode.tag) {
-        // istanbul ignore next
+        /* v8 ignore start */
         case "make":
           throw new Error(
             `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${JSON.stringify(
@@ -598,6 +599,7 @@ export async function handleOutputAction({
               2
             )}`
           );
+        /* v8 ignore stop */
 
         case "hot":
           await typecheck({
@@ -1012,9 +1014,11 @@ function needsToWriteProxyFile(
     handle = fs.openSync(outputPath.absolutePath, "r");
   } catch (unknownError) {
     const error = toError(unknownError);
+    /* v8 ignore start */
     return error.code === "ENOENT"
       ? { tag: "Needed" }
-      : /* istanbul ignore next */ { tag: "ReadError", error };
+      : { tag: "ReadError", error };
+    /* v8 ignore stop */
   }
   const buffer = Buffer.alloc(versionedIdentifier.byteLength);
   try {
@@ -1644,7 +1648,7 @@ function targetNameEmojiTweak(
     return { targetName, delta: 0 };
   }
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const content = match[0] ?? "";
 
   // Avoid emoji on Windows, for example.
@@ -1752,10 +1756,11 @@ function statusLine(
     start: string
   ): string => {
     const strings = extra.flatMap((item) => item ?? []);
-    // istanbul ignore if
+    /* v8 ignore start */
     if (!isNonEmptyArray(strings)) {
       return helper(emojiName, start);
     }
+    /* v8 ignore stop */
 
     // Emojis take two terminal columns, plus a space that we add after.
     const startLength =
@@ -1821,7 +1826,7 @@ function statusLine(
     case "QueuedForPostprocess":
       return helper("QueuedForPostprocess", `${targetName}: elm make done`);
 
-    // istanbul ignore next
+    /* v8 ignore next */
     case "ElmNotFoundError":
     case "CommandNotFoundError":
     case "OtherSpawnError":
@@ -1944,9 +1949,8 @@ function maybePrintDurations(
   return join(
     mapNonEmptyArray(newDurations, (duration) =>
       printDuration(
-        loggerConfig.mockedTimings
-          ? mockDuration(duration)
-          : /* istanbul ignore next */ duration,
+        /* v8 ignore next */
+        loggerConfig.mockedTimings ? mockDuration(duration) : duration,
         loggerConfig.fancy
       )
     ),
@@ -2084,19 +2088,16 @@ export function renderOutputErrors(
     case "NotWrittenToDisk":
       return [];
 
-    // istanbul ignore next
+    /* v8 ignore start */
     case "ElmMake":
-    // istanbul ignore next
     case "ElmMakeTypecheckOnly":
-    // istanbul ignore next
     case "Postprocess":
-    // istanbul ignore next
     case "Interrupted":
     case "QueuedForElmMake":
       return includeStuckInProgressState
         ? [Errors.stuckInProgressState(outputPath, status.tag)]
-        : // istanbul ignore next
-          [];
+        : [];
+    /* v8 ignore stop */
 
     // If there are `elm make` errors we skip postprocessing (fail fast).
     case "QueuedForPostprocess":
@@ -2105,16 +2106,18 @@ export function renderOutputErrors(
     case "Success":
       return [];
 
-    // istanbul ignore next
+    /* v8 ignore start */
     case "ElmNotFoundError":
       return [Errors.elmNotFoundError(outputPath, status.command)];
+    /* v8 ignore stop */
 
     case "CommandNotFoundError":
       return [Errors.commandNotFoundError(outputPath, status.command)];
 
-    // istanbul ignore next
+    /* v8 ignore start */
     case "OtherSpawnError":
       return [Errors.otherSpawnError(outputPath, status.error, status.command)];
+    /* v8 ignore stop */
 
     case "UnexpectedElmMakeOutput":
       return [
@@ -2128,7 +2131,7 @@ export function renderOutputErrors(
       ];
 
     // This is covered on macOS and Windows, but not Linux.
-    // istanbul ignore next
+    /* v8 ignore start */
     case "PostprocessStdinWriteError":
       return [
         Errors.postprocessStdinWriteError(
@@ -2137,6 +2140,7 @@ export function renderOutputErrors(
           status.command
         ),
       ];
+    /* v8 ignore stop */
 
     case "PostprocessNonZeroExit":
       return [

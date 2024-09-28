@@ -100,19 +100,20 @@ export function make({
 
   const handleSpawnResult = (spawnResult: SpawnResult): RunElmMakeResult => {
     switch (spawnResult.tag) {
-      // istanbul ignore next
+      /* v8 ignore start */
       case "CommandNotFoundError":
         return { tag: "ElmNotFoundError", command };
+      /* v8 ignore stop */
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "OtherSpawnError":
-      // istanbul ignore next
       case "StdinWriteError": // We never write to stdin.
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
+      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -150,12 +151,13 @@ export function make({
   return {
     promise: promise.then(handleSpawnResult),
     kill: ({ force }) => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (force) {
         kill();
       } else {
         delayKill(promise, startTime, getNow, env, kill);
       }
+      /* v8 ignore stop */
     },
   };
 }
@@ -381,10 +383,11 @@ export function install({
         error,
       }),
       kill:
-        // istanbul ignore next
+        /* v8 ignore start */
         () => {
           // Do nothing.
         },
+      /* v8 ignore stop */
     };
   }
 
@@ -407,15 +410,15 @@ export function install({
       case "CommandNotFoundError":
         return { tag: "ElmNotFoundError", command };
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "OtherSpawnError":
-      // istanbul ignore next
       case "StdinWriteError": // We never write to stdin.
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
+      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -464,7 +467,6 @@ export function install({
             return { tag: "ElmJsonError" };
           }
 
-          // istanbul ignore else
           if (title !== undefined && message !== undefined) {
             return {
               tag: "ElmInstallError",
@@ -490,12 +492,13 @@ export function install({
   return {
     promise: promise.then(handleSpawnResult),
     kill: ({ force }) => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (force) {
         kill();
       } else {
         delayKill(promise, startTime, getNow, env, kill);
       }
+      /* v8 ignore stop */
     },
   };
 }
