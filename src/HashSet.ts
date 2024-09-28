@@ -41,10 +41,11 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
   /**
    * forEach is not implemented. Use a for-of loop instead.
    */
-  // istanbul ignore next
+  /* v8 ignore start */
   forEach(callback: never): never {
     return callback;
   }
+  /* v8 ignore stop */
 
   *keys(): IterableIterator<V> {
     for (const value of this._set.keys()) {
@@ -68,10 +69,11 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 
   [Symbol.toStringTag] = "HashSet";
 
-  // istanbul ignore next
+  /* v8 ignore start */
   [util.inspect.custom](): Set<V> {
     return new Set(this);
   }
+  /* v8 ignore stop */
 }
 
 function hash(value: Record<string, unknown>): string {

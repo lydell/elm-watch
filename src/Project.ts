@@ -459,10 +459,11 @@ export function initProject({
 
   const watchRoot = longestCommonAncestorPath(paths);
 
-  // istanbul ignore if
+  /* v8 ignore start */
   if (watchRoot === undefined) {
     return { tag: "NoCommonRoot", paths };
   }
+  /* v8 ignore stop */
 
   const maxParallel = silentlyReadIntEnvValue(
     env[__ELM_WATCH_MAX_PARALLEL],

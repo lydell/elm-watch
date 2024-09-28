@@ -192,9 +192,8 @@ export function example(
 }
 
 function toUnixPath(filePath: string): string {
-  return IS_WINDOWS
-    ? /* istanbul ignore next */ filePath.split(path.sep).join(path.posix.sep)
-    : filePath;
+  /* v8 ignore next */
+  return IS_WINDOWS ? filePath.split(path.sep).join(path.posix.sep) : filePath;
 }
 
 type ElmMakeParsed = {

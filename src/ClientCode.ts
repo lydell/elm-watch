@@ -12,7 +12,7 @@ function getOutput(name: string): string {
   const match = result.outputFiles.find(
     (output) => path.basename(output.path) === name
   );
-  // istanbul ignore if
+  /* v8 ignore start */
   if (match === undefined) {
     throw new Error(
       `ClientCode: Found no output from esbuild matching ${JSON.stringify(
@@ -20,6 +20,7 @@ function getOutput(name: string): string {
       )} in ${JSON.stringify(result.outputFiles.map((output) => output.path))}`
     );
   }
+  /* v8 ignore stop */
   return match.text;
 }
 

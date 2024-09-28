@@ -722,9 +722,10 @@ export function inject(compilationMode: CompilationMode, code: string): string {
   return code.replace(
     REPLACEMENT_REGEX,
     (match, name1: string, name: string = name1) =>
-      // istanbul ignore next
+      /* v8 ignore start */
       replacements[name] ??
       `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
+    /* v8 ignore stop */
   );
 }
 
@@ -758,24 +759,25 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
       code
     );
 
-  // istanbul ignore next
+  /* v8 ignore start */
   const [
     ,
     init = "init_missing",
     update = "update_missing",
     subscriptions = "subscriptions_missing",
   ] = match1 ?? [];
+  /* v8 ignore stop */
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [, setup = "setup_missing"] = match2 ?? [];
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [, body = "body_missing"] = match3 ?? [];
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [, title = "title_missing"] = match4 ?? [];
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [
     ,
     protocol = "protocol_missing",
@@ -786,7 +788,7 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
   const extra = Object.fromEntries(
     Array.from(
       code.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
-      // istanbul ignore next
+      /* v8 ignore next */
       ([, from = "from_missing", to = "to_missing"]) => [from, to]
     )
   );
@@ -865,7 +867,7 @@ export function clientCode(
     ClientCode.client.replace(
       new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
       (match: string, name: string) =>
-        // istanbul ignore next
+        /* v8 ignore next */
         replacements[name] ?? match
     )
   );
@@ -905,7 +907,7 @@ export function getRecordFields(
 
     // If the set of accessed record field names changes in optimize mode, we cannot hot reload.
     case "optimize": {
-      // istanbul ignore next
+      /* v8 ignore next */
       const matches = code.match(RECORD_FIELD_REGEX) ?? [];
       return new Set(matches.filter((string) => string.startsWith(".")));
     }

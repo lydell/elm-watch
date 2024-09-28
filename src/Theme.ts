@@ -95,10 +95,11 @@ export async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
   // Querying colors is not supported on Windows:
   // https://github.com/microsoft/terminal/issues/3718
   // Save them the timeout.
-  // istanbul ignore if
+  /* v8 ignore start */
   if (IS_WINDOWS) {
     return DEFAULT_THEME;
   }
+  /* v8 ignore stop */
   const stdin = await logger.queryTerminal(THEME_ESCAPES_STRING, (stdinSoFar) =>
     stdinSoFar.includes(THEME_ESCAPES_DONE_CHECK)
   );
@@ -109,7 +110,7 @@ function parseTheme(stdin: string): Theme {
   const theme = { ...DEFAULT_THEME, palette: { ...DEFAULT_THEME.palette } };
 
   for (const match of stdin.matchAll(THEME_ESCAPES_REGEX)) {
-    // istanbul ignore next
+    /* v8 ignore next */
     const [, isPaletteString, indexString, r = "0", g = "0", b = "0"] = match;
     const isPalette = isPaletteString !== undefined;
     const index = Number(indexString);

@@ -73,12 +73,13 @@ class PolyHttpServer {
         error: (Error & { code?: string }) | undefined
       ): void => {
         numClosed++;
-        // istanbul ignore if
+        /* v8 ignore start */
         if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
           reject(error);
         } else if (numClosed === 3) {
           resolve();
         }
+        /* v8 ignore stop */
       };
       this.net.close(callback);
       this.http.close(callback);
@@ -137,7 +138,7 @@ export class WebSocketServer {
           [util.inspect.custom]: util.CustomInspectFunction;
         }
       )[util.inspect.custom] =
-        // istanbul ignore next
+        /* v8 ignore next */
         (_depth, options) => options.stylize("WebSocket", "special");
 
       this.dispatch({
@@ -146,7 +147,7 @@ export class WebSocketServer {
         // `request.url` is always a string here, but the types says it can be undefined:
         // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
         urlString:
-          // istanbul ignore next
+          /* v8 ignore next */
           request.url ?? "/",
       });
 
@@ -162,13 +163,14 @@ export class WebSocketServer {
         this.dispatch({ tag: "WebSocketClosed", webSocket });
       });
 
-      // istanbul ignore next
+      /* v8 ignore start */
       webSocket.on("error", (error) => {
         this.dispatch({
           tag: "WebSocketServerError",
           error: { tag: "OtherError", error },
         });
       });
+      /* v8 ignore stop */
     });
 
     this.polyHttpServer.onError((error) => {
@@ -177,7 +179,7 @@ export class WebSocketServer {
         error:
           error.code === "EADDRINUSE"
             ? { tag: "PortConflict", portChoice, error }
-            : // istanbul ignore next
+            : /* v8 ignore next */
               { tag: "OtherError", error },
       });
     });
@@ -212,12 +214,13 @@ export class WebSocketServer {
 
   setDispatch(dispatch: (msg: WebSocketServerMsg) => void): void {
     this.dispatch = dispatch;
+    // When testing, a change to elm.json gives a 5 ms room where queueing is needed.
+    // That’s very unlikely to even be needed, and very hard to test.
+    /* v8 ignore start */
     for (const msg of this.msgQueue) {
-      // When testing, a change to elm.json gives a 5 ms room where queueing is needed.
-      // That’s very unlikely to even be needed, and very hard to test.
-      // istanbul ignore next
       dispatch(msg);
     }
+    /* v8 ignore stop */
   }
 
   unsetDispatch(): void {
@@ -262,9 +265,9 @@ function html(isHttps: boolean, request: http.IncomingMessage): string {
               "return to your page"
             )}.</p>`
           : `<p>Did you mean to go to the ${maybeLink(
-              host !== undefined
+              /* v8 ignore start */ host !== undefined
                 ? `https://${host}${request.url}`
-                : /* istanbul ignore next */ undefined,
+                : undefined /* v8 ignore stop */,
               "HTTPS version of this page"
             )} to accept elm-watch's self-signed certificate?</p>`
         : `<p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>`

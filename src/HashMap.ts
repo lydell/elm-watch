@@ -47,10 +47,11 @@ export class HashMap<K extends Record<string, unknown>, V>
   /**
    * forEach is not implemented. Use a for-of loop instead.
    */
-  // istanbul ignore next
+  /* v8 ignore start */
   forEach(callback: never): never {
     return callback;
   }
+  /* v8 ignore stop */
 
   *keys(): IterableIterator<K> {
     for (const key of this.map.keys()) {
@@ -74,10 +75,11 @@ export class HashMap<K extends Record<string, unknown>, V>
 
   [Symbol.toStringTag] = "HashMap";
 
-  // istanbul ignore next
+  /* v8 ignore start */
   [util.inspect.custom](): Map<K, V> {
     return new Map(this);
   }
+  /* v8 ignore stop */
 }
 
 function hash(value: Record<string, unknown>): string {

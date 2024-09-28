@@ -42,7 +42,7 @@ export function walkImports(
       [util.inspect.custom]: () => unknown;
     }
   )[util.inspect.custom] =
-    // istanbul ignore next
+    /* v8 ignore next */
     () => Array.from(allRelatedElmFilePaths);
 
   // To avoid reading the same file twice, and to handle circular imports.

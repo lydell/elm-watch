@@ -113,16 +113,18 @@ export function silentlyReadIntEnvValue(
 }
 
 export const toError: (arg: unknown) => NodeJS.ErrnoException = (arg) =>
+  /* v8 ignore start */
   arg instanceof Error
     ? arg
     : new Error(
         `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
       );
+/* v8 ignore stop */
 
 export type JsonError = DecoderError | SyntaxError;
 
 export const toJsonError: (arg: unknown) => JsonError = (arg) =>
-  // istanbul ignore next
+  /* v8 ignore start */
   arg instanceof DecoderError
     ? arg
     : arg instanceof SyntaxError
@@ -132,6 +134,7 @@ export const toJsonError: (arg: unknown) => JsonError = (arg) =>
           arg
         )}`
       );
+/* v8 ignore stop */
 
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
