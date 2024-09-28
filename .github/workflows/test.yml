@@ -67,7 +67,7 @@ jobs:
       # so that elm-watch isn’t shut down properly.
       # Retry failing tests, as a stopgap while fixing flaky tests.
       - name: Vitest
-        run: npx vitest --coverage --forceExit
+        run: npx vitest --coverage
         # TODO: Specify this for vitest? Probably, right?
         # env:
         #   JEST_RETRIES: 4
