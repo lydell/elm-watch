@@ -2,7 +2,7 @@
 
 import * as https from "https";
 
-import { GOOD_ENOUGH_STARTS_WITH_EMOJI_REGEX } from "../src/Compile";
+import { STARTS_WITH_EMOJI_REGEX } from "../src/EmojiRegex";
 import { bold } from "../src/Helpers";
 
 const matching: Array<string> = [];
@@ -18,7 +18,7 @@ https
 
       response.on("data", (chunk: string) => {
         for (const emoji of chunk.split("\n")) {
-          if (GOOD_ENOUGH_STARTS_WITH_EMOJI_REGEX.test(`${emoji} `)) {
+          if (STARTS_WITH_EMOJI_REGEX.test(`${emoji} `)) {
             matching.push(emoji);
           } else {
             nonMatching.push(emoji);

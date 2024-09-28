@@ -253,7 +253,7 @@ describe("successful make", () => {
       ✅ 😎  Cool emoji⧙                                               1 ms Q | 1.23 s E⧘
       ✅ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in…
       ✅ 👋🏻 Skin tone⧙                                                1 ms Q | 1.23 s E⧘
-      ✅ ↪  Non-emoji symbol⧙                                         1 ms Q | 1.23 s E⧘
+      ✅ ↪ Non-emoji symbol⧙                                          1 ms Q | 1.23 s E⧘
       ✅ ↪️  Emoji version of symbol⧙                                  1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
@@ -272,7 +272,7 @@ describe("successful make", () => {
       Cool emoji: success                                            1 ms Q | 1.23 s E
       Flag emoji and really long target name that needs to be cut off to fit in the...
       Skin tone: success                                             1 ms Q | 1.23 s E
-      Non-emoji symbol: success                                      1 ms Q | 1.23 s E
+      ↪ Non-emoji symbol: success                                    1 ms Q | 1.23 s E
       Emoji version of symbol: success                               1 ms Q | 1.23 s E
 
       Compilation finished in 123 ms.

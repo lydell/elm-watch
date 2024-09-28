@@ -1,6 +1,7 @@
 import * as fs from "fs";
 
 import * as ElmJson from "./ElmJson";
+import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
@@ -1605,25 +1606,6 @@ export function emojiWidthFix({
   return `${emoji}${isTTY ? cursorHorizontalAbsolute(column) : ""}`;
 }
 
-// I found `\p{Other_Symbol}` (`\p{So}`) in: https://stackoverflow.com/a/45894101
-// It means “various symbols that are not math symbols, currency signs, or
-// combining characters” according to: https://www.regular-expressions.info/unicode.html
-// As far as I can tell, that can match more than emoji, but should be fine for
-// this use case.
-// `[\u{1f3fb}-\u{1f3ff}]` are skin tone modifiers: https://css-tricks.com/changing-emoji-skin-tones-programmatically/#aa-removing-and-swapping-skin-tone-modifiers-with-javascript
-// `\ufe0f` is a Variation Selector that says that the preceding character
-// should be displayed as an emoji: https://unicode-table.com/en/FE0F/
-// The second part of the regex matches emoji flags (also invalid ones): https://stackoverflow.com/a/53360239
-// This file is good to test with: https://github.com/mathiasbynens/emoji-test-regex-pattern/blob/main/dist/latest/index.txt
-// It contains basically all emoji that exist. This regex matches around half of
-// them – the “most common ones” in my opinion. The ones not matched are lots of
-// combinations like families. See scripts/Emoji.ts for exactly which emojis do
-// and do not match this regex.
-// We _could_ use this package for near-perfect emoji matching: https://github.com/mathiasbynens/emoji-regex
-// But I don’t think it’s worth the extra dependency for this non-core little feature.
-export const GOOD_ENOUGH_STARTS_WITH_EMOJI_REGEX =
-  /^(?:\p{Other_Symbol}[\u{1f3fb}-\u{1f3ff}]?\ufe0f?|[🇦-🇿]{2}) /u;
-
 // When you have many targets, it can be nice to have an emoji at the start of
 // the name to make the targets easier to distinguish. This function tries to
 // improve the emoji terminal situation. If it looks like the target name starts
@@ -1642,7 +1624,7 @@ function targetNameEmojiTweak(
   loggerConfig: LoggerConfig,
   targetName: string
 ): { targetName: string; delta: number } {
-  const match = GOOD_ENOUGH_STARTS_WITH_EMOJI_REGEX.exec(targetName);
+  const match = STARTS_WITH_EMOJI_REGEX.exec(targetName);
 
   if (match === null) {
     return { targetName, delta: 0 };

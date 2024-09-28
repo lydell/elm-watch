@@ -86,6 +86,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
 
   const result = await esbuild.build({
     bundle: true,
+    legalComments: "inline",
     entryPoints: [
       path.join(DIR, "src", "index.ts"),
       path.join(DIR, "src", "PostprocessWorker.ts"),
