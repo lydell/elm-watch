@@ -2,11 +2,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import {
-  afterAll,
   afterEach,
   beforeEach,
   describe,
   expect,
+  onTestFinished,
   test,
   vi,
 } from "vitest";
@@ -565,113 +565,110 @@ describe("hot reloading", () => {
     }
   );
 
-  describe("All program types", () => {
+  test("Program types that do and don’t support the debugger in the same output", async () => {
     const container = document.createElement("div");
-
-    afterAll(() => {
+    onTestFinished(() => {
       container.remove();
     });
 
-    test("Program types that do and don’t support the debugger in the same output", async () => {
-      let sendToWorker = (): void => {
-        throw new Error("sendToWorker was never reassigned.");
-      };
+    let sendToWorker = (): void => {
+      throw new Error("sendToWorker was never reassigned.");
+    };
 
-      const { replace, go } = runHotReload({
-        name: "AllProgramTypes",
-        programType: "Element",
-        compilationMode: "debug",
-        init: () => {
-          const base = window.Elm?.AllProgramTypes;
-          if (base === undefined) {
-            throw new Error("Could not find Elm.AllProgramTypes.");
-          }
+    const { replace, go } = runHotReload({
+      name: "AllProgramTypes",
+      programType: "Element",
+      compilationMode: "debug",
+      init: () => {
+        const base = window.Elm?.AllProgramTypes;
+        if (base === undefined) {
+          throw new Error("Could not find Elm.AllProgramTypes.");
+        }
 
-          document.documentElement.appendChild(container);
+        document.documentElement.appendChild(container);
 
-          for (const appName of [
-            "HtmlProgram",
-            "SandboxProgram",
-            "ElementProgram",
-          ] as const) {
-            const node = document.createElement("div");
-            container.append(node);
-            base[appName]?.init({ node });
-          }
+        for (const appName of [
+          "HtmlProgram",
+          "SandboxProgram",
+          "ElementProgram",
+        ] as const) {
+          const node = document.createElement("div");
+          container.append(node);
+          base[appName]?.init({ node });
+        }
 
-          base.ApplicationProgram?.init();
+        base.ApplicationProgram?.init();
 
-          const workerNode = document.createElement("p");
-          container.append(workerNode);
-          const workerApp = base.WorkerProgram?.init();
-          if (workerApp?.ports === undefined) {
-            throw new Error("WorkerProgram should have ports.");
-          }
-          const subscribe = workerApp.ports.output?.subscribe;
-          if (subscribe === undefined) {
-            throw new Error(
-              "WorkerProgram app.ports.output.subscribe should exist."
-            );
-          }
-          subscribe((value: unknown) => {
-            workerNode.textContent = String(value);
-          });
-          const send = workerApp.ports.input?.send;
-          if (send === undefined) {
-            throw new Error("WorkerProgram app.ports.input.send should exist.");
-          }
-          sendToWorker = () => {
-            send(null);
-          };
+        const workerNode = document.createElement("p");
+        container.append(workerNode);
+        const workerApp = base.WorkerProgram?.init();
+        if (workerApp?.ports === undefined) {
+          throw new Error("WorkerProgram should have ports.");
+        }
+        const subscribe = workerApp.ports.output?.subscribe;
+        if (subscribe === undefined) {
+          throw new Error(
+            "WorkerProgram app.ports.output.subscribe should exist."
+          );
+        }
+        subscribe((value: unknown) => {
+          workerNode.textContent = String(value);
+        });
+        const send = workerApp.ports.input?.send;
+        if (send === undefined) {
+          throw new Error("WorkerProgram app.ports.input.send should exist.");
+        }
+        sendToWorker = () => {
+          send(null);
+        };
+        sendToWorker();
+
+        return undefined;
+      },
+    });
+
+    await go(({ idle, body }) => {
+      switch (idle) {
+        case 1:
+          assertDebugger(body);
+          assert1(body);
+          replace((content) => content.replace("(1)", "(2)"));
+          return "KeepGoing";
+        default:
           sendToWorker();
-
-          return undefined;
-        },
-      });
-
-      await go(({ idle, body }) => {
-        switch (idle) {
-          case 1:
-            assertDebugger(body);
-            assert1(body);
-            replace((content) => content.replace("(1)", "(2)"));
-            return "KeepGoing";
-          default:
-            sendToWorker();
-            assert2(body);
-            return "Stop";
-        }
-      });
-
-      function assert1(body: HTMLBodyElement): void {
-        expect(removeDebugger(body)).toMatchInlineSnapshot(
-          `<body><p>ApplicationProgram (1)</p></body>`
-        );
-
-        expect(removeDebugger(container)).toMatchInlineSnapshot(
-          `<div><p>HtmlProgram (1)</p><p>SandboxProgram (1)</p><p>ElementProgram (1)</p><p>WorkerProgram (1)</p></div>`
-        );
-      }
-
-      function assert2(body: HTMLBodyElement): void {
-        expect(removeDebugger(body)).toMatchInlineSnapshot(
-          `<body><p>ApplicationProgram (2)</p></body>`
-        );
-
-        expect(removeDebugger(container)).toMatchInlineSnapshot(
-          `<div><p>HtmlProgram (2)</p><p>SandboxProgram (2)</p><p>ElementProgram (2)</p><p>WorkerProgram (2)</p></div>`
-        );
-      }
-
-      function removeDebugger(element: HTMLElement): string {
-        const clone = element.cloneNode(true) as HTMLElement;
-        // In this test, we know that we render no `<div>`s, so all `<div>`s must be debugger elements.
-        for (const div of clone.querySelectorAll("div")) {
-          div.remove();
-        }
-        return clone.outerHTML;
+          assert2(body);
+          return "Stop";
       }
     });
+
+    function assert1(body: HTMLBodyElement): void {
+      expect(removeDebugger(body)).toMatchInlineSnapshot(
+        `<body><p>ApplicationProgram (1)</p></body>`
+      );
+
+      expect(removeDebugger(container)).toMatchInlineSnapshot(
+        `<div><p>HtmlProgram (1)</p><p>SandboxProgram (1)</p><p>ElementProgram (1)</p><p>WorkerProgram (1)</p></div>`
+      );
+    }
+
+    function assert2(body: HTMLBodyElement): void {
+      expect(removeDebugger(body)).toMatchInlineSnapshot(
+        `<body><p>ApplicationProgram (2)</p></body>`
+      );
+
+      expect(removeDebugger(container)).toMatchInlineSnapshot(
+        `<div><p>HtmlProgram (2)</p><p>SandboxProgram (2)</p><p>ElementProgram (2)</p><p>WorkerProgram (2)</p></div>`
+      );
+    }
+
+    function removeDebugger(element: HTMLElement): string {
+      const clone = element.cloneNode(true) as HTMLElement;
+      // In this test, we know that we render no `<div>`s, so all `<div>`s must be debugger elements.
+      for (const div of clone.querySelectorAll("div")) {
+        div.remove();
+      }
+      return clone.outerHTML;
+    }
   });
 
   test("remove input file", async () => {
@@ -1165,172 +1162,165 @@ describe("hot reloading", () => {
     }
   });
 
-  describe("Init with cancelable Task", () => {
+  test("Init with cancelable Task", async () => {
     // eslint-disable-next-line no-console
     const originalConsoleError = console.error;
 
-    afterEach(() => {
+    onTestFinished(() => {
       // eslint-disable-next-line no-console
       console.error = originalConsoleError;
     });
 
-    test("Init with cancelable Task", async () => {
-      // The HTTP request made in the test fails, and jsdom logs that using `console.error`.
-      // eslint-disable-next-line no-console
-      console.error = () => {
-        // Do nothing.
-      };
+    // The HTTP request made in the test fails, and jsdom logs that using `console.error`.
+    // eslint-disable-next-line no-console
+    console.error = () => {
+      // Do nothing.
+    };
 
-      const { replace, go } = runHotReload({
-        name: "InitHttp",
-        programType: "Element",
-        compilationMode: "standard",
-      });
+    const { replace, go } = runHotReload({
+      name: "InitHttp",
+      programType: "Element",
+      compilationMode: "standard",
+    });
 
-      const { browserConsole } = await go(async ({ idle, div }) => {
-        switch (idle) {
-          case 1:
-            await assert1(div);
-            replace((content) => content.replace("Count:", "Hot count:"));
-            return "KeepGoing";
-          default:
-            assert2(div);
-            return "Stop";
-        }
-      });
-
-      // This should not list any reloads. (It’s tricky because Elm mutates Tasks.)
-      expect(browserConsole).toMatchInlineSnapshot(``);
-
-      async function assert1(div: HTMLDivElement): Promise<void> {
-        const button = div.querySelector("button");
-        if (button === null) {
-          throw new Error("Could not find button!");
-        }
-        expect(button.outerHTML).toMatchInlineSnapshot(
-          `<button>Count: 0</button>`
-        );
-        button.click();
-        await waitOneFrame();
-        expect(button.outerHTML).toMatchInlineSnapshot(
-          `<button>Count: 1</button>`
-        );
-      }
-
-      function assert2(div: HTMLDivElement): void {
-        const button = div.querySelector("button");
-        if (button === null) {
-          throw new Error("Could not find button!");
-        }
-        expect(button.outerHTML).toMatchInlineSnapshot(
-          `<button>Hot count: 1</button>`
-        );
+    const { browserConsole } = await go(async ({ idle, div }) => {
+      switch (idle) {
+        case 1:
+          await assert1(div);
+          replace((content) => content.replace("Count:", "Hot count:"));
+          return "KeepGoing";
+        default:
+          assert2(div);
+          return "Stop";
       }
     });
+
+    // This should not list any reloads. (It’s tricky because Elm mutates Tasks.)
+    expect(browserConsole).toMatchInlineSnapshot(``);
+
+    async function assert1(div: HTMLDivElement): Promise<void> {
+      const button = div.querySelector("button");
+      if (button === null) {
+        throw new Error("Could not find button!");
+      }
+      expect(button.outerHTML).toMatchInlineSnapshot(
+        `<button>Count: 0</button>`
+      );
+      button.click();
+      await waitOneFrame();
+      expect(button.outerHTML).toMatchInlineSnapshot(
+        `<button>Count: 1</button>`
+      );
+    }
+
+    function assert2(div: HTMLDivElement): void {
+      const button = div.querySelector("button");
+      if (button === null) {
+        throw new Error("Could not find button!");
+      }
+      expect(button.outerHTML).toMatchInlineSnapshot(
+        `<button>Hot count: 1</button>`
+      );
+    }
   });
 
-  describe("Html.Lazy", () => {
+  test("Html.Lazy", async () => {
     // eslint-disable-next-line no-console
     const originalConsoleLog = console.log;
 
-    afterEach(() => {
+    onTestFinished(() => {
       // eslint-disable-next-line no-console
       console.log = originalConsoleLog;
     });
 
-    test("Html.Lazy", async () => {
-      const mockConsoleLog = vi.fn();
-      // eslint-disable-next-line no-console
-      console.log = (...args) => {
-        if (
-          typeof args[0] === "string" &&
-          args[0].startsWith("ELM_LAZY_TEST")
-        ) {
-          mockConsoleLog(...args);
-        } else {
-          originalConsoleLog(...args);
-        }
-      };
-
-      const { replace, go } = runHotReload({
-        name: "Lazy",
-        programType: "Element",
-        compilationMode: "standard",
-      });
-
-      await go(async ({ idle, main }) => {
-        switch (idle) {
-          case 1:
-            await assert1(main);
-            replace((content) =>
-              content.replace("Is divisible by", "HOT RELOADED $&")
-            );
-            return "KeepGoing";
-          default:
-            await assert2(main);
-            return "Stop";
-        }
-      });
-
-      expect(mockConsoleLog.mock.calls).toMatchInlineSnapshot(`
-          [
-            [
-              ELM_LAZY_TEST isDivisible: True,
-            ],
-            [
-              ELM_LAZY_TEST isDivisible: False,
-            ],
-            [
-              ELM_LAZY_TEST isDivisible: False,
-            ],
-            [
-              ELM_LAZY_TEST isDivisible: True,
-            ],
-          ]
-        `);
-
-      async function assert1(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 0</p><p>Is divisible by 4? Yes.</p></main>`
-        );
-        expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`1`);
-
-        main.click();
-        await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 1</p><p>Is divisible by 4? No.</p></main>`
-        );
-        expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
-
-        main.click();
-        await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 2</p><p>Is divisible by 4? No.</p></main>`
-        );
-        expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
+    const mockConsoleLog = vi.fn();
+    // eslint-disable-next-line no-console
+    console.log = (...args) => {
+      if (typeof args[0] === "string" && args[0].startsWith("ELM_LAZY_TEST")) {
+        mockConsoleLog(...args);
+      } else {
+        originalConsoleLog(...args);
       }
+    };
 
-      async function assert2(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 2</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
-        );
-        expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
+    const { replace, go } = runHotReload({
+      name: "Lazy",
+      programType: "Element",
+      compilationMode: "standard",
+    });
 
-        main.click();
-        await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 3</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
-        );
-        expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
-
-        main.click();
-        await waitOneFrame();
-        expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 4</p><p>HOT RELOADED Is divisible by 4? Yes.</p></main>`
-        );
-        expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`4`);
+    await go(async ({ idle, main }) => {
+      switch (idle) {
+        case 1:
+          await assert1(main);
+          replace((content) =>
+            content.replace("Is divisible by", "HOT RELOADED $&")
+          );
+          return "KeepGoing";
+        default:
+          await assert2(main);
+          return "Stop";
       }
     });
+
+    expect(mockConsoleLog.mock.calls).toMatchInlineSnapshot(`
+        [
+          [
+            ELM_LAZY_TEST isDivisible: True,
+          ],
+          [
+            ELM_LAZY_TEST isDivisible: False,
+          ],
+          [
+            ELM_LAZY_TEST isDivisible: False,
+          ],
+          [
+            ELM_LAZY_TEST isDivisible: True,
+          ],
+        ]
+      `);
+
+    async function assert1(main: HTMLElement): Promise<void> {
+      expect(main.outerHTML).toMatchInlineSnapshot(
+        `<main><p>Number: 0</p><p>Is divisible by 4? Yes.</p></main>`
+      );
+      expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`1`);
+
+      main.click();
+      await waitOneFrame();
+      expect(main.outerHTML).toMatchInlineSnapshot(
+        `<main><p>Number: 1</p><p>Is divisible by 4? No.</p></main>`
+      );
+      expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
+
+      main.click();
+      await waitOneFrame();
+      expect(main.outerHTML).toMatchInlineSnapshot(
+        `<main><p>Number: 2</p><p>Is divisible by 4? No.</p></main>`
+      );
+      expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
+    }
+
+    async function assert2(main: HTMLElement): Promise<void> {
+      expect(main.outerHTML).toMatchInlineSnapshot(
+        `<main><p>Number: 2</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
+      );
+      expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
+
+      main.click();
+      await waitOneFrame();
+      expect(main.outerHTML).toMatchInlineSnapshot(
+        `<main><p>Number: 3</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
+      );
+      expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
+
+      main.click();
+      await waitOneFrame();
+      expect(main.outerHTML).toMatchInlineSnapshot(
+        `<main><p>Number: 4</p><p>HOT RELOADED Is divisible by 4? Yes.</p></main>`
+      );
+      expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`4`);
+    }
   });
 
   test("Html.map", async () => {
@@ -1433,193 +1423,192 @@ describe("hot reloading", () => {
     }
   });
 
-  describe("Unexpected/unhandled error at eval", () => {
+  test("Unexpected/unhandled error at eval", async () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalPromiseReject = Promise.reject;
-    afterEach(() => {
+
+    onTestFinished(() => {
       Promise.reject = originalPromiseReject;
     });
 
-    test("Unexpected/unhandled error at eval", async () => {
-      const error = new Error("Very unexpected error");
+    const error = new Error("Very unexpected error");
 
-      const mockPromiseReject = vi.fn();
+    const mockPromiseReject = vi.fn();
 
-      Promise.reject = <T>(reason: unknown): Promise<T> => {
-        if (reason === error) {
-          mockPromiseReject(reason);
-          return undefined as unknown as Promise<T>;
-        } else {
-          return originalPromiseReject.call(Promise, reason) as Promise<T>;
-        }
-      };
-
-      const { replace, go } = runHotReload({
-        name: "HtmlMain",
-        programType: "Html",
-        compilationMode: "standard",
-        expandUiImmediately: true,
-      });
-
-      const { renders } = await go(({ idle, div }) => {
-        switch (idle) {
-          case 1:
-            assert1(div);
-            Object.defineProperty(window.Elm?.HtmlMain, "__elmWatchApps", {
-              get() {
-                throw error;
-              },
-            });
-            replace((content) =>
-              content.replace("hot reload", "simple text change")
-            );
-            return "KeepGoing";
-          default:
-            assert2(div);
-            return "Stop";
-        }
-      });
-
-      expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
-        ◯ (disabled) Standard
-        ◯ (disabled) Optimize
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
-        ◉ (disabled) Standard
-        ◯ (disabled) Optimize
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 HtmlMain
-        ================================================================================
-        ▼ 🔌 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ (disabled) Standard
-        ◯ (disabled) Optimize
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Successfully compiled
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-        ◉ Standard
-        ◯ Optimize
-        ↑↗
-        ·→
-        ▲ ✅ 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        window.Elm does not look like expected! This is the error message:
-        At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
-        Very unexpected error
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        window.Elm does not look like expected! This is the error message:
-        At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
-        Very unexpected error
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 HtmlMain
-        ================================================================================
-        target HtmlMain
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Eval error
-        Check the console in the browser developer tools to see errors!
-        ▲ ⛔️ 13:10:05 HtmlMain
-      `);
-
-      expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`
-          [
-            [
-              [Error: Very unexpected error],
-            ],
-          ]
-        `);
-
-      function assert1(div: HTMLDivElement): void {
-        expect(div.outerHTML).toMatchInlineSnapshot(
-          `<div><h1 class="probe">hot reload</h1></div>`
-        );
+    Promise.reject = <T>(reason: unknown): Promise<T> => {
+      if (reason === error) {
+        mockPromiseReject(reason);
+        return undefined as unknown as Promise<T>;
+      } else {
+        return originalPromiseReject.call(Promise, reason) as Promise<T>;
       }
+    };
 
-      function assert2(div: HTMLDivElement): void {
-        expect(div.outerHTML).toMatchInlineSnapshot(
-          `<div><h1 class="probe">hot reload</h1></div>`
-        );
+    const { replace, go } = runHotReload({
+      name: "HtmlMain",
+      programType: "Html",
+      compilationMode: "standard",
+      expandUiImmediately: true,
+    });
+
+    const { renders } = await go(({ idle, div }) => {
+      switch (idle) {
+        case 1:
+          assert1(div);
+          Object.defineProperty(window.Elm?.HtmlMain, "__elmWatchApps", {
+            get() {
+              throw error;
+            },
+          });
+          replace((content) =>
+            content.replace("hot reload", "simple text change")
+          );
+          return "KeepGoing";
+        default:
+          assert2(div);
+          return "Stop";
       }
     });
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◯ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 HtmlMain
+      ================================================================================
+      ▼ 🔌 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ↑↗
+      ·→
+      ▲ ✅ 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      window.Elm does not look like expected! This is the error message:
+      At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+      Very unexpected error
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      window.Elm does not look like expected! This is the error message:
+      At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+      Very unexpected error
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123
+      updated 2022-02-05 13:10:05
+      status Eval error
+      Check the console in the browser developer tools to see errors!
+      ▲ ⛔️ 13:10:05 HtmlMain
+    `);
+
+    expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`
+        [
+          [
+            [Error: Very unexpected error],
+          ],
+        ]
+      `);
+
+    function assert1(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div><h1 class="probe">hot reload</h1></div>`
+      );
+    }
+
+    function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div><h1 class="probe">hot reload</h1></div>`
+      );
+    }
   });
 
   test("One target is active, one is idle (outputsWithoutAction)", async () => {
