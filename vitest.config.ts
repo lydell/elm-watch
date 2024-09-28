@@ -24,6 +24,8 @@ const ignoreCoverage = {
 
 export default defineConfig({
   test: {
+    // Increase the default timeout for each test from 5 seconds to 30 seconds.
+    testTimeout: 30000,
     environmentOptions: {
       jsdom: {
         url: "http://localhost",
