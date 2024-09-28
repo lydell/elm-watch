@@ -2849,11 +2849,9 @@ export function printTimeline(
   const base = 2;
 
   if (events.length <= 2 * base + 1) {
-    return dim(
-      join(
-        mapNonEmptyArray(events, (event) => printEvent(loggerConfig, event)),
-        "\n"
-      )
+    return join(
+      mapNonEmptyArray(events, (event) => printEvent(loggerConfig, event)),
+      "\n"
     );
   }
 
@@ -2862,15 +2860,13 @@ export function printTimeline(
 
   const numMoreEvents = events.length - 2 * base;
 
-  return dim(
-    join(
-      [
-        ...start.map((event) => printEvent(loggerConfig, event)),
-        `${loggerConfig.fancy ? "   " : ""}(${numMoreEvents} more events)`,
-        ...end.map((event) => printEvent(loggerConfig, event)),
-      ],
-      "\n"
-    )
+  return join(
+    [
+      ...start.map((event) => printEvent(loggerConfig, event)),
+      `${loggerConfig.fancy ? "   " : ""}(${numMoreEvents} more events)`,
+      ...end.map((event) => printEvent(loggerConfig, event)),
+    ],
+    "\n"
   );
 }
 
@@ -2879,8 +2875,8 @@ function printEvent(loggerConfig: LoggerConfig, event: LatestEvent): string {
     loggerConfig,
     emojiName: "Information",
     date: event.date,
-    dateHighlight: (string) => string,
-    message: printEventMessage(event),
+    dateHighlight: dim,
+    message: dim(printEventMessage(event)),
   });
 }
 

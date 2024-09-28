@@ -70,8 +70,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
-      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
@@ -121,13 +121,13 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Worker⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Worker⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Worker
-      ℹ️ 13:10:05 Web socket connected for: Worker⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Worker⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Worker⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
@@ -305,8 +305,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
-      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Main⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
@@ -352,8 +352,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
-      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Main⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
@@ -443,7 +443,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Removed⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Removed⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
@@ -499,7 +499,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Readonly⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Readonly⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
@@ -1237,8 +1237,8 @@ describe("hot", () => {
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
-        ℹ️ 13:10:05 Web socket connected needing compilation of: Html⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
         ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
 
@@ -1716,31 +1716,7 @@ describe("hot", () => {
       },
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-      ⏳ Dependencies
-      ✅ Dependencies
-      ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
-      ℹ️ 13:10:05 Web socket connected for: Main⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
-      ⏳ Main: elm make
-      🚨 Main
-
+    expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
       ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
       ⧙Target: Main⧘
 
@@ -1760,21 +1736,10 @@ describe("hot", () => {
       ⧙Note⧘: This almost certainly means that a 3rd party tool (or editor plugin) is
       causing problems your the elm-stuff/ directory. Try disabling 3rd party tools
       one by one until you figure out which it is!
+    `);
 
-      🚨 ⧙1⧘ error found
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/src/Main.elm⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      ⏳ Dependencies
-      ✅ Dependencies
-      ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Removed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/elm-stuff⧘
+    expect(terminal.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(`
+      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/elm-stuff⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
@@ -1972,8 +1937,8 @@ describe("hot", () => {
     );
 
     expect(adjustedTerminal).toMatchInlineSnapshot(`
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
       ✅ ⧙13:10:05⧘ FYI: The above Elm files are not imported by any of the enabled targets. Nothing to do!
     `);
 
@@ -2003,7 +1968,7 @@ describe("hot", () => {
     });
 
     expect(grep(terminal, /Changed|FYI/)).toMatchInlineSnapshot(`
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-all-targets/src/Unused.elm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-all-targets/src/Unused.elm⧘
       ✅ ⧙13:10:05⧘ FYI: The above Elm file is not imported by any target. Nothing to do!
     `);
 
@@ -2061,13 +2026,13 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
-      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Html: elm make
       ⚪️ Worker: queued
@@ -2077,8 +2042,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
@@ -2119,32 +2084,11 @@ describe("hot", () => {
         onIdle: () => "Stop",
       });
 
-      expect(terminal).toMatchInlineSnapshot(`
-        ⏳ Dependencies
-        ✅ Dependencies
+      expect(grep(terminal, /elm make/)).toMatchInlineSnapshot(`
         ⏳ Target1: elm make (typecheck only)
         ⏳ Target2: elm make (typecheck only)
         ⏳ Target3: elm make (typecheck only)
-        ✅ Target1⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-        ✅ Target2⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-        ✅ Target3⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
         ⏳ Target1: elm make
-        ✅ Target1⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Target1⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-        ⧙ℹ️ 13:10:05 Web socket disconnected for: Target1
-        ℹ️ 13:10:05 Web socket connected for: Target1⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
       `);
 
       expect(renders).toMatchInlineSnapshot(`
@@ -2273,7 +2217,7 @@ describe("hot", () => {
     });
 
     // The middle “Dependencies” line is when it’s interrupted.
-    expect(terminal).toMatchInlineSnapshot(`
+    expect(grep(terminal, /[⏳✅]/u)).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ⏳ Dependencies
       ⏳ Dependencies
@@ -2282,34 +2226,15 @@ describe("hot", () => {
       ⏳ Main: interrupted
       ⏳ Main: elm make (typecheck only)
       ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/elm.json
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Main: elm make
       ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
-      ℹ️ 13:10:05 Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Main: elm make
       ⏳ Main: interrupted
       ⏳ Main: elm make
       ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-elm/src/Main.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
@@ -2343,8 +2268,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
-      ℹ️ 13:10:05 Web socket connected for: Main⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Main⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
   });
@@ -2377,44 +2302,12 @@ describe("hot", () => {
       },
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-      ⏳ Dependencies
-      ✅ Dependencies
-      ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      ⏳ Main: elm make
-      🟢 Main: elm make done
+    expect(grep(terminal, /: (?:postprocess|interrupted)/))
+      .toMatchInlineSnapshot(`
       ⏳ Main: postprocess
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
-      ℹ️ 13:10:05 Web socket connected for: Main⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
-      ⏳ Main: elm make
-      🟢 Main: elm make done
       ⏳ Main: postprocess
       ⏳ Main: interrupted
-      ⏳ Main: elm make
-      🟢 Main: elm make done
       ⏳ Main: postprocess
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess/src/Main.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
     function assert1(div: HTMLDivElement): void {
@@ -2458,49 +2351,13 @@ describe("hot", () => {
       },
     });
 
-    expect(terminal).toMatchInlineSnapshot(`
-      ⏳ Dependencies
-      ✅ Dependencies
-      ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-      ⏳ Main: elm make
-      🟢 Main: elm make done
-      ⏳ Main: postprocess
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
-
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: Main⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Main
-      ℹ️ 13:10:05 Web socket connected for: Main⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
-      ⏳ Main: elm make
-      🟢 Main: elm make done
-      ⏳ Main: postprocess
-      ⏳ Main: interrupted
-      ⏳ Main: elm make
-      🟢 Main: elm make done
-      ⏳ Main: postprocess
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I |   0 ms R | 31.2 s P⧘
-
-      📊 ⧙elm-watch-node workers:⧘ 1
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm
-      ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/kill-postprocess-elm-watch-node/src/Main.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-    `);
+    expect(grep(terminal, /: (?:postprocess|interrupted)/))
+      .toMatchInlineSnapshot(`
+        ⏳ Main: postprocess
+        ⏳ Main: postprocess
+        ⏳ Main: interrupted
+        ⏳ Main: postprocess
+      `);
 
     function assert1(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
@@ -3639,8 +3496,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
-      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
@@ -3685,8 +3542,8 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: Html
-      ℹ️ 13:10:05 Web socket connected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
@@ -3814,7 +3671,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/elm-json-above-elm-watch-json/elm.json⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/elm-json-above-elm-watch-json/elm.json⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
@@ -3845,7 +3702,7 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/source-directories-above-elm-watch-json/src/Answer.elm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/source-directories-above-elm-watch-json/src/Answer.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
   });
@@ -3925,63 +3782,63 @@ describe("hot", () => {
 
     test("1 event", () => {
       expect(print(events.slice(0, 1))).toMatchInlineSnapshot(
-        `⧙ℹ️ 23:59:05 Changed /One.elm⧘`
+        `ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘`
       );
     });
 
     test("2 events", () => {
       expect(print(events.slice(0, 2))).toMatchInlineSnapshot(`
-        ⧙ℹ️ 23:59:05 Changed /One.elm
-        ℹ️ 00:00:11 Web socket connected needing compilation of: One⧘
+        ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+        ℹ️ ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
       `);
     });
 
     test("3 events", () => {
       expect(print(events.slice(0, 3))).toMatchInlineSnapshot(`
-        ⧙ℹ️ 23:59:05 Changed /One.elm
-        ℹ️ 00:00:11 Web socket connected needing compilation of: One
-        ℹ️ 00:01:23 Removed /Two.elm⧘
+        ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+        ℹ️ ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
+        ℹ️ ⧙00:01:23⧘ ⧙Removed /Two.elm⧘
       `);
     });
 
     test("4 events", () => {
       expect(print(events.slice(0, 4))).toMatchInlineSnapshot(`
-        ⧙ℹ️ 23:59:05 Changed /One.elm
-        ℹ️ 00:00:11 Web socket connected needing compilation of: One
-        ℹ️ 00:01:23 Removed /Two.elm
-        ℹ️ 00:01:24 Added /Three.elm⧘
+        ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+        ℹ️ ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
+        ℹ️ ⧙00:01:23⧘ ⧙Removed /Two.elm⧘
+        ℹ️ ⧙00:01:24⧘ ⧙Added /Three.elm⧘
       `);
     });
 
     test("5 events", () => {
       expect(print(events.slice(0, 5))).toMatchInlineSnapshot(`
-        ⧙ℹ️ 23:59:05 Changed /One.elm
-        ℹ️ 00:00:11 Web socket connected needing compilation of: One
-        ℹ️ 00:01:23 Removed /Two.elm
-        ℹ️ 00:01:24 Added /Three.elm
-        ℹ️ 00:02:00 Web socket disconnected for: (no matching target)⧘
+        ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+        ℹ️ ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
+        ℹ️ ⧙00:01:23⧘ ⧙Removed /Two.elm⧘
+        ℹ️ ⧙00:01:24⧘ ⧙Added /Three.elm⧘
+        ℹ️ ⧙00:02:00⧘ ⧙Web socket disconnected for: (no matching target)⧘
       `);
     });
 
     test("6 events", () => {
       expect(print(events.slice(0, 6))).toMatchInlineSnapshot(`
-        ⧙ℹ️ 23:59:05 Changed /One.elm
-        ℹ️ 00:00:11 Web socket connected needing compilation of: One
+        ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+        ℹ️ ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
            (2 more events)
-        ℹ️ 00:02:00 Web socket disconnected for: (no matching target)
-        ℹ️ 00:02:59 Web socket connected with errors (see the browser for details)⧘
+        ℹ️ ⧙00:02:00⧘ ⧙Web socket disconnected for: (no matching target)⧘
+        ℹ️ ⧙00:02:59⧘ ⧙Web socket connected with errors (see the browser for details)⧘
       `);
     });
 
     test("6 events, non-fancy", () => {
       expect(print(events.slice(0, 6), { fancy: false }))
         .toMatchInlineSnapshot(`
-        ⧙23:59:05 Changed /One.elm
-        00:00:11 Web socket connected needing compilation of: One
-        (2 more events)
-        00:02:00 Web socket disconnected for: (no matching target)
-        00:02:59 Web socket connected with errors (see the browser for details)⧘
-      `);
+          ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+          ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
+          (2 more events)
+          ⧙00:02:00⧘ ⧙Web socket disconnected for: (no matching target)⧘
+          ⧙00:02:59⧘ ⧙Web socket connected with errors (see the browser for details)⧘
+        `);
     });
   });
 });

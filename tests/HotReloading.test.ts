@@ -1772,20 +1772,20 @@ describe("hot reloading", () => {
 
       📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ InterruptElm: elm make
       ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket connected needing compilation of: InterruptElm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: InterruptElm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: InterruptElm
-      ℹ️ 13:10:05 Web socket connected for: InterruptElm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: InterruptElm⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: InterruptElm⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
   });

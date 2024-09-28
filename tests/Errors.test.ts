@@ -1805,8 +1805,8 @@ describe("errors", () => {
 
       // Sometimes the same change is reported twice by the OS. Change it to just once.
       const adjustedOutput = output.replace(
-        /^⧙(.+Changed.+)\n.+Changed.+/m,
-        "⧙$1⧘"
+        /^(.+Changed.+)\n.+Changed.+/m,
+        "$1"
       );
 
       expect(adjustedOutput).toMatchInlineSnapshot(`
@@ -1841,7 +1841,7 @@ describe("errors", () => {
 
         📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
-        ⧙ℹ️ 13:10:05 Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
         🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
     });
