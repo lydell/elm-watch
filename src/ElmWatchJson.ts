@@ -201,11 +201,11 @@ type ElmMakeParsed = {
   output: string | undefined;
 };
 
-type IntermediaElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
+type IntermediateElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
 
 export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
-  return args.reduce<IntermediaElmMakeParsed>(
-    (passedParsed, { theArg: arg }): IntermediaElmMakeParsed => {
+  return args.reduce<IntermediateElmMakeParsed>(
+    (passedParsed, { theArg: arg }): IntermediateElmMakeParsed => {
       const parsed = { ...passedParsed, justSawOutputFlag: false };
       switch (arg) {
         case "--debug":
