@@ -500,6 +500,7 @@ function run(): void {
               : {
                   tag: "UpdateErrorOverlay",
                   errors:
+                    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
                     newErrorOverlay === undefined ||
                     !newErrorOverlay.openErrorOverlay
                       ? new Map<string, OverlayError>()
@@ -912,9 +913,9 @@ const initMutable =
     return mutable;
   };
 
-function addEventListener<EventName extends string>(
+function addEventListener(
   target: EventTarget,
-  eventName: EventName,
+  eventName: string,
   listener: (event: Event) => void,
 ): () => void {
   target.addEventListener(eventName, listener);
@@ -1470,6 +1471,7 @@ const runCmd =
           // eslint-disable-next-line @typescript-eslint/no-implied-eval
           const f = new Function(cmd.code);
           // Running the code can cause runtime errors.
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
           f();
           dispatch({ tag: "EvalSucceeded", date: getNow() });
         } catch (unknownError) {

@@ -117,6 +117,7 @@ async function elmWatchNode({
 
   let returnValue: unknown;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     returnValue = (await imported.default(args)) as unknown;
   } catch (unknownError) {
     return {

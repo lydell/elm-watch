@@ -131,7 +131,7 @@ function parse(elmFilePath: string): Array<Parser.ModuleName> {
   let bytesRead = 0;
   outer: while ((bytesRead = fs.readSync(handle, buffer)) > 0) {
     // The last read might contain less bytes than we asked for.
-    for (const char of buffer.slice(0, bytesRead)) {
+    for (const char of buffer.subarray(0, bytesRead)) {
       Parser.readChar(char, readState);
       if (Parser.isNonImport(readState)) {
         break outer;
