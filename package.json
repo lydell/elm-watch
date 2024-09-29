@@ -10,13 +10,13 @@
     "build": "node -r esbuild-register scripts/Build.ts"
   },
   "devDependencies": {
-    "@types/cross-spawn": "6.0.4",
-    "@types/ws": "8.5.8",
+    "@types/cross-spawn": "6.0.6",
+    "@types/ws": "8.5.12",
     "@vitest/coverage-v8": "2.1.1",
     "@vitest/eslint-plugin": "1.1.4",
-    "elm-tooling": "1.15.0",
+    "elm-tooling": "1.15.1",
     "esbuild": "0.15.18",
-    "esbuild-register": "3.5.0",
+    "esbuild-register": "3.6.0",
     "eslint": "9.11.1",
     "eslint-plugin-simple-import-sort": "12.1.1",
     "globals": "15.9.0",
@@ -30,6 +30,6 @@
     "chokidar": "^3.5.3",
     "cross-spawn": "^7.0.3",
     "tiny-decoders": "^7.0.1",
-    "ws": "^8.12.0"
+    "ws": "^8.18.0"
   }
 }
