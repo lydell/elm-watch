@@ -1626,8 +1626,8 @@ describe("hot reloading", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ⧙ℹ️ 13:10:05 Web socket disconnected for: OutputsWithoutAction
-      ℹ️ 13:10:05 Web socket connected for: OutputsWithoutAction⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: OutputsWithoutAction⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: OutputsWithoutAction⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
   });
