@@ -1330,7 +1330,7 @@ describe("hot", () => {
       ⧙I had trouble with the JSON inside:⧘
 
       At root:
-     SyntaxError: (JSON syntax error)
+      SyntaxError: (JSON syntax error)
 
       …
 
@@ -1341,9 +1341,9 @@ describe("hot", () => {
 
       ⧙I had trouble with the JSON inside:⧘
 
-      At root["targets"]:
-      Expected an object
-      Got: undefined
+      At root:
+      Expected an object with a field called: "targets"
+      Got: {}
 
       …
 

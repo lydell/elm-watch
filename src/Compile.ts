@@ -1525,7 +1525,6 @@ export function printSpaceForOutputs(
 }
 
 function writeNewLines(logger: Logger, count: number): void {
-  // istanbul ignore else
   if (count > 0) {
     // -1 because the logger always adds a newline.
     logger.write("\n".repeat(count - 1));

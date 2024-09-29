@@ -201,7 +201,7 @@ describe("errors", () => {
       ⧙I had trouble with the JSON inside:⧘
 
       At root:
-     SyntaxError: (JSON syntax error)
+      SyntaxError: (JSON syntax error)
     `);
   });
 
@@ -984,7 +984,7 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root:
-       SyntaxError: (JSON syntax error)
+        SyntaxError: (JSON syntax error)
 
         (I still managed to compile your code, but the watcher will not work properly
         and "postprocess" was not run.)
@@ -1276,7 +1276,7 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root:
-       SyntaxError: (JSON syntax error)
+        SyntaxError: (JSON syntax error)
 
         I wrote that to this file so you can inspect it:
 
@@ -1295,7 +1295,7 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root:
-       SyntaxError: (JSON syntax error)
+        SyntaxError: (JSON syntax error)
 
         I wrote this error to a file so you can inspect and possibly report it more easily.
 
@@ -1372,7 +1372,7 @@ describe("errors", () => {
         but I ran into an error when decoding it:
 
         At root:
-       SyntaxError: (JSON syntax error)
+        SyntaxError: (JSON syntax error)
 
         I tried to write that to this file:
 
@@ -2613,7 +2613,7 @@ describe("errors", () => {
         ⧙I had trouble with the JSON inside:⧘
 
         At root:
-       SyntaxError: (JSON syntax error)
+        SyntaxError: (JSON syntax error)
 
         This file is created by elm-watch, so reading it should never fail really.
         You could try removing that file (it contains nothing essential).

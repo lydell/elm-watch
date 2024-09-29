@@ -145,7 +145,7 @@ export function codecCatcher<Decoded, Encoded>(
           tag: "DecoderError",
           error: {
             tag: "custom",
-            // istanbul ignore next
+            /* v8 ignore next */
             message: error instanceof Error ? error.message : String(error),
             path: [],
           },

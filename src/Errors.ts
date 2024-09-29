@@ -1484,8 +1484,8 @@ export function openEditorCommandFailed({
       ? `The command took too long to run, and was killed after ${timeout} ms.`
       : error.code !== undefined
         ? `The command exited with code ${error.code}.`
-        : // istanbul ignore next
-          "The command failed for an unknown reason.";
+        : "The command failed for an unknown reason.";
+  /* v8 ignore stop */
   return `
 I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):
 

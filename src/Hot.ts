@@ -2160,7 +2160,7 @@ const WebSocketConnectedParams = Codec.fields(
             };
       },
       encoder:
-        // istanbul ignore next
+        /* v8 ignore next */
         (value) => value.toString(),
     }),
   },
