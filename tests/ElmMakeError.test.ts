@@ -1,4 +1,5 @@
 import * as Codec from "tiny-decoders";
+import { describe, expect, test } from "vitest";
 
 import { ElmMakeError } from "../src/ElmMakeError";
 import { stringSnapshotSerializer } from "./Helpers";

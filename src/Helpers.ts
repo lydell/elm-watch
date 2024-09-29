@@ -125,21 +125,6 @@ export const toError: (arg: unknown) => NodeJS.ErrnoException = (arg) =>
       );
 /* v8 ignore stop */
 
-export type JsonError = DecoderError | SyntaxError;
-
-export const toJsonError: (arg: unknown) => JsonError = (arg) =>
-  /* v8 ignore start */
-  arg instanceof DecoderError
-    ? arg
-    : arg instanceof SyntaxError
-      ? arg
-      : new SyntaxError(
-          `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
-            arg,
-          )}`,
-        );
-/* v8 ignore stop */
-
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
     ? (error as { stack: string }).stack
