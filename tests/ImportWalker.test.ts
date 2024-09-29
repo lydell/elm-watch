@@ -1,4 +1,5 @@
 import * as path from "path";
+import { describe, expect, test } from "vitest";
 
 import { walkImports } from "../src/ImportWalker";
 import { mapNonEmptyArray, NonEmptyArray } from "../src/NonEmptyArray";

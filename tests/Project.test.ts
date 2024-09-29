@@ -1,3 +1,5 @@
+import { describe, expect, test } from "vitest";
+
 import { HashMap } from "../src/HashMap";
 import { HashSet } from "../src/HashSet";
 import { OutputState, Project, projectToDebug } from "../src/Project";

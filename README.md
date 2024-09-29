@@ -7,8 +7,6 @@ elm-watch recompiles whenever your Elm files change and reloads the compiled JS 
 - 👉 [Getting started](https://lydell.github.io/elm-watch/getting-started/)
 - 👉 [What elm-watch is](https://lydell.github.io/elm-watch/what-elm-watch-is/)
 
-Note that elm-watch is all about Elm. Not HTML, not CSS, not JavaScript, not TypeScript and not serving files or proxying requests. That’s a strength in my opinion, but also something to be aware of. You can’t just replace for example Parcel with elm-watch and expect everything to be taken care of.
-
 ## Installation
 
 ```

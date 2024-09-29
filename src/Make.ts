@@ -29,6 +29,7 @@ export async function run(
   switch (installResult.tag) {
     case "Error":
     case "Killed":
+      await postprocessWorkerPool.terminate();
       return { tag: "Error" };
 
     case "Success":
@@ -155,7 +156,7 @@ function compileFinishedMessage({
     emojiName: hasErrors ? "Error" : "Success",
     string: `Compilation finished in ${bold(
       printDurationMs(
-        loggerConfig.mockedTimings ? 123 : /* istanbul ignore next */ duration,
+        loggerConfig.mockedTimings ? 123 : /* v8 ignore next */ duration,
       ).trim(),
     )}${workersString}`,
   });

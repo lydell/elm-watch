@@ -83,12 +83,15 @@ export function runPostprocess({
       case "OtherSpawnError":
         return spawnResult;
 
+      // This is covered on macOS and Windows, but not Linux.
+      /* v8 ignore start */
       case "StdinWriteError":
         return {
           tag: "PostprocessStdinWriteError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
+      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -216,7 +219,7 @@ class PostprocessWorker {
       stderr.push(chunk);
     });
 
-    // istanbul ignore next
+    /* v8 ignore start */
     this.worker.on("error", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
@@ -224,8 +227,9 @@ class PostprocessWorker {
         this.onUnexpectedError(error);
       }
     });
+    /* v8 ignore stop */
 
-    // istanbul ignore next
+    /* v8 ignore start */
     this.worker.on("messageerror", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
@@ -233,9 +237,10 @@ class PostprocessWorker {
         this.onUnexpectedError(error);
       }
     });
+    /* v8 ignore stop */
 
     this.worker.on("exit", (exitCode) => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
         this.onTerminated(this);
@@ -245,13 +250,14 @@ class PostprocessWorker {
           ),
         );
       }
+      /* v8 ignore stop */
     });
 
     this.worker.on("message", (message: MessageFromWorker) => {
       switch (message.tag) {
         case "PostprocessDone":
           switch (this.status.tag) {
-            // istanbul ignore next
+            /* v8 ignore start */
             case "Idle":
               this.terminate().catch(this.onUnexpectedError);
               this.onUnexpectedError(
@@ -262,6 +268,7 @@ class PostprocessWorker {
                 ),
               );
               break;
+            /* v8 ignore stop */
 
             case "Busy":
               switch (message.result.tag) {
@@ -279,18 +286,20 @@ class PostprocessWorker {
                   break;
                 }
 
-                // istanbul ignore next
+                /* v8 ignore start */
                 case "Reject":
                   this.status.reject(toError(message.result.error));
                   break;
+                /* v8 ignore stop */
               }
               this.status = { tag: "Idle" };
               this.onIdle(this);
               break;
 
-            // istanbul ignore next
+            /* v8 ignore start */
             case "Terminated":
               break;
+            /* v8 ignore stop */
           }
 
           stdout.length = 0;
@@ -317,9 +326,8 @@ class PostprocessWorker {
           this.postMessage({ tag: "StartPostprocess", args });
         });
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "Busy":
-      // istanbul ignore next
       case "Terminated":
         throw new Error(
           `Cannot call PostprocessWorker#postprocess because \`this.status === ${Codec.JSON.stringify(
@@ -327,6 +335,7 @@ class PostprocessWorker {
             this.status,
           )}\` instead of the expected "Idle".`,
         );
+      /* v8 ignore stop */
     }
   }
 
@@ -347,9 +356,10 @@ class PostprocessWorker {
         break;
       }
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "Terminated":
       // Do nothing.
+      /* v8 ignore stop */
     }
   }
 }

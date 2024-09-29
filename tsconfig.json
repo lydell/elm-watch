@@ -6,6 +6,7 @@
     "isolatedModules": true,
     "module": "CommonJS",
     "moduleResolution": "node",
+    "checkJs": true,
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
@@ -22,7 +23,11 @@
       "DOM.Iterable"
     ],
   },
-  "exclude": [
-    "example"
+  "include": [
+    "src",
+    "client",
+    "scripts",
+    "tests/*.ts",
+    "eslint.config.mjs"
   ]
 }

@@ -13,7 +13,7 @@ function getOutput(name: string): string {
   const match = result.outputFiles.find(
     (output) => path.basename(output.path) === name,
   );
-  // istanbul ignore if
+  /* v8 ignore start */
   if (match === undefined) {
     throw new Error(
       `ClientCode: Found no output from esbuild matching ${quote(
@@ -24,6 +24,7 @@ function getOutput(name: string): string {
       )}`,
     );
   }
+  /* v8 ignore stop */
   return match.text;
 }
 

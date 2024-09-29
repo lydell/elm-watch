@@ -17,6 +17,8 @@ type NonEmptyArray<T> = [T, ...Array<T>];
 type ElmWatchJson = {
   postprocess?: NonEmptyArray<string>;
   port?: number;
+  webSocketUrl?: string; // ⚠️ elm-watch@beta only
+  serve?: string; // ⚠️ elm-watch@beta only
   targets: {
     [name: string]: {
       inputs: NonEmptyArray<string>;
@@ -56,12 +58,14 @@ Example:
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
 | [postprocess](../postprocess/) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | The port for elm-watch’s HTTP and WebSocket server, used for hot reloading and as a simple file server. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
+| ⚠️ webSocketUrl | `string` | `` `ws://${currentHostname}:${port}/elm-watch` `` (sort of) | **Only available in `elm-watch@beta`.** This lets you customize how the elm-watch client connects its WebSocket for advanced use cases. You can also use the `ELM_WATCH_WEBSOCKET_URL` environment variable for dynamically setting it (the environment variable takes precedence). The value must be a valid URL starting with `ws:` or `wss:`. |
+| ⚠️ serve | `string` | unset | **Only available in `elm-watch@beta`.** A directory of static files to [serve](../server/). |
 
 ## targets
 
 There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
 
-It’s an object. They keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](../postprocess/) script. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
+It’s an object. The keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](../postprocess/) script. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
 
 For each target, provide the following:
 

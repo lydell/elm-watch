@@ -234,7 +234,7 @@ function renderPieceForTerminal(piece: Piece): string {
       return dimTerminal(piece.text);
     case "ElmStyle":
       return (
-        (piece.bold ? /* istanbul ignore next */ "\x1B[1m" : "") +
+        (piece.bold ? /* v8 ignore next */ "\x1B[1m" : "") +
         (piece.underline ? "\x1B[4m" : "") +
         (piece.color === undefined
           ? ""
@@ -255,7 +255,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
       return `<span style="opacity: 0.6">${escapeHtml(piece.text)}</span>`;
     case "ElmStyle":
       return (
-        (piece.bold ? /* istanbul ignore next */ "<b>" : "") +
+        (piece.bold ? /* v8 ignore next */ "<b>" : "") +
         (piece.underline ? "<u>" : "") +
         (piece.color === undefined
           ? ""
@@ -263,7 +263,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
         escapeHtml(piece.text) +
         (piece.color === undefined ? "" : "</span>") +
         (piece.underline ? "</u>" : "") +
-        (piece.bold ? /* istanbul ignore next */ "</b>" : "")
+        (piece.bold ? /* v8 ignore next */ "</b>" : "")
       );
     case "Text":
       return escapeHtml(piece.text);
@@ -283,9 +283,10 @@ function escapeHtml(string: string): string {
         return "&quot;";
       case "'":
         return "&apos;";
-      // istanbul ignore next
+      /* v8 ignore start */
       default:
         return match;
+      /* v8 ignore stop */
     }
   });
 }
@@ -1477,6 +1478,7 @@ export function openEditorCommandFailed({
   stdout: string;
   stderr: string;
 }): string {
+  /* v8 ignore start */
   const errorReason =
     error.killed === true
       ? `The command took too long to run, and was killed after ${timeout} ms.`
@@ -1731,10 +1733,11 @@ function printElmWatchNodeRunCommand(args: ElmWatchNodePublicArgs): Template {
 function truncate(string: string): string {
   const roughLimit = 20;
   const half = Math.floor(roughLimit / 2);
+  /* v8 ignore start */
   return string.length <= roughLimit
-    ? // istanbul ignore next
-      string
+    ? string
     : `${string.slice(0, half)}...${string.slice(-half)}`;
+  /* v8 ignore stop */
 }
 
 function printJsonError(error: Codec.DecoderError): Piece {

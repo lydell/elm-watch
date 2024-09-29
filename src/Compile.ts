@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as Codec from "tiny-decoders";
 
 import * as ElmJson from "./ElmJson";
+import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
@@ -182,11 +183,12 @@ export function installDependencies(
         case "ElmNotFoundError":
           return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
 
-        // istanbul ignore next
+        /* v8 ignore start */
         case "OtherSpawnError":
           return onError(
             Errors.otherSpawnError(elmJsonPath, result.error, result.command),
           );
+        /* v8 ignore stop */
 
         case "ElmInstallError":
           return onError(
@@ -349,7 +351,7 @@ export function getOutputActions({
             output,
             postprocessArray: outputState.status.postprocessArray,
             priority:
-              // istanbul ignore next
+              /* v8 ignore next */
               priority ?? 0,
             code: outputState.status.code,
             elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
@@ -590,7 +592,7 @@ export async function handleOutputAction({
 
     case "NeedsElmMakeTypecheckOnly":
       switch (runMode.tag) {
-        // istanbul ignore next
+        /* v8 ignore start */
         case "make":
           throw new Error(
             `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${Codec.JSON.stringify(
@@ -599,6 +601,7 @@ export async function handleOutputAction({
               2,
             )}`,
           );
+        /* v8 ignore stop */
 
         case "hot":
           await typecheck({
@@ -1013,9 +1016,11 @@ function needsToWriteProxyFile(
     handle = fs.openSync(outputPath.absolutePath, "r");
   } catch (unknownError) {
     const error = toError(unknownError);
+    /* v8 ignore start */
     return error.code === "ENOENT"
       ? { tag: "Needed" }
-      : /* istanbul ignore next */ { tag: "ReadError", error };
+      : { tag: "ReadError", error };
+    /* v8 ignore stop */
   }
   const buffer = Buffer.alloc(versionedIdentifier.byteLength);
   try {
@@ -1602,25 +1607,6 @@ export function emojiWidthFix({
   return `${emoji}${isTTY ? cursorHorizontalAbsolute(column) : ""}`;
 }
 
-// I found `\p{Other_Symbol}` (`\p{So}`) in: https://stackoverflow.com/a/45894101
-// It means “various symbols that are not math symbols, currency signs, or
-// combining characters” according to: https://www.regular-expressions.info/unicode.html
-// As far as I can tell, that can match more than emoji, but should be fine for
-// this use case.
-// `[\u{1f3fb}-\u{1f3ff}]` are skin tone modifiers: https://css-tricks.com/changing-emoji-skin-tones-programmatically/#aa-removing-and-swapping-skin-tone-modifiers-with-javascript
-// `\ufe0f` is a Variation Selector that says that the preceding character
-// should be displayed as an emoji: https://unicode-table.com/en/FE0F/
-// The second part of the regex matches emoji flags (also invalid ones): https://stackoverflow.com/a/53360239
-// This file is good to test with: https://github.com/mathiasbynens/emoji-test-regex-pattern/blob/main/dist/latest/index.txt
-// It contains basically all emoji that exist. This regex matches around half of
-// them – the “most common ones” in my opinion. The ones not matched are lots of
-// combinations like families. See scripts/Emoji.ts for exactly which emojis do
-// and do not match this regex.
-// We _could_ use this package for near-perfect emoji matching: https://github.com/mathiasbynens/emoji-regex
-// But I don’t think it’s worth the extra dependency for this non-core little feature.
-export const GOOD_ENOUGH_STARTS_WITH_EMOJI_REGEX =
-  /^(?:\p{Other_Symbol}[\u{1f3fb}-\u{1f3ff}]?\ufe0f?|[🇦-🇿]{2}) /u;
-
 // When you have many targets, it can be nice to have an emoji at the start of
 // the name to make the targets easier to distinguish. This function tries to
 // improve the emoji terminal situation. If it looks like the target name starts
@@ -1639,13 +1625,13 @@ function targetNameEmojiTweak(
   loggerConfig: LoggerConfig,
   targetName: string,
 ): { targetName: string; delta: number } {
-  const match = GOOD_ENOUGH_STARTS_WITH_EMOJI_REGEX.exec(targetName);
+  const match = STARTS_WITH_EMOJI_REGEX.exec(targetName);
 
   if (match === null) {
     return { targetName, delta: 0 };
   }
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const content = match[0] ?? "";
 
   // Avoid emoji on Windows, for example.
@@ -1753,10 +1739,11 @@ function statusLine(
     start: string,
   ): string => {
     const strings = extra.flatMap((item) => item ?? []);
-    // istanbul ignore if
+    /* v8 ignore start */
     if (!isNonEmptyArray(strings)) {
       return helper(emojiName, start);
     }
+    /* v8 ignore stop */
 
     // Emojis take two terminal columns, plus a space that we add after.
     const startLength =
@@ -1822,7 +1809,7 @@ function statusLine(
     case "QueuedForPostprocess":
       return helper("QueuedForPostprocess", `${targetName}: elm make done`);
 
-    // istanbul ignore next
+    /* v8 ignore next */
     case "ElmNotFoundError":
     case "CommandNotFoundError":
     case "OtherSpawnError":
@@ -1945,9 +1932,8 @@ function maybePrintDurations(
   return join(
     mapNonEmptyArray(newDurations, (duration) =>
       printDuration(
-        loggerConfig.mockedTimings
-          ? mockDuration(duration)
-          : /* istanbul ignore next */ duration,
+        /* v8 ignore next */
+        loggerConfig.mockedTimings ? mockDuration(duration) : duration,
         loggerConfig.fancy,
       ),
     ),
@@ -2085,19 +2071,16 @@ export function renderOutputErrors(
     case "NotWrittenToDisk":
       return [];
 
-    // istanbul ignore next
+    /* v8 ignore start */
     case "ElmMake":
-    // istanbul ignore next
     case "ElmMakeTypecheckOnly":
-    // istanbul ignore next
     case "Postprocess":
-    // istanbul ignore next
     case "Interrupted":
     case "QueuedForElmMake":
       return includeStuckInProgressState
         ? [Errors.stuckInProgressState(outputPath, status.tag)]
-        : // istanbul ignore next
-          [];
+        : [];
+    /* v8 ignore stop */
 
     // If there are `elm make` errors we skip postprocessing (fail fast).
     case "QueuedForPostprocess":
@@ -2106,16 +2089,18 @@ export function renderOutputErrors(
     case "Success":
       return [];
 
-    // istanbul ignore next
+    /* v8 ignore start */
     case "ElmNotFoundError":
       return [Errors.elmNotFoundError(outputPath, status.command)];
+    /* v8 ignore stop */
 
     case "CommandNotFoundError":
       return [Errors.commandNotFoundError(outputPath, status.command)];
 
-    // istanbul ignore next
+    /* v8 ignore start */
     case "OtherSpawnError":
       return [Errors.otherSpawnError(outputPath, status.error, status.command)];
+    /* v8 ignore stop */
 
     case "UnexpectedElmMakeOutput":
       return [
@@ -2128,6 +2113,8 @@ export function renderOutputErrors(
         ),
       ];
 
+    // This is covered on macOS and Windows, but not Linux.
+    /* v8 ignore start */
     case "PostprocessStdinWriteError":
       return [
         Errors.postprocessStdinWriteError(
@@ -2136,6 +2123,7 @@ export function renderOutputErrors(
           status.command,
         ),
       ];
+    /* v8 ignore stop */
 
     case "PostprocessNonZeroExit":
       return [

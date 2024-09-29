@@ -5,6 +5,7 @@ import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
 import * as url from "url";
+import { describe, test } from "vitest";
 
 import { EMOJI } from "../src/Compile";
 import {
@@ -18,15 +19,8 @@ import {
   WT_SESSION,
 } from "../src/Env";
 import { printStdio } from "../src/Errors";
-import { ReadStream, toError, WriteStream } from "../src/Helpers";
+import { ReadStream, WriteStream } from "../src/Helpers";
 import { IS_WINDOWS } from "../src/IsWindows";
-
-toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
-
-const { JEST_RETRIES } = process.env;
-if (JEST_RETRIES !== undefined) {
-  jest.retryTimes(Number(JEST_RETRIES), { logErrorsBeforeRetry: true });
-}
 
 // Print date and time in UTC in snapshots.
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -38,10 +32,9 @@ Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
 Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
 /* eslint-enable @typescript-eslint/unbound-method */
 
-// This uses `console` rather than `process.stdout` so Jest can capture it.
-// And `.log` instead of `.error`, because Jest colors `.error` red.
+// This uses `console` rather than `process.stderr` so Vitest can capture it.
 // eslint-disable-next-line no-console
-export const logDebug = console.log;
+export const logDebug = console.error;
 
 // Read file with normalized line endings to make snapshotting easier
 // cross-platform.
@@ -514,6 +507,8 @@ export function clean(string: string): string {
   // That can be extra tricky since we sometimes print JSON strings where the
   // backslashes end up escaped with another backslash. Normalize some error
   // messages between Windows and others, and between Node.js versions.
+  // Match a web socket disconnect followed by a connect, and replace them just
+  // with the connect. Sometimes in tests, we don’t get both messages.
   return string
     .split(path.dirname(__dirname))
     .join(project)
@@ -528,6 +523,7 @@ export function clean(string: string): string {
     )
     .split(os.tmpdir())
     .join(path.join(root, "tmp", "fake"))
+    .replace(/\/private\//g, "/") // Ends up before `os.tmpdir()` on macOS in `fs` errors.
     .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘")
@@ -539,12 +535,50 @@ export function clean(string: string): string {
     .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
     .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
     .replace(
-      /Expected .+ in JSON at position \d+|Unexpected token . in JSON at position \d+|Unexpected end of JSON input/g,
+      /(?:Expected .+|Unexpected token .) in JSON at position \d+(?: \(line \d+ column \d+\))?|Unexpected end of JSON input/g,
       "(JSON syntax error)",
     )
     .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
-    .replace(/EOF/g, "EPIPE");
+    .replace(/EOF/g, "EPIPE")
+    .replace(
+      /\n.+Web socket disconnected for: (.+)(\n.+Web socket connected for: \1)/g,
+      "$2",
+    );
+}
+
+export function onlyErrorMessages(terminal: string): string {
+  const output = [];
+  let lines = terminal.split("\n");
+  while (lines.length > 0) {
+    const start = lines.findIndex((line) => /-- \S+(?:\s\S+)* --/.test(line));
+    if (start === -1) {
+      break;
+    }
+    lines = lines.slice(start);
+    const end = lines.findIndex((line) => line.includes("🚨"));
+    if (end <= 0) {
+      output.push(lines);
+      break;
+    } else {
+      output.push(lines.slice(0, end - 1));
+      lines = lines.slice(end + 1);
+    }
+  }
+  return output.length === 0
+    ? `NO ERROR MESSAGES FOUND!\n${terminal}`
+    : output.map((chunk) => chunk.join("\n")).join("\n\n…\n\n");
+}
+
+export function grep(string: string, pattern: RegExp): string {
+  return string
+    .split("\n")
+    .filter((line) => pattern.test(line))
+    .join("\n");
+}
+
+export function removeIndents(string: string): string {
+  return string.trim().replace(/^\s+/gm, "");
 }
 
 export function assertExitCode(
@@ -552,7 +586,9 @@ export function assertExitCode(
   actualExitCode: number,
   stdout: string,
   stderr: string,
+  dir: string,
 ): void {
+  maybeClearElmStuff(stdout, dir);
   if (expectedExitCode !== actualExitCode) {
     throw new Error(
       `
@@ -561,6 +597,19 @@ exit ${actualExitCode} (expected ${expectedExitCode})
 ${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
       `.trim(),
     );
+  }
+}
+
+export function maybeClearElmStuff(stdout: string, dir: string): void {
+  // In CI we retry failing tests. If a test got the “CORRUPT CACHE” error
+  // from Elm (or similar), try to make the next attempt more successful by removing
+  // elm-stuff/. We only remove elm-stuff/0.19.1/ because in some tests have
+  // fixtures in other parts of elm-stuff/.
+  if (stdout.includes("elm-stuff")) {
+    fs.rmSync(path.join(dir, "elm-stuff", "0.19.1"), {
+      recursive: true,
+      force: true,
+    });
   }
 }
 
@@ -575,6 +624,9 @@ export const stringSnapshotSerializer = {
 // For things like symlinks and readonly files/folders that aren’t really a thing on Windows.
 export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;
+
+// The stdin error test is not working on Linux and not worth it.
+export const testExceptLinux = process.platform === "linux" ? test.skip : test;
 
 export async function httpGet(
   urlString: string,
@@ -598,7 +650,11 @@ export async function httpGet(
               new Error(
                 `GET ${urlString} – expected status code 200 but got ${
                   res.statusCode ?? "(no status code)"
-                }:\n\n${body}`,
+                }\n\nOptions:\n${JSON.stringify(
+                  options,
+                  null,
+                  2,
+                )}\nResponse:\n${body === "" ? "(none)" : body}`,
               ),
             );
           }

@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
+import { expect } from "vitest";
 
 import {
   ElmModule,
@@ -19,6 +20,7 @@ import {
   clean,
   CursorWriteStream,
   logDebug,
+  maybeClearElmStuff,
   MemoryWriteStream,
   rimraf,
   rm,
@@ -121,6 +123,7 @@ export async function run({
   terminal: string;
   browserConsole: string;
   renders: string;
+  onlyExpandedRenders: string;
   div: HTMLDivElement;
 }> {
   // eslint-disable-next-line no-console
@@ -180,7 +183,7 @@ export async function run({
           // Copying the script does a couple of things:
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
-          // - Lets us make a few replacements for Jest.
+          // - Lets us make a few replacements for Vitest.
           const newScript = numberedScript(script, loads);
           const content =
             loads > 2 && simulateHttpCacheOnReload
@@ -288,7 +291,7 @@ export async function run({
       const fallbackMain = document.createElement("main");
       fallbackMain.textContent = "No `main` element found.";
       const main = actualMain ?? fallbackMain;
-      // Wait for logs to settle. This file is pretty slow to run through
+      // Wait for logs to settle. This type of tests is pretty slow to run through
       // anyway, so this wait is just a drop in the ocean.
       wait(100)
         .then(() =>
@@ -348,14 +351,24 @@ export async function run({
       .catch(reject);
   });
 
+  const stdoutString = clean(stdout.getOutput());
+
+  maybeClearElmStuff(stdoutString, dir);
   expect(stderr.content).toBe("");
 
   return {
-    terminal: clean(stdout.getOutput()),
+    terminal: stdoutString,
     browserConsole: browserConsole.join("\n\n"),
-    renders: clean(renders.join(`\n${"=".repeat(80)}\n`)),
+    renders: joinRenders(renders),
+    onlyExpandedRenders: joinRenders(
+      renders.filter((render) => render.includes("▲")),
+    ),
     div: outerDiv,
   };
+}
+
+function joinRenders(renders: Array<string>): string {
+  return clean(renders.join(`\n${"=".repeat(80)}\n`));
 }
 
 export function runHotReload({
@@ -438,7 +451,7 @@ export function runHotReload({
     removeInput,
     sendToElm,
     lastValueFromElm,
-    go: (onIdle: OnIdle) => {
+    go: async (onIdle: OnIdle) => {
       const elmWatchStuffJsonPath = path.join(
         dir,
         "elm-stuff",
@@ -450,7 +463,19 @@ export function runHotReload({
         elmWatchStuffJsonPath,
         Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
       );
+
+      // Here we write a file just before we start the watcher. I’ve seen this file
+      // be picked up by the watcher! But only when running all tests. Here’s the theory:
+      // 1. We write the file.
+      // 2. The operating system (macOS) takes note of the change. It is added to some
+      //    kind of batch of file system changes.
+      // 3. We start the watcher, which tells the OS that we are interested in file system changes.
+      // 4. The OS flushes its batch of file system changes to all subscribers.
+      // By waiting a little bit, we avoid getting updates about changes before we started watching.
+      // It’s a bad solution, but it does make tests less flaky. This type of tests is pretty slow
+      // to run through anyway, so this wait is just a drop in the ocean.
       write(1);
+      await wait(100);
 
       return run({
         fixture,
@@ -633,7 +658,7 @@ export function assertCompilationMode(compilationMode: CompilationMode): void {
   withShadowRoot((shadowRoot) => {
     const radio = shadowRoot?.querySelector(`input[type="radio"]:checked`);
     if (radio instanceof HTMLInputElement) {
-      expect(radio.value).toMatchInlineSnapshot(compilationMode);
+      expect(radio.value).toStrictEqual(compilationMode);
     } else {
       throw new Error(
         `Could not find a checked radio button (expecting to be ${compilationMode}).`,
@@ -647,7 +672,7 @@ export function assertDebugDisabled(): void {
   withShadowRoot((shadowRoot) => {
     const radio = shadowRoot?.querySelector('input[type="radio"]');
     if (radio instanceof HTMLInputElement) {
-      expect(radio.disabled).toMatchInlineSnapshot(`true`);
+      expect(radio.disabled).toBe(true);
     } else {
       throw new Error(`Could not find any radio button!`);
     }
@@ -658,11 +683,7 @@ export function assertDebugDisabled(): void {
 export function assertDebugger(body: HTMLBodyElement): void {
   expect(
     Array.from(body.querySelectorAll("svg"), (element) => element.localName),
-  ).toMatchInlineSnapshot(`
-    [
-      svg,
-    ]
-  `);
+  ).toStrictEqual(["svg"]);
 }
 
 function getTextContent(element: Node): string {
