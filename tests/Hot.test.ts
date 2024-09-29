@@ -70,7 +70,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
@@ -126,7 +125,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Worker⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Worker⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
@@ -239,7 +237,6 @@ describe("hot", () => {
 
       web socket connections: 1 (ws://0.0.0.0:59123)
 
-      13:10:05 Web socket disconnected for: Html
       13:10:05 Web socket connected for: Html
       13:10:05 Everything up to date.
     `);
@@ -281,7 +278,6 @@ describe("hot", () => {
 
       web socket connections: 1 (ws://0.0.0.0:59123)
 
-      13:10:05 Web socket disconnected for: Html
       13:10:05 Web socket connected for: Html
       13:10:05 Everything up to date.
     `);
@@ -305,7 +301,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Main⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
@@ -352,7 +347,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Main⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
@@ -2031,7 +2025,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Html: elm make
@@ -2268,7 +2261,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Main⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
@@ -3496,7 +3488,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
@@ -3542,7 +3533,6 @@ describe("hot", () => {
 
       📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);

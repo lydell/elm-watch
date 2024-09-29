@@ -507,6 +507,8 @@ export function clean(string: string): string {
   // That can be extra tricky since we sometimes print JSON strings where the
   // backslashes end up escaped with another backslash. Normalize some error
   // messages between Windows and others, and between Node.js versions.
+  // Match a web socket disconnect followed by a connect, and replace them just
+  // with the connect. Sometimes in tests, we don’t get both messages.
   return string
     .split(path.dirname(__dirname))
     .join(project)
@@ -538,7 +540,11 @@ export function clean(string: string): string {
     )
     .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
-    .replace(/EOF/g, "EPIPE");
+    .replace(/EOF/g, "EPIPE")
+    .replace(
+      /\n.+Web socket disconnected for: (.+)(\n.+Web socket connected for: \1)/g,
+      "$2",
+    );
 }
 
 export function onlyErrorMessages(terminal: string): string {
