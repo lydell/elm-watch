@@ -216,8 +216,8 @@ module.exports = {
               ...Object.keys(globals.jest),
             ].filter(
               (name) =>
-                !Object.prototype.hasOwnProperty.call(globals.node, name)
-            )
+                !Object.prototype.hasOwnProperty.call(globals.node, name),
+            ),
           ),
         ],
       },
@@ -232,8 +232,8 @@ module.exports = {
           ...new Set(
             [...Object.keys(globals.node), ...Object.keys(globals.jest)].filter(
               (name) =>
-                !Object.prototype.hasOwnProperty.call(globals.browser, name)
-            )
+                !Object.prototype.hasOwnProperty.call(globals.browser, name),
+            ),
           ),
         ],
       },

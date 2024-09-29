@@ -11,17 +11,17 @@ const result = esbuild.buildSync(clientEsbuildOptions);
 
 function getOutput(name: string): string {
   const match = result.outputFiles.find(
-    (output) => path.basename(output.path) === name
+    (output) => path.basename(output.path) === name,
   );
   // istanbul ignore if
   if (match === undefined) {
     throw new Error(
       `ClientCode: Found no output from esbuild matching ${quote(
-        name
+        name,
       )} in ${join(
         result.outputFiles.map((output) => quote(output.path)),
-        ", "
-      )}`
+        ", ",
+      )}`,
     );
   }
   return match.text;

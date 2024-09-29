@@ -36,7 +36,7 @@ function run(args: Array<string>): void {
       theInputPath: absolutePathFromString(cwd.path, elmFilePathRaw),
       originalString: elmFilePathRaw,
       realpath: absolutePathFromString(cwd.path, elmFilePathRaw),
-    })
+    }),
   );
 
   const elmJsonPathsRaw = new HashSet(
@@ -46,8 +46,8 @@ function run(args: Array<string>): void {
         findClosest("elm.json", absoluteDirname(inputPath.theInputPath)) ?? {
           tag: "NotFound" as const,
           inputPath,
-        }
-    )
+        },
+    ),
   );
 
   const uniqueElmJsonPathRaw = getSetSingleton(elmJsonPathsRaw);
@@ -55,7 +55,7 @@ function run(args: Array<string>): void {
   if (uniqueElmJsonPathRaw === undefined) {
     console.error(
       "Could not find (a unique) elm.json for all of the input paths:",
-      inputPaths
+      inputPaths,
     );
     process.exit(1);
   }
@@ -63,7 +63,7 @@ function run(args: Array<string>): void {
   if (uniqueElmJsonPathRaw.tag === "NotFound") {
     console.error(
       "Could not find elm.json for:",
-      uniqueElmJsonPathRaw.inputPath
+      uniqueElmJsonPathRaw.inputPath,
     );
     process.exit(1);
   }
@@ -87,15 +87,15 @@ function run(args: Array<string>): void {
 
   const sourceDirectories = ElmJson.getSourceDirectories(
     elmJsonPath,
-    elmJsonResult.elmJson
+    elmJsonResult.elmJson,
   );
 
   console.log(
     "Elm file(s):",
     mapNonEmptyArray(
       inputPaths,
-      (inputPath) => inputPath.theInputPath.absolutePath
-    )
+      (inputPath) => inputPath.theInputPath.absolutePath,
+    ),
   );
   console.log("elm.json:", elmJsonPath.theElmJsonPath.absolutePath);
   console.time("Run");

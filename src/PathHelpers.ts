@@ -39,22 +39,22 @@ export function absoluteRealpath({ absolutePath }: AbsolutePath): AbsolutePath {
 
 export function findClosest(
   name: string,
-  absoluteDir: AbsolutePath
+  absoluteDir: AbsolutePath,
 ): AbsolutePath | undefined {
   const dir = absoluteDir.absolutePath;
   const entry = path.join(dir, name);
   return fs.existsSync(entry)
     ? { tag: "AbsolutePath", absolutePath: entry }
     : dir === path.parse(dir).root
-    ? undefined
-    : findClosest(name, absoluteDirname(absoluteDir));
+      ? undefined
+      : findClosest(name, absoluteDirname(absoluteDir));
 }
 
 export function longestCommonAncestorPath(
-  paths: NonEmptyArray<AbsolutePath>
+  paths: NonEmptyArray<AbsolutePath>,
 ): AbsolutePath | undefined {
   const pathArrays = mapNonEmptyArray(paths, ({ absolutePath }) =>
-    absolutePath.split(path.sep)
+    absolutePath.split(path.sep),
   );
 
   const length = Math.min(...pathArrays.map((array) => array.length));
@@ -85,7 +85,7 @@ type ReadJsonFileResult<T> =
 
 export function readJsonFile<T>(
   file: AbsolutePath,
-  codec: Codec.Codec<T>
+  codec: Codec.Codec<T>,
 ): ReadJsonFileResult<T> {
   let content;
   try {

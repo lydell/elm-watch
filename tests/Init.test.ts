@@ -17,7 +17,7 @@ import {
 const FIXTURES_DIR = path.join(__dirname, "fixtures", "init");
 
 async function initSuccessHelper(
-  fixture: string
+  fixture: string,
 ): Promise<{ stdout: string; json: string }> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const elmWatchJsonPath = path.join(dir, "elm-watch.json");

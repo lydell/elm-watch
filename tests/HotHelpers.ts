@@ -46,7 +46,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
     // eslint-disable-next-line no-console
     console.error(
       "cleanupAfterEachTest: watcher never closed by itself – closing now. Test:",
-      currentTestName
+      currentTestName,
     );
     watcher.close();
     watcher = undefined;
@@ -56,7 +56,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
     // eslint-disable-next-line no-console
     console.error(
       "cleanupAfterEachTest: elm-watch never finished – killing. Test:",
-      currentTestName
+      currentTestName,
     );
     await hotKillManager.kill();
   }
@@ -190,7 +190,7 @@ export async function run({
                   .replace(/\(this\)\);\s*$/, "(window));")
                   .replace(
                     /^(\s*var bodyNode) = .+;/m,
-                    `$1 = document.documentElement.children[${bodyIndex}];`
+                    `$1 = document.documentElement.children[${bodyIndex}];`,
                   );
           fs.writeFileSync(newScript, content);
           await import(newScript);
@@ -292,7 +292,14 @@ export async function run({
       // anyway, so this wait is just a drop in the ocean.
       wait(100)
         .then(() =>
-          onIdle({ idle: localIdle, div: outerDiv, main, body, reason, stdout })
+          onIdle({
+            idle: localIdle,
+            div: outerDiv,
+            main,
+            body,
+            reason,
+            stdout,
+          }),
         )
         .then((result) => {
           switch (result) {
@@ -436,12 +443,12 @@ export function runHotReload({
         dir,
         "elm-stuff",
         "elm-watch",
-        "stuff.json"
+        "stuff.json",
       );
       fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), { recursive: true });
       fs.writeFileSync(
         elmWatchStuffJsonPath,
-        Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson)
+        Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
       );
       write(1);
 
@@ -500,7 +507,7 @@ function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
         targetName === undefined
           ? "[data-target]"
           : `[data-target="${targetName}"]`
-      } button[aria-expanded]`
+      } button[aria-expanded]`,
     );
     if (button instanceof HTMLElement) {
       if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
@@ -519,7 +526,7 @@ export function showErrors(targetName?: string): void {
         targetName === undefined
           ? "[data-target]"
           : `[data-target="${targetName}"]`
-      } [data-test-id="ShowErrorOverlayButton"]`
+      } [data-test-id="ShowErrorOverlayButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -536,7 +543,7 @@ export function hideErrors(targetName?: string): void {
         targetName === undefined
           ? "[data-target]"
           : `[data-target="${targetName}"]`
-      } [data-test-id="HideErrorOverlayButton"]`
+      } [data-test-id="HideErrorOverlayButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -549,7 +556,7 @@ export function hideErrors(targetName?: string): void {
 export function closeOverlay(): void {
   withShadowRoot((shadowRoot) => {
     const button = shadowRoot?.querySelector(
-      `[data-test-id="OverlayCloseButton"]`
+      `[data-test-id="OverlayCloseButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -597,7 +604,7 @@ export function moveUi(position: BrowserUiPosition): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
     const button = shadowRoot?.querySelector(
-      `button[data-position="${position}"]`
+      `button[data-position="${position}"]`,
     );
     if (button instanceof HTMLButtonElement) {
       button.click();
@@ -611,7 +618,7 @@ export function switchCompilationMode(compilationMode: CompilationMode): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
     const radio = shadowRoot?.querySelector(
-      `input[type="radio"][value="${compilationMode}"]`
+      `input[type="radio"][value="${compilationMode}"]`,
     );
     if (radio instanceof HTMLInputElement) {
       radio.click();
@@ -629,7 +636,7 @@ export function assertCompilationMode(compilationMode: CompilationMode): void {
       expect(radio.value).toMatchInlineSnapshot(compilationMode);
     } else {
       throw new Error(
-        `Could not find a checked radio button (expecting to be ${compilationMode}).`
+        `Could not find a checked radio button (expecting to be ${compilationMode}).`,
       );
     }
   });
@@ -650,7 +657,7 @@ export function assertDebugDisabled(): void {
 
 export function assertDebugger(body: HTMLBodyElement): void {
   expect(
-    Array.from(body.querySelectorAll("svg"), (element) => element.localName)
+    Array.from(body.querySelectorAll("svg"), (element) => element.localName),
   ).toMatchInlineSnapshot(`
     [
       svg,
@@ -723,7 +730,7 @@ export function click(element: HTMLElement, selector: string): void {
     throw new Error(
       `Element to click is not considered clickable: ${selector} -> ${
         target === null ? "not found" : target.nodeName
-      }`
+      }`,
     );
   }
 }

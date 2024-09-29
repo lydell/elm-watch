@@ -9,11 +9,11 @@ const CLIENT_DIR = path.join(DIR, "client");
 
 function readPackage<T extends Record<string, unknown>>(
   name: string,
-  codec: Codec.Codec<T>
+  codec: Codec.Codec<T>,
 ): T & { raw: Record<string, unknown> } {
   const raw = Codec.JSON.parse(
     Codec.record(Codec.unknown),
-    fs.readFileSync(path.join(DIR, name), "utf8")
+    fs.readFileSync(path.join(DIR, name), "utf8"),
   );
   if (raw.tag === "DecoderError") {
     throw new Error(`Decoding ${name}:\n${Codec.format(raw.error)}`);
@@ -27,12 +27,12 @@ function readPackage<T extends Record<string, unknown>>(
 
 const PACKAGE = readPackage(
   "package.json",
-  Codec.fields({ dependencies: Codec.record(Codec.string) })
+  Codec.fields({ dependencies: Codec.record(Codec.string) }),
 );
 
 const PACKAGE_REAL = readPackage(
   "package-real.json",
-  Codec.fields({ version: Codec.string })
+  Codec.fields({ version: Codec.string }),
 );
 
 type FileToCopy = {
@@ -58,7 +58,7 @@ async function run(): Promise<void> {
     if (transform !== undefined) {
       fs.writeFileSync(
         path.join(BUILD, dest),
-        transform(fs.readFileSync(path.join(DIR, src), "utf8"))
+        transform(fs.readFileSync(path.join(DIR, src), "utf8")),
       );
     } else {
       fs.copyFileSync(path.join(DIR, src), path.join(BUILD, dest));
@@ -70,8 +70,8 @@ async function run(): Promise<void> {
     Codec.JSON.stringify(
       Codec.unknown,
       { ...PACKAGE_REAL.raw, dependencies: PACKAGE.dependencies },
-      2
-    )
+      2,
+    ),
   );
 
   fs.writeFileSync(
@@ -81,7 +81,7 @@ const fs = require("fs");
 const path = require("path");
 exports.client = fs.readFileSync(path.join(__dirname, "client.js"), "utf8");
 exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
-    `.trim()
+    `.trim(),
   );
 
   const clientResult = await esbuild.build(clientEsbuildOptions);
@@ -92,7 +92,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
       case "proxy.js":
         fs.writeFileSync(
           output.path,
-          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version)
+          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version),
         );
         break;
 
@@ -120,7 +120,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
             {
               filter: /^\.\/ClientCode$/,
             },
-            (args) => ({ path: args.path, external: true })
+            (args) => ({ path: args.path, external: true }),
           );
         },
       },
@@ -136,7 +136,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         const replaced = output.text
           .slice(
             secondIndexOf(output.text, "//"),
-            output.text.lastIndexOf("//")
+            output.text.lastIndexOf("//"),
           )
           .replace(toModuleRegex, "$1")
           .replace(exportsRegex, "")
@@ -152,7 +152,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
           output.path,
           output.text
             .slice(output.text.indexOf("//"))
-            .replace(toModuleRegex, "$1")
+            .replace(toModuleRegex, "$1"),
         );
         break;
 

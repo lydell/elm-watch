@@ -12,7 +12,7 @@ This stub file is now connecting to \`elm-watch\` via WebSocket, letting it know
 that it's time to start generating real JS. Once that's done the page should be
 automatically reloaded. But if you get compilation errors you'll need to fix
 them first.
-  `.trim()
+  `.trim(),
 );
 
 error.elmWatchProxy = true;

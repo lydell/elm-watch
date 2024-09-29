@@ -13,7 +13,7 @@ import {
 
 async function helpHelper(
   args: Array<string>,
-  env: Env = process.env
+  env: Env = process.env,
 ): Promise<string> {
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();

@@ -3,7 +3,7 @@ if (require("../elm-install")) {
   process.stderr.write(
     `{"type":"compile-errors","errors":[{"path":"/Users/you/src/Admin/Main.elm","name":"Admin.Main","problems":[{"title":"MODULE NOT FOUND","region":{"start":{"line":71,"column":8},"end":{"line":71,"column":22}},"message":["You are trying to imporelm: Map.!: given key is not an element in the map
 CallStack (from HasCallStack):
-  error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal`
+  error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal`,
   );
   process.exit(1);
 }

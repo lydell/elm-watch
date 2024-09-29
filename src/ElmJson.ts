@@ -69,7 +69,7 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
 
 export function getSourceDirectories(
   elmJsonPath: ElmJsonPath,
-  elmJson: ElmJson
+  elmJson: ElmJson,
 ): NonEmptyArray<SourceDirectory> {
   const base = absoluteDirname(elmJsonPath.theElmJsonPath);
 

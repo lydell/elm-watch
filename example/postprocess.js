@@ -23,13 +23,13 @@ export default async function postprocess({
         // as an example. For some apps, faster builds is more important than smaller output, and vice versa.
         // Make your choice.
         minimal: !["Html", "Sandbox", "Element", "Document", "Worker"].includes(
-          targetName
+          targetName,
         ),
       });
 
     default:
       throw new Error(
-        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`
+        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`,
       );
   }
 }
@@ -63,8 +63,8 @@ async function runUglifyJSAndEsbuild(code) {
     compress: {
       ...Object.fromEntries(
         Object.entries(UglifyJS.default_options().compress).map(
-          ([key, value]) => [key, value === true ? false : value]
-        )
+          ([key, value]) => [key, value === true ? false : value],
+        ),
       ),
       pure_funcs: pureFuncs,
       pure_getters: true,
@@ -110,6 +110,6 @@ async function runEsbuild(code) {
 function removeIIFE(code) {
   return `var scope = window;${code.slice(
     code.indexOf("{") + 1,
-    code.lastIndexOf("}")
+    code.lastIndexOf("}"),
   )}`;
 }

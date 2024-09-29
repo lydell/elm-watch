@@ -24,8 +24,8 @@
     "globals": "13.23.0",
     "jest": "29.7.0",
     "jest-environment-jsdom": "29.7.0",
-    "prettier": "2.8.3",
-    "run-pty": "4.1.0",
+    "prettier": "3.3.3",
+    "run-pty": "5.0.0",
     "ts-jest": "29.1.1",
     "typescript": "5.2.2"
   },

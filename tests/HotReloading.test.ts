@@ -52,13 +52,13 @@ describe("hot reloading", () => {
           assertDebugDisabled();
           assertInit(div);
           replace((content) =>
-            content.replace("hot reload", "simple text change")
+            content.replace("hot reload", "simple text change"),
           );
           return "KeepGoing";
         case 2:
           assertHotReload(div);
           replace((content) =>
-            content.replace("simple text change", "hot reload")
+            content.replace("simple text change", "hot reload"),
           );
           return "KeepGoing";
         case 3:
@@ -69,7 +69,7 @@ describe("hot reloading", () => {
           assertDebugDisabled();
           assertInit(div);
           replace((content) =>
-            content.replace("hot reload", "simple text change")
+            content.replace("hot reload", "simple text change"),
           );
           return "KeepGoing";
         default:
@@ -191,20 +191,20 @@ describe("hot reloading", () => {
 
     function assertInit(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><h1 class="probe">hot reload</h1></div>`
+        `<div><h1 class="probe">hot reload</h1></div>`,
       );
       probe = div.querySelector(".probe");
       expect(probe?.outerHTML).toMatchInlineSnapshot(
-        `<h1 class="probe">hot reload</h1>`
+        `<h1 class="probe">hot reload</h1>`,
       );
     }
 
     function assertHotReload(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><h1 class="probe">simple text change</h1></div>`
+        `<div><h1 class="probe">simple text change</h1></div>`,
       );
       expect(div.querySelector(".probe") === probe).toMatchInlineSnapshot(
-        `true`
+        `true`,
       );
     }
   });
@@ -246,8 +246,8 @@ describe("hot reloading", () => {
                 .replace("Before hot reload", "After hot reload")
                 .replace(
                   "onClick OriginalButtonClicked",
-                  "onClick NewButtonClicked"
-                )
+                  "onClick NewButtonClicked",
+                ),
             );
             return "KeepGoing";
           default:
@@ -266,7 +266,7 @@ describe("hot reloading", () => {
 
         probe = main.querySelector(".probe");
         expect(probe?.outerHTML).toMatchInlineSnapshot(
-          `<h1 class="probe">Before hot reload</h1>`
+          `<h1 class="probe">Before hot reload</h1>`,
         );
 
         click(main, "button");
@@ -288,7 +288,7 @@ describe("hot reloading", () => {
           `);
 
         expect(main.querySelector(".probe") === probe).toMatchInlineSnapshot(
-          `true`
+          `true`,
         );
 
         click(main, "button");
@@ -300,7 +300,7 @@ describe("hot reloading", () => {
             </pre></main>
           `);
       }
-    }
+    },
   );
 
   test.each(["standard", "debug", "optimize"] as const)(
@@ -321,12 +321,12 @@ describe("hot reloading", () => {
                 .replace("Before hot reload", "After hot reload")
                 .replace(
                   "onUrlRequest = OriginalUrlRequested",
-                  "onUrlRequest = NewUrlRequested"
+                  "onUrlRequest = NewUrlRequested",
                 )
                 .replace(
                   "onUrlChange = OriginalUrlChanged",
-                  "onUrlChange = NewUrlChanged"
-                )
+                  "onUrlChange = NewUrlChanged",
+                ),
             );
             return "KeepGoing";
           default:
@@ -406,7 +406,7 @@ describe("hot reloading", () => {
             </pre></main>
           `);
       }
-    }
+    },
   );
 
   test.each([
@@ -433,7 +433,7 @@ describe("hot reloading", () => {
         case 1:
           await assertInit();
           replace((content) =>
-            content.replace("fromJs OriginalFromJs", "fromJs NewFromJs")
+            content.replace("fromJs OriginalFromJs", "fromJs NewFromJs"),
           );
           return "KeepGoing";
         default:
@@ -446,7 +446,7 @@ describe("hot reloading", () => {
       sendToElm(1);
       await waitOneFrame();
       expect(lastValueFromElm.value).toMatchInlineSnapshot(
-        `Before hot reload: [1]`
+        `Before hot reload: [1]`,
       );
     }
 
@@ -454,7 +454,7 @@ describe("hot reloading", () => {
       sendToElm(2);
       await waitOneFrame();
       expect(lastValueFromElm.value).toMatchInlineSnapshot(
-        `Before: [1]. After hot reload: [2]`
+        `Before: [1]. After hot reload: [2]`,
       );
     }
   });
@@ -483,7 +483,7 @@ describe("hot reloading", () => {
           case 1:
             await assertInit(main);
             replace((content) =>
-              content.replace(/-- /g, "").replace("Sub.none", "")
+              content.replace(/-- /g, "").replace("Sub.none", ""),
             );
             return "KeepGoing";
           default:
@@ -536,7 +536,7 @@ describe("hot reloading", () => {
         await waitOneFrame();
         expect(main.outerHTML).toMatchInlineSnapshot(`<main>9</main>`);
       }
-    }
+    },
   );
 
   describe("All program types", () => {
@@ -584,7 +584,7 @@ describe("hot reloading", () => {
           const subscribe = workerApp.ports.output?.subscribe;
           if (subscribe === undefined) {
             throw new Error(
-              "WorkerProgram app.ports.output.subscribe should exist."
+              "WorkerProgram app.ports.output.subscribe should exist.",
             );
           }
           subscribe((value: unknown) => {
@@ -628,21 +628,21 @@ describe("hot reloading", () => {
 
       function assert1(body: HTMLBodyElement): void {
         expect(removeDebugger(body)).toMatchInlineSnapshot(
-          `<body><p>ApplicationProgram (1)</p></body>`
+          `<body><p>ApplicationProgram (1)</p></body>`,
         );
 
         expect(removeDebugger(container)).toMatchInlineSnapshot(
-          `<div><p>HtmlProgram (1)</p><p>SandboxProgram (1)</p><p>ElementProgram (1)</p><p>WorkerProgram (1)</p></div>`
+          `<div><p>HtmlProgram (1)</p><p>SandboxProgram (1)</p><p>ElementProgram (1)</p><p>WorkerProgram (1)</p></div>`,
         );
       }
 
       function assert2(body: HTMLBodyElement): void {
         expect(removeDebugger(body)).toMatchInlineSnapshot(
-          `<body><p>ApplicationProgram (2)</p></body>`
+          `<body><p>ApplicationProgram (2)</p></body>`,
         );
 
         expect(removeDebugger(container)).toMatchInlineSnapshot(
-          `<div><p>HtmlProgram (2)</p><p>SandboxProgram (2)</p><p>ElementProgram (2)</p><p>WorkerProgram (2)</p></div>`
+          `<div><p>HtmlProgram (2)</p><p>SandboxProgram (2)</p><p>ElementProgram (2)</p><p>WorkerProgram (2)</p></div>`,
         );
       }
 
@@ -676,7 +676,7 @@ describe("hot reloading", () => {
         case 2:
           touch(elmJsonPath);
           replace((content) =>
-            content.replace("hot reload", "simple text change")
+            content.replace("hot reload", "simple text change"),
           );
           return "KeepGoing" as const;
         default:
@@ -739,19 +739,19 @@ describe("hot reloading", () => {
 
     async function assert1(div: HTMLDivElement): Promise<void> {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><div><h1>hot reload</h1><button>Button</button><pre>0</pre></div></div>`
+        `<div><div><h1>hot reload</h1><button>Button</button><pre>0</pre></div></div>`,
       );
 
       click(div, "button");
       await waitOneFrame();
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><div><h1>hot reload</h1><button>Button</button><pre>1</pre></div></div>`
+        `<div><div><h1>hot reload</h1><button>Button</button><pre>1</pre></div></div>`,
       );
     }
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><div><h1>simple text change</h1><button>Button</button><pre>1</pre></div></div>`
+        `<div><div><h1>simple text change</h1><button>Button</button><pre>1</pre></div></div>`,
       );
     }
   });
@@ -868,7 +868,7 @@ describe("hot reloading", () => {
         await waitOneFrame();
         expect(main.outerHTML).toMatchInlineSnapshot(`<main>AddedMsg</main>`);
       }
-    }
+    },
   );
 
   test("Init tweak value", async () => {
@@ -934,7 +934,7 @@ describe("hot reloading", () => {
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>field1 with newField</div>`
+        `<div>field1 with newField</div>`,
       );
     }
   });
@@ -951,7 +951,7 @@ describe("hot reloading", () => {
         case 1:
           assert1();
           replace((content) =>
-            content.replace("module", "port module").replace(/-- /g, "")
+            content.replace("module", "port module").replace(/-- /g, ""),
           );
           return "KeepGoing";
         default:
@@ -989,7 +989,7 @@ describe("hot reloading", () => {
         case 1:
           assert1();
           replace((content) =>
-            content.replace("module", "port module").replace(/-- /g, "")
+            content.replace("module", "port module").replace(/-- /g, ""),
           );
           return "KeepGoing";
         default:
@@ -1027,7 +1027,7 @@ describe("hot reloading", () => {
         case 1:
           assert1(main);
           replace((content) =>
-            content.replace("module", "port module").replace(/-- /g, "")
+            content.replace("module", "port module").replace(/-- /g, ""),
           );
           return "KeepGoing";
         default:
@@ -1100,7 +1100,7 @@ describe("hot reloading", () => {
             content
               .replace("Maybe Int", "Maybe String")
               .replace("String.fromInt", "String.toUpper")
-              .replace("1337", '"Just"')
+              .replace("1337", '"Just"'),
           );
           return "KeepGoing";
         default:
@@ -1110,7 +1110,7 @@ describe("hot reloading", () => {
     });
 
     expect(
-      browserConsole.replace(/(\n\s*at _String_toUpper).*(\n\s*at.+)*/, "$1")
+      browserConsole.replace(/(\n\s*at _String_toUpper).*(\n\s*at.+)*/, "$1"),
     ).toMatchInlineSnapshot(`
         elm-watch: I did a full page reload because hot reload for \`Elm.ViewFailsAfterHotReload\` failed, probably because of incompatible model changes.
         This is the error:
@@ -1164,12 +1164,12 @@ describe("hot reloading", () => {
       }
       expect(document.activeElement).toBe(button);
       expect(button.outerHTML).toMatchInlineSnapshot(
-        `<button id="id">Count: 0</button>`
+        `<button id="id">Count: 0</button>`,
       );
       button.click();
       await waitOneFrame();
       expect(button.outerHTML).toMatchInlineSnapshot(
-        `<button id="id">Count: 1</button>`
+        `<button id="id">Count: 1</button>`,
       );
     }
 
@@ -1180,7 +1180,7 @@ describe("hot reloading", () => {
       }
       expect(document.activeElement).toBe(button);
       expect(button.outerHTML).toMatchInlineSnapshot(
-        `<button id="id">Hot count: 1</button>`
+        `<button id="id">Hot count: 1</button>`,
       );
     }
   });
@@ -1228,12 +1228,12 @@ describe("hot reloading", () => {
           throw new Error("Could not find button!");
         }
         expect(button.outerHTML).toMatchInlineSnapshot(
-          `<button>Count: 0</button>`
+          `<button>Count: 0</button>`,
         );
         button.click();
         await waitOneFrame();
         expect(button.outerHTML).toMatchInlineSnapshot(
-          `<button>Count: 1</button>`
+          `<button>Count: 1</button>`,
         );
       }
 
@@ -1243,7 +1243,7 @@ describe("hot reloading", () => {
           throw new Error("Could not find button!");
         }
         expect(button.outerHTML).toMatchInlineSnapshot(
-          `<button>Hot count: 1</button>`
+          `<button>Hot count: 1</button>`,
         );
       }
     });
@@ -1283,7 +1283,7 @@ describe("hot reloading", () => {
           case 1:
             await assert1(main);
             replace((content) =>
-              content.replace("Is divisible by", "HOT RELOADED $&")
+              content.replace("Is divisible by", "HOT RELOADED $&"),
             );
             return "KeepGoing";
           default:
@@ -1311,42 +1311,42 @@ describe("hot reloading", () => {
 
       async function assert1(main: HTMLElement): Promise<void> {
         expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 0</p><p>Is divisible by 4? Yes.</p></main>`
+          `<main><p>Number: 0</p><p>Is divisible by 4? Yes.</p></main>`,
         );
         expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`1`);
 
         main.click();
         await waitOneFrame();
         expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 1</p><p>Is divisible by 4? No.</p></main>`
+          `<main><p>Number: 1</p><p>Is divisible by 4? No.</p></main>`,
         );
         expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
 
         main.click();
         await waitOneFrame();
         expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 2</p><p>Is divisible by 4? No.</p></main>`
+          `<main><p>Number: 2</p><p>Is divisible by 4? No.</p></main>`,
         );
         expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`2`);
       }
 
       async function assert2(main: HTMLElement): Promise<void> {
         expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 2</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
+          `<main><p>Number: 2</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`,
         );
         expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
 
         main.click();
         await waitOneFrame();
         expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 3</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`
+          `<main><p>Number: 3</p><p>HOT RELOADED Is divisible by 4? No.</p></main>`,
         );
         expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`3`);
 
         main.click();
         await waitOneFrame();
         expect(main.outerHTML).toMatchInlineSnapshot(
-          `<main><p>Number: 4</p><p>HOT RELOADED Is divisible by 4? Yes.</p></main>`
+          `<main><p>Number: 4</p><p>HOT RELOADED Is divisible by 4? Yes.</p></main>`,
         );
         expect(mockConsoleLog.mock.calls.length).toMatchInlineSnapshot(`4`);
       }
@@ -1375,7 +1375,7 @@ describe("hot reloading", () => {
           replace((content) =>
             content
               .replace("Html.map Clicked", "Html.map NewClicked")
-              .replace(/-- /g, "")
+              .replace(/-- /g, ""),
           );
           return "KeepGoing";
         case 4:
@@ -1383,7 +1383,7 @@ describe("hot reloading", () => {
           replace((content) =>
             content
               .replace("onClick 1", "onClick (NewClicked 5)")
-              .replace(/\|> Html\.map .+/g, "")
+              .replace(/\|> Html\.map .+/g, ""),
           );
           return "KeepGoing";
         default:
@@ -1394,61 +1394,61 @@ describe("hot reloading", () => {
 
     async function assert1(main: HTMLElement): Promise<void> {
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>Count: 0</button></main>`
+        `<main><button>Count: 0</button></main>`,
       );
 
       click(main, "button");
       await waitOneFrame();
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>Count: 2</button></main>`
+        `<main><button>Count: 2</button></main>`,
       );
     }
 
     async function assert2(main: HTMLElement): Promise<void> {
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: 2</button></main>`
+        `<main><button>HOT RELOADED Count: 2</button></main>`,
       );
 
       click(main, "button");
       await waitOneFrame();
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: 4</button></main>`
+        `<main><button>HOT RELOADED Count: 4</button></main>`,
       );
     }
 
     async function assert3(main: HTMLElement): Promise<void> {
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: 4</button></main>`
+        `<main><button>HOT RELOADED Count: 4</button></main>`,
       );
 
       click(main, "button");
       await waitOneFrame();
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: 7</button></main>`
+        `<main><button>HOT RELOADED Count: 7</button></main>`,
       );
     }
 
     async function assert4(main: HTMLElement): Promise<void> {
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: 7</button></main>`
+        `<main><button>HOT RELOADED Count: 7</button></main>`,
       );
 
       click(main, "button");
       await waitOneFrame();
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: 4</button></main>`
+        `<main><button>HOT RELOADED Count: 4</button></main>`,
       );
     }
 
     async function assert5(main: HTMLElement): Promise<void> {
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: 4</button></main>`
+        `<main><button>HOT RELOADED Count: 4</button></main>`,
       );
 
       click(main, "button");
       await waitOneFrame();
       expect(main.outerHTML).toMatchInlineSnapshot(
-        `<main><button>HOT RELOADED Count: -1</button></main>`
+        `<main><button>HOT RELOADED Count: -1</button></main>`,
       );
     }
   });
@@ -1491,7 +1491,7 @@ describe("hot reloading", () => {
               },
             });
             replace((content) =>
-              content.replace("hot reload", "simple text change")
+              content.replace("hot reload", "simple text change"),
             );
             return "KeepGoing";
           default:
@@ -1630,7 +1630,7 @@ describe("hot reloading", () => {
 
       function assertInit(div: HTMLDivElement): void {
         expect(div.outerHTML).toMatchInlineSnapshot(
-          `<div><h1 class="probe">hot reload</h1></div>`
+          `<div><h1 class="probe">hot reload</h1></div>`,
         );
       }
     });
@@ -2549,7 +2549,7 @@ describe("hot reloading", () => {
 
     function assertHotReload(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>Text and new text</div>`
+        `<div>Text and new text</div>`,
       );
     }
   });
@@ -2637,11 +2637,11 @@ describe("hot reloading", () => {
 
     const replaceHelper = (
       name: string,
-      f: (content: string) => string
+      f: (content: string) => string,
     ): void => {
       fs.writeFileSync(
         path.join(src, name),
-        f(fs.readFileSync(path.join(src, name), "utf-8"))
+        f(fs.readFileSync(path.join(src, name), "utf-8")),
       );
     };
 
@@ -2683,7 +2683,7 @@ describe("hot reloading", () => {
             return "KeepGoing"; // The first script has loaded.
           case 2:
             replaceHelper("AppHelpers.elm", (content) =>
-              content.replace(/"/g, "'")
+              content.replace(/"/g, "'"),
             );
             return "KeepGoing";
           case 3:
@@ -2694,7 +2694,7 @@ describe("hot reloading", () => {
             return "KeepGoing";
           case 4:
             replaceHelper("AppOtherHelpers.elm", (content) =>
-              content.replace("=", ":=")
+              content.replace("=", ":="),
             );
             return "KeepGoing";
           case 5:
@@ -2704,7 +2704,7 @@ describe("hot reloading", () => {
             return "KeepGoing";
           case 6:
             replaceHelper("Shared.elm", (content) =>
-              content.replace("text", "textTypo")
+              content.replace("text", "textTypo"),
             );
             return "KeepGoing";
           case 7:

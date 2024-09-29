@@ -70,7 +70,7 @@ class PolyHttpServer {
     return new Promise((resolve, reject) => {
       let numClosed = 0;
       const callback = (
-        error: (Error & { code?: string }) | undefined
+        error: (Error & { code?: string }) | undefined,
       ): void => {
         numClosed++;
         // istanbul ignore if
@@ -95,8 +95,8 @@ class PolyHttpServer {
     listener: (
       req: InstanceType<typeof http.IncomingMessage>,
       socket: Duplex,
-      head: Buffer
-    ) => void
+      head: Buffer,
+    ) => void,
   ): void {
     this.http.on("upgrade", listener);
     this.https.on("upgrade", listener);
@@ -202,7 +202,7 @@ export class WebSocketServer {
 
     this.polyHttpServer.listen(
       // If `port` is 0, the operating system will assign an arbitrary unused port.
-      portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort
+      portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
     );
   }
 
@@ -259,11 +259,11 @@ function html(isHttps: boolean, request: http.IncomingMessage): string {
               referer !== undefined && new URL(referer).host !== host
                 ? referer
                 : undefined,
-              "return to your page"
+              "return to your page",
             )}.</p>`
           : `<p>Did you mean to go to the ${maybeLink(
               host !== undefined ? `https://${host}${request.url}` : undefined,
-              "HTTPS version of this page"
+              "HTTPS version of this page",
             )} to accept elm-watch's self-signed certificate?</p>`
         : `<p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>`
     }

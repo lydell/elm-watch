@@ -35,7 +35,7 @@ https
       });
 
       response.on("error", onError);
-    }
+    },
   )
   .on("error", onError);
 

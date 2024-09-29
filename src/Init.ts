@@ -14,7 +14,7 @@ const elmWatchJson = bold("elm-watch.json");
 export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   if (isNonEmptyArray(args)) {
     logger.writeToStderrMakesALotOfSenseHere(
-      `${bold("elm-watch init")} takes no arguments.`
+      `${bold("elm-watch init")} takes no arguments.`,
     );
     return 1;
   }
@@ -26,7 +26,7 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
 
   if (fs.existsSync(elmWatchJsonPath.theElmWatchJsonPath.absolutePath)) {
     logger.writeToStderrMakesALotOfSenseHere(
-      `${elmWatchJson} already exists in the current directory!`
+      `${elmWatchJson} already exists in the current directory!`,
     );
     return 1;
   }
@@ -39,12 +39,12 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   try {
     fs.writeFileSync(
       elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
-      example
+      example,
     );
   } catch (unknownError) {
     const error = toError(unknownError);
     logger.writeToStderrMakesALotOfSenseHere(
-      `Failed to write ${elmWatchJson}:\n\n${error.message}`
+      `Failed to write ${elmWatchJson}:\n\n${error.message}`,
     );
     return 1;
   }
@@ -55,7 +55,7 @@ Created a minimal ${elmWatchJson} in the current directory to get you started.
 Go check it out!
 
 Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
-  `.trim()
+  `.trim(),
   );
   return 0;
 }

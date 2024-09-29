@@ -78,7 +78,7 @@ export function prependPATH(folder: string): string {
   if (IS_WINDOWS && fs.existsSync(path.join(folder, "elm"))) {
     fs.writeFileSync(
       path.join(folder, "elm.cmd"),
-      `@echo off\r\nnode "%~dp0\\elm" %*`
+      `@echo off\r\nnode "%~dp0\\elm" %*`,
     );
   }
   return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
@@ -155,7 +155,7 @@ export class TerminalColorReadStream
 {
   override on<T>(
     eventName: string | symbol,
-    listener: (...args: Array<T>) => void
+    listener: (...args: Array<T>) => void,
   ): this {
     if (eventName === "data" && this.isRaw) {
       this.data.push(
@@ -166,7 +166,7 @@ export class TerminalColorReadStream
           }`;
         }),
         "\x1B]10;rgb:1111/2222/3333\x07",
-        "\x1B]11;rgb:aaaa/bbbb/cccc\x1B\\"
+        "\x1B]11;rgb:aaaa/bbbb/cccc\x1B\\",
       );
       this._read();
     }
@@ -191,7 +191,7 @@ export class MemoryWriteStream extends stream.Writable implements WriteStream {
   override _write(
     chunk: Buffer | string,
     _encoding: BufferEncoding,
-    callback: (error?: Error | null) => void
+    callback: (error?: Error | null) => void,
   ): void {
     this.content += removeTerminalColorRequests(chunk.toString());
     callback();
@@ -242,7 +242,7 @@ type Escape =
 function parseEscape(
   char: string,
   num1: number | undefined,
-  num2: number | undefined
+  num2: number | undefined,
 ): Escape {
   switch (char) {
     case "A":
@@ -315,7 +315,7 @@ function stringLength(string: string): number {
 function colorAwareSlice(
   string: string,
   start: number,
-  end: number = string.length
+  end: number = string.length,
 ): string {
   let result = "";
   let index = 0;
@@ -333,8 +333,8 @@ function colorAwareSlice(
       start === 0 && end === 0
         ? false
         : start === 0
-        ? index >= 0 && index <= end
-        : index > start && index <= end
+          ? index >= 0 && index <= end
+          : index > start && index <= end
     ) {
       result += part;
     }
@@ -354,10 +354,10 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
   override _write(
     chunk: Buffer | string,
     _encoding: BufferEncoding,
-    callback: (error?: Error | null) => void
+    callback: (error?: Error | null) => void,
   ): void {
     const parts = removeTerminalColorRequests(chunk.toString()).split(
-      SPLIT_REGEX
+      SPLIT_REGEX,
     );
     for (const part of parts) {
       switch (part) {
@@ -376,7 +376,7 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
             const escape = parseEscape(
               match[3] as string,
               toNumber(match[1]),
-              toNumber(match[2])
+              toNumber(match[2]),
             );
 
             switch (escape.tag) {
@@ -388,14 +388,14 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                 this.lines[this.cursor.y] = colorAwareSlice(
                   this.lines[this.cursor.y] ?? "",
                   0,
-                  this.cursor.x
+                  this.cursor.x,
                 );
                 break;
 
               case "ClearLineToStart":
                 this.lines[this.cursor.y] = colorAwareSlice(
                   this.lines[this.cursor.y] ?? "",
-                  this.cursor.x
+                  this.cursor.x,
                 );
                 break;
 
@@ -412,8 +412,8 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                   index < this.cursor.y
                     ? line
                     : index === this.cursor.y
-                    ? colorAwareSlice(line, 0, this.cursor.x)
-                    : ""
+                      ? colorAwareSlice(line, 0, this.cursor.x)
+                      : "",
                 );
                 break;
 
@@ -422,9 +422,9 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                   index < this.cursor.y
                     ? ""
                     : index === this.cursor.y
-                    ? " ".repeat(this.cursor.x + 1) +
-                      colorAwareSlice(line, this.cursor.x + 1)
-                    : line
+                      ? " ".repeat(this.cursor.x + 1) +
+                        colorAwareSlice(line, this.cursor.x + 1)
+                      : line,
                 );
                 break;
 
@@ -435,11 +435,11 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                   callback(
                     new Error(
                       `Cursor out of bounds: ${JSON.stringify(
-                        this.cursor
+                        this.cursor,
                       )} + ${JSON.stringify({ dx, dy })} = ${JSON.stringify(
-                        cursor
-                      )}`
-                    )
+                        cursor,
+                      )}`,
+                    ),
                   );
                   return;
                 } else {
@@ -487,9 +487,9 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
         `(${Object.values(EMOJI)
           .map(({ emoji }) => emoji)
           .join("|")})  `,
-        "g"
+        "g",
       ),
-      "$1 "
+      "$1 ",
     );
   }
 
@@ -524,7 +524,7 @@ export function clean(string: string): string {
       url
         .pathToFileURL(project)
         .toString()
-        .replace(/[A-Z]:\//g, "")
+        .replace(/[A-Z]:\//g, ""),
     )
     .split(os.tmpdir())
     .join(path.join(root, "tmp", "fake"))
@@ -534,13 +534,13 @@ export function clean(string: string): string {
     .replace(
       /[A-Z]:\\(\S+)/g,
       (_match, rest: string) =>
-        `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`
+        `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`,
     )
     .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
     .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
     .replace(
       /Expected .+ in JSON at position \d+|Unexpected token . in JSON at position \d+|Unexpected end of JSON input/g,
-      "(JSON syntax error)"
+      "(JSON syntax error)",
     )
     .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
@@ -551,7 +551,7 @@ export function assertExitCode(
   expectedExitCode: number,
   actualExitCode: number,
   stdout: string,
-  stderr: string
+  stderr: string,
 ): void {
   if (expectedExitCode !== actualExitCode) {
     throw new Error(
@@ -559,7 +559,7 @@ export function assertExitCode(
 exit ${actualExitCode} (expected ${expectedExitCode})
 
 ${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
-      `.trim()
+      `.trim(),
     );
   }
 }
@@ -578,7 +578,7 @@ export const testExceptWindows = IS_WINDOWS ? test.skip : test;
 
 export async function httpGet(
   urlString: string,
-  options: http.RequestOptions = {}
+  options: http.RequestOptions = {},
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     (urlString.startsWith("https:") ? https : http)
@@ -598,8 +598,8 @@ export async function httpGet(
               new Error(
                 `GET ${urlString} – expected status code 200 but got ${
                   res.statusCode ?? "(no status code)"
-                }:\n\n${body}`
-              )
+                }:\n\n${body}`,
+              ),
             );
           }
         });

@@ -53,7 +53,7 @@ export function spawn(command: Command): {
   };
 
   const promise = (
-    actualSpawn: typeof childProcess.spawn
+    actualSpawn: typeof childProcess.spawn,
   ): Promise<SpawnResult> =>
     new Promise((resolve) => {
       // istanbul ignore if
@@ -75,7 +75,7 @@ export function spawn(command: Command): {
           // istanbul ignore next
           error.code === "ENOENT"
             ? { tag: "CommandNotFoundError", command }
-            : { tag: "OtherSpawnError", error, command }
+            : { tag: "OtherSpawnError", error, command },
         );
       });
 
@@ -108,7 +108,7 @@ export function spawn(command: Command): {
               () => {
                 resolve(result);
               },
-              500
+              500,
             ),
           };
         } else {
@@ -191,12 +191,12 @@ export type ExitReason =
 
 function exitReason(
   exitCode: number | null,
-  signal: NodeJS.Signals | null
+  signal: NodeJS.Signals | null,
 ): ExitReason {
   // istanbul ignore next
   return exitCode !== null
     ? { tag: "ExitCode", exitCode }
     : signal !== null
-    ? { tag: "Signal", signal }
-    : { tag: "Unknown" };
+      ? { tag: "Signal", signal }
+      : { tag: "Unknown" };
 }

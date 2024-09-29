@@ -135,7 +135,7 @@ export const WebSocketToServerMessage = Codec.taggedUnion("tag", [
 ]);
 
 export function encodeWebSocketToClientMessage(
-  message: WebSocketToClientMessage
+  message: WebSocketToClientMessage,
 ): string {
   switch (message.tag) {
     // Optimization: Avoid encoding megabytes of JS code as a JSON string.
@@ -153,7 +153,7 @@ export function encodeWebSocketToClientMessage(
 }
 
 export function decodeWebSocketToClientMessage(
-  data: unknown
+  data: unknown,
 ): Codec.DecoderResult<WebSocketToClientMessage> {
   const messageResult = Codec.string.decoder(data);
   if (messageResult.tag === "DecoderError") {

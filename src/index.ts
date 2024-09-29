@@ -29,7 +29,7 @@ export async function elmWatchCli(
     stderr,
     logDebug,
     hotKillManager = { kill: undefined },
-  }: Options
+  }: Options,
 ): Promise<number> {
   const getNow: GetNow = () => new Date();
   const logger = makeLogger({
@@ -44,12 +44,12 @@ export async function elmWatchCli(
     tag: "Cwd",
     path: absolutePathFromString(
       { tag: "AbsolutePath", absolutePath: process.cwd() },
-      cwdString
+      cwdString,
     ),
   };
 
   const isHelp = args.some(
-    (arg) => arg === "-h" || arg === "-help" || arg === "--help"
+    (arg) => arg === "-h" || arg === "-help" || arg === "--help",
   );
   if (isHelp) {
     logger.write(Help.render(logger.config));
@@ -88,7 +88,7 @@ export async function elmWatchCli(
                 ? new PostprocessWorkerPool(reject)
                 : result.postprocessWorkerPool,
               result === undefined ? undefined : result.webSocketState,
-              hotKillManager
+              hotKillManager,
             );
           } while (result.tag === "Restart");
           switch (result.tag) {
@@ -130,7 +130,7 @@ if (require.main === module) {
       }
       if (process.stdout.isTTY) {
         process.stdout.write(
-          "Exiting elm-watch. Press ctrl+c (again) to force."
+          "Exiting elm-watch. Press ctrl+c (again) to force.",
         );
         process.once("exit", () => {
           process.stdout.cursorTo(0);
@@ -140,7 +140,7 @@ if (require.main === module) {
     })
     .catch((error: unknown) => {
       process.stderr.write(
-        `Unexpected error:\n${unknownErrorToString(error)}\n`
+        `Unexpected error:\n${unknownErrorToString(error)}\n`,
       );
       // Forcefully exit since the watcher might still be running.
       process.exit(1);

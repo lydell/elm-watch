@@ -102,7 +102,7 @@ type TokenizerState = {
 
 function tokenize(
   char: number,
-  tokenizerState: TokenizerState
+  tokenizerState: TokenizerState,
 ): Token | undefined {
   switch (tokenizerState.tag) {
     case "Initial":

@@ -164,7 +164,7 @@ describe("Helpers", () => {
 
     test("just a string", () => {
       expect(unknownErrorToString("some error string")).toBe(
-        '"some error string"'
+        '"some error string"',
       );
     });
 

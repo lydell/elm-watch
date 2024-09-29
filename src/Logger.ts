@@ -44,7 +44,7 @@ export type Logger = {
   reset: () => void;
   queryTerminal: (
     escapes: string,
-    isDone: (stdin: string) => boolean
+    isDone: (stdin: string) => boolean,
   ) => Promise<string | undefined>;
 };
 
@@ -99,11 +99,11 @@ export function makeLogger({
   // don’t support querying colors.
   const queryTerminalTimeoutMs = silentlyReadIntEnvValue(
     env[__ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS],
-    100
+    100,
   );
   const queryTerminalMaxAgeMs = silentlyReadIntEnvValue(
     env[__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS],
-    1000
+    1000,
   );
 
   const config: LoggerConfig = {
@@ -140,7 +140,7 @@ export function makeLogger({
     },
     errorTemplate(template) {
       stdout.write(
-        `${Errors.toTerminalString(template, config.columns, noColor)}\n`
+        `${Errors.toTerminalString(template, config.columns, noColor)}\n`,
       );
     },
     // istanbul ignore next
@@ -155,10 +155,10 @@ export function makeLogger({
                     depth: Infinity,
                     colors: !noColor,
                     maxStringLength: 1000,
-                  })
+                  }),
             ),
-            "\n"
-          )
+            "\n",
+          ),
         );
       }
     },
@@ -213,7 +213,7 @@ export function makeLogger({
           stdin,
           stdout,
           escapes,
-          isDone
+          isDone,
         );
         queryTerminalStatus = {
           tag: "Queried",
@@ -258,7 +258,7 @@ async function queryTerminalHelper(
   stdin: ReadStream,
   stdout: WriteStream,
   escapes: string,
-  isDone: (stdin: string) => boolean
+  isDone: (stdin: string) => boolean,
 ): Promise<string | undefined> {
   return new Promise((resolve) => {
     let stdinString = "";

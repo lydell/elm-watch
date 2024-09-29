@@ -40,14 +40,14 @@ const StyledText = Codec.map(
   {
     decoder: (value) => ({ tag: "StyledText" as const, ...value }),
     encoder: ({ tag: _tag, ...value }) => value,
-  }
+  },
 );
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L394-L409
 export type MessageChunk = Codec.Infer<typeof MessageChunk>;
 const MessageChunk = Codec.flatMap(Codec.multi(["string", "object"]), {
   decoder: (
-    value
+    value,
   ): Codec.DecoderResult<
     StyledText | { tag: "UnstyledText"; string: string }
   > => {
@@ -120,12 +120,12 @@ const GeneralErrorPath = Codec.map(
     Codec.map(Codec.primitiveUnion(["elm.json"]), {
       decoder: (tag) => ({ tag }),
       encoder: ({ tag }) => tag,
-    })
+    }),
   ),
   {
     decoder: (value) => value ?? { tag: "NoPath" as const },
     encoder: (value) => (value.tag === "NoPath" ? null : value),
-  }
+  },
 );
 
 export type GeneralError = Extract<ElmMakeError, { tag: "GeneralError" }>;

@@ -726,13 +726,13 @@ export function inject(compilationMode: CompilationMode, code: string): string {
     (match, name1: string, name: string = name1) =>
       // istanbul ignore next
       replacements[name] ??
-      `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
+      `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`,
   );
 }
 
 function getReplacements(
   compilationMode: CompilationMode,
-  code: string
+  code: string,
 ): Record<string, string> {
   switch (compilationMode) {
     case "debug":
@@ -752,12 +752,12 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
   const match2 = /^\s*var divertHrefToApp = impl\.([\w$]+)/m.exec(code);
   const match3 =
     /^\s*var nextNode = _VirtualDom_node\('body'\)\(_List_Nil\)\(doc\.([\w$]+)\);/m.exec(
-      code
+      code,
     );
   const match4 = /^\s*\(title !== doc\.([\w$]+)\)/m.exec(code);
   const match5 =
     /^\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+)\..*/m.exec(
-      code
+      code,
     );
 
   // istanbul ignore next
@@ -789,8 +789,8 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
     Array.from(
       code.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
       // istanbul ignore next
-      ([, from = "from_missing", to = "to_missing"]) => [from, to]
-    )
+      ([, from = "from_missing", to = "to_missing"]) => [from, to],
+    ),
   );
 
   return {
@@ -809,23 +809,23 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
 
 function updateReplacements(
   optimizeModeRecordNames: Record<string, string>,
-  replacements: Record<string, string>
+  replacements: Record<string, string>,
 ): Record<string, string> {
   return Object.fromEntries(
     Object.entries(replacements).map(([key, value]) => [
       key,
       updateString(optimizeModeRecordNames, value),
-    ])
+    ]),
   );
 }
 
 function updateString(
   optimizeModeRecordNames: Record<string, string>,
-  string: string
+  string: string,
 ): string {
   return string.replace(
     PLACEHOLDER_REGEX,
-    (_, name: string) => optimizeModeRecordNames[name] ?? name
+    (_, name: string) => optimizeModeRecordNames[name] ?? name,
   );
 }
 
@@ -834,7 +834,7 @@ export function proxyFile(
   elmCompiledTimestamp: number,
   browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
-  debug: boolean
+  debug: boolean,
 ): string {
   return `${clientCode(
     outputPath,
@@ -842,7 +842,7 @@ export function proxyFile(
     "proxy",
     browserUiPosition,
     webSocketPort,
-    debug
+    debug,
   )}\n${ClientCode.proxy}`;
 }
 
@@ -852,7 +852,7 @@ export function clientCode(
   compilationMode: CompilationModeWithProxy,
   browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
-  debug: boolean
+  debug: boolean,
 ): string {
   const replacements: Record<string, string> = {
     TARGET_NAME: outputPath.targetName,
@@ -868,7 +868,7 @@ export function clientCode(
       new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
       (match: string, name: string) =>
         // istanbul ignore next
-        replacements[name] ?? match
+        replacements[name] ?? match,
     )
   );
 }
@@ -881,7 +881,7 @@ export function clientCode(
 // - And it used the same WebSocket port. (Otherwise it will never connect to us.)
 export function versionedIdentifier(
   targetName: string,
-  webSocketPort: Port
+  webSocketPort: Port,
 ): string {
   return `// elm-watch hot ${Codec.JSON.stringify(Codec.unknown, {
     version: "%VERSION%",
@@ -898,7 +898,7 @@ const RECORD_FIELD_REGEX =
 
 export function getRecordFields(
   compilationMode: CompilationMode,
-  code: string
+  code: string,
 ): Set<string> | undefined {
   switch (compilationMode) {
     case "debug":
@@ -920,7 +920,7 @@ export function getRecordFields(
 // either side being `undefined`) does not count.
 export function recordFieldsChanged(
   oldSet: Set<string> | undefined,
-  newSet: Set<string> | undefined
+  newSet: Set<string> | undefined,
 ): boolean {
   return !(
     oldSet === undefined ||

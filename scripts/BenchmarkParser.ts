@@ -21,7 +21,7 @@ async function run(args: Array<string>): Promise<void> {
 
   if (!isNonEmptyArray(directories)) {
     throw new KnownError(
-      `You must pass at least one directory to find Elm files in.`
+      `You must pass at least one directory to find Elm files in.`,
     );
   }
 
@@ -37,7 +37,7 @@ async function run(args: Array<string>): Promise<void> {
   };
 
   const elmFiles = directories.flatMap((dir) =>
-    findElmFiles(absolutePathFromString(cwd.path, dir))
+    findElmFiles(absolutePathFromString(cwd.path, dir)),
   );
 
   console.log("Strategy:", strategy);
@@ -60,7 +60,7 @@ const Strategy = Codec.primitiveUnion([
 
 async function runStrategy(
   strategy: Strategy,
-  elmFiles: Array<AbsolutePath>
+  elmFiles: Array<AbsolutePath>,
 ): Promise<Array<Parser.ModuleName>> {
   switch (strategy) {
     case "readFileSync":
@@ -93,7 +93,7 @@ function readFileSyncStrategy(elmFile: AbsolutePath): Array<Parser.ModuleName> {
 }
 
 async function readFileStrategy(
-  elmFile: AbsolutePath
+  elmFile: AbsolutePath,
 ): Promise<Array<Parser.ModuleName>> {
   const elm = await fsPromises.readFile(elmFile.absolutePath);
   const readState = Parser.initialReadState();
@@ -124,7 +124,7 @@ function readSyncStrategy(elmFile: AbsolutePath): Array<Parser.ModuleName> {
 }
 
 async function readStrategy(
-  elmFile: AbsolutePath
+  elmFile: AbsolutePath,
 ): Promise<Array<Parser.ModuleName>> {
   const readState = Parser.initialReadState();
   const fileHandle = await fsPromises.open(elmFile.absolutePath, "r");
@@ -145,7 +145,7 @@ async function readStrategy(
 }
 
 async function createReadStreamStrategy(
-  elmFile: AbsolutePath
+  elmFile: AbsolutePath,
 ): Promise<Array<Parser.ModuleName>> {
   return new Promise((resolve, reject) => {
     const readState = Parser.initialReadState();
@@ -169,7 +169,7 @@ async function createReadStreamStrategy(
 }
 
 async function createReadStreamForAwaitStrategy(
-  elmFile: AbsolutePath
+  elmFile: AbsolutePath,
 ): Promise<Array<Parser.ModuleName>> {
   const readState = Parser.initialReadState();
   const stream = fs.createReadStream(elmFile.absolutePath, {

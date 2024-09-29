@@ -44,36 +44,39 @@ export async function run(
   restartReasons: Array<Hot.LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: Hot.WebSocketState | undefined,
-  hotKillManager: Hot.HotKillManager
+  hotKillManager: Hot.HotKillManager,
 ): Promise<RunResult> {
   const parseResult = ElmWatchJson.findReadAndParse(cwd);
 
   switch (parseResult.tag) {
     case "ReadError":
       logger.errorTemplate(
-        Errors.readElmWatchJson(parseResult.elmWatchJsonPath, parseResult.error)
+        Errors.readElmWatchJson(
+          parseResult.elmWatchJsonPath,
+          parseResult.error,
+        ),
       );
       return handleElmWatchJsonError(
         logger,
         getNow,
         runMode,
         parseResult.elmWatchJsonPath,
-        postprocessWorkerPool
+        postprocessWorkerPool,
       );
 
     case "DecoderError":
       logger.errorTemplate(
         Errors.decodeElmWatchJson(
           parseResult.elmWatchJsonPath,
-          parseResult.error
-        )
+          parseResult.error,
+        ),
       );
       return handleElmWatchJsonError(
         logger,
         getNow,
         runMode,
         parseResult.elmWatchJsonPath,
-        postprocessWorkerPool
+        postprocessWorkerPool,
       );
 
     case "ElmWatchJsonNotFound":
@@ -91,8 +94,8 @@ export async function run(
               parseResult.elmWatchJsonPath,
               runMode,
               args,
-              parseArgsResult.unknownFlags
-            )
+              parseArgsResult.unknownFlags,
+            ),
           );
           return { tag: "Exit", exitCode: 1 };
 
@@ -109,15 +112,15 @@ export async function run(
 
           // The decoder validates that there’s at least one output.
           const knownTargets = Object.keys(
-            config.targets
+            config.targets,
           ) as NonEmptyArray<string>;
 
           const unknownTargetsSubstrings =
             parseArgsResult.targetsSubstrings.filter(
               (substring) =>
                 !knownTargets.some((targetName) =>
-                  targetName.includes(substring)
-                )
+                  targetName.includes(substring),
+                ),
             );
 
           if (isNonEmptyArray(unknownTargetsSubstrings)) {
@@ -125,8 +128,8 @@ export async function run(
               Errors.unknownTargetsSubstrings(
                 parseResult.elmWatchJsonPath,
                 knownTargets,
-                unknownTargetsSubstrings
-              )
+                unknownTargetsSubstrings,
+              ),
             );
             return { tag: "Exit", exitCode: 1 };
           }
@@ -136,7 +139,7 @@ export async function run(
             theElmWatchStuffDir: absolutePathFromString(
               absoluteDirname(parseResult.elmWatchJsonPath.theElmWatchJsonPath),
               "elm-stuff",
-              "elm-watch"
+              "elm-watch",
             ),
           };
 
@@ -144,7 +147,7 @@ export async function run(
             tag: "ElmWatchStuffJsonPath",
             theElmWatchStuffJsonPath: absolutePathFromString(
               elmWatchStuffDir.theElmWatchStuffDir,
-              "stuff.json"
+              "stuff.json",
             ),
           };
 
@@ -158,8 +161,8 @@ export async function run(
               logger.errorTemplate(
                 Errors.readElmWatchStuffJson(
                   elmWatchStuffJsonPath,
-                  elmWatchStuffJsonParseResult.errors
-                )
+                  elmWatchStuffJsonParseResult.errors,
+                ),
               );
               return { tag: "Exit", exitCode: 1 };
 
@@ -167,8 +170,8 @@ export async function run(
               logger.errorTemplate(
                 Errors.decodeElmWatchStuffJson(
                   elmWatchStuffJsonPath,
-                  elmWatchStuffJsonParseResult.error
-                )
+                  elmWatchStuffJsonParseResult.error,
+                ),
               );
               return { tag: "Exit", exitCode: 1 };
 
@@ -187,7 +190,7 @@ export async function run(
                 elmWatchJsonPath: parseResult.elmWatchJsonPath,
                 config: parseResult.config,
                 enabledTargetsSubstrings: isNonEmptyArray(
-                  parseArgsResult.targetsSubstrings
+                  parseArgsResult.targetsSubstrings,
                 )
                   ? parseArgsResult.targetsSubstrings
                   : knownTargets,
@@ -201,21 +204,21 @@ export async function run(
                   logger.errorTemplate(
                     Errors.duplicateOutputs(
                       parseResult.elmWatchJsonPath,
-                      initProjectResult.duplicates
-                    )
+                      initProjectResult.duplicates,
+                    ),
                   );
                   return handleElmWatchJsonError(
                     logger,
                     getNow,
                     runMode,
                     parseResult.elmWatchJsonPath,
-                    postprocessWorkerPool
+                    postprocessWorkerPool,
                   );
 
                 // istanbul ignore next
                 case "NoCommonRoot":
                   logger.errorTemplate(
-                    Errors.noCommonRoot(initProjectResult.paths)
+                    Errors.noCommonRoot(initProjectResult.paths),
                   );
                   return { tag: "Exit", exitCode: 1 };
 
@@ -245,7 +248,7 @@ export async function run(
                         logger,
                         getNow,
                         project,
-                        postprocessWorkerPool
+                        postprocessWorkerPool,
                       );
                       switch (result.tag) {
                         case "Error":
@@ -268,12 +271,12 @@ export async function run(
                         config.port !== undefined
                           ? { tag: "PortFromConfig", port: config.port }
                           : elmWatchStuffJson !== undefined
-                          ? {
-                              tag: "PersistedPort",
-                              port: elmWatchStuffJson.port,
-                            }
-                          : { tag: "NoPort" },
-                        hotKillManager
+                            ? {
+                                tag: "PersistedPort",
+                                port: elmWatchStuffJson.port,
+                              }
+                            : { tag: "NoPort" },
+                        hotKillManager,
                       );
                       switch (result.tag) {
                         case "ExitOnHandledFatalError":
@@ -309,7 +312,7 @@ async function handleElmWatchJsonError(
   getNow: GetNow,
   runMode: RunMode,
   elmWatchJsonPath: ElmWatchJsonPath,
-  postprocessWorkerPool: PostprocessWorkerPool
+  postprocessWorkerPool: PostprocessWorkerPool,
 ): Promise<RunResult> {
   switch (runMode) {
     case "make":
@@ -320,7 +323,7 @@ async function handleElmWatchJsonError(
       Compile.printNumErrors(logger, 1);
       const elmWatchJsonEvent = await Hot.watchElmWatchJsonOnce(
         getNow,
-        elmWatchJsonPath
+        elmWatchJsonPath,
       );
       logger.clearScreen();
       return {

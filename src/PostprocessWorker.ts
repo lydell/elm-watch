@@ -95,7 +95,7 @@ async function elmWatchNode({
       imported: unknownValueAsString(
         // To/from entries is needed. Otherwise `repr` prints `"Module"`.
         Object.fromEntries(Object.entries(imported)),
-        (value) => Codec.repr(value, { maxObjectChildren: 10 })
+        (value) => Codec.repr(value, { maxObjectChildren: 10 }),
       ),
       typeofDefault: typeof imported.default,
       ...emptyStdio,
@@ -143,7 +143,7 @@ async function elmWatchNode({
 
 function unknownValueAsString(
   value: unknown,
-  toString: (value: unknown) => string
+  toString: (value: unknown) => string,
 ): UnknownValueAsString {
   return {
     tag: "UnknownValueAsString",

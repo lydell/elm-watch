@@ -333,7 +333,7 @@ describe("hot", () => {
     const dir = path.join(FIXTURES_DIR, fixture);
     fs.copyFileSync(
       path.join(dir, "elm.template.json"),
-      path.join(dir, "elm.json")
+      path.join(dir, "elm.json"),
     );
 
     const { terminal } = await run({
@@ -549,7 +549,7 @@ describe("hot", () => {
         constructor(url: URL | string) {
           if (typeof url === "string") {
             throw new Error(
-              "TestWebSocket expects the url to be a URL object, not a string!"
+              "TestWebSocket expects the url to be a URL object, not a string!",
             );
           }
 
@@ -605,8 +605,8 @@ describe("hot", () => {
       expect(
         renders.replace(
           /elmCompiledTimestamp=\d+/,
-          "elmCompiledTimestamp=1644064438938"
-        )
+          "elmCompiledTimestamp=1644064438938",
+        ),
       ).toMatchInlineSnapshot(`
         ▼ 🔌 13:10:05 BadUrl
         ================================================================================
@@ -932,11 +932,11 @@ describe("hot", () => {
       const elmWatchJsonPath = path.join(dir, "elm-watch.json");
       const elmWatchJsonTemplatePath = path.join(
         dir,
-        "elm-watch.template.json"
+        "elm-watch.template.json",
       );
       const elmWatchJsonString = fs.readFileSync(
         elmWatchJsonTemplatePath,
-        "utf8"
+        "utf8",
       );
       fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
 
@@ -956,7 +956,7 @@ describe("hot", () => {
             case 1:
               fs.writeFileSync(
                 elmWatchJsonPath,
-                elmWatchJsonString.replace("Main", "Renamed")
+                elmWatchJsonString.replace("Main", "Renamed"),
               );
               return "KeepGoing";
             case 2:
@@ -1486,12 +1486,12 @@ describe("hot", () => {
             touch(roguePath);
             fs.writeFileSync(
               elmWatchJsonPath,
-              elmWatchJsonString.slice(0, -10)
+              elmWatchJsonString.slice(0, -10),
             );
             await wait(100);
             fs.writeFileSync(
               elmWatchJsonPath,
-              elmWatchJsonString.replace(/"postprocess":.*/, "")
+              elmWatchJsonString.replace(/"postprocess":.*/, ""),
             );
             return "KeepGoing" as const;
           case 2:
@@ -1506,7 +1506,7 @@ describe("hot", () => {
             return "KeepGoing";
           default:
             throw new Error(
-              "Expected elm-watch to exit due to no elm-watch.json!"
+              "Expected elm-watch to exit due to no elm-watch.json!",
             );
         }
       },
@@ -2229,7 +2229,7 @@ describe("hot", () => {
     const postprocessTemplatePath = path.join(
       FIXTURES_DIR,
       fixture,
-      "postprocess.template.js"
+      "postprocess.template.js",
     );
     const roguePath = path.join(FIXTURES_DIR, fixture, "src", "postprocess.js");
     const postprocessString = fs
@@ -2256,7 +2256,7 @@ describe("hot", () => {
           case 2:
             fs.writeFileSync(
               postprocessPath,
-              postprocessString.replace("toUpperCase", "toLowerCase")
+              postprocessString.replace("toUpperCase", "toLowerCase"),
             );
             return "KeepGoing";
           case 3:
@@ -2862,7 +2862,7 @@ describe("hot", () => {
         ================================================================================
         ▼ ✅ 13:10:05 Target1
       `);
-    }
+    },
   );
 
   test("elm compilation errors from the start, with terminal resize", async () => {
@@ -3178,13 +3178,13 @@ describe("hot", () => {
 
     function assert1(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>postprocess content before</div>`
+        `<div>postprocess content before</div>`,
       );
     }
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>postprocess content after</div>`
+        `<div>postprocess content after</div>`,
       );
     }
   });
@@ -3287,13 +3287,13 @@ describe("hot", () => {
 
     function assert1(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>postprocess content before</div>`
+        `<div>postprocess content before</div>`,
       );
     }
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>postprocess content after</div>`
+        `<div>postprocess content after</div>`,
       );
     }
   });
@@ -3781,7 +3781,7 @@ describe("hot", () => {
         // Windows
         .replace(
           "'nope' is not recognized as an internal or external command,\r\noperable program or batch file.",
-          replacement
+          replacement,
         )
         .replace("code 1.", "code 127.");
 
@@ -3918,7 +3918,7 @@ describe("hot", () => {
       const outputFile = path.join(
         FIXTURES_DIR,
         fixture,
-        "click-error-location.txt"
+        "click-error-location.txt",
       );
       rm(outputFile);
 
@@ -3954,7 +3954,7 @@ describe("hot", () => {
         ▼ 🚨 13:10:05 Main
       `);
       expect(clean(fs.readFileSync(outputFile, "utf-8"))).toMatchInlineSnapshot(
-        `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31`
+        `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31`,
       );
     });
   });
@@ -3974,7 +3974,7 @@ describe("hot", () => {
       onIdle: ({ body }) => {
         // No debugger.
         expect(body.outerHTML).toMatchInlineSnapshot(
-          `<body><div>Html</div></body>`
+          `<body><div>Html</div></body>`,
         );
         expandUi();
         return "Stop";
@@ -4629,10 +4629,10 @@ describe("hot", () => {
     const dir = path.join(FIXTURES_DIR, fixture);
     const elmWatchJsonPath = path.join(dir, "elm-watch.json");
     const elmWatchJson: unknown = JSON.parse(
-      fs.readFileSync(elmWatchJsonPath, "utf8")
+      fs.readFileSync(elmWatchJsonPath, "utf8"),
     );
     const portResult = Codec.fields({ port: Codec.number }).decoder(
-      elmWatchJson
+      elmWatchJson,
     );
     if (portResult.tag === "DecoderError") {
       throw new Error(Codec.format(portResult.error));
@@ -4831,7 +4831,7 @@ describe("hot", () => {
 
     const cleanedRenders = renders.replace(
       /compiled .+? and/,
-      "compiled 10/9/2022, 11:36:01 AM, and"
+      "compiled 10/9/2022, 11:36:01 AM, and",
     );
 
     expect(cleanedRenders).toMatchInlineSnapshot(`
@@ -4977,7 +4977,7 @@ describe("hot", () => {
   describe("printTimeline", () => {
     function print(
       events: Array<LatestEvent>,
-      loggerConfig?: Partial<LoggerConfig>
+      loggerConfig?: Partial<LoggerConfig>,
     ): string | undefined {
       const result = printTimeline(
         {
@@ -4989,7 +4989,7 @@ describe("hot", () => {
           columns: 80,
           ...loggerConfig,
         },
-        events
+        events,
       );
       return result === undefined
         ? undefined
@@ -5049,7 +5049,7 @@ describe("hot", () => {
 
     test("1 event", () => {
       expect(print(events.slice(0, 1))).toMatchInlineSnapshot(
-        `⧙ℹ️ 23:59:05 Changed /One.elm⧘`
+        `⧙ℹ️ 23:59:05 Changed /One.elm⧘`,
       );
     });
 

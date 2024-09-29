@@ -59,14 +59,14 @@ export function quote(string: string): string {
 export function formatDate(date: Date): string {
   return join(
     [pad(date.getFullYear()), pad(date.getMonth() + 1), pad(date.getDate())],
-    "-"
+    "-",
   );
 }
 
 export function formatTime(date: Date): string {
   return join(
     [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())],
-    ":"
+    ":",
   );
 }
 
@@ -111,7 +111,7 @@ export function capitalize(string: string): string {
 
 export function silentlyReadIntEnvValue(
   value: string | undefined,
-  defaultValue: number
+  defaultValue: number,
 ): number {
   return /^\d+$/.test(value ?? "") ? Number(value) : defaultValue;
 }
@@ -127,21 +127,21 @@ export const toError: ((arg: unknown) => NodeJS.ErrnoException) & {
   toError.jestWorkaround !== undefined
     ? toError.jestWorkaround(arg)
     : arg instanceof Error
-    ? arg
-    : new Error(
-        `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
-      );
+      ? arg
+      : new Error(
+          `Caught error not instanceof Error: ${unknownErrorToString(arg)}`,
+        );
 
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
     ? (error as { stack: string }).stack
     : typeof (error as { message?: string } | undefined)?.message === "string"
-    ? (error as { message: string }).message
-    : Codec.repr(error);
+      ? (error as { message: string }).message
+      : Codec.repr(error);
 }
 
 export function codecCatcher<Decoded, Encoded>(
-  codec: Codec.Codec<Decoded, Encoded>
+  codec: Codec.Codec<Decoded, Encoded>,
 ): Codec.Codec<Decoded, Encoded> {
   return {
     decoder: (value) => {

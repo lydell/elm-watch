@@ -13,7 +13,7 @@ export type Theme = {
 // Search for “Set Text Parameters” in: https://www.xfree86.org/current/ctlseqs.html
 const THEME_ESCAPES_STRING = Array.from(
   { length: 16 },
-  (_, i) => `\x1B]4;${i};?\x1B\\` // Palette.
+  (_, i) => `\x1B]4;${i};?\x1B\\`, // Palette.
 )
   .concat("\x1B]10;?\x1B\\", "\x1B]11;?\x1B\\") // Foreground and background.
   .join("");
@@ -100,7 +100,7 @@ export async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
     return DEFAULT_THEME;
   }
   const stdin = await logger.queryTerminal(THEME_ESCAPES_STRING, (stdinSoFar) =>
-    stdinSoFar.includes(THEME_ESCAPES_DONE_CHECK)
+    stdinSoFar.includes(THEME_ESCAPES_DONE_CHECK),
   );
   return stdin === undefined ? DEFAULT_THEME : parseTheme(stdin);
 }

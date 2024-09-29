@@ -51,11 +51,11 @@ type ParseError =
     };
 
 export function readAndParse(
-  elmWatchStuffJsonPath: ElmWatchStuffJsonPath
+  elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
 ): ParseResult {
   const parsed = readJsonFile(
     elmWatchStuffJsonPath.theElmWatchStuffJsonPath,
-    ElmWatchStuffJson
+    ElmWatchStuffJson,
   );
   switch (parsed.tag) {
     case "DecoderError":

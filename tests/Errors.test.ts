@@ -39,7 +39,7 @@ const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
 async function run(
   fixture: string,
   args: Array<string>,
-  options?: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean }
+  options?: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean },
 ): Promise<string> {
   return runAbsolute(path.join(FIXTURES_DIR, fixture), args, options);
 }
@@ -51,7 +51,7 @@ async function runAbsolute(
     env,
     isTTY = true,
     exitHotOnError = false,
-  }: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean } = {}
+  }: { env?: Env; isTTY?: boolean; exitHotOnError?: boolean } = {},
 ): Promise<string> {
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();
@@ -93,7 +93,7 @@ async function runWithBadElmBin(
   {
     postprocess = false,
     exitHotOnError = false,
-  }: { postprocess?: boolean; exitHotOnError?: boolean } = {}
+  }: { postprocess?: boolean; exitHotOnError?: boolean } = {},
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
   const BUILD = path.join(dir, "build");
@@ -104,12 +104,12 @@ async function runWithBadElmBin(
     {
       env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
       exitHotOnError,
-    }
+    },
   );
 }
 
 async function runWithBadElmBinAndWrittenError(
-  fixture: string
+  fixture: string,
 ): Promise<{ output: string; writtenError: string }> {
   const dir = path.join(FIXTURES_DIR, "valid");
 
@@ -117,7 +117,7 @@ async function runWithBadElmBinAndWrittenError(
     fs
       .readdirSync(dir)
       .filter((item) =>
-        /^elm-watch-ElmMakeJsonParseError-[^.]+\.txt$/.test(item)
+        /^elm-watch-ElmMakeJsonParseError-[^.]+\.txt$/.test(item),
       )
       .map((item) => path.join(dir, item))
       .filter((item) => fs.statSync(item).isFile());
@@ -141,7 +141,7 @@ async function runWithBadElmBinAndWrittenError(
   } catch (unknownError) {
     const error = toError(unknownError);
     throw new Error(
-      `Expected ${errorPath} to exist.\n\n${error.message}\n\n${output}`
+      `Expected ${errorPath} to exist.\n\n${error.message}\n\n${output}`,
     );
   }
 
@@ -157,7 +157,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 describe("errors", () => {
   test("unknown command", async () => {
     expect(await run("wherever", ["nope"])).toMatchInlineSnapshot(
-      `Unknown command: nope`
+      `Unknown command: nope`,
     );
   });
 
@@ -210,7 +210,9 @@ describe("errors", () => {
     describe("bad target name", () => {
       test("starts with dash", async () => {
         expect(
-          await run("elm-watch-json-bad-target-name/starts-with-dash", ["make"])
+          await run("elm-watch-json-bad-target-name/starts-with-dash", [
+            "make",
+          ]),
         ).toMatchInlineSnapshot(`
           ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
           /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/starts-with-dash/elm-watch.json
@@ -230,7 +232,7 @@ describe("errors", () => {
         expect(
           await run("elm-watch-json-bad-target-name/starts-with-whitespace", [
             "make",
-          ])
+          ]),
         ).toMatchInlineSnapshot(`
           ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
           /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/starts-with-whitespace/elm-watch.json
@@ -248,7 +250,9 @@ describe("errors", () => {
 
       test("contains newline", async () => {
         expect(
-          await run("elm-watch-json-bad-target-name/contains-newline", ["make"])
+          await run("elm-watch-json-bad-target-name/contains-newline", [
+            "make",
+          ]),
         ).toMatchInlineSnapshot(`
           ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
           /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/contains-newline/elm-watch.json
@@ -268,7 +272,7 @@ describe("errors", () => {
         expect(
           await run("elm-watch-json-bad-target-name/ends-with-whitespace", [
             "make",
-          ])
+          ]),
         ).toMatchInlineSnapshot(`
           ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
           /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/ends-with-whitespace/elm-watch.json
@@ -287,7 +291,7 @@ describe("errors", () => {
 
     test("bad output extension", async () => {
       expect(
-        await run("elm-watch-json-decode-error/bad-output-extension", ["make"])
+        await run("elm-watch-json-decode-error/bad-output-extension", ["make"]),
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension/elm-watch.json
@@ -307,8 +311,8 @@ describe("errors", () => {
       expect(
         await run(
           "elm-watch-json-decode-error/bad-output-extension-just-dot-js",
-          ["make"]
-        )
+          ["make"],
+        ),
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension-just-dot-js/elm-watch.json
@@ -376,7 +380,7 @@ describe("errors", () => {
 
     test("bad input extension", async () => {
       expect(
-        await run("elm-watch-json-decode-error/bad-input-extension", ["make"])
+        await run("elm-watch-json-decode-error/bad-input-extension", ["make"]),
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-extension/elm-watch.json
@@ -393,7 +397,9 @@ describe("errors", () => {
 
     test("bad input module name", async () => {
       expect(
-        await run("elm-watch-json-decode-error/bad-input-module-name", ["make"])
+        await run("elm-watch-json-decode-error/bad-input-module-name", [
+          "make",
+        ]),
       ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-module-name/elm-watch.json
@@ -472,7 +478,7 @@ describe("errors", () => {
         "src/Game.elm",
         "--output",
         "dist/game.js",
-      ])
+      ]),
     ).toMatchInlineSnapshot(`
       ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
 
@@ -505,7 +511,7 @@ describe("errors", () => {
           "--output",
           "bundle.js",
           "--debug",
-        ])
+        ]),
       ).toMatchInlineSnapshot(`
         ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
@@ -540,7 +546,7 @@ describe("errors", () => {
 
     test("no suggesting for unknown flags", async () => {
       expect(
-        await run("valid", ["make", "src/App.elm", "--loglevel=silent", "-f"])
+        await run("valid", ["make", "src/App.elm", "--loglevel=silent", "-f"]),
       ).toMatchInlineSnapshot(`
         ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
@@ -562,7 +568,7 @@ describe("errors", () => {
           "src/App.elm",
           "../lib/Admin.elm",
           "--output=dist/main.js",
-        ])
+        ]),
       ).toMatchInlineSnapshot(`
         ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
@@ -621,7 +627,7 @@ describe("errors", () => {
           "ignored.js",
           "--docs",
           "docs.json",
-        ])
+        ]),
       ).toMatchInlineSnapshot(`
         ⧙-- UNEXPECTED FLAGS ------------------------------------------------------------⧘
 
@@ -664,7 +670,7 @@ describe("errors", () => {
 
   test("unknown targets", async () => {
     expect(
-      await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"])
+      await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"]),
     ).toMatchInlineSnapshot(`
       ⧙-- UNKNOWN TARGETS SUBSTRINGS --------------------------------------------------⧘
       /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
@@ -913,7 +919,7 @@ describe("errors", () => {
             ...TEST_ENV,
             [NO_COLOR]: "",
           },
-        })
+        }),
       ).toMatchInlineSnapshot(`
         yoooooooooooooooooooooooooooolooooooooooooooooooooooooooooooooooooooooooooooo...
 
@@ -970,7 +976,7 @@ describe("errors", () => {
         await run("elm-json-is-folder", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
           exitHotOnError: true,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 Main
@@ -1001,7 +1007,7 @@ describe("errors", () => {
         await run("elm-json-bad-json", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
           exitHotOnError: true,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 Main
@@ -1033,7 +1039,7 @@ describe("errors", () => {
         await run("elm-json-decode-error", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
           exitHotOnError: true,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 Main
@@ -1071,10 +1077,10 @@ describe("errors", () => {
           env: {
             ...TEST_ENV,
             PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
-              path.delimiter
+              path.delimiter,
             ),
           },
-        })
+        }),
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
 
@@ -1124,9 +1130,9 @@ describe("errors", () => {
       expect(
         printPATHWindows({
           Path: [__dirname, path.join(__dirname, "some", "bin")].join(
-            path.delimiter
+            path.delimiter,
           ),
-        })
+        }),
       ).toMatchInlineSnapshot(`
           This is what the Path environment variable looks like:
 
@@ -1137,7 +1143,7 @@ describe("errors", () => {
 
     test("Windows no PATH-like", () => {
       expect(printPATHWindows({})).toMatchInlineSnapshot(
-        `I can't find any program, because I can't find any PATH-like environment variables!`
+        `I can't find any program, because I can't find any PATH-like environment variables!`,
       );
     });
 
@@ -1145,14 +1151,14 @@ describe("errors", () => {
       expect(
         printPATHWindows({
           Path: [__dirname, path.join(__dirname, "some", "bin")].join(
-            path.delimiter
+            path.delimiter,
           ),
           PATH: [
             path.join(__dirname, "that", "bin"),
             path.join(__dirname, "final", "bin"),
           ].join(path.delimiter),
           notPath: "should not be seen",
-        })
+        }),
       ).toMatchInlineSnapshot(`
         You seem to have several PATH-like environment variables set. The last one
         should be the one that is actually used, but it's better to have a single one!
@@ -1179,7 +1185,7 @@ describe("errors", () => {
             ...TEST_ENV,
             [__ELM_WATCH_TMP_DIR]: tmpDir,
           },
-        })
+        }),
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
 
@@ -1319,9 +1325,8 @@ describe("errors", () => {
 
   describe("elm make json errors", () => {
     test("syntax error", async () => {
-      const { output, writtenError } = await runWithBadElmBinAndWrittenError(
-        "json-syntax-error"
-      );
+      const { output, writtenError } =
+        await runWithBadElmBinAndWrittenError("json-syntax-error");
 
       expect(output).toMatchInlineSnapshot(`
         🚨 app
@@ -1372,9 +1377,8 @@ describe("errors", () => {
     });
 
     test("decode error", async () => {
-      const { output, writtenError } = await runWithBadElmBinAndWrittenError(
-        "json-decode-error"
-      );
+      const { output, writtenError } =
+        await runWithBadElmBinAndWrittenError("json-decode-error");
 
       expect(output).toMatchInlineSnapshot(`
         🚨 app
@@ -1824,7 +1828,7 @@ describe("errors", () => {
 
     test("--optimize with Debug.log", async () => {
       expect(
-        await run("compilation-errors", ["make", "DebugLog", "--optimize"])
+        await run("compilation-errors", ["make", "DebugLog", "--optimize"]),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 DebugLog
@@ -1871,7 +1875,7 @@ describe("errors", () => {
         {
           cwd: dir,
           encoding: "utf8",
-        }
+        },
       );
       if (!(result.error === undefined || result.error === null)) {
         throw result.error;
@@ -1880,7 +1884,7 @@ describe("errors", () => {
         throw new Error(
           `elm make failed with status ${result.status ?? "null"}.\n\n${
             result.stdout
-          }\n\n${result.stderr}`
+          }\n\n${result.stderr}`,
         );
       }
       fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
@@ -2145,7 +2149,7 @@ describe("errors", () => {
       expect(
         await run(fixture, ["hot"], {
           exitHotOnError: true,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 Main
@@ -2176,7 +2180,7 @@ describe("errors", () => {
       ]);
 
       expect(
-        output.replace(/PATH(.*:\n\n)(.+\n)+/i, "PATH$1/some/fake/bin/path\n")
+        output.replace(/PATH(.*:\n\n)(.+\n)+/i, "PATH$1/some/fake/bin/path\n"),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
@@ -2325,7 +2329,7 @@ describe("errors", () => {
 
     test("exit 2 + stderr + debug", async () => {
       expect(
-        await run("postprocess/variants/exit-2-stderr", ["make", "--debug"])
+        await run("postprocess/variants/exit-2-stderr", ["make", "--debug"]),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
@@ -2454,7 +2458,7 @@ describe("errors", () => {
         await run("postprocess/variants/exit-3-no-output", [
           "make",
           "--optimize",
-        ])
+        ]),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
@@ -2482,7 +2486,7 @@ describe("errors", () => {
       expect(
         await run("postprocess/variants/exit-4-both-stdout-and-stderr", [
           "make",
-        ])
+        ]),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
@@ -2542,7 +2546,7 @@ describe("errors", () => {
       const dir = path.join(FIXTURES_DIR, fixture);
       const elmWatchJson = fs.readFileSync(
         path.join(dir, "elm-watch.template.json"),
-        "utf8"
+        "utf8",
       );
       // `echo` works for the test on all platforms, except on Linux it
       // _sometimes_ does not trigger the stdin error. `true` works on Linux and
@@ -2656,7 +2660,7 @@ describe("errors", () => {
 
     test("throw non-error at import, with console.log", async () => {
       expect(
-        await run("postprocess/variants/throw-non-error-at-import", ["make"])
+        await run("postprocess/variants/throw-non-error-at-import", ["make"]),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         🚨 main
@@ -2989,7 +2993,7 @@ describe("errors", () => {
         dir,
         "elm-stuff",
         "elm-watch",
-        "stuff.json"
+        "stuff.json",
       );
       fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), {
         recursive: true,
@@ -2999,7 +3003,7 @@ describe("errors", () => {
         fs.writeFileSync(
           elmWatchStuffJsonPath,
           Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
-          { mode: "0444" } // readonly
+          { mode: "0444" }, // readonly
         );
       } catch {
         // Ignore write errors (readonly).
@@ -3008,7 +3012,7 @@ describe("errors", () => {
         await runAbsolute(dir, ["hot"], {
           env: elmBinAlwaysSucceedEnv,
           exitHotOnError: true,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ✅ Dependencies
         ✅ Main⧙                                             1 ms Q | 765 ms T ¦  50 ms W⧘
@@ -3036,7 +3040,7 @@ describe("errors", () => {
       await run("import-walker-file-system-error", ["hot"], {
         env: elmBinAlwaysSucceedEnv,
         exitHotOnError: true,
-      })
+      }),
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
       🚨 Main
@@ -3077,7 +3081,7 @@ describe("errors", () => {
         await run("port-conflict-for-persisted-port", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
           exitHotOnError: true,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch/stuff.json
@@ -3110,7 +3114,7 @@ describe("errors", () => {
         await run("port-conflict-for-port-from-config", ["hot"], {
           env: elmBinAlwaysSucceedEnv,
           exitHotOnError: true,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/port-conflict-for-port-from-config/elm-watch.json
@@ -3212,7 +3216,7 @@ describe("errors", () => {
       expect(
         await run("ci", ["make", "postprocess-error"], {
           isTTY: false,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         ⏳ Dependencies
         ✅ Dependencies
@@ -3252,7 +3256,7 @@ describe("errors", () => {
             [NO_COLOR]: "",
           },
           isTTY: false,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
         Dependencies: success
@@ -3306,7 +3310,7 @@ describe("errors", () => {
             [NO_COLOR]: "",
           },
           isTTY: false,
-        })
+        }),
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
         Dependencies: success
@@ -3343,7 +3347,7 @@ describe("errors", () => {
           ...TEST_ENV,
           [__ELM_WATCH_MAX_PARALLEL]: "0",
         },
-      })
+      }),
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
       ⚪️ app: queued
@@ -3381,9 +3385,9 @@ describe("errors", () => {
               { tag: "AbsolutePath", absolutePath: "D:\\stuff\\elm\\elm.json" },
             ]),
             80,
-            false
-          )
-        )
+            false,
+          ),
+        ),
       ).toMatchInlineSnapshot(`
         -- NO COMMON ROOT --------------------------------------------------------------
 
@@ -3418,9 +3422,9 @@ describe("errors", () => {
                 },
                 env: {},
               },
-            }
-          )
-        )
+            },
+          ),
+        ),
       ).toMatchInlineSnapshot(`
         ⧙-- TROUBLE SPAWNING COMMAND ----------------------------------------------------⧘
         /Users/you/project/elm.json
@@ -3466,9 +3470,9 @@ describe("errors", () => {
                 },
                 env: {},
               },
-            }
-          )
-        )
+            },
+          ),
+        ),
       ).toMatchInlineSnapshot(`
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
@@ -3515,9 +3519,9 @@ describe("errors", () => {
                 },
                 env: {},
               },
-            }
-          )
-        )
+            },
+          ),
+        ),
       ).toMatchInlineSnapshot(`
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: main⧘
@@ -3536,7 +3540,9 @@ describe("errors", () => {
 
     test("portConflictForNoPort", () => {
       expect(
-        printError(Errors.portConflictForNoPort(new Error("The error message")))
+        printError(
+          Errors.portConflictForNoPort(new Error("The error message")),
+        ),
       ).toMatchInlineSnapshot(`
         ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
 

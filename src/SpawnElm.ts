@@ -132,11 +132,11 @@ export function make({
           stderr === ""
           ? { tag: "Success" }
           : exitReason.tag === "ExitCode" &&
-            exitReason.exitCode === 1 &&
-            stdout === ""
-          ? parsePotentialElmMakeJson(command, stderr) ??
-            unexpectedElmMakeOutput
-          : unexpectedElmMakeOutput;
+              exitReason.exitCode === 1 &&
+              stdout === ""
+            ? (parsePotentialElmMakeJson(command, stderr) ??
+              unexpectedElmMakeOutput)
+            : unexpectedElmMakeOutput;
       }
     }
   };
@@ -161,11 +161,11 @@ function delayKill(
   startTime: number,
   getNow: GetNow,
   env: Env,
-  kill: () => void
+  kill: () => void,
 ): void {
   const timeout = silentlyReadIntEnvValue(
     env[__ELM_WATCH_ELM_TIMEOUT_MS],
-    10000
+    10000,
   );
   const elapsed = getNow().getTime() - startTime;
   const timeoutId = setTimeout(kill, Math.max(0, timeout - elapsed));
@@ -175,7 +175,7 @@ function delayKill(
 }
 
 export function compilationModeToArg(
-  compilationMode: CompilationMode
+  compilationMode: CompilationMode,
 ): string | undefined {
   switch (compilationMode) {
     case "standard":
@@ -188,7 +188,7 @@ export function compilationModeToArg(
 }
 
 function outputPathToAbsoluteString(
-  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean })
+  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean }),
 ): string {
   switch (outputPath.tag) {
     case "OutputPath":
@@ -210,7 +210,7 @@ function maybeToArray<T>(arg: T | undefined): Array<T> {
 
 function parsePotentialElmMakeJson(
   command: Command,
-  stderr: string
+  stderr: string,
 ): RunElmMakeResult | undefined {
   if (!stderr.endsWith("}")) {
     // This is a workaround for when Elm crashes, potentially half-way through printing the JSON.
@@ -245,12 +245,12 @@ function parsePotentialElmMakeJson(
 function parseActualElmMakeJson(
   command: Command,
   jsonString: string,
-  extraError: string | undefined
+  extraError: string | undefined,
 ): RunElmMakeResult {
   // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
   const parsed = Codec.JSON.parse(
     ElmMakeError,
-    jsonString.replace(/\t/g, "\\t")
+    jsonString.replace(/\t/g, "\\t"),
   );
   switch (parsed.tag) {
     case "DecoderError":
@@ -265,8 +265,8 @@ function parseActualElmMakeJson(
               { tag: "NoLocation" },
               parsed.error,
               { tag: "ErrorFileBadContent", content: jsonString },
-              command
-            )
+              command,
+            ),
           ),
           hash: jsonString,
         }),
@@ -340,7 +340,7 @@ export function install({
       tag: "AbsolutePath",
       absolutePath: env[__ELM_WATCH_TMP_DIR] ?? os.tmpdir(),
     },
-    "ElmWatchDummy.elm"
+    "ElmWatchDummy.elm",
   );
 
   try {

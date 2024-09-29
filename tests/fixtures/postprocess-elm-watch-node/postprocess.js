@@ -4,8 +4,8 @@ module.exports = (input) => {
   if (Object.keys(input).length !== 5) {
     return new Error(
       `Expected 5 keys but got ${Object.keys(input).length}: ${JSON.stringify(
-        input
-      )}`
+        input,
+      )}`,
     );
   }
 
@@ -13,7 +13,7 @@ module.exports = (input) => {
 
   if (argv.length !== 4) {
     return new Error(
-      `Expected 4 argv but got ${argv.length}: ${JSON.stringify(argv)}`
+      `Expected 4 argv but got ${argv.length}: ${JSON.stringify(argv)}`,
     );
   }
 
@@ -23,8 +23,8 @@ module.exports = (input) => {
   if (name !== expectedName) {
     return new Error(
       `Expected name to be ${JSON.stringify(
-        expectedName
-      )} but got: ${JSON.stringify(name)}`
+        expectedName,
+      )} but got: ${JSON.stringify(name)}`,
     );
   }
 
@@ -34,8 +34,8 @@ module.exports = (input) => {
   if (last !== expectedFile) {
     return new Error(
       `Expected last segment of file to be ${JSON.stringify(
-        expectedFile
-      )} but got: ${JSON.stringify(file)}`
+        expectedFile,
+      )} but got: ${JSON.stringify(file)}`,
     );
   }
 
@@ -43,8 +43,8 @@ module.exports = (input) => {
   if (arg1 !== expectedArg1) {
     return new Error(
       `Expected arg 1 to be ${JSON.stringify(
-        expectedArg1
-      )} but got: ${JSON.stringify(arg1)}`
+        expectedArg1,
+      )} but got: ${JSON.stringify(arg1)}`,
     );
   }
 
@@ -52,8 +52,8 @@ module.exports = (input) => {
   if (arg2 !== expectedArg2) {
     return new Error(
       `Expected arg 2 to be ${JSON.stringify(
-        expectedArg2
-      )} but got: ${JSON.stringify(arg2)}`
+        expectedArg2,
+      )} but got: ${JSON.stringify(arg2)}`,
     );
   }
 
@@ -61,8 +61,8 @@ module.exports = (input) => {
   if (targetName !== expectedTargetName) {
     return new Error(
       `Expected targetName to be ${JSON.stringify(
-        expectedTargetName
-      )} but got: ${JSON.stringify(targetName)}`
+        expectedTargetName,
+      )} but got: ${JSON.stringify(targetName)}`,
     );
   }
 
@@ -71,7 +71,7 @@ module.exports = (input) => {
       const probe = "Compiled in DEV mode";
       if (!code.includes(probe)) {
         return new Error(
-          `Expected the passed code to contain: ${JSON.stringify(probe)}`
+          `Expected the passed code to contain: ${JSON.stringify(probe)}`,
         );
       }
       break;
@@ -79,7 +79,7 @@ module.exports = (input) => {
 
     default:
       return new Error(
-        `Unexpected compilation mode: ${JSON.stringify(compilationMode)}`
+        `Unexpected compilation mode: ${JSON.stringify(compilationMode)}`,
       );
   }
 

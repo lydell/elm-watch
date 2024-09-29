@@ -51,7 +51,7 @@ const Target = Codec.fields(
                 },
               },
         encoder: (value) => value,
-      })
+      }),
     ),
     output: Codec.flatMap(Codec.string, {
       decoder: (output) =>
@@ -69,12 +69,12 @@ const Target = Codec.fields(
       encoder: (value) => value,
     }),
   },
-  { allowExtraFields: false }
+  { allowExtraFields: false },
 );
 
 const TargetRecordHelper = {
   decoder: (
-    record: Record<string, Target>
+    record: Record<string, Target>,
   ): Codec.DecoderResult<Record<string, Target>> => {
     const keys = Object.keys(record);
     for (const key of keys) {
@@ -114,7 +114,7 @@ const Config = Codec.fields(
     postprocess: Codec.field(NonEmptyArray(Codec.string), { optional: true }),
     port: Codec.field(Port, { optional: true }),
   },
-  { allowExtraFields: false }
+  { allowExtraFields: false },
 );
 
 type ParseResult =
@@ -177,7 +177,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
 export function example(
   cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
-  elmMakeParsed: ElmMakeParsed
+  elmMakeParsed: ElmMakeParsed,
 ): string {
   const { elmFiles, output = "build/main.js" } = elmMakeParsed;
 
@@ -191,11 +191,11 @@ export function example(
               toUnixPath(
                 path.relative(
                   path.dirname(
-                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath
+                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
                   ),
-                  path.resolve(cwd.path.absolutePath, file)
-                )
-              )
+                  path.resolve(cwd.path.absolutePath, file),
+                ),
+              ),
             )
           : ["src/Main.elm"],
         output,
@@ -254,6 +254,6 @@ export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
       elmFiles: [],
       output: undefined,
       justSawOutputFlag: false,
-    }
+    },
   );
 }

@@ -2,7 +2,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
   initMutable: (
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: Result) => void,
-    rejectPromise: (error: Error) => void
+    rejectPromise: (error: Error) => void,
   ) => Mutable;
   init: [Model, Array<Cmd>];
   update: (msg: Msg, model: Model) => [Model, Array<Cmd>];
@@ -11,7 +11,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     mutable: Mutable,
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: Result) => void,
-    rejectPromise: (error: Error) => void
+    rejectPromise: (error: Error) => void,
   ) => void;
 }): Promise<Result> {
   return new Promise((resolve, reject) => {
@@ -54,7 +54,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
             cmds.length = 0;
             killed = true;
             reject(error);
-          }
+          },
         );
         // istanbul ignore next
         if (killed) {
@@ -73,7 +73,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
       (error) => {
         killed = true;
         reject(error);
-      }
+      },
     );
 
     runCmds(initialCmds);

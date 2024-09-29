@@ -15,7 +15,7 @@ function walkImportsHelper(
   fixture: string,
   inputFiles: NonEmptyArray<string>,
   sourceDirectories: NonEmptyArray<string>,
-  { resolveSymlinks = false } = {}
+  { resolveSymlinks = false } = {},
 ): string {
   const dir = absolutePathFromString(FIXTURES_DIR, fixture);
 
@@ -31,7 +31,7 @@ function walkImportsHelper(
           ? absoluteRealpath(theInputPath)
           : theInputPath,
       };
-    }
+    },
   );
 
   const result = walkImports(
@@ -40,9 +40,9 @@ function walkImportsHelper(
       (sourceDirectory): SourceDirectory => ({
         tag: "SourceDirectory",
         theSourceDirectory: absolutePathFromString(dir, sourceDirectory),
-      })
+      }),
     ),
-    inputPaths
+    inputPaths,
   );
 
   switch (result.tag) {
@@ -62,7 +62,7 @@ function printRelatedElmFilePaths(relatedElmFilePaths: Set<string>): string {
   return Array.from(relatedElmFilePaths, (filePath) =>
     filePath.startsWith(FIXTURES_DIR.absolutePath)
       ? filePath.slice(FIXTURES_DIR.absolutePath.length)
-      : filePath
+      : filePath,
   )
     .join("\n")
     .split(path.sep)
@@ -87,8 +87,8 @@ describe("WalkImports", () => {
       walkImportsHelper(
         "multiple-source-directories",
         ["app/Main.elm"],
-        ["app", "body-parts", "units"]
-      )
+        ["app", "body-parts", "units"],
+      ),
     ).toMatchInlineSnapshot(`
       /multiple-source-directories/app/Main.elm
       /multiple-source-directories/body-parts/Main.elm
@@ -125,7 +125,7 @@ describe("WalkImports", () => {
 
   test("multiple inputs", () => {
     expect(
-      walkImportsHelper("multiple-inputs", ["App.elm", "Admin.elm"], ["."])
+      walkImportsHelper("multiple-inputs", ["App.elm", "Admin.elm"], ["."]),
     ).toMatchInlineSnapshot(`
       /multiple-inputs/App.elm
       /multiple-inputs/Admin.elm
@@ -139,7 +139,7 @@ describe("WalkImports", () => {
 
   test("duplicate imports", () => {
     expect(
-      walkImportsHelper("duplicate-imports", ["DuplicateImports.elm"], ["."])
+      walkImportsHelper("duplicate-imports", ["DuplicateImports.elm"], ["."]),
     ).toMatchInlineSnapshot(`
       /duplicate-imports/DuplicateImports.elm
       /duplicate-imports/A.elm
@@ -151,7 +151,7 @@ describe("WalkImports", () => {
   test("ambiguous source directories", () => {
     expect(
       // Missing source directories don’t matter.
-      walkImportsHelper("anywhere", ["Main.elm"], [".", "src"])
+      walkImportsHelper("anywhere", ["Main.elm"], [".", "src"]),
     ).toMatchInlineSnapshot(`
       /anywhere/Main.elm
       /anywhere/src/Main.elm
@@ -163,8 +163,8 @@ describe("WalkImports", () => {
       walkImportsHelper(
         "anywhere",
         ["src/App/Main.elm"],
-        ["lib", "src", "src/App"]
-      )
+        ["lib", "src", "src/App"],
+      ),
     ).toMatchInlineSnapshot(`
       /anywhere/src/App/Main.elm
       /anywhere/lib/App/Main.elm
@@ -179,8 +179,8 @@ describe("WalkImports", () => {
       walkImportsHelper(
         "anywhere",
         ["src/App/Main.elm", "src/App/Other.elm"],
-        ["lib", "src", "src/App"]
-      )
+        ["lib", "src", "src/App"],
+      ),
     ).toMatchInlineSnapshot(`
       /anywhere/src/App/Main.elm
       /anywhere/lib/App/Main.elm
@@ -202,7 +202,7 @@ describe("WalkImports", () => {
     expect(
       walkImportsHelper("symlinks", ["MainSymlink.elm"], ["."], {
         resolveSymlinks: true,
-      })
+      }),
     ).toMatchInlineSnapshot(`
       /symlinks/RealMain.elm
       /symlinks/DepSymlink.elm
@@ -213,7 +213,7 @@ describe("WalkImports", () => {
   describe("cycles", () => {
     test("import self", () => {
       expect(
-        walkImportsHelper("cycles", ["ImportSelf.elm"], ["."])
+        walkImportsHelper("cycles", ["ImportSelf.elm"], ["."]),
       ).toMatchInlineSnapshot(`/cycles/ImportSelf.elm`);
     });
 
@@ -228,7 +228,7 @@ describe("WalkImports", () => {
 
     test("import entrypoint indirect", () => {
       expect(
-        walkImportsHelper("cycles", ["ImportEntryPointIndirect.elm"], ["."])
+        walkImportsHelper("cycles", ["ImportEntryPointIndirect.elm"], ["."]),
       ).toMatchInlineSnapshot(`
         /cycles/ImportEntryPointIndirect.elm
         /cycles/Sub.elm

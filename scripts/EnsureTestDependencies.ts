@@ -17,7 +17,7 @@ const FIXTURES_DIR = absolutePathFromString(
   { tag: "AbsolutePath", absolutePath: __dirname },
   "..",
   "tests",
-  "fixtures"
+  "fixtures",
 );
 
 function checkDir(dir: AbsolutePath): void {
@@ -46,7 +46,7 @@ const ElmJson = Codec.fields({
 function checkFile(file: AbsolutePath): void {
   const relativeFile = path.relative(
     FIXTURES_DIR.absolutePath,
-    file.absolutePath
+    file.absolutePath,
   );
 
   const parsed = readJsonFile(file, ElmJson);
@@ -76,10 +76,10 @@ function checkFile(file: AbsolutePath): void {
     if (version !== versionToInstall) {
       throw new Error(
         `This file includes \`${quote(name)}: ${quote(
-          version
+          version,
         )}\`, but the elm.json we install includes: \`${quote(name)}: ${
           versionToInstall === undefined ? "undefined" : quote(versionToInstall)
-        }\``
+        }\``,
       );
     }
   }
