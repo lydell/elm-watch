@@ -28,6 +28,7 @@
     "client",
     "scripts",
     "tests/*.ts",
-    "eslint.config.mjs"
+    "eslint.config.mjs",
+    "vitest.config.mts"
   ]
 }
