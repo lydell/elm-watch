@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
@@ -1054,7 +1054,12 @@ describe("hot", () => {
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
-        Expected one of these tags: "ChangedCompilationMode", "ChangedBrowserUiPosition", "ChangedOpenErrorOverlay", "FocusedTab", "PressedOpenEditor"
+        Expected one of these tags:
+         "ChangedCompilationMode",
+         "ChangedBrowserUiPosition",
+         "ChangedOpenErrorOverlay",
+         "FocusedTab",
+         "PressedOpenEditor"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
@@ -1231,7 +1236,6 @@ describe("hot", () => {
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
         ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
@@ -1290,7 +1294,7 @@ describe("hot", () => {
               elmWatchJsonPath,
               elmWatchJsonString.slice(0, -10),
             );
-            await wait(100);
+            await wait(1000);
             fs.writeFileSync(
               elmWatchJsonPath,
               elmWatchJsonString.replace(/"postprocess":.*/, ""),
@@ -1317,14 +1321,15 @@ describe("hot", () => {
     await window.__ELM_WATCH.KILL_MATCHING(/^/);
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING elm-watch.json ----------------------------------------------⧘
+      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙I had trouble reading it as JSON:⧘
+      ⧙I had trouble with the JSON inside:⧘
 
-      (JSON syntax error)
+      At root:
+      SyntaxError: (JSON syntax error)
 
       …
 
@@ -1335,9 +1340,9 @@ describe("hot", () => {
 
       ⧙I had trouble with the JSON inside:⧘
 
-      At root["targets"]:
-      Expected an object
-      Got: undefined
+      At root:
+      Expected an object with a field called: "targets"
+      Got: {}
 
       …
 
@@ -3387,9 +3392,13 @@ describe("hot", () => {
     const elmWatchJson: unknown = JSON.parse(
       fs.readFileSync(elmWatchJsonPath, "utf8"),
     );
-    const port = Decode.fields((field) => field("port", Decode.number))(
+    const portResult = Codec.fields({ port: Codec.number }).decoder(
       elmWatchJson,
     );
+    if (portResult.tag === "DecoderError") {
+      throw new Error(Codec.format(portResult.error));
+    }
+    const { port } = portResult.value;
 
     let mainHtml = "(not set)";
     let variations: Array<string> = ["(not set)"];

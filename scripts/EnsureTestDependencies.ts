@@ -1,8 +1,11 @@
 /* eslint-disable no-console */
 import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
+import { quote } from "../src/Helpers";
+import { absolutePathFromString, readJsonFile } from "../src/PathHelpers";
+import { AbsolutePath } from "../src/Types";
 import * as mainElmJson from "../tests/install-packages/elm.json";
 
 const PACKAGES_TO_INSTALL: Record<string, string> = {
@@ -10,48 +13,56 @@ const PACKAGES_TO_INSTALL: Record<string, string> = {
   ...mainElmJson.dependencies.indirect,
 };
 
-const FIXTURES_DIR = path.join(__dirname, "..", "tests", "fixtures");
+const FIXTURES_DIR = absolutePathFromString(
+  { tag: "AbsolutePath", absolutePath: __dirname },
+  "..",
+  "tests",
+  "fixtures",
+);
 
-function checkDir(dir: string): void {
-  for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+function checkDir(dir: AbsolutePath): void {
+  for (const item of fs.readdirSync(dir.absolutePath, {
+    withFileTypes: true,
+  })) {
     if (item.isFile()) {
       if (item.name === "elm.json" || item.name === "elm.template.json") {
-        checkFile(path.join(dir, item.name));
+        checkFile(absolutePathFromString(dir, item.name));
       }
     } else if (item.isDirectory()) {
-      checkDir(path.join(dir, item.name));
+      checkDir(absolutePathFromString(dir, item.name));
     }
   }
 }
 
-const Dependencies = Decode.record(Decode.string);
+const Dependencies = Codec.record(Codec.string);
 
-const ElmJson = Decode.fieldsAuto({
-  dependencies: Decode.fieldsAuto({
+const ElmJson = Codec.fields({
+  dependencies: Codec.fields({
     direct: Dependencies,
     indirect: Dependencies,
   }),
 });
 
-function checkFile(file: string): void {
-  const relativeFile = path.relative(FIXTURES_DIR, file);
+function checkFile(file: AbsolutePath): void {
+  const relativeFile = path.relative(
+    FIXTURES_DIR.absolutePath,
+    file.absolutePath,
+  );
 
-  let json;
-  try {
-    json = ElmJson(JSON.parse(fs.readFileSync(file, "utf8")));
-  } catch (error) {
-    // Some test files contain syntax errors on purpose – ignore those.
-    // One test is for an Elm package – ignore that too (since version ranges are hard).
-    console.info(
-      `Skipping: ${relativeFile}:`,
-      error instanceof Decode.DecoderError
-        ? error.format().replace(/\n/g, " | ")
-        : error instanceof Error
-          ? error.message
-          : error,
-    );
-    return;
+  const parsed = readJsonFile(file, ElmJson);
+  // Some test files contain syntax errors on purpose – ignore those.
+  // One test is for an Elm package – ignore that too (since version ranges are hard).
+  switch (parsed.tag) {
+    case "ReadError":
+      console.info(`Skipping: ${relativeFile}:`, parsed.error.message);
+      return;
+    case "DecoderError":
+      console.info(`Skipping: ${relativeFile}:`, Codec.format(parsed.error));
+      return;
+    case "Valid":
+    // Keep going.
   }
+  const json = parsed.value;
 
   console.info(`Checking: ${relativeFile}`);
 
@@ -64,11 +75,11 @@ function checkFile(file: string): void {
     const versionToInstall = PACKAGES_TO_INSTALL[name];
     if (version !== versionToInstall) {
       throw new Error(
-        `This file includes \`${JSON.stringify(name)}: ${JSON.stringify(
+        `This file includes \`${quote(name)}: ${quote(
           version,
-        )}\`, but the elm.json we install includes: \`${JSON.stringify(
-          name,
-        )}: ${JSON.stringify(versionToInstall)}\``,
+        )}\`, but the elm.json we install includes: \`${quote(name)}: ${
+          versionToInstall === undefined ? "undefined" : quote(versionToInstall)
+        }\``,
       );
     }
   }

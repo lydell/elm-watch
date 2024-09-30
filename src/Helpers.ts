@@ -1,5 +1,5 @@
 import type { Readable, Writable } from "stream";
-import { DecoderError, repr } from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
 import { NonEmptyArray } from "./NonEmptyArray";
 
@@ -50,6 +50,10 @@ export function cursorHorizontalAbsolute(n: number): string {
 
 function pad(number: number): string {
   return number.toString().padStart(2, "0");
+}
+
+export function quote(string: string): string {
+  return Codec.JSON.stringify(Codec.string, string);
 }
 
 export function formatDate(date: Date): string {
@@ -121,25 +125,36 @@ export const toError: (arg: unknown) => NodeJS.ErrnoException = (arg) =>
       );
 /* v8 ignore stop */
 
-export type JsonError = DecoderError | SyntaxError;
-
-export const toJsonError: (arg: unknown) => JsonError = (arg) =>
-  /* v8 ignore start */
-  arg instanceof DecoderError
-    ? arg
-    : arg instanceof SyntaxError
-      ? arg
-      : new SyntaxError(
-          `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
-            arg,
-          )}`,
-        );
-/* v8 ignore stop */
-
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
     ? (error as { stack: string }).stack
     : typeof (error as { message?: string } | undefined)?.message === "string"
       ? (error as { message: string }).message
-      : repr(error);
+      : Codec.repr(error);
 }
+
+// This function is covered by the "Unexpected/unhandled error at eval" test,
+// but for some reason it is reported as not covered, so we have to ignore it.
+/* v8 ignore start */
+export function codecCatcher<Decoded, Encoded>(
+  codec: Codec.Codec<Decoded, Encoded>,
+): Codec.Codec<Decoded, Encoded> {
+  return {
+    decoder: (value) => {
+      try {
+        return codec.decoder(value);
+      } catch (error) {
+        return {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: error instanceof Error ? error.message : String(error),
+            path: [],
+          },
+        };
+      }
+    },
+    encoder: codec.encoder,
+  };
+}
+/* v8 ignore stop */

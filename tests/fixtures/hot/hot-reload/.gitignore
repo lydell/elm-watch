@@ -1,3 +1,4 @@
 src/*.elm
 !src/*1.elm
 !src/*2.elm
+lock

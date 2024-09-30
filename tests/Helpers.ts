@@ -542,7 +542,7 @@ export function clean(string: string): string {
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
     .replace(/EOF/g, "EPIPE")
     .replace(
-      /\n.+Web socket disconnected for: (.+)(\n.+Web socket connected for: \1)/g,
+      /\n.+Web socket disconnected for: (.+)(\n.+Web socket connected (?:for|needing compilation of): \1)/g,
       "$2",
     );
 }

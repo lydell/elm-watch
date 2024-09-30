@@ -1,7 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 
-import { getSetSingleton, join } from "./Helpers";
+import { getSetSingleton, join, toError } from "./Helpers";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -74,4 +75,24 @@ export function longestCommonAncestorPath(
     : // On Windows, a `C:` path and a `D:` path has no common ancestor.
       undefined;
   /* v8 ignore stop */
+}
+
+type ReadJsonFileResult<T> =
+  | Codec.DecoderResult<T>
+  | {
+      tag: "ReadError";
+      error: NodeJS.ErrnoException;
+    };
+
+export function readJsonFile<T>(
+  file: AbsolutePath,
+  codec: Codec.Codec<T>,
+): ReadJsonFileResult<T> {
+  let content;
+  try {
+    content = fs.readFileSync(file.absolutePath, "utf8");
+  } catch (error) {
+    return { tag: "ReadError", error: toError(error) };
+  }
+  return Codec.JSON.parse(codec, content);
 }

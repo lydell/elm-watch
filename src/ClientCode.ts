@@ -5,6 +5,7 @@ import * as esbuild from "esbuild";
 import * as path from "path";
 
 import { clientEsbuildOptions } from "../scripts/Build";
+import { join, quote } from "./Helpers";
 
 const result = esbuild.buildSync(clientEsbuildOptions);
 
@@ -15,9 +16,12 @@ function getOutput(name: string): string {
   /* v8 ignore start */
   if (match === undefined) {
     throw new Error(
-      `ClientCode: Found no output from esbuild matching ${JSON.stringify(
+      `ClientCode: Found no output from esbuild matching ${quote(
         name,
-      )} in ${JSON.stringify(result.outputFiles.map((output) => output.path))}`,
+      )} in ${join(
+        result.outputFiles.map((output) => quote(output.path)),
+        ", ",
+      )}`,
     );
   }
   /* v8 ignore stop */

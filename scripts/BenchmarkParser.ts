@@ -3,7 +3,7 @@
 
 import * as fs from "fs";
 import * as fsPromises from "fs/promises";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
 import { isNonEmptyArray } from "../src/NonEmptyArray";
 import * as Parser from "../src/Parser";
@@ -25,7 +25,11 @@ async function run(args: Array<string>): Promise<void> {
     );
   }
 
-  const strategy = Strategy(strategyRaw);
+  const strategyResult = Strategy.decoder(strategyRaw);
+  if (strategyResult.tag === "DecoderError") {
+    throw new KnownError(Codec.format(strategyResult.error));
+  }
+  const strategy = strategyResult.value;
 
   const cwd: Cwd = {
     tag: "Cwd",
@@ -44,15 +48,15 @@ async function run(args: Array<string>): Promise<void> {
   console.log("Imports:", imports.length);
 }
 
-type Strategy = ReturnType<typeof Strategy>;
-const Strategy = Decode.stringUnion({
-  readFileSync: null,
-  readFile: null,
-  readSync: null,
-  read: null,
-  createReadStream: null,
-  createReadStreamForAwait: null,
-});
+type Strategy = Codec.Infer<typeof Strategy>;
+const Strategy = Codec.primitiveUnion([
+  "readFileSync",
+  "readFile",
+  "readSync",
+  "read",
+  "createReadStream",
+  "createReadStreamForAwait",
+]);
 
 async function runStrategy(
   strategy: Strategy,
@@ -205,11 +209,5 @@ function findElmFiles(dir: AbsolutePath): Array<AbsolutePath> {
 }
 
 run(process.argv.slice(2)).catch((error) => {
-  console.error(
-    error instanceof Decode.DecoderError
-      ? error.format()
-      : error instanceof KnownError
-        ? error.message
-        : error,
-  );
+  console.error(error instanceof KnownError ? error.message : error);
 });

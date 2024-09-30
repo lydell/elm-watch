@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as Codec from "tiny-decoders";
 
 import * as ElmJson from "./ElmJson";
 import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex";
@@ -594,9 +595,9 @@ export async function handleOutputAction({
         /* v8 ignore start */
         case "make":
           throw new Error(
-            `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${JSON.stringify(
+            `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${Codec.JSON.stringify(
+              Codec.unknown,
               action,
-              null,
               2,
             )}`,
           );
@@ -1524,7 +1525,6 @@ export function printSpaceForOutputs(
 }
 
 function writeNewLines(logger: Logger, count: number): void {
-  // istanbul ignore else
   if (count > 0) {
     // -1 because the logger always adds a newline.
     logger.write("\n".repeat(count - 1));
@@ -1823,7 +1823,7 @@ function statusLine(
     case "ElmMakeCrashError":
     case "ElmMakeJsonParseError":
     case "ElmMakeError":
-    case "ElmJsonReadAsJsonError":
+    case "ElmJsonReadError":
     case "ElmJsonDecodeError":
     case "ImportWalkerFileSystemError":
     case "NeedsToWriteProxyFileReadError":
@@ -2221,8 +2221,8 @@ export function renderOutputErrors(
           );
       }
 
-    case "ElmJsonReadAsJsonError":
-      return [Errors.readElmJsonAsJson(status.elmJsonPath, status.error)];
+    case "ElmJsonReadError":
+      return [Errors.readElmJson(status.elmJsonPath, status.error)];
 
     case "ElmJsonDecodeError":
       return [Errors.decodeElmJson(status.elmJsonPath, status.error)];
@@ -2290,7 +2290,7 @@ function allRelatedElmFilePathsWithFallback(
     case "ImportWalkerFileSystemError":
       return walkerResult.relatedElmFilePathsUntilError;
 
-    case "ElmJsonReadAsJsonError":
+    case "ElmJsonReadError":
     case "ElmJsonDecodeError":
       return new Set(
         mapNonEmptyArray(

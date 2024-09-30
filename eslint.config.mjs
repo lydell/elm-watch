@@ -11,6 +11,14 @@ const warn = process.argv.includes("--report-unused-disable-directives")
   ? "error"
   : "warn";
 
+const restrictedGlobals = [
+  {
+    name: "JSON",
+    message:
+      "Import JSON from tiny-decoders and use its JSON.parse and JSON.stringify with a codec instead.",
+  },
+];
+
 export default typescriptEslint.config(
   typescriptEslint.configs.base,
   {
@@ -226,6 +234,7 @@ export default typescriptEslint.config(
     rules: {
       "no-restricted-globals": [
         error,
+        ...restrictedGlobals,
         ...Object.keys(globals.browser).filter(
           (name) => !Object.prototype.hasOwnProperty.call(globals.node, name),
         ),
@@ -238,6 +247,7 @@ export default typescriptEslint.config(
       "no-restricted-imports": [error, ...builtinModules],
       "no-restricted-globals": [
         error,
+        ...restrictedGlobals,
         ...Object.keys(globals.node).filter(
           (name) =>
             !Object.prototype.hasOwnProperty.call(globals.browser, name),

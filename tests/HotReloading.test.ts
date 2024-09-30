@@ -1563,7 +1563,7 @@ describe("hot reloading", () => {
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       window.Elm does not look like expected! This is the error message:
-      At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+      At root:
       Very unexpected error
       ↑↗
       ·→
@@ -1575,7 +1575,7 @@ describe("hot reloading", () => {
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       window.Elm does not look like expected! This is the error message:
-      At root["Elm"]["HtmlMain"]["__elmWatchApps"]:
+      At root:
       Very unexpected error
       ↑↗
       ·→
@@ -1642,8 +1642,6 @@ describe("hot reloading", () => {
       extraElmWatchStuffJson: {
         MultipleTargetsOther1: {
           compilationMode: "debug",
-          browserUiPosition: "BottomLeft",
-          openErrorOverlay: false,
         },
       },
       init: (node) => {
@@ -1683,7 +1681,13 @@ describe("hot reloading", () => {
   });
 
   test("Change Elm file while `elm make` is running", async () => {
+    const fixture = "hot-reload";
+    const lockFile = path.join(FIXTURES_DIR, fixture, "lock");
+
+    fs.writeFileSync(lockFile, "Normal");
+
     const { replace, go } = runHotReload({
+      fixture,
       name: "InterruptElm",
       programType: "Html",
       compilationMode: "standard",
@@ -1695,9 +1699,21 @@ describe("hot reloading", () => {
       switch (idle) {
         case 1:
           assertInit(div);
+          fs.writeFileSync(lockFile, "Delay");
           replace((content) => content.replace("1", "2"));
-          await wait(60);
+          await new Promise<void>((resolve) => {
+            (function rec() {
+              if (fs.readFileSync(lockFile, "utf8") === "DelayAck") {
+                resolve();
+              } else {
+                setTimeout(rec, 10);
+              }
+            })();
+          });
           replace((content) => content.replace("2", "3"));
+          // Wait for the watcher to pick up the change before releasing the previous compilation.
+          await wait(100);
+          fs.writeFileSync(lockFile, "Normal");
           return "KeepGoing";
         default:
           assertHotReload(div);
@@ -1719,9 +1735,14 @@ describe("hot reloading", () => {
   });
 
   test("Restart while `elm make` is running", async () => {
-    const elmJsonPath = path.join(FIXTURES_DIR, "hot-reload", "elm.json");
+    const fixture = "hot-reload";
+    const lockFile = path.join(FIXTURES_DIR, fixture, "lock");
+    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+
+    fs.writeFileSync(lockFile, "Normal");
 
     const { replace, go } = runHotReload({
+      fixture,
       name: "InterruptElm",
       programType: "Html",
       compilationMode: "standard",
@@ -1732,9 +1753,21 @@ describe("hot reloading", () => {
     const { terminal } = await go(async ({ idle }) => {
       switch (idle) {
         case 1:
+          fs.writeFileSync(lockFile, "Delay");
           replace((content) => content.replace("1", "2"));
-          await wait(60);
+          await new Promise<void>((resolve) => {
+            (function rec() {
+              if (fs.readFileSync(lockFile, "utf8") === "DelayAck") {
+                resolve();
+              } else {
+                setTimeout(rec, 10);
+              }
+            })();
+          });
           touch(elmJsonPath);
+          // Wait for the watcher to pick up the change before releasing the previous compilation.
+          await wait(100);
+          fs.writeFileSync(lockFile, "Normal");
           return "KeepGoing";
         default:
           return "Stop";
@@ -1747,9 +1780,14 @@ describe("hot reloading", () => {
   });
 
   test("Restart while installing dependencies", async () => {
-    const elmJsonPath = path.join(FIXTURES_DIR, "hot-reload", "elm.json");
+    const fixture = "hot-reload";
+    const lockFile = path.join(FIXTURES_DIR, fixture, "lock");
+    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+
+    fs.writeFileSync(lockFile, "Delay");
 
     const { go } = runHotReload({
+      fixture,
       name: "InterruptElm",
       programType: "Html",
       compilationMode: "standard",
@@ -1760,8 +1798,19 @@ describe("hot reloading", () => {
     const [{ terminal }] = await Promise.all([
       go(() => "Stop"),
       (async () => {
-        await wait(160);
+        await new Promise<void>((resolve) => {
+          (function rec() {
+            if (fs.readFileSync(lockFile, "utf8") === "DelayAck") {
+              resolve();
+            } else {
+              setTimeout(rec, 10);
+            }
+          })();
+        });
         touch(elmJsonPath);
+        // Wait for the watcher to pick up the change before releasing the previous compilation.
+        await wait(100);
+        fs.writeFileSync(lockFile, "Normal");
       })(),
     ]);
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals */
 import * as util from "util";
 
 /**
@@ -49,7 +50,7 @@ export class HashSet<V extends Record<string, unknown>> implements Set<V> {
 
   *keys(): IterableIterator<V> {
     for (const value of this._set.keys()) {
-      yield JSON.parse(value) as V;
+      yield JSON.parse(value);
     }
   }
 

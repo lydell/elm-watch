@@ -30,7 +30,7 @@
   "dependencies": {
     "chokidar": "^3.5.3",
     "cross-spawn": "^7.0.3",
-    "tiny-decoders": "^7.0.1",
+    "tiny-decoders": "^23.0.0",
     "ws": "^8.18.0"
   }
 }

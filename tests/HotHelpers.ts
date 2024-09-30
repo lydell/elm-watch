@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 import { expect } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
   UppercaseLetter,
 } from "../client/client";
 import { elmWatchCli } from "../src";
-import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
+import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";
 import { HotKillManager } from "../src/Hot";
@@ -392,7 +393,7 @@ export function runHotReload({
   compilationMode: CompilationMode;
   init?: (node: HTMLDivElement) => ReturnType<ElmModule["init"]> | undefined;
   extraScripts?: Array<string>;
-  extraElmWatchStuffJson?: ElmWatchStuffJsonWritable["targets"];
+  extraElmWatchStuffJson?: ElmWatchStuffJson["targets"];
 }): {
   replace: (f: (fileContent: string) => string) => void;
   write: (n: number) => void;
@@ -404,13 +405,11 @@ export function runHotReload({
   const dir = path.join(FIXTURES_DIR, fixture);
   const src = path.join(dir, "src");
 
-  const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
-    port: 58888,
+  const elmWatchStuffJson: ElmWatchStuffJson = {
+    port: { tag: "Port", thePort: 58888 },
     targets: {
       [name]: {
         compilationMode,
-        browserUiPosition: "BottomLeft",
-        openErrorOverlay: false,
       },
       ...extraElmWatchStuffJson,
     },
@@ -462,7 +461,7 @@ export function runHotReload({
       fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), { recursive: true });
       fs.writeFileSync(
         elmWatchStuffJsonPath,
-        JSON.stringify(elmWatchStuffJson),
+        Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
       );
 
       // Here we write a file just before we start the watcher. I’ve seen this file

@@ -1,8 +1,9 @@
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 import { Worker } from "worker_threads";
 
 import { Env } from "./Env";
-import { toError } from "./Helpers";
+import { quote, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
 import {
@@ -261,7 +262,7 @@ class PostprocessWorker {
               this.terminate().catch(this.onUnexpectedError);
               this.onUnexpectedError(
                 new Error(
-                  `PostprocessWorker received a ${JSON.stringify(
+                  `PostprocessWorker received a ${quote(
                     message.tag,
                   )} message from the worker. This should only happen when "Busy" but the status is "Idle".`,
                 ),
@@ -329,7 +330,8 @@ class PostprocessWorker {
       case "Busy":
       case "Terminated":
         throw new Error(
-          `Cannot call PostprocessWorker#postprocess because \`this.status === ${JSON.stringify(
+          `Cannot call PostprocessWorker#postprocess because \`this.status === ${Codec.JSON.stringify(
+            Codec.unknown,
             this.status,
           )}\` instead of the expected "Idle".`,
         );

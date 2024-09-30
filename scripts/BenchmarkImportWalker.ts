@@ -1,9 +1,8 @@
 /* eslint-disable no-console */
 
-import * as fs from "fs";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
-import { ElmJson, getSourceDirectories } from "../src/ElmJson";
+import * as ElmJson from "../src/ElmJson";
 import { HashSet } from "../src/HashSet";
 import { getSetSingleton } from "../src/Helpers";
 import { walkImports } from "../src/ImportWalker";
@@ -74,25 +73,22 @@ function run(args: Array<string>): void {
     theElmJsonPath: uniqueElmJsonPathRaw,
   };
 
-  let elmJson;
-  try {
-    elmJson = ElmJson(
-      JSON.parse(
-        fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf8"),
-      ),
-    );
-  } catch (error) {
-    console.error(
-      error instanceof Decode.DecoderError
-        ? error.format()
-        : error instanceof Error
-          ? error.message
-          : error,
-    );
-    process.exit(1);
+  const elmJsonResult = ElmJson.readAndParse(elmJsonPath);
+  switch (elmJsonResult.tag) {
+    case "ElmJsonDecodeError":
+      console.error(Codec.format(elmJsonResult.error));
+      process.exit(1);
+    case "ElmJsonReadError":
+      console.error(elmJsonResult.error.message);
+      process.exit(1);
+    case "Parsed":
+    // Keep going.
   }
 
-  const sourceDirectories = getSourceDirectories(elmJsonPath, elmJson);
+  const sourceDirectories = ElmJson.getSourceDirectories(
+    elmJsonPath,
+    elmJsonResult.elmJson,
+  );
 
   console.log(
     "Elm file(s):",

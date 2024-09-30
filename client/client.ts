@@ -1,6 +1,6 @@
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
-import { formatDate, formatTime } from "../src/Helpers";
+import { codecCatcher, formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
   AbsolutePath,
@@ -13,7 +13,7 @@ import {
   decodeWebSocketToClientMessage,
   ErrorLocation,
   OpenEditorError,
-  StatusChanged,
+  StatusChange,
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "./WebSocketMessages";
@@ -426,11 +426,13 @@ function logDebug(...args: Array<unknown>): void {
   }
 }
 
-function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
-  try {
-    return BrowserUiPosition(value);
-  } catch {
-    return ORIGINAL_BROWSER_UI_POSITION;
+function BrowserUiPositionWithFallback(value: unknown): BrowserUiPosition {
+  const decoderResult = BrowserUiPosition.decoder(value);
+  switch (decoderResult.tag) {
+    case "DecoderError":
+      return ORIGINAL_BROWSER_UI_POSITION;
+    case "Valid":
+      return decoderResult.value;
   }
 }
 
@@ -460,7 +462,7 @@ function run(): void {
   const browserUiPosition =
     elements === undefined
       ? ORIGINAL_BROWSER_UI_POSITION
-      : parseBrowseUiPositionWithFallback(elements.container.dataset.position);
+      : BrowserUiPositionWithFallback(elements.container.dataset.position);
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
@@ -781,6 +783,16 @@ function setBrowserUiPosition(
   );
 }
 
+export function singleField<Decoded, Encoded>(
+  fieldName: string,
+  codec: Codec.Codec<Decoded, Encoded>,
+): Codec.Codec<Decoded, Record<string, Encoded>> {
+  return Codec.map(Codec.fields({ [fieldName]: codec }), {
+    decoder: (value) => value[fieldName],
+    encoder: () => ({}),
+  }) as Codec.Codec<Decoded, Record<string, Encoded>>;
+}
+
 const initMutable =
   (getNow: GetNow, elements: Elements | undefined) =>
   (
@@ -835,9 +847,9 @@ const initMutable =
                   (event) => {
                     dispatch({
                       tag: "BrowserUiMoved",
-                      browserUiPosition: Decode.fields((field) =>
-                        field("detail", parseBrowseUiPositionWithFallback),
-                      )(event),
+                      browserUiPosition: BrowserUiPositionWithFallback(
+                        (event as CustomEvent).detail,
+                      ),
                     });
                   },
                 ),
@@ -1242,7 +1254,7 @@ function onWebSocketToClientMessage(
       ];
 
     case "StatusChanged":
-      return statusChanged(date, msg, model);
+      return statusChanged(date, msg.status, model);
 
     case "SuccessfullyCompiled": {
       const justChangedBrowserUiPosition =
@@ -1308,7 +1320,7 @@ function onWebSocketToClientMessage(
 
 function statusChanged(
   date: Date,
-  { status }: StatusChanged,
+  status: StatusChange,
   model: Model,
 ): [Model, Array<Cmd>] {
   switch (status.tag) {
@@ -1380,7 +1392,7 @@ function statusChanged(
                     foregroundColor: status.foregroundColor,
                     backgroundColor: status.backgroundColor,
                   };
-                  const id = JSON.stringify(overlayError);
+                  const id = Codec.JSON.stringify(Codec.unknown, overlayError);
                   return [id, overlayError];
                 }),
               ),
@@ -1529,7 +1541,10 @@ const runCmd =
       }
 
       case "SendMessage": {
-        const json = JSON.stringify(cmd.message);
+        const json = Codec.JSON.stringify(
+          WebSocketToServerMessage,
+          cmd.message,
+        );
         try {
           mutable.webSocket.send(json);
         } catch (error) {
@@ -1661,60 +1676,60 @@ type ParseWebSocketMessageDataResult =
 function parseWebSocketMessageData(
   data: unknown,
 ): ParseWebSocketMessageDataResult {
-  try {
-    return {
-      tag: "Success",
-      message: decodeWebSocketToClientMessage(Decode.string(data)),
-    };
-  } catch (unknownError) {
-    return {
-      tag: "Error",
-      message: `Failed to decode web socket message sent from the server:\n${possiblyDecodeErrorToString(
-        unknownError,
-      )}`,
-    };
+  const decoderResult = decodeWebSocketToClientMessage(data);
+  switch (decoderResult.tag) {
+    case "DecoderError":
+      return {
+        tag: "Error",
+        message: `Failed to decode web socket message sent from the server:\n${Codec.format(
+          decoderResult.error,
+        )}`,
+      };
+    case "Valid":
+      return {
+        tag: "Success",
+        message: decoderResult.value,
+      };
   }
 }
 
-function possiblyDecodeErrorToString(unknownError: unknown): string {
-  return unknownError instanceof Decode.DecoderError
-    ? unknownError.format()
-    : unknownError instanceof Error
-      ? unknownError.message
-      : Decode.repr(unknownError);
-}
+type ProgramType = Codec.Infer<typeof ProgramType>;
+const ProgramType = Codec.primitiveUnion([
+  "Platform.worker",
+  "Browser.sandbox",
+  "Browser.element",
+  "Browser.document",
+  "Browser.application",
+  "Html",
+]);
 
-function functionToNull(value: unknown): unknown {
-  return typeof value === "function" ? null : value;
-}
-
-type ProgramType = ReturnType<typeof ProgramType>;
-const ProgramType = Decode.stringUnion({
-  "Platform.worker": null,
-  "Browser.sandbox": null,
-  "Browser.element": null,
-  "Browser.document": null,
-  "Browser.application": null,
-  Html: null,
-});
-
-const ElmModule: Decode.Decoder<Array<ProgramType>> = Decode.chain(
-  Decode.record(
-    Decode.chain(
-      functionToNull,
-      Decode.multi({
-        null: () => [],
-        array: Decode.array(
-          Decode.fields((field) => field("__elmWatchProgramType", ProgramType)),
-        ),
-        object: (value) => ElmModule(value),
-      }),
-    ),
+const ElmModule: Codec.Codec<Array<ProgramType>> = Codec.map(
+  Codec.record(
+    Codec.flatMap(Codec.multi(["function", "array", "object"]), {
+      decoder: (value) => {
+        switch (value.type) {
+          case "function":
+            return { tag: "Valid", value: [] };
+          case "array":
+            return Codec.array(
+              singleField("__elmWatchProgramType", ProgramType),
+            ).decoder(value.value);
+          case "object":
+            return ElmModule.decoder(value.value);
+        }
+      },
+      encoder: () => ({ type: "function" as const, value: Function.prototype }),
+    }),
   ),
-  (record) => Object.values(record).flat(),
+  {
+    decoder: (record: Record<string, Array<ProgramType>>) =>
+      Object.values(record).flat(),
+    encoder: () => ({}),
+  },
 );
 
-const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
+// Reading fields might throw errors.
+const ProgramTypes = codecCatcher(singleField("Elm", ElmModule));
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   // If this target is a proxy, or if another one is, it’s not safe to touch
@@ -1735,15 +1750,15 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
     return { tag: "MissingWindowElm" };
   }
 
-  let programTypes;
-  try {
-    programTypes = ProgramTypes(window);
-  } catch (unknownError) {
+  const programTypesResult = ProgramTypes.decoder(window);
+  if (programTypesResult.tag === "DecoderError") {
     return {
-      tag: "DecodeError",
-      message: possiblyDecodeErrorToString(unknownError),
+      tag: "DecoderError",
+      error: programTypesResult.error,
     };
   }
+
+  const programTypes = programTypesResult.value;
 
   if (programTypes.length === 0) {
     return { tag: "NoProgramsAtAll" };
@@ -2875,7 +2890,7 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
 
 function idleIcon(status: InitializedElmAppsStatus): string {
   switch (status.tag) {
-    case "DecodeError":
+    case "DecoderError":
     case "MissingWindowElm":
       return "❌";
 
@@ -2958,8 +2973,8 @@ type InitializedElmAppsStatus =
       status: Toggled;
     }
   | {
-      tag: "DecodeError";
-      message: string;
+      tag: "DecoderError";
+      error: Codec.DecoderError;
     }
   | {
       tag: "MissingWindowElm";
@@ -3011,14 +3026,18 @@ function viewCompilationModeChooser({
   info: Info;
 }): Array<HTMLElement> {
   switch (info.initializedElmAppsStatus.tag) {
-    case "DecodeError":
+    case "DecoderError":
       return [
         h(
           HTMLParagraphElement,
           {},
           "window.Elm does not look like expected! This is the error message:",
         ),
-        h(HTMLPreElement, {}, info.initializedElmAppsStatus.message),
+        h(
+          HTMLPreElement,
+          {},
+          Codec.format(info.initializedElmAppsStatus.error),
+        ),
       ];
 
     case "MissingWindowElm":
@@ -3444,12 +3463,12 @@ function renderMockStatuses(
       info: {
         ...info,
         initializedElmAppsStatus: {
-          tag: "DecodeError",
-          message: new Decode.DecoderError({
+          tag: "DecoderError",
+          error: {
             tag: "object",
             got: 5,
-            key: "Main",
-          }).format(),
+            path: ["Main"],
+          },
         },
       },
     },

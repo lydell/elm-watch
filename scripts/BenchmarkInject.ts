@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 
 import * as fs from "fs";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
 import { inject } from "../src/Inject";
 import { absolutePathFromString } from "../src/PathHelpers";
@@ -18,7 +18,11 @@ function run(args: Array<string>): void {
     );
   }
 
-  const compilationMode = CompilationMode(compilationModeRaw);
+  const compilationModeResult = CompilationMode.decoder(compilationModeRaw);
+  if (compilationModeResult.tag === "DecoderError") {
+    throw new KnownError(Codec.format(compilationModeResult.error));
+  }
+  const compilationMode = compilationModeResult.value;
 
   const cwd: Cwd = {
     tag: "Cwd",
@@ -42,11 +46,5 @@ function run(args: Array<string>): void {
 new Promise(() => {
   run(process.argv.slice(2));
 }).catch((error) => {
-  console.error(
-    error instanceof Decode.DecoderError
-      ? error.format()
-      : error instanceof KnownError
-        ? error.message
-        : error,
-  );
+  console.error(error instanceof KnownError ? error.message : error);
 });

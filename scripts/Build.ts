@@ -1,22 +1,39 @@
 import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 
 const DIR = path.dirname(__dirname);
 const BUILD = path.join(DIR, "build");
 const CLIENT_DIR = path.join(DIR, "client");
 
-type Package = {
-  version: string;
-  dependencies: Record<string, string>;
-};
-
-function readPackage(name: string): Package {
-  return JSON.parse(fs.readFileSync(path.join(DIR, name), "utf8")) as Package;
+function readPackage<T extends Record<string, unknown>>(
+  name: string,
+  codec: Codec.Codec<T>,
+): T & { raw: Record<string, unknown> } {
+  const raw = Codec.JSON.parse(
+    Codec.record(Codec.unknown),
+    fs.readFileSync(path.join(DIR, name), "utf8"),
+  );
+  if (raw.tag === "DecoderError") {
+    throw new Error(`Decoding ${name}:\n${Codec.format(raw.error)}`);
+  }
+  const decoded = codec.decoder(raw.value);
+  if (decoded.tag === "DecoderError") {
+    throw new Error(`Decoding ${name}:\n${Codec.format(decoded.error)}`);
+  }
+  return { ...decoded.value, raw: raw.value };
 }
 
-const PACKAGE = readPackage("package.json");
-const PACKAGE_REAL = readPackage("package-real.json");
+const PACKAGE = readPackage(
+  "package.json",
+  Codec.fields({ dependencies: Codec.record(Codec.string) }),
+);
+
+const PACKAGE_REAL = readPackage(
+  "package-real.json",
+  Codec.fields({ version: Codec.string }),
+);
 
 type FileToCopy = {
   src: string;
@@ -50,9 +67,9 @@ async function run(): Promise<void> {
 
   fs.writeFileSync(
     path.join(BUILD, "package.json"),
-    JSON.stringify(
-      { ...PACKAGE_REAL, dependencies: PACKAGE.dependencies },
-      null,
+    Codec.JSON.stringify(
+      Codec.unknown,
+      { ...PACKAGE_REAL.raw, dependencies: PACKAGE.dependencies },
       2,
     ),
   );

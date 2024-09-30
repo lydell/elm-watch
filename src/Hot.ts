@@ -2,7 +2,7 @@ import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
 import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 import { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
@@ -12,7 +12,7 @@ import {
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages";
 import * as Compile from "./Compile";
-import { ElmWatchStuffJsonWritable } from "./ElmWatchStuffJson";
+import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
@@ -31,11 +31,10 @@ import {
   dim,
   formatTime,
   join,
-  JsonError,
   printDurationMs,
+  quote,
   silentlyReadIntEnvValue,
   toError,
-  toJsonError,
 } from "./Helpers";
 import type { Logger, LoggerConfig } from "./Logger";
 import {
@@ -607,32 +606,34 @@ const initMutable =
   };
 
 function writeElmWatchStuffJson(mutable: Mutable): void {
-  const json: ElmWatchStuffJsonWritable = {
-    port: mutable.webSocketServer.port.thePort,
-    targets: Object.fromEntries([
-      ...mutable.project.elmJsonsErrors.map(
-        (error) =>
-          [
-            error.outputPath.targetName,
-            {
-              compilationMode: error.compilationMode,
-              browserUiPosition: error.browserUiPosition,
-              openErrorOverlay: error.openErrorOverlay,
-            },
-          ] as const,
-      ),
-      ...getFlatOutputs(mutable.project).map(
-        ({ outputPath, outputState }) =>
-          [
-            outputPath.targetName,
-            {
-              compilationMode: outputState.compilationMode,
-              browserUiPosition: outputState.browserUiPosition,
-              openErrorOverlay: outputState.openErrorOverlay,
-            },
-          ] as const,
-      ),
-    ]),
+  const targets: Record<string, Required<Target>> = Object.fromEntries([
+    ...mutable.project.elmJsonsErrors.map(
+      (error) =>
+        [
+          error.outputPath.targetName,
+          {
+            compilationMode: error.compilationMode,
+            browserUiPosition: error.browserUiPosition,
+            openErrorOverlay: error.openErrorOverlay,
+          },
+        ] as const,
+    ),
+    ...getFlatOutputs(mutable.project).map(
+      ({ outputPath, outputState }) =>
+        [
+          outputPath.targetName,
+          {
+            compilationMode: outputState.compilationMode,
+            browserUiPosition: outputState.browserUiPosition,
+            openErrorOverlay: outputState.openErrorOverlay,
+          },
+        ] as const,
+    ),
+  ]);
+
+  const json: ElmWatchStuffJson = {
+    port: mutable.webSocketServer.port,
+    targets,
   };
 
   try {
@@ -646,7 +647,7 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
     fs.writeFileSync(
       mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath
         .absolutePath,
-      `${JSON.stringify(json, null, 4)}\n`,
+      `${Codec.JSON.stringify(ElmWatchStuffJson, json, 4)}\n`,
     );
     mutable.elmWatchStuffJsonWriteError = undefined;
   } catch (unknownError) {
@@ -1062,7 +1063,7 @@ function update(
             result.message,
           );
 
-        case "DecodeError":
+        case "DecoderError":
           return [
             model,
             [
@@ -1839,7 +1840,7 @@ function onWebSocketServerMsg(
       if (webSocketConnection === undefined) {
         rejectPromise(
           new Error(
-            `No web socket connection found for web socket message ${JSON.stringify(
+            `No web socket connection found for web socket message ${quote(
               msg.tag,
             )}`,
           ),
@@ -2139,22 +2140,31 @@ function webSocketConnectionIsForOutputPath(
   }
 }
 
-const WebSocketConnectedParams = Decode.fieldsAuto(
+const WebSocketConnectedParams = Codec.fields(
   {
-    elmWatchVersion: Decode.string,
-    targetName: Decode.string,
-    elmCompiledTimestamp: Decode.chain(Decode.string, (string) => {
-      const number = Number(string);
-      if (Number.isFinite(number)) {
-        return number;
-      }
-      throw new Decode.DecoderError({
-        message: "Expected a number",
-        value: string,
-      });
+    elmWatchVersion: Codec.string,
+    targetName: Codec.string,
+    elmCompiledTimestamp: Codec.flatMap(Codec.string, {
+      decoder: (string) => {
+        const number = Number(string);
+        return Number.isFinite(number)
+          ? { tag: "Valid", value: number }
+          : {
+              tag: "DecoderError",
+              error: {
+                tag: "custom",
+                message: "Expected a number",
+                got: string,
+                path: [],
+              },
+            };
+      },
+      encoder:
+        /* v8 ignore next */
+        (value) => value.toString(),
     }),
   },
-  { exact: "throw" },
+  { allowExtraFields: false },
 );
 
 type ParseWebSocketConnectRequestUrlResult =
@@ -2179,7 +2189,7 @@ type ParseWebSocketConnectRequestUrlError =
     }
   | {
       tag: "ParamsDecodeError";
-      error: JsonError;
+      error: Codec.DecoderError;
       actualUrlString: string;
     }
   | {
@@ -2222,19 +2232,17 @@ function parseWebSocketConnectRequestUrl(
     urlString.slice(WEBSOCKET_URL_EXPECTED_START.length),
   );
 
-  let webSocketConnectedParams;
-  try {
-    webSocketConnectedParams = WebSocketConnectedParams(
-      Object.fromEntries(params),
-    );
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
+  const webSocketConnectedParamsResult = WebSocketConnectedParams.decoder(
+    Object.fromEntries(params),
+  );
+  if (webSocketConnectedParamsResult.tag === "DecoderError") {
     return {
       tag: "ParamsDecodeError",
-      error,
+      error: webSocketConnectedParamsResult.error,
       actualUrlString: urlString,
     };
   }
+  const webSocketConnectedParams = webSocketConnectedParamsResult.value;
 
   if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
     return {
@@ -2346,8 +2354,8 @@ function webSocketConnectRequestUrlErrorToString(
 
 type ParseWebSocketToServerMessageResult =
   | {
-      tag: "DecodeError";
-      error: JsonError;
+      tag: "DecoderError";
+      error: Codec.DecoderError;
     }
   | {
       tag: "Success";
@@ -2368,14 +2376,12 @@ function parseWebSocketToServerMessage(
           : data.toString("utf8");
   /* v8 ignore stop */
 
-  try {
-    return {
-      tag: "Success",
-      message: WebSocketToServerMessage(JSON.parse(stringData)),
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return { tag: "DecodeError", error };
+  const parsed = Codec.JSON.parse(WebSocketToServerMessage, stringData);
+  switch (parsed.tag) {
+    case "DecoderError":
+      return { tag: "DecoderError", error: parsed.error };
+    case "Valid":
+      return { tag: "Success", message: parsed.value };
   }
 }
 
@@ -2902,14 +2908,14 @@ function printEventMessage(event: LatestEvent): string {
       return `Web socket connected with errors (see the browser for details)`;
 
     case "WebSocketChangedBrowserUiPosition":
-      return `Changed browser UI position to ${JSON.stringify(
+      return `Changed browser UI position to ${quote(
         event.browserUiPosition,
       )} of: ${event.outputPath.targetName}`;
 
     case "WebSocketChangedCompilationMode":
-      return `Changed compilation mode to ${JSON.stringify(
-        event.compilationMode,
-      )} of: ${event.outputPath.targetName}`;
+      return `Changed compilation mode to ${quote(event.compilationMode)} of: ${
+        event.outputPath.targetName
+      }`;
 
     case "WorkersLimitedAfterWebSocketClosed":
       return `Terminated ${event.numTerminatedWorkers} superfluous ${

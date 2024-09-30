@@ -1,15 +1,11 @@
 import * as fs from "fs";
 import * as os from "os";
+import * as Codec from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
 import { __ELM_WATCH_ELM_TIMEOUT_MS, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
-import {
-  JsonError,
-  silentlyReadIntEnvValue,
-  toError,
-  toJsonError,
-} from "./Helpers";
+import { silentlyReadIntEnvValue, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn, SpawnResult } from "./Spawn";
@@ -40,7 +36,7 @@ export type RunElmMakeError =
     }
   | {
       tag: "ElmMakeJsonParseError";
-      error: JsonError;
+      error: Codec.DecoderError;
       errorFilePath: Errors.ErrorFilePath;
       command: Command;
     }
@@ -253,62 +249,38 @@ function parseActualElmMakeJson(
   jsonString: string,
   extraError: string | undefined,
 ): RunElmMakeResult {
-  let json: unknown;
-
-  try {
-    // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
-    json = JSON.parse(jsonString.replace(/\t/g, "\\t"));
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmMakeJsonParseError",
-      error,
-      errorFilePath: Errors.tryWriteErrorFile({
-        cwd: command.options.cwd,
-        name: "ElmMakeJsonParseError",
-        content: Errors.toPlainString(
-          Errors.elmMakeJsonParseError(
-            { tag: "NoLocation" },
-            error,
-            { tag: "ErrorFileBadContent", content: jsonString },
-            command,
+  // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
+  const parsed = Codec.JSON.parse(
+    ElmMakeError,
+    jsonString.replace(/\t/g, "\\t"),
+  );
+  switch (parsed.tag) {
+    case "DecoderError":
+      return {
+        tag: "ElmMakeJsonParseError",
+        error: parsed.error,
+        errorFilePath: Errors.tryWriteErrorFile({
+          cwd: command.options.cwd,
+          name: "ElmMakeJsonParseError",
+          content: Errors.toPlainString(
+            Errors.elmMakeJsonParseError(
+              { tag: "NoLocation" },
+              parsed.error,
+              { tag: "ErrorFileBadContent", content: jsonString },
+              command,
+            ),
           ),
-        ),
-        hash: jsonString,
-      }),
-      command,
-    };
-  }
+          hash: jsonString,
+        }),
+        command,
+      };
 
-  try {
-    return {
-      tag: "ElmMakeError",
-      error: ElmMakeError(json),
-      extraError,
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmMakeJsonParseError",
-      error,
-      errorFilePath: Errors.tryWriteErrorFile({
-        cwd: command.options.cwd,
-        name: "ElmMakeJsonParseError",
-        content: Errors.toPlainString(
-          Errors.elmMakeJsonParseError(
-            { tag: "NoLocation" },
-            error,
-            {
-              tag: "ErrorFileBadContent",
-              content: JSON.stringify(json, null, 2),
-            },
-            command,
-          ),
-        ),
-        hash: jsonString,
-      }),
-      command,
-    };
+    case "Valid":
+      return {
+        tag: "ElmMakeError",
+        error: parsed.value,
+        extraError,
+      };
   }
 }
 
