@@ -1236,7 +1236,6 @@ describe("hot", () => {
 
         📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
         ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
