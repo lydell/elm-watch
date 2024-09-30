@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 const spawn = require("cross-spawn");
 const path = require("path");
+const fs = require("fs");
+
+const lockFile = path.join(__dirname, "..", "..", "lock");
 
 const child = spawn("elm", process.argv.slice(2), {
   env: {
@@ -13,7 +16,16 @@ const child = spawn("elm", process.argv.slice(2), {
 });
 
 child.on("exit", (exitCode) => {
-  setTimeout(() => {
+  if (fs.readFileSync(lockFile, "utf8") === "Delay") {
+    fs.writeFileSync(lockFile, "DelayAck");
+    (function rec() {
+      if (fs.readFileSync(lockFile, "utf8") === "Normal") {
+        process.exit(exitCode);
+      } else {
+        setTimeout(rec, 10);
+      }
+    })();
+  } else {
     process.exit(exitCode);
-  }, 100);
+  }
 });
