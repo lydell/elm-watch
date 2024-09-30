@@ -542,6 +542,10 @@ export function clean(string: string): string {
     .replace(
       /\n.+Web socket disconnected for: (.+)(\n.+Web socket connected (?:for|needing compilation of): \1)/g,
       "$2",
+    )
+    .replace(
+      /\n.*web socket connections:.? 0.+\n\n.+Web socket disconnected for:.+\n.+Everything up to date.+\n/g,
+      "",
     );
 }
 
