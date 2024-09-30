@@ -110,7 +110,7 @@ type Piece =
       text: string;
       bold: boolean;
       underline: boolean;
-      color?: ElmMakeError.Color;
+      color: ElmMakeError.Color | undefined;
     }
   | { tag: "Bold"; text: string }
   | { tag: "Dim"; text: string }
@@ -213,7 +213,7 @@ export function toHtml(
   noColor: boolean,
 ): {
   title: string;
-  location: ErrorLocation | undefined;
+  location?: ErrorLocation;
   htmlContent: string;
 } {
   const renderPiece = (piece: Piece): string =>
@@ -223,7 +223,9 @@ export function toHtml(
     DEFAULT_COLUMNS,
     renderPiece,
   );
-  return { title, location, htmlContent: content };
+  return location === undefined
+    ? { title, htmlContent: content }
+    : { title, location, htmlContent: content };
 }
 
 function renderPieceForTerminal(piece: Piece): string {

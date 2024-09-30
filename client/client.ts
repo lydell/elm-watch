@@ -3103,7 +3103,7 @@ function viewCompilationModeChooser({
                 disabled: sendKey === undefined || status.tag === "Disabled",
                 onchange:
                   sendKey === undefined
-                    ? undefined
+                    ? null
                     : () => {
                         dispatch({
                           tag: "ChangedCompilationMode",

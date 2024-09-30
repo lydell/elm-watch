@@ -12,6 +12,7 @@
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,

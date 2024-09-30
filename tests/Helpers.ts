@@ -177,8 +177,6 @@ export class CtrlCReadStream extends SilentReadStream implements ReadStream {
 export class MemoryWriteStream extends stream.Writable implements WriteStream {
   isTTY = true;
 
-  columns = undefined;
-
   content = "";
 
   override _write(

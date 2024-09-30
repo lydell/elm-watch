@@ -416,7 +416,7 @@ export async function run(
     runCmd: runCmd(env, logger, getNow, exitOnError),
   });
 
-  delete hotKillManager.kill;
+  hotKillManager.kill = undefined;
 
   return result;
 }
@@ -582,7 +582,7 @@ const initMutable =
       }
       /* v8 ignore stop */
 
-      delete hotKillManager.kill;
+      hotKillManager.kill = undefined;
     };
 
     hotKillManager.kill = async () => {

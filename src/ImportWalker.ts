@@ -19,7 +19,7 @@ export type WalkImportsResult =
 
 export type WalkImportsError = {
   tag: "ImportWalkerFileSystemError";
-  error: Error & { code?: string };
+  error: NodeJS.ErrnoException;
   relatedElmFilePathsUntilError: Set<string>;
 };
 
