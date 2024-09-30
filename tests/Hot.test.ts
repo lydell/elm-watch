@@ -1295,7 +1295,7 @@ describe("hot", () => {
               elmWatchJsonPath,
               elmWatchJsonString.slice(0, -10),
             );
-            await wait(100);
+            await wait(1000);
             fs.writeFileSync(
               elmWatchJsonPath,
               elmWatchJsonString.replace(/"postprocess":.*/, ""),
