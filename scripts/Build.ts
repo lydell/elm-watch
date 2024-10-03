@@ -108,7 +108,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
       path.join(DIR, "src", "index.ts"),
       path.join(DIR, "src", "PostprocessWorker.ts"),
     ],
-    external: Object.keys(PACKAGE.dependencies),
+    packages: "external",
     outdir: BUILD,
     platform: "node",
     write: false,
@@ -129,21 +129,16 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
   });
 
   const toModuleRegex = /__toESM\((require\("[^"]+"\))\)/g;
-  const exportsRegex = /module.exports = .+/g;
 
   for (const output of result.outputFiles) {
     switch (path.basename(output.path)) {
       case "index.js": {
         const replaced = output.text
-          .slice(
-            secondIndexOf(output.text, "//"),
-            output.text.lastIndexOf("//"),
-          )
+          .replace(/^[^]+\nmodule.exports = .+\s*/g, "")
           .replace(toModuleRegex, "$1")
-          .replace(exportsRegex, "")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
           .trim();
-        const code = `#!/usr/bin/env node\n${replaced}`;
+        const code = `#!/usr/bin/env node\n"use strict";\n${replaced}`;
         fs.writeFileSync(output.path, code, { mode: "755" });
         break;
       }
@@ -152,7 +147,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         fs.writeFileSync(
           output.path,
           output.text
-            .slice(output.text.indexOf("//"))
+            .slice(output.text.indexOf("// src/"))
             .replace(toModuleRegex, "$1"),
         );
         break;
@@ -161,13 +156,6 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         throw new Error(`Unexpected output: ${output.path}`);
     }
   }
-}
-
-function secondIndexOf(string: string, substring: string): number {
-  const first = string.indexOf(substring);
-  return first === -1
-    ? -1
-    : string.indexOf(substring, first + substring.length);
 }
 
 export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
