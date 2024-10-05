@@ -2432,11 +2432,11 @@ describe("errors", () => {
       expect(await run("postprocess/variants/wrong-default-export", ["make"]))
         .toMatchInlineSnapshot(`
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.js
+        /Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.cjs
 
         I imported your postprocess file:
 
-        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.js")
+        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.cjs")
 
         I expected ⧙imported.default⧘ to be a function, but it isn't!
 
