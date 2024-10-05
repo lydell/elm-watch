@@ -30,7 +30,7 @@ import {
 } from "./Helpers";
 
 const CONTAINER_ID = "elm-watch";
-export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
+export const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "hot");
 
 let watcher: fs.FSWatcher | undefined = undefined;
 const hotKillManager: HotKillManager = { kill: undefined };

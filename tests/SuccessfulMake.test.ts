@@ -17,7 +17,7 @@ import {
   TEST_ENV,
 } from "./Helpers";
 
-const FIXTURES_DIR = path.join(__dirname, "fixtures");
+const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures");
 
 async function run(
   fixture: string,

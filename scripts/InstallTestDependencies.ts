@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 const INSTALL_PACKAGES_DIR = path.join(
-  __dirname,
+  import.meta.dirname,
   "..",
   "tests",
   "install-packages",

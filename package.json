@@ -1,13 +1,13 @@
 {
   "private": true,
   "name": "build",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "install-test-elm-dependencies": "node -r esbuild-register scripts/InstallTestDependencies.ts",
-    "pretest": "run-pty --auto-exit % prettier --check . % eslint . --report-unused-disable-directives % tsc % node -r esbuild-register scripts/EnsureTestDependencies.ts % npm run build",
+    "install-test-elm-dependencies": "tsx scripts/InstallTestDependencies.ts",
+    "pretest": "run-pty --auto-exit % prettier --check . % eslint . --report-unused-disable-directives % tsc % tsx scripts/EnsureTestDependencies.ts % npm run build",
     "test": "vitest run --coverage",
-    "build": "node -r esbuild-register scripts/Build.ts"
+    "build": "tsx scripts/Build.ts"
   },
   "devDependencies": {
     "@types/cross-spawn": "6.0.6",
@@ -16,13 +16,13 @@
     "@vitest/eslint-plugin": "1.1.5",
     "elm-tooling": "1.15.1",
     "esbuild": "0.24.0",
-    "esbuild-register": "3.6.0",
     "eslint": "9.11.1",
     "eslint-plugin-simple-import-sort": "12.1.1",
     "globals": "15.10.0",
     "jsdom": "25.0.1",
     "prettier": "3.3.3",
     "run-pty": "5.0.0",
+    "tsx": "4.19.1",
     "typescript": "5.5.4",
     "typescript-eslint": "8.8.0",
     "vitest": "2.1.2"

@@ -6,7 +6,7 @@ import * as Codec from "tiny-decoders";
 import { quote } from "../src/Helpers";
 import { absolutePathFromString, readJsonFile } from "../src/PathHelpers";
 import { AbsolutePath } from "../src/Types";
-import * as mainElmJson from "../tests/install-packages/elm.json";
+import mainElmJson from "../tests/install-packages/elm.json";
 
 const PACKAGES_TO_INSTALL: Record<string, string> = {
   ...mainElmJson.dependencies.direct,
@@ -14,7 +14,7 @@ const PACKAGES_TO_INSTALL: Record<string, string> = {
 };
 
 const FIXTURES_DIR = absolutePathFromString(
-  { tag: "AbsolutePath", absolutePath: __dirname },
+  { tag: "AbsolutePath", absolutePath: import.meta.dirname },
   "..",
   "tests",
   "fixtures",

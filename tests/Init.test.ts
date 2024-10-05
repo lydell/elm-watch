@@ -15,7 +15,7 @@ import {
   testExceptWindows,
 } from "./Helpers";
 
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "init");
+const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "init");
 
 async function initSuccessHelper(
   fixture: string,

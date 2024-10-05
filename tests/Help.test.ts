@@ -21,7 +21,7 @@ async function helpHelper(
   const stderr = new MemoryWriteStream();
 
   const exitCode = await elmWatchCli(args, {
-    cwd: __dirname,
+    cwd: import.meta.dirname,
     env: {
       ...TEST_ENV,
       ...env,
@@ -34,7 +34,7 @@ async function helpHelper(
 
   const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(0, exitCode, stdoutString, stderr.content, __dirname);
+  assertExitCode(0, exitCode, stdoutString, stderr.content, import.meta.dirname);
   expect(stderr.content).toBe("");
 
   return stdoutString;

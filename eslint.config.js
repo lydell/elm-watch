@@ -29,7 +29,6 @@ export default typescriptEslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        // @ts-expect-error This will be fixed once we switch to `"type": "module"` in package.json.
         tsconfigRootDir: import.meta.dirname,
       },
     },

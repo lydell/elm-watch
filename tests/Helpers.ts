@@ -495,7 +495,7 @@ function removeTerminalColorRequests(string: string): string {
 }
 
 export function clean(string: string): string {
-  const { root } = path.parse(__dirname);
+  const { root } = path.parse(import.meta.dirname);
 
   const project = path.join(root, "Users", "you", "project");
 
@@ -508,11 +508,11 @@ export function clean(string: string): string {
   // Match a web socket disconnect followed by a connect, and replace them just
   // with the connect. Sometimes in tests, we don’t get both messages.
   return string
-    .split(path.dirname(__dirname))
+    .split(path.dirname(import.meta.dirname))
     .join(project)
-    .split(path.dirname(__dirname).replace(/\\/g, "\\\\"))
+    .split(path.dirname(import.meta.dirname).replace(/\\/g, "\\\\"))
     .join(project)
-    .split(url.pathToFileURL(path.dirname(__dirname)).toString())
+    .split(url.pathToFileURL(path.dirname(import.meta.dirname)).toString())
     .join(
       url
         .pathToFileURL(project)

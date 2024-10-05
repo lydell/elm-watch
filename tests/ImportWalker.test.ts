@@ -9,7 +9,7 @@ import { clean, stringSnapshotSerializer, testExceptWindows } from "./Helpers";
 
 const FIXTURES_DIR: AbsolutePath = {
   tag: "AbsolutePath",
-  absolutePath: path.join(__dirname, "fixtures", "ImportWalker"),
+  absolutePath: path.join(import.meta.dirname, "fixtures", "ImportWalker"),
 };
 
 function walkImportsHelper(

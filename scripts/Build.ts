@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-const DIR = path.dirname(__dirname);
+const DIR = path.dirname(import.meta.dirname);
 const BUILD = path.join(DIR, "build");
 const CLIENT_DIR = path.join(DIR, "client");
 
@@ -128,7 +128,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
     ],
   });
 
-  const toModuleRegex = /__toESM\((require\("[^"]+"\))\)/g;
+  const toModuleRegex = /__toESM\((require\("[^"]+"\))(?:, 1)?\)/g;
 
   for (const output of result.outputFiles) {
     switch (path.basename(output.path)) {
@@ -169,7 +169,8 @@ export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
   write: false,
 };
 
-if (require.main === module) {
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+if (process.argv[1]!.endsWith("Build.ts")) {
   run().catch((error: Error) => {
     process.stderr.write(`${error.message}\n`);
     process.exit(1);

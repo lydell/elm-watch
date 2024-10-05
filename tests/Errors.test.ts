@@ -38,7 +38,7 @@ import {
   wait,
 } from "./Helpers";
 
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "errors");
+const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "errors");
 
 async function run(
   fixture: string,
@@ -100,7 +100,7 @@ async function runAbsolute(
 const elmBinAlwaysSucceedEnv = {
   ...process.env,
   ...TEST_ENV,
-  PATH: prependPATH(path.join(__dirname, "fixtures", "elm-bin-always-succeed")),
+  PATH: prependPATH(path.join(import.meta.dirname, "fixtures", "elm-bin-always-succeed")),
 };
 
 async function runWithBadElmBin(
@@ -463,7 +463,7 @@ describe("errors", () => {
   });
 
   test("elm-watch.json not found", async () => {
-    expect(await runAbsolute(path.parse(__dirname).root, ["make"]))
+    expect(await runAbsolute(path.parse(import.meta.dirname).root, ["make"]))
       .toMatchInlineSnapshot(`
       ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
 
@@ -488,7 +488,7 @@ describe("errors", () => {
 
   test("elm-watch.json not found and suggest JSON from args", async () => {
     expect(
-      await runAbsolute(path.parse(__dirname).root, [
+      await runAbsolute(path.parse(import.meta.dirname).root, [
         "make",
         "src/Game.elm",
         "--output",
@@ -1024,7 +1024,7 @@ describe("errors", () => {
         await run("valid", ["make"], {
           env: {
             ...TEST_ENV,
-            PATH: [__dirname, path.join(__dirname, "some", "bin")].join(
+            PATH: [import.meta.dirname, path.join(import.meta.dirname, "some", "bin")].join(
               path.delimiter,
             ),
           },
@@ -1073,7 +1073,7 @@ describe("errors", () => {
     test("Windows basic", () => {
       expect(
         printPATHWindows({
-          Path: [__dirname, path.join(__dirname, "some", "bin")].join(
+          Path: [import.meta.dirname, path.join(import.meta.dirname, "some", "bin")].join(
             path.delimiter,
           ),
         }),
@@ -1094,12 +1094,12 @@ describe("errors", () => {
     test("Windows multiple PATH-like", () => {
       expect(
         printPATHWindows({
-          Path: [__dirname, path.join(__dirname, "some", "bin")].join(
+          Path: [import.meta.dirname, path.join(import.meta.dirname, "some", "bin")].join(
             path.delimiter,
           ),
           PATH: [
-            path.join(__dirname, "that", "bin"),
-            path.join(__dirname, "final", "bin"),
+            path.join(import.meta.dirname, "that", "bin"),
+            path.join(import.meta.dirname, "final", "bin"),
           ].join(path.delimiter),
           notPath: "should not be seen",
         }),
