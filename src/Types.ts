@@ -120,11 +120,14 @@ export function markAsTargetName(string: string): TargetName {
 //                                    ^^^^^^^^^^^^^^
 // This is a `string` rather than a `URL` to avoid worker serialization stuff.
 export type ElmWatchNodeScriptPath = Brand<string, "ElmWatchNodeScriptPath">;
+// This function is only used in PostprocessWorker.ts, for which code coverage cannot be measured.
+/* v8 ignore start */
 export function markAsElmWatchNodeScriptPath(
   string: string,
 ): ElmWatchNodeScriptPath {
   return string as ElmWatchNodeScriptPath;
 }
+/* v8 ignore stop */
 
 export type CliArg = Brand<string, "CliArg">;
 export function markAsCliArg(string: string): CliArg {

@@ -15,13 +15,6 @@ const windowsCoverage = {
   statements: 97,
 };
 
-const ignoreCoverage = {
-  branches: 0,
-  functions: 0,
-  lines: 0,
-  statements: 0,
-};
-
 export default defineConfig({
   test: {
     // Increase the default timeout for each test from 5 seconds to 30 seconds.
@@ -33,11 +26,10 @@ export default defineConfig({
     },
     coverage: {
       include: ["src/**/*.ts"],
+      // Vitest reports 0 % coverage for this file, while in reality it should be 100 %.
+      exclude: ["src/PostprocessWorker.ts"],
       thresholds: {
-        global:
-          process.platform === "win32" ? windowsCoverage : requireCoverage,
-        // Vitest reports 0 % coverage for this file, while in reality it should be 100 %.
-        "./src/PostprocessWorker.ts": ignoreCoverage,
+        ...(process.platform === "win32" ? windowsCoverage : requireCoverage),
       },
     },
     setupFiles: ["tests/setupTests.ts"],

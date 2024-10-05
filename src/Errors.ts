@@ -243,9 +243,11 @@ export function toHtml(
     DEFAULT_COLUMNS,
     renderPiece,
   );
+  /* v8 ignore start */
   return location === undefined
     ? { title, htmlContent: content }
     : { title, location, htmlContent: content };
+  /* v8 ignore stop */
 }
 
 function renderPieceForTerminal(piece: Piece): string {
