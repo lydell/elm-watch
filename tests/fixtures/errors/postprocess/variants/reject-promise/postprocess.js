@@ -1,3 +1,3 @@
-module.exports = async () => {
+export default async () => {
   throw "rejected!";
 };

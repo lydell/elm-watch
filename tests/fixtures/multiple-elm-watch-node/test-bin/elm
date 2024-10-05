@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const fs = require("fs");
-const path = require("path");
+import spawn from "cross-spawn";
+import fs from "fs";
+import path from "path";
 
 const argv = process.argv.slice(2);
 
@@ -17,7 +17,7 @@ const child = spawn("elm", argv, {
 
 child.on("exit", (exitCode) => {
   if (argv.some((arg) => arg.includes("2.js"))) {
-    fs.writeFileSync(path.join(__dirname, "..", "lock"), "third-elm-done");
+    fs.writeFileSync(path.join(import.meta.dirname, "..", "lock"), "third-elm-done");
   }
   process.exit(exitCode);
 });

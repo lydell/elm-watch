@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 async function read(stream) {
   const chunks = [];
@@ -19,7 +19,7 @@ async function wait(ms) {
 
 async function run() {
   const code = await read(process.stdin);
-  const tmp = path.join(__dirname, "postprocess.tmp");
+  const tmp = path.join(import.meta.dirname, "postprocess.tmp");
   const n = Number(fs.readFileSync(tmp, "utf8"));
   fs.writeFileSync(tmp, (n + 1).toString());
 

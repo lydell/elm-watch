@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-if (require("../elm-install")) {
+import installed from "../elm-install.js";
+if (installed) {
   process.stderr.write(
     `elm: Map.!: given key is not an element in the map
 CallStack (from HasCallStack):

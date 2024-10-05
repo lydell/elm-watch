@@ -1,8 +1,10 @@
-const spawn = require("cross-spawn");
-const path = require("path");
+import crossSpawn from "cross-spawn";
+import path from "path";
 
-if (process.argv.some((arg) => arg.includes("ElmWatchDummy"))) {
-  spawn("elm", process.argv.slice(2), {
+const isInstall = process.argv.some((arg) => arg.includes("ElmWatchDummy"));
+
+if (isInstall) {
+  crossSpawn("elm", process.argv.slice(2), {
     env: {
       ...process.env,
       PATH: process.env.PATH.split(path.delimiter)
@@ -11,7 +13,6 @@ if (process.argv.some((arg) => arg.includes("ElmWatchDummy"))) {
     },
     stdio: "inherit",
   });
-  module.exports = false;
-} else {
-  module.exports = true;
 }
+
+export default !isInstall;

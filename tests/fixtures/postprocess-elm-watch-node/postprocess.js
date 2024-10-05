@@ -1,6 +1,6 @@
-const path = require("path");
+import path from "path";
 
-module.exports = (input) => {
+export default (input) => {
   if (Object.keys(input).length !== 5) {
     return new Error(
       `Expected 5 keys but got ${Object.keys(input).length}: ${JSON.stringify(

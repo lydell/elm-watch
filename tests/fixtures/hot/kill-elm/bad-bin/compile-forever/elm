@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const path = require("path");
-const fs = require("fs");
+import spawn from "cross-spawn";
+import path from "path";
+import fs from "fs";
 
-const elmJsonPath = path.join(__dirname, "..", "..", "elm.json");
-const inputPath = path.join(__dirname, "..", "..", "src", "Main.elm");
-const lockPath = path.join(__dirname, "..", "..", "lock");
+const elmJsonPath = path.join(import.meta.dirname, "..", "..", "elm.json");
+const inputPath = path.join(import.meta.dirname, "..", "..", "src", "Main.elm");
+const lockPath = path.join(import.meta.dirname, "..", "..", "lock");
 const lockFile = fs.readFileSync(lockPath, "utf8");
 
 const isInstall = process.argv.some((arg) => arg.includes("ElmWatchDummy"));

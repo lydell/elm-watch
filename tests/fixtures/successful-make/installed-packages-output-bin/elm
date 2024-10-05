@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const path = require("path");
+import spawn from "cross-spawn";
+import path from "path";
 
 if (process.argv.some((arg) => arg.includes("ElmWatchDummy"))) {
   process.stdout.write(

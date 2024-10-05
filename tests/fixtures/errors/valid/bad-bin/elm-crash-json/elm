@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-if (require("../elm-install")) {
+import installed from "../elm-install.js";
+if (installed) {
   process.stderr.write(
     `{"type":"compile-errors","errors":[{"path":"/Users/you/src/Admin/Main.elm","name":"Admin.Main","problems":[{"title":"MODULE NOT FOUND","region":{"start":{"line":71,"column":8},"end":{"line":71,"column":22}},"message":["You are trying to imporelm: Map.!: given key is not an element in the map
 CallStack (from HasCallStack):

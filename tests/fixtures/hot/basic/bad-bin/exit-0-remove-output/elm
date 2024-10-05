@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const fs = require("fs");
-const path = require("path");
+import spawn from "cross-spawn";
+import fs from "fs";
+import path from "path";
 
 const child = spawn("elm", process.argv.slice(2), {
   env: {
@@ -15,7 +15,7 @@ const child = spawn("elm", process.argv.slice(2), {
 
 child.on("exit", (exitCode) => {
   if (!process.argv.some((arg) => arg.includes("/dev/null"))) {
-    const dir = path.join(__dirname, "..", "..", "elm-stuff", "elm-watch");
+    const dir = path.join(import.meta.dirname, "..", "..", "elm-stuff", "elm-watch");
     fs.rmSync(dir, { recursive: true });
   }
   process.exit(exitCode);

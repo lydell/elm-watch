@@ -100,7 +100,9 @@ async function runAbsolute(
 const elmBinAlwaysSucceedEnv = {
   ...process.env,
   ...TEST_ENV,
-  PATH: prependPATH(path.join(import.meta.dirname, "fixtures", "elm-bin-always-succeed")),
+  PATH: prependPATH(
+    path.join(import.meta.dirname, "fixtures", "elm-bin-always-succeed"),
+  ),
 };
 
 async function runWithBadElmBin(
@@ -1024,9 +1026,10 @@ describe("errors", () => {
         await run("valid", ["make"], {
           env: {
             ...TEST_ENV,
-            PATH: [import.meta.dirname, path.join(import.meta.dirname, "some", "bin")].join(
-              path.delimiter,
-            ),
+            PATH: [
+              import.meta.dirname,
+              path.join(import.meta.dirname, "some", "bin"),
+            ].join(path.delimiter),
           },
         }),
       ).toMatchInlineSnapshot(`
@@ -1073,9 +1076,10 @@ describe("errors", () => {
     test("Windows basic", () => {
       expect(
         printPATHWindows({
-          Path: [import.meta.dirname, path.join(import.meta.dirname, "some", "bin")].join(
-            path.delimiter,
-          ),
+          Path: [
+            import.meta.dirname,
+            path.join(import.meta.dirname, "some", "bin"),
+          ].join(path.delimiter),
         }),
       ).toMatchInlineSnapshot(`
           This is what the Path environment variable looks like:
@@ -1094,9 +1098,10 @@ describe("errors", () => {
     test("Windows multiple PATH-like", () => {
       expect(
         printPATHWindows({
-          Path: [import.meta.dirname, path.join(import.meta.dirname, "some", "bin")].join(
-            path.delimiter,
-          ),
+          Path: [
+            import.meta.dirname,
+            path.join(import.meta.dirname, "some", "bin"),
+          ].join(path.delimiter),
           PATH: [
             path.join(import.meta.dirname, "that", "bin"),
             path.join(import.meta.dirname, "final", "bin"),
@@ -2394,35 +2399,33 @@ describe("errors", () => {
     test("empty file", async () => {
       expect(await run("postprocess/variants/empty-file", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js
+          ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js
 
-        I imported your postprocess file:
+          I imported your postprocess file:
 
-        const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js")
+          const imported = await import("file:///Users/you/project/tests/fixtures/errors/postprocess/variants/empty-file/postprocess.js")
 
-        I expected ⧙imported.default⧘ to be a function, but it isn't!
+          I expected ⧙imported.default⧘ to be a function, but it isn't!
 
-        typeof imported.default === "object"
+          typeof imported.default === "undefined"
 
-        ⧙imported⧘ is:
+          ⧙imported⧘ is:
 
-        {
-          "default": {}
-        }
+          {}
 
-        Here is a sample function to get you started:
+          Here is a sample function to get you started:
 
-        // CJS
-        module.exports = async function postprocess({ code, targetName, compilationMode }) {
-          return code;
-        };
+          // CJS
+          module.exports = async function postprocess({ code, targetName, compilationMode }) {
+            return code;
+          };
 
-        // MJS
-        export default async function postprocess({ code, targetName, compilationMode }) {
-          return code;
-        };
-      `);
+          // MJS
+          export default async function postprocess({ code, targetName, compilationMode }) {
+            return code;
+          };
+        `);
     });
 
     test("wrong default export, with console.log and console.error", async () => {

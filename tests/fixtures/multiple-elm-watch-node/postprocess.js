@@ -1,7 +1,7 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-const lock = path.join(__dirname, "lock");
+const lock = path.join(import.meta.dirname, "lock");
 
 async function wait(ms) {
   return new Promise((resolve) => {
@@ -11,7 +11,7 @@ async function wait(ms) {
   });
 }
 
-module.exports = async ({ code, targetName }) => {
+export default async ({ code, targetName }) => {
   switch (targetName) {
     case "main":
       while (fs.readFileSync(lock, "utf8") !== "third-elm-done") {

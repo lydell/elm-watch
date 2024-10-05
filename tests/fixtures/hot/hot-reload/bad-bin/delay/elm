@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const path = require("path");
-const fs = require("fs");
+import spawn from "cross-spawn";
+import path from "path";
+import fs from "fs";
 
-const lockFile = path.join(__dirname, "..", "..", "lock");
+const lockFile = path.join(import.meta.dirname, "..", "..", "lock");
 
 const child = spawn("elm", process.argv.slice(2), {
   env: {

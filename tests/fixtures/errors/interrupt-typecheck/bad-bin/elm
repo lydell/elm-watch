@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const fs = require("fs");
-const path = require("path");
+import spawn from "cross-spawn";
+import fs from "fs";
+import path from "path";
 
 const argv = process.argv.slice(2);
-const lock = path.join(__dirname, "..", "lock");
+const lock = path.join(import.meta.dirname, "..", "lock");
 const isMain = argv.some((arg) => arg.includes("Main"));
 
 function canExit() {
