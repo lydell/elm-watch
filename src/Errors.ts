@@ -44,6 +44,7 @@ import {
   markAsElmWatchJsonPath,
   OutputPath,
   RunMode,
+  TargetName,
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
 } from "./Types";
@@ -164,7 +165,7 @@ type ErrorLocation =
     }
   | {
       tag: "Target";
-      targetName: string;
+      targetName: TargetName;
     };
 
 export const fancyError =
@@ -1435,7 +1436,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 }
 
 export function webSocketTargetNotFound(
-  targetName: string,
+  targetName: TargetName,
   enabledOutputs: Array<OutputPath>,
   disabledOutputs: Array<OutputPath>,
 ): string {
@@ -1471,7 +1472,7 @@ If so, try reloading the page.
 }
 
 export function webSocketTargetDisabled(
-  targetName: string,
+  targetName: TargetName,
   enabledOutputs: Array<OutputPath>,
   disabledOutputs: Array<OutputPath>,
 ): string {

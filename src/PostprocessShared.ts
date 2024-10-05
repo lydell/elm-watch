@@ -4,6 +4,7 @@ import {
   CompilationMode,
   ElmWatchNodeScriptPath,
   RunMode,
+  TargetName,
 } from "./Types";
 
 export const ELM_WATCH_NODE = "elm-watch-node";
@@ -11,7 +12,7 @@ export const ELM_WATCH_NODE = "elm-watch-node";
 export type ElmWatchNodeInternalArgs = {
   cwd: AbsolutePath;
   code: string;
-  targetName: string;
+  targetName: TargetName;
   compilationMode: CompilationMode;
   runMode: RunMode;
   userArgs: Array<string>;
@@ -19,7 +20,7 @@ export type ElmWatchNodeInternalArgs = {
 
 export type ElmWatchNodePublicArgs = {
   code: string;
-  targetName: string;
+  targetName: TargetName;
   compilationMode: CompilationMode;
   runMode: RunMode;
   argv: Array<string>;

@@ -53,8 +53,10 @@ import {
   ElmWatchJsonPath,
   GetNow,
   InputPath,
+  markAsTargetName,
   OutputPath,
   RunMode,
+  TargetName,
 } from "./Types";
 
 export type InstallDependenciesResult =
@@ -1621,8 +1623,8 @@ export function emojiWidthFix({
 // function.
 function targetNameEmojiTweak(
   loggerConfig: LoggerConfig,
-  targetName: string,
-): { targetName: string; delta: number } {
+  targetName: TargetName,
+): { targetName: TargetName; delta: number } {
   const match = STARTS_WITH_EMOJI_REGEX.exec(targetName);
 
   if (match === null) {
@@ -1634,7 +1636,10 @@ function targetNameEmojiTweak(
 
   // Avoid emoji on Windows, for example.
   if (!loggerConfig.fancy) {
-    return { targetName: targetName.slice(content.length), delta: 0 };
+    return {
+      targetName: markAsTargetName(targetName.slice(content.length)),
+      delta: 0,
+    };
   }
 
   const start = emojiWidthFix({
@@ -1644,7 +1649,9 @@ function targetNameEmojiTweak(
   });
 
   return {
-    targetName: `${start} ${targetName.slice(content.length)}`,
+    targetName: markAsTargetName(
+      `${start} ${targetName.slice(content.length)}`,
+    ),
     // `start.length` is pretty big: Emojis can take many characters, and the
     // escape code to move the cursor takes some as well. In reality, it takes
     // just 2 characters of screen width (2 chars of emoji).

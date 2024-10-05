@@ -8,6 +8,7 @@ import {
   CompilationMode,
   CompilationModeWithProxy,
   OutputPath,
+  TargetName,
 } from "./Types";
 
 // This matches full functions, declared either with `function name(` or `var name =`.
@@ -882,7 +883,7 @@ export function clientCode(
 // - And it has the same target name. (It might have changed, and needs to match.)
 // - And it used the same WebSocket port. (Otherwise it will never connect to us.)
 export function versionedIdentifier(
-  targetName: string,
+  targetName: TargetName,
   webSocketPort: Port,
 ): string {
   return `// elm-watch hot ${Codec.JSON.stringify(Codec.unknown, {

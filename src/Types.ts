@@ -111,6 +111,7 @@ export type OutputPath = {
 //    ^^^^^^^^^^^^^^
 // }
 export type TargetName = Brand<string, "TargetName">;
+export const TargetName = brand<TargetName>();
 export function markAsTargetName(string: string): TargetName {
   return string as TargetName;
 }

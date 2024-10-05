@@ -64,6 +64,7 @@ import {
   GetNow,
   markAsAbsolutePath,
   OutputPath,
+  TargetName,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
@@ -2117,7 +2118,7 @@ function webSocketConnectionIsForOutputPath(
 const WebSocketConnectedParams = Codec.fields(
   {
     elmWatchVersion: Codec.string,
-    targetName: Codec.string,
+    targetName: TargetName,
     elmCompiledTimestamp: Codec.flatMap(Codec.string, {
       decoder: (string) => {
         const number = Number(string);
@@ -2168,13 +2169,13 @@ type ParseWebSocketConnectRequestUrlError =
     }
   | {
       tag: "TargetDisabled";
-      targetName: string;
+      targetName: TargetName;
       enabledOutputs: Array<OutputPath>;
       disabledOutputs: Array<OutputPath>;
     }
   | {
       tag: "TargetNotFound";
-      targetName: string;
+      targetName: TargetName;
       enabledOutputs: Array<OutputPath>;
       disabledOutputs: Array<OutputPath>;
     }
