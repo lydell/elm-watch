@@ -15,7 +15,13 @@ const child = spawn("elm", process.argv.slice(2), {
 
 child.on("exit", (exitCode) => {
   if (!process.argv.some((arg) => arg.includes("/dev/null"))) {
-    const dir = path.join(import.meta.dirname, "..", "..", "elm-stuff", "elm-watch");
+    const dir = path.join(
+      import.meta.dirname,
+      "..",
+      "..",
+      "elm-stuff",
+      "elm-watch",
+    );
     fs.rmSync(dir, { recursive: true });
   }
   process.exit(exitCode);

@@ -15,7 +15,13 @@ const child = spawn("elm", process.argv.slice(2), {
 
 child.on("exit", (exitCode) => {
   if (!process.argv.some((arg) => arg.includes("/dev/null"))) {
-    const file = path.join(import.meta.dirname, "..", "..", "build", "InjectError.js");
+    const file = path.join(
+      import.meta.dirname,
+      "..",
+      "..",
+      "build",
+      "InjectError.js",
+    );
     const content = fs.readFileSync(file, "utf8");
     const newContent = content.replace(
       /^var _Platform_worker =.+\s*\{/gm,

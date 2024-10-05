@@ -25,4 +25,4 @@ export default async function run({ code }) {
     default:
       return code.replace("REPLACE_ME", "postprocess content after");
   }
-};
+}

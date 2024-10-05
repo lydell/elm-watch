@@ -3,4 +3,4 @@ export default function postprocess({ code }) {
   // This can happen if you try to `import` a JS file created by `elm make`
   // and your bundler rewrites `this`.
   return code.replace(/\bthis\b([\W\s]+)$/, "{}$1");
-};
+}
