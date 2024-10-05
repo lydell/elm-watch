@@ -40,5 +40,6 @@ export default defineConfig({
         "./src/PostprocessWorker.ts": ignoreCoverage,
       },
     },
+    setupFiles: ["tests/setupTests.ts"],
   },
 });
