@@ -103,8 +103,17 @@ export type OutputPath = {
   theOutputPath: AbsolutePath;
   temporaryOutputPath: AbsolutePath;
   originalString: string;
-  targetName: string;
+  targetName: TargetName;
 };
+
+// "targets": {
+//   "My Target Name": {}
+//    ^^^^^^^^^^^^^^
+// }
+export type TargetName = Brand<string, "TargetName">;
+export function markAsTargetName(string: string): TargetName {
+  return string as TargetName;
+}
 
 // "postprocess": ["elm-watch-node", "postprocess.js"]
 //                                    ^^^^^^^^^^^^^^

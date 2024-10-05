@@ -18,7 +18,7 @@ import {
 import { LatestEvent, printTimeline } from "../src/Hot";
 import { IS_WINDOWS } from "../src/IsWindows";
 import { LoggerConfig } from "../src/Logger";
-import { markAsAbsolutePath } from "../src/Types";
+import { markAsAbsolutePath, markAsTargetName } from "../src/Types";
 import {
   clean,
   CtrlCReadStream,
@@ -3744,7 +3744,7 @@ describe("hot", () => {
           theOutputPath: markAsAbsolutePath("/build/One.js"),
           temporaryOutputPath: markAsAbsolutePath("/elm-stuff/elm-watch/1.js"),
           originalString: "build/One.js",
-          targetName: "One",
+          targetName: markAsTargetName("One"),
         },
       },
       {

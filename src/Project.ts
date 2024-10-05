@@ -28,6 +28,7 @@ import {
   type GetNow,
   type InputPath,
   markAsElmJsonPath,
+  markAsTargetName,
   type OutputPath,
   type UncheckedInputPath,
   type WriteOutputErrorReasonForWriting,
@@ -347,7 +348,7 @@ export function initProject({
         `${index}.js`,
       ),
       originalString: target.output,
-      targetName,
+      targetName: markAsTargetName(targetName),
     };
 
     const previousOutput = potentialOutputDuplicates.get(

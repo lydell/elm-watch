@@ -19,7 +19,11 @@ import {
 import * as Errors from "../src/Errors";
 import { removeColor, toError } from "../src/Helpers";
 import { markAsPort } from "../src/Port";
-import { markAsAbsolutePath, markAsElmJsonPath } from "../src/Types";
+import {
+  markAsAbsolutePath,
+  markAsElmJsonPath,
+  markAsTargetName,
+} from "../src/Types";
 import {
   assertExitCode,
   badElmBinEnv,
@@ -3107,7 +3111,7 @@ describe("errors", () => {
                 "/elm-stuff/elm-watch/1.js",
               ),
               originalString: "main.js",
-              targetName: "main",
+              targetName: markAsTargetName("main"),
             },
             { tag: "Signal", signal: "SIGABRT" },
             "",
@@ -3149,7 +3153,7 @@ describe("errors", () => {
                 "/elm-stuff/elm-watch/1.js",
               ),
               originalString: "main.js",
-              targetName: "main",
+              targetName: markAsTargetName("main"),
             },
             { tag: "Unknown" },
             "",

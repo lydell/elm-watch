@@ -7,6 +7,7 @@ import {
   markAsElmJsonPath,
   markAsElmWatchJsonPath,
   markAsElmWatchStuffJsonPath,
+  markAsTargetName,
 } from "../src/Types";
 import { stringSnapshotSerializer } from "./Helpers";
 
@@ -29,7 +30,7 @@ const project: Project = {
     {
       originalString: "public/build/HtmlMain.js",
       tag: "OutputPath",
-      targetName: "Html",
+      targetName: markAsTargetName("Html"),
       theOutputPath: markAsAbsolutePath(
         "/Users/you/project/public/build/HtmlMain.js",
       ),
@@ -40,7 +41,7 @@ const project: Project = {
     {
       originalString: "public/submodules/azimutt/public/dist/elm.js",
       tag: "OutputPath",
-      targetName: "Azimutt",
+      targetName: markAsTargetName("Azimutt"),
       theOutputPath: markAsAbsolutePath(
         "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
       ),
@@ -60,7 +61,7 @@ const project: Project = {
           "/Users/you/project/elm-stuff/elm-watch/3.js",
         ),
         originalString: "public/build/SandboxMain.js",
-        targetName: "Sandbox",
+        targetName: markAsTargetName("Sandbox"),
       },
       compilationMode: "standard",
       browserUiPosition: "BottomLeft",
@@ -87,7 +88,7 @@ const project: Project = {
           {
             originalString: "public/build/ElementMain.js",
             tag: "OutputPath",
-            targetName: "Element",
+            targetName: markAsTargetName("Element"),
             theOutputPath: markAsAbsolutePath(
               "/Users/you/project/public/build/ElementMain.js",
             ),
@@ -118,7 +119,7 @@ const project: Project = {
           {
             originalString: "public/build/Frankenstein.js",
             tag: "OutputPath",
-            targetName: "Frankenstein",
+            targetName: markAsTargetName("Frankenstein"),
             theOutputPath: markAsAbsolutePath(
               "/Users/you/project/public/build/Frankenstein.js",
             ),
@@ -168,7 +169,7 @@ const project: Project = {
           {
             originalString: "public/submodules/concourse/web/public/elm.min.js",
             tag: "OutputPath",
-            targetName: "Concourse",
+            targetName: markAsTargetName("Concourse"),
             theOutputPath: markAsAbsolutePath(
               "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
             ),
