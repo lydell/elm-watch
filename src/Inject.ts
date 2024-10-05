@@ -47,8 +47,9 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	$elm$core$Result$isOk(flagResult) || _Debug_crash(2 /**/, _Json_errorToString(flagResult.a) /**/);
 	var managers = {};
 	var initUrl = programType === "Browser.application" ? _Browser_getUrl() : undefined;
-	globalThis.__ELM_WATCH.INIT_URL = initUrl;
+	globalThis.__ELM_WATCH_INIT_URL = initUrl;
 	var initPair = init(flagResult.a);
+	delete globalThis.__ELM_WATCH_INIT_URL;
 	var model = initPair.a;
 	var stepper = stepperBuilder(sendToApp, model);
 	var ports = _Platform_setupEffects(managers, sendToApp);
@@ -112,8 +113,9 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		if (isDebug) {
 			init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
 		}
-		globalThis.__ELM_WATCH.INIT_URL = initUrl;
+		globalThis.__ELM_WATCH_INIT_URL = initUrl;
 		var newInitPair = init(newFlagResult.a);
+		delete globalThis.__ELM_WATCH_INIT_URL;
 		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
 			return reloadReasons.concat("\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!");
 		}
@@ -321,7 +323,7 @@ function _Platform_mergeExportsElmWatch(moduleName, obj, exports)
 
   // ### _Browser_application
   // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`. Init
-  // with URL given from `_Platform_initialize` (via `globalThis.__ELM_WATCH.INIT_URL`).
+  // with URL given from `_Platform_initialize` (via `globalThis.__ELM_WATCH_INIT_URL`).
   _Browser_application: `
 // This function was slightly modified by elm-watch.
 function _Browser_application(impl)
@@ -361,7 +363,7 @@ function _Browser_application(impl)
 		%init%: function(flags)
 		{
 			// return A3(impl.init, flags, _Browser_getUrl(), key); // commented out by elm-watch
-			return A3(impl.%init%, flags, globalThis.__ELM_WATCH.INIT_URL, key); // added by elm-watch
+			return A3(impl.%init%, flags, globalThis.__ELM_WATCH_INIT_URL, key); // added by elm-watch
 		},
 		// view: impl.view, // commented out by elm-watch
 		// update: impl.update, // commented out by elm-watch
