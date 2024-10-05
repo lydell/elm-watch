@@ -5,22 +5,22 @@ export type PortChoice =
   | { tag: "PersistedPort"; port: Port }
   | { tag: "PortFromConfig"; port: Port };
 
-export type Port = {
-  tag: "Port";
-  thePort: number;
+export type Port = number & {
+  readonly Port: never;
 };
 
-export const Port = Codec.flatMap(Codec.number, {
+export function markAsPort(number: number): Port {
+  return number as Port;
+}
+
+export const Port: Codec.Codec<Port, number> = Codec.flatMap(Codec.number, {
   decoder: (number) => {
     const min = 1;
     const max = 65535;
     return Number.isInteger(number) && min <= number && number <= max
       ? {
           tag: "Valid",
-          value: {
-            tag: "Port" as const,
-            thePort: number,
-          },
+          value: markAsPort(number),
         }
       : {
           tag: "DecoderError",
@@ -32,5 +32,5 @@ export const Port = Codec.flatMap(Codec.number, {
           },
         };
   },
-  encoder: ({ thePort }) => thePort,
+  encoder: (port) => port,
 });

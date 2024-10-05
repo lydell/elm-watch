@@ -1333,12 +1333,12 @@ get a new port number on each restart, which means that if you had tabs
 open in the browser they would try to connect to the old port number.
 
 I tried to use such a saved port number from a previous run (or from previous
-configuration). But now that port (${number(port.thePort)}) wasn't available!
+configuration). But now that port (${number(port)}) wasn't available!
 
 Most likely you already have elm-watch running somewhere else! If so,
 find it and use that, or kill it.
 
-If not, something else could have started using port ${number(port.thePort)}
+If not, something else could have started using port ${number(port)}
 (though it's not very likely.) Then you can either try to find what that is,
 or remove ${elmWatchStuffJson} here:
 
@@ -1358,7 +1358,7 @@ export function portConflictForPortFromConfig(
   })`
 In your ${elmWatchJson} you have this:
 
-"port": ${json(port.thePort)}
+"port": ${json(port)}
 
 But something else seems to already be running on that port!
 You might already have elm-watch running somewhere, or it could be a completely

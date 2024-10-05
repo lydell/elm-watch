@@ -18,6 +18,7 @@ import {
 } from "../src/Env";
 import * as Errors from "../src/Errors";
 import { removeColor, toError } from "../src/Helpers";
+import { markAsPort } from "../src/Port";
 import { markAsAbsolutePath, markAsElmJsonPath } from "../src/Types";
 import {
   assertExitCode,
@@ -2649,7 +2650,7 @@ describe("errors", () => {
     test("write error", async () => {
       const dir = path.join(FIXTURES_DIR, "elm-watch-stuff-json-write-error");
       const elmWatchStuffJson: ElmWatchStuffJson = {
-        port: { tag: "Port", thePort: 59999 },
+        port: markAsPort(59999),
         targets: {},
       };
       const elmWatchStuffJsonPath = path.join(

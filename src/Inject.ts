@@ -861,7 +861,7 @@ export function clientCode(
     INITIAL_ELM_COMPILED_TIMESTAMP: elmCompiledTimestamp.toString(),
     ORIGINAL_COMPILATION_MODE: compilationMode,
     ORIGINAL_BROWSER_UI_POSITION: browserUiPosition,
-    WEBSOCKET_PORT: webSocketPort.thePort.toString(),
+    WEBSOCKET_PORT: webSocketPort.toString(),
     DEBUG: debug.toString(),
   };
   return (
@@ -888,7 +888,7 @@ export function versionedIdentifier(
   return `// elm-watch hot ${Codec.JSON.stringify(Codec.unknown, {
     version: "%VERSION%",
     targetName,
-    webSocketPort: webSocketPort.thePort,
+    webSocketPort,
   })}\n`;
 }
 

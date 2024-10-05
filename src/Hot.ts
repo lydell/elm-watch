@@ -2803,7 +2803,7 @@ function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
         : undefined,
       `${dim("web socket connections:")} ${
         mutable.webSocketConnections.length
-      } ${dim(`(ws://0.0.0.0:${mutable.webSocketServer.port.thePort})`)}`,
+      } ${dim(`(ws://0.0.0.0:${mutable.webSocketServer.port})`)}`,
     ].flatMap((part) =>
       part === undefined
         ? []

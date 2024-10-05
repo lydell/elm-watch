@@ -6,7 +6,7 @@ import * as util from "util";
 import WebSocket, { WebSocketServer as WsServer } from "ws";
 
 import { CERTIFICATE } from "./Certificate";
-import { Port, PortChoice } from "./Port";
+import { markAsPort, Port, PortChoice } from "./Port";
 
 export type WebSocketServerMsg =
   | {
@@ -194,17 +194,17 @@ export class WebSocketServer {
       });
     });
 
-    this.port = { tag: "Port", thePort: 0 };
+    this.port = markAsPort(0);
     this.listening = new Promise((resolve) => {
       this.polyHttpServer.onceListening((address) => {
-        this.port.thePort = address.port;
+        this.port = markAsPort(address.port);
         resolve();
       });
     });
 
     this.polyHttpServer.listen(
       // If `port` is 0, the operating system will assign an arbitrary unused port.
-      portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
+      portChoice.tag === "NoPort" ? 0 : portChoice.port,
     );
   }
 

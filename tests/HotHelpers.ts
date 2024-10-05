@@ -14,6 +14,7 @@ import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";
 import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
+import { markAsPort } from "../src/Port";
 import { BrowserUiPosition, CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
@@ -406,7 +407,7 @@ export function runHotReload({
   const src = path.join(dir, "src");
 
   const elmWatchStuffJson: ElmWatchStuffJson = {
-    port: { tag: "Port", thePort: 58888 },
+    port: markAsPort(58888),
     targets: {
       [name]: {
         compilationMode,
