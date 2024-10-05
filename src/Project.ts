@@ -4,7 +4,6 @@ import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
 import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
-import { HashMap } from "./HashMap";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -41,7 +40,7 @@ export type Project = {
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: Array<OutputPath>;
   elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
-  elmJsons: Map<ElmJsonPath, HashMap<OutputPath, OutputState>>;
+  elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   maxParallel: number;
   postprocess: Postprocess;
 };
@@ -328,7 +327,7 @@ export function initProject({
 }): InitProjectResult {
   const disabledOutputs: Array<OutputPath> = [];
   const elmJsonsErrors: Array<ElmJsonErrorWithMetadata> = [];
-  const elmJsons = new Map<ElmJsonPath, HashMap<OutputPath, OutputState>>();
+  const elmJsons = new Map<ElmJsonPath, Array<[OutputPath, OutputState]>>();
   const potentialOutputDuplicates = new Map<
     AbsolutePath,
     NonEmptyArray<string>
@@ -381,10 +380,8 @@ export function initProject({
 
       switch (resolveElmJsonResult.tag) {
         case "Success": {
-          const previous =
-            elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
-            new HashMap<OutputPath, OutputState>();
-          previous.set(
+          const previous = elmJsons.get(resolveElmJsonResult.elmJsonPath) ?? [];
+          previous.push([
             outputPath,
             new OutputState(
               resolveElmJsonResult.inputs,
@@ -393,7 +390,7 @@ export function initProject({
               openErrorOverlay,
               getNow,
             ),
-          );
+          ]);
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
           break;
         }
@@ -637,7 +634,7 @@ export function getFlatOutputs(project: Project): Array<{
 }> {
   return Array.from(project.elmJsons.entries()).flatMap(
     ([elmJsonPath, outputs]) =>
-      Array.from(outputs, ([outputPath, outputState]) => ({
+      outputs.map(([outputPath, outputState]) => ({
         elmJsonPath,
         outputPath,
         outputState,
@@ -654,7 +651,7 @@ export function projectToDebug(project: Project): unknown {
     postprocess: project.postprocess,
     enabledTargets: Array.from(project.elmJsons.entries()).flatMap(
       ([elmJsonPath, outputs]) =>
-        Array.from(outputs.entries(), ([outputPath, outputState]) => ({
+        outputs.map(([outputPath, outputState]) => ({
           ...outputPathToDebug(outputPath),
           compilationMode: outputState.compilationMode,
           elmJson: elmJsonPath,

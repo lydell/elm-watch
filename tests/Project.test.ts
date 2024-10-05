@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import { HashMap } from "../src/HashMap";
 import { OutputState, Project, projectToDebug } from "../src/Project";
 import {
   GetNow,
@@ -83,7 +82,7 @@ const project: Project = {
   elmJsons: new Map([
     [
       markAsElmJsonPath(markAsAbsolutePath("/Users/you/project/elm.json")),
-      new HashMap([
+      [
         [
           {
             originalString: "public/build/ElementMain.js",
@@ -156,7 +155,7 @@ const project: Project = {
             getNow,
           ),
         ],
-      ]),
+      ],
     ],
     [
       markAsElmJsonPath(
@@ -164,7 +163,7 @@ const project: Project = {
           "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
         ),
       ),
-      new HashMap([
+      [
         [
           {
             originalString: "public/submodules/concourse/web/public/elm.min.js",
@@ -196,7 +195,7 @@ const project: Project = {
             getNow,
           ),
         ],
-      ]),
+      ],
     ],
   ]),
 };
