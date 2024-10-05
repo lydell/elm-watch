@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
 import { HashMap } from "../src/HashMap";
-import { HashSet } from "../src/HashSet";
 import { OutputState, Project, projectToDebug } from "../src/Project";
 import {
   GetNow,
@@ -27,7 +26,7 @@ const project: Project = {
     tag: "Postprocess",
     postprocessArray: ["elm-watch-node", "postprocess.js"],
   },
-  disabledOutputs: new HashSet([
+  disabledOutputs: [
     {
       originalString: "public/build/HtmlMain.js",
       tag: "OutputPath",
@@ -50,7 +49,7 @@ const project: Project = {
         "/Users/you/project/elm-stuff/elm-watch/2.js",
       ),
     },
-  ]),
+  ],
   elmJsonsErrors: [
     {
       outputPath: {

@@ -3,7 +3,6 @@
 import * as Codec from "tiny-decoders";
 
 import * as ElmJson from "../src/ElmJson";
-import { HashSet } from "../src/HashSet";
 import { getSetSingleton } from "../src/Helpers";
 import { walkImports } from "../src/ImportWalker";
 import {
@@ -44,25 +43,13 @@ function run(args: Array<string>): void {
     }),
   );
 
-  const elmJsonPathsRaw = new HashSet<
-    | { tag: "AbsolutePath"; absolutePath: AbsolutePath }
-    | { tag: "NotFound"; inputPath: InputPath }
-  >(
-    mapNonEmptyArray(inputPaths, (inputPath) => {
-      const closest = findClosest(
-        "elm.json",
-        absoluteDirname(inputPath.theInputPath),
-      );
-      return closest === undefined
-        ? ({
-            tag: "NotFound",
-            inputPath,
-          } as const)
-        : {
-            tag: "AbsolutePath",
-            absolutePath: closest,
-          };
-    }),
+  const elmJsonPathsRaw = new Set<AbsolutePath>(
+    mapNonEmptyArray(
+      inputPaths,
+      (inputPath) =>
+        findClosest("elm.json", absoluteDirname(inputPath.theInputPath)) ??
+        inputPath.theInputPath,
+    ),
   );
 
   const uniqueElmJsonPathRaw = getSetSingleton(elmJsonPathsRaw);
@@ -75,17 +62,12 @@ function run(args: Array<string>): void {
     process.exit(1);
   }
 
-  if (uniqueElmJsonPathRaw.tag === "NotFound") {
-    console.error(
-      "Could not find elm.json for:",
-      uniqueElmJsonPathRaw.inputPath,
-    );
+  if (!uniqueElmJsonPathRaw.endsWith("elm.json")) {
+    console.error("Could not find elm.json for:", uniqueElmJsonPathRaw);
     process.exit(1);
   }
 
-  const elmJsonPath: ElmJsonPath = markAsElmJsonPath(
-    uniqueElmJsonPathRaw.absolutePath,
-  );
+  const elmJsonPath: ElmJsonPath = markAsElmJsonPath(uniqueElmJsonPathRaw);
 
   const elmJsonResult = ElmJson.readAndParse(elmJsonPath);
   switch (elmJsonResult.tag) {

@@ -5,7 +5,6 @@ import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
 import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
 import { HashMap } from "./HashMap";
-import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -40,7 +39,7 @@ export type Project = {
   watchRoot: AbsolutePath;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
-  disabledOutputs: HashSet<OutputPath>;
+  disabledOutputs: Array<OutputPath>;
   elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
   elmJsons: Map<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   maxParallel: number;
@@ -327,7 +326,7 @@ export function initProject({
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
-  const disabledOutputs = new HashSet<OutputPath>();
+  const disabledOutputs: Array<OutputPath> = [];
   const elmJsonsErrors: Array<ElmJsonErrorWithMetadata> = [];
   const elmJsons = new Map<ElmJsonPath, HashMap<OutputPath, OutputState>>();
   const potentialOutputDuplicates = new Map<
@@ -410,7 +409,7 @@ export function initProject({
           break;
       }
     } else {
-      disabledOutputs.add(outputPath);
+      disabledOutputs.push(outputPath);
     }
   }
 

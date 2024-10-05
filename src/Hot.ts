@@ -24,7 +24,6 @@ import {
 import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
 import { HashMap } from "./HashMap";
-import { HashSet } from "./HashSet";
 import {
   bold,
   capitalize,
@@ -2913,11 +2912,11 @@ function compileFinishedMessage(
 
 function printEventsMessage(
   events: Array<LatestEvent>,
-  disabledOutputs: HashSet<OutputPath>,
+  disabledOutputs: Array<OutputPath>,
 ): string {
   const what1 = events.length === 1 ? "file is" : "files are";
   const what2 =
-    disabledOutputs.size > 0 ? "any of the enabled targets" : "any target";
+    disabledOutputs.length > 0 ? "any of the enabled targets" : "any target";
   return events.every(
     (event) => event.tag === "WatcherEvent" && !event.affectsAnyTarget,
   )
