@@ -474,7 +474,7 @@ const initMutable =
       10000,
     );
 
-    const watcher = chokidar.watch(project.watchRoot, {
+    const watcher = chokidar.watch(Array.from(project.watchRoots), {
       ignoreInitial: true,
       // Note: Forward slashes must be used here even on Windows. (Using
       // backslashes on Windows never matches.) The trailing slash is important:

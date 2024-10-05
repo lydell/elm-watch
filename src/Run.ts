@@ -213,14 +213,6 @@ export async function run(
                     postprocessWorkerPool,
                   );
 
-                /* v8 ignore start */
-                case "NoCommonRoot":
-                  logger.errorTemplate(
-                    Errors.noCommonRoot(initProjectResult.paths),
-                  );
-                  return { tag: "Exit", exitCode: 1 };
-                /* v8 ignore stop */
-
                 case "Project": {
                   const { project } = initProjectResult;
 

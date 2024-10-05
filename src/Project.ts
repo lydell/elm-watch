@@ -1,4 +1,5 @@
 import * as os from "os";
+import * as path from "path";
 
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
@@ -12,7 +13,6 @@ import {
   absolutePathFromString,
   absoluteRealpath,
   findClosest,
-  longestCommonAncestorPath,
 } from "./PathHelpers";
 import { Postprocess } from "./Postprocess";
 import { PostprocessError } from "./PostprocessShared";
@@ -35,8 +35,10 @@ import {
 } from "./Types";
 
 export type Project = {
-  // Path to the longest ancestor of elm-watch.json and all elm.json.
-  watchRoot: AbsolutePath;
+  // Path of the directories containing elm-watch.json, all elm.json,
+  // and all source directories, without duplicates and where each
+  // directory does not contain any other.
+  watchRoots: Set<AbsolutePath>;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: Array<OutputPath>;
@@ -297,10 +299,6 @@ type InitProjectResult =
       }>;
     }
   | {
-      tag: "NoCommonRoot";
-      paths: NonEmptyArray<AbsolutePath>;
-    }
-  | {
       tag: "Project";
       project: Project;
     };
@@ -425,10 +423,44 @@ export function initProject({
     };
   }
 
-  const paths: NonEmptyArray<AbsolutePath> = [
-    absoluteDirname(elmWatchJsonPath),
-    ...Array.from(elmJsons.keys()).flatMap(
-      (elmJsonPath): Array<AbsolutePath> => {
+  const watchRoots = getWatchRoots(
+    elmWatchJsonPath,
+    Array.from(elmJsons.keys()),
+  );
+
+  const maxParallel = silentlyReadIntEnvValue(
+    env[__ELM_WATCH_MAX_PARALLEL],
+    os.cpus().length,
+  );
+
+  const postprocess: Postprocess =
+    config.postprocess === undefined
+      ? { tag: "NoPostprocess" }
+      : { tag: "Postprocess", postprocessArray: config.postprocess };
+
+  return {
+    tag: "Project",
+    project: {
+      watchRoots,
+      elmWatchJsonPath,
+      elmWatchStuffJsonPath,
+      disabledOutputs,
+      elmJsonsErrors,
+      elmJsons,
+      maxParallel,
+      postprocess,
+    },
+  };
+}
+
+function getWatchRoots(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  elmJsons: Array<ElmJsonPath>,
+): Set<AbsolutePath> {
+  return new Set<AbsolutePath>(
+    filterSubDirs(path.sep, [
+      absoluteDirname(elmWatchJsonPath),
+      ...elmJsons.flatMap((elmJsonPath): Array<AbsolutePath> => {
         // This is a bit weird, but we can actually ignore errors here. Some facts:
         // - We want to run Elm even if the elm.json is invalid, because Elm has
         //   really nice error messages.
@@ -449,41 +481,24 @@ export function initProject({
           case "ElmJsonDecodeError":
             return [absoluteDirname(elmJsonPath)];
         }
-      },
-    ),
-  ];
-
-  const watchRoot = longestCommonAncestorPath(paths);
-
-  /* v8 ignore start */
-  if (watchRoot === undefined) {
-    return { tag: "NoCommonRoot", paths };
-  }
-  /* v8 ignore stop */
-
-  const maxParallel = silentlyReadIntEnvValue(
-    env[__ELM_WATCH_MAX_PARALLEL],
-    os.cpus().length,
+      }),
+    ]),
   );
+}
 
-  const postprocess: Postprocess =
-    config.postprocess === undefined
-      ? { tag: "NoPostprocess" }
-      : { tag: "Postprocess", postprocessArray: config.postprocess };
-
-  return {
-    tag: "Project",
-    project: {
-      watchRoot,
-      elmWatchJsonPath,
-      elmWatchStuffJsonPath,
-      disabledOutputs,
-      elmJsonsErrors,
-      elmJsons,
-      maxParallel,
-      postprocess,
-    },
-  };
+export function filterSubDirs(
+  pathSep: string,
+  paths: Array<AbsolutePath>,
+): Array<AbsolutePath> {
+  return paths.filter((root, index) =>
+    paths.every(
+      (root2, index2) =>
+        // Don’t compare to self.
+        index === index2 ||
+        // If any other root contains this one, discard this one.
+        !root.startsWith(root2.endsWith(pathSep) ? root2 : root2 + pathSep),
+    ),
+  );
 }
 
 type ResolveElmJsonResult =
@@ -645,7 +660,7 @@ export function getFlatOutputs(project: Project): Array<{
 
 export function projectToDebug(project: Project): unknown {
   return {
-    watchRoot: project.watchRoot,
+    watchRoots: Array.from(project.watchRoots),
     elmWatchJson: project.elmWatchJsonPath,
     elmWatchStuffJson: project.elmWatchStuffJsonPath,
     maxParallel: project.maxParallel,

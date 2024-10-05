@@ -494,18 +494,6 @@ Or do you need to add some more targets?
 `;
 }
 
-export function noCommonRoot(
-  paths: NonEmptyArray<AbsolutePath>,
-): ErrorTemplate {
-  return fancyError("NO COMMON ROOT", { tag: "NoLocation" })`
-I could not find a common ancestor for these paths:
-
-${join(paths, "\n")}
-
-${bold("Compiling files on different drives is not supported.")}
-`;
-}
-
 export function elmJsonNotFound(
   outputPath: OutputPath,
   inputs: NonEmptyArray<InputPath>,
