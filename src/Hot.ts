@@ -63,6 +63,7 @@ import {
   ElmWatchJsonPath,
   equalsInputPath,
   GetNow,
+  markAsAbsolutePath,
   OutputPath,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
@@ -165,7 +166,7 @@ type Msg =
       tag: "GotWatcherEvent";
       date: Date;
       eventName: WatcherEventName;
-      absolutePathString: string;
+      absolutePath: AbsolutePath;
     }
   | {
       tag: "InstallDependenciesDone";
@@ -426,23 +427,17 @@ export async function watchElmWatchJsonOnce(
   elmWatchJsonPath: ElmWatchJsonPath,
 ): Promise<WatcherEvent> {
   return new Promise((resolve, reject) => {
-    const watcher = chokidar.watch(
-      elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
-      {
-        ignoreInitial: true,
-        disableGlobbing: true,
-      },
-    );
+    const watcher = chokidar.watch(elmWatchJsonPath, {
+      ignoreInitial: true,
+      disableGlobbing: true,
+    });
 
     watcherOnAll(watcher, reject, (eventName, absolutePathString) => {
       const event: WatcherEvent = {
         tag: "WatcherEvent",
         date: getNow(),
         eventName,
-        file: {
-          tag: "AbsolutePath",
-          absolutePath: absolutePathString,
-        },
+        file: markAsAbsolutePath(absolutePathString),
       };
       watcher
         .close()
@@ -480,7 +475,7 @@ const initMutable =
       10000,
     );
 
-    const watcher = chokidar.watch(project.watchRoot.absolutePath, {
+    const watcher = chokidar.watch(project.watchRoot, {
       ignoreInitial: true,
       // Note: Forward slashes must be used here even on Windows. (Using
       // backslashes on Windows never matches.) The trailing slash is important:
@@ -502,12 +497,12 @@ const initMutable =
           })
           .catch(rejectPromise);
       },
-      (eventName: WatcherEventName, absolutePathString: string): void => {
+      (eventName: WatcherEventName, absolutePath: AbsolutePath): void => {
         dispatch({
           tag: "GotWatcherEvent",
           date: getNow(),
           eventName,
-          absolutePathString,
+          absolutePath,
         });
       },
     );
@@ -637,16 +632,12 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
   };
 
   try {
-    fs.mkdirSync(
-      absoluteDirname(
-        mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath,
-      ).absolutePath,
-      { recursive: true },
-    );
+    fs.mkdirSync(absoluteDirname(mutable.project.elmWatchStuffJsonPath), {
+      recursive: true,
+    });
 
     fs.writeFileSync(
-      mutable.project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath
-        .absolutePath,
+      mutable.project.elmWatchStuffJsonPath,
       `${Codec.JSON.stringify(ElmWatchStuffJson, json, 4)}\n`,
     );
     mutable.elmWatchStuffJsonWriteError = undefined;
@@ -659,25 +650,26 @@ function writeElmWatchStuffJson(mutable: Mutable): void {
 function watcherOnAll(
   watcher: chokidar.FSWatcher,
   onError: (error: Error) => void,
-  onSuccess: (eventName: WatcherEventName, absolutePathString: string) => void,
+  onSuccess: (eventName: WatcherEventName, absolutePath: AbsolutePath) => void,
 ): void {
   // We generally only care about files – not directories – but adding and
   // removing directories can cause/fix errors, if they are named
   // `elm-watch.json`, `elm.json` or `*.elm`.
   watcher.on("all", (chokidarEventName, absolutePathString) => {
+    const absolutePath = markAsAbsolutePath(absolutePathString);
     switch (chokidarEventName) {
       case "add":
       case "addDir":
-        onSuccess("added", absolutePathString);
+        onSuccess("added", absolutePath);
         return;
 
       case "unlink":
       case "unlinkDir":
-        onSuccess("removed", absolutePathString);
+        onSuccess("removed", absolutePath);
         return;
 
       case "change":
-        onSuccess("changed", absolutePathString);
+        onSuccess("changed", absolutePath);
         return;
     }
   });
@@ -735,7 +727,7 @@ function update(
         msg.date,
         project,
         msg.eventName,
-        msg.absolutePathString,
+        msg.absolutePath,
         model.nextAction,
       );
 
@@ -1108,36 +1100,33 @@ function onWatcherEvent(
   now: Date,
   project: Project,
   eventName: WatcherEventName,
-  absolutePathString: string,
+  absolutePath: AbsolutePath,
   nextAction: NextAction,
 ): [NextAction, LatestEvent, Array<Cmd>] | undefined {
-  if (absolutePathString.endsWith(".elm")) {
+  if (absolutePath.endsWith(".elm")) {
     return onElmFileWatcherEvent(
       project,
-      makeWatcherEvent(eventName, absolutePathString, now),
+      makeWatcherEvent(eventName, absolutePath, now),
       nextAction,
     );
   }
 
-  const basename = path.basename(absolutePathString);
+  const basename = path.basename(absolutePath);
 
   switch (basename) {
     case "elm-watch.json":
       switch (eventName) {
         case "added":
           return makeRestartNextAction(
-            makeWatcherEvent(eventName, absolutePathString, now),
+            makeWatcherEvent(eventName, absolutePath, now),
             project,
           );
 
         case "changed":
         case "removed":
-          if (
-            absolutePathString ===
-            project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath
-          ) {
+          if (absolutePath === project.elmWatchJsonPath) {
             return makeRestartNextAction(
-              makeWatcherEvent(eventName, absolutePathString, now),
+              makeWatcherEvent(eventName, absolutePath, now),
               project,
             );
           }
@@ -1148,7 +1137,7 @@ function onWatcherEvent(
       switch (eventName) {
         case "added":
           return makeRestartNextAction(
-            makeWatcherEvent(eventName, absolutePathString, now),
+            makeWatcherEvent(eventName, absolutePath, now),
             project,
           );
 
@@ -1156,16 +1145,15 @@ function onWatcherEvent(
         case "removed":
           if (
             Array.from(project.elmJsons).some(
-              ([elmJsonPath]) =>
-                absolutePathString === elmJsonPath.theElmJsonPath.absolutePath,
+              ([elmJsonPath]) => absolutePath === elmJsonPath,
             ) ||
             isElmJsonFileRelatedToElmJsonsErrors(
-              absolutePathString,
+              absolutePath,
               project.elmJsonsErrors,
             )
           ) {
             return makeRestartNextAction(
-              makeWatcherEvent(eventName, absolutePathString, now),
+              makeWatcherEvent(eventName, absolutePath, now),
               project,
             );
           }
@@ -1180,7 +1168,7 @@ function onWatcherEvent(
       switch (eventName) {
         case "removed":
           return makeRestartNextAction(
-            makeWatcherEvent(eventName, absolutePathString, now),
+            makeWatcherEvent(eventName, absolutePath, now),
             project,
           );
 
@@ -1198,14 +1186,14 @@ function onWatcherEvent(
             scriptPathString !== undefined
           ) {
             const scriptPath = absolutePathFromString(
-              absoluteDirname(project.elmWatchJsonPath.theElmWatchJsonPath),
+              absoluteDirname(project.elmWatchJsonPath),
               scriptPathString,
             );
-            if (absolutePathString === scriptPath.absolutePath) {
+            if (absolutePath === scriptPath) {
               return [
                 compileNextAction(nextAction),
                 {
-                  ...makeWatcherEvent(eventName, absolutePathString, now),
+                  ...makeWatcherEvent(eventName, absolutePath, now),
                   affectsAnyTarget: true,
                 },
                 [
@@ -1255,7 +1243,7 @@ function onElmFileWatcherEvent(
         }
       }
       Compile.ensureAllRelatedElmFilePaths(elmJsonPath, outputState);
-      if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
+      if (outputState.allRelatedElmFilePaths.has(elmFile)) {
         dirtyOutputs.push({ outputPath, outputState });
       }
     }
@@ -1603,15 +1591,13 @@ const runCmd =
 
       case "OpenEditor": {
         const command = env[ELM_WATCH_OPEN_EDITOR];
-        const cwd = absoluteDirname(
-          mutable.project.elmWatchJsonPath.theElmWatchJsonPath,
-        );
+        const cwd = absoluteDirname(mutable.project.elmWatchJsonPath);
         const timeout = silentlyReadIntEnvValue(
           env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
           5000,
         );
         const extraEnv = {
-          file: cmd.file.absolutePath,
+          file: cmd.file,
           line: cmd.line.toString(),
           column: cmd.column.toString(),
         };
@@ -1624,7 +1610,7 @@ const runCmd =
           childProcess.exec(
             command,
             {
-              cwd: cwd.absolutePath,
+              cwd,
               env: { ...env, ...extraEnv },
               encoding: "utf8",
               timeout,
@@ -1662,9 +1648,7 @@ const runCmd =
         const elmWatchJsonChanged = cmd.restartReasons.some((event) => {
           switch (event.tag) {
             case "WatcherEvent":
-              return (
-                path.basename(event.file.absolutePath) === "elm-watch.json"
-              );
+              return path.basename(event.file) === "elm-watch.json";
             /* v8 ignore start */
             default:
               return false;
@@ -2012,17 +1996,14 @@ function makePrioritizedOutputs(
 
 function makeWatcherEvent(
   eventName: WatcherEventName,
-  absolutePathString: string,
+  absolutePath: AbsolutePath,
   date: Date,
 ): WatcherEvent {
   return {
     tag: "WatcherEvent",
     date,
     eventName,
-    file: {
-      tag: "AbsolutePath",
-      absolutePath: absolutePathString,
-    },
+    file: absolutePath,
   };
 }
 
@@ -2053,7 +2034,7 @@ function isElmFileRelatedToElmJsonsErrors(
       case "DuplicateInputs":
         return error.duplicates.some(
           ({ inputs, resolved }) =>
-            resolved.absolutePath === elmFile.absolutePath ||
+            resolved === elmFile ||
             inputs.some((inputPath) => equalsInputPath(elmFile, inputPath)),
         );
 
@@ -2077,17 +2058,13 @@ function isElmFileRelatedToElmJsonsErrors(
       /* v8 ignore start */
       case "InputsFailedToResolve":
         return error.inputsFailedToResolve.some(
-          ({ inputPath }) =>
-            inputPath.theUncheckedInputPath.absolutePath ===
-            elmFile.absolutePath,
+          ({ inputPath }) => inputPath.theUncheckedInputPath === elmFile,
         );
       /* v8 ignore stop */
 
       case "InputsNotFound":
         return error.inputsNotFound.some(
-          (inputPath) =>
-            inputPath.theUncheckedInputPath.absolutePath ===
-            elmFile.absolutePath,
+          (inputPath) => inputPath.theUncheckedInputPath === elmFile,
         );
 
       // Changes to the .elm files don’t make the elm.json:s more unique, but
@@ -2112,13 +2089,11 @@ function isElmJsonFileRelatedToElmJsonsErrors(
         return false;
       case "ElmJsonNotFound":
         return error.foundElmJsonPaths.some(
-          ({ elmJsonPath }) =>
-            elmJsonPath.theElmJsonPath.absolutePath === absoluteElmJsonFilePath,
+          ({ elmJsonPath }) => elmJsonPath === absoluteElmJsonFilePath,
         );
       case "NonUniqueElmJsonPaths":
         return error.nonUniqueElmJsonPaths.some(
-          ({ elmJsonPath }) =>
-            elmJsonPath.theElmJsonPath.absolutePath === absoluteElmJsonFilePath,
+          ({ elmJsonPath }) => elmJsonPath === absoluteElmJsonFilePath,
         );
     }
   });
@@ -2134,8 +2109,8 @@ function webSocketConnectionIsForOutputPath(
 
     case "OutputPath":
       return (
-        webSocketConnection.outputPath.theOutputPath.absolutePath ===
-        outputPath.theOutputPath.absolutePath
+        webSocketConnection.outputPath.theOutputPath ===
+        outputPath.theOutputPath
       );
   }
 }
@@ -2889,7 +2864,7 @@ function printEvent(loggerConfig: LoggerConfig, event: LatestEvent): string {
 function printEventMessage(event: LatestEvent): string {
   switch (event.tag) {
     case "WatcherEvent":
-      return `${capitalize(event.eventName)} ${event.file.absolutePath}`;
+      return `${capitalize(event.eventName)} ${event.file}`;
 
     case "WebSocketClosed":
       return `Web socket disconnected for: ${

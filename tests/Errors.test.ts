@@ -18,6 +18,7 @@ import {
 } from "../src/Env";
 import * as Errors from "../src/Errors";
 import { removeColor, toError } from "../src/Helpers";
+import { markAsAbsolutePath, markAsElmJsonPath } from "../src/Types";
 import {
   assertExitCode,
   badElmBinEnv,
@@ -3039,8 +3040,8 @@ describe("errors", () => {
         removeColor(
           Errors.toTerminalString(
             Errors.noCommonRoot([
-              { tag: "AbsolutePath", absolutePath: "C:\\project\\elm.json" },
-              { tag: "AbsolutePath", absolutePath: "D:\\stuff\\elm\\elm.json" },
+              markAsAbsolutePath("C:\\project\\elm.json"),
+              markAsAbsolutePath("D:\\stuff\\elm\\elm.json"),
             ]),
             80,
             false,
@@ -3064,20 +3065,16 @@ describe("errors", () => {
           Errors.otherSpawnError(
             {
               tag: "ElmJsonPath",
-              theElmJsonPath: {
-                tag: "AbsolutePath",
-                absolutePath: "/Users/you/project/elm.json",
-              },
+              theElmJsonPath: markAsElmJsonPath(
+                markAsAbsolutePath("/Users/you/project/elm.json"),
+              ),
             },
             new Error("Wingardium Leviosa"),
             {
               command: "elm",
               args: ["make", "src/Main.elm"],
               options: {
-                cwd: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project",
-                },
+                cwd: markAsAbsolutePath("/Users/you/project"),
                 env: {},
               },
             },
@@ -3104,14 +3101,10 @@ describe("errors", () => {
           Errors.postprocessNonZeroExit(
             {
               tag: "OutputPath",
-              theOutputPath: {
-                tag: "AbsolutePath",
-                absolutePath: "/build/main.js",
-              },
-              temporaryOutputPath: {
-                tag: "AbsolutePath",
-                absolutePath: "/elm-stuff/elm-watch/1.js",
-              },
+              theOutputPath: markAsAbsolutePath("/build/main.js"),
+              temporaryOutputPath: markAsAbsolutePath(
+                "/elm-stuff/elm-watch/1.js",
+              ),
               originalString: "main.js",
               targetName: "main",
             },
@@ -3122,10 +3115,7 @@ describe("errors", () => {
               command: "node",
               args: ["postprocess.js"],
               options: {
-                cwd: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project",
-                },
+                cwd: markAsAbsolutePath("/Users/you/project"),
                 env: {},
               },
             },
@@ -3153,14 +3143,10 @@ describe("errors", () => {
           Errors.postprocessNonZeroExit(
             {
               tag: "OutputPath",
-              theOutputPath: {
-                tag: "AbsolutePath",
-                absolutePath: "/build/main.js",
-              },
-              temporaryOutputPath: {
-                tag: "AbsolutePath",
-                absolutePath: "/elm-stuff/elm-watch/1.js",
-              },
+              theOutputPath: markAsAbsolutePath("/build/main.js"),
+              temporaryOutputPath: markAsAbsolutePath(
+                "/elm-stuff/elm-watch/1.js",
+              ),
               originalString: "main.js",
               targetName: "main",
             },
@@ -3171,10 +3157,7 @@ describe("errors", () => {
               command: "node",
               args: ["postprocess.js"],
               options: {
-                cwd: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project",
-                },
+                cwd: markAsAbsolutePath("/Users/you/project"),
                 env: {},
               },
             },
@@ -3222,20 +3205,16 @@ describe("errors", () => {
           Errors.postprocessStdinWriteError(
             {
               tag: "ElmJsonPath",
-              theElmJsonPath: {
-                tag: "AbsolutePath",
-                absolutePath: "/Users/you/project/elm.json",
-              },
+              theElmJsonPath: markAsElmJsonPath(
+                markAsAbsolutePath("/Users/you/project/elm.json"),
+              ),
             },
             new Error("The error message"),
             {
               command: "node",
               args: ["postprocess.js"],
               options: {
-                cwd: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project",
-                },
+                cwd: markAsAbsolutePath("/Users/you/project"),
                 env: {},
               },
             },

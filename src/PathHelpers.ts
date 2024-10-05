@@ -8,44 +8,34 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { AbsolutePath } from "./Types";
+import { AbsolutePath, markAsAbsolutePath } from "./Types";
 
 export function absolutePathFromString(
   from: AbsolutePath,
   ...pathStrings: NonEmptyArray<string>
 ): AbsolutePath {
-  return {
-    tag: "AbsolutePath",
-    absolutePath: path.resolve(from.absolutePath, ...pathStrings),
-  };
+  return markAsAbsolutePath(path.resolve(from, ...pathStrings));
 }
 
-export function absoluteDirname({ absolutePath }: AbsolutePath): AbsolutePath {
-  return {
-    tag: "AbsolutePath",
-    absolutePath: path.dirname(absolutePath),
-  };
+export function absoluteDirname(absolutePath: AbsolutePath): AbsolutePath {
+  return markAsAbsolutePath(path.dirname(absolutePath));
 }
 
 /**
  * Note that this can throw fs errors.
  */
-export function absoluteRealpath({ absolutePath }: AbsolutePath): AbsolutePath {
-  return {
-    tag: "AbsolutePath",
-    absolutePath: fs.realpathSync(absolutePath),
-  };
+export function absoluteRealpath(absolutePath: AbsolutePath): AbsolutePath {
+  return markAsAbsolutePath(fs.realpathSync(absolutePath));
 }
 
 export function findClosest(
   name: string,
   absoluteDir: AbsolutePath,
 ): AbsolutePath | undefined {
-  const dir = absoluteDir.absolutePath;
-  const entry = path.join(dir, name);
+  const entry = path.join(absoluteDir, name);
   return fs.existsSync(entry)
-    ? { tag: "AbsolutePath", absolutePath: entry }
-    : dir === path.parse(dir).root
+    ? markAsAbsolutePath(entry)
+    : absoluteDir === path.parse(absoluteDir).root
       ? undefined
       : findClosest(name, absoluteDirname(absoluteDir));
 }
@@ -53,7 +43,7 @@ export function findClosest(
 export function longestCommonAncestorPath(
   paths: NonEmptyArray<AbsolutePath>,
 ): AbsolutePath | undefined {
-  const pathArrays = mapNonEmptyArray(paths, ({ absolutePath }) =>
+  const pathArrays = mapNonEmptyArray(paths, (absolutePath) =>
     absolutePath.split(path.sep),
   );
 
@@ -71,7 +61,7 @@ export function longestCommonAncestorPath(
 
   /* v8 ignore start */
   return isNonEmptyArray(commonSegments)
-    ? { tag: "AbsolutePath", absolutePath: join(commonSegments, path.sep) }
+    ? markAsAbsolutePath(join(commonSegments, path.sep))
     : // On Windows, a `C:` path and a `D:` path has no common ancestor.
       undefined;
   /* v8 ignore stop */
@@ -90,7 +80,7 @@ export function readJsonFile<T>(
 ): ReadJsonFileResult<T> {
   let content;
   try {
-    content = fs.readFileSync(file.absolutePath, "utf8");
+    content = fs.readFileSync(file, "utf8");
   } catch (error) {
     return { tag: "ReadError", error: toError(error) };
   }

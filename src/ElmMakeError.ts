@@ -104,13 +104,7 @@ const Problem = Codec.fields({
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Error.hs#L175-L185
 const CompileError = Codec.fields({
   // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Error.hs#L42
-  path: Codec.map(Codec.string, {
-    decoder: (string): AbsolutePath => ({
-      tag: "AbsolutePath",
-      absolutePath: string,
-    }),
-    encoder: ({ absolutePath }): string => absolutePath,
-  }),
+  path: AbsolutePath,
   name: Codec.string,
   problems: NonEmptyArray(Problem),
 });

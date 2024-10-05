@@ -19,19 +19,20 @@ import {
 import { Postprocess } from "./Postprocess";
 import { PostprocessError } from "./PostprocessShared";
 import { RunElmMakeError } from "./SpawnElm";
-import type {
-  AbsolutePath,
-  BrowserUiPosition,
-  CompilationMode,
-  ElmJsonPath,
-  ElmWatchJsonPath,
-  ElmWatchStuffDir,
-  ElmWatchStuffJsonPath,
-  GetNow,
-  InputPath,
-  OutputPath,
-  UncheckedInputPath,
-  WriteOutputErrorReasonForWriting,
+import {
+  type AbsolutePath,
+  type BrowserUiPosition,
+  type CompilationMode,
+  type ElmJsonPath,
+  type ElmWatchJsonPath,
+  type ElmWatchStuffDir,
+  type ElmWatchStuffJsonPath,
+  type GetNow,
+  type InputPath,
+  markAsElmJsonPath,
+  type OutputPath,
+  type UncheckedInputPath,
+  type WriteOutputErrorReasonForWriting,
 } from "./Types";
 
 export type Project = {
@@ -41,7 +42,7 @@ export type Project = {
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: HashSet<OutputPath>;
   elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
-  elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
+  elmJsons: Map<ElmJsonPath, HashMap<OutputPath, OutputState>>;
   maxParallel: number;
   postprocess: Postprocess;
 };
@@ -68,7 +69,7 @@ export class OutputState {
 
   openErrorOverlay = false;
 
-  allRelatedElmFilePaths = new Set<string>();
+  allRelatedElmFilePaths = new Set<AbsolutePath>();
 
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
   // makes that more clear.
@@ -328,8 +329,8 @@ export function initProject({
 }): InitProjectResult {
   const disabledOutputs = new HashSet<OutputPath>();
   const elmJsonsErrors: Array<ElmJsonErrorWithMetadata> = [];
-  const elmJsons = new HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>();
-  const potentialOutputDuplicates = new HashMap<
+  const elmJsons = new Map<ElmJsonPath, HashMap<OutputPath, OutputState>>();
+  const potentialOutputDuplicates = new Map<
     AbsolutePath,
     NonEmptyArray<string>
   >();
@@ -340,11 +341,11 @@ export function initProject({
     const outputPath: OutputPath = {
       tag: "OutputPath",
       theOutputPath: absolutePathFromString(
-        absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+        absoluteDirname(elmWatchJsonPath),
         target.output,
       ),
       temporaryOutputPath: absolutePathFromString(
-        elmWatchStuffDir.theElmWatchStuffDir,
+        elmWatchStuffDir,
         `${index}.js`,
       ),
       originalString: target.output,
@@ -428,7 +429,7 @@ export function initProject({
   }
 
   const paths: NonEmptyArray<AbsolutePath> = [
-    absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+    absoluteDirname(elmWatchJsonPath),
     ...Array.from(elmJsons.keys()).flatMap(
       (elmJsonPath): Array<AbsolutePath> => {
         // This is a bit weird, but we can actually ignore errors here. Some facts:
@@ -443,15 +444,13 @@ export function initProject({
         switch (result.tag) {
           case "Parsed":
             return [
-              absoluteDirname(elmJsonPath.theElmJsonPath),
-              ...ElmJson.getSourceDirectories(elmJsonPath, result.elmJson).map(
-                (sourceDirectory) => sourceDirectory.theSourceDirectory,
-              ),
+              absoluteDirname(elmJsonPath),
+              ...ElmJson.getSourceDirectories(elmJsonPath, result.elmJson),
             ];
 
           case "ElmJsonReadError":
           case "ElmJsonDecodeError":
-            return [absoluteDirname(elmJsonPath.theElmJsonPath)];
+            return [absoluteDirname(elmJsonPath)];
         }
       },
     ),
@@ -508,13 +507,13 @@ function resolveElmJson(
     inputPath: UncheckedInputPath;
     error: Error;
   }> = [];
-  const resolved = new HashMap<AbsolutePath, NonEmptyArray<InputPath>>();
+  const resolved = new Map<AbsolutePath, NonEmptyArray<InputPath>>();
 
   for (const inputString of inputStrings) {
     const uncheckedInputPath: UncheckedInputPath = {
       tag: "UncheckedInputPath",
       theUncheckedInputPath: absolutePathFromString(
-        absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
+        absoluteDirname(elmWatchJsonPath),
         inputString,
       ),
       originalString: inputString,
@@ -594,7 +593,7 @@ function resolveElmJson(
     } else {
       elmJsonPaths.push({
         inputPath,
-        elmJsonPath: { tag: "ElmJsonPath", theElmJsonPath: elmJsonPathRaw },
+        elmJsonPath: markAsElmJsonPath(elmJsonPathRaw),
       });
     }
   }
@@ -607,7 +606,7 @@ function resolveElmJson(
     };
   }
 
-  const elmJsonPathsSet = new HashSet(
+  const elmJsonPathsSet = new Set(
     elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath),
   );
 
@@ -649,10 +648,9 @@ export function getFlatOutputs(project: Project): Array<{
 
 export function projectToDebug(project: Project): unknown {
   return {
-    watchRoot: project.watchRoot.absolutePath,
-    elmWatchJson: project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
-    elmWatchStuffJson:
-      project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,
+    watchRoot: project.watchRoot,
+    elmWatchJson: project.elmWatchJsonPath,
+    elmWatchStuffJson: project.elmWatchStuffJsonPath,
     maxParallel: project.maxParallel,
     postprocess: project.postprocess,
     enabledTargets: Array.from(project.elmJsons.entries()).flatMap(
@@ -660,7 +658,7 @@ export function projectToDebug(project: Project): unknown {
         Array.from(outputs.entries(), ([outputPath, outputState]) => ({
           ...outputPathToDebug(outputPath),
           compilationMode: outputState.compilationMode,
-          elmJson: elmJsonPath.theElmJsonPath.absolutePath,
+          elmJson: elmJsonPath,
           inputs: outputState.inputs.map(inputPathToDebug),
         })),
     ),
@@ -678,16 +676,16 @@ export function projectToDebug(project: Project): unknown {
 function outputPathToDebug(outputPath: OutputPath): Record<string, unknown> {
   return {
     targetName: outputPath.targetName,
-    output: outputPath.theOutputPath.absolutePath,
-    temporaryOutput: outputPath.temporaryOutputPath.absolutePath,
+    output: outputPath.theOutputPath,
+    temporaryOutput: outputPath.temporaryOutputPath,
     originalString: outputPath.originalString,
   };
 }
 
 function inputPathToDebug(inputPath: InputPath): Record<string, unknown> {
   return {
-    input: inputPath.theInputPath.absolutePath,
-    realpath: inputPath.realpath.absolutePath,
+    input: inputPath.theInputPath,
+    realpath: inputPath.realpath,
     originalString: inputPath.originalString,
   };
 }

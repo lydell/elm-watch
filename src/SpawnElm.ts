@@ -14,6 +14,7 @@ import {
   ElmJsonPath,
   GetNow,
   InputPath,
+  markAsAbsolutePath,
   OutputPath,
 } from "./Types";
 
@@ -84,10 +85,10 @@ export function make({
       "--report=json",
       ...maybeToArray(compilationModeToArg(compilationMode)),
       `--output=${outputPathToAbsoluteString(outputPath)}`,
-      ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
+      ...inputs.map((inputPath) => inputPath.theInputPath),
     ],
     options: {
-      cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+      cwd: absoluteDirname(elmJsonPath),
       env,
     },
   };
@@ -199,8 +200,8 @@ function outputPathToAbsoluteString(
       // no hot reloading or web socket client. The only time we can write directly
       // to the output is when in "make" mode with no postprocessing.
       return outputPath.writeToTemporaryDir
-        ? outputPath.temporaryOutputPath.absolutePath
-        : outputPath.theOutputPath.absolutePath;
+        ? outputPath.temporaryOutputPath
+        : outputPath.theOutputPath;
     case "NullOutputPath":
       return "/dev/null";
   }
@@ -338,15 +339,12 @@ export function install({
   kill: (options: { force: boolean }) => void;
 } {
   const dummy = absolutePathFromString(
-    {
-      tag: "AbsolutePath",
-      absolutePath: env[__ELM_WATCH_TMP_DIR] ?? os.tmpdir(),
-    },
+    markAsAbsolutePath(env[__ELM_WATCH_TMP_DIR] ?? os.tmpdir()),
     "ElmWatchDummy.elm",
   );
 
   try {
-    fs.writeFileSync(dummy.absolutePath, elmWatchDummy());
+    fs.writeFileSync(dummy, elmWatchDummy());
   } catch (unknownError) {
     const error = toError(unknownError);
     return {
@@ -368,9 +366,9 @@ export function install({
     // Don’t use `--report=json` here, because then Elm won’t print downloading
     // of packages. We unfortunately lose colors this way, but package download
     // errors aren’t very colorful anyway.
-    args: ["make", `--output=/dev/null`, dummy.absolutePath],
+    args: ["make", `--output=/dev/null`, dummy],
     options: {
-      cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+      cwd: absoluteDirname(elmJsonPath),
       env,
     },
   };

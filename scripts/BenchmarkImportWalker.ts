@@ -16,7 +16,15 @@ import {
   absolutePathFromString,
   findClosest,
 } from "../src/PathHelpers";
-import { Cwd, InputPath } from "../src/Types";
+import {
+  AbsolutePath,
+  Cwd,
+  ElmJsonPath,
+  InputPath,
+  markAsAbsolutePath,
+  markAsCwd,
+  markAsElmJsonPath,
+} from "../src/Types";
 
 function run(args: Array<string>): void {
   if (!isNonEmptyArray(args)) {
@@ -24,30 +32,37 @@ function run(args: Array<string>): void {
     process.exit(1);
   }
 
-  const cwd: Cwd = {
-    tag: "Cwd",
-    path: { tag: "AbsolutePath", absolutePath: process.cwd() },
-  };
+  const cwd: Cwd = markAsCwd(markAsAbsolutePath(process.cwd()));
 
   const inputPaths: NonEmptyArray<InputPath> = mapNonEmptyArray(
     args,
     (elmFilePathRaw) => ({
       tag: "InputPath",
-      theInputPath: absolutePathFromString(cwd.path, elmFilePathRaw),
+      theInputPath: absolutePathFromString(cwd, elmFilePathRaw),
       originalString: elmFilePathRaw,
-      realpath: absolutePathFromString(cwd.path, elmFilePathRaw),
+      realpath: absolutePathFromString(cwd, elmFilePathRaw),
     }),
   );
 
-  const elmJsonPathsRaw = new HashSet(
-    mapNonEmptyArray(
-      inputPaths,
-      (inputPath) =>
-        findClosest("elm.json", absoluteDirname(inputPath.theInputPath)) ?? {
-          tag: "NotFound" as const,
-          inputPath,
-        },
-    ),
+  const elmJsonPathsRaw = new HashSet<
+    | { tag: "AbsolutePath"; absolutePath: AbsolutePath }
+    | { tag: "NotFound"; inputPath: InputPath }
+  >(
+    mapNonEmptyArray(inputPaths, (inputPath) => {
+      const closest = findClosest(
+        "elm.json",
+        absoluteDirname(inputPath.theInputPath),
+      );
+      return closest === undefined
+        ? ({
+            tag: "NotFound",
+            inputPath,
+          } as const)
+        : {
+            tag: "AbsolutePath",
+            absolutePath: closest,
+          };
+    }),
   );
 
   const uniqueElmJsonPathRaw = getSetSingleton(elmJsonPathsRaw);
@@ -68,10 +83,9 @@ function run(args: Array<string>): void {
     process.exit(1);
   }
 
-  const elmJsonPath = {
-    tag: "ElmJsonPath" as const,
-    theElmJsonPath: uniqueElmJsonPathRaw,
-  };
+  const elmJsonPath: ElmJsonPath = markAsElmJsonPath(
+    uniqueElmJsonPathRaw.absolutePath,
+  );
 
   const elmJsonResult = ElmJson.readAndParse(elmJsonPath);
   switch (elmJsonResult.tag) {
@@ -92,12 +106,9 @@ function run(args: Array<string>): void {
 
   console.log(
     "Elm file(s):",
-    mapNonEmptyArray(
-      inputPaths,
-      (inputPath) => inputPath.theInputPath.absolutePath,
-    ),
+    mapNonEmptyArray(inputPaths, (inputPath) => inputPath.theInputPath),
   );
-  console.log("elm.json:", elmJsonPath.theElmJsonPath.absolutePath);
+  console.log("elm.json:", elmJsonPath);
   console.time("Run");
   const result = walkImports(sourceDirectories, inputPaths);
   console.timeEnd("Run");

@@ -6,7 +6,6 @@ import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
 import { HashMap } from "./HashMap";
-import { HashSet } from "./HashSet";
 import {
   bold,
   cursorHorizontalAbsolute,
@@ -181,12 +180,21 @@ export function installDependencies(
           return onError(Errors.creatingDummyFailed(elmJsonPath, result.error));
 
         case "ElmNotFoundError":
-          return onError(Errors.elmNotFoundError(elmJsonPath, result.command));
+          return onError(
+            Errors.elmNotFoundError(
+              { tag: "ElmJsonPath", theElmJsonPath: elmJsonPath },
+              result.command,
+            ),
+          );
 
         /* v8 ignore start */
         case "OtherSpawnError":
           return onError(
-            Errors.otherSpawnError(elmJsonPath, result.error, result.command),
+            Errors.otherSpawnError(
+              { tag: "ElmJsonPath", theElmJsonPath: elmJsonPath },
+              result.error,
+              result.command,
+            ),
           );
         /* v8 ignore stop */
 
@@ -295,7 +303,7 @@ export function getOutputActions({
     [];
   const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
   const outputsWithoutAction: Array<IndexedOutput> = [];
-  const busyElmJsons = new HashSet<ElmJsonPath>();
+  const busyElmJsons = new Set<ElmJsonPath>();
 
   for (const [elmJsonPath, outputs] of project.elmJsons) {
     const typecheckOnly: Array<IndexedOutputWithSource> = [];
@@ -821,7 +829,7 @@ function onCompileSuccess(
         case "NoPostprocess": {
           let fileSize;
           try {
-            fileSize = fs.statSync(outputPath.theOutputPath.absolutePath).size;
+            fileSize = fs.statSync(outputPath.theOutputPath).size;
           } catch (unknownError) {
             const error = toError(unknownError);
             outputState.setStatus({
@@ -850,9 +858,7 @@ function onCompileSuccess(
         case "Postprocess": {
           let buffer;
           try {
-            buffer = fs.readFileSync(
-              outputPath.temporaryOutputPath.absolutePath,
-            );
+            buffer = fs.readFileSync(outputPath.temporaryOutputPath);
           } catch (unknownError) {
             const error = toError(unknownError);
             outputState.setStatus({
@@ -883,10 +889,7 @@ function onCompileSuccess(
     case "hot": {
       let code;
       try {
-        code = fs.readFileSync(
-          outputPath.temporaryOutputPath.absolutePath,
-          "utf8",
-        );
+        code = fs.readFileSync(outputPath.temporaryOutputPath, "utf8");
       } catch (unknownError) {
         const error = toError(unknownError);
         outputState.setStatus({
@@ -914,12 +917,11 @@ function onCompileSuccess(
       switch (postprocess.tag) {
         case "NoPostprocess": {
           try {
-            fs.mkdirSync(
-              absoluteDirname(outputPath.theOutputPath).absolutePath,
-              { recursive: true },
-            );
+            fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
+              recursive: true,
+            });
             fs.writeFileSync(
-              outputPath.theOutputPath.absolutePath,
+              outputPath.theOutputPath,
               // This will inject `elmCompiledTimestamp` into the built
               // code, which is later used to detect if recompilations are
               // needed or not. Note: This needs to be the timestamp of
@@ -1013,7 +1015,7 @@ function needsToWriteProxyFile(
 ): NeedsToWriteProxyFileResult {
   let handle;
   try {
-    handle = fs.openSync(outputPath.absolutePath, "r");
+    handle = fs.openSync(outputPath, "r");
   } catch (unknownError) {
     const error = toError(unknownError);
     /* v8 ignore start */
@@ -1105,15 +1107,12 @@ async function postprocessHelper({
 
     case "Success": {
       try {
-        fs.mkdirSync(absoluteDirname(outputPath.theOutputPath).absolutePath, {
+        fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
           recursive: true,
         });
         switch (runMode.tag) {
           case "make":
-            fs.writeFileSync(
-              outputPath.theOutputPath.absolutePath,
-              postprocessResult.code,
-            );
+            fs.writeFileSync(outputPath.theOutputPath, postprocessResult.code);
             break;
           case "hot": {
             const clientCode = Inject.clientCode(
@@ -1125,7 +1124,7 @@ async function postprocessHelper({
               logger.config.debug,
             );
             fs.writeFileSync(
-              outputPath.theOutputPath.absolutePath,
+              outputPath.theOutputPath,
               typeof postprocessResult.code === "string"
                 ? clientCode + postprocessResult.code
                 : Buffer.concat([
@@ -1226,7 +1225,7 @@ async function typecheck({
     // Mentioning the same input twice is an error according to `elm make`.
     // It even resolves symlinks when checking if two inputs are the same!
     inputs: nonEmptyArrayUniqueBy(
-      (inputPath) => inputPath.realpath.absolutePath,
+      (inputPath) => inputPath.realpath,
       flattenNonEmptyArray(
         mapNonEmptyArray(outputs, ({ outputState }) => outputState.inputs),
       ),
@@ -1329,11 +1328,11 @@ async function typecheck({
     switch (proxyFileResult.tag) {
       case "Needed":
         try {
-          fs.mkdirSync(absoluteDirname(outputPath.theOutputPath).absolutePath, {
+          fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
             recursive: true,
           });
           fs.writeFileSync(
-            outputPath.theOutputPath.absolutePath,
+            outputPath.theOutputPath,
             Inject.proxyFile(
               outputPath,
               getNow().getTime(),
@@ -1418,7 +1417,7 @@ function onlyElmMakeErrorsRelatedToOutput(
   }
 
   const errors = elmMakeResult.error.errors.filter((error) =>
-    outputState.allRelatedElmFilePaths.has(error.path.absolutePath),
+    outputState.allRelatedElmFilePaths.has(error.path),
   );
 
   return isNonEmptyArray(errors)
@@ -2282,7 +2281,7 @@ function getAllRelatedElmFilePaths(
 function allRelatedElmFilePathsWithFallback(
   walkerResult: GetAllRelatedElmFilePathsResult,
   outputState: OutputState,
-): Set<string> {
+): Set<AbsolutePath> {
   switch (walkerResult.tag) {
     case "Success":
       return walkerResult.allRelatedElmFilePaths;
@@ -2293,10 +2292,7 @@ function allRelatedElmFilePathsWithFallback(
     case "ElmJsonReadError":
     case "ElmJsonDecodeError":
       return new Set(
-        mapNonEmptyArray(
-          outputState.inputs,
-          (inputPath) => inputPath.realpath.absolutePath,
-        ),
+        mapNonEmptyArray(outputState.inputs, (inputPath) => inputPath.realpath),
       );
   }
 }

@@ -7,7 +7,14 @@ import { makeLogger } from "./Logger";
 import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { run } from "./Run";
-import { CliArg, Cwd, GetNow } from "./Types";
+import {
+  CliArg,
+  Cwd,
+  GetNow,
+  markAsAbsolutePath,
+  markAsCliArg,
+  markAsCwd,
+} from "./Types";
 
 type Options = {
   cwd: string;
@@ -40,13 +47,9 @@ export async function elmWatchCli(
     stderr,
     logDebug,
   });
-  const cwd: Cwd = {
-    tag: "Cwd",
-    path: absolutePathFromString(
-      { tag: "AbsolutePath", absolutePath: process.cwd() },
-      cwdString,
-    ),
-  };
+  const cwd: Cwd = markAsCwd(
+    absolutePathFromString(markAsAbsolutePath(process.cwd()), cwdString),
+  );
 
   const isHelp = args.some(
     (arg) => arg === "-h" || arg === "-help" || arg === "--help",
@@ -56,9 +59,7 @@ export async function elmWatchCli(
     return 0;
   }
 
-  const restArgs: Array<CliArg> = args
-    .slice(1)
-    .map((arg) => ({ tag: "CliArg", theArg: arg }));
+  const restArgs: Array<CliArg> = args.slice(1).map(markAsCliArg);
 
   switch (args[0]) {
     case undefined:

@@ -66,7 +66,7 @@ export function spawn(command: Command): {
 
       const child = actualSpawn(command.command, command.args, {
         ...command.options,
-        cwd: command.options.cwd.absolutePath,
+        cwd: command.options.cwd,
       });
 
       const stdout: Array<Buffer> = [];

@@ -6,7 +6,7 @@ import {
   absolutePathFromString,
   readJsonFile,
 } from "./PathHelpers";
-import { ElmJsonPath, SourceDirectory } from "./Types";
+import { ElmJsonPath, markAsSourceDirectory, SourceDirectory } from "./Types";
 
 export type ElmJson = Codec.Infer<typeof ElmJson>;
 export const ElmJson = Codec.taggedUnion("tag", [
@@ -45,7 +45,7 @@ export type ParseError =
     };
 
 export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
-  const parsed = readJsonFile(elmJsonPath.theElmJsonPath, ElmJson);
+  const parsed = readJsonFile(elmJsonPath, ElmJson);
   switch (parsed.tag) {
     case "DecoderError":
       return {
@@ -71,21 +71,15 @@ export function getSourceDirectories(
   elmJsonPath: ElmJsonPath,
   elmJson: ElmJson,
 ): NonEmptyArray<SourceDirectory> {
-  const base = absoluteDirname(elmJsonPath.theElmJsonPath);
+  const base = absoluteDirname(elmJsonPath);
 
   switch (elmJson.tag) {
     case "Application":
-      return mapNonEmptyArray(elmJson["source-directories"], (dir) => ({
-        tag: "SourceDirectory",
-        theSourceDirectory: absolutePathFromString(base, dir),
-      }));
+      return mapNonEmptyArray(elmJson["source-directories"], (dir) =>
+        markAsSourceDirectory(absolutePathFromString(base, dir)),
+      );
 
     case "Package":
-      return [
-        {
-          tag: "SourceDirectory",
-          theSourceDirectory: absolutePathFromString(base, "src"),
-        },
-      ];
+      return [markAsSourceDirectory(absolutePathFromString(base, "src"))];
   }
 }

@@ -51,7 +51,7 @@ export function runPostprocess({
 }): { promise: Promise<PostprocessResult>; kill: () => Promise<void> } {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
-  const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
+  const cwd = absoluteDirname(elmWatchJsonPath);
 
   if (commandName === ELM_WATCH_NODE) {
     const worker = postprocessWorkerPool.getOrCreateAvailableWorker();

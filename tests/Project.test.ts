@@ -3,30 +3,25 @@ import { describe, expect, test } from "vitest";
 import { HashMap } from "../src/HashMap";
 import { HashSet } from "../src/HashSet";
 import { OutputState, Project, projectToDebug } from "../src/Project";
-import { GetNow } from "../src/Types";
+import {
+  GetNow,
+  markAsAbsolutePath,
+  markAsElmJsonPath,
+  markAsElmWatchJsonPath,
+  markAsElmWatchStuffJsonPath,
+} from "../src/Types";
 import { stringSnapshotSerializer } from "./Helpers";
 
 const getNow: GetNow = () => new Date();
 
 const project: Project = {
-  watchRoot: {
-    tag: "AbsolutePath",
-    absolutePath: "/Users/you/project",
-  },
-  elmWatchJsonPath: {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: {
-      tag: "AbsolutePath",
-      absolutePath: "/Users/you/project/elm-watch.json",
-    },
-  },
-  elmWatchStuffJsonPath: {
-    tag: "ElmWatchStuffJsonPath",
-    theElmWatchStuffJsonPath: {
-      tag: "AbsolutePath",
-      absolutePath: "/Users/you/project/elm-stuff/elm-watch/stuff.json",
-    },
-  },
+  watchRoot: markAsAbsolutePath("/Users/you/project"),
+  elmWatchJsonPath: markAsElmWatchJsonPath(
+    markAsAbsolutePath("/Users/you/project/elm-watch.json"),
+  ),
+  elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
+    markAsAbsolutePath("/Users/you/project/elm-stuff/elm-watch/stuff.json"),
+  ),
   maxParallel: 12,
   postprocess: {
     tag: "Postprocess",
@@ -37,42 +32,35 @@ const project: Project = {
       originalString: "public/build/HtmlMain.js",
       tag: "OutputPath",
       targetName: "Html",
-      theOutputPath: {
-        tag: "AbsolutePath",
-        absolutePath: "/Users/you/project/public/build/HtmlMain.js",
-      },
-      temporaryOutputPath: {
-        tag: "AbsolutePath",
-        absolutePath: "/Users/you/project/elm-stuff/elm-watch/1.js",
-      },
+      theOutputPath: markAsAbsolutePath(
+        "/Users/you/project/public/build/HtmlMain.js",
+      ),
+      temporaryOutputPath: markAsAbsolutePath(
+        "/Users/you/project/elm-stuff/elm-watch/1.js",
+      ),
     },
     {
       originalString: "public/submodules/azimutt/public/dist/elm.js",
       tag: "OutputPath",
       targetName: "Azimutt",
-      theOutputPath: {
-        tag: "AbsolutePath",
-        absolutePath:
-          "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
-      },
-      temporaryOutputPath: {
-        tag: "AbsolutePath",
-        absolutePath: "/Users/you/project/elm-stuff/elm-watch/2.js",
-      },
+      theOutputPath: markAsAbsolutePath(
+        "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
+      ),
+      temporaryOutputPath: markAsAbsolutePath(
+        "/Users/you/project/elm-stuff/elm-watch/2.js",
+      ),
     },
   ]),
   elmJsonsErrors: [
     {
       outputPath: {
         tag: "OutputPath",
-        theOutputPath: {
-          tag: "AbsolutePath",
-          absolutePath: "/Users/you/project/public/build/SandboxMain.js",
-        },
-        temporaryOutputPath: {
-          tag: "AbsolutePath",
-          absolutePath: "/Users/you/project/elm-stuff/elm-watch/3.js",
-        },
+        theOutputPath: markAsAbsolutePath(
+          "/Users/you/project/public/build/SandboxMain.js",
+        ),
+        temporaryOutputPath: markAsAbsolutePath(
+          "/Users/you/project/elm-stuff/elm-watch/3.js",
+        ),
         originalString: "public/build/SandboxMain.js",
         targetName: "Sandbox",
       },
@@ -84,53 +72,42 @@ const project: Project = {
         inputsNotFound: [
           {
             tag: "UncheckedInputPath",
-            theUncheckedInputPath: {
-              tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/src/BandboxMain.elm",
-            },
+            theUncheckedInputPath: markAsAbsolutePath(
+              "/Users/you/project/src/BandboxMain.elm",
+            ),
             originalString: "src/BandboxMain.elm",
           },
         ],
       },
     },
   ],
-  elmJsons: new HashMap([
+  elmJsons: new Map([
     [
-      {
-        tag: "ElmJsonPath",
-        theElmJsonPath: {
-          tag: "AbsolutePath",
-          absolutePath: "/Users/you/project/elm.json",
-        },
-      },
+      markAsElmJsonPath(markAsAbsolutePath("/Users/you/project/elm.json")),
       new HashMap([
         [
           {
             originalString: "public/build/ElementMain.js",
             tag: "OutputPath",
             targetName: "Element",
-            theOutputPath: {
-              tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/public/build/ElementMain.js",
-            },
-            temporaryOutputPath: {
-              tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/elm-stuff/elm-watch/4.js",
-            },
+            theOutputPath: markAsAbsolutePath(
+              "/Users/you/project/public/build/ElementMain.js",
+            ),
+            temporaryOutputPath: markAsAbsolutePath(
+              "/Users/you/project/elm-stuff/elm-watch/4.js",
+            ),
           },
           new OutputState(
             [
               {
                 tag: "InputPath",
-                theInputPath: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ElementMain.elm",
-                },
+                theInputPath: markAsAbsolutePath(
+                  "/Users/you/project/src/ElementMain.elm",
+                ),
                 originalString: "src/ElementMain.elm",
-                realpath: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ElementMain.elm",
-                },
+                realpath: markAsAbsolutePath(
+                  "/Users/you/project/src/ElementMain.elm",
+                ),
               },
             ],
             "optimize",
@@ -144,40 +121,34 @@ const project: Project = {
             originalString: "public/build/Frankenstein.js",
             tag: "OutputPath",
             targetName: "Frankenstein",
-            theOutputPath: {
-              tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/public/build/Frankenstein.js",
-            },
-            temporaryOutputPath: {
-              tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/elm-stuff/elm-watch/5.js",
-            },
+            theOutputPath: markAsAbsolutePath(
+              "/Users/you/project/public/build/Frankenstein.js",
+            ),
+            temporaryOutputPath: markAsAbsolutePath(
+              "/Users/you/project/elm-stuff/elm-watch/5.js",
+            ),
           },
           new OutputState(
             [
               {
                 tag: "InputPath",
-                theInputPath: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ApplicationMain.elm",
-                },
+                theInputPath: markAsAbsolutePath(
+                  "/Users/you/project/src/ApplicationMain.elm",
+                ),
                 originalString: "src/ApplicationMain.elm",
-                realpath: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/ApplicationMain.elm",
-                },
+                realpath: markAsAbsolutePath(
+                  "/Users/you/project/src/ApplicationMain.elm",
+                ),
               },
               {
                 tag: "InputPath",
-                theInputPath: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/DocumentMain.elm",
-                },
+                theInputPath: markAsAbsolutePath(
+                  "/Users/you/project/src/DocumentMain.elm",
+                ),
                 originalString: "src/DocumentMain.elm",
-                realpath: {
-                  tag: "AbsolutePath",
-                  absolutePath: "/Users/you/project/src/DocumentMain.elm",
-                },
+                realpath: markAsAbsolutePath(
+                  "/Users/you/project/src/DocumentMain.elm",
+                ),
               },
             ],
             "standard",
@@ -189,45 +160,35 @@ const project: Project = {
       ]),
     ],
     [
-      {
-        tag: "ElmJsonPath",
-        theElmJsonPath: {
-          tag: "AbsolutePath",
-          absolutePath:
-            "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
-        },
-      },
+      markAsElmJsonPath(
+        markAsAbsolutePath(
+          "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
+        ),
+      ),
       new HashMap([
         [
           {
             originalString: "public/submodules/concourse/web/public/elm.min.js",
             tag: "OutputPath",
             targetName: "Concourse",
-            theOutputPath: {
-              tag: "AbsolutePath",
-              absolutePath:
-                "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
-            },
-            temporaryOutputPath: {
-              tag: "AbsolutePath",
-              absolutePath: "/Users/you/project/elm-stuff/elm-watch/6.js",
-            },
+            theOutputPath: markAsAbsolutePath(
+              "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
+            ),
+            temporaryOutputPath: markAsAbsolutePath(
+              "/Users/you/project/elm-stuff/elm-watch/6.js",
+            ),
           },
           new OutputState(
             [
               {
                 tag: "InputPath",
-                theInputPath: {
-                  tag: "AbsolutePath",
-                  absolutePath:
-                    "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
-                },
+                theInputPath: markAsAbsolutePath(
+                  "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
+                ),
                 originalString: "src/ElementMain.elm",
-                realpath: {
-                  tag: "AbsolutePath",
-                  absolutePath:
-                    "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
-                },
+                realpath: markAsAbsolutePath(
+                  "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
+                ),
               },
             ],
             "optimize",

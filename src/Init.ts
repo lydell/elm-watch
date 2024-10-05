@@ -5,7 +5,7 @@ import { bold, toError } from "./Helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { absolutePathFromString } from "./PathHelpers";
-import { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
+import { CliArg, Cwd, ElmWatchJsonPath, markAsElmWatchJsonPath } from "./Types";
 
 const elmWatchJson = bold("elm-watch.json");
 
@@ -19,12 +19,11 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
     return 1;
   }
 
-  const elmWatchJsonPath: ElmWatchJsonPath = {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: absolutePathFromString(cwd.path, "elm-watch.json"),
-  };
+  const elmWatchJsonPath: ElmWatchJsonPath = markAsElmWatchJsonPath(
+    absolutePathFromString(cwd, "elm-watch.json"),
+  );
 
-  if (fs.existsSync(elmWatchJsonPath.theElmWatchJsonPath.absolutePath)) {
+  if (fs.existsSync(elmWatchJsonPath)) {
     logger.writeToStderrMakesALotOfSenseHere(
       `${elmWatchJson} already exists in the current directory!`,
     );
@@ -37,10 +36,7 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   });
 
   try {
-    fs.writeFileSync(
-      elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
-      example,
-    );
+    fs.writeFileSync(elmWatchJsonPath, example);
   } catch (unknownError) {
     const error = toError(unknownError);
     logger.writeToStderrMakesALotOfSenseHere(

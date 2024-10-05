@@ -19,6 +19,8 @@ import {
   ElmWatchStuffDir,
   ElmWatchStuffJsonPath,
   GetNow,
+  markAsElmWatchStuffDir,
+  markAsElmWatchStuffJsonPath,
   RunMode,
 } from "./Types";
 
@@ -134,22 +136,18 @@ export async function run(
             return { tag: "Exit", exitCode: 1 };
           }
 
-          const elmWatchStuffDir: ElmWatchStuffDir = {
-            tag: "ElmWatchStuffDir",
-            theElmWatchStuffDir: absolutePathFromString(
-              absoluteDirname(parseResult.elmWatchJsonPath.theElmWatchJsonPath),
+          const elmWatchStuffDir: ElmWatchStuffDir = markAsElmWatchStuffDir(
+            absolutePathFromString(
+              absoluteDirname(parseResult.elmWatchJsonPath),
               "elm-stuff",
               "elm-watch",
             ),
-          };
+          );
 
-          const elmWatchStuffJsonPath: ElmWatchStuffJsonPath = {
-            tag: "ElmWatchStuffJsonPath",
-            theElmWatchStuffJsonPath: absolutePathFromString(
-              elmWatchStuffDir.theElmWatchStuffDir,
-              "stuff.json",
-            ),
-          };
+          const elmWatchStuffJsonPath: ElmWatchStuffJsonPath =
+            markAsElmWatchStuffJsonPath(
+              absolutePathFromString(elmWatchStuffDir, "stuff.json"),
+            );
 
           const elmWatchStuffJsonParseResult =
             runMode === "hot"

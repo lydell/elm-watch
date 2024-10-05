@@ -2,6 +2,7 @@ import * as Codec from "tiny-decoders";
 import { describe, expect, test } from "vitest";
 
 import { ElmMakeError } from "../src/ElmMakeError";
+import { markAsAbsolutePath } from "../src/Types";
 import { stringSnapshotSerializer } from "./Helpers";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -86,10 +87,7 @@ describe("ElmMakeError", () => {
       tag: "CompileErrors",
       errors: [
         {
-          path: {
-            tag: "AbsolutePath",
-            absolutePath: "/path/to/file",
-          },
+          path: markAsAbsolutePath("/path/to/file"),
           name: "name",
           problems: [
             {

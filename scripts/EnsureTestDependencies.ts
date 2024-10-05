@@ -5,7 +5,7 @@ import * as Codec from "tiny-decoders";
 
 import { quote } from "../src/Helpers";
 import { absolutePathFromString, readJsonFile } from "../src/PathHelpers";
-import { AbsolutePath } from "../src/Types";
+import { AbsolutePath, markAsAbsolutePath } from "../src/Types";
 import mainElmJson from "../tests/install-packages/elm.json";
 
 const PACKAGES_TO_INSTALL: Record<string, string> = {
@@ -14,14 +14,14 @@ const PACKAGES_TO_INSTALL: Record<string, string> = {
 };
 
 const FIXTURES_DIR = absolutePathFromString(
-  { tag: "AbsolutePath", absolutePath: import.meta.dirname },
+  markAsAbsolutePath(import.meta.dirname),
   "..",
   "tests",
   "fixtures",
 );
 
 function checkDir(dir: AbsolutePath): void {
-  for (const item of fs.readdirSync(dir.absolutePath, {
+  for (const item of fs.readdirSync(dir, {
     withFileTypes: true,
   })) {
     if (item.isFile()) {
@@ -44,10 +44,7 @@ const ElmJson = Codec.fields({
 });
 
 function checkFile(file: AbsolutePath): void {
-  const relativeFile = path.relative(
-    FIXTURES_DIR.absolutePath,
-    file.absolutePath,
-  );
+  const relativeFile = path.relative(FIXTURES_DIR, file);
 
   const parsed = readJsonFile(file, ElmJson);
   // Some test files contain syntax errors on purpose – ignore those.

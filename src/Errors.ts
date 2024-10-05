@@ -40,6 +40,8 @@ import {
   ElmWatchNodeScriptPath,
   ElmWatchStuffJsonPath,
   InputPath,
+  markAsAbsolutePath,
+  markAsElmWatchJsonPath,
   OutputPath,
   RunMode,
   UncheckedInputPath,
@@ -91,10 +93,22 @@ const elmWatchJson = bold("elm-watch.json");
 const elmWatchStuffJson = bold("elm-stuff/elm-watch/stuff.json");
 
 type FancyErrorLocation =
-  | ElmJsonPath
-  | ElmWatchJsonPath
-  | ElmWatchNodeScriptPath
-  | ElmWatchStuffJsonPath
+  | {
+      tag: "ElmJsonPath";
+      theElmJsonPath: ElmJsonPath;
+    }
+  | {
+      tag: "ElmWatchJsonPath";
+      theElmWatchJsonPath: ElmWatchJsonPath;
+    }
+  | {
+      tag: "ElmWatchNodeScriptPath";
+      theElmWatchNodeScriptPath: ElmWatchNodeScriptPath;
+    }
+  | {
+      tag: "ElmWatchStuffJsonPath";
+      theElmWatchStuffJsonPath: ElmWatchStuffJsonPath;
+    }
   | OutputPath
   | {
       tag: "FileWithLineAndColumn";
@@ -103,6 +117,11 @@ type FancyErrorLocation =
       column: number;
     }
   | { tag: "NoLocation" };
+
+type ElmJsonPathOrOutputPath = Extract<
+  FancyErrorLocation,
+  { tag: "ElmJsonPath" | "OutputPath" }
+>;
 
 type Piece =
   | {
@@ -308,12 +327,9 @@ function fancyToPlainErrorLocation(
     case "ElmWatchNodeScriptPath":
       return {
         tag: "FileOnly",
-        file: {
-          tag: "AbsolutePath",
-          absolutePath: url.fileURLToPath(
-            location.theElmWatchNodeScriptFileUrl,
-          ),
-        },
+        file: markAsAbsolutePath(
+          url.fileURLToPath(location.theElmWatchNodeScriptPath),
+        ),
       };
     case "FileWithLineAndColumn":
       return location;
@@ -325,11 +341,9 @@ function fancyToPlainErrorLocation(
 function renderErrorLocation(location: ErrorLocation): Piece {
   switch (location.tag) {
     case "FileOnly":
-      return text(location.file.absolutePath);
+      return text(location.file);
     case "FileWithLineAndColumn":
-      return text(
-        `${location.file.absolutePath}:${location.line}:${location.column}`,
-      );
+      return text(`${location.file}:${location.line}:${location.column}`);
     case "Target":
       return dim(`Target: ${location.targetName}`);
   }
@@ -339,7 +353,10 @@ export function readElmWatchJson(
   elmWatchJsonPath: ElmWatchJsonPath,
   error: Error,
 ): ErrorTemplate {
-  return fancyError("TROUBLE READING elm-watch.json", elmWatchJsonPath)`
+  return fancyError("TROUBLE READING elm-watch.json", {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: elmWatchJsonPath,
+  })`
 I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("I had trouble reading it:")}
@@ -352,7 +369,10 @@ export function decodeElmWatchJson(
   elmWatchJsonPath: ElmWatchJsonPath,
   error: Codec.DecoderError,
 ): ErrorTemplate {
-  return fancyError("INVALID elm-watch.json FORMAT", elmWatchJsonPath)`
+  return fancyError("INVALID elm-watch.json FORMAT", {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: elmWatchJsonPath,
+  })`
 I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("I had trouble with the JSON inside:")}
@@ -367,10 +387,7 @@ export function elmWatchJsonNotFound(
 ): ErrorTemplate {
   const example = ElmWatchJson.example(
     cwd,
-    {
-      tag: "ElmWatchJsonPath",
-      theElmWatchJsonPath: absolutePathFromString(cwd.path, "elm-watch.json"),
-    },
+    markAsElmWatchJsonPath(absolutePathFromString(cwd, "elm-watch.json")),
     ElmWatchJson.parseArgsLikeElmMake(args),
   );
 
@@ -415,7 +432,7 @@ export function unknownFlags(
 It looks like your arguments might fit in an ${bold("elm make")} command.
 If so, you could try moving them to the ${elmWatchJson} I found here:
 
-${text(elmWatchJsonPath.theElmWatchJsonPath.absolutePath)}
+${text(elmWatchJsonPath)}
 
 For example, you could add some JSON like this:
 
@@ -428,10 +445,7 @@ ${printRunModeArgsHelp(runMode)}
 
 But you provided these flag-looking args:
 
-${join(
-  theUnknownFlags.map((arg) => arg.theArg),
-  "\n",
-)}
+${join(theUnknownFlags, "\n")}
 
 Try removing those extra flags!
 
@@ -460,7 +474,10 @@ export function unknownTargetsSubstrings(
   knownTargets: NonEmptyArray<string>,
   theUnknownTargetsSubstrings: NonEmptyArray<string>,
 ): ErrorTemplate {
-  return fancyError("UNKNOWN TARGETS SUBSTRINGS", elmWatchJsonPath)`
+  return fancyError("UNKNOWN TARGETS SUBSTRINGS", {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: elmWatchJsonPath,
+  })`
 I read inputs, outputs and options from ${elmWatchJson}.
 
 It contains these targets:
@@ -482,10 +499,7 @@ export function noCommonRoot(
   return fancyError("NO COMMON ROOT", { tag: "NoLocation" })`
 I could not find a common ancestor for these paths:
 
-${join(
-  mapNonEmptyArray(paths, (thePath) => thePath.absolutePath),
-  "\n",
-)}
+${join(paths, "\n")}
 
 ${bold("Compiling files on different drives is not supported.")}
 `;
@@ -507,7 +521,7 @@ ${join(
   mapNonEmptyArray(
     foundElmJsonPaths,
     ({ inputPath, elmJsonPath }) =>
-      `${inputPath.originalString}\n-> ${elmJsonPath.theElmJsonPath.absolutePath}`,
+      `${inputPath.originalString}\n-> ${elmJsonPath}`,
   ),
   "\n\n",
 )}
@@ -544,7 +558,7 @@ ${join(
   mapNonEmptyArray(
     theNonUniqueElmJsonPaths,
     ({ inputPath, elmJsonPath }) =>
-      `${inputPath.originalString}\n-> ${elmJsonPath.theElmJsonPath.absolutePath}`,
+      `${inputPath.originalString}\n-> ${elmJsonPath}`,
   ),
   "\n\n",
 )}
@@ -568,7 +582,7 @@ ${joinTemplate(
     inputs,
     (inputPath) =>
       template`${text(inputPath.originalString)} ${dim(
-        `(${inputPath.theUncheckedInputPath.absolutePath})`,
+        `(${inputPath.theUncheckedInputPath})`,
       )}`,
   ),
   "\n",
@@ -608,7 +622,7 @@ export function duplicateInputs(
   }>,
 ): ErrorTemplate {
   const isSymlink = (inputPath: InputPath): boolean =>
-    inputPath.theInputPath.absolutePath !== inputPath.realpath.absolutePath;
+    inputPath.theInputPath !== inputPath.realpath;
 
   const hasSymlink = duplicates.some(({ inputs }) => inputs.some(isSymlink));
 
@@ -628,7 +642,7 @@ ${joinTemplate(
             ? template`${text(inputPath.originalString)} ${dim("(symlink)")}`
             : text(inputPath.originalString),
         ),
-        text(`-> ${resolved.absolutePath}`),
+        text(`-> ${resolved}`),
       ],
       "\n",
     ),
@@ -649,15 +663,15 @@ export function duplicateOutputs(
     absolutePath: AbsolutePath;
   }>,
 ): ErrorTemplate {
-  return fancyError("DUPLICATE OUTPUTS", elmWatchJsonPath)`
+  return fancyError("DUPLICATE OUTPUTS", {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: elmWatchJsonPath,
+  })`
 Some of your outputs seem to be duplicates!
 
 ${joinTemplate(
   mapNonEmptyArray(duplicates, ({ originalOutputPathStrings, absolutePath }) =>
-    join(
-      [...originalOutputPathStrings, `-> ${absolutePath.absolutePath}`],
-      "\n",
-    ),
+    join([...originalOutputPathStrings, `-> ${absolutePath}`], "\n"),
   ),
   "\n\n",
 )}
@@ -667,7 +681,7 @@ Make sure every output is listed just once!
 }
 
 export function elmNotFoundError(
-  location: ElmJsonPath | OutputPath,
+  location: ElmJsonPathOrOutputPath,
   command: Command,
 ): ErrorTemplate {
   return fancyError("ELM NOT FOUND", location)`
@@ -697,7 +711,7 @@ Is ${bold(command.command)} installed?
 }
 
 export function otherSpawnError(
-  location: ElmJsonPath | OutputPath,
+  location: ElmJsonPathOrOutputPath,
   error: Error,
   command: Command,
 ): ErrorTemplate {
@@ -741,7 +755,10 @@ export function unexpectedElmInstallOutput(
   stderr: string,
   command: Command,
 ): ErrorTemplate {
-  return fancyError("UNEXPECTED ELM OUTPUT", elmJsonPath)`
+  return fancyError("UNEXPECTED ELM OUTPUT", {
+    tag: "ElmJsonPath",
+    theElmJsonPath: elmJsonPath,
+  })`
 I tried to make sure all packages are installed by running the following commands:
 
 ${printCommand(command)}
@@ -757,7 +774,7 @@ ${printStdio(stdout, stderr)}
 }
 
 export function postprocessStdinWriteError(
-  location: ElmJsonPath | OutputPath,
+  location: ElmJsonPathOrOutputPath,
   error: Error,
   command: Command,
 ): ErrorTemplate {
@@ -799,7 +816,10 @@ ${printStdio(stdout, stderr)}
 export function elmWatchNodeMissingScript(
   elmWatchJsonPath: ElmWatchJsonPath,
 ): ErrorTemplate {
-  return fancyError("MISSING POSTPROCESS SCRIPT", elmWatchJsonPath)`
+  return fancyError("MISSING POSTPROCESS SCRIPT", {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: elmWatchJsonPath,
+  })`
 You have specified this in ${elmWatchJson}:
 
 "postprocess": [${json(ELM_WATCH_NODE)}]
@@ -816,7 +836,10 @@ export function elmWatchNodeImportError(
   stdout: string,
   stderr: string,
 ): ErrorTemplate {
-  return fancyError("POSTPROCESS IMPORT ERROR", scriptPath)`
+  return fancyError("POSTPROCESS IMPORT ERROR", {
+    tag: "ElmWatchNodeScriptPath",
+    theElmWatchNodeScriptPath: scriptPath,
+  })`
 I tried to import your postprocess file:
 
 ${printElmWatchNodeImportCommand(scriptPath)}
@@ -838,7 +861,10 @@ export function elmWatchNodeDefaultExportNotFunction(
 ): ErrorTemplate {
   // This is in a variable to avoid a regex in scripts/Build.ts removing the line.
   const moduleExports = text("module.exports");
-  return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", scriptPath)`
+  return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", {
+    tag: "ElmWatchNodeScriptPath",
+    theElmWatchNodeScriptPath: scriptPath,
+  })`
 I imported your postprocess file:
 
 ${printElmWatchNodeImportCommand(scriptPath)}
@@ -874,7 +900,10 @@ export function elmWatchNodeRunError(
   stdout: string,
   stderr: string,
 ): ErrorTemplate {
-  return fancyError("POSTPROCESS RUN ERROR", scriptPath)`
+  return fancyError("POSTPROCESS RUN ERROR", {
+    tag: "ElmWatchNodeScriptPath",
+    theElmWatchNodeScriptPath: scriptPath,
+  })`
 I tried to run your postprocess command:
 
 ${printElmWatchNodeImportCommand(scriptPath)}
@@ -895,7 +924,10 @@ export function elmWatchNodeBadReturnValue(
   stdout: string,
   stderr: string,
 ): ErrorTemplate {
-  return fancyError("INVALID POSTPROCESS RESULT", scriptPath)`
+  return fancyError("INVALID POSTPROCESS RESULT", {
+    tag: "ElmWatchNodeScriptPath",
+    theElmWatchNodeScriptPath: scriptPath,
+  })`
 I ran your postprocess command:
 
 ${printElmWatchNodeImportCommand(scriptPath)}
@@ -996,12 +1028,12 @@ function generalErrorPath(
   outputPath: OutputPath,
   elmJsonPath: ElmJsonPath,
   errorPath: ElmMakeError.GeneralError["path"],
-): ElmJsonPath | OutputPath {
+): ElmJsonPathOrOutputPath {
   switch (errorPath.tag) {
     case "NoPath":
       return outputPath;
     case "elm.json":
-      return elmJsonPath;
+      return { tag: "ElmJsonPath", theElmJsonPath: elmJsonPath };
   }
 }
 
@@ -1054,7 +1086,10 @@ export function creatingDummyFailed(
   elmJsonPath: ElmJsonPath,
   error: Error,
 ): ErrorTemplate {
-  return fancyError("FILE SYSTEM TROUBLE", elmJsonPath)`
+  return fancyError("FILE SYSTEM TROUBLE", {
+    tag: "ElmJsonPath",
+    theElmJsonPath: elmJsonPath,
+  })`
 I tried to make sure that all packages are installed. To do that, I need to
 create a temporary dummy .elm file but that failed:
 
@@ -1067,7 +1102,7 @@ export function elmInstallError(
   title: string,
   message: string,
 ): ErrorTemplate {
-  return fancyError(title, elmJsonPath)`
+  return fancyError(title, { tag: "ElmJsonPath", theElmJsonPath: elmJsonPath })`
 ${text(message)}
 `;
 }
@@ -1076,7 +1111,10 @@ export function readElmJson(
   elmJsonPath: ElmJsonPath,
   error: Error,
 ): ErrorTemplate {
-  return fancyError("TROUBLE READING elm.json", elmJsonPath)`
+  return fancyError("TROUBLE READING elm.json", {
+    tag: "ElmJsonPath",
+    theElmJsonPath: elmJsonPath,
+  })`
 I read "source-directories" from ${elmJson} when figuring out all Elm files that
 your inputs depend on.
 
@@ -1093,7 +1131,10 @@ export function decodeElmJson(
   elmJsonPath: ElmJsonPath,
   error: Codec.DecoderError,
 ): ErrorTemplate {
-  return fancyError("INVALID elm.json FORMAT", elmJsonPath)`
+  return fancyError("INVALID elm.json FORMAT", {
+    tag: "ElmJsonPath",
+    theElmJsonPath: elmJsonPath,
+  })`
 I read "source-directories" from ${elmJson} when figuring out all Elm files that
 your inputs depend on.
 
@@ -1110,10 +1151,10 @@ export function readElmWatchStuffJson(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   error: Error,
 ): ErrorTemplate {
-  return fancyError(
-    "TROUBLE READING elm-stuff/elm-watch/stuff.json",
-    elmWatchStuffJsonPath,
-  )`
+  return fancyError("TROUBLE READING elm-stuff/elm-watch/stuff.json", {
+    tag: "ElmWatchStuffJsonPath",
+    theElmWatchStuffJsonPath: elmWatchStuffJsonPath,
+  })`
 I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble reading it:")}
@@ -1129,10 +1170,10 @@ export function decodeElmWatchStuffJson(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   error: Codec.DecoderError,
 ): ErrorTemplate {
-  return fancyError(
-    "INVALID elm-stuff/elm-watch/stuff.json FORMAT",
-    elmWatchStuffJsonPath,
-  )`
+  return fancyError("INVALID elm-stuff/elm-watch/stuff.json FORMAT", {
+    tag: "ElmWatchStuffJsonPath",
+    theElmWatchStuffJsonPath: elmWatchStuffJsonPath,
+  })`
 I read stuff from ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble with the JSON inside:")}
@@ -1148,10 +1189,10 @@ export function elmWatchStuffJsonWriteError(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   error: Error,
 ): ErrorTemplate {
-  return fancyError(
-    "TROUBLE WRITING elm-stuff/elm-watch/stuff.json",
-    elmWatchStuffJsonPath,
-  )`
+  return fancyError("TROUBLE WRITING elm-stuff/elm-watch/stuff.json", {
+    tag: "ElmWatchStuffJsonPath",
+    theElmWatchStuffJsonPath: elmWatchStuffJsonPath,
+  })`
 I write stuff to ${elmWatchStuffJson} to remember some things between runs.
 
 ${bold("I had trouble writing that file:")}
@@ -1186,7 +1227,7 @@ export function needsToWriteProxyFileReadError(
 I managed to typecheck your code. Then I tried to read part of the previous output,
 to see if I need to write a dummy output file there:
 
-${text(triedPath.absolutePath)}
+${text(triedPath)}
 
 Doing so I encountered this error:
 
@@ -1202,7 +1243,7 @@ export function readOutputError(
   return fancyError("TROUBLE READING OUTPUT", outputPath)`
 I managed to compile your code. Then I tried to read the output:
 
-${text(triedPath.absolutePath)}
+${text(triedPath)}
 
 Doing so I encountered this error:
 
@@ -1218,11 +1259,11 @@ export function writeOutputError(
   return fancyError("TROUBLE WRITING OUTPUT", outputPath)`
 I managed to compile your code and read the generated file:
 
-${text(outputPath.temporaryOutputPath.absolutePath)}
+${text(outputPath.temporaryOutputPath)}
 
 ${printWriteOutputErrorReasonForWriting(reasonForWriting)}
 
-${text(outputPath.theOutputPath.absolutePath)}
+${text(outputPath.theOutputPath)}
 
 But I encountered this error:
 
@@ -1254,7 +1295,7 @@ export function writeProxyOutputError(
 There are no WebSocket connections for this target, so I only typecheck the
 code. That went well. Then I tried to write a dummy output file here:
 
-${text(outputPath.theOutputPath.absolutePath)}
+${text(outputPath.theOutputPath)}
 
 Doing so I encountered this error:
 
@@ -1280,7 +1321,10 @@ export function portConflictForPersistedPort(
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath,
   port: Port,
 ): ErrorTemplate {
-  return fancyError("PORT CONFLICT", elmWatchStuffJsonPath)`
+  return fancyError("PORT CONFLICT", {
+    tag: "ElmWatchStuffJsonPath",
+    theElmWatchStuffJsonPath: elmWatchStuffJsonPath,
+  })`
 I ask the operating system for an arbitrary available port for the
 web socket server.
 
@@ -1298,7 +1342,7 @@ If not, something else could have started using port ${number(port.thePort)}
 (though it's not very likely.) Then you can either try to find what that is,
 or remove ${elmWatchStuffJson} here:
 
-${text(elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath)}
+${text(elmWatchStuffJsonPath)}
 
 Then I will ask the operating system for a new arbitrary available port.
   `;
@@ -1308,7 +1352,10 @@ export function portConflictForPortFromConfig(
   elmWatchJsonPath: ElmWatchJsonPath,
   port: Port,
 ): ErrorTemplate {
-  return fancyError("PORT CONFLICT", elmWatchJsonPath)`
+  return fancyError("PORT CONFLICT", {
+    tag: "ElmWatchJsonPath",
+    theElmWatchJsonPath: elmWatchJsonPath,
+  })`
 In your ${elmWatchJson} you have this:
 
 "port": ${json(port.thePort)}
@@ -1491,7 +1538,7 @@ export function openEditorCommandFailed({
   return `
 I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):
 
-${commandToPresentationName(["cd", cwd.absolutePath])}
+${commandToPresentationName(["cd", cwd])}
 ${command}
 
 I ran the command with these extra environment variables:
@@ -1568,7 +1615,7 @@ function printCommand(command: Command): Piece {
           truncate(command.stdin.toString("utf8")),
         ])} | `;
   return text(`
-${commandToPresentationName(["cd", command.options.cwd.absolutePath])}
+${commandToPresentationName(["cd", command.options.cwd])}
 ${stdin}${commandToPresentationName([command.command, ...command.args])}
 `);
 }
@@ -1684,14 +1731,14 @@ function printErrorFilePath(errorFilePath: ErrorFilePath): Template {
       return template`
 I wrote that to this file so you can inspect it:
 
-${text(errorFilePath.absolutePath)}
+${text(errorFilePath.theAbsolutePath)}
       `;
 
     case "WritingErrorFileFailed":
       return template`
 I tried to write that to this file:
 
-${text(errorFilePath.attemptedPath.absolutePath)}
+${text(errorFilePath.attemptedPath)}
 
 ${bold("But that failed too:")}
 
@@ -1719,9 +1766,7 @@ function printUnknownValueAsString(value: UnknownValueAsString): Piece {
 function printElmWatchNodeImportCommand(
   scriptPath: ElmWatchNodeScriptPath,
 ): Template {
-  return template`const imported = await import(${json(
-    scriptPath.theElmWatchNodeScriptFileUrl,
-  )})`;
+  return template`const imported = await import(${json(scriptPath)})`;
 }
 
 function printElmWatchNodeRunCommand(args: ElmWatchNodePublicArgs): Template {
@@ -1747,7 +1792,10 @@ function printJsonError(error: Codec.DecoderError): Piece {
 }
 
 export type ErrorFilePath =
-  | AbsolutePath
+  | {
+      tag: "AbsolutePath";
+      theAbsolutePath: AbsolutePath;
+    }
   | {
       tag: "ErrorFileBadContent";
       content: string;
@@ -1776,8 +1824,8 @@ export function tryWriteErrorFile({
     `elm-watch-${name}-${sha256(hash)}.txt`,
   );
   try {
-    fs.writeFileSync(jsonPath.absolutePath, content);
-    return jsonPath;
+    fs.writeFileSync(jsonPath, content);
+    return { tag: "AbsolutePath", theAbsolutePath: jsonPath };
   } catch (unknownError) {
     const error = toError(unknownError);
     return {

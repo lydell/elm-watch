@@ -14,7 +14,10 @@ import {
   PostprocessResult,
   UnknownValueAsString,
 } from "./PostprocessShared";
-import type { ElmWatchNodeScriptPath } from "./Types";
+import {
+  type ElmWatchNodeScriptPath,
+  markAsElmWatchNodeScriptPath,
+} from "./Types";
 
 // Many errors are typed to always have `stdout` and `stderr`. They are captured
 // from the worker in `Postprocess.ts`, not here, though. By including this
@@ -67,18 +70,13 @@ async function elmWatchNode({
     return { tag: "ElmWatchNodeMissingScript" };
   }
 
-  const scriptPath: ElmWatchNodeScriptPath = {
-    tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptFileUrl: url
-      .pathToFileURL(path.resolve(cwd.absolutePath, userArgs[0]))
-      .toString(),
-  };
+  const scriptPath: ElmWatchNodeScriptPath = markAsElmWatchNodeScriptPath(
+    url.pathToFileURL(path.resolve(cwd, userArgs[0])).toString(),
+  );
 
   let imported;
   try {
-    imported = (await import(
-      scriptPath.theElmWatchNodeScriptFileUrl
-    )) as Record<string, unknown>;
+    imported = (await import(scriptPath)) as Record<string, unknown>;
   } catch (unknownError) {
     return {
       tag: "ElmWatchNodeImportError",
@@ -108,11 +106,7 @@ async function elmWatchNode({
     compilationMode,
     runMode,
     // Mimic `process.argv`: ["node", "/absolute/path/to/script", "arg1", "arg2", "..."].
-    argv: [
-      ELM_WATCH_NODE,
-      url.fileURLToPath(scriptPath.theElmWatchNodeScriptFileUrl),
-      ...userArgs.slice(1),
-    ],
+    argv: [ELM_WATCH_NODE, url.fileURLToPath(scriptPath), ...userArgs.slice(1)],
   };
 
   let returnValue: unknown;

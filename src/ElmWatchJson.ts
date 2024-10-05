@@ -9,7 +9,12 @@ import {
 } from "./NonEmptyArray";
 import { findClosest, readJsonFile } from "./PathHelpers";
 import { Port } from "./Port";
-import type { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
+import {
+  type CliArg,
+  type Cwd,
+  type ElmWatchJsonPath,
+  markAsElmWatchJsonPath,
+} from "./Types";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
@@ -138,17 +143,15 @@ type ParseResult =
     };
 
 export function findReadAndParse(cwd: Cwd): ParseResult {
-  const elmWatchJsonPathRaw = findClosest("elm-watch.json", cwd.path);
+  const elmWatchJsonPathRaw = findClosest("elm-watch.json", cwd);
   if (elmWatchJsonPathRaw === undefined) {
     return {
       tag: "ElmWatchJsonNotFound",
     };
   }
 
-  const elmWatchJsonPath: ElmWatchJsonPath = {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: elmWatchJsonPathRaw,
-  };
+  const elmWatchJsonPath: ElmWatchJsonPath =
+    markAsElmWatchJsonPath(elmWatchJsonPathRaw);
 
   const parsed = readJsonFile(elmWatchJsonPathRaw, Config);
 
@@ -190,10 +193,8 @@ export function example(
               // Windows), while backslashes only work on Windows.
               toUnixPath(
                 path.relative(
-                  path.dirname(
-                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
-                  ),
-                  path.resolve(cwd.path.absolutePath, file),
+                  path.dirname(elmWatchJsonPath),
+                  path.resolve(cwd, file),
                 ),
               ),
             )
@@ -220,7 +221,7 @@ type IntermediateElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
 
 export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
   return args.reduce<IntermediateElmMakeParsed>(
-    (passedParsed, { theArg: arg }): IntermediateElmMakeParsed => {
+    (passedParsed, arg): IntermediateElmMakeParsed => {
       const parsed = { ...passedParsed, justSawOutputFlag: false };
       switch (arg) {
         case "--debug":

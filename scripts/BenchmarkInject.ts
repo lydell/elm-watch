@@ -5,7 +5,12 @@ import * as Codec from "tiny-decoders";
 
 import { inject } from "../src/Inject";
 import { absolutePathFromString } from "../src/PathHelpers";
-import { CompilationMode, Cwd } from "../src/Types";
+import {
+  CompilationMode,
+  Cwd,
+  markAsAbsolutePath,
+  markAsCwd,
+} from "../src/Types";
 
 class KnownError extends Error {}
 
@@ -24,13 +29,10 @@ function run(args: Array<string>): void {
   }
   const compilationMode = compilationModeResult.value;
 
-  const cwd: Cwd = {
-    tag: "Cwd",
-    path: { tag: "AbsolutePath", absolutePath: process.cwd() },
-  };
+  const cwd: Cwd = markAsCwd(markAsAbsolutePath(process.cwd()));
 
-  const elmFile = absolutePathFromString(cwd.path, elmFileRaw);
-  const code = fs.readFileSync(elmFile.absolutePath, "utf8");
+  const elmFile = absolutePathFromString(cwd, elmFileRaw);
+  const code = fs.readFileSync(elmFile, "utf8");
 
   console.time("Run");
   const newCode = inject(compilationMode, code);

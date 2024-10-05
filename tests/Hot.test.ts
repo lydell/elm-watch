@@ -18,6 +18,7 @@ import {
 import { LatestEvent, printTimeline } from "../src/Hot";
 import { IS_WINDOWS } from "../src/IsWindows";
 import { LoggerConfig } from "../src/Logger";
+import { markAsAbsolutePath } from "../src/Types";
 import {
   clean,
   CtrlCReadStream,
@@ -3732,7 +3733,7 @@ describe("hot", () => {
         tag: "WatcherEvent",
         date: new Date("2022-03-05T23:59:05Z"),
         eventName: "changed",
-        file: { tag: "AbsolutePath", absolutePath: "/One.elm" },
+        file: markAsAbsolutePath("/One.elm"),
         affectsAnyTarget: true,
       },
       {
@@ -3740,11 +3741,8 @@ describe("hot", () => {
         date: new Date("2022-03-06T00:00:11Z"),
         outputPath: {
           tag: "OutputPath",
-          theOutputPath: { tag: "AbsolutePath", absolutePath: "/build/One.js" },
-          temporaryOutputPath: {
-            tag: "AbsolutePath",
-            absolutePath: "/elm-stuff/elm-watch/1.js",
-          },
+          theOutputPath: markAsAbsolutePath("/build/One.js"),
+          temporaryOutputPath: markAsAbsolutePath("/elm-stuff/elm-watch/1.js"),
           originalString: "build/One.js",
           targetName: "One",
         },
@@ -3753,14 +3751,14 @@ describe("hot", () => {
         tag: "WatcherEvent",
         date: new Date("2022-03-06T00:01:23Z"),
         eventName: "removed",
-        file: { tag: "AbsolutePath", absolutePath: "/Two.elm" },
+        file: markAsAbsolutePath("/Two.elm"),
         affectsAnyTarget: true,
       },
       {
         tag: "WatcherEvent",
         date: new Date("2022-03-06T00:01:24Z"),
         eventName: "added",
-        file: { tag: "AbsolutePath", absolutePath: "/Three.elm" },
+        file: markAsAbsolutePath("/Three.elm"),
         affectsAnyTarget: true,
       },
       {

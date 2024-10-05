@@ -1,26 +1,28 @@
 /* eslint-disable no-labels */
 import * as fs from "fs";
 import * as path from "path";
-import * as util from "util";
 
 import { toError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import * as Parser from "./Parser";
-import { AbsolutePath, InputPath, SourceDirectory } from "./Types";
-
-// NOTE: This module uses just `string` instead of `AbsolutePath` for performance!
+import {
+  AbsolutePath,
+  InputPath,
+  markAsAbsolutePath,
+  SourceDirectory,
+} from "./Types";
 
 export type WalkImportsResult =
   | WalkImportsError
   | {
       tag: "Success";
-      allRelatedElmFilePaths: Set<string>;
+      allRelatedElmFilePaths: Set<AbsolutePath>;
     };
 
 export type WalkImportsError = {
   tag: "ImportWalkerFileSystemError";
   error: NodeJS.ErrnoException;
-  relatedElmFilePathsUntilError: Set<string>;
+  relatedElmFilePathsUntilError: Set<AbsolutePath>;
 };
 
 // Returns Elm file paths that if created, deleted or changed, `inputPath` needs
@@ -35,16 +37,6 @@ export function walkImports(
     ),
   );
 
-  // Workaround for: https://github.com/nodejs/node/issues/42933
-  // These sets can get super long in projects with many files.
-  (
-    allRelatedElmFilePaths as Set<string> & {
-      [util.inspect.custom]: () => unknown;
-    }
-  )[util.inspect.custom] =
-    /* v8 ignore next */
-    () => Array.from(allRelatedElmFilePaths);
-
   // To avoid reading the same file twice, and to handle circular imports.
   const visitedModules = new Set<string>();
 
@@ -53,9 +45,9 @@ export function walkImports(
       walkImportsHelper(
         mapNonEmptyArray(sourceDirectories, (sourceDirectory) => ({
           sourceDirectory,
-          children: new Set(readdirSync(sourceDirectory.theSourceDirectory)),
+          children: new Set(readdirSync(sourceDirectory)),
         })),
-        inputPath.realpath.absolutePath,
+        inputPath.realpath,
         allRelatedElmFilePaths,
         visitedModules,
       );
@@ -79,8 +71,8 @@ type SourceDirectoryWithChildren = {
 
 function walkImportsHelper(
   sourceDirectories: NonEmptyArray<SourceDirectoryWithChildren>,
-  elmFilePath: string,
-  allRelatedElmFilePaths: Set<string>,
+  elmFilePath: AbsolutePath,
+  allRelatedElmFilePaths: Set<AbsolutePath>,
   visitedModules: Set<string>,
 ): void {
   // This is much faster than `try-catch` around `parse` and checking for ENOENT.
@@ -98,10 +90,9 @@ function walkImportsHelper(
     if (!visitedModules.has(relativePath)) {
       visitedModules.add(relativePath);
       for (const { sourceDirectory, children } of sourceDirectories) {
-        const newElmFilePath =
-          sourceDirectory.theSourceDirectory.absolutePath +
-          path.sep +
-          relativePath;
+        const newElmFilePath = markAsAbsolutePath(
+          sourceDirectory + path.sep + relativePath,
+        );
         allRelatedElmFilePaths.add(newElmFilePath);
         const child =
           importedModule.length === 1
@@ -122,7 +113,7 @@ function walkImportsHelper(
   }
 }
 
-function parse(elmFilePath: string): Array<Parser.ModuleName> {
+function parse(elmFilePath: AbsolutePath): Array<Parser.ModuleName> {
   const readState = Parser.initialReadState();
   const handle = fs.openSync(elmFilePath, "r");
   // Benchmarking has shown that synchronously reading around 2048 bytes at a
@@ -155,22 +146,21 @@ function parse(elmFilePath: string): Array<Parser.ModuleName> {
 function initialRelatedElmFilePaths(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
   inputPath: InputPath,
-): NonEmptyArray<string> {
+): NonEmptyArray<AbsolutePath> {
   // Inputs are allowed to be symlinks. If there’s an error in the input, Elm
   // shows the resolved path in the error message rather than the original path
   // (the path where the symlink is located).
-  const inputPathString = inputPath.realpath.absolutePath;
+  const inputRealPath = inputPath.realpath;
 
   return [
-    inputPathString,
+    inputRealPath,
     ...sourceDirectories.flatMap((sourceDirectory) => {
-      const prefix = sourceDirectory.theSourceDirectory.absolutePath + path.sep;
-      return inputPathString.startsWith(prefix)
-        ? sourceDirectories.map(
-            (sourceDirectory2) =>
-              sourceDirectory2.theSourceDirectory.absolutePath +
-              path.sep +
-              inputPathString.slice(prefix.length),
+      const prefix = sourceDirectory + path.sep;
+      return inputRealPath.startsWith(prefix)
+        ? sourceDirectories.map((sourceDirectory2) =>
+            markAsAbsolutePath(
+              sourceDirectory2 + path.sep + inputRealPath.slice(prefix.length),
+            ),
           )
         : [];
     }),
@@ -181,7 +171,7 @@ function initialRelatedElmFilePaths(
 // errors should not be considered at this point.
 function readdirSync(dir: AbsolutePath): Array<string> {
   try {
-    return fs.readdirSync(dir.absolutePath);
+    return fs.readdirSync(dir);
   } catch {
     return [];
   }

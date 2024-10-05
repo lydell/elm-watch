@@ -24,7 +24,7 @@ export function parseArgs(
   const targetsSubstrings: Array<string> = [];
 
   for (const arg of args) {
-    switch (arg.theArg) {
+    switch (arg) {
       case "--debug":
         debug = true;
         break;
@@ -34,10 +34,10 @@ export function parseArgs(
         break;
 
       default:
-        if (arg.theArg.startsWith("-")) {
+        if (arg.startsWith("-")) {
           unknownFlags.push(arg);
         } else {
-          targetsSubstrings.push(arg.theArg);
+          targetsSubstrings.push(arg);
         }
     }
   }

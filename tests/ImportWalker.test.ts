@@ -4,13 +4,18 @@ import { describe, expect, test } from "vitest";
 import { walkImports } from "../src/ImportWalker";
 import { mapNonEmptyArray, NonEmptyArray } from "../src/NonEmptyArray";
 import { absolutePathFromString, absoluteRealpath } from "../src/PathHelpers";
-import { AbsolutePath, InputPath, SourceDirectory } from "../src/Types";
+import {
+  AbsolutePath,
+  InputPath,
+  markAsAbsolutePath,
+  markAsSourceDirectory,
+  SourceDirectory,
+} from "../src/Types";
 import { clean, stringSnapshotSerializer, testExceptWindows } from "./Helpers";
 
-const FIXTURES_DIR: AbsolutePath = {
-  tag: "AbsolutePath",
-  absolutePath: path.join(import.meta.dirname, "fixtures", "ImportWalker"),
-};
+const FIXTURES_DIR: AbsolutePath = markAsAbsolutePath(
+  path.join(import.meta.dirname, "fixtures", "ImportWalker"),
+);
 
 function walkImportsHelper(
   fixture: string,
@@ -38,10 +43,8 @@ function walkImportsHelper(
   const result = walkImports(
     mapNonEmptyArray(
       sourceDirectories,
-      (sourceDirectory): SourceDirectory => ({
-        tag: "SourceDirectory",
-        theSourceDirectory: absolutePathFromString(dir, sourceDirectory),
-      }),
+      (sourceDirectory): SourceDirectory =>
+        markAsSourceDirectory(absolutePathFromString(dir, sourceDirectory)),
     ),
     inputPaths,
   );
@@ -61,8 +64,8 @@ ${printRelatedElmFilePaths(result.relatedElmFilePathsUntilError)}
 
 function printRelatedElmFilePaths(relatedElmFilePaths: Set<string>): string {
   return Array.from(relatedElmFilePaths, (filePath) =>
-    filePath.startsWith(FIXTURES_DIR.absolutePath)
-      ? filePath.slice(FIXTURES_DIR.absolutePath.length)
+    filePath.startsWith(FIXTURES_DIR)
+      ? filePath.slice(FIXTURES_DIR.length)
       : filePath,
   )
     .join("\n")

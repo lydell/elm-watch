@@ -3283,7 +3283,7 @@ function viewErrorLocation(
           line: 1,
           column: 1,
         },
-        location.file.absolutePath,
+        location.file,
       );
 
     case "FileWithLineAndColumn": {
@@ -3291,7 +3291,7 @@ function viewErrorLocation(
         dispatch,
         sendKey,
         location,
-        `${location.file.absolutePath}:${location.line}:${location.column}`,
+        `${location.file}:${location.line}:${location.column}`,
       );
     }
 

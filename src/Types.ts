@@ -1,14 +1,24 @@
 import * as Codec from "tiny-decoders";
 
-export type AbsolutePath = Codec.Infer<typeof AbsolutePath>;
-export const AbsolutePath = Codec.taggedUnion("tag", [
-  {
-    tag: Codec.tag("AbsolutePath"),
-    absolutePath: Codec.string,
-  },
-]);
+export type Brand<T extends string, Name extends string> = T & {
+  readonly [_ in Name]: never;
+};
 
-export type Cwd = { tag: "Cwd"; path: AbsolutePath };
+function brand<T extends string>(): Codec.Codec<T, string> {
+  // @ts-expect-error This works and does what I want, but doesn’t type check for some reason.
+  return Codec.string;
+}
+
+export type AbsolutePath = Brand<string, "AbsolutePath">;
+export const AbsolutePath = brand<AbsolutePath>();
+export function markAsAbsolutePath(string: string): AbsolutePath {
+  return string as AbsolutePath;
+}
+
+export type Cwd = Brand<AbsolutePath, "Cwd">;
+export function markAsCwd(absolutePath: AbsolutePath): Cwd {
+  return absolutePath as Cwd;
+}
 
 export type RunMode = "hot" | "make";
 
@@ -30,35 +40,46 @@ export const BrowserUiPosition = Codec.primitiveUnion([
 ]);
 
 // elm-watch.json
-export type ElmWatchJsonPath = {
-  tag: "ElmWatchJsonPath";
-  theElmWatchJsonPath: AbsolutePath;
-};
+export type ElmWatchJsonPath = Brand<AbsolutePath, "ElmWatchJsonPath">;
+export function markAsElmWatchJsonPath(
+  absolutePath: AbsolutePath,
+): ElmWatchJsonPath {
+  return absolutePath as ElmWatchJsonPath;
+}
 
 // elm.json
-export type ElmJsonPath = {
-  tag: "ElmJsonPath";
-  theElmJsonPath: AbsolutePath;
-};
+export type ElmJsonPath = Brand<AbsolutePath, "ElmJsonPath">;
+export function markAsElmJsonPath(absolutePath: AbsolutePath): ElmJsonPath {
+  return absolutePath as ElmJsonPath;
+}
 
 // elm-stuff/elm-watch/
-export type ElmWatchStuffDir = {
-  tag: "ElmWatchStuffDir";
-  theElmWatchStuffDir: AbsolutePath;
-};
+export type ElmWatchStuffDir = Brand<AbsolutePath, "ElmWatchStuffDir">;
+export function markAsElmWatchStuffDir(
+  absolutePath: AbsolutePath,
+): ElmWatchStuffDir {
+  return absolutePath as ElmWatchStuffDir;
+}
 
 // elm-stuff/elm-watch/stuff.json
-export type ElmWatchStuffJsonPath = {
-  tag: "ElmWatchStuffJsonPath";
-  theElmWatchStuffJsonPath: AbsolutePath;
-};
+export type ElmWatchStuffJsonPath = Brand<
+  AbsolutePath,
+  "ElmWatchStuffJsonPath"
+>;
+export function markAsElmWatchStuffJsonPath(
+  absolutePath: AbsolutePath,
+): ElmWatchStuffJsonPath {
+  return absolutePath as ElmWatchStuffJsonPath;
+}
 
 // applications: "source-directories": [...]
 // packages: src
-export type SourceDirectory = {
-  tag: "SourceDirectory";
-  theSourceDirectory: AbsolutePath;
-};
+export type SourceDirectory = Brand<AbsolutePath, "SourceDirectory">;
+export function markAsSourceDirectory(
+  absolutePath: AbsolutePath,
+): SourceDirectory {
+  return absolutePath as SourceDirectory;
+}
 
 // src/Main.elm
 export type InputPath = {
@@ -87,16 +108,18 @@ export type OutputPath = {
 
 // "postprocess": ["elm-watch-node", "postprocess.js"]
 //                                    ^^^^^^^^^^^^^^
-export type ElmWatchNodeScriptPath = {
-  tag: "ElmWatchNodeScriptPath";
-  // This is a `string` rather than a `URL` to avoid worker serialization stuff.
-  theElmWatchNodeScriptFileUrl: string;
-};
+// This is a `string` rather than a `URL` to avoid worker serialization stuff.
+export type ElmWatchNodeScriptPath = Brand<string, "ElmWatchNodeScriptPath">;
+export function markAsElmWatchNodeScriptPath(
+  string: string,
+): ElmWatchNodeScriptPath {
+  return string as ElmWatchNodeScriptPath;
+}
 
-export type CliArg = {
-  tag: "CliArg";
-  theArg: string;
-};
+export type CliArg = Brand<string, "CliArg">;
+export function markAsCliArg(string: string): CliArg {
+  return string as CliArg;
+}
 
 export type WriteOutputErrorReasonForWriting =
   | "InjectWebSocketClient"
@@ -108,8 +131,5 @@ export function equalsInputPath(
   elmFile: AbsolutePath,
   inputPath: InputPath,
 ): boolean {
-  return (
-    inputPath.theInputPath.absolutePath === elmFile.absolutePath ||
-    inputPath.realpath.absolutePath === elmFile.absolutePath
-  );
+  return inputPath.theInputPath === elmFile || inputPath.realpath === elmFile;
 }
