@@ -5,7 +5,6 @@ import * as ElmJson from "./ElmJson";
 import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex";
 import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
 import * as Errors from "./Errors";
-import { HashMap } from "./HashMap";
 import {
   bold,
   cursorHorizontalAbsolute,
@@ -294,7 +293,7 @@ export function getOutputActions({
   project: Project;
   runMode: RunMode;
   includeInterrupted: boolean;
-  prioritizedOutputs: HashMap<OutputPath, number> | "AllEqualPriority";
+  prioritizedOutputs: Map<TargetName, number> | "AllEqualPriority";
 }): OutputActions {
   let index = 0;
   let numExecuting = 0;
@@ -322,7 +321,7 @@ export function getOutputActions({
       const priority =
         prioritizedOutputs === "AllEqualPriority"
           ? 0
-          : prioritizedOutputs.get(outputPath);
+          : prioritizedOutputs.get(outputPath.targetName);
 
       const needsElm = (source: IndexedOutputWithSource["source"]): void => {
         if (priority !== undefined) {

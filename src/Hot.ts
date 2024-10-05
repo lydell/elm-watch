@@ -23,7 +23,6 @@ import {
 } from "./Env";
 import * as Errors from "./Errors";
 import { ErrorTemplate } from "./Errors";
-import { HashMap } from "./HashMap";
 import {
   bold,
   capitalize,
@@ -155,7 +154,7 @@ type Msg =
   | {
       tag: "CompilationPartDone";
       date: Date;
-      prioritizedOutputs: HashMap<OutputPath, number>;
+      prioritizedOutputs: Map<TargetName, number>;
       handleOutputActionResult: Compile.HandleOutputActionResult;
     }
   | {
@@ -1982,13 +1981,13 @@ async function closeAll(
 
 function makePrioritizedOutputs(
   webSocketConnections: Array<WebSocketConnection>,
-): HashMap<OutputPath, number> {
-  const map = new HashMap<OutputPath, number>();
+): Map<TargetName, number> {
+  const map = new Map<TargetName, number>();
   for (const { outputPath, priority } of webSocketConnections) {
     if (outputPath.tag !== "OutputPathError") {
       /* v8 ignore next */
-      const previous = map.get(outputPath) ?? 0;
-      map.set(outputPath, Math.max(priority, previous));
+      const previous = map.get(outputPath.targetName) ?? 0;
+      map.set(outputPath.targetName, Math.max(priority, previous));
     }
   }
   return map;
