@@ -1,6 +1,5 @@
 // @ts-check
-import * as esbuild from "esbuild";
-import * as UglifyJS from "uglify-js";
+import * as swc from "@swc/core";
 
 /**
  * @type {import("elm-watch/elm-watch-node").Postprocess}
@@ -16,16 +15,7 @@ export default async function postprocess({
       return code;
 
     case "optimize":
-      return minify(code, {
-        // `minimal: true` runs both UglifyJS and esbuild, which results in smaller output but is slow.
-        // `minimal: false` runs only esbuild, which is super fast but results in slightly larger output.
-        // This enables the `minimal` mode for _some_ targets, based on their names in elm-watch.json,
-        // as an example. For some apps, faster builds is more important than smaller output, and vice versa.
-        // Make your choice.
-        minimal: !["Html", "Sandbox", "Element", "Document", "Worker"].includes(
-          targetName,
-        ),
-      });
+      return minify(code);
 
     default:
       throw new Error(
@@ -53,63 +43,19 @@ const pureFuncs = [
   "A9",
 ];
 
-// Source: https://discourse.elm-lang.org/t/what-i-ve-learned-about-minifying-elm-code/7632
-async function minify(code, { minimal }) {
-  return minimal ? runUglifyJSAndEsbuild(code) : runEsbuild(code);
-}
-
-async function runUglifyJSAndEsbuild(code) {
-  const result = UglifyJS.minify(code, {
-    compress: {
-      ...Object.fromEntries(
-        Object.entries(UglifyJS.default_options().compress).map(
-          ([key, value]) => [key, value === true ? false : value],
-        ),
-      ),
-      pure_funcs: pureFuncs,
-      pure_getters: true,
-      strings: true,
-      sequences: true,
-      merge_vars: true,
-      switches: true,
-      dead_code: true,
-      if_return: true,
-      inline: true,
-      join_vars: true,
-      reduce_vars: true,
-      conditionals: true,
-      collapse_vars: true,
-      unused: true,
-    },
-    mangle: false,
-  });
-
-  if (result.error !== undefined) {
-    throw result.error;
-  }
-
+// Source: https://discourse.elm-lang.org/t/elm-minification-benchmarks/9968
+async function minify(code) {
   return (
-    await esbuild.transform(result.code, {
-      minify: true,
-      target: "es5",
+    await swc.minify(code, {
+      compress: {
+        pure_funcs: pureFuncs,
+        pure_getters: true,
+        unsafe_comps: true,
+        unsafe: true,
+      },
+      mangle: {
+        reserved: pureFuncs,
+      },
     })
   ).code;
-}
-
-async function runEsbuild(code) {
-  return (
-    await esbuild.transform(removeIIFE(code), {
-      minify: true,
-      pure: pureFuncs,
-      target: "es5",
-      format: "iife",
-    })
-  ).code;
-}
-
-function removeIIFE(code) {
-  return `var scope = window;${code.slice(
-    code.indexOf("{") + 1,
-    code.lastIndexOf("}"),
-  )}`;
 }
