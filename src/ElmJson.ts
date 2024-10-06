@@ -23,7 +23,7 @@ type ParseResult =
   | ParseError
   | {
       tag: "Parsed";
-      elmJson: ElmJson;
+      sourceDirectories: NonEmptyArray<SourceDirectory>;
     };
 
 export type ParseError =
@@ -38,7 +38,7 @@ export type ParseError =
       error: Error;
     };
 
-export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
+export function readSourceDirectories(elmJsonPath: ElmJsonPath): ParseResult {
   const parsed = readJsonFile(elmJsonPath, ElmJson);
   switch (parsed.tag) {
     case "DecoderError":
@@ -56,12 +56,12 @@ export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
     case "Valid":
       return {
         tag: "Parsed",
-        elmJson: parsed.value,
+        sourceDirectories: getSourceDirectories(elmJsonPath, parsed.value),
       };
   }
 }
 
-export function getSourceDirectories(
+function getSourceDirectories(
   elmJsonPath: ElmJsonPath,
   elmJson: ElmJson,
 ): NonEmptyArray<SourceDirectory> {

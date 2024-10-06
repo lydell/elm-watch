@@ -464,18 +464,15 @@ function getWatchRoots(
         // This is a bit weird, but we can actually ignore errors here. Some facts:
         // - We want to run Elm even if the elm.json is invalid, because Elm has
         //   really nice error messages.
-        // - We run `ElmJson.readAndParse` again later and do report the errors then.
+        // - We run `ElmJson.readSourceDirectories` again later and do report the errors then.
         //   (But in practice you won’t see them because we show Elm’s errors instead.)
         // - Regardless of whether we report the errors here we can’t know the
         //   real watch root until it becomes valid. The best guess is to just
         //   use the elm-watch.json and elm.json paths then.
-        const result = ElmJson.readAndParse(elmJsonPath);
+        const result = ElmJson.readSourceDirectories(elmJsonPath);
         switch (result.tag) {
           case "Parsed":
-            return [
-              absoluteDirname(elmJsonPath),
-              ...ElmJson.getSourceDirectories(elmJsonPath, result.elmJson),
-            ];
+            return [absoluteDirname(elmJsonPath), ...result.sourceDirectories];
 
           case "ElmJsonReadError":
           case "ElmJsonDecodeError":

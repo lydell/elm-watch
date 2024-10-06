@@ -69,7 +69,7 @@ function run(args: Array<string>): void {
 
   const elmJsonPath: ElmJsonPath = markAsElmJsonPath(uniqueElmJsonPathRaw);
 
-  const elmJsonResult = ElmJson.readAndParse(elmJsonPath);
+  const elmJsonResult = ElmJson.readSourceDirectories(elmJsonPath);
   switch (elmJsonResult.tag) {
     case "ElmJsonDecodeError":
       console.error(Codec.format(elmJsonResult.error));
@@ -81,18 +81,13 @@ function run(args: Array<string>): void {
     // Keep going.
   }
 
-  const sourceDirectories = ElmJson.getSourceDirectories(
-    elmJsonPath,
-    elmJsonResult.elmJson,
-  );
-
   console.log(
     "Elm file(s):",
     mapNonEmptyArray(inputPaths, (inputPath) => inputPath.theInputPath),
   );
   console.log("elm.json:", elmJsonPath);
   console.time("Run");
-  const result = walkImports(sourceDirectories, inputPaths);
+  const result = walkImports(elmJsonResult.sourceDirectories, inputPaths);
   console.timeEnd("Run");
   switch (result.tag) {
     case "Success":

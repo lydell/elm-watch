@@ -2270,17 +2270,14 @@ function getAllRelatedElmFilePaths(
   elmJsonPath: ElmJsonPath,
   inputs: NonEmptyArray<InputPath>,
 ): GetAllRelatedElmFilePathsResult {
-  const parseResult = ElmJson.readAndParse(elmJsonPath);
+  const result = ElmJson.readSourceDirectories(elmJsonPath);
 
-  switch (parseResult.tag) {
+  switch (result.tag) {
     case "Parsed":
-      return walkImports(
-        ElmJson.getSourceDirectories(elmJsonPath, parseResult.elmJson),
-        inputs,
-      );
+      return walkImports(result.sourceDirectories, inputs);
 
     default:
-      return parseResult;
+      return result;
   }
 }
 
