@@ -9,19 +9,13 @@ import {
 import { ElmJsonPath, markAsSourceDirectory, SourceDirectory } from "./Types";
 
 export type ElmJson = Codec.Infer<typeof ElmJson>;
-export const ElmJson = Codec.taggedUnion("tag", [
+export const ElmJson = Codec.taggedUnion("type", [
   {
-    tag: Codec.tag("Application", {
-      renameTagFrom: "application",
-      renameFieldFrom: "type",
-    }),
+    type: Codec.tag("application"),
     "source-directories": NonEmptyArray(Codec.string),
   },
   {
-    tag: Codec.tag("Package", {
-      renameTagFrom: "package",
-      renameFieldFrom: "type",
-    }),
+    type: Codec.tag("package"),
   },
 ]);
 
@@ -73,13 +67,13 @@ export function getSourceDirectories(
 ): NonEmptyArray<SourceDirectory> {
   const base = absoluteDirname(elmJsonPath);
 
-  switch (elmJson.tag) {
-    case "Application":
+  switch (elmJson.type) {
+    case "application":
       return mapNonEmptyArray(elmJson["source-directories"], (dir) =>
         markAsSourceDirectory(absolutePathFromString(base, dir)),
       );
 
-    case "Package":
+    case "package":
       return [markAsSourceDirectory(absolutePathFromString(base, "src"))];
   }
 }
