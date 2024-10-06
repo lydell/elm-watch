@@ -39,7 +39,7 @@ const REPLACEMENTS: Record<string, string> = {
 function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
 	if (args === "__elmWatchReturnData") {
-		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType };
+		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType, _Platform_effectManagers: _Platform_effectManagers, _Scheduler_enqueue: _Scheduler_enqueue };
 	}
 
 	var flags = _Json_wrap(args ? args['flags'] : undefined);
@@ -74,19 +74,19 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	setUpdateAndSubscriptions();
 	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-	function __elmWatchHotReload(newData, new_Platform_effectManagers, new_Scheduler_enqueue, moduleName) {
+	function __elmWatchHotReload(newData) {
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
-		_Scheduler_enqueue = new_Scheduler_enqueue;
+		_Scheduler_enqueue = newData._Scheduler_enqueue;
 
 		var reloadReasons = [];
 
-		for (var key in new_Platform_effectManagers) {
-			var manager = new_Platform_effectManagers[key];
+		for (var key in newData._Platform_effectManagers) {
+			var manager = newData._Platform_effectManagers[key];
 			if (!(key in _Platform_effectManagers)) {
 				_Platform_effectManagers[key] = manager;
 				managers[key] = _Platform_instantiateManager(manager, sendToApp);
 				if (manager.a) {
-					reloadReasons.push("a new port '" + key + "' was added. The idea is to give JavaScript code a chance to set it up!");
+					reloadReasons.push({ tag: "NewPortAdded", name: key });
 					manager.a(key, sendToApp)
 				}
 			}
@@ -104,10 +104,10 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 
 		var newFlagResult = A2(_Json_run, newData.flagDecoder, flags);
 		if (!$elm$core$Result$isOk(newFlagResult)) {
-			return reloadReasons.concat("the flags type in \`" + moduleName + "\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\\nThis is the error:\\n" + _Json_errorToString(newFlagResult.a));
+			return reloadReasons.concat({ tag: "FlagsTypeChanged", jsonErrorMessage: _Json_errorToString(newFlagResult.a) });
 		}
 		if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
-			return reloadReasons.concat("the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).');
+			return reloadReasons.concat({ tag: "MessageTypeChangedInDebugMode" });
 		}
 		init = impl.%init% || impl._impl.%init%;
 		if (isDebug) {
@@ -117,7 +117,7 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		var newInitPair = init(newFlagResult.a);
 		delete globalThis.__ELM_WATCH_INIT_URL;
 		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
-			return reloadReasons.concat("\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!");
+			return reloadReasons.concat({ tag: "InitReturnValueChanged" });
 		}
 
 		setUpdateAndSubscriptions();
@@ -234,7 +234,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 	var programType = "Html";
 
 	if (args === "__elmWatchReturnData") {
-		return { virtualNode: virtualNode, programType: programType };
+		return { virtualNode: virtualNode, programType: programType, _Platform_effectManagers: _Platform_effectManagers, _Scheduler_enqueue: _Scheduler_enqueue };
 	}
 
 	/**_UNUSED/ // always UNUSED with elm-watch
@@ -267,57 +267,23 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 				`.trim(),
 
   // ### _Platform_export
-  // New implementation (inspired by the original).
+  // Allow registering the exports, and skipping the usual merging of `window.Elm` (for hot reloading).
   _Platform_export: `
-// This whole function was changed by elm-watch.
 function _Platform_export(exports)
 {
-	var reloadReasons = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
-	if (reloadReasons.length > 0) {
-		throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(reloadReasons))).join("\\n\\n---\\n\\n"));
-	}
-}
-
-// This whole function was added by elm-watch.
-function _Platform_mergeExportsElmWatch(moduleName, obj, exports)
-{
-	var reloadReasons = [];
-	for (var name in exports) {
-		if (name === "init") {
-			if ("init" in obj) {
-				if ("__elmWatchApps" in obj) {
-					var data = exports.init("__elmWatchReturnData");
-					for (var index = 0; index < obj.__elmWatchApps.length; index++) {
-						var app = obj.__elmWatchApps[index];
-						if (app.__elmWatchProgramType !== data.programType) {
-							reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + data.programType + "\`.");
-						} else {
-							try {
-								var innerReasons = app.__elmWatchHotReload(data, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
-								reloadReasons = reloadReasons.concat(innerReasons);
-							} catch (error) {
-								reloadReasons.push("hot reload for \`" + moduleName + "\` failed, probably because of incompatible model changes.\\nThis is the error:\\n" + error + "\\n" + (error ? error.stack : ""));
-							}
-						}
-					}
-				} else {
-					throw new Error("elm-watch: I'm trying to create \`" + moduleName + ".init\`, but it already exists and wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally?");
-				}
-			} else {
-				obj.__elmWatchApps = [];
-				obj.init = function() {
-					var app = exports.init.apply(exports, arguments);
-					obj.__elmWatchApps.push(app);
-					globalThis.__ELM_WATCH.ON_INIT();
-					return app;
-				};
-			}
+	// added by elm-watch
+	if (globalThis.__ELM_WATCH) {
+		if (globalThis.__ELM_WATCH.REGISTER) {
+			globalThis.__ELM_WATCH.REGISTER(exports);
 		} else {
-			var innerReasons = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
-			reloadReasons = reloadReasons.concat(innerReasons);
+			globalThis.__ELM_WATCH.HOT_RELOAD(exports);
+			return;
 		}
 	}
-	return reloadReasons;
+
+	scope['Elm']
+		? _Platform_mergeExportsDebug('Elm', scope['Elm'], exports) // Always calls the debug version with elm-watch (the only difference is an error message).
+		: scope['Elm'] = exports;
 }
 				`.trim(),
 

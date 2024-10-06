@@ -1,6 +1,6 @@
 import * as Codec from "tiny-decoders";
 
-import { codecCatcher, formatDate, formatTime } from "../src/Helpers";
+import { formatDate, formatTime } from "../src/Helpers";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
   AbsolutePath,
@@ -32,7 +32,10 @@ type __ELM_WATCH = {
   WEBSOCKET_TIMEOUT: number;
   RELOAD_STATUSES: Record<string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
-  ON_INIT: () => void;
+  INITIALIZED_APPS: Record<string, Record<string, Array<ElmApp>>>;
+  REGISTER?: (elmExports: ElmExports) => void;
+  HOT_RELOAD: (elmExports: ElmExports) => void;
+  EVAL_AS_MODULE: (code: string) => Promise<void>;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
   KILL_MATCHING: (targetName: RegExp) => Promise<void>;
@@ -43,10 +46,12 @@ type __ELM_WATCH = {
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
-    Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
+    Elm?: ElmExports;
     __ELM_WATCH: __ELM_WATCH;
   }
 }
+
+type ElmExports = Record<`${UppercaseLetter}${string}`, ElmModule>;
 
 export type UppercaseLetter =
   | "A"
@@ -77,14 +82,64 @@ export type UppercaseLetter =
   | "Z";
 
 export type ElmModule = {
-  init: (options?: { node?: Element; flags?: unknown }) => {
-    ports?: Record<
-      string,
-      { subscribe?: (value: unknown) => void; send?: (value: unknown) => void }
-    >;
-  };
+  init: (options?: { node?: Element; flags?: unknown }) => ElmApp;
   [key: `${UppercaseLetter}${string}`]: ElmModule;
 };
+
+type ElmWatchReturnDataInit = (
+  arg: "__elmWatchReturnData",
+) => ElmWatchReturnData;
+
+type ElmApp = {
+  ports?: Record<
+    string,
+    { subscribe?: (value: unknown) => void; send?: (value: unknown) => void }
+  >;
+  __elmWatchHotReload: (
+    elmWatchReturnData: ElmWatchReturnData,
+  ) => Array<ReloadReason>;
+  __elmWatchProgramType: ProgramType;
+};
+
+type ElmWatchReturnData = {
+  programType: ProgramType;
+  moreData: never;
+};
+
+type ReloadReason =
+  | {
+      tag: "FlagsTypeChanged";
+      jsonErrorMessage: string;
+    }
+  | {
+      tag: "HotReloadCaughtError";
+      caughtError: unknown;
+    }
+  | {
+      tag: "InitReturnValueChanged";
+    }
+  | {
+      tag: "MessageTypeChangedInDebugMode";
+    }
+  | {
+      tag: "NewPortAdded";
+      name: string;
+    }
+  | {
+      tag: "ProgramTypeChanged";
+      previousProgramType: ProgramType;
+      newProgramType: ProgramType;
+    };
+
+type ReloadReasonWithModuleName = ReloadReason & { moduleName: string };
+
+type ProgramType =
+  | "Platform.worker"
+  | "Browser.sandbox"
+  | "Browser.element"
+  | "Browser.document"
+  | "Browser.application"
+  | "Html";
 
 type ReloadStatus =
   | {
@@ -108,10 +163,6 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   // takes around 2-4 ms. In iOS Safari via WiFi, I’ve seen it take up to 120 ms.
   // So 1 second should be plenty above the threshold, while not taking too long.
   WEBSOCKET_TIMEOUT: 1000,
-
-  ON_INIT: () => {
-    // Do nothing.
-  },
 
   ON_RENDER: () => {
     // Do nothing.
@@ -147,6 +198,24 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
     }
   },
 
+  INITIALIZED_APPS: {},
+
+  REGISTER: () => {
+    throw new Error("elm-watch: __ELM_WATCH.REGISTER not initialized yet.");
+  },
+
+  HOT_RELOAD: () => {
+    // Do nothing.
+  },
+
+  EVAL_AS_MODULE: async (code: string): Promise<void> => {
+    const objectURL = URL.createObjectURL(
+      new Blob([code], { type: "text/javascript" }),
+    );
+    await import(objectURL);
+    URL.revokeObjectURL(objectURL);
+  },
+
   KILL_MATCHING: () => Promise.resolve(),
 
   DISCONNECT: () => {
@@ -170,7 +239,6 @@ if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
 }
 
 for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (__ELM_WATCH[key as keyof __ELM_WATCH] === undefined) {
     (__ELM_WATCH as Record<string, unknown>)[key] = value;
   }
@@ -225,7 +293,7 @@ type Msg =
   | {
       tag: "EvalNeedsReload";
       date: Date;
-      reasons: Array<string>;
+      reasons: Array<ReloadReasonWithModuleName>;
     }
   | {
       tag: "EvalSucceeded";
@@ -794,14 +862,19 @@ function setBrowserUiPosition(
   );
 }
 
-export function singleField<Decoded, Encoded>(
-  fieldName: string,
-  codec: Codec.Codec<Decoded, Encoded>,
-): Codec.Codec<Decoded, Record<string, Encoded>> {
-  return Codec.map(Codec.fields({ [fieldName]: codec }), {
-    decoder: (value) => value[fieldName],
-    encoder: () => ({}),
-  }) as Codec.Codec<Decoded, Record<string, Encoded>>;
+function flattenElmExports(elmExports: ElmExports): Array<[string, ElmModule]> {
+  return flattenElmExportsHelper("Elm", elmExports as ElmModule);
+}
+
+function flattenElmExportsHelper(
+  moduleName: string,
+  module: ElmModule,
+): Array<[string, ElmModule]> {
+  return Object.entries(module).flatMap(([key, value]) =>
+    key === "init"
+      ? [[moduleName, module]]
+      : flattenElmExportsHelper(`${moduleName}.${key}`, value as ElmModule),
+  );
 }
 
 const initMutable =
@@ -888,10 +961,80 @@ const initMutable =
       tag: "MightWantToReload",
     };
 
-    const originalOnInit = __ELM_WATCH.ON_INIT;
-    __ELM_WATCH.ON_INIT = () => {
-      dispatch({ tag: "AppInit" });
-      originalOnInit();
+    __ELM_WATCH.REGISTER = (elmExports) => {
+      delete __ELM_WATCH.REGISTER;
+      const initializedElmApps =
+        __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
+      for (const [moduleName, module] of flattenElmExports(elmExports)) {
+        const { init } = module;
+        module.init = (...args) => {
+          const app = init(...args);
+          const apps = initializedElmApps[moduleName];
+          if (apps === undefined) {
+            initializedElmApps[moduleName] = [app];
+          } else {
+            apps.push(app);
+          }
+          dispatch({ tag: "AppInit" });
+          return app;
+        };
+      }
+      __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] = initializedElmApps;
+    };
+
+    const originalHotReload = __ELM_WATCH.HOT_RELOAD;
+    __ELM_WATCH.HOT_RELOAD = (elmExports) => {
+      originalHotReload(elmExports);
+      const initializedElmApps =
+        __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
+      const reloadReasons: Array<ReloadReasonWithModuleName> = [];
+      let didReloadAtLeastOneApp = false;
+      for (const [moduleName, module] of flattenElmExports(elmExports)) {
+        const apps = initializedElmApps[moduleName] ?? [];
+        for (const app of apps) {
+          didReloadAtLeastOneApp = true;
+          const data = (module.init as unknown as ElmWatchReturnDataInit)(
+            "__elmWatchReturnData",
+          );
+          if (app.__elmWatchProgramType !== data.programType) {
+            reloadReasons.push({
+              tag: "ProgramTypeChanged",
+              previousProgramType: app.__elmWatchProgramType,
+              newProgramType: data.programType,
+              moduleName,
+            });
+          } else {
+            try {
+              const innerReasons = app.__elmWatchHotReload(data);
+              for (const innerReason of innerReasons) {
+                reloadReasons.push({ ...innerReason, moduleName });
+              }
+            } catch (error) {
+              reloadReasons.push({
+                tag: "HotReloadCaughtError",
+                caughtError: error,
+                moduleName,
+              });
+            }
+          }
+        }
+      }
+      // If `didReloadAtLeastOneApp` is still `false`, the hot reload was for
+      // some other target.
+      if (didReloadAtLeastOneApp) {
+        if (reloadReasons.length === 0) {
+          dispatch({
+            tag: "EvalSucceeded",
+            date: getNow(),
+          });
+        } else {
+          dispatch({
+            tag: "EvalNeedsReload",
+            date: getNow(),
+            reasons: reloadReasons,
+          });
+        }
+      }
     };
 
     const originalKillMatching = __ELM_WATCH.KILL_MATCHING;
@@ -1034,7 +1177,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
           status: {
             tag: "WaitingForReload",
             date: msg.date,
-            reasons: msg.reasons,
+            reasons: Array.from(new Set(msg.reasons.map(reloadReasonToString))),
           },
         },
         [],
@@ -1488,32 +1631,12 @@ const runCmd =
     rejectPromise: (error: Error) => void,
   ): void => {
     switch (cmd.tag) {
-      case "Eval": {
-        try {
-          // `new Function` throws if the code contains syntax errors.
-          // eslint-disable-next-line @typescript-eslint/no-implied-eval
-          const f = new Function(cmd.code);
-          // Running the code can cause runtime errors.
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          f();
-          dispatch({ tag: "EvalSucceeded", date: getNow() });
-        } catch (unknownError) {
-          if (
-            unknownError instanceof Error &&
-            unknownError.message.startsWith("ELM_WATCH_RELOAD_NEEDED")
-          ) {
-            dispatch({
-              tag: "EvalNeedsReload",
-              date: getNow(),
-              reasons: unknownError.message.split("\n\n---\n\n").slice(1),
-            });
-          } else {
-            void Promise.reject(unknownError);
-            dispatch({ tag: "EvalErrored", date: getNow() });
-          }
-        }
+      case "Eval":
+        void __ELM_WATCH.EVAL_AS_MODULE(cmd.code).catch((unknownError) => {
+          void Promise.reject(unknownError);
+          dispatch({ tag: "EvalErrored", date: getNow() });
+        });
         return;
-      }
 
       case "NoCmd":
         return;
@@ -1704,72 +1827,12 @@ function parseWebSocketMessageData(
   }
 }
 
-type ProgramType = Codec.Infer<typeof ProgramType>;
-const ProgramType = Codec.primitiveUnion([
-  "Platform.worker",
-  "Browser.sandbox",
-  "Browser.element",
-  "Browser.document",
-  "Browser.application",
-  "Html",
-]);
-
-const ElmModule: Codec.Codec<Array<ProgramType>> = Codec.map(
-  Codec.record(
-    Codec.flatMap(Codec.multi(["function", "array", "object"]), {
-      decoder: (value) => {
-        switch (value.type) {
-          case "function":
-            return { tag: "Valid", value: [] };
-          case "array":
-            return Codec.array(
-              singleField("__elmWatchProgramType", ProgramType),
-            ).decoder(value.value);
-          case "object":
-            return ElmModule.decoder(value.value);
-        }
-      },
-      encoder: () => ({ type: "function" as const, value: Function.prototype }),
-    }),
-  ),
-  {
-    decoder: (record: Record<string, Array<ProgramType>>) =>
-      Object.values(record).flat(),
-    encoder: () => ({}),
-  },
-);
-
-// Reading fields might throw errors.
-const ProgramTypes = codecCatcher(singleField("Elm", ElmModule));
-
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
-  // If this target is a proxy, or if another one is, it’s not safe to touch
-  // `window.Elm` since it can throw errors by design, but not errors that
-  // we want to show with a different icon. In this case, we don’t know if
-  // it will be possible to switch to debug mode, so don’t allow that yet.
-  if (window.Elm !== undefined && "__elmWatchProxy" in window.Elm) {
-    return {
-      tag: "DebuggerModeStatus",
-      status: {
-        tag: "Disabled",
-        reason: noDebuggerYetReason,
-      },
-    };
-  }
+  const initializedElmApps = __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
 
-  if (window.Elm === undefined) {
-    return { tag: "MissingWindowElm" };
-  }
-
-  const programTypesResult = ProgramTypes.decoder(window);
-  if (programTypesResult.tag === "DecoderError") {
-    return {
-      tag: "DecoderError",
-      error: programTypesResult.error,
-    };
-  }
-
-  const programTypes = programTypesResult.value;
+  const programTypes: Array<ProgramType> = Object.values(
+    initializedElmApps,
+  ).flatMap((apps) => apps.map((app) => app.__elmWatchProgramType));
 
   if (programTypes.length === 0) {
     return { tag: "NoProgramsAtAll" };
@@ -1827,7 +1890,6 @@ function reloadPageIfNeeded(): void {
   if (!shouldReload) {
     return;
   }
-
   const first = reasons[0];
   const [separator, reasonString] =
     reasons.length === 1 && first !== undefined && first[1].length === 1
@@ -2901,10 +2963,6 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
 
 function idleIcon(status: InitializedElmAppsStatus): string {
   switch (status.tag) {
-    case "DecoderError":
-    case "MissingWindowElm":
-      return "❌";
-
     case "NoProgramsAtAll":
       return "❓";
 
@@ -2984,13 +3042,6 @@ type InitializedElmAppsStatus =
       status: Toggled;
     }
   | {
-      tag: "DecoderError";
-      error: Codec.DecoderError;
-    }
-  | {
-      tag: "MissingWindowElm";
-    }
-  | {
       tag: "NoProgramsAtAll";
     };
 
@@ -3010,6 +3061,23 @@ function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
     Array.from(noDebuggerProgramTypes, (programType) => `\`${programType}\``),
     "and",
   )} programs.`;
+}
+
+function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
+  switch (reason.tag) {
+    case "FlagsTypeChanged":
+      return `the flags type in \`${reason.moduleName}\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\nThis is the error:\n${reason.jsonErrorMessage}`;
+    case "HotReloadCaughtError":
+      return `hot reload for \`${reason.moduleName}\` failed, probably because of incompatible model changes.\nThis is the error:\n${String(reason.caughtError)}\n${reason.caughtError instanceof Error ? (reason.caughtError.stack ?? "") : ""}`;
+    case "InitReturnValueChanged":
+      return `\`${reason.moduleName}.init\` returned something different than last time. Let's start fresh!`;
+    case "MessageTypeChangedInDebugMode":
+      return `the message type in \`${reason.moduleName}\` changed in debug mode ("debug metadata" changed).`;
+    case "NewPortAdded":
+      return `a new port '${reason.name}' was added. The idea is to give JavaScript code a chance to set it up!`;
+    case "ProgramTypeChanged":
+      return `\`${reason.moduleName}.main\` changed from \`${reason.previousProgramType}\` to \`${reason.newProgramType}\`.`;
+  }
 }
 
 function humanList(list: Array<string>, joinWord: string): string {
@@ -3037,39 +3105,6 @@ function viewCompilationModeChooser({
   info: Info;
 }): Array<HTMLElement> {
   switch (info.initializedElmAppsStatus.tag) {
-    case "DecoderError":
-      return [
-        h(
-          HTMLParagraphElement,
-          {},
-          "window.Elm does not look like expected! This is the error message:",
-        ),
-        h(
-          HTMLPreElement,
-          {},
-          Codec.format(info.initializedElmAppsStatus.error),
-        ),
-      ];
-
-    case "MissingWindowElm":
-      return [
-        h(
-          HTMLParagraphElement,
-          {},
-          "elm-watch requires ",
-          h(
-            HTMLAnchorElement,
-            {
-              href: "https://lydell.github.io/elm-watch/window.Elm/",
-              target: "_blank",
-              rel: "noreferrer",
-            },
-            "window.Elm",
-          ),
-          " to exist, but it is undefined!",
-        ),
-      ];
-
     case "NoProgramsAtAll":
       return [
         h(
@@ -3464,22 +3499,6 @@ function renderMockStatuses(
         ...info,
         initializedElmAppsStatus: {
           tag: "NoProgramsAtAll",
-        },
-      },
-    },
-    WindowElmDecodeError: {
-      tag: "Idle",
-      date,
-      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      info: {
-        ...info,
-        initializedElmAppsStatus: {
-          tag: "DecoderError",
-          error: {
-            tag: "object",
-            got: 5,
-            path: ["Main"],
-          },
         },
       },
     },

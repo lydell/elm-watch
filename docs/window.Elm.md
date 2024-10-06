@@ -7,7 +7,8 @@ nav_order: 12
 
 elm-watch is basically just `elm make` in watch mode, so the output format is using the good old `window.Elm` global.
 
-elm-watch even _requires `window.Elm` to exist._ That global variable is key to make [hot reloading](../hot-reloading/) work. (Technically, `globalThis.Elm` is required to exist. See below.)
+{: .info }  
+ℹ️ elm-watch 1.1.3 even _required `window.Elm` to exist,_ to make [hot reloading](../hot-reloading/) work. Newer versions of elm-watch don’t mind if you change that, though.
 
 **In short:** Keep it simple and load the built Elm JS in its own `<script>` tag and you’ll be fine.
 
@@ -21,7 +22,7 @@ const root = document.getElementById("root");
 +const app = window.Elm.Main.init({ node: root });
 ```
 
-Regardless of whether you use a bundler or just standard `import`s, **don’t** be tempted to `import` the built Elm JS:
+Regardless of whether you use a bundler or just standard `import`s, **don’t** be tempted to `import` the built Elm JS. elm-watch compiles Elm just like `elm make`, and neither support `import` out of the box:
 
 ```js
 // 🚨 WRONG! Don’t do this!
@@ -66,6 +67,20 @@ Having `window.Elm.Main.init()` in your code might feel ugly and old-school comp
 - It makes hot reloading work without any setup.
 - And it can even be good for browser caching! Your Elm code might change very often, but some JavaScript code (perhaps using an npm package) might be very stable and can then be cached independently from the compiled Elm code.
 
+If you _really_ want to `import` your Elm code, you can postprocess the code into an actual ECMAScript module:
+
+```js
+function postprocess({ code }) {
+  return `const output = {}; (function(){${code}}).call(output); export default output.Elm;`;
+}
+```
+
+{: .warning }  
+⚠️ Beware that if you put a script tag on your page that loads a JS file, which in turns `import`s the compiled Elm code, it might cause your page to load more slowly, since the compiled Elm code needs to wait for the first JS file to download and execute first.
+
+Note that [elm-esm] does not work with elm-watch: It replaces a bit too much of the code.
+
+[elm-esm]: https://github.com/ChristophP/elm-esm
 [globalthis]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
 [parcel]: https://parceljs.org/
 [platform.worker]: https://package.elm-lang.org/packages/elm/core/latest/Platform#worker

@@ -38,9 +38,6 @@ const elmProxy = new Proxy(existingObject ?? {}, {
     throw error;
   },
   has(target, property) {
-    if (property === "__elmWatchProxy") {
-      return true;
-    }
     const has = Reflect.has(target, property);
     if (has) {
       return true;
@@ -53,5 +50,7 @@ const elmProxy = new Proxy(existingObject ?? {}, {
 });
 
 window.Elm = elmProxy;
+
+window.__ELM_WATCH.REGISTER?.({});
 
 export {};
