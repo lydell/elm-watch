@@ -1020,8 +1020,8 @@ function generalErrorPath(
   elmJsonPath: ElmJsonPath,
   errorPath: ElmMakeError.GeneralError["path"],
 ): ElmJsonPathOrOutputPath {
-  switch (errorPath.tag) {
-    case "NoPath":
+  switch (errorPath) {
+    case null:
       return outputPath;
     case "elm.json":
       return { tag: "ElmJsonPath", theElmJsonPath: elmJsonPath };
@@ -1046,19 +1046,16 @@ ${joinTemplate(problem.message.map(renderMessageChunk), "")}
 }
 
 function renderMessageChunk(chunk: ElmMakeError.MessageChunk): Piece {
-  switch (chunk.tag) {
-    case "UnstyledText":
-      // This does not use `text()` since that function trims whitespace.
-      return { tag: "Text", text: chunk.string };
-    case "StyledText":
-      return {
+  return typeof chunk === "string"
+    ? // This does not use `text()` since that function trims whitespace.
+      { tag: "Text", text: chunk }
+    : {
         tag: "ElmStyle",
         text: chunk.string,
         bold: chunk.bold,
         underline: chunk.underline,
-        color: chunk.color,
+        color: chunk.color ?? undefined,
       };
-  }
 }
 
 export function stuckInProgressState(

@@ -20,16 +20,12 @@ function decode(jsonString: string): ElmMakeError {
 describe("ElmMakeError", () => {
   test("GeneralError, NoPath", () => {
     const fixture: ElmMakeError = {
-      tag: "GeneralError",
-      path: { tag: "NoPath" },
+      type: "error",
+      path: null,
       title: "title",
       message: [
+        "text",
         {
-          tag: "UnstyledText",
-          string: "text",
-        },
-        {
-          tag: "StyledText",
           string: "styled",
           bold: false,
           underline: false,
@@ -62,8 +58,8 @@ describe("ElmMakeError", () => {
 
   test("GeneralError, elm.json", () => {
     const fixture: ElmMakeError = {
-      tag: "GeneralError",
-      path: { tag: "elm.json" },
+      type: "error",
+      path: "elm.json",
       title: "title",
       message: [],
     };
@@ -84,7 +80,7 @@ describe("ElmMakeError", () => {
 
   test("CompileErrors", () => {
     const fixture: ElmMakeError = {
-      tag: "CompileErrors",
+      type: "compile-errors",
       errors: [
         {
           path: markAsAbsolutePath("/path/to/file"),
@@ -103,16 +99,12 @@ describe("ElmMakeError", () => {
                 },
               },
               message: [
+                "text",
                 {
-                  tag: "UnstyledText",
-                  string: "text",
-                },
-                {
-                  tag: "StyledText",
                   string: "styled",
                   bold: false,
                   underline: false,
-                  color: undefined,
+                  color: null,
                 },
               ],
             },

@@ -27,21 +27,12 @@ const Color = Codec.primitiveUnion([
 ]);
 
 type StyledText = Codec.Infer<typeof StyledText>;
-const StyledText = Codec.map(
-  Codec.fields({
-    bold: Codec.boolean,
-    underline: Codec.boolean,
-    color: Codec.map(Codec.nullOr(Color), {
-      decoder: (value) => value ?? undefined,
-      encoder: (value) => value ?? null,
-    }),
-    string: Codec.string,
-  }),
-  {
-    decoder: (value) => ({ tag: "StyledText" as const, ...value }),
-    encoder: ({ tag: _tag, ...value }) => value,
-  },
-);
+const StyledText = Codec.fields({
+  bold: Codec.boolean,
+  underline: Codec.boolean,
+  color: Codec.nullOr(Color),
+  string: Codec.string,
+});
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L394-L409
 export type MessageChunk = Codec.Infer<typeof MessageChunk>;
@@ -49,36 +40,28 @@ const MessageChunk = Codec.flatMap(Codec.multi(["string", "object"]), {
   decoder: (
     value,
   ): Codec.DecoderResult<
-    StyledText | { tag: "UnstyledText"; string: string }
+    StyledText | string // UnstyledText
   > => {
     switch (value.type) {
       case "string":
         return {
           tag: "Valid",
-          value: {
-            tag: "UnstyledText" as const,
-            string: value.value,
-          },
+          value: value.value,
         };
       case "object":
         return StyledText.decoder(value.value);
     }
   },
-  encoder: (value) => {
-    switch (value.tag) {
-      case "UnstyledText":
-        return {
+  encoder: (value) =>
+    typeof value === "string"
+      ? {
           type: "string" as const,
-          value: value.string,
-        };
-
-      case "StyledText":
-        return {
+          value,
+        }
+      : {
           type: "object" as const,
           value: StyledText.encoder(value),
-        };
-    }
-  },
+        },
 });
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Error.hs#L201-L204
@@ -109,39 +92,22 @@ const CompileError = Codec.fields({
   problems: NonEmptyArray(Problem),
 });
 
-const GeneralErrorPath = Codec.map(
-  Codec.nullOr(
-    Codec.map(Codec.primitiveUnion(["elm.json"]), {
-      decoder: (tag) => ({ tag }),
-      encoder: ({ tag }) => tag,
-    }),
-  ),
-  {
-    decoder: (value) => value ?? { tag: "NoPath" as const },
-    encoder: (value) => (value.tag === "NoPath" ? null : value),
-  },
-);
+const GeneralErrorPath = Codec.nullOr(Codec.primitiveUnion(["elm.json"]));
 
-export type GeneralError = Extract<ElmMakeError, { tag: "GeneralError" }>;
+export type GeneralError = Extract<ElmMakeError, { type: "error" }>;
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/builder/src/Reporting/Exit/Help.hs#L94-L109
 export type ElmMakeError = Codec.Infer<typeof ElmMakeError>;
-export const ElmMakeError = Codec.taggedUnion("tag", [
+export const ElmMakeError = Codec.taggedUnion("type", [
   {
-    tag: Codec.tag("GeneralError", {
-      renameTagFrom: "error",
-      renameFieldFrom: "type",
-    }),
+    type: Codec.tag("error"),
     // `Nothing` and `Just "elm.json"` are the only values I’ve found in the compiler code base.
     path: GeneralErrorPath,
     title: Codec.string,
     message: Codec.array(MessageChunk),
   },
   {
-    tag: Codec.tag("CompileErrors", {
-      renameTagFrom: "compile-errors",
-      renameFieldFrom: "type",
-    }),
+    type: Codec.tag("compile-errors"),
     errors: NonEmptyArray(CompileError),
   },
 ]);

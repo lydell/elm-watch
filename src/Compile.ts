@@ -1402,7 +1402,7 @@ function onlyElmMakeErrorsRelatedToOutput(
   if (
     !(
       elmMakeResult.tag === "ElmMakeError" &&
-      elmMakeResult.error.tag === "CompileErrors"
+      elmMakeResult.error.type === "compile-errors"
     )
   ) {
     // Note: In this case we don’t know which targets the error is for. In
@@ -1424,7 +1424,7 @@ function onlyElmMakeErrorsRelatedToOutput(
   return isNonEmptyArray(errors)
     ? {
         tag: "ElmMakeError",
-        error: { tag: "CompileErrors", errors },
+        error: { type: "compile-errors", errors },
         extraError: elmMakeResult.extraError,
       }
     : { tag: "Success" };
@@ -2207,8 +2207,8 @@ export function renderOutputErrors(
       ];
 
     case "ElmMakeError":
-      switch (status.error.tag) {
-        case "GeneralError":
+      switch (status.error.type) {
+        case "error":
           return [
             Errors.elmMakeGeneralError(
               outputPath,
@@ -2218,7 +2218,7 @@ export function renderOutputErrors(
             ),
           ];
 
-        case "CompileErrors":
+        case "compile-errors":
           return status.error.errors.flatMap((error) =>
             error.problems.map((problem) =>
               Errors.elmMakeProblem(error.path, problem, status.extraError),
