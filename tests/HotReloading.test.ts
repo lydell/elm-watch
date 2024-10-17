@@ -580,7 +580,7 @@ describe("hot reloading", () => {
       programType: "Element",
       compilationMode: "debug",
       init: () => {
-        const base = window.Elm?.AllProgramTypes;
+        const base = window.Elm?.["AllProgramTypes"];
         if (base === undefined) {
           throw new Error("Could not find Elm.AllProgramTypes.");
         }
@@ -597,15 +597,15 @@ describe("hot reloading", () => {
           base[appName]?.init({ node });
         }
 
-        base.ApplicationProgram?.init();
+        base["ApplicationProgram"]?.init();
 
         const workerNode = document.createElement("p");
         container.append(workerNode);
-        const workerApp = base.WorkerProgram?.init();
+        const workerApp = base["WorkerProgram"]?.init();
         if (workerApp?.ports === undefined) {
           throw new Error("WorkerProgram should have ports.");
         }
-        const subscribe = workerApp.ports.output?.subscribe;
+        const subscribe = workerApp.ports["output"]?.subscribe;
         if (subscribe === undefined) {
           throw new Error(
             "WorkerProgram app.ports.output.subscribe should exist.",
@@ -614,7 +614,7 @@ describe("hot reloading", () => {
         subscribe((value: unknown) => {
           workerNode.textContent = String(value);
         });
-        const send = workerApp.ports.input?.send;
+        const send = workerApp.ports["input"]?.send;
         if (send === undefined) {
           throw new Error("WorkerProgram app.ports.input.send should exist.");
         }
@@ -740,7 +740,7 @@ describe("hot reloading", () => {
       compilationMode: "standard",
       init: (node) => {
         initCount++;
-        return window.Elm?.FlagsChange?.init({
+        return window.Elm?.["FlagsChange"]?.init({
           node,
           flags: initCount === 1 ? { one: "one" } : { one: "one", two: 2 },
         });
@@ -996,7 +996,8 @@ describe("hot reloading", () => {
       name: "AddPortUsedInSubscriptions",
       programType: "Element",
       compilationMode: "standard",
-      init: (node) => window.Elm?.AddPortUsedInSubscriptions?.init({ node }),
+      init: (node) =>
+        window.Elm?.["AddPortUsedInSubscriptions"]?.init({ node }),
     });
 
     const { browserConsole } = await go(async ({ idle, main }) => {
@@ -1455,7 +1456,7 @@ describe("hot reloading", () => {
       switch (idle) {
         case 1:
           assert1(div);
-          Object.defineProperty(window.Elm?.HtmlMain, "__elmWatchApps", {
+          Object.defineProperty(window.Elm?.["HtmlMain"], "__elmWatchApps", {
             get() {
               throw error;
             },
@@ -1648,8 +1649,8 @@ describe("hot reloading", () => {
         const node1 = document.createElement("div");
         const node2 = document.createElement("div");
         node.append(node1, node2);
-        window.Elm?.MultipleTargets?.init({ node: node1 });
-        return window.Elm?.MultipleTargetsOther1?.init({ node: node2 });
+        window.Elm?.["MultipleTargets"]?.init({ node: node1 });
+        return window.Elm?.["MultipleTargetsOther1"]?.init({ node: node2 });
       },
     });
 
@@ -2117,8 +2118,8 @@ describe("hot reloading", () => {
           const node1 = document.createElement("div");
           const node2 = document.createElement("div");
           node.append(node1, node2);
-          window.Elm?.App?.init({ node: node1 });
-          return window.Elm?.AppOther?.init({ node: node2 });
+          window.Elm?.["App"]?.init({ node: node1 });
+          return window.Elm?.["AppOther"]?.init({ node: node2 });
         },
       });
 

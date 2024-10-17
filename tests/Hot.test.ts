@@ -61,7 +61,7 @@ describe("hot", () => {
       args: ["Html"],
       scripts: ["Html.js"],
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -102,7 +102,7 @@ describe("hot", () => {
       expandUiImmediately: true,
       isTTY: false,
       init: () => {
-        window.Elm?.Worker?.init();
+        window.Elm?.["Worker"]?.init();
       },
       onIdle: () => "Stop",
     });
@@ -228,7 +228,7 @@ describe("hot", () => {
         [NO_COLOR]: "",
       },
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -255,7 +255,7 @@ describe("hot", () => {
         [NO_COLOR]: "",
       },
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -292,7 +292,7 @@ describe("hot", () => {
       args: ["Main"],
       scripts: ["Main.js"],
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -338,7 +338,7 @@ describe("hot", () => {
       args: ["Main"],
       scripts: ["Main.js"],
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -362,7 +362,7 @@ describe("hot", () => {
       keepBuild: true,
       keepElmStuffJson: true,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -854,7 +854,7 @@ describe("hot", () => {
         isTTY: false,
         init: (node) => {
           try {
-            window.Elm?.Main?.init({ node });
+            window.Elm?.["Main"]?.init({ node });
           } catch {
             // Ignore elm-watch proxy “error” on reload.
           }
@@ -1006,7 +1006,7 @@ describe("hot", () => {
         args: ["SendBadJson"],
         scripts: ["SendBadJson.js"],
         init: (node) => {
-          window.Elm?.HtmlMain?.init({ node });
+          window.Elm?.["HtmlMain"]?.init({ node });
         },
         onIdle: ({ idle }) => {
           switch (idle) {
@@ -1083,7 +1083,7 @@ describe("hot", () => {
         scripts: ["Reconnect.js"],
         expandUiImmediately: true,
         init: (node) => {
-          window.Elm?.HtmlMain?.init({ node });
+          window.Elm?.["HtmlMain"]?.init({ node });
         },
         onIdle: () => "Stop",
       });
@@ -1227,7 +1227,7 @@ describe("hot", () => {
         args: ["Html"],
         scripts: ["Html.js"],
         init: (node) => {
-          window.Elm?.HtmlMain?.init({ node });
+          window.Elm?.["HtmlMain"]?.init({ node });
         },
         onIdle: () => "Stop",
       });
@@ -1284,7 +1284,7 @@ describe("hot", () => {
       cwd: "src",
       isTTY: false,
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: async ({ idle, div }) => {
         switch (idle) {
@@ -1403,7 +1403,7 @@ describe("hot", () => {
       isTTY: false,
       cwd: "src",
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: ({ idle, div }) => {
         switch (idle) {
@@ -1639,7 +1639,7 @@ describe("hot", () => {
       scripts: ["HtmlMain.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: async ({ idle }) => {
         switch (idle) {
@@ -1698,7 +1698,7 @@ describe("hot", () => {
       scripts: ["Main.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: async ({ idle }) => {
         switch (idle) {
@@ -1765,7 +1765,7 @@ describe("hot", () => {
       scripts: ["HtmlMain.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: ({ idle, div }) => {
         switch (idle) {
@@ -1848,7 +1848,7 @@ describe("hot", () => {
       isTTY: false,
       cwd: "src",
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: ({ idle, div }) => {
         switch (idle) {
@@ -1915,7 +1915,7 @@ describe("hot", () => {
       scripts: ["HtmlMain1.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.HtmlMain1?.init({ node });
+        window.Elm?.["HtmlMain1"]?.init({ node });
       },
       onIdle: async ({ div }) => {
         assert(div);
@@ -1956,7 +1956,7 @@ describe("hot", () => {
       scripts: ["HtmlMain.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: async ({ div }) => {
         assert(div);
@@ -1990,7 +1990,7 @@ describe("hot", () => {
       scripts: ["Html.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: async ({ idle }) => {
         switch (idle) {
@@ -2077,7 +2077,7 @@ describe("hot", () => {
         scripts: ["Main.js"],
         isTTY: false,
         init: (node) => {
-          window.Elm?.Main?.init({ node });
+          window.Elm?.["Main"]?.init({ node });
         },
         onIdle: () => "Stop",
       });
@@ -2197,7 +2197,7 @@ describe("hot", () => {
         [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: ({ idle }) => {
         switch (idle) {
@@ -2256,7 +2256,7 @@ describe("hot", () => {
         [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -2282,7 +2282,7 @@ describe("hot", () => {
       scripts: ["Main.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: async ({ idle, div }) => {
         switch (idle) {
@@ -2331,7 +2331,7 @@ describe("hot", () => {
       scripts: ["Main.js"],
       isTTY: false,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: async ({ idle, div }) => {
         switch (idle) {
@@ -2388,8 +2388,8 @@ describe("hot", () => {
         const node1 = document.createElement("div");
         const node2 = document.createElement("div");
         node.append(node1, node2);
-        window.Elm?.One?.init({ node: node1 });
-        window.Elm?.Two?.init({ node: node2 });
+        window.Elm?.["One"]?.init({ node: node1 });
+        window.Elm?.["Two"]?.init({ node: node2 });
       },
       onIdle: async ({ idle }) => {
         switch (idle) {
@@ -2419,7 +2419,7 @@ describe("hot", () => {
       scripts: ["Main.js"],
       keepElmStuffJson: true,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: ({ body }) => {
         assertDebugger(body);
@@ -2452,7 +2452,7 @@ describe("hot", () => {
       keepElmStuffJson: true,
       expandUiImmediately: true,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -2553,7 +2553,7 @@ describe("hot", () => {
       scripts: ["Main.js"],
       keepElmStuffJson: true,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -2600,7 +2600,7 @@ describe("hot", () => {
         [NO_COLOR]: "",
       },
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: () => "Stop",
     });
@@ -2653,7 +2653,7 @@ describe("hot", () => {
       args: [],
       scripts: ["Main.js"],
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: ({ idle }) => {
         switch (idle) {
@@ -2713,7 +2713,7 @@ describe("hot", () => {
         keepElmStuffJson: true,
         env,
         init: (node) => {
-          window.Elm?.Main?.init({ node });
+          window.Elm?.["Main"]?.init({ node });
         },
         onIdle: ({ idle }) => {
           switch (idle) {
@@ -2901,7 +2901,7 @@ describe("hot", () => {
           [ELM_WATCH_OPEN_EDITOR]: `node -e "require('fs').writeFileSync('click-error-location.txt', process.argv[1])" ${arg}`,
         },
         init: (node) => {
-          window.Elm?.Main?.init({ node });
+          window.Elm?.["Main"]?.init({ node });
         },
         onIdle: async () => {
           clickFirstErrorLocation();
@@ -2935,7 +2935,7 @@ describe("hot", () => {
       scripts: ["Main.js"],
       keepElmStuffJson: true,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: ({ body }) => {
         // No debugger.
@@ -2973,7 +2973,7 @@ describe("hot", () => {
         expandUi();
       },
       onIdle: ({ div }) => {
-        window.Elm?.Main?.init({ node: div });
+        window.Elm?.["Main"]?.init({ node: div });
         return "Stop";
       },
     });
@@ -3038,8 +3038,8 @@ describe("hot", () => {
         const node1 = document.createElement("div");
         const node2 = document.createElement("div");
         node.append(node1, node2);
-        window.Elm?.Main3?.init({ node: node1 });
-        window.Elm?.Main4?.init({ node: node2 });
+        window.Elm?.["Main3"]?.init({ node: node1 });
+        window.Elm?.["Main4"]?.init({ node: node2 });
       },
       onIdle: async ({ idle }) => {
         switch (idle) {
@@ -3087,8 +3087,8 @@ describe("hot", () => {
         const node1 = document.createElement("div");
         const node2 = document.createElement("div");
         node.append(node1, node2);
-        window.Elm?.One?.init({ node: node1 });
-        window.Elm?.Two?.init({ node: node2 });
+        window.Elm?.["One"]?.init({ node: node1 });
+        window.Elm?.["Two"]?.init({ node: node2 });
       },
       onIdle: ({ idle }) => {
         switch (idle) {
@@ -3159,7 +3159,7 @@ describe("hot", () => {
       // Maybe `elm` doesn’t like the symlink shenanigans.
       clearElmStuff: true,
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: ({ idle, div }) => {
         switch (idle) {
@@ -3263,7 +3263,7 @@ describe("hot", () => {
       args: ["Html"],
       scripts: ["Html.js"],
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: ({ idle }) => {
         switch (idle) {
@@ -3408,7 +3408,7 @@ describe("hot", () => {
       args: ["Main"],
       scripts: ["Main.js"],
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: async () => {
         mainHtml = await httpGet(`http://localhost:${port}`);
@@ -3484,7 +3484,7 @@ describe("hot", () => {
       scripts: ["Html.js"],
       stdin,
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: () => {
         stdin.ctrlC();
@@ -3529,7 +3529,7 @@ describe("hot", () => {
         [ELM_WATCH_EXIT_ON_STDIN_END]: "",
       },
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: () => {
         stdin.push(null);
@@ -3570,7 +3570,7 @@ describe("hot", () => {
       scripts: ["HttpCaching.js"],
       simulateHttpCacheOnReload: true,
       init: (node) => {
-        window.Elm?.HtmlMain?.init({ node });
+        window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: ({ idle }) => {
         switch (idle) {
@@ -3651,7 +3651,7 @@ describe("hot", () => {
       fixture: path.join(fixture, "example"),
       scripts: ["Main.js"],
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: ({ idle }) => {
         switch (idle) {
@@ -3683,7 +3683,7 @@ describe("hot", () => {
       fixture: path.join(fixture, "app", "example"),
       scripts: ["Main.js"],
       init: (node) => {
-        window.Elm?.Main?.init({ node });
+        window.Elm?.["Main"]?.init({ node });
       },
       onIdle: ({ idle }) => {
         switch (idle) {

@@ -74,7 +74,7 @@ export function prependPATH(folder: string): string {
       `@echo off\r\nnode "%~dp0\\elm" %*`,
     );
   }
-  return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
+  return `${folder}${path.delimiter}${process.env["PATH"] ?? ""}`;
 }
 
 export async function waitOneFrame(): Promise<void> {

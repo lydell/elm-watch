@@ -86,7 +86,7 @@ async function elmWatchNode({
     };
   }
 
-  if (typeof imported.default !== "function") {
+  if (typeof imported["default"] !== "function") {
     return {
       tag: "ElmWatchNodeDefaultExportNotFunction",
       scriptPath,
@@ -95,7 +95,7 @@ async function elmWatchNode({
         Object.fromEntries(Object.entries(imported)),
         (value) => Codec.repr(value, { maxObjectChildren: 10 }),
       ),
-      typeofDefault: typeof imported.default,
+      typeofDefault: typeof imported["default"],
       ...emptyStdio,
     };
   }
@@ -112,7 +112,7 @@ async function elmWatchNode({
   let returnValue: unknown;
   try {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    returnValue = (await imported.default(args)) as unknown;
+    returnValue = (await imported["default"](args)) as unknown;
   } catch (unknownError) {
     return {
       tag: "ElmWatchNodeRunError",

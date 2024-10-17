@@ -47,7 +47,6 @@ export default typescriptEslint.config(
       ],
       "@typescript-eslint/consistent-type-definitions": [warn, "type"],
       "@typescript-eslint/default-param-last": warn,
-      "@typescript-eslint/dot-notation": warn,
       "@typescript-eslint/explicit-function-return-type": [
         warn,
         { allowExpressions: true },

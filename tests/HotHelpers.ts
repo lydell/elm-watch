@@ -67,7 +67,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
 
-  delete (window as unknown as Record<string, unknown>).__ELM_WATCH;
+  delete (window as unknown as Record<string, unknown>)["__ELM_WATCH"];
 }
 
 let bodyCounter = 0;
@@ -175,8 +175,8 @@ export async function run({
     const loadBuiltFiles = (): void => {
       loads++;
 
-      delete (window as unknown as Record<string, unknown>).Elm;
-      (window as unknown as Record<string, unknown>).__ELM_WATCH = {};
+      delete (window as unknown as Record<string, unknown>)["Elm"];
+      (window as unknown as Record<string, unknown>)["__ELM_WATCH"] = {};
       setBasicElmWatchProperties();
 
       (async () => {
@@ -225,7 +225,7 @@ export async function run({
         .catch(reject);
     };
 
-    (window as unknown as Record<string, unknown>).__ELM_WATCH = {};
+    (window as unknown as Record<string, unknown>)["__ELM_WATCH"] = {};
 
     window.__ELM_WATCH.MOCKED_TIMINGS = true;
 
@@ -439,7 +439,7 @@ export function runHotReload({
   const lastValueFromElm: { value: unknown } = { value: undefined };
 
   const sendToElm = (value: number): void => {
-    const send = app?.ports?.fromJs?.send;
+    const send = app?.ports?.["fromJs"]?.send;
     if (send === undefined) {
       throw new Error("Failed to find 'fromJs' send port.");
     }
@@ -489,7 +489,7 @@ export function runHotReload({
             ? (node) => {
                 app = window.Elm?.[name]?.init({ node });
                 if (app?.ports !== undefined) {
-                  const subscribe = app.ports.toJs?.subscribe;
+                  const subscribe = app.ports["toJs"]?.subscribe;
                   if (subscribe === undefined) {
                     throw new Error("Failed to find 'toJs' subscribe port.");
                   }

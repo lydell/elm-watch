@@ -470,7 +470,7 @@ function run(): void {
   const browserUiPosition =
     elements === undefined
       ? ORIGINAL_BROWSER_UI_POSITION
-      : BrowserUiPositionWithFallback(elements.container.dataset.position);
+      : BrowserUiPositionWithFallback(elements.container.dataset["position"]);
   const getNow: GetNow = () => new Date();
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
@@ -774,7 +774,7 @@ function setBrowserUiPosition(
     return;
   }
 
-  elements.container.dataset.position = browserUiPosition;
+  elements.container.dataset["position"] = browserUiPosition;
 
   for (const [key, value] of Object.entries(
     browserUiPositionToCss(browserUiPosition),
