@@ -93,6 +93,7 @@ export async function elmWatchCli(
             );
           } while (result.tag === "Restart");
           switch (result.tag) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             case "Exit":
               return result.exitCode;
           }
@@ -126,6 +127,7 @@ if (require.main === module) {
       // happens it should at least be possible to exit with a simple ctrl+c.
       // Note: `.setRawMode` is `undefined` when stdin is not a TTY, but this is
       // not reflected in the type definitions.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (process.stdin.setRawMode !== undefined) {
         process.stdin.setRawMode(false);
       }

@@ -21,6 +21,7 @@ import {
 // Support Web Workers, where `window` does not exist.
 const window = globalThis as unknown as Window;
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 const IS_WEB_WORKER = window.window === undefined;
 
 // These used to be separate properties on `window`, like
@@ -159,6 +160,7 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
 
 let { __ELM_WATCH } = window;
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
   // Each property is added later below.
   __ELM_WATCH = {} as unknown as __ELM_WATCH;
@@ -168,6 +170,7 @@ if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
 }
 
 for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (__ELM_WATCH[key as keyof __ELM_WATCH] === undefined) {
     (__ELM_WATCH as Record<string, unknown>)[key] = value;
   }

@@ -1746,6 +1746,7 @@ ${text(errorFilePath.content)}
 
 function printUnknownValueAsString(value: UnknownValueAsString): Piece {
   switch (value.tag) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     case "UnknownValueAsString":
       return text(value.value);
   }

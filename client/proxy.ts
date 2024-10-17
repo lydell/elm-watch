@@ -19,6 +19,7 @@ error.elmWatchProxy = true;
 
 const existing = window.Elm;
 const existingObject =
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   typeof existing === "object" && existing !== null ? existing : undefined;
 
 const elmProxy = new Proxy(existingObject ?? {}, {

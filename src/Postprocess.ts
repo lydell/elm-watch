@@ -255,6 +255,7 @@ class PostprocessWorker {
 
     this.worker.on("message", (message: MessageFromWorker) => {
       switch (message.tag) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         case "PostprocessDone":
           switch (this.status.tag) {
             /* v8 ignore start */

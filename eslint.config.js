@@ -79,6 +79,7 @@ export default typescriptEslint.config(
       "@typescript-eslint/no-shadow": error,
       "@typescript-eslint/no-this-alias": warn,
       "@typescript-eslint/no-unnecessary-boolean-literal-compare": warn,
+      "@typescript-eslint/no-unnecessary-condition": error,
       "@typescript-eslint/no-unnecessary-parameter-property-assignment": warn,
       "@typescript-eslint/no-unnecessary-template-expression": error,
       "@typescript-eslint/no-unnecessary-type-arguments": warn,

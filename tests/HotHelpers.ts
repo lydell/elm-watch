@@ -39,6 +39,7 @@ const hotKillManager: HotKillManager = { kill: undefined };
 export async function cleanupAfterEachTest(): Promise<void> {
   const { currentTestName } = expect.getState();
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (window.__ELM_WATCH?.KILL_MATCHING !== undefined) {
     // The idea is that we need no logging here – it’ll just result in double
     // logging since there will most likely be a running server as well.
@@ -528,7 +529,7 @@ export function collapseUi(targetName?: string): void {
 
 function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `${
         targetName === undefined
           ? "[data-target]"
@@ -547,7 +548,7 @@ function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
 
 export function showErrors(targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `${
         targetName === undefined
           ? "[data-target]"
@@ -564,7 +565,7 @@ export function showErrors(targetName?: string): void {
 
 export function hideErrors(targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `${
         targetName === undefined
           ? "[data-target]"
@@ -581,7 +582,7 @@ export function hideErrors(targetName?: string): void {
 
 export function closeOverlay(): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `[data-test-id="OverlayCloseButton"]`,
     );
     if (button instanceof HTMLElement) {
@@ -595,7 +596,7 @@ export function closeOverlay(): void {
 export function getOverlay(): string {
   let result = "(Overlay not found)";
   withShadowRoot((shadowRoot) => {
-    const overlay = shadowRoot?.querySelector(`[data-test-id="Overlay"]`);
+    const overlay = shadowRoot.querySelector(`[data-test-id="Overlay"]`);
     if (overlay instanceof HTMLElement) {
       const children = Array.from(overlay.children, (child, index) => {
         const clone = child.cloneNode(true) as HTMLElement;
@@ -617,7 +618,7 @@ export function getOverlay(): string {
 
 export function clickFirstErrorLocation(): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(`[data-test-id="Overlay"] button`);
+    const button = shadowRoot.querySelector(`[data-test-id="Overlay"] button`);
     if (button instanceof HTMLButtonElement) {
       button.click();
     } else {
@@ -629,7 +630,7 @@ export function clickFirstErrorLocation(): void {
 export function moveUi(position: BrowserUiPosition): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `button[data-position="${position}"]`,
     );
     if (button instanceof HTMLButtonElement) {
@@ -643,7 +644,7 @@ export function moveUi(position: BrowserUiPosition): void {
 export function switchCompilationMode(compilationMode: CompilationMode): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const radio = shadowRoot?.querySelector(
+    const radio = shadowRoot.querySelector(
       `input[type="radio"][value="${compilationMode}"]`,
     );
     if (radio instanceof HTMLInputElement) {
@@ -657,7 +658,7 @@ export function switchCompilationMode(compilationMode: CompilationMode): void {
 export function assertCompilationMode(compilationMode: CompilationMode): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const radio = shadowRoot?.querySelector(`input[type="radio"]:checked`);
+    const radio = shadowRoot.querySelector(`input[type="radio"]:checked`);
     if (radio instanceof HTMLInputElement) {
       expect(radio.value).toStrictEqual(compilationMode);
     } else {
@@ -671,7 +672,7 @@ export function assertCompilationMode(compilationMode: CompilationMode): void {
 export function assertDebugDisabled(): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const radio = shadowRoot?.querySelector('input[type="radio"]');
+    const radio = shadowRoot.querySelector('input[type="radio"]');
     if (radio instanceof HTMLInputElement) {
       expect(radio.disabled).toBe(true);
     } else {

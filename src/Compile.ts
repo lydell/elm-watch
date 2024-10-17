@@ -116,7 +116,7 @@ export function installDependencies(
       );
 
       // Avoid printing `loadingMessage` if there’s nothing to download.
-      let didWriteLoadingMessage = false;
+      let didWriteLoadingMessage = false as boolean;
       const timeoutId = setTimeout(() => {
         logger.write(loadingMessage);
         didWriteLoadingMessage = true;
@@ -691,7 +691,7 @@ async function compileOneOutput({
 
   // Watcher events that happen while waiting for `elm make` and
   // postprocessing can flip `dirty` back to `true`.
-  outputState.dirty = false;
+  outputState.dirty = false as boolean;
 
   const { promise, kill } = SpawnElm.make({
     elmJsonPath,
@@ -1630,8 +1630,7 @@ function targetNameEmojiTweak(
     return { targetName, delta: 0 };
   }
 
-  /* v8 ignore next */
-  const content = match[0] ?? "";
+  const content = match[0];
 
   // Avoid emoji on Windows, for example.
   if (!loggerConfig.fancy) {

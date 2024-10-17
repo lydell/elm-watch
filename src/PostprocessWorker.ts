@@ -39,6 +39,7 @@ function main(port: PortWrapper): void {
 
   port.on("message", (message: MessageToWorker) => {
     switch (message.tag) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       case "StartPostprocess":
         elmWatchNode(message.args)
           .then((result) => {

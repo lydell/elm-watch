@@ -1713,6 +1713,7 @@ describe("errors", () => {
           encoding: "utf8",
         },
       );
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!(result.error === undefined || result.error === null)) {
         throw result.error;
       }

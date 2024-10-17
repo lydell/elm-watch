@@ -1459,6 +1459,7 @@ const runCmd =
           // Retry writing it.
           writeElmWatchStuffJson(mutable);
           // If still an error, print it.
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (mutable.elmWatchStuffJsonWriteError !== undefined) {
             logger.write("");
             logger.errorTemplate(
