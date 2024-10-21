@@ -33,8 +33,11 @@ type __ELM_WATCH = {
   RELOAD_STATUSES: Record<string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
   INITIALIZED_APPS: Record<string, Record<string, Array<ElmApp>>>;
-  REGISTER?: (elmExports: ElmExports) => void;
-  HOT_RELOAD: (elmExports: ElmExports) => void;
+  // Just HOOK: instead? Returns whether to move on. But how to know if hot reload or register?
+  // IS_PROXY should lead to not being able to determine if debugger is enabled
+  // (restore code) – it wasn’t only about safety, also about not being able to know.
+  REGISTER?: (elmExports: ElmExports | "IS_PROXY") => void;
+  HOT_RELOAD?: (elmExports: ElmExports) => void;
   EVAL_AS_MODULE: (code: string) => Promise<void>;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
@@ -205,7 +208,7 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   },
 
   HOT_RELOAD: () => {
-    // Do nothing.
+    TODO;
   },
 
   EVAL_AS_MODULE: async (code: string): Promise<void> => {
@@ -963,12 +966,17 @@ const initMutable =
 
     __ELM_WATCH.REGISTER = (elmExports) => {
       delete __ELM_WATCH.REGISTER;
+
+      // I think we should throw an error if TARGET_NAME is already registered.
+      // Similar to standard Elm. Why would you ever load the same module twice?
       const initializedElmApps =
         __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
       for (const [moduleName, module] of flattenElmExports(elmExports)) {
         const { init } = module;
+        console.log("Overwrite init", moduleName);
         module.init = (...args) => {
           const app = init(...args);
+          console.log("overridden init called", moduleName, app);
           const apps = initializedElmApps[moduleName];
           if (apps === undefined) {
             initializedElmApps[moduleName] = [app];
@@ -1632,10 +1640,22 @@ const runCmd =
   ): void => {
     switch (cmd.tag) {
       case "Eval":
-        void __ELM_WATCH.EVAL_AS_MODULE(cmd.code).catch((unknownError) => {
-          void Promise.reject(unknownError);
-          dispatch({ tag: "EvalErrored", date: getNow() });
-        });
+        // The idea was to temporarily assign HOT_RELOAD here, so that
+        // we can support two different targets having the same Elm module name
+        // (two different Main.elm with different elm.json), which is possible if
+        // you use ESM instead of window.Elm. However, this is async, so we kinda
+        // need a queue here, or something.
+        // CAN’T WE RETURN THE HOT RELOADER IN REGISTER?
+        __ELM_WATCH.HOT_RELOAD = ä;
+        __ELM_WATCH
+          .EVAL_AS_MODULE(cmd.code)
+          .finally(() => {
+            delete __ELM_WATCH.HOT_RELOAD;
+          })
+          .catch((unknownError) => {
+            void Promise.reject(unknownError);
+            dispatch({ tag: "EvalErrored", date: getNow() });
+          });
         return;
 
       case "NoCmd":
@@ -1829,6 +1849,7 @@ function parseWebSocketMessageData(
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   const initializedElmApps = __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
+  console.log("initialized", __ELM_WATCH.INITIALIZED_APPS, TARGET_NAME);
 
   const programTypes: Array<ProgramType> = Object.values(
     initializedElmApps,
