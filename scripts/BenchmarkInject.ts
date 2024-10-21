@@ -19,7 +19,7 @@ function run(args: Array<string>): void {
 
   if (args.length !== 2 || elmFileRaw === undefined) {
     throw new KnownError(
-      `You must pass the compilation mode as well as the path to a single Elm file.`,
+      `You must pass the compilation mode as well as the path to a single JS file of compiled Elm code.`,
     );
   }
 
@@ -38,10 +38,15 @@ function run(args: Array<string>): void {
   const newCode = inject(compilationMode, code);
   console.timeEnd("Run");
 
+  const oldLines = code.split("\n").length;
+  const newLines = newCode.split("\n").length;
+
   console.log(
-    `Success! Before: ${code.length}. After: ${newCode.length}. Diff: ${
-      newCode.length - code.length
-    }`,
+    `
+Success!
+Lines before: ${oldLines}
+Lines after:  ${newLines}
+Diff: ${newLines - oldLines}`,
   );
 }
 
