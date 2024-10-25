@@ -94,7 +94,7 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
   });
 
-  test.only("successful connect (expanded, not TTY, Worker)", async () => {
+  test("successful connect (expanded, not TTY, Worker)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",
       args: ["Worker"],

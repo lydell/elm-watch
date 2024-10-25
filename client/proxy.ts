@@ -51,6 +51,6 @@ const elmProxy = new Proxy(existingObject ?? {}, {
 
 window.Elm = elmProxy;
 
-window.__ELM_WATCH.REGISTER?.({});
+window.__ELM_WATCH.REGISTER("%TARGET_NAME%", {});
 
 export {};

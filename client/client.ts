@@ -30,14 +30,13 @@ const IS_WEB_WORKER = window.window === undefined;
 type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
-  RELOAD_STATUSES: Record<string, ReloadStatus>;
+  RELOAD_STATUSES: Map<string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
-  INITIALIZED_APPS: Record<string, Record<string, Array<ElmApp>>>;
-  // Just HOOK: instead? Returns whether to move on. But how to know if hot reload or register?
-  // IS_PROXY should lead to not being able to determine if debugger is enabled
-  // (restore code) – it wasn’t only about safety, also about not being able to know.
-  REGISTER?: (elmExports: ElmExports | "IS_PROXY") => void;
-  HOT_RELOAD?: (elmExports: ElmExports) => void;
+  INITIALIZED_APPS: Map<string, Record<string, Array<ElmApp>>>;
+  SOME_TARGET_IS_PROXY: boolean;
+  IS_REGISTERING: boolean;
+  REGISTER: (targetName: string, elmExports: ElmExports) => void;
+  HOT_RELOAD: (targetName: string, elmExports: ElmExports) => void;
   EVAL_AS_MODULE: (code: string) => Promise<void>;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
@@ -175,7 +174,7 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
     // Do nothing.
   },
 
-  RELOAD_STATUSES: {},
+  RELOAD_STATUSES: new Map(),
 
   RELOAD_PAGE: (message) => {
     if (message !== undefined) {
@@ -201,14 +200,18 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
     }
   },
 
-  INITIALIZED_APPS: {},
+  INITIALIZED_APPS: new Map(),
+
+  SOME_TARGET_IS_PROXY: false,
+
+  IS_REGISTERING: true,
 
   REGISTER: () => {
-    throw new Error("elm-watch: __ELM_WATCH.REGISTER not initialized yet.");
+    // Do nothing.
   },
 
   HOT_RELOAD: () => {
-    TODO;
+    // Do nothing.
   },
 
   EVAL_AS_MODULE: async (code: string): Promise<void> => {
@@ -242,6 +245,7 @@ if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
 }
 
 for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (__ELM_WATCH[key as keyof __ELM_WATCH] === undefined) {
     (__ELM_WATCH as Record<string, unknown>)[key] = value;
   }
@@ -274,6 +278,9 @@ const CLOSE_ALL_ERROR_OVERLAYS_EVENT = "CLOSE_ALL_ERROR_OVERLAYS_EVENT";
 // A compilation after moving the browser UI on a big app takes around 700 ms
 // for me. So more than double that should be plenty.
 const JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT = 2000;
+
+__ELM_WATCH.SOME_TARGET_IS_PROXY ||= ORIGINAL_COMPILATION_MODE === "proxy";
+__ELM_WATCH.IS_REGISTERING = true;
 
 type Mutable = {
   removeListeners: () => void;
@@ -960,23 +967,27 @@ const initMutable =
       { once: true },
     );
 
-    __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = {
+    __ELM_WATCH.RELOAD_STATUSES.set(TARGET_NAME, {
       tag: "MightWantToReload",
-    };
+    });
 
-    __ELM_WATCH.REGISTER = (elmExports) => {
-      delete __ELM_WATCH.REGISTER;
-
-      // I think we should throw an error if TARGET_NAME is already registered.
-      // Similar to standard Elm. Why would you ever load the same module twice?
-      const initializedElmApps =
-        __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
+    const originalRegister = __ELM_WATCH.REGISTER;
+    __ELM_WATCH.REGISTER = (targetName, elmExports) => {
+      originalRegister(targetName, elmExports);
+      if (targetName !== TARGET_NAME) {
+        return;
+      }
+      __ELM_WATCH.IS_REGISTERING = false;
+      if (__ELM_WATCH.INITIALIZED_APPS.has(TARGET_NAME)) {
+        throw new Error(
+          `elm-watch: This target is already registered! Maybe a duplicate script is being loaded accidentally? Target: ${TARGET_NAME}`,
+        );
+      }
+      const initializedElmApps: Record<string, Array<ElmApp>> = {};
       for (const [moduleName, module] of flattenElmExports(elmExports)) {
         const { init } = module;
-        console.log("Overwrite init", moduleName);
         module.init = (...args) => {
           const app = init(...args);
-          console.log("overridden init called", moduleName, app);
           const apps = initializedElmApps[moduleName];
           if (apps === undefined) {
             initializedElmApps[moduleName] = [app];
@@ -987,20 +998,21 @@ const initMutable =
           return app;
         };
       }
-      __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] = initializedElmApps;
+      __ELM_WATCH.INITIALIZED_APPS.set(TARGET_NAME, initializedElmApps);
     };
 
     const originalHotReload = __ELM_WATCH.HOT_RELOAD;
-    __ELM_WATCH.HOT_RELOAD = (elmExports) => {
-      originalHotReload(elmExports);
+    __ELM_WATCH.HOT_RELOAD = (targetName, elmExports) => {
+      originalHotReload(targetName, elmExports);
+      if (targetName !== TARGET_NAME) {
+        return;
+      }
       const initializedElmApps =
-        __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
+        __ELM_WATCH.INITIALIZED_APPS.get(TARGET_NAME) ?? {};
       const reloadReasons: Array<ReloadReasonWithModuleName> = [];
-      let didReloadAtLeastOneApp = false;
       for (const [moduleName, module] of flattenElmExports(elmExports)) {
         const apps = initializedElmApps[moduleName] ?? [];
         for (const app of apps) {
-          didReloadAtLeastOneApp = true;
           const data = (module.init as unknown as ElmWatchReturnDataInit)(
             "__elmWatchReturnData",
           );
@@ -1027,21 +1039,17 @@ const initMutable =
           }
         }
       }
-      // If `didReloadAtLeastOneApp` is still `false`, the hot reload was for
-      // some other target.
-      if (didReloadAtLeastOneApp) {
-        if (reloadReasons.length === 0) {
-          dispatch({
-            tag: "EvalSucceeded",
-            date: getNow(),
-          });
-        } else {
-          dispatch({
-            tag: "EvalNeedsReload",
-            date: getNow(),
-            reasons: reloadReasons,
-          });
-        }
+      if (reloadReasons.length === 0) {
+        dispatch({
+          tag: "EvalSucceeded",
+          date: getNow(),
+        });
+      } else {
+        dispatch({
+          tag: "EvalNeedsReload",
+          date: getNow(),
+          reasons: reloadReasons,
+        });
       }
     };
 
@@ -1640,22 +1648,10 @@ const runCmd =
   ): void => {
     switch (cmd.tag) {
       case "Eval":
-        // The idea was to temporarily assign HOT_RELOAD here, so that
-        // we can support two different targets having the same Elm module name
-        // (two different Main.elm with different elm.json), which is possible if
-        // you use ESM instead of window.Elm. However, this is async, so we kinda
-        // need a queue here, or something.
-        // CAN’T WE RETURN THE HOT RELOADER IN REGISTER?
-        __ELM_WATCH.HOT_RELOAD = ä;
-        __ELM_WATCH
-          .EVAL_AS_MODULE(cmd.code)
-          .finally(() => {
-            delete __ELM_WATCH.HOT_RELOAD;
-          })
-          .catch((unknownError) => {
-            void Promise.reject(unknownError);
-            dispatch({ tag: "EvalErrored", date: getNow() });
-          });
+        __ELM_WATCH.EVAL_AS_MODULE(cmd.code).catch((unknownError) => {
+          void Promise.reject(unknownError);
+          dispatch({ tag: "EvalErrored", date: getNow() });
+        });
         return;
 
       case "NoCmd":
@@ -1755,7 +1751,7 @@ const runCmd =
         return;
 
       case "UpdateGlobalStatus":
-        __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = cmd.reloadStatus;
+        __ELM_WATCH.RELOAD_STATUSES.set(TARGET_NAME, cmd.reloadStatus);
         switch (cmd.reloadStatus.tag) {
           case "NoReloadWanted":
           case "MightWantToReload":
@@ -1848,8 +1844,20 @@ function parseWebSocketMessageData(
 }
 
 function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
-  const initializedElmApps = __ELM_WATCH.INITIALIZED_APPS[TARGET_NAME] ?? {};
-  console.log("initialized", __ELM_WATCH.INITIALIZED_APPS, TARGET_NAME);
+  // If this target is a proxy, or if another one is, we don’t know if
+  // it will be possible to switch to debug mode, so don’t allow that yet.
+  if (__ELM_WATCH.SOME_TARGET_IS_PROXY) {
+    return {
+      tag: "DebuggerModeStatus",
+      status: {
+        tag: "Disabled",
+        reason: noDebuggerYetReason,
+      },
+    };
+  }
+
+  const initializedElmApps =
+    __ELM_WATCH.INITIALIZED_APPS.get(TARGET_NAME) ?? {};
 
   const programTypes: Array<ProgramType> = Object.values(
     initializedElmApps,
@@ -1891,9 +1899,10 @@ function reloadPageIfNeeded(): void {
   let shouldReload = false;
   const reasons: Array<[string, Array<string>]> = [];
 
-  for (const [targetName, reloadStatus] of Object.entries(
-    __ELM_WATCH.RELOAD_STATUSES,
-  )) {
+  for (const [
+    targetName,
+    reloadStatus,
+  ] of __ELM_WATCH.RELOAD_STATUSES.entries()) {
     switch (reloadStatus.tag) {
       case "MightWantToReload":
         return;
@@ -1930,7 +1939,7 @@ function reloadPageIfNeeded(): void {
     reasons.length === 0
       ? undefined
       : `elm-watch: I did a full page reload because${separator}${reasonString}`;
-  __ELM_WATCH.RELOAD_STATUSES = {};
+  __ELM_WATCH.RELOAD_STATUSES = new Map();
   __ELM_WATCH.RELOAD_PAGE(message);
 }
 

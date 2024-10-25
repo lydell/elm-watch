@@ -10,6 +10,7 @@ import {
   Cwd,
   markAsAbsolutePath,
   markAsCwd,
+  markAsTargetName,
 } from "../src/Types";
 
 class KnownError extends Error {}
@@ -35,7 +36,7 @@ function run(args: Array<string>): void {
   const code = fs.readFileSync(elmFile, "utf8");
 
   console.time("Run");
-  const newCode = inject(compilationMode, code);
+  const newCode = inject(compilationMode, code, markAsTargetName("TargetName"));
   console.timeEnd("Run");
 
   const oldLines = code.split("\n").length;

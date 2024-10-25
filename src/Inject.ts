@@ -274,10 +274,10 @@ function _Platform_export(exports)
 	// added by elm-watch
 	if (globalThis.__ELM_WATCH) {
 		var elmWatchTargetName = "";
-		if (globalThis.__ELM_WATCH.REGISTER) {
-			globalThis.__ELM_WATCH.REGISTER(exports);
+		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
+			globalThis.__ELM_WATCH.REGISTER(elmWatchTargetName, exports);
 		} else {
-			globalThis.__ELM_WATCH.HOT_RELOAD(exports);
+			globalThis.__ELM_WATCH.HOT_RELOAD(elmWatchTargetName, exports);
 			return;
 		}
 	}
@@ -688,22 +688,29 @@ function _Scheduler_step(proc)
 
 const REPLACEMENTS_WITHOUT_PLACEHOLDERS = updateReplacements({}, REPLACEMENTS);
 
-export function inject(compilationMode: CompilationMode, code: string): string {
+export function inject(
+  compilationMode: CompilationMode,
+  code: string,
+  targetName?: TargetName,
+): string {
   const replacements = getReplacements(compilationMode, code);
 
-  return code
-    .replace(
-      REPLACEMENT_REGEX,
-      (match, name1: string, name: string = name1) =>
-        /* v8 ignore start */
-        replacements[name] ??
-        `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`,
-      /* v8 ignore stop */
-    )
-    .replace(
-      /^\t\tvar elmWatchTargetName = "";$/,
-      `\t\tvar elmWatchTargetName = "";`,
-    );
+  return (
+    code
+      .replace(
+        REPLACEMENT_REGEX,
+        (match, name1: string, name: string = name1) =>
+          /* v8 ignore start */
+          replacements[name] ??
+          `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`,
+        /* v8 ignore stop */
+      )
+      // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
+      .replace(
+        /^\t\tvar elmWatchTargetName = "";$/m,
+        `\t\tvar elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
+      )
+  );
 }
 
 function getReplacements(
@@ -813,14 +820,19 @@ export function proxyFile(
   webSocketPort: Port,
   debug: boolean,
 ): string {
-  return `${clientCode(
+  const clientCodeString = clientCode(
     outputPath,
     elmCompiledTimestamp,
     "proxy",
     browserUiPosition,
     webSocketPort,
     debug,
-  )}\n${ClientCode.proxy}`;
+  );
+  const proxyCodeString = ClientCode.proxy.replace(
+    /"%TARGET_NAME%"/g,
+    Codec.JSON.stringify(Codec.string, outputPath.targetName),
+  );
+  return `${clientCodeString}\n${proxyCodeString}`;
 }
 
 export function clientCode(
