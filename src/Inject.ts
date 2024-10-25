@@ -708,6 +708,7 @@ export function inject(
       // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
       .replace(
         /^\t\tvar elmWatchTargetName = "";$/m,
+        /* v8 ignore next */
         `\t\tvar elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
       )
   );

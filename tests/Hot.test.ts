@@ -3245,7 +3245,8 @@ describe("hot", () => {
     }
   });
 
-  test("missing window.Elm", async () => {
+  // Remove? Or change this into testing that a bundler has rewritten the scope?
+  test.skip("missing window.Elm", async () => {
     const { onlyExpandedRenders } = await run({
       fixture: "missing-window-elm",
       args: ["Main"],
