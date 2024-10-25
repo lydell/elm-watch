@@ -273,6 +273,7 @@ function _Platform_export(exports)
 {
 	// added by elm-watch
 	if (globalThis.__ELM_WATCH) {
+		var elmWatchTargetName = "";
 		if (globalThis.__ELM_WATCH.REGISTER) {
 			globalThis.__ELM_WATCH.REGISTER(exports);
 		} else {
@@ -690,14 +691,19 @@ const REPLACEMENTS_WITHOUT_PLACEHOLDERS = updateReplacements({}, REPLACEMENTS);
 export function inject(compilationMode: CompilationMode, code: string): string {
   const replacements = getReplacements(compilationMode, code);
 
-  return code.replace(
-    REPLACEMENT_REGEX,
-    (match, name1: string, name: string = name1) =>
-      /* v8 ignore start */
-      replacements[name] ??
-      `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`,
-    /* v8 ignore stop */
-  );
+  return code
+    .replace(
+      REPLACEMENT_REGEX,
+      (match, name1: string, name: string = name1) =>
+        /* v8 ignore start */
+        replacements[name] ??
+        `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`,
+      /* v8 ignore stop */
+    )
+    .replace(
+      /^\t\tvar elmWatchTargetName = "";$/,
+      `\t\tvar elmWatchTargetName = "";`,
+    );
 }
 
 function getReplacements(
