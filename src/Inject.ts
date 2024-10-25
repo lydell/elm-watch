@@ -870,10 +870,10 @@ export function clientCode(
   return (
     versionedIdentifier(outputPath.targetName, webSocketPort) +
     ClientCode.client.replace(
-      new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
-      (match: string, name: string) =>
+      new RegExp(`"%(${join(Object.keys(replacements), "|")})%"`, "g"),
+      (_, name: string) =>
         /* v8 ignore next */
-        replacements[name] ?? match,
+        Codec.JSON.stringify(Codec.string, replacements[name] ?? name),
     )
   );
 }

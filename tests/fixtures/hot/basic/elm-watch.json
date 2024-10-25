@@ -71,6 +71,12 @@
                 "src/HtmlMain.elm"
             ],
             "output": "build/HttpCaching.js"
+        },
+        "\"Esc\\apes\"": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/Escapes.js"
         }
     }
 }

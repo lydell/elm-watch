@@ -325,6 +325,20 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
   });
 
+  test("successful connect (target name with escapes)", async () => {
+    const { div } = await run({
+      fixture: "basic",
+      args: ['"Esc\\apes"'],
+      scripts: ["Escapes.js"],
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
+  });
+
   test("connect with elm.json error", async () => {
     const fixture = "connect-with-elm-json-error";
     const dir = path.join(FIXTURES_DIR, fixture);
@@ -979,6 +993,7 @@ describe("hot", () => {
         SendBadJson
         Reconnect
         HttpCaching
+        "Esc\\apes"
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
         ▲ ❌ 13:10:05 TargetDisabled
