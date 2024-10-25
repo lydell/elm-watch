@@ -833,7 +833,12 @@ export function proxyFile(
     /"%TARGET_NAME%"/g,
     Codec.JSON.stringify(Codec.string, outputPath.targetName),
   );
-  return `${clientCodeString}\n${proxyCodeString}`;
+  // In ESM, importing something that isn’t exported is an error.
+  // When ESM-ify:ing Elm’s output, the two most likely export names
+  // are `default` and `Elm`, so make those available. To not break
+  // regular scripts (non-ESM), where `export` is a syntax error,
+  // use this cursed polyglot syntax: https://stackoverflow.com/a/72314371
+  return `${clientCodeString}\n${proxyCodeString}\n0 && await/2//2; const Elm = window.Elm; export { Elm as default, Elm as Elm }`;
 }
 
 export function clientCode(

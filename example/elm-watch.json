@@ -51,6 +51,12 @@
             ],
             "output": "public/build/Frankenstein.js"
         },
+        "ESM": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "public/build/ESM.js"
+        },
         "🇫🇷 Azimutt": {
             "inputs": [
                 "public/submodules/azimutt/.elm-spa/defaults/Main.elm"
