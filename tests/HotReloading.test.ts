@@ -1424,8 +1424,7 @@ describe("hot reloading", () => {
     }
   });
 
-  // TODO: Remove? Have to change it for code coverage?
-  test.skip("Unexpected/unhandled error at eval", async () => {
+  test("Unexpected/unhandled error at eval", async () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalPromiseReject = Promise.reject;
 
@@ -1450,139 +1449,27 @@ describe("hot reloading", () => {
       name: "HtmlMain",
       programType: "Html",
       compilationMode: "standard",
-      expandUiImmediately: true,
     });
 
-    const { renders } = await go(({ idle, div }) => {
+    const { onlyExpandedRenders } = await go(({ idle, div }) => {
       switch (idle) {
         case 1:
           assert1(div);
-          Object.defineProperty(window.Elm?.["HtmlMain"], "__elmWatchApps", {
-            get() {
-              throw error;
-            },
-          });
+          window.__ELM_WATCH.HOT_RELOAD = () => {
+            throw error;
+          };
           replace((content) =>
             content.replace("hot reload", "simple text change"),
           );
           return "KeepGoing";
         default:
           assert2(div);
+          expandUi();
           return "Stop";
       }
     });
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 HtmlMain
-      ================================================================================
-      ▼ 🔌 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
-      ◉ Standard
-      ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      window.Elm does not look like expected! This is the error message:
-      At root:
-      Very unexpected error
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      window.Elm does not look like expected! This is the error message:
-      At root:
-      Very unexpected error
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 HtmlMain
-      ================================================================================
+    expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target HtmlMain
       elm-watch %VERSION%
       web socket ws://localhost:59123
