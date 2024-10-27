@@ -723,6 +723,9 @@ function getOrCreateContainer(): HTMLElement {
   container.style.position = "fixed";
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
 
+  // Enable popover mode, allowing `.showPopover()` to be called later.
+  container.popover = "manual";
+
   const shadowRoot = container.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS));
   document.documentElement.append(container);
@@ -1724,6 +1727,22 @@ const runCmd =
         } else {
           const { targetRoot } = elements;
           render(getNow, targetRoot, dispatch, model, info, cmd.manageFocus);
+
+          // Put the container in the top level. This is needed to stay on top of
+          // popovers and modal dialogs. See:
+          // https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
+          // The latest shown popover (or modal dialog) gets drawn on top, so we need to
+          // enter and exit popover for elm-watch to force it to be on the very top.
+          // `.showPopover()` shipped in Firefox 125, released 2024-04-16.
+          // At the time of writing (2024-10-27) that was a bit too recent to be
+          // required, so we only call these methods if available.
+          if (
+            typeof elements.container.hidePopover === "function" &&
+            typeof elements.container.showPopover === "function"
+          ) {
+            elements.container.hidePopover();
+            elements.container.showPopover();
+          }
         }
         return;
       }

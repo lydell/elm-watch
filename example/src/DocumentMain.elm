@@ -1,4 +1,4 @@
-module DocumentMain exposing (main)
+port module DocumentMain exposing (main)
 
 import Browser
 import Html
@@ -7,9 +7,13 @@ import Html.Events exposing (onClick)
 import Shared
 
 
+port openModalDialog : () -> Cmd msg
+
+
 type Msg
     = IncrementClicked
     | DecrementClicked
+    | OpenModalDialogClicked
 
 
 type alias Model =
@@ -34,6 +38,9 @@ update msg model =
         DecrementClicked ->
             ( { model | count = model.count - 1 }, Cmd.none )
 
+        OpenModalDialogClicked ->
+            ( model, openModalDialog () )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -50,6 +57,16 @@ view model =
             , Html.text (" " ++ String.fromInt model.count ++ " ")
             , Html.button [ onClick IncrementClicked ]
                 [ Html.text Shared.plus ]
+            , Html.hr [] []
+            , Html.button [ Attr.attribute "popovertarget" "popover" ]
+                [ Html.text "Open popover" ]
+            , Html.p [ Attr.attribute "popover" "auto", Attr.id "popover" ]
+                [ Html.text "popover – should be covered by the error display" ]
+            , Html.button [ onClick OpenModalDialogClicked ]
+                [ Html.text "Open modal dialog" ]
+            , Html.node "dialog"
+                []
+                [ Html.text "modal dialog – should be covered by the error display" ]
             , Html.p
                 [ Attr.style "position" "fixed"
                 , Attr.style "top" "0"

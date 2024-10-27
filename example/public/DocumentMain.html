@@ -37,7 +37,10 @@
   <body>
     <script src="build/DocumentMain.js"></script>
     <script>
-      Elm.DocumentMain.init();
+      const app = Elm.DocumentMain.init();
+      app.ports.openModalDialog.subscribe(() => {
+        document.querySelector("dialog").showModal();
+      });
     </script>
   </body>
 </html>
