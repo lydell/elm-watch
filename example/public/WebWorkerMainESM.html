@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebWorkerMainESM</title>
+  </head>
+  <body>
+    <p>
+      <input type="text" id="input" />
+      <button type="button" id="send">Send message</button>
+    </p>
+    <p>
+      Last sent message has this many duplicates: <span id="duplicates">0</span>
+    </p>
+    <script>
+      const worker = new Worker("workerESM.js", { type: "module" });
+
+      worker.addEventListener("message", (event) => {
+        duplicates.textContent = event.data;
+      });
+
+      send.onclick = () => {
+        worker.postMessage(input.value);
+        input.value = "";
+      };
+    </script>
+  </body>
+</html>

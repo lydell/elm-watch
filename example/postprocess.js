@@ -30,12 +30,11 @@ export default async function postprocess({
  * @returns {string}
  */
 function patch(targetName, code) {
-  switch (targetName) {
-    case "ESM":
-      // Turn the Elm JS into an ECMAScript module:
-      return `const output = {}; (function(){${code}}).call(output); export default output.Elm;`;
-    default:
-      return code;
+  if (targetName.includes("ESM")) {
+    // Turn the Elm JS into an ECMAScript module:
+    return `const output = {}; (function(){${code}}).call(output); export default output.Elm;`;
+  } else {
+    return code;
   }
 }
 
