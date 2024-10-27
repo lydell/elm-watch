@@ -838,7 +838,7 @@ export function proxyFile(
   // are `default` and `Elm`, so make those available. To not break
   // regular scripts (non-ESM), where `export` is a syntax error,
   // use this cursed polyglot syntax: https://stackoverflow.com/a/72314371
-  return `${clientCodeString}\n${proxyCodeString}\n0 && await/2//2; const Elm = window.Elm; export { Elm as default, Elm as Elm }`;
+  return `${clientCodeString}\n${proxyCodeString}\n0 && await/2//2; const Elm = globalThis.Elm; export { Elm as default, Elm as Elm }`;
 }
 
 export function clientCode(
