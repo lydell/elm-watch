@@ -719,7 +719,7 @@ function getOrCreateContainer(): HTMLElement {
   }
 
   const container = h(HTMLDivElement, { id: CONTAINER_ID });
-  container.style.all = "unset";
+  container.style.all = "initial";
   container.style.position = "fixed";
   container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
 

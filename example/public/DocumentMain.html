@@ -4,6 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DocumentMain</title>
+    <!-- This styling should not leak into elm-watch’s UI. -->
+    <style>
+      html {
+        color: magenta;
+        cursor: nesw-resize;
+        font-size: 32px;
+        font-weight: bold;
+        font-style: italic;
+        letter-spacing: 1em;
+        line-height: 3;
+        text-align: right;
+        text-indent: 3em;
+        text-transform: uppercase;
+        text-shadow: 1px 1px 1px black;
+        word-spacing: 5em;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        all: initial;
+        display: block;
+        height: 100vh;
+        padding: 1em;
+        box-sizing: border-box;
+      }
+    </style>
   </head>
   <body>
     <script src="build/DocumentMain.js"></script>

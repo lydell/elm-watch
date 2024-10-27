@@ -44,7 +44,7 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "Awesome counter app"
     , body =
-        [ Html.div []
+        [ Html.main_ []
             [ Html.button [ onClick DecrementClicked ]
                 [ Html.text Shared.minus ]
             , Html.text (" " ++ String.fromInt model.count ++ " ")
