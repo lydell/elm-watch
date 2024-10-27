@@ -6,10 +6,16 @@
     <title>ESM</title>
   </head>
   <body>
-    <div id="root"></div>
+    <button id="button">Add one more Elm app instance</button>
     <script type="module">
-      import * as Elm from "/build/ESM.js";
-      Elm.default.HtmlMain.init({ node: document.getElementById("root") });
+      import Elm from "/build/ESM.js";
+      function init() {
+        const node = document.createElement("div");
+        document.body.append(node);
+        Elm.HtmlMain.init({ node });
+      }
+      button.onclick = init;
+      init();
     </script>
   </body>
 </html>

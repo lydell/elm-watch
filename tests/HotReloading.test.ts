@@ -215,6 +215,70 @@ describe("hot reloading", () => {
     }
   });
 
+  test("update window.Elm for next init (Html)", async () => {
+    const node1 = document.createElement("h1");
+    const node2 = document.createElement("h1");
+    node1.id = "node1-before-init";
+    node2.id = "node2-before-init";
+
+    const { replace, go } = runHotReload({
+      name: "HtmlMain",
+      programType: "Html",
+      compilationMode: "standard",
+      init: (node) => {
+        node.append(node1, node2);
+        return window.Elm?.["HtmlMain"]?.init({ node: node1 });
+      },
+    });
+
+    await go(({ idle, div }) => {
+      switch (idle) {
+        case 1:
+          assertInit(div);
+          replace((content) =>
+            content.replace("hot reload", "simple text change"),
+          );
+          return "KeepGoing";
+        case 2:
+          assertHotReload(div);
+          // Init another instance of the app. It should render the updated version immediately.
+          window.Elm?.["HtmlMain"]?.init({ node: node2 });
+          assertHotReloadTwoApps(div);
+          replace((content) =>
+            content.replace("simple text change", "final change"),
+          );
+          return "KeepGoing";
+        default:
+          assertFinalChangeTwoApps(div);
+          return "Stop";
+      }
+    });
+
+    function assertInit(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div><div><h1 class="probe">hot reload</h1><h1 id="node2-before-init"></h1></div></div>`,
+      );
+    }
+
+    function assertHotReload(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div><div><h1 class="probe">simple text change</h1><h1 id="node2-before-init"></h1></div></div>`,
+      );
+    }
+
+    function assertHotReloadTwoApps(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div><div><h1 class="probe">simple text change</h1><h1 class="probe">simple text change</h1></div></div>`,
+      );
+    }
+
+    function assertFinalChangeTwoApps(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div><div><h1 class="probe">final change</h1><h1 class="probe">final change</h1></div></div>`,
+      );
+    }
+  });
+
   test.each([
     ["Sandbox", "standard"],
     ["Sandbox", "debug"],
@@ -309,6 +373,100 @@ describe("hot reloading", () => {
             originalButtonClicked: 1
             newButtonClicked: 1
             </pre></main>
+          `),
+        );
+      }
+    },
+  );
+
+  test.each([
+    ["Sandbox", "standard"],
+    ["Sandbox", "debug"],
+    ["Sandbox", "optimize"],
+    ["Element", "standard"],
+    ["Element", "debug"],
+    ["Element", "optimize"],
+  ] as const)(
+    "update window.Elm for next init: %s / %s",
+    async (programType, compilationMode) => {
+      const node1 = document.createElement("h1");
+      const node2 = document.createElement("h1");
+      node1.id = "node1-before-init";
+      node2.id = "node2-before-init";
+
+      const { replace, go } = runHotReload({
+        name: "DomAndMsgChange",
+        programType,
+        compilationMode,
+        init: (node) => {
+          node.append(node1, node2);
+          return window.Elm?.["DomAndMsgChange"]?.init({ node: node1 });
+        },
+      });
+
+      await go(({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assertCompilationMode(compilationMode);
+            assertInit(div);
+            replace((content) =>
+              content.replace("Before hot reload", "After hot reload"),
+            );
+            return "KeepGoing";
+          case 2:
+            assertHotReload(div);
+            // Init another instance of the app. It should render the updated version immediately.
+            window.Elm?.["DomAndMsgChange"]?.init({ node: node2 });
+            assertHotReloadTwoApps(div);
+            replace((content) =>
+              content.replace("After hot reload", "Final change"),
+            );
+            return "KeepGoing";
+          default:
+            assertFinalChangeTwoApps(div);
+            return "Stop";
+        }
+      });
+
+      function getH1s(div: HTMLDivElement): string {
+        return Array.from(
+          div.querySelectorAll("h1"),
+          (h1) => h1.outerHTML,
+        ).join("\n");
+      }
+
+      function assertInit(div: HTMLDivElement): void {
+        expect(getH1s(div)).toStrictEqual(
+          removeIndents(`
+            <h1 class="probe">Before hot reload</h1>
+            <h1 id="node2-before-init"></h1>
+          `),
+        );
+      }
+
+      function assertHotReload(div: HTMLDivElement): void {
+        expect(getH1s(div)).toStrictEqual(
+          removeIndents(`
+            <h1 class="probe">After hot reload</h1>
+            <h1 id="node2-before-init"></h1>
+          `),
+        );
+      }
+
+      function assertHotReloadTwoApps(div: HTMLDivElement): void {
+        expect(getH1s(div)).toStrictEqual(
+          removeIndents(`
+            <h1 class="probe">After hot reload</h1>
+            <h1 class="probe">After hot reload</h1>
+          `),
+        );
+      }
+
+      function assertFinalChangeTwoApps(div: HTMLDivElement): void {
+        expect(getH1s(div)).toStrictEqual(
+          removeIndents(`
+            <h1 class="probe">Final change</h1>
+            <h1 class="probe">Final change</h1>
           `),
         );
       }
