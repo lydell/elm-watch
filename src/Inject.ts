@@ -74,7 +74,7 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	setUpdateAndSubscriptions();
 	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-	function __elmWatchHotReload(newData) {
+	function __elmWatchHotReload(newData, shouldReloadDueToInitCmds) {
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
 		_Scheduler_enqueue = newData._Scheduler_enqueue;
 
@@ -118,6 +118,9 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		delete globalThis.__ELM_WATCH_INIT_URL;
 		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
 			return reloadReasons.concat({ tag: "InitReturnValueChanged" });
+		}
+		if (shouldReloadDueToInitCmds && !_Utils_eq_elmWatchInternal(newInitPair.b, _Platform_batch(_List_Nil))) {
+			return reloadReasons.concat({ tag: "InitCmds" });
 		}
 
 		setUpdateAndSubscriptions();

@@ -20,7 +20,7 @@ init : () -> ( Model, Cmd Msg )
 init () =
     ( { messages = []
       }
-    , Cmd.none
+    , toJs 0
     )
 
 

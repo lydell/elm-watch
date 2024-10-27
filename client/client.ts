@@ -104,6 +104,7 @@ type ElmApp = {
   >;
   __elmWatchHotReload: (
     elmWatchReturnData: ElmWatchReturnData,
+    shouldReloadDueToInitCmds: boolean,
   ) => Array<ReloadReason>;
   __elmWatchProgramType: ProgramType;
 };
@@ -121,6 +122,9 @@ type ReloadReason =
   | {
       tag: "HotReloadCaughtError";
       caughtError: unknown;
+    }
+  | {
+      tag: "InitCmds";
     }
   | {
       tag: "InitReturnValueChanged";
@@ -288,6 +292,7 @@ __ELM_WATCH.SOME_TARGET_IS_PROXY ||= ORIGINAL_COMPILATION_MODE === "proxy";
 __ELM_WATCH.IS_REGISTERING = true;
 
 type Mutable = {
+  hasEverReachedIdleState: boolean;
   removeListeners: () => void;
   webSocket: WebSocket;
   webSocketTimeoutId: NodeJS.Timeout | undefined;
@@ -901,6 +906,7 @@ const initMutable =
     let removeListeners: Array<() => void> = [];
 
     const mutable: Mutable = {
+      hasEverReachedIdleState: false,
       removeListeners: () => {
         for (const removeListener of removeListeners) {
           removeListener();
@@ -1054,7 +1060,10 @@ const initMutable =
             });
           } else {
             try {
-              const innerReasons = app.__elmWatchHotReload(data);
+              const innerReasons = app.__elmWatchHotReload(
+                data,
+                /* shouldReloadDueToInitCmds */ !mutable.hasEverReachedIdleState,
+              );
               for (const innerReason of innerReasons) {
                 reloadReasons.push({ ...innerReason, moduleName });
               }
@@ -1756,6 +1765,7 @@ const runCmd =
         return;
 
       case "TriggerReachedIdleState":
+        mutable.hasEverReachedIdleState = true;
         // Let the cmd queue be emptied first.
         Promise.resolve()
           .then(() => {
@@ -3109,6 +3119,8 @@ function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
       return `the flags type in \`${reason.moduleName}\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\nThis is the error:\n${reason.jsonErrorMessage}`;
     case "HotReloadCaughtError":
       return `hot reload for \`${reason.moduleName}\` failed, probably because of incompatible model changes.\nThis is the error:\n${String(reason.caughtError)}\n${reason.caughtError instanceof Error ? (reason.caughtError.stack ?? "") : ""}`;
+    case "InitCmds":
+      return `the page loaded with old compiled code, and Cmds returned from \`${reason.moduleName}.init\` started running before the new code arrived. Let's re-run those with the new code!`;
     case "InitReturnValueChanged":
       return `\`${reason.moduleName}.init\` returned something different than last time. Let's start fresh!`;
     case "MessageTypeChangedInDebugMode":
