@@ -244,6 +244,17 @@ export async function run({
         .catch(reject);
     };
 
+    // JSDOM does not support `URL.createObjectURL`, so we use the approach
+    // that we used to do in elm-watch instead. Note that this does not support
+    // `import` and `export`.
+    // eslint-disable-next-line @typescript-eslint/require-await
+    window.__ELM_WATCH.EVAL_AS_MODULE = async (code) => {
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const f = new Function(code);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      f();
+    };
+
     window.__ELM_WATCH.ON_RENDER = (targetName) => {
       withShadowRoot((shadowRoot) => {
         const element = shadowRoot.lastElementChild;

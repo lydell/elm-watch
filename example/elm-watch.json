@@ -40,6 +40,12 @@
             ],
             "output": "public/build/WorkerMain.js"
         },
+        "WorkerESM": {
+            "inputs": [
+                "src/WorkerMain.elm"
+            ],
+            "output": "public/build/WorkerMainESM.js"
+        },
         "Frankenstein": {
             "inputs": [
                 "src/ApplicationMain.elm",
@@ -50,6 +56,12 @@
                 "src/WorkerMain.elm"
             ],
             "output": "public/build/Frankenstein.js"
+        },
+        "ESM": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "public/build/ESM.js"
         },
         "🇫🇷 Azimutt": {
             "inputs": [

@@ -12,15 +12,29 @@ export default async function postprocess({
   switch (compilationMode) {
     case "standard":
     case "debug":
-      return code;
+      return patch(targetName, code);
 
     case "optimize":
-      return minify(code);
+      return minify(patch(targetName, code));
 
     default:
       throw new Error(
         `Unknown compilation mode: ${JSON.stringify(compilationMode)}`,
       );
+  }
+}
+
+/**
+ * @param {string} targetName
+ * @param {string} code
+ * @returns {string}
+ */
+function patch(targetName, code) {
+  if (targetName.includes("ESM")) {
+    // Turn the Elm JS into an ECMAScript module:
+    return `const output = {}; (function(){${code}}).call(output); export default output.Elm;`;
+  } else {
+    return code;
   }
 }
 
@@ -43,7 +57,12 @@ const pureFuncs = [
   "A9",
 ];
 
-// Source: https://discourse.elm-lang.org/t/elm-minification-benchmarks/9968
+/**
+ * Source: https://discourse.elm-lang.org/t/elm-minification-benchmarks/9968
+ *
+ * @param {string} code
+ * @returns {Promise<string>}
+ */
 async function minify(code) {
   return (
     await swc.minify(code, {
