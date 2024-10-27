@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, onTestFinished, test } from "vitest";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
@@ -3245,14 +3245,21 @@ describe("hot", () => {
     }
   });
 
-  // Remove? Or change this into testing that a bundler has rewritten the scope?
-  test.skip("missing window.Elm", async () => {
-    const { onlyExpandedRenders } = await run({
+  test("missing window.Elm", async () => {
+    (window as unknown as { NotElm: unknown }).NotElm = {};
+    onTestFinished(() => {
+      delete (window as unknown as { NotElm: unknown }).NotElm;
+    });
+
+    const { onlyExpandedRenders, div } = await run({
       fixture: "missing-window-elm",
       args: ["Main"],
       scripts: ["Main.js"],
-      init: () => {
+      init: (node) => {
         expect(window.Elm).toBeUndefined();
+        (window as unknown as { NotElm: typeof window }).NotElm.Elm?.[
+          "Main"
+        ]?.init({ node });
       },
       onIdle: () => {
         expandUi();
@@ -3266,11 +3273,16 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Successfully compiled
-      elm-watch requires [window.Elm](https://lydell.github.io/elm-watch/window.Elm/) to exist, but it is undefined!
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◉ Standard
+      ◯ Optimize
       ↑↗
       ·→
-      ▲ ❌ 13:10:05 Main
+      ▲ ✅ 13:10:05 Main
     `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Main</div>`);
   });
 
   test("Move UI", async () => {
