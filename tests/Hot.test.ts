@@ -399,7 +399,10 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Waiting for compilation
-      It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 Main
@@ -3009,7 +3012,10 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Waiting for compilation
-      It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 Main
@@ -3019,10 +3025,13 @@ describe("hot", () => {
       web socket ws://localhost:59123
       updated 2022-02-05 13:10:05
       status Successfully compiled
-      It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      ◉ Standard
+      ◯ Optimize
       ↑↗
       ·→
-      ▲ ❓ 13:10:05 Main
+      ▲ ✅ 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
