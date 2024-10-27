@@ -32,7 +32,7 @@ type __ELM_WATCH = {
   WEBSOCKET_TIMEOUT: number;
   RELOAD_STATUSES: Map<string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
-  INITIALIZED_APPS: Map<string, Record<string, Array<ElmApp>>>;
+  INITIALIZED_APPS: Map<string, Map<string, Array<ElmApp>>>;
   SOME_TARGET_IS_PROXY: boolean;
   IS_REGISTERING: boolean;
   REGISTER: (targetName: string, elmExports: ElmExports) => void;
@@ -983,14 +983,14 @@ const initMutable =
           `elm-watch: This target is already registered! Maybe a duplicate script is being loaded accidentally? Target: ${TARGET_NAME}`,
         );
       }
-      const initializedElmApps: Record<string, Array<ElmApp>> = {};
+      const initializedElmApps = new Map<string, Array<ElmApp>>();
       for (const [moduleName, module] of flattenElmExports(elmExports)) {
         const { init } = module;
         module.init = (...args) => {
           const app = init(...args);
-          const apps = initializedElmApps[moduleName];
+          const apps = initializedElmApps.get(moduleName);
           if (apps === undefined) {
-            initializedElmApps[moduleName] = [app];
+            initializedElmApps.set(moduleName, [app]);
           } else {
             apps.push(app);
           }
@@ -1007,11 +1007,13 @@ const initMutable =
       if (targetName !== TARGET_NAME) {
         return;
       }
-      const initializedElmApps =
-        __ELM_WATCH.INITIALIZED_APPS.get(TARGET_NAME) ?? {};
+      const initializedElmApps = __ELM_WATCH.INITIALIZED_APPS.get(TARGET_NAME);
+      if (initializedElmApps === undefined) {
+        return;
+      }
       const reloadReasons: Array<ReloadReasonWithModuleName> = [];
       for (const [moduleName, module] of flattenElmExports(elmExports)) {
-        const apps = initializedElmApps[moduleName] ?? [];
+        const apps = initializedElmApps.get(moduleName) ?? [];
         for (const app of apps) {
           const data = (module.init as unknown as ElmWatchReturnDataInit)(
             "__elmWatchReturnData",
@@ -1856,12 +1858,14 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
     };
   }
 
-  const initializedElmApps =
-    __ELM_WATCH.INITIALIZED_APPS.get(TARGET_NAME) ?? {};
+  const initializedElmApps = __ELM_WATCH.INITIALIZED_APPS.get(TARGET_NAME);
 
-  const programTypes: Array<ProgramType> = Object.values(
-    initializedElmApps,
-  ).flatMap((apps) => apps.map((app) => app.__elmWatchProgramType));
+  const programTypes: Array<ProgramType> =
+    initializedElmApps === undefined
+      ? []
+      : Array.from(initializedElmApps.values()).flatMap((apps) =>
+          apps.map((app) => app.__elmWatchProgramType),
+        );
 
   if (programTypes.length === 0) {
     return { tag: "NoProgramsAtAll" };
