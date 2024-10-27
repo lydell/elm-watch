@@ -711,30 +711,46 @@ function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
   }
 }
 
-function getOrCreateContainer(): HTMLElement {
+function getOrCreateContainer(): HTMLDialogElement {
   const existing = document.getElementById(CONTAINER_ID);
 
   if (existing !== null) {
-    return existing;
+    return existing as HTMLDialogElement;
   }
 
-  const container = h(HTMLDivElement, { id: CONTAINER_ID });
+  const container = h(
+    typeof HTMLDialogElement === "function"
+      ? HTMLDialogElement
+      : (HTMLDivElement as typeof HTMLDialogElement),
+    { id: CONTAINER_ID },
+  );
+  // Note: If we add any more styling to this element, Chrome and Safari expand all the styles
+  // in the element inspector, which takes several lines and is pretty distracting.
   container.style.all = "initial";
-  container.style.position = "fixed";
-  container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
 
-  // Enable popover mode, allowing `.showPopover()` to be called later.
-  container.popover = "manual";
+  // `<dialog>` elements cannot have a shadow root, so we need an inner element.
+  const containerInner = h(HTMLDivElement, {});
+  containerInner.style.all = "initial";
+  containerInner.style.position = "fixed";
+  containerInner.style.zIndex = "2147483647"; // Maximum z-index supported by browsers. (Popover fallback.)
 
-  const shadowRoot = container.attachShadow({ mode: "open" });
+  // In Safari, when making a `<dialog>` element into a popovers, it
+  // always covers the entire page (making it impossible to click things),
+  // which is another reason for having the inner element.
+  // This enables popover mode, allowing `.showPopover()` to be called later:
+  containerInner.popover = "manual";
+
+  const shadowRoot = containerInner.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS));
+  container.append(containerInner);
   document.documentElement.append(container);
 
   return container;
 }
 
 type Elements = {
-  container: HTMLElement;
+  container: HTMLDialogElement;
+  containerInner: HTMLElement;
   shadowRoot: ShadowRoot;
   overlay: HTMLElement;
   overlayCloseButton: HTMLElement;
@@ -744,7 +760,15 @@ type Elements = {
 
 function getOrCreateTargetRoot(): Elements {
   const container = getOrCreateContainer();
-  const { shadowRoot } = container;
+  const containerInner = container.firstElementChild;
+
+  if (containerInner === null) {
+    throw new Error(
+      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.firstElementChild\` is null!`,
+    );
+  }
+
+  const { shadowRoot } = containerInner;
 
   if (shadowRoot === null) {
     throw new Error(
@@ -802,6 +826,7 @@ function getOrCreateTargetRoot(): Elements {
 
   const elements: Elements = {
     container,
+    containerInner: containerInner as HTMLElement,
     shadowRoot,
     overlay: overlay as HTMLElement,
     overlayCloseButton: overlayCloseButton as HTMLElement,
@@ -873,7 +898,7 @@ function setBrowserUiPosition(
   for (const [key, value] of Object.entries(
     browserUiPositionToCss(browserUiPosition),
   )) {
-    elements.container.style.setProperty(key, value);
+    elements.containerInner.style.setProperty(key, value);
   }
 
   const isInBottomHalf =
@@ -1728,20 +1753,37 @@ const runCmd =
           const { targetRoot } = elements;
           render(getNow, targetRoot, dispatch, model, info, cmd.manageFocus);
 
-          // Put the container in the top level. This is needed to stay on top of
-          // popovers and modal dialogs. See:
-          // https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
-          // The latest shown popover (or modal dialog) gets drawn on top, so we need to
-          // enter and exit popover for elm-watch to force it to be on the very top.
+          // elm-watch’s overlay needs to be a modal `<dialog>` for two reasons:
+          // - It makes sure you cannot interact with elements behind it.
+          // - We need it to win against other modal `<dialog>`s on the page – they make
+          //   all other content on the page, including our overlay, inert.
+          // Support for `<dialog>` shipped in Firefox and Safari in 2022-03-14.
+          // These methods are not supported in JSDOM, so we only call them if they exist.
+          if (
+            typeof elements.container.close === "function" &&
+            typeof elements.container.showModal === "function"
+          ) {
+            if (elements.overlay.hidden) {
+              elements.container.close();
+            } else {
+              elements.container.showModal();
+            }
+          }
+
+          // Put the inner container in the top level. This is needed to stay on top of
+          // popovers. See: https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
+          // The latest shown popover gets drawn on top, so we need to enter and exit
+          // popover frequently for elm-watch to force it to be on the very top.
           // `.showPopover()` shipped in Firefox 125, released 2024-04-16.
           // At the time of writing (2024-10-27) that was a bit too recent to be
-          // required, so we only call these methods if available.
+          // required, so we use only call the methods if they exist. The element falls
+          // back to having the highest z-index.
           if (
-            typeof elements.container.hidePopover === "function" &&
-            typeof elements.container.showPopover === "function"
+            typeof elements.containerInner.hidePopover === "function" &&
+            typeof elements.containerInner.showPopover === "function"
           ) {
-            elements.container.hidePopover();
-            elements.container.showPopover();
+            elements.containerInner.hidePopover();
+            elements.containerInner.showPopover();
           }
         }
         return;
@@ -2211,6 +2253,7 @@ time::after {
   inset: 0;
   overflow-y: auto;
   padding: 2ch 0;
+  user-select: text;
 }
 
 .${CLASS.overlayCloseButton} {

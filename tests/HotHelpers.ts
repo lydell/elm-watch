@@ -521,7 +521,8 @@ export function runHotReload({
 
 function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
   const shadowRoot =
-    document.getElementById(CONTAINER_ID)?.shadowRoot ?? undefined;
+    document.getElementById(CONTAINER_ID)?.firstElementChild?.shadowRoot ??
+    undefined;
 
   if (shadowRoot === undefined) {
     throw new Error(`Couldn’t find #${CONTAINER_ID}!`);
