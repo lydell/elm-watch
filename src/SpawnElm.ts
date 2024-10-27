@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
@@ -10,6 +11,7 @@ import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn, SpawnResult } from "./Spawn";
 import {
+  AbsolutePath,
   CompilationMode,
   ElmJsonPath,
   GetNow,
@@ -78,17 +80,21 @@ export function make({
   promise: Promise<RunElmMakeResult>;
   kill: (options: { force: boolean }) => void;
 } {
+  const cwd = absoluteDirname(elmJsonPath);
   const command: Command = {
     command: "elm",
     args: [
       "make",
       "--report=json",
       ...maybeToArray(compilationModeToArg(compilationMode)),
-      `--output=${outputPathToAbsoluteString(outputPath)}`,
-      ...inputs.map((inputPath) => inputPath.theInputPath),
+      `--output=${outputPathToAbsoluteString(cwd, outputPath)}`,
+      // Use relative paths because:
+      // - Windows has a maximum command length. See: https://github.com/lydell/elm-watch/issues/86
+      // - It looks nicer in error messages (the printed commands are much shorter).
+      ...inputs.map((inputPath) => path.relative(cwd, inputPath.theInputPath)),
     ],
     options: {
-      cwd: absoluteDirname(elmJsonPath),
+      cwd,
       env,
     },
   };
@@ -191,6 +197,7 @@ export function compilationModeToArg(
 }
 
 function outputPathToAbsoluteString(
+  cwd: AbsolutePath,
   outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean }),
 ): string {
   switch (outputPath.tag) {
@@ -199,9 +206,12 @@ function outputPathToAbsoluteString(
       // If postprocessing fails, we don’t want to end up with a plain Elm file with
       // no hot reloading or web socket client. The only time we can write directly
       // to the output is when in "make" mode with no postprocessing.
-      return outputPath.writeToTemporaryDir
-        ? outputPath.temporaryOutputPath
-        : outputPath.theOutputPath;
+      return path.relative(
+        cwd,
+        outputPath.writeToTemporaryDir
+          ? outputPath.temporaryOutputPath
+          : outputPath.theOutputPath,
+      );
     case "NullOutputPath":
       return "/dev/null";
   }

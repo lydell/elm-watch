@@ -1281,7 +1281,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -1300,7 +1300,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -1327,7 +1327,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -1349,7 +1349,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -1377,7 +1377,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I seem to have gotten some JSON back as expected,
         but I ran into an error when decoding it:
@@ -1405,7 +1405,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I expected it to either exit 0 with no output (success),
         or exit 1 with JSON on stderr (compile errors).
@@ -1426,7 +1426,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I expected it to either exit 0 with no output (success),
         or exit 1 with JSON on stderr (compile errors).
@@ -1447,7 +1447,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I expected it to either exit 0 with no output (success),
         or exit 1 with JSON on stderr (compile errors).
@@ -1469,7 +1469,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I expected it to either exit 0 with no output (success),
         or exit 1 with JSON on stderr (compile errors).
@@ -1497,7 +1497,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I expected it to either exit 0 with no output (success),
         or exit 1 with JSON on stderr (compile errors).
@@ -1518,7 +1518,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I expected it to either exit 0 with no output (success),
         or exit 1 with JSON on stderr (compile errors).
@@ -1557,19 +1557,19 @@ describe("errors", () => {
       // Elm’s message is a bit odd.
       expect(await run("compilation-errors", ["make", "Dir"]))
         .toMatchInlineSnapshot(`
-        ⧙-- FILE NOT FOUND --------------------------------------------------------------⧘
-        ⧙Target: Dir⧘
+          ⧙-- FILE NOT FOUND --------------------------------------------------------------⧘
+          ⧙Target: Dir⧘
 
-        I cannot find this file:
+          I cannot find this file:
 
-            ⧙/Users/you/project/tests/fixtures/errors/compilation-errors/src/Dir.elm⧘
+              ⧙src/Dir.elm⧘
 
-        Is there a typo?
+          Is there a typo?
 
-        ⧙Note⧘: If you are just getting started, try working through the examples in the
-        official guide https://guide.elm-lang.org to get an idea of the kinds of things
-        that typically go in a src/Main.elm file.
-      `);
+          ⧙Note⧘: If you are just getting started, try working through the examples in the
+          official guide https://guide.elm-lang.org to get an idea of the kinds of things
+          that typically go in a src/Main.elm file.
+        `);
     });
 
     test("Elm syntax error", async () => {
@@ -1756,7 +1756,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         Elm crashed with this error:
 
@@ -1774,7 +1774,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         I got back 242 characters of JSON, but then Elm crashed with this error:
 
@@ -1792,7 +1792,7 @@ describe("errors", () => {
         I ran the following commands:
 
         cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=/Users/you/project/tests/fixtures/errors/valid/build/app.js /Users/you/project/tests/fixtures/errors/valid/src/App.elm
+        elm make --report=json --output=build/app.js src/App.elm
 
         Elm printed this text:
 
