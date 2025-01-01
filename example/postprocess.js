@@ -66,6 +66,7 @@ const pureFuncs = [
 async function minify(code) {
   return (
     await swc.minify(code, {
+      module: true,
       compress: {
         pure_funcs: pureFuncs,
         pure_getters: true,
