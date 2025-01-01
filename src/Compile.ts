@@ -9,7 +9,6 @@ import {
   bold,
   cursorHorizontalAbsolute,
   dim,
-  join,
   printDurationMs,
   printFileSize,
   silentlyReadIntEnvValue,
@@ -1699,7 +1698,7 @@ export function printErrors(
   );
 
   logger.write("");
-  logger.write(join(errorStrings, "\n\n"));
+  logger.write(errorStrings.join("\n\n"));
   logger.write("");
   printNumErrors(logger, errorStrings.length);
 }
@@ -1755,7 +1754,7 @@ function statusLine(
     // Emojis take two terminal columns, plus a space that we add after.
     const startLength =
       (loggerConfig.fancy ? start.length + 3 : start.length) + delta;
-    const end = join(strings, "   ");
+    const end = strings.join("   ");
     const max = Math.min(loggerConfig.columns, 100);
     const padding = loggerConfig.isTTY
       ? Math.max(3, max - end.length - startLength)
@@ -1936,16 +1935,13 @@ function maybePrintDurations(
     ? durations
     : [{ tag: "QueuedForElmMake", durationMs: 0 }, ...durations];
 
-  return join(
-    mapNonEmptyArray(newDurations, (duration) =>
-      printDuration(
-        /* v8 ignore next */
-        loggerConfig.mockedTimings ? mockDuration(duration) : duration,
-        loggerConfig.fancy,
-      ),
+  return mapNonEmptyArray(newDurations, (duration) =>
+    printDuration(
+      /* v8 ignore next */
+      loggerConfig.mockedTimings ? mockDuration(duration) : duration,
+      loggerConfig.fancy,
     ),
-    " | ",
-  );
+  ).join(" | ");
 }
 
 function printDuration(duration: Duration, fancy: boolean): string {

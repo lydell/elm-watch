@@ -28,7 +28,6 @@ import {
   capitalize,
   dim,
   formatTime,
-  join,
   printDurationMs,
   quote,
   silentlyReadIntEnvValue,
@@ -2751,22 +2750,21 @@ function infoMessageWithTimeline({
   events: Array<LatestEvent>;
   hasErrors: boolean;
 }): string {
-  return join(
-    [
-      "", // Empty line separator.
-      printStats(loggerConfig, mutable),
-      "",
-      printTimeline(loggerConfig, events),
-      printMessageWithTimeAndEmoji({
-        loggerConfig,
-        emojiName: hasErrors ? "Error" : "Success",
-        date,
-        dateHighlight: bold,
-        message,
-      }),
-    ].flatMap((part) => part ?? []),
-    "\n",
-  );
+  return [
+    "", // Empty line separator.
+    printStats(loggerConfig, mutable),
+    "",
+    printTimeline(loggerConfig, events),
+    printMessageWithTimeAndEmoji({
+      loggerConfig,
+      emojiName: hasErrors ? "Error" : "Success",
+      date,
+      dateHighlight: bold,
+      message,
+    }),
+  ]
+    .flatMap((part) => part ?? [])
+    .join("\n");
 }
 
 function printMessageWithTimeAndEmoji({
@@ -2796,15 +2794,15 @@ function printMessageWithTimeAndEmoji({
 
 function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
-  return join(
-    [
-      numWorkers > 0
-        ? `${dim(`${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
-        : undefined,
-      `${dim("web socket connections:")} ${
-        mutable.webSocketConnections.length
-      } ${dim(`(ws://0.0.0.0:${mutable.webSocketServer.port})`)}`,
-    ].flatMap((part) =>
+  return [
+    numWorkers > 0
+      ? `${dim(`${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
+      : undefined,
+    `${dim("web socket connections:")} ${
+      mutable.webSocketConnections.length
+    } ${dim(`(ws://0.0.0.0:${mutable.webSocketServer.port})`)}`,
+  ]
+    .flatMap((part) =>
       part === undefined
         ? []
         : Compile.printStatusLine({
@@ -2814,9 +2812,8 @@ function printStats(loggerConfig: LoggerConfig, mutable: Mutable): string {
             emojiName: "Stats",
             string: part,
           }),
-    ),
-    "\n",
-  );
+    )
+    .join("\n");
 }
 
 export function printTimeline(
@@ -2830,10 +2827,9 @@ export function printTimeline(
   const base = 2;
 
   if (events.length <= 2 * base + 1) {
-    return join(
-      mapNonEmptyArray(events, (event) => printEvent(loggerConfig, event)),
-      "\n",
-    );
+    return mapNonEmptyArray(events, (event) =>
+      printEvent(loggerConfig, event),
+    ).join("\n");
   }
 
   const start = events.slice(0, base);
@@ -2841,14 +2837,11 @@ export function printTimeline(
 
   const numMoreEvents = events.length - 2 * base;
 
-  return join(
-    [
-      ...start.map((event) => printEvent(loggerConfig, event)),
-      `${loggerConfig.fancy ? "   " : ""}(${numMoreEvents} more events)`,
-      ...end.map((event) => printEvent(loggerConfig, event)),
-    ],
-    "\n",
-  );
+  return [
+    ...start.map((event) => printEvent(loggerConfig, event)),
+    `${loggerConfig.fancy ? "   " : ""}(${numMoreEvents} more events)`,
+    ...end.map((event) => printEvent(loggerConfig, event)),
+  ].join("\n");
 }
 
 function printEvent(loggerConfig: LoggerConfig, event: LatestEvent): string {

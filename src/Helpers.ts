@@ -14,13 +14,6 @@ export type WriteStream = Writable & {
   columns?: number;
 };
 
-/**
- * More type safe version of `Array#join`.
- */
-export function join(array: Array<string>, separator: string): string {
-  return array.join(separator);
-}
-
 export function split(string: string, splitter: string): NonEmptyArray<string> {
   return string.split(splitter) as NonEmptyArray<string>;
 }
@@ -57,17 +50,19 @@ export function quote(string: string): string {
 }
 
 export function formatDate(date: Date): string {
-  return join(
-    [pad(date.getFullYear()), pad(date.getMonth() + 1), pad(date.getDate())],
-    "-",
-  );
+  return [
+    pad(date.getFullYear()),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join("-");
 }
 
 export function formatTime(date: Date): string {
-  return join(
-    [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())],
-    ":",
-  );
+  return [
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join(":");
 }
 
 const KiB = 1024;

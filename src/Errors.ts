@@ -11,7 +11,6 @@ import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
-  join as joinString,
   RESET_COLOR,
   toError,
 } from "./Helpers";
@@ -66,7 +65,7 @@ function number(num: number): Piece {
 }
 
 function join(array: Array<string>, separator: string): Piece {
-  return text(joinString(array, separator));
+  return text(array.join(separator));
 }
 
 function json(data: unknown, indent?: number): Piece {
@@ -183,8 +182,8 @@ export const fancyError =
 export const template =
   (strings: ReadonlyArray<string>, ...values: Array<Piece | Template>) =>
   (width: number, renderPiece: (piece: Piece) => string): string =>
-    joinString(
-      strings.flatMap((string, index) => {
+    strings
+      .flatMap((string, index) => {
         const value = values[index] ?? text("");
         return [
           string,
@@ -192,9 +191,9 @@ export const template =
             ? value(width, renderPiece)
             : renderPiece(value),
         ];
-      }),
-      "",
-    ).trim();
+      })
+      .join("")
+      .trim();
 
 export function toTerminalString(
   errorTemplate: ErrorTemplate,
@@ -210,17 +209,14 @@ export function toTerminalString(
   const line = "-".repeat(Math.max(0, width - prefix.length));
   const titleWithSeparator = renderPiece(bold(`${prefix}${line}`));
 
-  return joinString(
-    [
-      titleWithSeparator,
-      ...(location === undefined
-        ? []
-        : [renderPiece(renderErrorLocation(location))]),
-      "",
-      content,
-    ],
-    "\n",
-  );
+  return [
+    titleWithSeparator,
+    ...(location === undefined
+      ? []
+      : [renderPiece(renderErrorLocation(location))]),
+    "",
+    content,
+  ].join("\n");
 }
 
 export function toPlainString(errorTemplate: ErrorTemplate): string {
@@ -1432,10 +1428,7 @@ export function webSocketTargetNotFound(
 
 These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
 
-${joinString(
-  mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName),
-  "\n",
-)}
+${mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName).join("\n")}
   `.trimEnd()
     : "";
 
@@ -1448,10 +1441,7 @@ But I can't find that target in elm-watch.json!
 
 These targets are available in elm-watch.json:
 
-${joinString(
-  enabledOutputs.map((outputPath) => outputPath.targetName),
-  "\n",
-)}${extra}
+${enabledOutputs.map((outputPath) => outputPath.targetName).join("\n")}${extra}
 
 Maybe this target used to exist in elm-watch.json, but you removed or changed it?
 If so, try reloading the page.
@@ -1472,17 +1462,11 @@ That target does exist in elm-watch.json, but isn't enabled.
 
 These targets are enabled via CLI arguments:
 
-${joinString(
-  enabledOutputs.map((outputPath) => outputPath.targetName),
-  "\n",
-)}
+${enabledOutputs.map((outputPath) => outputPath.targetName).join("\n")}
 
 These targets exist in elm-watch.json but aren't enabled:
 
-${joinString(
-  disabledOutputs.map((outputPath) => outputPath.targetName),
-  "\n",
-)}
+${disabledOutputs.map((outputPath) => outputPath.targetName).join("\n")}
 
 If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
   `.trim();
@@ -1581,7 +1565,7 @@ ${join(value.split(path.delimiter), "\n")}
 
   const pathEntriesString = join(
     pathEntries.map(([key, value]) =>
-      joinString([`${key}:`, ...value.split(path.delimiter)], "\n"),
+      [`${key}:`, ...value.split(path.delimiter)].join("\n"),
     ),
     "\n\n",
   );
@@ -1609,27 +1593,24 @@ ${stdin}${commandToPresentationName([command.command, ...command.args])}
 }
 
 function commandToPresentationName(command: NonEmptyArray<string>): string {
-  return joinString(
-    command.map((part) =>
+  return command
+    .map((part) =>
       part === ""
         ? "''"
-        : joinString(
-            part
-              .split(/(')/)
-              .map((subPart) =>
-                subPart === ""
-                  ? ""
-                  : subPart === "'"
-                    ? "\\'"
-                    : /^[\w.,:/=@%+-]+$/.test(subPart)
-                      ? subPart
-                      : `'${subPart}'`,
-              ),
-            "",
-          ),
-    ),
-    " ",
-  );
+        : part
+            .split(/(')/)
+            .map((subPart) =>
+              subPart === ""
+                ? ""
+                : subPart === "'"
+                  ? "\\'"
+                  : /^[\w.,:/=@%+-]+$/.test(subPart)
+                    ? subPart
+                    : `'${subPart}'`,
+            )
+            .join(""),
+    )
+    .join(" ");
 }
 
 function printExitReason(exitReason: ExitReason): Piece {
@@ -1703,7 +1684,7 @@ const limitStdio =
       }
     }
 
-    const joined = joinString(result, "\n");
+    const joined = result.join("\n");
     const left = lines.length - result.length;
 
     return left > 0

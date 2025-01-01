@@ -1,7 +1,7 @@
 import * as Codec from "tiny-decoders";
 
 import * as ClientCode from "./ClientCode";
-import { join } from "./Helpers";
+import {} from "./Helpers";
 import { Port } from "./Port";
 import {
   BrowserUiPosition,
@@ -863,7 +863,7 @@ export function clientCode(
   return (
     versionedIdentifier(outputPath.targetName, webSocketPort) +
     ClientCode.client.replace(
-      new RegExp(`"%(${join(Object.keys(replacements), "|")})%"`, "g"),
+      new RegExp(`"%(${Object.keys(replacements).join("|")})%"`, "g"),
       (_, name: string) =>
         /* v8 ignore next */
         Codec.JSON.stringify(Codec.string, replacements[name] ?? name),

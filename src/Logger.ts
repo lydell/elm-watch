@@ -16,7 +16,6 @@ import * as Errors from "./Errors";
 import {
   bold,
   CLEAR,
-  join,
   ReadStream,
   removeColor,
   silentlyReadIntEnvValue,
@@ -147,8 +146,8 @@ export function makeLogger({
     debug(...args) {
       if (config.debug) {
         logDebug(
-          join(
-            args.map((arg, index) =>
+          args
+            .map((arg, index) =>
               index === 0 && typeof arg === "string" && !noColor
                 ? bold(arg)
                 : util.inspect(arg, {
@@ -156,9 +155,8 @@ export function makeLogger({
                     colors: !noColor,
                     maxStringLength: 1000,
                   }),
-            ),
-            "\n",
-          ),
+            )
+            .join("\n"),
         );
       }
     },

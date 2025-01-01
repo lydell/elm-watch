@@ -4,7 +4,7 @@ import {
   ELM_WATCH_OPEN_EDITOR,
   NO_COLOR,
 } from "./Env";
-import { bold, dim, join } from "./Helpers";
+import { bold, dim } from "./Helpers";
 import { LoggerConfig } from "./Logger";
 
 const elmWatchJson = bold("elm-watch.json");
@@ -15,17 +15,16 @@ export function render(loggerConfig: LoggerConfig): string {
     ? `
 ${bold("Symbol legend:")}
 
-${join(
-  Object.values(EMOJI).map(({ emoji, description }) => {
+${Object.values(EMOJI)
+  .map(({ emoji, description }) => {
     const indent = "    ";
     return `${indent}${emojiWidthFix({
       emoji,
       column: indent.length + 3,
       isTTY: loggerConfig.isTTY,
     })} ${description}`;
-  }),
-  "\n",
-)}
+  })
+  .join("\n")}
 `
     : "";
 
