@@ -152,6 +152,7 @@ export default typescriptEslint.config(
         error,
         {
           allowDefaultCaseForExhaustiveSwitch: false,
+          considerDefaultExhaustiveForUnions: true,
           requireDefaultForNonUnion: true,
         },
       ],
@@ -260,7 +261,7 @@ export default typescriptEslint.config(
       vitest,
     },
     rules: {
-      ...vitest.configs.recommended.rules,
+      ...vitest.configs?.["recommended"].rules,
       "vitest/no-disabled-tests": warn,
       "vitest/no-focused-tests": warn,
     },
