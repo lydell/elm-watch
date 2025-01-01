@@ -63,6 +63,12 @@
             ],
             "output": "public/build/ESM.js"
         },
+        "Node.js": {
+            "inputs": [
+                "src/NodeJS.elm"
+            ],
+            "output": "public/build/NodeJS.js"
+        },
         "🇫🇷 Azimutt": {
             "inputs": [
                 "public/submodules/azimutt/.elm-spa/defaults/Main.elm"

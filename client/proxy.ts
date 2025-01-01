@@ -1,5 +1,12 @@
-// Support Web Workers, where `window` does not exist.
+// Support environments, such as Web Workers, where `window` does not exist.
 const window = globalThis as unknown as Window;
+
+// This is replaced with `const __this__ = this;` in Inject.ts.
+// That’s a tooling workaround: This file appears to be a module (where global
+// `this` is `undefined` and often compiled to a literal `undefined`). But it
+// is actually used as a script in the end. Since we do a string replacement on
+// this file anyway for `%TARGET_NAME%`, this was an easy solution for `this` too.
+const __this__ = window;
 
 const error: Error & { elmWatchProxy?: true } = new Error(
   `
@@ -17,7 +24,7 @@ them first.
 
 error.elmWatchProxy = true;
 
-const existing = window.Elm;
+const existing = __this__.Elm;
 const existingObject =
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   typeof existing === "object" && existing !== null ? existing : undefined;
@@ -49,7 +56,7 @@ const elmProxy = new Proxy(existingObject ?? {}, {
   },
 });
 
-window.Elm = elmProxy;
+__this__.Elm = elmProxy;
 
 window.__ELM_WATCH.REGISTER("%TARGET_NAME%", {});
 

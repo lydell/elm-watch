@@ -4,9 +4,9 @@
   "name": "example",
   "scripts": {
     "postinstall": "npm --prefix public/submodules/seeds-game ci && elm-tooling install",
-    "start": "run-pty % elm-watch hot % npm run esbuild -- --serve=9000 --servedir=public % node dev-server.js 9000",
+    "start": "run-pty % elm-watch hot % npm run esbuild -- --serve=9000 --servedir=public % node dev-server.js 9000 % node --watch nodejs-program.js",
     "start-advanced": "run-pty run-pty.json",
-    "try-production": "run-pty % esbuild --serve=9000 --servedir=public % node dev-server.js 9000",
+    "try-production": "run-pty % esbuild --serve=9000 --servedir=public % node dev-server.js 9000 % node nodejs-program.js",
     "build": "elm-watch make --optimize && npm run esbuild -- --minify",
     "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/unisonShare.js public/submodules/seeds-game/src/index.ts --bundle --outdir=public/build --public-path=/build/ --loader:.svg=file --loader:.woff2=file --loader:.mp3=file",
     "start-advanced-dev": "run-pty run-pty-dev.json",

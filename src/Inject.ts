@@ -832,10 +832,12 @@ export function proxyFile(
     webSocketPort,
     debug,
   );
-  const proxyCodeString = ClientCode.proxy.replace(
-    /"%TARGET_NAME%"/g,
-    Codec.JSON.stringify(Codec.string, outputPath.targetName),
-  );
+  const proxyCodeString = ClientCode.proxy
+    .replace(
+      /"%TARGET_NAME%"/g,
+      Codec.JSON.stringify(Codec.string, outputPath.targetName),
+    )
+    .replace(/__this__ = window/g, "__this__ = this");
   // In ESM, importing something that isn’t exported is an error.
   // When ESM-ify:ing Elm’s output, the two most likely export names
   // are `default` and `Elm`, so make those available. To not break

@@ -18,11 +18,11 @@ import {
   WebSocketToServerMessage,
 } from "./WebSocketMessages";
 
-// Support Web Workers, where `window` does not exist.
+// Support environments, such as Web Workers, where `window` does not exist.
 const window = globalThis as unknown as Window;
 
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-const IS_WEB_WORKER = window.window === undefined;
+const HAS_WINDOW = window.window !== undefined;
 
 // These used to be separate properties on `window`, like
 // `window.__ELM_WATCH_MOCKED_TIMINGS`. It’s better to group them all together
@@ -53,6 +53,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     Elm?: ElmExports;
+    ELM_WATCH_FULL_RELOAD?: () => void;
     __ELM_WATCH: __ELM_WATCH;
   }
 }
@@ -192,19 +193,24 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
         // Ignore failing to write to sessionStorage.
       }
     }
-    if (IS_WEB_WORKER) {
+    // Allow customizing how to “reload the page”, for Web Workers and Node.js
+    // (or in the browser if you really want to).
+    if (typeof window.ELM_WATCH_FULL_RELOAD === "function") {
+      window.ELM_WATCH_FULL_RELOAD();
+    } else if (HAS_WINDOW) {
+      window.location.reload();
+    } else {
       if (message !== undefined) {
         // eslint-disable-next-line no-console
         console.info(message);
       }
-      // eslint-disable-next-line no-console
-      console.error(
+      const why =
         message === undefined
-          ? "elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I can’t do it for you."
-          : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`,
-      );
-    } else {
-      window.location.reload();
+          ? "because a hot reload was not possible"
+          : "see above";
+      const info = `elm-watch: A full reload or restart of the program running your Elm code is needed (${why}). In a web browser page, I would have reloaded the page. You need to do this manually, or define a \`globalThis.ELM_WATCH_FULL_RELOAD\` function.`;
+      // eslint-disable-next-line no-console
+      console.error(info);
     }
   },
 
@@ -548,7 +554,7 @@ function run(): void {
     // Ignore failing to read or delete from sessionStorage.
   }
 
-  const elements = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
+  const elements = HAS_WINDOW ? getOrCreateTargetRoot() : undefined;
   const browserUiPosition =
     elements === undefined
       ? ORIGINAL_BROWSER_UI_POSITION
@@ -943,59 +949,60 @@ const initMutable =
     // Firefox throws this error via `FocusedTab`:
     // DOMException: An attempt was made to use an object that is not, or is no longer, usable
     // So wait until the WebSocket is ready before starting those listeners.
-    mutable.webSocket.addEventListener(
-      "open",
-      () => {
-        removeListeners = [
-          addEventListener(window, "focus", (event) => {
-            // Used in tests to trigger focus for just one target.
-            if (event instanceof CustomEvent && event.detail !== TARGET_NAME) {
-              return;
-            }
-            dispatch({ tag: "FocusedTab" });
-          }),
-          addEventListener(window, "visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-              dispatch({
-                tag: "PageVisibilityChangedToVisible",
-                date: getNow(),
-              });
-            }
-          }),
-          ...(elements === undefined
-            ? []
-            : [
-                addEventListener(
-                  elements.shadowRoot,
-                  BROWSER_UI_MOVED_EVENT,
-                  (event) => {
-                    dispatch({
-                      tag: "BrowserUiMoved",
-                      browserUiPosition: BrowserUiPositionWithFallback(
-                        (event as CustomEvent).detail,
-                      ),
-                    });
+    if (elements !== undefined) {
+      mutable.webSocket.addEventListener(
+        "open",
+        () => {
+          removeListeners = [
+            addEventListener(window, "focus", (event) => {
+              // Used in tests to trigger focus for just one target.
+              if (
+                event instanceof CustomEvent &&
+                event.detail !== TARGET_NAME
+              ) {
+                return;
+              }
+              dispatch({ tag: "FocusedTab" });
+            }),
+            addEventListener(window, "visibilitychange", () => {
+              if (document.visibilityState === "visible") {
+                dispatch({
+                  tag: "PageVisibilityChangedToVisible",
+                  date: getNow(),
+                });
+              }
+            }),
+            addEventListener(
+              elements.shadowRoot,
+              BROWSER_UI_MOVED_EVENT,
+              (event) => {
+                dispatch({
+                  tag: "BrowserUiMoved",
+                  browserUiPosition: BrowserUiPositionWithFallback(
+                    (event as CustomEvent).detail,
+                  ),
+                });
+              },
+            ),
+            addEventListener(
+              elements.shadowRoot,
+              CLOSE_ALL_ERROR_OVERLAYS_EVENT,
+              () => {
+                dispatch({
+                  tag: "UiMsg",
+                  date: getNow(),
+                  msg: {
+                    tag: "ChangedOpenErrorOverlay",
+                    openErrorOverlay: false,
                   },
-                ),
-                addEventListener(
-                  elements.shadowRoot,
-                  CLOSE_ALL_ERROR_OVERLAYS_EVENT,
-                  () => {
-                    dispatch({
-                      tag: "UiMsg",
-                      date: getNow(),
-                      msg: {
-                        tag: "ChangedOpenErrorOverlay",
-                        openErrorOverlay: false,
-                      },
-                    });
-                  },
-                ),
-              ]),
-        ];
-      },
-      { once: true },
-    );
+                });
+              },
+            ),
+          ];
+        },
+        { once: true },
+      );
+    }
 
     __ELM_WATCH.RELOAD_STATUSES.set(TARGET_NAME, {
       tag: "MightWantToReload",
@@ -1168,9 +1175,19 @@ function initWebSocket(
   elmCompiledTimestamp: number,
   dispatch: (msg: Msg) => void,
 ): WebSocket {
-  const hostname =
-    window.location.hostname === "" ? "localhost" : window.location.hostname;
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const [hostname, protocol] =
+    // Browser: `window.location` always exists.
+    // Web Worker: `window` has been set to `globalThis` at the top, which has `.location`.
+    // Node.js: `window.location` does not exist.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    window.location === undefined
+      ? ["localhost", "ws"]
+      : [
+          window.location.hostname === ""
+            ? "localhost"
+            : window.location.hostname,
+          window.location.protocol === "https:" ? "wss" : "ws",
+        ];
   const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/elm-watch`);
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
@@ -1183,6 +1200,15 @@ function initWebSocket(
   });
 
   webSocket.addEventListener("close", () => {
+    dispatch({
+      tag: "WebSocketClosed",
+      date: getNow(),
+    });
+  });
+
+  // In Node.js, if you start the Node.js program (with the elm-watch client) before you start `elm-watch` hot,
+  // the "error" event is emitted. Treating it like "closed" allows us to try reconnecting.
+  webSocket.addEventListener("error", () => {
     dispatch({
       tag: "WebSocketClosed",
       date: getNow(),
@@ -1736,9 +1762,16 @@ const runCmd =
         if (elements === undefined) {
           if (model.status.tag !== model.previousStatusTag) {
             const isError = statusToStatusType(model.status.tag) === "Error";
+            const isWebWorker =
+              typeof (window as unknown as { WorkerGlobalScope: unknown })
+                .WorkerGlobalScope !== "undefined" && !isError;
+            const consoleMethodName =
+              // `console.info` looks nicer in the browser console for Web Workers.
+              // On Node.js, we want to always print to stderr.
+              isError || !isWebWorker ? "error" : "info";
             // eslint-disable-next-line no-console
-            const consoleMethod = isError ? console.error : console.info;
-            consoleMethod(renderWebWorker(model, info));
+            const consoleMethod = console[consoleMethodName];
+            consoleMethod(renderWithoutDomElements(model, info));
           }
         } else {
           const { targetRoot } = elements;
@@ -2118,7 +2151,7 @@ type Info = {
   errorOverlayVisible: boolean;
 };
 
-function renderWebWorker(model: Model, info: Info): string {
+function renderWithoutDomElements(model: Model, info: Info): string {
   const statusData = statusIconAndText(model);
   return `${statusData.icon} elm-watch: ${statusData.status} ${formatTime(
     model.status.date,
@@ -3711,8 +3744,10 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 
 void renderMockStatuses;
 
-// `Platform.worker` programs can also be run in Node.js. (`this === exports` there.)
-// But there’s no `WebSocket`. So don’t bother with starting anything.
+// Node.js used to not have a `WebSocket` global. We used to skip running the elm-watch client
+// for `Platform.worker` programs run (in a certain way) in Node.js.
+// These days, Node.js does have `WebSocket`, and the elm-watch client does work in Node.js.
+// But we keep the check for backwards compatibility.
 if (typeof WebSocket !== "undefined") {
   run();
 }
