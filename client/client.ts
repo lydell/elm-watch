@@ -37,7 +37,6 @@ type __ELM_WATCH = {
   IS_REGISTERING: boolean;
   REGISTER: (targetName: string, elmExports: ElmExports) => void;
   HOT_RELOAD: (targetName: string, elmExports: ElmExports) => void;
-  EVAL_AS_MODULE: (code: string) => Promise<void>;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
   KILL_MATCHING: (targetName: RegExp) => Promise<void>;
@@ -221,14 +220,6 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
 
   HOT_RELOAD: () => {
     // Do nothing.
-  },
-
-  EVAL_AS_MODULE: async (code: string): Promise<void> => {
-    const objectURL = URL.createObjectURL(
-      new Blob([code], { type: "text/javascript" }),
-    );
-    await import(objectURL);
-    URL.revokeObjectURL(objectURL);
   },
 
   KILL_MATCHING: () => Promise.resolve(),
@@ -1714,7 +1705,7 @@ const runCmd =
   ): void => {
     switch (cmd.tag) {
       case "Eval":
-        __ELM_WATCH.EVAL_AS_MODULE(cmd.code).catch((unknownError) => {
+        evalAsModule(cmd.code).catch((unknownError) => {
           void Promise.reject(unknownError);
           dispatch({ tag: "EvalErrored", date: getNow() });
         });
@@ -1912,6 +1903,31 @@ const runCmd =
         return;
     }
   };
+
+// In the Azimutt example, this method takes about 40 ms (which is about the same as
+// `f = new Function(code); f()` which doesn’t support modules).
+async function evalAsModuleViaBlob(code: string): Promise<void> {
+  const objectURL = URL.createObjectURL(
+    new Blob([code], { type: "text/javascript" }),
+  );
+  await import(objectURL);
+  URL.revokeObjectURL(objectURL);
+}
+
+// In the Azimutt example, this method takes about 200 ms.
+// JSDOM does not support `URL.createObjectURL`, and Node.js does not support `import(blob)`.
+async function evalAsModuleViaDataUri(code: string): Promise<void> {
+  await import(`data:text/javascript,${encodeURIComponent(code)}`);
+}
+
+let evalAsModule = evalAsModuleViaDataUri;
+evalAsModuleViaBlob("")
+  .then(() => {
+    evalAsModule = evalAsModuleViaBlob;
+  })
+  .catch(() => {
+    // `evalAsModuleViaBlob` not supported, using the slower `evalAsModuleViaDataUri`.
+  });
 
 type ParseWebSocketMessageDataResult =
   | {
