@@ -119,7 +119,7 @@ export async function run({
   fixture: string;
   scripts: Array<string>;
   args?: Array<string>;
-  init: (node: HTMLDivElement) => void;
+  init: (node: HTMLDivElement, allExports: Array<unknown>) => void;
   onIdle: OnIdle;
 }): Promise<{
   terminal: string;
@@ -181,6 +181,7 @@ export async function run({
       setBasicElmWatchProperties();
 
       (async () => {
+        const allExports: Array<unknown> = [];
         for (const script of absoluteScripts) {
           // Copying the script does a couple of things:
           // - Avoiding require/import cache.
@@ -198,10 +199,11 @@ export async function run({
                     `$1 = document.documentElement.children[${bodyIndex}];`,
                   );
           fs.writeFileSync(newScript, content);
-          await import(newScript);
+          allExports.push(await import(newScript));
         }
+        return allExports;
       })()
-        .then(() => {
+        .then((allExports) => {
           if (expandUiImmediately) {
             expandUi();
           }
@@ -210,7 +212,7 @@ export async function run({
             outerDiv.replaceChildren(innerDiv);
             body.replaceChildren(outerDiv);
             try {
-              init(innerDiv);
+              init(innerDiv, allExports);
             } catch (unknownError) {
               const isElmWatchProxyError =
                 typeof unknownError === "object" &&
@@ -393,7 +395,10 @@ export function runHotReload({
     | "Sandbox"
     | "Worker";
   compilationMode: CompilationMode;
-  init?: (node: HTMLDivElement) => ReturnType<ElmModule["init"]> | undefined;
+  init?: (
+    node: HTMLDivElement,
+    allExports: Array<unknown>,
+  ) => ReturnType<ElmModule["init"]> | undefined;
   extraScripts?: Array<string>;
   extraElmWatchStuffJson?: ElmWatchStuffJson["targets"];
 }): {
@@ -499,8 +504,8 @@ export function runHotReload({
                   });
                 }
               }
-            : (node) => {
-                app = init(node);
+            : (node, allExports) => {
+                app = init(node, allExports);
               },
         onIdle,
       });

@@ -2123,6 +2123,52 @@ describe("hot reloading", () => {
       `);
   });
 
+  test("hot reload code postprocessed to ESM", async () => {
+    const { go, replace } = runHotReload({
+      fixture: "hot-reload-postprocess",
+      name: "ESM",
+      programType: "Html",
+      compilationMode: "standard",
+      init: (node, allExports) => {
+        expect(allExports).toHaveLength(1);
+        const onlyExport = allExports[0];
+        if (
+          typeof onlyExport !== "object" ||
+          onlyExport === null ||
+          !("default" in onlyExport)
+        ) {
+          throw new Error(`Unexpected export: ${JSON.stringify(onlyExport)}`);
+        }
+        expect(window.Elm).toStrictEqual(onlyExport.default);
+        return window.Elm?.["ESM"]?.init({ node });
+      },
+    });
+
+    await go(({ idle, div }) => {
+      switch (idle) {
+        case 1:
+          expectInit(div);
+          replace((content) =>
+            content.replace("original text", "hot reloaded text"),
+          );
+          return "KeepGoing";
+        default:
+          expectReload(div);
+          return "Stop";
+      }
+    });
+
+    function expectInit(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>original text</div>`);
+    }
+
+    function expectReload(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(
+        `<div>hot reloaded text</div>`,
+      );
+    }
+  });
+
   test("Reload due to init Cmds", async () => {
     const { replace, go } = runHotReload({
       name: "InitCmds",
