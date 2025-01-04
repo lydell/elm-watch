@@ -841,6 +841,11 @@ export function proxyFile(
   // are `default` and `Elm`, so make those available. To not break
   // regular scripts (non-ESM), where `export` is a syntax error,
   // use this cursed polyglot syntax: https://stackoverflow.com/a/72314371
+  // If elm-watch users end up wanting different export names, I guess
+  // the solution would be to run the postprocessing step on the proxy
+  // files as well. Downsides with that approach are that it’ll take
+  // a little bit more time, and that the postprocessing user code needs
+  // to be able to handle code that isn’t the Elm output.
   return `${clientCodeString}\n${proxyCodeString}\n0 && await/2//2; const Elm = globalThis.Elm; export { Elm as default, Elm as Elm }`;
 }
 
