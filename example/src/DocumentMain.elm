@@ -1,9 +1,11 @@
 port module DocumentMain exposing (main)
 
 import Browser
+import Browser.Events
 import Html
 import Html.Attributes as Attr
 import Html.Events exposing (onClick)
+import Json.Decode as Decode
 import Shared
 
 
@@ -14,16 +16,19 @@ type Msg
     = IncrementClicked
     | DecrementClicked
     | OpenModalDialogClicked
+    | PressedKey String
 
 
 type alias Model =
     { count : Int
+    , lastPressedKeys : List String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init () =
     ( { count = 0
+      , lastPressedKeys = []
       }
     , Cmd.none
     )
@@ -41,10 +46,13 @@ update msg model =
         OpenModalDialogClicked ->
             ( model, openModalDialog () )
 
+        PressedKey key ->
+            ( { model | lastPressedKeys = key :: model.lastPressedKeys }, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Browser.Events.onKeyDown (Decode.field "key" Decode.string |> Decode.map PressedKey)
 
 
 view : Model -> Browser.Document Msg
@@ -75,6 +83,8 @@ view model =
                 , Attr.style "z-index" "2147483647"
                 ]
                 [ Html.text "position: fixed with maximum z-index – should be covered by the error overlay" ]
+            , Html.hr [] []
+            , Html.p [] [ Html.text ("Last pressed keys: " ++ String.join ", " model.lastPressedKeys) ]
             ]
         ]
     }
