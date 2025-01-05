@@ -501,7 +501,7 @@ export function clean(string: string): string {
 
   // Replace start of absolute paths with hardcoded stuff so the tests pass on
   // more than one computer. Replace automatic port numbers with a fixed one.
-  // Replace colors for snapshots. Replace backslashes with slashes for Windows
+  // Replace colors for snapshots. Replace backslashes with slashes for Windows.
   // That can be extra tricky since we sometimes print JSON strings where the
   // backslashes end up escaped with another backslash. Normalize some error
   // messages between Windows and others, and between Node.js versions.
@@ -530,6 +530,7 @@ export function clean(string: string): string {
       (_match, rest: string) =>
         `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`,
     )
+    .replace(/\S+\.(?:elm|js)/g, (match) => match.replace(/\\/g, "/"))
     .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
     .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
     .replace(
