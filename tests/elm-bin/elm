@@ -1,0 +1,51 @@
+#!/usr/bin/env node
+import spawn from "cross-spawn";
+import fs from "fs";
+import path from "path";
+
+function run(retries) {
+  const child = spawn("elm", process.argv.slice(2), {
+    env: {
+      ...process.env,
+      PATH: process.env.PATH.split(path.delimiter)
+        .filter((part) => !part.includes("elm-bin"))
+        .join(path.delimiter),
+    },
+    stdio: ["inherit", "pipe", "pipe"],
+  });
+
+  const stdout = [];
+  const stderr = [];
+
+  child.stdout.on("data", (chunk) => {
+    stdout.push(chunk);
+  });
+
+  child.stderr.on("data", (chunk) => {
+    stderr.push(chunk);
+  });
+
+  child.on("exit", (exitCode) => {
+    const allStdout = Buffer.concat(stdout);
+    const allStderr = Buffer.concat(stderr);
+
+    // If Elm fails with for example “withBinaryFile: resource busy (file is
+    // locked)” or some other intermittent error, automatically retry a couple
+    // of times.
+    if (
+      retries > 0 &&
+      exitCode === 1 &&
+      allStderr.toString("utf8").includes("elm-stuff")
+    ) {
+      fs.rmSync("elm-stuff", { recursive: true, force: true });
+      run(retries - 1);
+      return;
+    }
+
+    process.stdout.write(allStdout);
+    process.stderr.write(allStderr);
+    process.exitCode = exitCode;
+  });
+}
+
+run(5);

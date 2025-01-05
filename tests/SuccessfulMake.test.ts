@@ -42,9 +42,7 @@ async function run(
       ...TEST_ENV,
       ...env,
       PATH:
-        bin === undefined
-          ? process.env["PATH"]
-          : prependPATH(path.join(dir, bin)),
+        bin === undefined ? TEST_ENV["PATH"] : prependPATH(path.join(dir, bin)),
     },
     stdin: new SilentReadStream(),
     stdout,

@@ -39,6 +39,7 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
+  TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
   testExceptLinux,
   testExceptWindows,
   wait,
@@ -54,6 +55,7 @@ async function run(
     isTTY?: boolean;
     exitHotOnError?: boolean;
     originalStdout?: boolean;
+    useElmErrorWorkaround?: boolean;
   },
 ): Promise<string> {
   return runAbsolute(path.join(FIXTURES_DIR, fixture), args, options);
@@ -67,11 +69,13 @@ async function runAbsolute(
     isTTY = true,
     exitHotOnError = false,
     originalStdout = false,
+    useElmErrorWorkaround = true,
   }: {
     env?: Env;
     isTTY?: boolean;
     exitHotOnError?: boolean;
     originalStdout?: boolean;
+    useElmErrorWorkaround?: boolean;
   } = {},
 ): Promise<string> {
   const stdout = new CursorWriteStream();
@@ -86,7 +90,9 @@ async function runAbsolute(
       ...(exitHotOnError ? { [__ELM_WATCH_EXIT_ON_ERROR]: "" } : {}),
       ...(env ?? {
         ...process.env,
-        ...TEST_ENV,
+        ...(useElmErrorWorkaround
+          ? TEST_ENV
+          : TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND),
       }),
     },
     stdin: new SilentReadStream(),
@@ -1725,7 +1731,9 @@ describe("errors", () => {
         );
       }
       fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
-      expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
+      expect(
+        await run(fixture, ["make", "Main"], { useElmErrorWorkaround: false }),
+      ).toMatchInlineSnapshot(`
         ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
         ⧙Target: Main⧘
 
