@@ -42,7 +42,7 @@ export function readFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
 }
 
-export const TEST_ENV = {
+export const TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND = {
   [ELM_WATCH_OPEN_EDITOR]: undefined,
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
@@ -50,6 +50,14 @@ export const TEST_ENV = {
   [__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS]: "100000",
   [__ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS]: "0",
   [WT_SESSION]: "",
+};
+
+export const TEST_ENV = {
+  ...TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
+  // `elm-bin/` contains an `elm` wrapper which automatically retries a couple
+  // of times if Elm fails with for example “withBinaryFile: resource busy
+  // (file is locked)” or some other intermittent error.
+  PATH: prependPATH(path.join(import.meta.dirname, "elm-bin"), process.env),
 };
 
 export function badElmBinEnv(dir: string): Env {
@@ -64,7 +72,7 @@ export function badElmBinEnv(dir: string): Env {
   };
 }
 
-export function prependPATH(folder: string): string {
+export function prependPATH(folder: string, env: Env = TEST_ENV): string {
   // On Windows, create an `elm.cmd` next to fake `elm` binaries. Files without
   // extensions aren’t executable, but .cmd files are. The `elm.cmd` files
   // execute the `elm` file next to them using `node`.
@@ -74,7 +82,7 @@ export function prependPATH(folder: string): string {
       `@echo off\r\nnode "%~dp0\\elm" %*`,
     );
   }
-  return `${folder}${path.delimiter}${process.env["PATH"] ?? ""}`;
+  return `${folder}${path.delimiter}${env["PATH"] ?? ""}`;
 }
 
 export async function waitOneFrame(): Promise<void> {
