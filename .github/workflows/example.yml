@@ -37,6 +37,8 @@ jobs:
       - name: Internal build
         run: npm run build
         working-directory: .
+      - name: Workaround for Elm failures
+        run: echo "./tests/bad-bin" >> "$GITHUB_PATH"
 
       - name: Cache node_modules
         id: cache-node_modules
