@@ -39,6 +39,8 @@ jobs:
         working-directory: .
       - name: Workaround for Elm failures
         run: echo "./tests/bad-bin" >> "$GITHUB_PATH"
+      - run: cat "$GITHUB_PATH"
+      - run: echo "$PATH"
 
       - name: Cache node_modules
         id: cache-node_modules
