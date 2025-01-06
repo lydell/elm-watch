@@ -38,7 +38,7 @@ jobs:
         run: npm run build
         working-directory: .
       - name: Workaround for Elm failures
-        run: echo "./tests/bad-bin" >> "$GITHUB_PATH"
+        run: echo "../tests/bad-bin" >> "$GITHUB_PATH"
       - run: cat "$GITHUB_PATH"
       - run: echo "$PATH"
 
