@@ -31,8 +31,7 @@ export default async function postprocess({
  */
 function patch(targetName, code) {
   if (targetName === "Node.js") {
-    // Disable Elm’s “Compiled in DEV mode” logs.
-    return code.replace(/^console\.warn\('Compiled in DEV mode\..+'\);$/m, "");
+    return `(function(){const console = { warn() {/* Skip Elm's "Compiled in DEV mode" logs. */}, log: globalThis.console.warn /* Debug.log to stderr instead of stdout. */ }; ${code}}).call(this);`;
   } else if (targetName.includes("ESM")) {
     // Turn the Elm JS into an ECMAScript module:
     return `const output = {}; (function(){${code}}).call(output); export default output.Elm;`;
