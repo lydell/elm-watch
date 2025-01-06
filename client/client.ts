@@ -1330,21 +1330,27 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     case "UiMsg":
       return onUiMsg(msg.date, msg.msg, model);
 
-    case "WebSocketClosed": {
-      const attemptNumber =
-        "attemptNumber" in model.status ? model.status.attemptNumber + 1 : 1;
-      return [
-        {
-          ...model,
-          status: {
-            tag: "SleepingBeforeReconnect",
-            date: msg.date,
-            attemptNumber,
+    case "WebSocketClosed":
+      // This message is triggered from both the WebSocket "error" and "closed" events.
+      // Sometimes, both events happen at the same time. We only want to start reconnecting once,
+      // so check if we’re already sleeping before doing anything.
+      if (model.status.tag === "SleepingBeforeReconnect") {
+        return [model, []];
+      } else {
+        const attemptNumber =
+          "attemptNumber" in model.status ? model.status.attemptNumber + 1 : 1;
+        return [
+          {
+            ...model,
+            status: {
+              tag: "SleepingBeforeReconnect",
+              date: msg.date,
+              attemptNumber,
+            },
           },
-        },
-        [{ tag: "SleepBeforeReconnect", attemptNumber }],
-      ];
-    }
+          [{ tag: "SleepBeforeReconnect", attemptNumber }],
+        ];
+      }
 
     case "WebSocketConnected":
       return [
