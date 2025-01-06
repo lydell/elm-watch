@@ -34,6 +34,8 @@ jobs:
         if: steps.internal-cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
         working-directory: .
+      - run: ls node_modules/.bin
+        working-directory: .
       - name: Internal build
         run: npm run build
         working-directory: .
