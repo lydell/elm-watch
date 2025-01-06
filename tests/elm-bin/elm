@@ -37,7 +37,12 @@ function run(retries) {
       exitCode === 1 &&
       allStderr.toString("utf8").includes("elm-stuff")
     ) {
-      fs.rmSync("elm-stuff", { recursive: true, force: true });
+      // elm-watch watches for deletions of elm-stuff/, so delete the sub folder instead
+      // to not affect test snapshots.
+      fs.rmSync(path.join("elm-stuff", "0.19.1"), {
+        recursive: true,
+        force: true,
+      });
       run(retries - 1);
       return;
     }
