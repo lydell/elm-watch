@@ -34,8 +34,6 @@ jobs:
         if: steps.internal-cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
         working-directory: .
-      - run: ls node_modules/.bin
-        working-directory: .
       - name: Internal build
         run: npm run build
         working-directory: .
@@ -62,7 +60,7 @@ jobs:
 
       - run: npx elm-tooling install
 
-      - run: PATH="../tests/elm-bin:./node_modules/.bin:../node_modules/.bin:$PATH" elm-watch make --optimize
+      - run: PATH="../tests/elm-bin:./node_modules/.bin:./example/node_modules/.bin:$PATH" elm-watch make --optimize
 
       - run: npm run esbuild -- --minify
 
