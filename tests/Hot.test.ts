@@ -31,6 +31,7 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
+  TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
   testExceptWindows,
   touch,
   wait,
@@ -2212,7 +2213,7 @@ describe("hot", () => {
       isTTY: false,
       bin: "compile-forever",
       env: {
-        ...TEST_ENV,
+        ...TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
         [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
