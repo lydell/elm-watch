@@ -60,7 +60,7 @@ jobs:
 
       - run: npx elm-tooling install
 
-      - run: PATH="../tests/bad-bin:./node_modules/.bin:$PATH" elm-watch make --optimize
+      - run: PATH="../tests/elm-bin:./node_modules/.bin:$PATH" elm-watch make --optimize
 
       - run: npm run esbuild -- --minify
 
