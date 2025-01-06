@@ -60,5 +60,4 @@ jobs:
         working-directory: tests/install-packages
 
       # Retry failing tests, as a stopgap while fixing flaky tests.
-      # However, retry is useless until this bug is fixed: https://github.com/vitest-dev/vitest/issues/6589
-      - run: npx vitest --coverage # --retry=4
+      - run: npx vitest --coverage --retry=4
