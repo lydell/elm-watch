@@ -1791,7 +1791,9 @@ const runCmd =
           // These methods are not supported in JSDOM, so we only call them if they exist.
           if (
             typeof elements.container.close === "function" &&
-            typeof elements.container.showModal === "function"
+            typeof elements.container.showModal === "function" &&
+            // Support users removing elm-watch’s UI (`.showModal()` throws an error in that case).
+            elements.container.isConnected
           ) {
             if (elements.overlay.hidden) {
               elements.container.close();
@@ -1810,7 +1812,9 @@ const runCmd =
           // back to having the highest z-index.
           if (
             typeof elements.containerInner.hidePopover === "function" &&
-            typeof elements.containerInner.showPopover === "function"
+            typeof elements.containerInner.showPopover === "function" &&
+            // Support users removing elm-watch’s UI (`.showPopover()` throws an error in that case).
+            elements.containerInner.isConnected
           ) {
             elements.containerInner.hidePopover();
             elements.containerInner.showPopover();
