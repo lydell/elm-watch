@@ -1981,6 +1981,7 @@ evalAsModuleViaBlob("")
 // Top-level `this` is `undefined` in module mode, while it refers to the global
 // object in script mode (`window` in web pages). (In CommonJS, it refers to `exports`.)
 // This backwards compatibility can be removed in a major version.
+// When we do, revert this commit to make the tests pass: bbdbe86f24c8d047f2cd7d9a04c1d3de19d77822
 let evalWithBackwardsCompatibility = async (code: string): Promise<void> => {
   let f;
   try {
