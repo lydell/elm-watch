@@ -1972,18 +1972,66 @@ evalAsModuleViaBlob("")
     // `evalAsModuleViaBlob` not supported, using the slower `evalAsModuleViaDataUri`.
   });
 
-async function evalWithBackwardsCompatibility(code: string): Promise<void> {
+// For backwards compatibility, we need to first try eval-ing the code like
+// we did before supporting modules. While any strict mode enabled script
+// should work just fine to execute as a module (which are always in strict mode),
+// non-strict mode scripts might use features that break in a module or strict mode.
+// For example, if the user has postprocessed the code to do things like
+// `this.FOO = true` (inspired by how the Elm JS basically does `this.Elm = stuff`).
+// Top-level `this` is `undefined` in module mode, while it refers to the global
+// object in script mode (`window` in web pages). (In CommonJS, it refers to `exports`.)
+// This backwards compatibility can be removed in a major version.
+let evalWithBackwardsCompatibility = async (code: string): Promise<void> => {
+  let f;
+  try {
+    // This can fail if the code has incorrect syntax.
+    // Note that the code isn’t executed until we call the function.
+    // This is good – this allows us to syntax check the code without side effects.
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    f = new Function(code);
+  } catch (scriptError) {
+    // If there was a syntax error, there’s a chance it was due to `import` and `export`.
+    try {
+      await evalAsModule(code);
+    } catch (moduleError) {
+      // If eval-ing as a module failed too, present both errors as we can’t know which
+      // is more useful to the user.
+      throw new Error(
+        `Error when evaluated as a module:\n\n${unknownErrorToString(moduleError)}\n\nError when evaluated as a script:\n\n${unknownErrorToString(scriptError)}`,
+      );
+    }
+    // If the code parsed and ran successfully, the code most likely has `import`
+    // or `export`, and will likely have that next time too. Swap over to a variation
+    // of this function where we try module mode first, and script mode second.
+    // `new Function(code)` isn’t free – spending time on that on each hot reload can
+    // up to double the time.
+    [evalWithBackwardsCompatibility, evalWithBackwardsCompatibility2] = [
+      evalWithBackwardsCompatibility2,
+      evalWithBackwardsCompatibility,
+    ];
+    return;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  f();
+};
+
+// Like `evalWithBackwardsCompatibility` but tries the modes in the opposite order:
+// Module first, then script.
+let evalWithBackwardsCompatibility2 = async (code: string): Promise<void> => {
   try {
     await evalAsModule(code);
   } catch (moduleError) {
+    // If eval-ing as a module fails, try script mode.
+    // Note that this is not 100 % clean: Every line but the last might succeed,
+    // and then the very last line might be `this.FOO = 1337`, which then fails
+    // as `this` is `undefined` in modules. Then trying script mode is going to
+    // succeed, but in practice all the code ran twice. That should be fine though –
+    // an unnecessary hot reload shouldn’t cause any trouble. One known effect
+    // is that the green animation does not appear. However, since we flip back the
+    // functions it’s going to work next time. And I don’t think it’s very likely
+    // this will happen. And in the next major version, script mode eval-ing will
+    // be removed anyway.
     try {
-      // This is how we used to eval the code, before supporting modules.
-      // There are some edge cases where code won’t work in module mode,
-      // for example if the user has postprocessed the code to do things like
-      // `this.FOO = true` (inspired by how the Elm JS basically does `this.Elm = stuff`).
-      // Top-level `this` is `undefined` in module mode, while it refers to the global
-      // object in script mode (`window` in web pages). (In CommonJS, it refers to `exports`.)
-      // This backwards compatibility can be removed in a major version.
       // eslint-disable-next-line @typescript-eslint/no-implied-eval
       const f = new Function(code);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -1993,8 +2041,13 @@ async function evalWithBackwardsCompatibility(code: string): Promise<void> {
         `Error when evaluated as a module:\n\n${unknownErrorToString(moduleError)}\n\nError when evaluated as a script:\n\n${unknownErrorToString(scriptError)}`,
       );
     }
+    // Swap back to trying script mode before module mode, as that succeeded better.
+    [evalWithBackwardsCompatibility, evalWithBackwardsCompatibility2] = [
+      evalWithBackwardsCompatibility2,
+      evalWithBackwardsCompatibility,
+    ];
   }
-}
+};
 
 type ParseWebSocketMessageDataResult =
   | {
