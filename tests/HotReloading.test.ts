@@ -1590,12 +1590,11 @@ describe("hot reloading", () => {
     });
 
     const error = new Error("Very unexpected error");
-    error.stack = `${error.message}\n    at function`;
 
     const mockPromiseReject = vi.fn();
 
     Promise.reject = <T>(reason: unknown): Promise<T> => {
-      if (reason instanceof Error && reason.message.includes(error.message)) {
+      if (reason === error) {
         mockPromiseReject(reason);
         return undefined as unknown as Promise<T>;
       } else {
@@ -1638,20 +1637,12 @@ describe("hot reloading", () => {
     `);
 
     expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`
-      [
         [
-          [Error: Error when evaluated as a module:
-
-      Very unexpected error
-          at function
-
-      Error when evaluated as a script:
-
-      Very unexpected error
-          at function],
-        ],
-      ]
-    `);
+          [
+            [Error: Very unexpected error],
+          ],
+        ]
+      `);
 
     function assert1(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
