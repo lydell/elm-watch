@@ -479,7 +479,9 @@ const initMutable =
       // backslashes on Windows never matches.) The trailing slash is important:
       // It makes it possible to get notifications of a removed elm-stuff
       // folder, while ignoring everything that happens _inside_ that folder.
-      ignored: /\/(elm-stuff|node_modules)\//,
+      // For `.stack-work/`, see https://docs.haskellstack.org/en/stable/topics/stack_work/ and
+      // https://github.com/lydell/elm-watch/issues/106.
+      ignored: /\/(elm-stuff|node_modules|\.stack-work)\//,
       disableGlobbing: true,
     });
 
