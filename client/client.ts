@@ -1737,7 +1737,7 @@ const runCmd =
   ): void => {
     switch (cmd.tag) {
       case "Eval":
-        evalAsModule(cmd.code).catch((unknownError) => {
+        evalWithBackwardsCompatibility(cmd.code).catch((unknownError) => {
           void Promise.reject(unknownError);
           dispatch({ tag: "EvalErrored", date: getNow() });
         });
@@ -1971,6 +1971,30 @@ evalAsModuleViaBlob("")
   .catch(() => {
     // `evalAsModuleViaBlob` not supported, using the slower `evalAsModuleViaDataUri`.
   });
+
+async function evalWithBackwardsCompatibility(code: string): Promise<void> {
+  try {
+    await evalAsModule(code);
+  } catch (moduleError) {
+    try {
+      // This is how we used to eval the code, before supporting modules.
+      // There are some edge cases where code won’t work in module mode,
+      // for example if the user has postprocessed the code to do things like
+      // `this.FOO = true` (inspired by how the Elm JS basically does `this.Elm = stuff`).
+      // Top-level `this` is `undefined` in module mode, while it refers to the global
+      // object in script mode (`window` in web pages). (In CommonJS, it refers to `exports`.)
+      // This backwards compatibility can be removed in a major version.
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const f = new Function(code);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      f();
+    } catch (scriptError) {
+      throw new Error(
+        `Error when evaluated as a module:\n\n${unknownErrorToString(moduleError)}\n\nError when evaluated as a script:\n\n${unknownErrorToString(scriptError)}`,
+      );
+    }
+  }
+}
 
 type ParseWebSocketMessageDataResult =
   | {
@@ -3239,7 +3263,7 @@ function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
     case "FlagsTypeChanged":
       return `the flags type in \`${reason.moduleName}\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\nThis is the error:\n${reason.jsonErrorMessage}`;
     case "HotReloadCaughtError":
-      return `hot reload for \`${reason.moduleName}\` failed, probably because of incompatible model changes.\nThis is the error:\n${String(reason.caughtError)}\n${reason.caughtError instanceof Error ? (reason.caughtError.stack ?? "") : ""}`;
+      return `hot reload for \`${reason.moduleName}\` failed, probably because of incompatible model changes.\nThis is the error:\n${unknownErrorToString(reason.caughtError)}`;
     case "InitCmds":
       return `the page loaded with old compiled code, and Cmds returned from \`${reason.moduleName}.init\` started running before the new code arrived. Let's re-run those with the new code!`;
     case "InitReturnValueChanged":
@@ -3251,6 +3275,20 @@ function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
     case "ProgramTypeChanged":
       return `\`${reason.moduleName}.main\` changed from \`${reason.previousProgramType}\` to \`${reason.newProgramType}\`.`;
   }
+}
+
+// This is slightly different from `unknownErrorToString` in `Helpers.ts`, which only
+// needs to support Node.js (V8). This one supports browsers having different `.stack`.
+function unknownErrorToString(error: unknown): string {
+  return error instanceof Error
+    ? error.stack !== undefined
+      ? // In Chrome (V8), `.stack` looks like this: `${errorConstructorName}: ${message}\n${stack}`.
+        // In Firefox and Safari, `.stack` is only the stacktrace (does not contain the message).
+        error.stack.includes(error.message)
+        ? error.stack
+        : `${error.message}\n${error.stack}`
+      : error.message
+    : Codec.repr(error);
 }
 
 function humanList(list: Array<string>, joinWord: string): string {

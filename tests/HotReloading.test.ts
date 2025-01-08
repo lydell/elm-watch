@@ -1251,7 +1251,6 @@ describe("hot reloading", () => {
         elm-watch: I did a full page reload because hot reload for \`Elm.ViewFailsAfterHotReload\` failed, probably because of incompatible model changes.
         This is the error:
         TypeError: str.toUpperCase is not a function
-        TypeError: str.toUpperCase is not a function
             at _String_toUpper
         (target: ViewFailsAfterHotReload)
       `);
@@ -1591,11 +1590,12 @@ describe("hot reloading", () => {
     });
 
     const error = new Error("Very unexpected error");
+    error.stack = `${error.message}\n    at function`;
 
     const mockPromiseReject = vi.fn();
 
     Promise.reject = <T>(reason: unknown): Promise<T> => {
-      if (reason === error) {
+      if (reason instanceof Error && reason.message.includes(error.message)) {
         mockPromiseReject(reason);
         return undefined as unknown as Promise<T>;
       } else {
@@ -1638,12 +1638,20 @@ describe("hot reloading", () => {
     `);
 
     expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`
+      [
         [
-          [
-            [Error: Very unexpected error],
-          ],
-        ]
-      `);
+          [Error: Error when evaluated as a module:
+
+      Very unexpected error
+          at function
+
+      Error when evaluated as a script:
+
+      Very unexpected error
+          at function],
+        ],
+      ]
+    `);
 
     function assert1(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
