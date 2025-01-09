@@ -19,7 +19,6 @@ import {
   AbsolutePath,
   Cwd,
   ElmJsonPath,
-  InputPath,
   markAsAbsolutePath,
   markAsCwd,
   markAsElmJsonPath,
@@ -33,22 +32,17 @@ function run(args: Array<string>): void {
 
   const cwd: Cwd = markAsCwd(markAsAbsolutePath(process.cwd()));
 
-  const inputPaths: NonEmptyArray<InputPath> = mapNonEmptyArray(
+  const inputRealPaths: NonEmptyArray<AbsolutePath> = mapNonEmptyArray(
     args,
-    (elmFilePathRaw) => ({
-      tag: "InputPath",
-      theInputPath: absolutePathFromString(cwd, elmFilePathRaw),
-      originalString: elmFilePathRaw,
-      realpath: absolutePathFromString(cwd, elmFilePathRaw),
-    }),
+    (elmFilePathRaw) => absolutePathFromString(cwd, elmFilePathRaw),
   );
 
   const elmJsonPathsRaw = new Set<AbsolutePath>(
     mapNonEmptyArray(
-      inputPaths,
-      (inputPath) =>
-        findClosest("elm.json", absoluteDirname(inputPath.theInputPath)) ??
-        inputPath.theInputPath,
+      inputRealPaths,
+      (inputRealPath) =>
+        findClosest("elm.json", absoluteDirname(inputRealPath)) ??
+        inputRealPath,
     ),
   );
 
@@ -57,7 +51,7 @@ function run(args: Array<string>): void {
   if (uniqueElmJsonPathRaw === undefined) {
     console.error(
       "Could not find (a unique) elm.json for all of the input paths:",
-      inputPaths,
+      inputRealPaths,
     );
     process.exit(1);
   }
@@ -81,13 +75,10 @@ function run(args: Array<string>): void {
     // Keep going.
   }
 
-  console.log(
-    "Elm file(s):",
-    mapNonEmptyArray(inputPaths, (inputPath) => inputPath.theInputPath),
-  );
+  console.log("Elm file(s):", inputRealPaths);
   console.log("elm.json:", elmJsonPath);
   console.time("Run");
-  const result = walkImports(elmJsonResult.sourceDirectories, inputPaths);
+  const result = walkImports(elmJsonResult.sourceDirectories, inputRealPaths);
   console.timeEnd("Run");
   switch (result.tag) {
     case "Success":

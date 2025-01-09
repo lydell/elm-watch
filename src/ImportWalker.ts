@@ -5,12 +5,7 @@ import * as path from "path";
 import { toError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
 import * as Parser from "./Parser";
-import {
-  AbsolutePath,
-  InputPath,
-  markAsAbsolutePath,
-  SourceDirectory,
-} from "./Types";
+import { AbsolutePath, markAsAbsolutePath, SourceDirectory } from "./Types";
 
 export type WalkImportsResult =
   | WalkImportsError
@@ -25,15 +20,15 @@ export type WalkImportsError = {
   relatedElmFilePathsUntilError: Set<AbsolutePath>;
 };
 
-// Returns Elm file paths that if created, deleted or changed, `inputPath` needs
+// Returns Elm file paths that if created, deleted or changed, `inputRealPath` needs
 // to be recompiled.
 export function walkImports(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
-  inputPaths: NonEmptyArray<InputPath>,
+  inputRealPaths: NonEmptyArray<AbsolutePath>,
 ): WalkImportsResult {
   const allRelatedElmFilePaths = new Set(
-    inputPaths.flatMap((inputPath) =>
-      initialRelatedElmFilePaths(sourceDirectories, inputPath),
+    inputRealPaths.flatMap((inputRealPath) =>
+      initialRelatedElmFilePaths(sourceDirectories, inputRealPath),
     ),
   );
 
@@ -41,13 +36,13 @@ export function walkImports(
   const visitedModules = new Set<string>();
 
   try {
-    for (const inputPath of inputPaths) {
+    for (const inputRealPath of inputRealPaths) {
       walkImportsHelper(
         mapNonEmptyArray(sourceDirectories, (sourceDirectory) => ({
           sourceDirectory,
           children: new Set(readdirSync(sourceDirectory)),
         })),
-        inputPath.realpath,
+        inputRealPath,
         allRelatedElmFilePaths,
         visitedModules,
       );
@@ -143,15 +138,14 @@ function parse(elmFilePath: AbsolutePath): Array<Parser.ModuleName> {
 // alternative paths in other source directories using all possible module names
 // (valid or not). (Note: The `module` line cannot be trusted – it might contain
 // a name not matching the file name (which of course is invalid, but still).)
+//
+// Inputs are allowed to be symlinks. If there’s an error in the input, Elm
+// shows the resolved path in the error message rather than the original path
+// (the path where the symlink is located). That’s why we work with the realpath.
 function initialRelatedElmFilePaths(
   sourceDirectories: NonEmptyArray<SourceDirectory>,
-  inputPath: InputPath,
+  inputRealPath: AbsolutePath,
 ): NonEmptyArray<AbsolutePath> {
-  // Inputs are allowed to be symlinks. If there’s an error in the input, Elm
-  // shows the resolved path in the error message rather than the original path
-  // (the path where the symlink is located).
-  const inputRealPath = inputPath.realpath;
-
   return [
     inputRealPath,
     ...sourceDirectories.flatMap((sourceDirectory) => {

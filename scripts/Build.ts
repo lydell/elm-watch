@@ -7,7 +7,7 @@ const DIR = path.dirname(import.meta.dirname);
 const BUILD = path.join(DIR, "build");
 const CLIENT_DIR = path.join(DIR, "client");
 
-function readPackage<T extends Record<string, unknown>>(
+export function readPackage<T extends Record<string, unknown>>(
   name: string,
   codec: Codec.Codec<T>,
 ): T & { raw: Record<string, unknown> } {
@@ -35,7 +35,7 @@ const PACKAGE_REAL = readPackage(
   Codec.fields({ version: Codec.string }),
 );
 
-type FileToCopy = {
+export type FileToCopy = {
   src: string;
   dest?: string;
   transform?: (content: string) => string;

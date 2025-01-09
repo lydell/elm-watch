@@ -2262,8 +2262,12 @@ export function renderOutputErrors(
   }
 }
 
-type GetAllRelatedElmFilePathsResult = ElmJson.ParseError | WalkImportsResult;
-type GetAllRelatedElmFilePathsError = ElmJson.ParseError | WalkImportsError;
+type GetAllRelatedElmFilePathsResult =
+  | ElmJson.ElmJsonParseError
+  | WalkImportsResult;
+type GetAllRelatedElmFilePathsError =
+  | ElmJson.ElmJsonParseError
+  | WalkImportsError;
 
 function getAllRelatedElmFilePaths(
   elmJsonPath: ElmJsonPath,
@@ -2273,7 +2277,10 @@ function getAllRelatedElmFilePaths(
 
   switch (result.tag) {
     case "Parsed":
-      return walkImports(result.sourceDirectories, inputs);
+      return walkImports(
+        result.sourceDirectories,
+        mapNonEmptyArray(inputs, (input) => input.realpath),
+      );
 
     default:
       return result;

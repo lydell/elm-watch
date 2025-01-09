@@ -60,7 +60,11 @@ export type RunElmMakeError =
       command: Command;
     };
 
-type NullOutputPath = { tag: "NullOutputPath" };
+type LocalOutputPath =
+  | { tag: "NullOutputPath" }
+  | (Pick<OutputPath, "tag" | "temporaryOutputPath" | "theOutputPath"> & {
+      writeToTemporaryDir: boolean;
+    });
 
 export function make({
   elmJsonPath,
@@ -72,8 +76,8 @@ export function make({
 }: {
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
-  inputs: NonEmptyArray<InputPath>;
-  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean });
+  inputs: NonEmptyArray<Pick<InputPath, "tag" | "theInputPath">>;
+  outputPath: LocalOutputPath;
   env: Env;
   getNow: GetNow;
 }): {
@@ -198,7 +202,7 @@ export function compilationModeToArg(
 
 function outputPathToAbsoluteString(
   cwd: AbsolutePath,
-  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean }),
+  outputPath: LocalOutputPath,
 ): string {
   switch (outputPath.tag) {
     case "OutputPath":

@@ -1,0 +1,14 @@
+{
+  "name": "elm-watch-lib",
+  "version": "1.0.0",
+  "author": "Simon Lydell",
+  "license": "MIT",
+  "description": "Parts of elm-watch as a library for use by other tools.",
+  "repository": "lydell/elm-watch",
+  "type": "module",
+  "exports": "./index.js",
+  "dependencies": {
+    "cross-spawn": "*",
+    "tiny-decoders": "*"
+  }
+}

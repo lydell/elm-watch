@@ -26,8 +26,13 @@ export default defineConfig({
     },
     coverage: {
       include: ["src/**/*.ts"],
-      // Vitest reports 0 % coverage for this file, while in reality it should be 100 %.
-      exclude: ["src/PostprocessWorker.ts"],
+      exclude: [
+        // Vitest reports 0 % coverage for this file, while in reality it should be 100 %.
+        "src/PostprocessWorker.ts",
+        // There is no need for tests for this file – it’s basically just re-exports.
+        // It needs to be tested manually against the projects that use it anyway.
+        "src/elm-watch-lib.ts",
+      ],
       thresholds: {
         ...(process.platform === "win32" ? windowsCoverage : requireCoverage),
       },

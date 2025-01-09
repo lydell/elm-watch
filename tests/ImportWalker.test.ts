@@ -6,7 +6,6 @@ import { mapNonEmptyArray, NonEmptyArray } from "../src/NonEmptyArray";
 import { absolutePathFromString, absoluteRealpath } from "../src/PathHelpers";
 import {
   AbsolutePath,
-  InputPath,
   markAsAbsolutePath,
   markAsSourceDirectory,
   SourceDirectory,
@@ -25,18 +24,11 @@ function walkImportsHelper(
 ): string {
   const dir = absolutePathFromString(FIXTURES_DIR, fixture);
 
-  const inputPaths: NonEmptyArray<InputPath> = mapNonEmptyArray(
+  const inputRealPaths: NonEmptyArray<AbsolutePath> = mapNonEmptyArray(
     inputFiles,
     (inputFile) => {
-      const theInputPath = absolutePathFromString(dir, inputFile);
-      return {
-        tag: "InputPath",
-        theInputPath,
-        originalString: inputFile,
-        realpath: resolveSymlinks
-          ? absoluteRealpath(theInputPath)
-          : theInputPath,
-      };
+      const inputPath = absolutePathFromString(dir, inputFile);
+      return resolveSymlinks ? absoluteRealpath(inputPath) : inputPath;
     },
   );
 
@@ -46,7 +38,7 @@ function walkImportsHelper(
       (sourceDirectory): SourceDirectory =>
         markAsSourceDirectory(absolutePathFromString(dir, sourceDirectory)),
     ),
-    inputPaths,
+    inputRealPaths,
   );
 
   switch (result.tag) {

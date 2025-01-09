@@ -7,7 +7,7 @@
     "install-test-elm-dependencies": "tsx scripts/InstallTestDependencies.ts",
     "pretest": "run-pty --auto-exit % prettier --check . % eslint . --report-unused-disable-directives % tsc % tsx scripts/EnsureTestDependencies.ts % npm run build",
     "test": "vitest run --coverage",
-    "build": "tsx scripts/Build.ts"
+    "build": "tsx scripts/Build.ts && tsx scripts/BuildElmWatchLib.ts"
   },
   "devDependencies": {
     "@types/cross-spawn": "6.0.6",

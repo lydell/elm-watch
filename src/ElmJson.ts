@@ -19,14 +19,14 @@ export const ElmJson = Codec.taggedUnion("type", [
   },
 ]);
 
-type ParseResult =
-  | ParseError
+type ElmJsonParseResult =
+  | ElmJsonParseError
   | {
       tag: "Parsed";
       sourceDirectories: NonEmptyArray<SourceDirectory>;
     };
 
-export type ParseError =
+export type ElmJsonParseError =
   | {
       tag: "ElmJsonDecodeError";
       elmJsonPath: ElmJsonPath;
@@ -38,7 +38,9 @@ export type ParseError =
       error: Error;
     };
 
-export function readSourceDirectories(elmJsonPath: ElmJsonPath): ParseResult {
+export function readSourceDirectories(
+  elmJsonPath: ElmJsonPath,
+): ElmJsonParseResult {
   const parsed = readJsonFile(elmJsonPath, ElmJson);
   switch (parsed.tag) {
     case "DecoderError":

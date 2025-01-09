@@ -192,7 +192,7 @@ export type OutputStatus =
     };
 
 export type OutputError =
-  | ElmJson.ParseError
+  | ElmJson.ElmJsonParseError
   | OutputFsError
   | PostprocessError
   | RunElmMakeError

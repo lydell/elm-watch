@@ -269,6 +269,7 @@ export default typescriptEslint.config(
   {
     ignores: [
       "build",
+      "build-*",
       "coverage",
       "dist",
       "example",
