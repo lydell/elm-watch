@@ -453,20 +453,7 @@ export function initProject({
       ? { tag: "NoPostprocess" }
       : { tag: "Postprocess", postprocessArray: config.postprocess };
 
-  // TODO: Do this in a function.
-  let { webSocketUrl } = config;
-  const envWebSocketUrlString = env[ELM_WATCH_WEBSOCKET_URL];
-  if (envWebSocketUrlString !== undefined) {
-    const decoderResult = WebSocketUrl("Env").decoder(envWebSocketUrlString);
-    switch (decoderResult.tag) {
-      case "Valid":
-        webSocketUrl = decoderResult.value;
-        break;
-      case "DecoderError":
-        // Invalid environment variables are silently ignored.
-        break;
-    }
-  }
+  const webSocketUrl = getWebSocketUrlFromEnv(env) ?? config.webSocketUrl;
 
   return {
     tag: "Project",
@@ -528,6 +515,23 @@ export function filterSubDirs(
         !root.startsWith(root2.endsWith(pathSep) ? root2 : root2 + pathSep),
     ),
   );
+}
+
+function getWebSocketUrlFromEnv(env: Env): WebSocketUrl | undefined {
+  const envWebSocketUrlString = env[ELM_WATCH_WEBSOCKET_URL];
+
+  if (envWebSocketUrlString === undefined) {
+    return undefined;
+  }
+
+  const decoderResult = WebSocketUrl("Env").decoder(envWebSocketUrlString);
+  switch (decoderResult.tag) {
+    case "Valid":
+      return decoderResult.value;
+    case "DecoderError":
+      // Invalid environment variables are silently ignored.
+      return undefined;
+  }
 }
 
 type ResolveElmJsonResult =
