@@ -300,9 +300,6 @@ type Cmd =
       killInstallDependencies: boolean;
     }
   | {
-      tag: "MaybePrintStats";
-    }
-  | {
       tag: "NoCmd";
     }
   | {
@@ -587,6 +584,9 @@ const initMutable =
     webSocketServer.listening
       .then(() => {
         writeElmWatchStuffJson(mutable);
+        if (!logger.config.isTTY) {
+          logger.write(printStats(logger.config, mutable, getHost(env)));
+        }
       })
       .catch(rejectPromise);
 
@@ -728,7 +728,6 @@ const init = (
   },
   [
     { tag: "ClearScreen" },
-    { tag: "MaybePrintStats" },
     { tag: "InstallDependencies" },
     ...elmJsonsErrors.map(
       (elmJsonError): Cmd => ({
@@ -1688,15 +1687,6 @@ const runCmd =
             },
             mutable.webSocketConnections,
           );
-        }
-        return;
-
-      case "MaybePrintStats":
-        if (!logger.config.isTTY) {
-          // One tick is enough for the final port number to be available.
-          process.nextTick(() => {
-            logger.write(printStats(logger.config, mutable, getHost(env)));
-          });
         }
         return;
 
