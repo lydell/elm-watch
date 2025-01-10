@@ -135,10 +135,9 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
     switch (path.basename(output.path)) {
       case "index.js": {
         const replaced = output.text
-          // TODO: Check this
           .replace(
             /^[^]+\nmodule.exports = .+\s*/g,
-            "module.exports = elmWatchCli",
+            "module.exports = elmWatchCli;\n",
           )
           .replace(toModuleRegex, "$1")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
