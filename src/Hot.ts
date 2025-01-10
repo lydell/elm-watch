@@ -584,7 +584,12 @@ const initMutable =
     webSocketServer.listening
       .then(() => {
         writeElmWatchStuffJson(mutable);
-        if (!logger.config.isTTY) {
+        // When not running as a TTY the output is a simple log, and it gets
+        // a bit tedious if the stats are printed after each event. Instead,
+        // we print it once at startup. This has to be done once the server
+        // is ready – we don’t know the final port to print until then.
+        const isRestart = webSocketState !== undefined;
+        if (!logger.config.isTTY && !isRestart) {
           logger.write(printStats(logger.config, mutable, getHost(env)));
         }
       })
