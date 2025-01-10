@@ -30,33 +30,21 @@ async function reloadCssIfNeeded(
   }
 
   const newCss = await response.text();
-  let newStyleSheet: CSSStyleSheet | undefined;
 
   const isFirefox = "MozAppearance" in document.documentElement.style;
-  if (isFirefox) {
-    // We cannot support `@import` due to the below “restricted” bug,
-    // and it’s difficult to bust Firefox’s cache (`fetch(url, {cache:
-    // "reload"})`} does not help).
-    if (/@import\b/i.test(newCss)) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "elm-watch: Reloading CSS with @import is not possible in Firefox (not even in a comment or string). Style sheet:",
-        url.href,
-      );
-      return false;
-    }
-    // We can’t use `parseCssWithImports`, because Firefox has a bug where
-    // things in the style sheet become “restricted” if devtools are open.
-    // https://bugzilla.mozilla.org/show_bug.cgi?id=1873290
-    newStyleSheet = new CSSStyleSheet();
-    await newStyleSheet.replace(newCss);
-  } else {
-    const importUrls = getAllCssImports(url, styleSheet);
-    await Promise.allSettled(
-      importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" })),
+  if (isFirefox && /@import\b/i.test(newCss)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "elm-watch: In Firefox, @import:ed CSS files are not hot reloaded due to over eager caching by Firefox. Style sheet:",
+      url.href,
     );
-    newStyleSheet = await parseCssWithImports(newCss);
   }
+
+  const importUrls = getAllCssImports(url, styleSheet);
+  await Promise.allSettled(
+    importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" })),
+  );
+  const newStyleSheet = await parseCssWithImports(newCss);
 
   return newStyleSheet === undefined
     ? false
