@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-if (require("../elm-install")) {
+import installed from "../elm-install.js";
+if (installed) {
   process.stderr.write(
     `Text before crashelm: Map.!: given key is not an element in the map
 CallStack (from HasCallStack):
-  error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal`
+  error, called at ./Data/Map/Internal.hs:610:17 in containers-0.5.11.0-FmkfE5FIiXiCSIJBVRC1nU:Data.Map.Internal`,
   );
   process.exit(1);
 }

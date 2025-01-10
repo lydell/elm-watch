@@ -2,11 +2,11 @@ import * as https from "https";
 import type { AddressInfo } from "net";
 import type { Duplex } from "stream";
 import * as util from "util";
-import WebSocket, { Server as WsServer } from "ws";
+import WebSocket, { WebSocketServer as WsServer } from "ws";
 
 import { toError } from "./Helpers";
 import { Host } from "./Host";
-import { Port, PortChoice } from "./Port";
+import { markAsPort, Port, PortChoice } from "./Port";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
 import { CreateServer, StaticFilesDir } from "./Types";
 
@@ -67,7 +67,7 @@ export class WebSocketServer {
     createServer: CreateServer,
     portChoice: PortChoice,
     host: Host,
-    staticFilesDirectory: StaticFilesDir | undefined
+    staticFilesDirectory: StaticFilesDir | undefined,
   ) {
     this.polyHttpServer = createServer({
       onRequest: (request, response) => {
@@ -75,20 +75,20 @@ export class WebSocketServer {
           try {
             SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
               request,
-              response
+              response,
             );
           } catch (unknownError) {
             SimpleStaticFileServer.respondHtml(
               response,
               500,
-              SimpleStaticFileServer.errorHtml(toError(unknownError).message)
+              SimpleStaticFileServer.errorHtml(toError(unknownError).message),
             );
           }
         } else {
           SimpleStaticFileServer.respondHtml(
             response,
             200,
-            SimpleStaticFileServer.staticFileNotEnabledHtml()
+            SimpleStaticFileServer.staticFileNotEnabledHtml(),
           );
         }
       },
@@ -99,7 +99,7 @@ export class WebSocketServer {
           head,
           (webSocket) => {
             this.webSocketServer.emit("connection", webSocket, request);
-          }
+          },
         );
       },
     });
@@ -114,7 +114,7 @@ export class WebSocketServer {
           [util.inspect.custom]: util.CustomInspectFunction;
         }
       )[util.inspect.custom] =
-        // istanbul ignore next
+        /* v8 ignore next */
         (_depth, options) => options.stylize("WebSocket", "special");
 
       this.dispatch({
@@ -123,7 +123,7 @@ export class WebSocketServer {
         // `request.url` is always a string here, but the types says it can be undefined:
         // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
         urlString:
-          // istanbul ignore next
+          /* v8 ignore next */
           request.url ?? "/",
       });
 
@@ -139,13 +139,14 @@ export class WebSocketServer {
         this.dispatch({ tag: "WebSocketClosed", webSocket });
       });
 
-      // istanbul ignore next
+      /* v8 ignore start */
       webSocket.on("error", (error) => {
         this.dispatch({
           tag: "WebSocketServerError",
           error: { tag: "OtherError", error },
         });
       });
+      /* v8 ignore stop */
     });
 
     this.polyHttpServer.on("error", (error: NodeJS.ErrnoException) => {
@@ -155,32 +156,32 @@ export class WebSocketServer {
           error.code === "EADDRINUSE"
             ? { tag: "PortConflict", portChoice, error }
             : error.code === "ENOTFOUND"
-            ? { tag: "HostNotFound", host, error }
-            : // istanbul ignore next
-              { tag: "OtherError", error },
+              ? { tag: "HostNotFound", host, error }
+              : /* v8 ignore next */
+                { tag: "OtherError", error },
       });
     });
 
-    this.polyHttpServer.on("connection", (socket) => {
+    this.polyHttpServer.on("connection", (socket: Duplex) => {
       this.sockets.add(socket);
       socket.once("close", () => {
         this.sockets.delete(socket);
       });
     });
 
-    this.port = { tag: "Port", thePort: 0 };
+    this.port = markAsPort(0);
     this.listening = new Promise((resolve) => {
       this.polyHttpServer.once("listening", () => {
         const address = this.polyHttpServer.address() as AddressInfo;
-        this.port.thePort = address.port;
+        this.port = markAsPort(address.port);
         resolve();
       });
     });
 
     this.polyHttpServer.listen(
       // If `port` is 0, the operating system will assign an arbitrary unused port.
-      portChoice.tag === "NoPort" ? 0 : portChoice.port.thePort,
-      host.theHost
+      portChoice.tag === "NoPort" ? 0 : portChoice.port,
+      host,
     );
   }
 
@@ -190,12 +191,13 @@ export class WebSocketServer {
 
   setDispatch(dispatch: (msg: WebSocketServerMsg) => void): void {
     this.dispatch = dispatch;
+    // When testing, a change to elm.json gives a 5 ms room where queueing is needed.
+    // That’s very unlikely to even be needed, and very hard to test.
+    /* v8 ignore start */
     for (const msg of this.msgQueue) {
-      // When testing, a change to elm.json gives a 5 ms room where queueing is needed.
-      // That’s very unlikely to even be needed, and very hard to test.
-      // istanbul ignore next
       dispatch(msg);
     }
+    /* v8 ignore stop */
   }
 
   unsetDispatch(): void {

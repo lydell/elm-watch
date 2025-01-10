@@ -16,15 +16,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
-        node-version: [16, 18, 20]
+        node-version: [20, 22]
 
     env:
       ELM_HOME: "${{ github.workspace }}/elm-stuff/elm-home"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "${{ matrix.node-version }}"
 
@@ -35,37 +35,30 @@ jobs:
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package.json', 'package-lock.json') }}
 
       - name: Cache ELM_HOME
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: "${{ env.ELM_HOME }}"
           key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json') }}
 
-      - name: npm ci
-        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+      - if: steps.cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
         env:
           NO_ELM_TOOLING_INSTALL: 1
 
-      - name: elm-tooling install
-        run: npx elm-tooling install
+      - run: npx elm-tooling install
 
       # The idea is that this will install all packages mentioned in test
       # fixtures, so that nothing needs to be downloaded while the tests
       # run, which could result in flaky tests.
-      - name: fill ELM_HOME with packages
-        run: npx elm make Main.elm --output=/dev/null
+      - run: npm run install-test-elm-dependencies
         working-directory: tests/install-packages
 
-      # Use `--forceExit` to avoid test runs “hanging” when tests are failing
-      # so that elm-watch isn’t shut down properly.
       # Retry failing tests, as a stopgap while fixing flaky tests.
-      - name: Jest
-        run: npx jest --coverage --forceExit
-        env:
-          JEST_RETRIES: 4
+      # However, retry is useless until this bug is fixed: https://github.com/vitest-dev/vitest/issues/6589
+      - run: npx vitest --coverage # --retry=4

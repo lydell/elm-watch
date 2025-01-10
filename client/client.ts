@@ -1,4 +1,4 @@
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
 import { formatDate, formatTime } from "../src/Helpers";
 import { NonEmptyArray } from "../src/NonEmptyArray";
@@ -15,15 +15,16 @@ import {
   decodeWebSocketToClientMessage,
   ErrorLocation,
   OpenEditorError,
-  StatusChanged,
+  StatusChange,
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "./WebSocketMessages";
 
-// Support Web Workers, where `window` does not exist.
+// Support environments, such as Web Workers, where `window` does not exist.
 const window = globalThis as unknown as Window;
 
-const IS_WEB_WORKER = window.window === undefined;
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+const HAS_WINDOW = window.window !== undefined;
 
 // These used to be separate properties on `window`, like
 // `window.__ELM_WATCH_MOCKED_TIMINGS`. It’s better to group them all together
@@ -34,9 +35,13 @@ type __ELM_WATCH = {
   CHANGED_CSS: Date;
   CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
-  RELOAD_STATUSES: Record<string, ReloadStatus>;
+  RELOAD_STATUSES: Map</* targetName */ string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
-  ON_INIT: () => void;
+  TARGET_DATA: Map</* targetName */ string, TargetData>;
+  SOME_TARGET_IS_PROXY: boolean;
+  IS_REGISTERING: boolean;
+  REGISTER: (targetName: string, elmExports: ElmExports) => void;
+  HOT_RELOAD: (targetName: string, elmExports: ElmExports) => void;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
   KILL_MATCHING: (targetName: RegExp) => Promise<void>;
@@ -44,13 +49,21 @@ type __ELM_WATCH = {
   LOG_DEBUG: typeof console.debug;
 };
 
+type TargetData = {
+  originalFlattenedElmExports: Map</* moduleName */ string, ElmModule>;
+  initializedElmApps: Map</* moduleName */ string, Array<ElmApp>>;
+};
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
-    Elm?: Record<`${UppercaseLetter}${string}`, ElmModule>;
+    Elm?: ElmExports;
+    ELM_WATCH_FULL_RELOAD?: () => void;
     __ELM_WATCH: __ELM_WATCH;
   }
 }
+
+type ElmExports = Record<`${UppercaseLetter}${string}`, ElmModule>;
 
 export type UppercaseLetter =
   | "A"
@@ -81,14 +94,68 @@ export type UppercaseLetter =
   | "Z";
 
 export type ElmModule = {
-  init: (options?: { node?: Element; flags?: unknown }) => {
-    ports?: Record<
-      string,
-      { subscribe?: (value: unknown) => void; send?: (value: unknown) => void }
-    >;
-  };
+  init: (options?: { node?: Element; flags?: unknown }) => ElmApp;
   [key: `${UppercaseLetter}${string}`]: ElmModule;
 };
+
+type ElmWatchReturnDataInit = (
+  arg: "__elmWatchReturnData",
+) => ElmWatchReturnData;
+
+type ElmApp = {
+  ports?: Record<
+    string,
+    { subscribe?: (value: unknown) => void; send?: (value: unknown) => void }
+  >;
+  __elmWatchHotReload: (
+    elmWatchReturnData: ElmWatchReturnData,
+    shouldReloadDueToInitCmds: boolean,
+  ) => Array<ReloadReason>;
+  __elmWatchProgramType: ProgramType;
+};
+
+type ElmWatchReturnData = {
+  programType: ProgramType;
+  moreData: never;
+};
+
+type ReloadReason =
+  | {
+      tag: "FlagsTypeChanged";
+      jsonErrorMessage: string;
+    }
+  | {
+      tag: "HotReloadCaughtError";
+      caughtError: unknown;
+    }
+  | {
+      tag: "InitCmds";
+    }
+  | {
+      tag: "InitReturnValueChanged";
+    }
+  | {
+      tag: "MessageTypeChangedInDebugMode";
+    }
+  | {
+      tag: "NewPortAdded";
+      name: string;
+    }
+  | {
+      tag: "ProgramTypeChanged";
+      previousProgramType: ProgramType;
+      newProgramType: ProgramType;
+    };
+
+type ReloadReasonWithModuleName = ReloadReason & { moduleName: string };
+
+type ProgramType =
+  | "Platform.worker"
+  | "Browser.sandbox"
+  | "Browser.element"
+  | "Browser.document"
+  | "Browser.application"
+  | "Html";
 
 type ReloadStatus =
   | {
@@ -109,13 +176,9 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   MOCKED_TIMINGS: false,
 
   // In a browser on the same computer, sending a message and receiving a reply
-  // takes around 2-4 ms. In iOS Safari via Wi-Fi, I’ve seen it take up to 120 ms.
+  // takes around 2-4 ms. In iOS Safari via WiFi, I’ve seen it take up to 120 ms.
   // So 1 second should be plenty above the threshold, while not taking too long.
   WEBSOCKET_TIMEOUT: 1000,
-
-  ON_INIT: () => {
-    // Do nothing.
-  },
 
   ON_RENDER: () => {
     // Do nothing.
@@ -131,7 +194,7 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
 
   ORIGINAL_STYLES: new WeakMap(),
 
-  RELOAD_STATUSES: {},
+  RELOAD_STATUSES: new Map(),
 
   RELOAD_PAGE: (message) => {
     if (message !== undefined) {
@@ -141,25 +204,44 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
         // Ignore failing to write to sessionStorage.
       }
     }
-    if (IS_WEB_WORKER) {
+    // Allow customizing how to “reload the page”, for Web Workers and Node.js
+    // (or in the browser if you really want to).
+    if (typeof window.ELM_WATCH_FULL_RELOAD === "function") {
+      window.ELM_WATCH_FULL_RELOAD();
+    } else if (HAS_WINDOW) {
+      window.location.reload();
+    } else {
       if (message !== undefined) {
         // eslint-disable-next-line no-console
         console.info(message);
       }
-      // eslint-disable-next-line no-console
-      console.error(
+      const why =
         message === undefined
-          ? "elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I can’t do it for you."
-          : `elm-watch: You need to reload the page! I seem to be running in a Web Worker, so I couldn’t actually reload the page (see above).`
-      );
-    } else {
-      window.location.reload();
+          ? "because a hot reload was not possible"
+          : "see above";
+      const info = `elm-watch: A full reload or restart of the program running your Elm code is needed (${why}). In a web browser page, I would have reloaded the page. You need to do this manually, or define a \`globalThis.ELM_WATCH_FULL_RELOAD\` function.`;
+      // eslint-disable-next-line no-console
+      console.error(info);
     }
   },
 
-  KILL_MATCHING: (): Promise<void> => Promise.resolve(),
+  TARGET_DATA: new Map(),
 
-  DISCONNECT: (): void => {
+  SOME_TARGET_IS_PROXY: false,
+
+  IS_REGISTERING: true,
+
+  REGISTER: () => {
+    // Do nothing.
+  },
+
+  HOT_RELOAD: () => {
+    // Do nothing.
+  },
+
+  KILL_MATCHING: () => Promise.resolve(),
+
+  DISCONNECT: () => {
     // Do nothing.
   },
 
@@ -170,6 +252,7 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
 
 let { __ELM_WATCH } = window;
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
   // Each property is added later below.
   __ELM_WATCH = {} as unknown as __ELM_WATCH;
@@ -179,6 +262,7 @@ if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
 }
 
 for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (__ELM_WATCH[key as keyof __ELM_WATCH] === undefined) {
     (__ELM_WATCH as Record<string, unknown>)[key] = value;
   }
@@ -187,7 +271,7 @@ for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
 const VERSION = "%VERSION%";
 const TARGET_NAME = "%TARGET_NAME%";
 const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-  "%INITIAL_ELM_COMPILED_TIMESTAMP%"
+  "%INITIAL_ELM_COMPILED_TIMESTAMP%",
 );
 // Note: The JS code running is compiled in `ORIGINAL_COMPILATION_MODE`. But
 // that does not necessarily match the selected compilation mode for the target.
@@ -218,7 +302,11 @@ const ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME = 10;
 // for me. So more than double that should be plenty.
 const JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT = 2000;
 
+__ELM_WATCH.SOME_TARGET_IS_PROXY ||= ORIGINAL_COMPILATION_MODE === "proxy";
+__ELM_WATCH.IS_REGISTERING = true;
+
 type Mutable = {
+  hasEverReachedIdleState: boolean;
   removeListeners: () => void;
   webSocket: WebSocket;
   webSocketTimeoutId: NodeJS.Timeout | undefined;
@@ -239,7 +327,7 @@ type Msg =
   | {
       tag: "EvalNeedsReload";
       date: Date;
-      reasons: Array<string>;
+      reasons: Array<ReloadReasonWithModuleName>;
     }
   | {
       tag: "EvalSucceeded";
@@ -453,7 +541,7 @@ export type ReachedIdleStateReason =
 type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
 const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
-  "This value is supposed to only be obtained via `Status`."
+  "This value is supposed to only be obtained via `Status`.",
 );
 
 function logDebug(...args: Array<unknown>): void {
@@ -462,11 +550,13 @@ function logDebug(...args: Array<unknown>): void {
   }
 }
 
-function parseBrowseUiPositionWithFallback(value: unknown): BrowserUiPosition {
-  try {
-    return BrowserUiPosition(value);
-  } catch {
-    return ORIGINAL_BROWSER_UI_POSITION;
+function BrowserUiPositionWithFallback(value: unknown): BrowserUiPosition {
+  const decoderResult = BrowserUiPosition.decoder(value);
+  switch (decoderResult.tag) {
+    case "DecoderError":
+      return ORIGINAL_BROWSER_UI_POSITION;
+    case "Valid":
+      return decoderResult.value;
   }
 }
 
@@ -505,14 +595,14 @@ function run(): void {
     // Ignore failing to read or delete from sessionStorage.
   }
 
-  const elements = IS_WEB_WORKER ? undefined : getOrCreateTargetRoot();
+  const elements = HAS_WINDOW ? getOrCreateTargetRoot() : undefined;
   const browserUiPosition =
     elements === undefined
       ? ORIGINAL_BROWSER_UI_POSITION
-      : parseBrowseUiPositionWithFallback(elements.container.dataset.position);
+      : BrowserUiPositionWithFallback(elements.container.dataset["position"]);
   const getNow: GetNow = () => new Date();
 
-  if (!IS_WEB_WORKER) {
+  if (HAS_WINDOW) {
     removeElmWatchIndexHtmlComment();
   }
 
@@ -567,6 +657,7 @@ function run(): void {
               : {
                   tag: "UpdateErrorOverlay",
                   errors:
+                    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
                     newErrorOverlay === undefined ||
                     !newErrorOverlay.openErrorOverlay
                       ? new Map<string, OverlayError>()
@@ -682,27 +773,46 @@ function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
   }
 }
 
-function getOrCreateContainer(): HTMLElement {
+function getOrCreateContainer(): HTMLDialogElement {
   const existing = document.getElementById(CONTAINER_ID);
 
   if (existing !== null) {
-    return existing;
+    return existing as HTMLDialogElement;
   }
 
-  const container = h(HTMLDivElement, { id: CONTAINER_ID });
-  container.style.all = "unset";
-  container.style.position = "fixed";
-  container.style.zIndex = "2147483647"; // Maximum z-index supported by browsers.
+  const container = h(
+    typeof HTMLDialogElement === "function"
+      ? HTMLDialogElement
+      : (HTMLDivElement as typeof HTMLDialogElement),
+    { id: CONTAINER_ID },
+  );
+  // Note: If we add any more styling to this element, Chrome and Safari expand all the styles
+  // in the element inspector, which takes several lines and is pretty distracting.
+  container.style.all = "initial";
 
-  const shadowRoot = container.attachShadow({ mode: "open" });
+  // `<dialog>` elements cannot have a shadow root, so we need an inner element.
+  const containerInner = h(HTMLDivElement, {});
+  containerInner.style.all = "initial";
+  containerInner.style.position = "fixed";
+  containerInner.style.zIndex = "2147483647"; // Maximum z-index supported by browsers. (Popover fallback.)
+
+  // In Safari, when making a `<dialog>` element into a popovers, it
+  // always covers the entire page (making it impossible to click things),
+  // which is another reason for having the inner element.
+  // This enables popover mode, allowing `.showPopover()` to be called later:
+  containerInner.popover = "manual";
+
+  const shadowRoot = containerInner.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS));
+  container.append(containerInner);
   document.documentElement.append(container);
 
   return container;
 }
 
 type Elements = {
-  container: HTMLElement;
+  container: HTMLDialogElement;
+  containerInner: HTMLElement;
   shadowRoot: ShadowRoot;
   overlay: HTMLElement;
   overlayCloseButton: HTMLElement;
@@ -712,11 +822,19 @@ type Elements = {
 
 function getOrCreateTargetRoot(): Elements {
   const container = getOrCreateContainer();
-  const { shadowRoot } = container;
+  const containerInner = container.firstElementChild;
+
+  if (containerInner === null) {
+    throw new Error(
+      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.firstElementChild\` is null!`,
+    );
+  }
+
+  const { shadowRoot } = containerInner;
 
   if (shadowRoot === null) {
     throw new Error(
-      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`
+      `elm-watch: Cannot set up hot reload, because an element with ID ${CONTAINER_ID} exists, but \`.shadowRoot\` is null!`,
     );
   }
 
@@ -730,7 +848,7 @@ function getOrCreateTargetRoot(): Elements {
   }
 
   let overlayCloseButton = shadowRoot.querySelector(
-    `.${CLASS.overlayCloseButton}`
+    `.${CLASS.overlayCloseButton}`,
   );
   if (overlayCloseButton === null) {
     const closeAllErrorOverlays = (): void => {
@@ -755,7 +873,7 @@ function getOrCreateTargetRoot(): Elements {
           closeAllErrorOverlays();
         }
       },
-      true
+      true,
     );
   }
 
@@ -770,6 +888,7 @@ function getOrCreateTargetRoot(): Elements {
 
   const elements: Elements = {
     container,
+    containerInner: containerInner as HTMLElement,
     shadowRoot,
     overlay: overlay as HTMLElement,
     overlayCloseButton: overlayCloseButton as HTMLElement,
@@ -797,7 +916,7 @@ type PositionCss<Position> = {
 };
 
 function browserUiPositionToCss(
-  browserUiPosition: BrowserUiPosition
+  browserUiPosition: BrowserUiPosition,
 ): PositionCss<"-1px" | "auto"> {
   switch (browserUiPosition) {
     case "TopLeft":
@@ -812,7 +931,7 @@ function browserUiPositionToCss(
 }
 
 function browserUiPositionToCssForChooser(
-  browserUiPosition: BrowserUiPosition
+  browserUiPosition: BrowserUiPosition,
 ): PositionCss<"0" | "auto"> {
   switch (browserUiPosition) {
     case "TopLeft":
@@ -828,7 +947,7 @@ function browserUiPositionToCssForChooser(
 
 function setBrowserUiPosition(
   browserUiPosition: BrowserUiPosition,
-  elements: Elements
+  elements: Elements,
 ): void {
   // Only the first target is in charge of the browser UI position.
   const isFirstTargetRoot = elements.targetRoot.previousElementSibling === null;
@@ -836,12 +955,12 @@ function setBrowserUiPosition(
     return;
   }
 
-  elements.container.dataset.position = browserUiPosition;
+  elements.container.dataset["position"] = browserUiPosition;
 
   for (const [key, value] of Object.entries(
-    browserUiPositionToCss(browserUiPosition)
+    browserUiPositionToCss(browserUiPosition),
   )) {
-    elements.container.style.setProperty(key, value);
+    elements.containerInner.style.setProperty(key, value);
   }
 
   const isInBottomHalf =
@@ -849,7 +968,22 @@ function setBrowserUiPosition(
   elements.root.classList.toggle(CLASS.rootBottomHalf, isInBottomHalf);
 
   elements.shadowRoot.dispatchEvent(
-    new CustomEvent(BROWSER_UI_MOVED_EVENT, { detail: browserUiPosition })
+    new CustomEvent(BROWSER_UI_MOVED_EVENT, { detail: browserUiPosition }),
+  );
+}
+
+function flattenElmExports(elmExports: ElmExports): Array<[string, ElmModule]> {
+  return flattenElmExportsHelper("Elm", elmExports as ElmModule);
+}
+
+function flattenElmExportsHelper(
+  moduleName: string,
+  module: ElmModule,
+): Array<[string, ElmModule]> {
+  return Object.entries(module).flatMap(([key, value]) =>
+    key === "init"
+      ? [[moduleName, module]]
+      : flattenElmExportsHelper(`${moduleName}.${key}`, value as ElmModule),
   );
 }
 
@@ -857,11 +991,12 @@ const initMutable =
   (getNow: GetNow, elements: Elements | undefined) =>
   (
     dispatch: (msg: Msg) => void,
-    resolvePromise: (result: undefined) => void
+    resolvePromise: (result: undefined) => void,
   ): Mutable => {
     let removeListeners: Array<() => void> = [];
 
     const mutable: Mutable = {
+      hasEverReachedIdleState: false,
       removeListeners: () => {
         for (const removeListener of removeListeners) {
           removeListener();
@@ -870,7 +1005,7 @@ const initMutable =
       webSocket: initWebSocket(
         getNow,
         INITIAL_ELM_COMPILED_TIMESTAMP,
-        dispatch
+        dispatch,
       ),
       webSocketTimeoutId: undefined,
     };
@@ -879,88 +1014,196 @@ const initMutable =
     // Firefox throws this error via `FocusedTab`:
     // DOMException: An attempt was made to use an object that is not, or is no longer, usable
     // So wait until the WebSocket is ready before starting those listeners.
-    mutable.webSocket.addEventListener(
-      "open",
-      () => {
-        removeListeners = [
-          addEventListener(window, "focus", (event) => {
-            // Used in tests to trigger focus for just one target.
-            if (event instanceof CustomEvent && event.detail !== TARGET_NAME) {
-              return;
-            }
-            dispatch({ tag: "FocusedTab" });
-          }),
-          addEventListener(window, "visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-              dispatch({
-                tag: "PageVisibilityChangedToVisible",
-                date: getNow(),
-              });
-            }
-          }),
-          ...(elements === undefined
-            ? []
-            : [
-                addEventListener(
-                  elements.shadowRoot,
-                  BROWSER_UI_MOVED_EVENT,
-                  (event) => {
-                    dispatch({
-                      tag: "BrowserUiMoved",
-                      browserUiPosition: Decode.fields((field) =>
-                        field("detail", parseBrowseUiPositionWithFallback)
-                      )(event),
-                    });
-                  }
-                ),
-                addEventListener(
-                  elements.shadowRoot,
-                  CLOSE_ALL_ERROR_OVERLAYS_EVENT,
-                  () => {
-                    dispatch({
-                      tag: "UiMsg",
-                      date: getNow(),
-                      msg: {
-                        tag: "ChangedOpenErrorOverlay",
-                        openErrorOverlay: false,
-                      },
-                    });
-                  }
-                ),
-              ]),
-        ];
-      },
-      { once: true }
-    );
+    if (elements !== undefined) {
+      mutable.webSocket.addEventListener(
+        "open",
+        () => {
+          removeListeners = [
+            addEventListener(window, "focus", (event) => {
+              // Used in tests to trigger focus for just one target.
+              if (
+                event instanceof CustomEvent &&
+                event.detail !== TARGET_NAME
+              ) {
+                return;
+              }
+              dispatch({ tag: "FocusedTab" });
+            }),
+            addEventListener(window, "visibilitychange", () => {
+              if (document.visibilityState === "visible") {
+                dispatch({
+                  tag: "PageVisibilityChangedToVisible",
+                  date: getNow(),
+                });
+              }
+            }),
+            addEventListener(
+              elements.shadowRoot,
+              BROWSER_UI_MOVED_EVENT,
+              (event) => {
+                dispatch({
+                  tag: "BrowserUiMoved",
+                  browserUiPosition: BrowserUiPositionWithFallback(
+                    (event as CustomEvent).detail,
+                  ),
+                });
+              },
+            ),
+            addEventListener(
+              elements.shadowRoot,
+              CLOSE_ALL_ERROR_OVERLAYS_EVENT,
+              () => {
+                dispatch({
+                  tag: "UiMsg",
+                  date: getNow(),
+                  msg: {
+                    tag: "ChangedOpenErrorOverlay",
+                    openErrorOverlay: false,
+                  },
+                });
+              },
+            ),
+          ];
+        },
+        { once: true },
+      );
+    }
 
-    __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = {
+    __ELM_WATCH.RELOAD_STATUSES.set(TARGET_NAME, {
       tag: "MightWantToReload",
+    });
+
+    const wrapElmAppInit = (
+      initializedElmApps: TargetData["initializedElmApps"],
+      moduleName: string,
+      module: ElmModule,
+      init: ElmModule["init"],
+    ): void => {
+      module.init = (...args) => {
+        const app = init(...args);
+        const apps = initializedElmApps.get(moduleName);
+        if (apps === undefined) {
+          initializedElmApps.set(moduleName, [app]);
+        } else {
+          apps.push(app);
+        }
+        dispatch({ tag: "AppInit" });
+        return app;
+      };
     };
 
-    const originalOnInit = __ELM_WATCH.ON_INIT;
-    __ELM_WATCH.ON_INIT = () => {
-      dispatch({ tag: "AppInit" });
-      originalOnInit();
+    const originalRegister = __ELM_WATCH.REGISTER;
+    __ELM_WATCH.REGISTER = (targetName, elmExports) => {
+      originalRegister(targetName, elmExports);
+      if (targetName !== TARGET_NAME) {
+        return;
+      }
+      __ELM_WATCH.IS_REGISTERING = false;
+      if (__ELM_WATCH.TARGET_DATA.has(TARGET_NAME)) {
+        throw new Error(
+          `elm-watch: This target is already registered! Maybe a duplicate script is being loaded accidentally? Target: ${TARGET_NAME}`,
+        );
+      }
+      const initializedElmApps: TargetData["initializedElmApps"] = new Map();
+      const flattenedElmExports = flattenElmExports(elmExports);
+      for (const [moduleName, module] of flattenedElmExports) {
+        wrapElmAppInit(initializedElmApps, moduleName, module, module.init);
+      }
+      __ELM_WATCH.TARGET_DATA.set(TARGET_NAME, {
+        originalFlattenedElmExports: new Map(flattenedElmExports),
+        initializedElmApps,
+      });
+    };
+
+    const originalHotReload = __ELM_WATCH.HOT_RELOAD;
+    __ELM_WATCH.HOT_RELOAD = (targetName, elmExports) => {
+      originalHotReload(targetName, elmExports);
+      if (targetName !== TARGET_NAME) {
+        return;
+      }
+      const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
+      if (targetData === undefined) {
+        return;
+      }
+      const reloadReasons: Array<ReloadReasonWithModuleName> = [];
+      for (const [moduleName, module] of flattenElmExports(elmExports)) {
+        const originalElmModule =
+          targetData.originalFlattenedElmExports.get(moduleName);
+        if (originalElmModule !== undefined) {
+          wrapElmAppInit(
+            targetData.initializedElmApps,
+            moduleName,
+            originalElmModule,
+            module.init,
+          );
+        }
+        const apps = targetData.initializedElmApps.get(moduleName) ?? [];
+        for (const app of apps) {
+          const data = (module.init as unknown as ElmWatchReturnDataInit)(
+            "__elmWatchReturnData",
+          );
+          if (app.__elmWatchProgramType !== data.programType) {
+            reloadReasons.push({
+              tag: "ProgramTypeChanged",
+              previousProgramType: app.__elmWatchProgramType,
+              newProgramType: data.programType,
+              moduleName,
+            });
+          } else {
+            try {
+              const innerReasons = app.__elmWatchHotReload(
+                data,
+                /* shouldReloadDueToInitCmds */ !mutable.hasEverReachedIdleState,
+              );
+              for (const innerReason of innerReasons) {
+                reloadReasons.push({ ...innerReason, moduleName });
+              }
+            } catch (error) {
+              reloadReasons.push({
+                tag: "HotReloadCaughtError",
+                caughtError: error,
+                moduleName,
+              });
+            }
+          }
+        }
+      }
+      if (reloadReasons.length === 0) {
+        dispatch({
+          tag: "EvalSucceeded",
+          date: getNow(),
+        });
+      } else {
+        dispatch({
+          tag: "EvalNeedsReload",
+          date: getNow(),
+          reasons: reloadReasons,
+        });
+      }
     };
 
     const originalKillMatching = __ELM_WATCH.KILL_MATCHING;
     __ELM_WATCH.KILL_MATCHING = (targetName) =>
       new Promise((resolve, reject) => {
-        if (
-          targetName.test(TARGET_NAME) &&
-          mutable.webSocket.readyState !== WebSocket.CLOSED
-        ) {
-          mutable.webSocket.addEventListener("close", () => {
-            originalKillMatching(targetName).then(resolve).catch(reject);
-          });
+        if (targetName.test(TARGET_NAME)) {
+          const needsToCloseWebSocket =
+            mutable.webSocket.readyState !== WebSocket.CLOSED;
+          if (needsToCloseWebSocket) {
+            mutable.webSocket.addEventListener("close", () => {
+              originalKillMatching(targetName).then(resolve).catch(reject);
+            });
+            mutable.webSocket.close();
+          }
           mutable.removeListeners();
-          mutable.webSocket.close();
           if (mutable.webSocketTimeoutId !== undefined) {
             clearTimeout(mutable.webSocketTimeoutId);
             mutable.webSocketTimeoutId = undefined;
           }
           elements?.targetRoot.remove();
           resolvePromise(undefined);
+          if (!needsToCloseWebSocket) {
+            originalKillMatching(targetName).then(resolve).catch(reject);
+          }
         } else {
           originalKillMatching(targetName).then(resolve).catch(reject);
         }
@@ -981,10 +1224,10 @@ const initMutable =
     return mutable;
   };
 
-function addEventListener<EventName extends string>(
+function addEventListener(
   target: EventTarget,
-  eventName: EventName,
-  listener: (event: Event) => void
+  eventName: string,
+  listener: (event: Event) => void,
 ): () => void {
   target.addEventListener(eventName, listener);
   return () => {
@@ -995,15 +1238,25 @@ function addEventListener<EventName extends string>(
 function initWebSocket(
   getNow: GetNow,
   elmCompiledTimestamp: number,
-  dispatch: (msg: Msg) => void
+  dispatch: (msg: Msg) => void,
 ): WebSocket {
-  const hostname =
-    window.location.hostname === "" ? "localhost" : window.location.hostname;
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const [hostname, protocol] =
+    // Browser: `window.location` always exists.
+    // Web Worker: `window` has been set to `globalThis` at the top, which has `.location`.
+    // Node.js: `window.location` does not exist.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    window.location === undefined
+      ? ["localhost", "ws"]
+      : [
+          window.location.hostname === ""
+            ? "localhost"
+            : window.location.hostname,
+          window.location.protocol === "https:" ? "wss" : "ws",
+        ];
   const url = new URL(
     /^\d+$/.test(WEBSOCKET_CONNECTION)
       ? `${protocol}://${hostname}:${WEBSOCKET_CONNECTION}/elm-watch`
-      : WEBSOCKET_CONNECTION
+      : WEBSOCKET_CONNECTION,
   );
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
@@ -1016,6 +1269,15 @@ function initWebSocket(
   });
 
   webSocket.addEventListener("close", () => {
+    dispatch({
+      tag: "WebSocketClosed",
+      date: getNow(),
+    });
+  });
+
+  // In Node.js, if you start the Node.js program (with the elm-watch client) before you start `elm-watch` hot,
+  // the "error" event is emitted. Treating it like "closed" allows us to try reconnecting.
+  webSocket.addEventListener("error", () => {
     dispatch({
       tag: "WebSocketClosed",
       date: getNow(),
@@ -1036,7 +1298,7 @@ function initWebSocket(
 const init = (
   date: Date,
   browserUiPosition: BrowserUiPosition,
-  elmCompiledTimestampBeforeReload: number | undefined
+  elmCompiledTimestampBeforeReload: number | undefined,
 ): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
@@ -1082,7 +1344,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
           status: {
             tag: "WaitingForReload",
             date: msg.date,
-            reasons: msg.reasons,
+            reasons: Array.from(new Set(msg.reasons.map(reloadReasonToString))),
           },
         },
         [],
@@ -1145,21 +1407,27 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
     case "UiMsg":
       return onUiMsg(msg.date, msg.msg, model);
 
-    case "WebSocketClosed": {
-      const attemptNumber =
-        "attemptNumber" in model.status ? model.status.attemptNumber + 1 : 1;
-      return [
-        {
-          ...model,
-          status: {
-            tag: "SleepingBeforeReconnect",
-            date: msg.date,
-            attemptNumber,
+    case "WebSocketClosed":
+      // This message is triggered from both the WebSocket "error" and "closed" events.
+      // Sometimes, both events happen at the same time. We only want to start reconnecting once,
+      // so check if we’re already sleeping before doing anything.
+      if (model.status.tag === "SleepingBeforeReconnect") {
+        return [model, []];
+      } else {
+        const attemptNumber =
+          "attemptNumber" in model.status ? model.status.attemptNumber + 1 : 1;
+        return [
+          {
+            ...model,
+            status: {
+              tag: "SleepingBeforeReconnect",
+              date: msg.date,
+              attemptNumber,
+            },
           },
-        },
-        [{ tag: "SleepBeforeReconnect", attemptNumber }],
-      ];
-    }
+          [{ tag: "SleepBeforeReconnect", attemptNumber }],
+        ];
+      }
 
     case "WebSocketConnected":
       return [
@@ -1298,7 +1566,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
 function onWebSocketToClientMessage(
   date: Date,
   msg: WebSocketToClientMessage,
-  model: Model
+  model: Model,
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
     case "FocusedTabAcknowledged":
@@ -1344,7 +1612,7 @@ function onWebSocketToClientMessage(
       ];
 
     case "StatusChanged":
-      return statusChanged(date, msg, model);
+      return statusChanged(date, msg.status, model);
 
     case "SuccessfullyCompiled": {
       const justChangedBrowserUiPosition =
@@ -1410,8 +1678,8 @@ function onWebSocketToClientMessage(
 
 function statusChanged(
   date: Date,
-  { status }: StatusChanged,
-  model: Model
+  status: StatusChange,
+  model: Model,
 ): [Model, Array<Cmd>] {
   switch (status.tag) {
     case "AlreadyUpToDate":
@@ -1482,9 +1750,9 @@ function statusChanged(
                     foregroundColor: status.foregroundColor,
                     backgroundColor: status.backgroundColor,
                   };
-                  const id = JSON.stringify(overlayError);
+                  const id = Codec.JSON.stringify(Codec.unknown, overlayError);
                   return [id, overlayError];
-                })
+                }),
               ),
               openErrorOverlay: status.openErrorOverlay,
             },
@@ -1520,7 +1788,7 @@ function statusChanged(
 function reconnect(
   model: Model,
   date: Date,
-  { force }: { force: boolean }
+  { force }: { force: boolean },
 ): [Model, Array<Cmd>] {
   // We never clear reconnect `setTimeout`s. Instead, check that the required
   // amount of time has passed. This is needed since we have the “Reconnect now”
@@ -1564,34 +1832,15 @@ const runCmd =
     mutable: Mutable,
     dispatch: (msg: Msg) => void,
     _resolvePromise: (result: undefined) => void,
-    rejectPromise: (error: Error) => void
+    rejectPromise: (error: Error) => void,
   ): void => {
     switch (cmd.tag) {
-      case "Eval": {
-        try {
-          // `new Function` throws if the code contains syntax errors.
-          // eslint-disable-next-line @typescript-eslint/no-implied-eval
-          const f = new Function(cmd.code);
-          // Running the code can cause runtime errors.
-          f();
-          dispatch({ tag: "EvalSucceeded", date: getNow() });
-        } catch (unknownError) {
-          if (
-            unknownError instanceof Error &&
-            unknownError.message.startsWith("ELM_WATCH_RELOAD_NEEDED")
-          ) {
-            dispatch({
-              tag: "EvalNeedsReload",
-              date: getNow(),
-              reasons: unknownError.message.split("\n\n---\n\n").slice(1),
-            });
-          } else {
-            void Promise.reject(unknownError);
-            dispatch({ tag: "EvalErrored", date: getNow() });
-          }
-        }
+      case "Eval":
+        evalWithBackwardsCompatibility(cmd.code).catch((unknownError) => {
+          void Promise.reject(unknownError);
+          dispatch({ tag: "EvalErrored", date: getNow() });
+        });
         return;
-      }
 
       case "Flash":
         if (elements !== undefined) {
@@ -1636,7 +1885,7 @@ const runCmd =
             window.dispatchEvent(
               new CustomEvent(ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT, {
                 detail: justChangedFileUrlPaths,
-              })
+              }),
             );
           }
         }
@@ -1665,7 +1914,7 @@ const runCmd =
         mutable.webSocket = initWebSocket(
           getNow,
           cmd.elmCompiledTimestamp,
-          dispatch
+          dispatch,
         );
         return;
 
@@ -1676,22 +1925,69 @@ const runCmd =
           webSocketUrl: new URL(mutable.webSocket.url),
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
-          initializedElmAppsStatus: checkInitializedElmAppsStatus(),
+          debugModeToggled: getDebugModeToggled(),
         };
         if (elements === undefined) {
           const isError = statusToStatusType(model.status.tag) === "Error";
+          const isWebWorker =
+            typeof (window as unknown as { WorkerGlobalScope: unknown })
+              .WorkerGlobalScope !== "undefined" && !isError;
+          const consoleMethodName =
+            // `console.info` looks nicer in the browser console for Web Workers.
+            // On Node.js, we want to always print to stderr.
+            isError || !isWebWorker ? "error" : "info";
           // eslint-disable-next-line no-console
-          const consoleMethod = isError ? console.error : console.info;
-          consoleMethod(renderWebWorker(model, info));
+          const consoleMethod = console[consoleMethodName];
+          consoleMethod(renderWithoutDomElements(model, info));
         } else {
           const { targetRoot } = elements;
           render(getNow, targetRoot, dispatch, model, info, cmd.manageFocus);
+
+          // elm-watch’s overlay needs to be a modal `<dialog>` for two reasons:
+          // - It makes sure you cannot interact with elements behind it.
+          // - We need it to win against other modal `<dialog>`s on the page – they make
+          //   all other content on the page, including our overlay, inert.
+          // Support for `<dialog>` shipped in Firefox and Safari in 2022-03-14.
+          // These methods are not supported in JSDOM, so we only call them if they exist.
+          if (
+            typeof elements.container.close === "function" &&
+            typeof elements.container.showModal === "function" &&
+            // Support users removing elm-watch’s UI (`.showModal()` throws an error in that case).
+            elements.container.isConnected
+          ) {
+            if (elements.overlay.hidden) {
+              elements.container.close();
+            } else {
+              elements.container.showModal();
+            }
+          }
+
+          // Put the inner container in the top level. This is needed to stay on top of
+          // popovers. See: https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
+          // The latest shown popover gets drawn on top, so we need to enter and exit
+          // popover frequently for elm-watch to force it to be on the very top.
+          // `.showPopover()` shipped in Firefox 125, released 2024-04-16.
+          // At the time of writing (2024-10-27) that was a bit too recent to be
+          // required, so we use only call the methods if they exist. The element falls
+          // back to having the highest z-index.
+          if (
+            typeof elements.containerInner.hidePopover === "function" &&
+            typeof elements.containerInner.showPopover === "function" &&
+            // Support users removing elm-watch’s UI (`.showPopover()` throws an error in that case).
+            elements.containerInner.isConnected
+          ) {
+            elements.containerInner.hidePopover();
+            elements.containerInner.showPopover();
+          }
         }
         return;
       }
 
       case "SendMessage": {
-        const json = JSON.stringify(cmd.message);
+        const json = Codec.JSON.stringify(
+          WebSocketToServerMessage,
+          cmd.message,
+        );
         try {
           mutable.webSocket.send(json);
         } catch (error) {
@@ -1724,6 +2020,7 @@ const runCmd =
         return;
 
       case "TriggerReachedIdleState":
+        mutable.hasEverReachedIdleState = true;
         // Let the cmd queue be emptied first.
         Promise.resolve()
           .then(() => {
@@ -1742,13 +2039,13 @@ const runCmd =
             cmd.sendKey,
             cmd.errors,
             elements.overlay,
-            elements.overlayCloseButton
+            elements.overlayCloseButton,
           );
         }
         return;
 
       case "UpdateGlobalStatus":
-        __ELM_WATCH.RELOAD_STATUSES[TARGET_NAME] = cmd.reloadStatus;
+        __ELM_WATCH.RELOAD_STATUSES.set(TARGET_NAME, cmd.reloadStatus);
         switch (cmd.reloadStatus.tag) {
           case "NoReloadWanted":
           case "MightWantToReload":
@@ -1757,7 +2054,7 @@ const runCmd =
             try {
               window.sessionStorage.setItem(
                 RELOAD_TARGET_NAME_KEY_PREFIX + TARGET_NAME,
-                cmd.elmCompiledTimestamp.toString()
+                cmd.elmCompiledTimestamp.toString(),
               );
             } catch {
               // Ignore failing to write to sessionStorage.
@@ -1810,6 +2107,109 @@ const runCmd =
     }
   };
 
+// In the Azimutt example, this method takes about 40 ms (which is about the same as
+// `f = new Function(code); f()` which doesn’t support modules).
+async function evalAsModuleViaBlob(code: string): Promise<void> {
+  const objectURL = URL.createObjectURL(
+    new Blob([code], { type: "text/javascript" }),
+  );
+  await import(objectURL);
+  URL.revokeObjectURL(objectURL);
+}
+
+// In the Azimutt example, this method takes about 200 ms.
+// JSDOM does not support `URL.createObjectURL`, and Node.js does not support `import(blob)`.
+async function evalAsModuleViaDataUri(code: string): Promise<void> {
+  await import(`data:text/javascript,${encodeURIComponent(code)}`);
+}
+
+let evalAsModule = evalAsModuleViaDataUri;
+evalAsModuleViaBlob("")
+  .then(() => {
+    evalAsModule = evalAsModuleViaBlob;
+  })
+  .catch(() => {
+    // `evalAsModuleViaBlob` not supported, using the slower `evalAsModuleViaDataUri`.
+  });
+
+// For backwards compatibility, we need to first try eval-ing the code like
+// we did before supporting modules. While any strict mode enabled script
+// should work just fine to execute as a module (which are always in strict mode),
+// non-strict mode scripts might use features that break in a module or strict mode.
+// For example, if the user has postprocessed the code to do things like
+// `this.FOO = true` (inspired by how the Elm JS basically does `this.Elm = stuff`).
+// Top-level `this` is `undefined` in module mode, while it refers to the global
+// object in script mode (`window` in web pages). (In CommonJS, it refers to `exports`.)
+// This backwards compatibility can be removed in a major version.
+// When we do, revert this commit to make the tests pass: bbdbe86f24c8d047f2cd7d9a04c1d3de19d77822
+let evalWithBackwardsCompatibility = async (code: string): Promise<void> => {
+  let f;
+  try {
+    // This can fail if the code has incorrect syntax.
+    // Note that the code isn’t executed until we call the function.
+    // This is good – this allows us to syntax check the code without side effects.
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    f = new Function(code);
+  } catch (scriptError) {
+    // If there was a syntax error, there’s a chance it was due to `import` and `export`.
+    try {
+      await evalAsModule(code);
+    } catch (moduleError) {
+      // If eval-ing as a module failed too, present both errors as we can’t know which
+      // is more useful to the user.
+      throw new Error(
+        `Error when evaluated as a module:\n\n${unknownErrorToString(moduleError)}\n\nError when evaluated as a script:\n\n${unknownErrorToString(scriptError)}`,
+      );
+    }
+    // If the code parsed and ran successfully, the code most likely has `import`
+    // or `export`, and will likely have that next time too. Swap over to a variation
+    // of this function where we try module mode first, and script mode second.
+    // `new Function(code)` isn’t free – spending time on that on each hot reload can
+    // up to double the time.
+    [evalWithBackwardsCompatibility, evalWithBackwardsCompatibility2] = [
+      evalWithBackwardsCompatibility2,
+      evalWithBackwardsCompatibility,
+    ];
+    return;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  f();
+};
+
+// Like `evalWithBackwardsCompatibility` but tries the modes in the opposite order:
+// Module first, then script.
+let evalWithBackwardsCompatibility2 = async (code: string): Promise<void> => {
+  try {
+    await evalAsModule(code);
+  } catch (moduleError) {
+    // If eval-ing as a module fails, try script mode.
+    // Note that this is not 100 % clean: Every line but the last might succeed,
+    // and then the very last line might be `this.FOO = 1337`, which then fails
+    // as `this` is `undefined` in modules. Then trying script mode is going to
+    // succeed, but in practice all the code ran twice. That should be fine though –
+    // an unnecessary hot reload shouldn’t cause any trouble. One known effect
+    // is that the green animation does not appear. However, since we flip back the
+    // functions it’s going to work next time. And I don’t think it’s very likely
+    // this will happen. And in the next major version, script mode eval-ing will
+    // be removed anyway.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const f = new Function(code);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      f();
+    } catch (scriptError) {
+      throw new Error(
+        `Error when evaluated as a module:\n\n${unknownErrorToString(moduleError)}\n\nError when evaluated as a script:\n\n${unknownErrorToString(scriptError)}`,
+      );
+    }
+    // Swap back to trying script mode before module mode, as that succeeded better.
+    [evalWithBackwardsCompatibility, evalWithBackwardsCompatibility2] = [
+      evalWithBackwardsCompatibility2,
+      evalWithBackwardsCompatibility,
+    ];
+  }
+};
+
 type ParseWebSocketMessageDataResult =
   | {
       tag: "Error";
@@ -1821,94 +2221,51 @@ type ParseWebSocketMessageDataResult =
     };
 
 function parseWebSocketMessageData(
-  data: unknown
+  data: unknown,
 ): ParseWebSocketMessageDataResult {
-  try {
-    return {
-      tag: "Success",
-      message: decodeWebSocketToClientMessage(Decode.string(data)),
-    };
-  } catch (unknownError) {
-    return {
-      tag: "Error",
-      message: `Failed to decode web socket message sent from the server:\n${possiblyDecodeErrorToString(
-        unknownError
-      )}`,
-    };
+  const decoderResult = decodeWebSocketToClientMessage(data);
+  switch (decoderResult.tag) {
+    case "DecoderError":
+      return {
+        tag: "Error",
+        message: `Failed to decode web socket message sent from the server:\n${Codec.format(
+          decoderResult.error,
+        )}`,
+      };
+    case "Valid":
+      return {
+        tag: "Success",
+        message: decoderResult.value,
+      };
   }
 }
 
-function possiblyDecodeErrorToString(unknownError: unknown): string {
-  return unknownError instanceof Decode.DecoderError
-    ? unknownError.format()
-    : unknownError instanceof Error
-    ? unknownError.message
-    : Decode.repr(unknownError);
-}
-
-function functionToNull(value: unknown): unknown {
-  return typeof value === "function" ? null : value;
-}
-
-type ProgramType = ReturnType<typeof ProgramType>;
-const ProgramType = Decode.stringUnion({
-  "Platform.worker": null,
-  "Browser.sandbox": null,
-  "Browser.element": null,
-  "Browser.document": null,
-  "Browser.application": null,
-  Html: null,
-});
-
-const ElmModule: Decode.Decoder<Array<ProgramType>> = Decode.chain(
-  Decode.record(
-    Decode.chain(
-      functionToNull,
-      Decode.multi({
-        null: () => [],
-        array: Decode.array(
-          Decode.fields((field) => field("__elmWatchProgramType", ProgramType))
-        ),
-        object: (value) => ElmModule(value),
-      })
-    )
-  ),
-  (record) => Object.values(record).flat()
-);
-
-const ProgramTypes = Decode.fields((field) => field("Elm", ElmModule));
-
-function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
-  // If this target is a proxy, or if another one is, it’s not safe to touch
-  // `window.Elm` since it can throw errors by design, but not errors that
-  // we want to show with a different icon. In this case, we don’t know if
+function getDebugModeToggled(): Toggled {
+  // If this target is a proxy, or if another one is, we don’t know if
   // it will be possible to switch to debug mode, so don’t allow that yet.
-  if (window.Elm !== undefined && "__elmWatchProxy" in window.Elm) {
+  if (__ELM_WATCH.SOME_TARGET_IS_PROXY) {
     return {
-      tag: "DebuggerModeStatus",
-      status: {
-        tag: "Disabled",
-        reason: noDebuggerYetReason,
-      },
+      tag: "Disabled",
+      reason: noDebuggerYetReason,
     };
   }
 
-  if (window.Elm === undefined) {
-    return { tag: "MissingWindowElm" };
-  }
+  const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
 
-  let programTypes;
-  try {
-    programTypes = ProgramTypes(window);
-  } catch (unknownError) {
-    return {
-      tag: "DecodeError",
-      message: possiblyDecodeErrorToString(unknownError),
-    };
-  }
+  const programTypes: Array<ProgramType> =
+    targetData === undefined
+      ? []
+      : Array.from(targetData.initializedElmApps.values()).flatMap((apps) =>
+          apps.map((app) => app.__elmWatchProgramType),
+        );
 
+  // It’s a valid use case to not initialize any Elm apps right away. (Maybe that is done when clicking a button.)
+  // We can’t know if the debugger can be enabled until at least one Elm app has been initialized.
   if (programTypes.length === 0) {
-    return { tag: "NoProgramsAtAll" };
+    return {
+      tag: "Disabled",
+      reason: noDebuggerNoAppsReason,
+    };
   }
 
   const noDebugger = programTypes.filter((programType) => {
@@ -1927,25 +2284,22 @@ function checkInitializedElmAppsStatus(): InitializedElmAppsStatus {
   // If we have _only_ programs that don’t support the debugger we know for sure
   // that we cannot enable it. Most likely there’s just one single program on
   // the page, and that’s where this is the most helpful anyway.
-  return {
-    tag: "DebuggerModeStatus",
-    status:
-      noDebugger.length === programTypes.length
-        ? {
-            tag: "Disabled",
-            reason: noDebuggerReason(new Set(noDebugger)),
-          }
-        : { tag: "Enabled" },
-  };
+  return noDebugger.length === programTypes.length
+    ? {
+        tag: "Disabled",
+        reason: noDebuggerReason(new Set(noDebugger)),
+      }
+    : { tag: "Enabled" };
 }
 
 function reloadPageIfNeeded(): void {
   let shouldReload = false;
   const reasons: Array<[string, Array<string>]> = [];
 
-  for (const [targetName, reloadStatus] of Object.entries(
-    __ELM_WATCH.RELOAD_STATUSES
-  )) {
+  for (const [
+    targetName,
+    reloadStatus,
+  ] of __ELM_WATCH.RELOAD_STATUSES.entries()) {
     switch (reloadStatus.tag) {
       case "MightWantToReload":
         return;
@@ -1963,7 +2317,6 @@ function reloadPageIfNeeded(): void {
   if (!shouldReload) {
     return;
   }
-
   const first = reasons[0];
   const [separator, reasonString] =
     reasons.length === 1 && first !== undefined && first[1].length === 1
@@ -1975,7 +2328,7 @@ function reloadPageIfNeeded(): void {
               [
                 targetName,
                 ...subReasons.map((subReason) => `- ${subReason}`),
-              ].join("\n")
+              ].join("\n"),
             )
             .join("\n\n"),
         ];
@@ -1983,7 +2336,7 @@ function reloadPageIfNeeded(): void {
     reasons.length === 0
       ? undefined
       : `elm-watch: I did a full page reload because${separator}${reasonString}`;
-  __ELM_WATCH.RELOAD_STATUSES = {};
+  __ELM_WATCH.RELOAD_STATUSES = new Map();
   __ELM_WATCH.RELOAD_PAGE(message);
 }
 
@@ -2009,7 +2362,7 @@ function h<T extends HTMLElement>(
         .replace("Anchor", "a")
         .replace("Paragraph", "p")
         .replace(/^([DOU])List$/, "$1l")
-        .toLowerCase()
+        .toLowerCase(),
   ) as T;
 
   Object.assign(element, props);
@@ -2029,7 +2382,7 @@ function h<T extends HTMLElement>(
   for (const child of children) {
     if (child !== undefined) {
       element.append(
-        typeof child === "string" ? document.createTextNode(child) : child
+        typeof child === "string" ? document.createTextNode(child) : child,
       );
     }
   }
@@ -2042,13 +2395,13 @@ type Info = {
   webSocketUrl: URL;
   targetName: string;
   originalCompilationMode: CompilationModeWithProxy;
-  initializedElmAppsStatus: InitializedElmAppsStatus;
+  debugModeToggled: Toggled;
 };
 
-function renderWebWorker(model: Model, info: Info): string {
-  const statusData = statusIconAndText(model, info);
+function renderWithoutDomElements(model: Model, info: Info): string {
+  const statusData = statusIconAndText(model);
   return `${statusData.icon} elm-watch: ${statusData.status} ${formatTime(
-    model.status.date
+    model.status.date,
   )} (${info.targetName})`;
 }
 
@@ -2058,7 +2411,7 @@ function render(
   dispatch: (msg: Msg) => void,
   model: Model,
   info: Info,
-  manageFocus: boolean
+  manageFocus: boolean,
 ): void {
   targetRoot.replaceChildren(
     view(
@@ -2066,8 +2419,8 @@ function render(
         dispatch({ tag: "UiMsg", date: getNow(), msg });
       },
       model,
-      info
-    )
+      info,
+    ),
   );
 
   const firstFocusableElement = targetRoot.querySelector(`button, [tabindex]`);
@@ -2121,8 +2474,8 @@ function getStatusFlashType({
           ? "error"
           : undefined
         : uiRelatedUpdate
-        ? undefined
-        : "error";
+          ? undefined
+          : "error";
     case "Waiting":
       return undefined;
   }
@@ -2132,7 +2485,7 @@ type FlashType = "error" | "success";
 
 function flash(elements: Elements, flashType: FlashType): void {
   for (const element of elements.targetRoot.querySelectorAll(
-    `.${CLASS.flash}`
+    `.${CLASS.flash}`,
   )) {
     element.setAttribute("data-flash", flashType);
   }
@@ -2202,6 +2555,7 @@ time::after {
   inset: 0;
   overflow-y: auto;
   padding: 2ch 0;
+  user-select: text;
 }
 
 .${CLASS.overlayCloseButton} {
@@ -2503,7 +2857,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
-  info: Info
+  info: Info,
 ): HTMLElement {
   const model: Model = __ELM_WATCH.MOCKED_TIMINGS
     ? {
@@ -2516,7 +2870,7 @@ function view(
     : passedModel;
 
   const statusData: StatusData = {
-    ...statusIconAndText(model, info),
+    ...statusIconAndText(model),
     ...viewStatus(dispatch, model, info),
   };
 
@@ -2529,7 +2883,7 @@ function view(
           statusData,
           info,
           model.browserUiPosition,
-          dispatch
+          dispatch,
         )
       : undefined,
     h(
@@ -2549,8 +2903,8 @@ function view(
         },
         icon(
           model.uiExpanded ? CHEVRON_UP : CHEVRON_DOWN,
-          model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch"
-        )
+          model.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch",
+        ),
       ),
       compilationModeIcon(model.compilationMode),
       icon(statusData.icon, statusData.status, {
@@ -2568,22 +2922,22 @@ function view(
       h(
         HTMLTimeElement,
         { dateTime: model.status.date.toISOString() },
-        formatTime(model.status.date)
+        formatTime(model.status.date),
       ),
-      h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME)
-    )
+      h(HTMLSpanElement, { className: CLASS.targetName }, TARGET_NAME),
+    ),
   );
 }
 
 function icon(
   emoji: string,
   alt: string,
-  props?: Partial<HTMLSpanElement>
+  props?: Partial<HTMLSpanElement>,
 ): HTMLElement {
   return h(
     HTMLSpanElement,
     { attrs: { "aria-label": alt }, ...props },
-    h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, emoji)
+    h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, emoji),
   );
 }
 
@@ -2592,7 +2946,7 @@ function viewExpandedUi(
   statusData: StatusData,
   info: Info,
   browserUiPosition: BrowserUiPosition,
-  dispatch: (msg: UiMsg) => void
+  dispatch: (msg: UiMsg) => void,
 ): HTMLElement {
   const items: Array<[string, HTMLElement | string]> = [
     ["target", info.targetName],
@@ -2606,7 +2960,7 @@ function viewExpandedUi(
           dateTime: status.date.toISOString(),
           attrs: { "data-format": "2044-04-30 04:44:44" },
         },
-        `${formatDate(status.date)} ${formatTime(status.date)}`
+        `${formatDate(status.date)} ${formatTime(status.date)}`,
       ),
     ],
     ["status", statusData.status],
@@ -2631,7 +2985,7 @@ function viewExpandedUi(
       ...items.flatMap(([key, value]) => [
         h(HTMLElement, { localName: "dt" }, key),
         h(HTMLElement, { localName: "dd" }, value),
-      ])
+      ]),
     ),
     ...statusData.content,
     browserUiPositionSendKey === undefined
@@ -2639,8 +2993,8 @@ function viewExpandedUi(
       : viewBrowserUiPositionChooser(
           browserUiPosition,
           dispatch,
-          browserUiPositionSendKey
-        )
+          browserUiPositionSendKey,
+        ),
   );
 }
 
@@ -2654,7 +3008,7 @@ const allBrowserUiPositionsInOrder: Array<BrowserUiPosition> = [
 function viewBrowserUiPositionChooser(
   currentPosition: BrowserUiPosition,
   dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey
+  sendKey: SendKey,
 ): HTMLElement {
   const arrows = getBrowserUiPositionArrows(currentPosition);
   return h(
@@ -2680,9 +3034,9 @@ function viewBrowserUiPositionChooser(
                 });
               },
             },
-            arrow
+            arrow,
           );
-    })
+    }),
   );
 }
 
@@ -2740,10 +3094,7 @@ type StatusData = {
   content: Array<HTMLElement>;
 };
 
-function statusIconAndText(
-  model: Model,
-  info: Info
-): Pick<StatusData, "icon" | "status"> {
+function statusIconAndText(model: Model): Pick<StatusData, "icon" | "status"> {
   switch (model.status.tag) {
     case "Busy":
       return {
@@ -2777,7 +3128,7 @@ function statusIconAndText(
 
     case "Idle":
       return {
-        icon: idleIcon(info.initializedElmAppsStatus),
+        icon: "✅",
         status: "Successfully compiled",
       };
 
@@ -2810,7 +3161,7 @@ function statusIconAndText(
 function viewStatus(
   dispatch: (msg: UiMsg) => void,
   model: Model,
-  info: Info
+  info: Info,
 ): Pick<StatusData, "content" | "dl"> {
   const { status, compilationMode } = model;
   switch (status.tag) {
@@ -2877,7 +3228,7 @@ function viewStatus(
           h(
             HTMLParagraphElement,
             {},
-            "Check the console in the browser developer tools to see errors!"
+            "Check the console in the browser developer tools to see errors!",
           ),
         ],
       };
@@ -2909,7 +3260,7 @@ function viewStatus(
                 dispatch({ tag: "PressedReconnectNow" });
               },
             },
-            "Reconnect web socket now"
+            "Reconnect web socket now",
           ),
         ],
       };
@@ -2921,7 +3272,7 @@ function viewStatus(
           h(
             HTMLParagraphElement,
             {},
-            "I ran into an unexpected error! This is the error message:"
+            "I ran into an unexpected error! This is the error message:",
           ),
           h(HTMLPreElement, {}, status.message),
         ],
@@ -2936,7 +3287,7 @@ function viewStatus(
                 "A while ago I reloaded the page to get new compiled JavaScript.",
                 "But it looks like after the last page reload I got the same JavaScript as before, instead of new stuff!",
                 `The old JavaScript was compiled ${new Date(
-                  model.elmCompiledTimestamp
+                  model.elmCompiledTimestamp,
                 ).toLocaleString()}, and so was the JavaScript currently running.`,
                 "I currently need to reload the page again, but fear a reload loop if I try.",
                 "Do you have accidental HTTP caching enabled maybe?",
@@ -2949,7 +3300,7 @@ function viewStatus(
 
 function viewErrorOverlayToggleButton(
   dispatch: (msg: UiMsg) => void,
-  errorOverlay: ErrorOverlay
+  errorOverlay: ErrorOverlay,
 ): HTMLElement {
   return h(
     HTMLButtonElement,
@@ -2966,7 +3317,7 @@ function viewErrorOverlayToggleButton(
         });
       },
     },
-    errorOverlay.openErrorOverlay ? "Hide errors" : "Show errors"
+    errorOverlay.openErrorOverlay ? "Hide errors" : "Show errors",
   );
 }
 
@@ -2980,7 +3331,7 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
           h(
             HTMLParagraphElement,
             {},
-            "ℹ️ Clicking error locations only works if you set it up."
+            "ℹ️ Clicking error locations only works if you set it up.",
           ),
           h(
             HTMLParagraphElement,
@@ -2996,10 +3347,10 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
               h(
                 HTMLElement,
                 { localName: "strong" },
-                "Clickable error locations"
-              )
-            )
-          )
+                "Clickable error locations",
+              ),
+            ),
+          ),
         ),
       ];
 
@@ -3011,30 +3362,16 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
           h(
             HTMLElement,
             { localName: "strong" },
-            "Opening the location in your editor failed!"
-          )
+            "Opening the location in your editor failed!",
+          ),
         ),
         h(HTMLPreElement, {}, error.message),
       ];
   }
 }
 
-function idleIcon(status: InitializedElmAppsStatus): string {
-  switch (status.tag) {
-    case "DecodeError":
-    case "MissingWindowElm":
-      return "❌";
-
-    case "NoProgramsAtAll":
-      return "❓";
-
-    case "DebuggerModeStatus":
-      return "✅";
-  }
-}
-
 function compilationModeIcon(
-  compilationMode: CompilationModeWithProxy
+  compilationMode: CompilationModeWithProxy,
 ): HTMLElement | undefined {
   switch (compilationMode) {
     case "proxy":
@@ -3061,7 +3398,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
         h(
           HTMLParagraphElement,
           {},
-          h(HTMLElement, { localName: "strong" }, "Having trouble connecting?")
+          h(HTMLElement, { localName: "strong" }, "Having trouble connecting?"),
         ),
         h(HTMLParagraphElement, {}, "Setting up HTTPS can be a bit tricky."),
         h(
@@ -3075,9 +3412,9 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
               target: "_blank",
               rel: "noreferrer",
             },
-            "HTTPS with elm-watch"
+            "HTTPS with elm-watch",
           ),
-          "."
+          ".",
         ),
       ]
     : [];
@@ -3086,24 +3423,8 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
 type CompilationModeOption = {
   mode: CompilationMode;
   name: string;
-  status: Toggled;
+  toggled: Toggled;
 };
-
-type InitializedElmAppsStatus =
-  | {
-      tag: "DebuggerModeStatus";
-      status: Toggled;
-    }
-  | {
-      tag: "DecodeError";
-      message: string;
-    }
-  | {
-      tag: "MissingWindowElm";
-    }
-  | {
-      tag: "NoProgramsAtAll";
-    };
 
 type Toggled =
   | {
@@ -3116,11 +3437,47 @@ type Toggled =
 
 const noDebuggerYetReason = "The Elm debugger isn't available at this point.";
 
+const noDebuggerNoAppsReason =
+  "The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)";
+
 function noDebuggerReason(noDebuggerProgramTypes: Set<ProgramType>): string {
   return `The Elm debugger isn't supported by ${humanList(
     Array.from(noDebuggerProgramTypes, (programType) => `\`${programType}\``),
-    "and"
+    "and",
   )} programs.`;
+}
+
+function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
+  switch (reason.tag) {
+    case "FlagsTypeChanged":
+      return `the flags type in \`${reason.moduleName}\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\nThis is the error:\n${reason.jsonErrorMessage}`;
+    case "HotReloadCaughtError":
+      return `hot reload for \`${reason.moduleName}\` failed, probably because of incompatible model changes.\nThis is the error:\n${unknownErrorToString(reason.caughtError)}`;
+    case "InitCmds":
+      return `the page loaded with old compiled code, and Cmds returned from \`${reason.moduleName}.init\` started running before the new code arrived. Let's re-run those with the new code!`;
+    case "InitReturnValueChanged":
+      return `\`${reason.moduleName}.init\` returned something different than last time. Let's start fresh!`;
+    case "MessageTypeChangedInDebugMode":
+      return `the message type in \`${reason.moduleName}\` changed in debug mode ("debug metadata" changed).`;
+    case "NewPortAdded":
+      return `a new port '${reason.name}' was added. The idea is to give JavaScript code a chance to set it up!`;
+    case "ProgramTypeChanged":
+      return `\`${reason.moduleName}.main\` changed from \`${reason.previousProgramType}\` to \`${reason.newProgramType}\`.`;
+  }
+}
+
+// This is slightly different from `unknownErrorToString` in `Helpers.ts`, which only
+// needs to support Node.js (V8). This one supports browsers having different `.stack`.
+function unknownErrorToString(error: unknown): string {
+  return error instanceof Error
+    ? error.stack !== undefined
+      ? // In Chrome (V8), `.stack` looks like this: `${errorConstructorName}: ${message}\n${stack}`.
+        // In Firefox and Safari, `.stack` is only the stacktrace (does not contain the message).
+        error.stack.includes(error.message)
+        ? error.stack
+        : `${error.message}\n${error.stack}`
+      : error.message
+    : Codec.repr(error);
 }
 
 function humanList(list: Array<string>, joinWord: string): string {
@@ -3128,10 +3485,10 @@ function humanList(list: Array<string>, joinWord: string): string {
   return length <= 1
     ? list.join("")
     : length === 2
-    ? list.join(` ${joinWord} `)
-    : `${list.slice(0, length - 2).join(", ")}, ${list
-        .slice(-2)
-        .join(` ${joinWord} `)}`;
+      ? list.join(` ${joinWord} `)
+      : `${list.slice(0, length - 2).join(", ")}, ${list
+          .slice(-2)
+          .join(` ${joinWord} `)}`;
 }
 
 function viewCompilationModeChooser({
@@ -3147,113 +3504,67 @@ function viewCompilationModeChooser({
   warnAboutCompilationModeMismatch: boolean;
   info: Info;
 }): Array<HTMLElement> {
-  switch (info.initializedElmAppsStatus.tag) {
-    case "DecodeError":
-      return [
-        h(
-          HTMLParagraphElement,
-          {},
-          "window.Elm does not look like expected! This is the error message:"
-        ),
-        h(HTMLPreElement, {}, info.initializedElmAppsStatus.message),
-      ];
+  const compilationModes: Array<CompilationModeOption> = [
+    { mode: "debug", name: "Debug", toggled: info.debugModeToggled },
+    { mode: "standard", name: "Standard", toggled: { tag: "Enabled" } },
+    { mode: "optimize", name: "Optimize", toggled: { tag: "Enabled" } },
+  ];
 
-    case "MissingWindowElm":
-      return [
-        h(
-          HTMLParagraphElement,
-          {},
-          "elm-watch requires ",
-          h(
-            HTMLAnchorElement,
-            {
-              href: "https://lydell.github.io/elm-watch/window.Elm/",
-              target: "_blank",
-              rel: "noreferrer",
-            },
-            "window.Elm"
-          ),
-          " to exist, but it is undefined!"
-        ),
-      ];
+  return [
+    h(
+      HTMLFieldSetElement,
+      { disabled: sendKey === undefined },
+      h(HTMLLegendElement, {}, "Compilation mode"),
+      ...compilationModes.map(({ mode, name, toggled: status }) => {
+        const nameWithIcon = h(
+          HTMLSpanElement,
+          { className: CLASS.compilationModeWithIcon },
+          name,
+          mode === selectedMode ? compilationModeIcon(mode) : undefined,
+        );
 
-    case "NoProgramsAtAll":
-      return [
-        h(
-          HTMLParagraphElement,
-          {},
-          "It looks like no Elm apps were initialized by elm-watch. Check the console in the browser developer tools to see potential errors!"
-        ),
-      ];
-
-    case "DebuggerModeStatus": {
-      const compilationModes: Array<CompilationModeOption> = [
-        {
-          mode: "debug",
-          name: "Debug",
-          status: info.initializedElmAppsStatus.status,
-        },
-        { mode: "standard", name: "Standard", status: { tag: "Enabled" } },
-        { mode: "optimize", name: "Optimize", status: { tag: "Enabled" } },
-      ];
-
-      return [
-        h(
-          HTMLFieldSetElement,
-          { disabled: sendKey === undefined },
-          h(HTMLLegendElement, {}, "Compilation mode"),
-          ...compilationModes.map(({ mode, name, status }) => {
-            const nameWithIcon = h(
-              HTMLSpanElement,
-              { className: CLASS.compilationModeWithIcon },
-              name,
-              mode === selectedMode ? compilationModeIcon(mode) : undefined
-            );
-
-            return h(
-              HTMLLabelElement,
-              { className: status.tag },
-              h(HTMLInputElement, {
-                type: "radio",
-                name: `CompilationMode-${info.targetName}`,
-                value: mode,
-                checked: mode === selectedMode,
-                disabled: sendKey === undefined || status.tag === "Disabled",
-                onchange:
-                  sendKey === undefined
-                    ? undefined
-                    : () => {
-                        dispatch({
-                          tag: "ChangedCompilationMode",
-                          compilationMode: mode,
-                          sendKey,
-                        });
-                      },
-              }),
-              ...(status.tag === "Enabled"
-                ? [
-                    nameWithIcon,
-                    warnAboutCompilationModeMismatch &&
-                    mode === selectedMode &&
-                    selectedMode !== info.originalCompilationMode &&
-                    info.originalCompilationMode !== "proxy"
-                      ? h(
-                          HTMLElement,
-                          { localName: "small" },
-                          `Note: The code currently running is in ${ORIGINAL_COMPILATION_MODE} mode.`
-                        )
-                      : undefined,
-                  ]
-                : [
-                    nameWithIcon,
-                    h(HTMLElement, { localName: "small" }, status.reason),
-                  ])
-            );
-          })
-        ),
-      ];
-    }
-  }
+        return h(
+          HTMLLabelElement,
+          { className: status.tag },
+          h(HTMLInputElement, {
+            type: "radio",
+            name: `CompilationMode-${info.targetName}`,
+            value: mode,
+            checked: mode === selectedMode,
+            disabled: sendKey === undefined || status.tag === "Disabled",
+            onchange:
+              sendKey === undefined
+                ? null
+                : () => {
+                    dispatch({
+                      tag: "ChangedCompilationMode",
+                      compilationMode: mode,
+                      sendKey,
+                    });
+                  },
+          }),
+          ...(status.tag === "Enabled"
+            ? [
+                nameWithIcon,
+                warnAboutCompilationModeMismatch &&
+                mode === selectedMode &&
+                selectedMode !== info.originalCompilationMode &&
+                info.originalCompilationMode !== "proxy"
+                  ? h(
+                      HTMLElement,
+                      { localName: "small" },
+                      `Note: The code currently running is in ${ORIGINAL_COMPILATION_MODE} mode.`,
+                    )
+                  : undefined,
+              ]
+            : [
+                nameWithIcon,
+                h(HTMLElement, { localName: "small" }, status.reason),
+              ]),
+        );
+      }),
+    ),
+  ];
 }
 
 const DATA_TARGET_NAMES = "data-target-names";
@@ -3264,7 +3575,7 @@ function updateErrorOverlay(
   sendKey: SendKey | undefined,
   errors: Map<string, OverlayError>,
   overlay: HTMLElement,
-  overlayCloseButton: HTMLElement
+  overlayCloseButton: HTMLElement,
 ): void {
   const existingErrorElements = new Map<
     string,
@@ -3275,11 +3586,11 @@ function updateErrorOverlay(
       {
         targetNames: new Set(
           // Newline is not a valid target name character.
-          (element.getAttribute(DATA_TARGET_NAMES) ?? "").split("\n")
+          (element.getAttribute(DATA_TARGET_NAMES) ?? "").split("\n"),
         ),
         element,
       },
-    ])
+    ]),
   );
 
   for (const [id, { targetNames, element }] of existingErrorElements) {
@@ -3303,7 +3614,7 @@ function updateErrorOverlay(
         dispatch,
         sendKey,
         id,
-        error
+        error,
       );
       if (previousElement === undefined) {
         overlay.prepend(element);
@@ -3313,18 +3624,18 @@ function updateErrorOverlay(
       overlay.style.backgroundColor = error.backgroundColor;
       overlayCloseButton.style.setProperty(
         "--foregroundColor",
-        error.foregroundColor
+        error.foregroundColor,
       );
       overlayCloseButton.style.setProperty(
         "--backgroundColor",
-        error.backgroundColor
+        error.backgroundColor,
       );
       previousElement = element;
     } else {
       if (!maybeExisting.targetNames.has(targetName)) {
         maybeExisting.element.setAttribute(
           DATA_TARGET_NAMES,
-          [...maybeExisting.targetNames, targetName].join("\n")
+          [...maybeExisting.targetNames, targetName].join("\n"),
         );
       }
       previousElement = maybeExisting.element;
@@ -3346,7 +3657,7 @@ function viewOverlayError(
   dispatch: (msg: UiMsg) => void,
   sendKey: SendKey | undefined,
   id: string,
-  error: OverlayError
+  error: OverlayError,
 ): HTMLElement {
   return h(
     HTMLDetailsElement,
@@ -3372,24 +3683,24 @@ function viewOverlayError(
             backgroundColor: error.backgroundColor,
           },
         },
-        error.title
+        error.title,
       ),
       error.location === undefined
         ? undefined
         : h(
             HTMLParagraphElement,
             {},
-            viewErrorLocation(dispatch, sendKey, error.location)
-          )
+            viewErrorLocation(dispatch, sendKey, error.location),
+          ),
     ),
-    h(HTMLPreElement, { innerHTML: error.htmlContent })
+    h(HTMLPreElement, { innerHTML: error.htmlContent }),
   );
 }
 
 function viewErrorLocation(
   dispatch: (msg: UiMsg) => void,
   sendKey: SendKey | undefined,
-  location: ErrorLocation
+  location: ErrorLocation,
 ): HTMLElement | string {
   switch (location.tag) {
     case "FileOnly":
@@ -3401,7 +3712,7 @@ function viewErrorLocation(
           line: 1,
           column: 1,
         },
-        location.file.absolutePath
+        location.file,
       );
 
     case "FileWithLineAndColumn": {
@@ -3409,7 +3720,7 @@ function viewErrorLocation(
         dispatch,
         sendKey,
         location,
-        `${location.file.absolutePath}:${location.line}:${location.column}`
+        `${location.file}:${location.line}:${location.column}`,
       );
     }
 
@@ -3426,7 +3737,7 @@ function viewErrorLocationButton(
     line: number;
     column: number;
   },
-  text: string
+  text: string,
 ): HTMLButtonElement | string {
   return sendKey === undefined
     ? text
@@ -3444,13 +3755,13 @@ function viewErrorLocationButton(
             });
           },
         },
-        text
+        text,
       );
 }
 
 function renderMockStatuses(
   getNow: GetNow,
-  elements: Elements | undefined
+  elements: Elements | undefined,
 ): void {
   if (elements === undefined) {
     return;
@@ -3462,10 +3773,7 @@ function renderMockStatuses(
     version: VERSION,
     webSocketUrl: new URL("ws://localhost:53167"),
     originalCompilationMode: "standard",
-    initializedElmAppsStatus: {
-      tag: "DebuggerModeStatus",
-      status: { tag: "Enabled" },
-    },
+    debugModeToggled: { tag: "Enabled" },
   };
 
   const mockStatuses: Record<
@@ -3497,7 +3805,7 @@ function renderMockStatuses(
       info: {
         ...info,
         webSocketUrl: new URL(
-          "ws://development.admin.example.com.localhost:53167"
+          "ws://development.admin.example.com.localhost:53167",
         ),
       },
     },
@@ -3522,12 +3830,9 @@ function renderMockStatuses(
       info: {
         ...info,
         originalCompilationMode: "standard",
-        initializedElmAppsStatus: {
-          tag: "DebuggerModeStatus",
-          status: {
-            tag: "Disabled",
-            reason: noDebuggerYetReason,
-          },
+        debugModeToggled: {
+          tag: "Disabled",
+          reason: noDebuggerYetReason,
         },
       },
       compilationMode: "optimize",
@@ -3538,12 +3843,9 @@ function renderMockStatuses(
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        initializedElmAppsStatus: {
-          tag: "DebuggerModeStatus",
-          status: {
-            tag: "Disabled",
-            reason: noDebuggerReason(new Set(["Html"])),
-          },
+        debugModeToggled: {
+          tag: "Disabled",
+          reason: noDebuggerReason(new Set(["Html"])),
         },
       },
     },
@@ -3553,12 +3855,9 @@ function renderMockStatuses(
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        initializedElmAppsStatus: {
-          tag: "DebuggerModeStatus",
-          status: {
-            tag: "Disabled",
-            reason: noDebuggerReason(new Set(["Html", "Platform.worker"])),
-          },
+        debugModeToggled: {
+          tag: "Disabled",
+          reason: noDebuggerReason(new Set(["Html", "Platform.worker"])),
         },
       },
     },
@@ -3568,24 +3867,9 @@ function renderMockStatuses(
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       info: {
         ...info,
-        initializedElmAppsStatus: {
-          tag: "NoProgramsAtAll",
-        },
-      },
-    },
-    WindowElmDecodeError: {
-      tag: "Idle",
-      date,
-      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      info: {
-        ...info,
-        initializedElmAppsStatus: {
-          tag: "DecodeError",
-          message: new Decode.DecoderError({
-            tag: "object",
-            got: 5,
-            key: "Main",
-          }).format(),
+        debugModeToggled: {
+          tag: "Disabled",
+          reason: noDebuggerNoAppsReason,
         },
       },
     },
@@ -3688,15 +3972,17 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       },
       model,
       { ...(status.info ?? info), targetName },
-      false
+      false,
     );
   }
 }
 
 void renderMockStatuses;
 
-// `Platform.worker` programs can also be run in Node.js. (`this === exports` there.)
-// But there’s no `WebSocket`. So don’t bother with starting anything.
+// Node.js used to not have a `WebSocket` global. We used to skip running the elm-watch client
+// for `Platform.worker` programs run (in a certain way) in Node.js.
+// These days, Node.js does have `WebSocket`, and the elm-watch client does work in Node.js.
+// But we keep the check for backwards compatibility.
 if (typeof WebSocket !== "undefined") {
   run();
 }

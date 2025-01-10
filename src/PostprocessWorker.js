@@ -1,4 +1,6 @@
-// This file is used during testing and when executing using `node -r esbuild-register` only.
+// This file is used during testing only.
 // In production we load the compiled version of PostprocessWorker.ts directly.
-require("esbuild-register/dist/node").register();
-require("./PostprocessWorker.ts");
+import { register } from "tsx/esm/api";
+const unregister = register();
+await import("./PostprocessWorker.ts");
+unregister();

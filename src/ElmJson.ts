@@ -1,90 +1,81 @@
-import * as fs from "fs";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
-import { JsonError, toError, toJsonError } from "./Helpers";
 import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
-import { ElmJsonPath, SourceDirectory } from "./Types";
+import {
+  absoluteDirname,
+  absolutePathFromString,
+  readJsonFile,
+} from "./PathHelpers";
+import { ElmJsonPath, markAsSourceDirectory, SourceDirectory } from "./Types";
 
-export type ElmJson = ReturnType<typeof ElmJson>;
-export const ElmJson = Decode.fieldsUnion("type", {
-  application: Decode.fieldsAuto({
-    tag: () => "Application" as const,
-    "source-directories": NonEmptyArray(Decode.string),
-  }),
-  package: () => ({
-    tag: "Package" as const,
-  }),
-});
+export type ElmJson = Codec.Infer<typeof ElmJson>;
+export const ElmJson = Codec.taggedUnion("type", [
+  {
+    type: Codec.tag("application"),
+    "source-directories": NonEmptyArray(Codec.string),
+  },
+  {
+    type: Codec.tag("package"),
+  },
+]);
 
-type ParseResult =
-  | ParseError
+type ElmJsonParseResult =
+  | ElmJsonParseError
   | {
       tag: "Parsed";
-      elmJson: ElmJson;
+      sourceDirectories: NonEmptyArray<SourceDirectory>;
     };
 
-export type ParseError =
+export type ElmJsonParseError =
   | {
       tag: "ElmJsonDecodeError";
       elmJsonPath: ElmJsonPath;
-      error: JsonError;
+      error: Codec.DecoderError;
     }
   | {
-      tag: "ElmJsonReadAsJsonError";
+      tag: "ElmJsonReadError";
       elmJsonPath: ElmJsonPath;
       error: Error;
     };
 
-export function readAndParse(elmJsonPath: ElmJsonPath): ParseResult {
-  let json: unknown = undefined;
-  try {
-    json = JSON.parse(
-      fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf-8")
-    );
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    return {
-      tag: "ElmJsonReadAsJsonError",
-      elmJsonPath,
-      error,
-    };
-  }
-
-  try {
-    return {
-      tag: "Parsed",
-      elmJson: ElmJson(json),
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmJsonDecodeError",
-      elmJsonPath,
-      error,
-    };
+export function readSourceDirectories(
+  elmJsonPath: ElmJsonPath,
+): ElmJsonParseResult {
+  const parsed = readJsonFile(elmJsonPath, ElmJson);
+  switch (parsed.tag) {
+    case "DecoderError":
+      return {
+        tag: "ElmJsonDecodeError",
+        elmJsonPath,
+        error: parsed.error,
+      };
+    case "ReadError":
+      return {
+        tag: "ElmJsonReadError",
+        elmJsonPath,
+        error: parsed.error,
+      };
+    case "Valid":
+      return {
+        tag: "Parsed",
+        sourceDirectories: getSourceDirectories(elmJsonPath, parsed.value),
+      };
   }
 }
 
-export function getSourceDirectories(
+function getSourceDirectories(
   elmJsonPath: ElmJsonPath,
-  elmJson: ElmJson
+  elmJson: ElmJson,
 ): NonEmptyArray<SourceDirectory> {
-  const base = absoluteDirname(elmJsonPath.theElmJsonPath);
+  const base = absoluteDirname(elmJsonPath);
 
-  switch (elmJson.tag) {
-    case "Application":
-      return mapNonEmptyArray(elmJson["source-directories"], (dir) => ({
-        tag: "SourceDirectory",
-        theSourceDirectory: absolutePathFromString(base, dir),
-      }));
+  switch (elmJson.type) {
+    case "application":
+      return mapNonEmptyArray(elmJson["source-directories"], (dir) =>
+        markAsSourceDirectory(absolutePathFromString(base, dir)),
+      );
 
-    case "Package":
-      return [
-        {
-          tag: "SourceDirectory",
-          theSourceDirectory: absolutePathFromString(base, "src"),
-        },
-      ];
+    case "package":
+      return [markAsSourceDirectory(absolutePathFromString(base, "src"))];
   }
 }

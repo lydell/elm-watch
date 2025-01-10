@@ -1,3 +1,5 @@
+import { describe, expect, test } from "vitest";
+
 import * as Parser from "../src/Parser";
 
 function parse(elmFile: string): Array<Parser.ModuleName> {

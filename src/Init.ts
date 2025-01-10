@@ -5,7 +5,7 @@ import { bold, toError } from "./Helpers";
 import { Logger } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
 import { absolutePathFromString } from "./PathHelpers";
-import { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
+import { CliArg, Cwd, ElmWatchJsonPath, markAsElmWatchJsonPath } from "./Types";
 
 const elmWatchJson = bold("elm-watch.json");
 
@@ -14,19 +14,18 @@ const elmWatchJson = bold("elm-watch.json");
 export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   if (isNonEmptyArray(args)) {
     logger.writeToStderrMakesALotOfSenseHere(
-      `${bold("elm-watch init")} takes no arguments.`
+      `${bold("elm-watch init")} takes no arguments.`,
     );
     return 1;
   }
 
-  const elmWatchJsonPath: ElmWatchJsonPath = {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: absolutePathFromString(cwd.path, "elm-watch.json"),
-  };
+  const elmWatchJsonPath: ElmWatchJsonPath = markAsElmWatchJsonPath(
+    absolutePathFromString(cwd, "elm-watch.json"),
+  );
 
-  if (fs.existsSync(elmWatchJsonPath.theElmWatchJsonPath.absolutePath)) {
+  if (fs.existsSync(elmWatchJsonPath)) {
     logger.writeToStderrMakesALotOfSenseHere(
-      `${elmWatchJson} already exists in the current directory!`
+      `${elmWatchJson} already exists in the current directory!`,
     );
     return 1;
   }
@@ -37,14 +36,11 @@ export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
   });
 
   try {
-    fs.writeFileSync(
-      elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
-      example
-    );
+    fs.writeFileSync(elmWatchJsonPath, example);
   } catch (unknownError) {
     const error = toError(unknownError);
     logger.writeToStderrMakesALotOfSenseHere(
-      `Failed to write ${elmWatchJson}:\n\n${error.message}`
+      `Failed to write ${elmWatchJson}:\n\n${error.message}`,
     );
     return 1;
   }
@@ -55,7 +51,7 @@ Created a minimal ${elmWatchJson} in the current directory to get you started.
 Go check it out!
 
 Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
-  `.trim()
+  `.trim(),
   );
   return 0;
 }

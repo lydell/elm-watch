@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const path = require("path");
+import spawn from "cross-spawn";
+import path from "path";
 
 if (process.argv.some((arg) => arg.includes("ElmWatchDummy"))) {
-  process.stdout.write("Starting downloads...\n\n  ● elm/html 1.0.0\n  ● elm/browser 1.0.2\n  ● elm/virtual-dom 1.0.3\n  ● elm/time 1.0.0\n  ● elm/json 1.1.3\n  ● elm/url 1.0.0\n  ● elm/core 1.0.5\n\nVerifying dependencies (0/7)\rVerifying dependencies (1/7)\rVerifying dependencies (2/7)\rVerifying dependencies (3/7)\rVerifying dependencies (4/7)\rVerifying dependencies (5/7)\rVerifying dependencies (6/7)\rVerifying dependencies (7/7)\r                            \rDependencies ready!\nCompiling ...\rCompiling (1)\rSuccess! Compiled 1 module.\n");
+  process.stdout.write(
+    "Starting downloads...\n\n  ● elm/html 1.0.0\n  ● elm/browser 1.0.2\n  ● elm/virtual-dom 1.0.3\n  ● elm/time 1.0.0\n  ● elm/json 1.1.3\n  ● elm/url 1.0.0\n  ● elm/core 1.0.5\n\nVerifying dependencies (0/7)\rVerifying dependencies (1/7)\rVerifying dependencies (2/7)\rVerifying dependencies (3/7)\rVerifying dependencies (4/7)\rVerifying dependencies (5/7)\rVerifying dependencies (6/7)\rVerifying dependencies (7/7)\r                            \rDependencies ready!\nCompiling ...\rCompiling (1)\rSuccess! Compiled 1 module.\n",
+  );
   process.exit(0);
 } else {
   spawn("elm", process.argv.slice(2), {

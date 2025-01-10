@@ -1,7 +1,7 @@
-const crossSpawn = require("cross-spawn");
-const path = require("path");
+import crossSpawn from "cross-spawn";
+import path from "path";
 
-const mainDir = path.join(__dirname, "..", "..");
+const mainDir = path.join(import.meta.dirname, "..", "..");
 const input = path.join(mainDir, "src", "App.elm");
 
 const result = crossSpawn.sync("elm", ["make", input, "--output=.js"], {

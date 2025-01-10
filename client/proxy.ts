@@ -1,5 +1,12 @@
-// Support Web Workers, where `window` does not exist.
+// Support environments, such as Web Workers, where `window` does not exist.
 const window = globalThis as unknown as Window;
+
+// This is replaced with `const __this__ = this;` in Inject.ts.
+// That’s a tooling workaround: This file appears to be a module (where global
+// `this` is `undefined` and often compiled to a literal `undefined`). But it
+// is actually used as a script in the end. Since we do a string replacement on
+// this file anyway for `%TARGET_NAME%`, this was an easy solution for `this` too.
+const __this__ = window;
 
 const error: Error & { elmWatchProxy?: true } = new Error(
   `
@@ -12,21 +19,20 @@ This stub file is now connecting to \`elm-watch\` via WebSocket, letting it know
 that it's time to start generating real JS. Once that's done the page should be
 automatically reloaded. But if you get compilation errors you'll need to fix
 them first.
-  `.trim()
+  `.trim(),
 );
 
 error.elmWatchProxy = true;
 
-const existing = window.Elm;
+const existing = __this__.Elm;
 const existingObject =
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   typeof existing === "object" && existing !== null ? existing : undefined;
 
 const elmProxy = new Proxy(existingObject ?? {}, {
   get(target, property, receiver) {
     const value = Reflect.get(target, property, receiver) as unknown;
-    // Jest tries to read `_isMockFunction`.
-    // There shouldn’t ever be anything starting with an underscore in `window.Elm` so whatever.
-    if (value !== undefined || property.toString().startsWith("_")) {
+    if (value !== undefined) {
       return value;
     }
     throw error;
@@ -39,9 +45,6 @@ const elmProxy = new Proxy(existingObject ?? {}, {
     throw error;
   },
   has(target, property) {
-    if (property === "__elmWatchProxy") {
-      return true;
-    }
     const has = Reflect.has(target, property);
     if (has) {
       return true;
@@ -53,6 +56,8 @@ const elmProxy = new Proxy(existingObject ?? {}, {
   },
 });
 
-window.Elm = elmProxy;
+__this__.Elm = elmProxy;
+
+window.__ELM_WATCH.REGISTER("%TARGET_NAME%", {});
 
 export {};

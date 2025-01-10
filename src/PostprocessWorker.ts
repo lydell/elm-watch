@@ -1,5 +1,5 @@
 import * as path from "path";
-import { repr } from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 import * as url from "url";
 import { MessagePort, parentPort } from "worker_threads";
 
@@ -14,7 +14,10 @@ import {
   PostprocessResult,
   UnknownValueAsString,
 } from "./PostprocessShared";
-import type { ElmWatchNodeScriptPath } from "./Types";
+import {
+  type ElmWatchNodeScriptPath,
+  markAsElmWatchNodeScriptPath,
+} from "./Types";
 
 // Many errors are typed to always have `stdout` and `stderr`. They are captured
 // from the worker in `Postprocess.ts`, not here, though. By including this
@@ -36,6 +39,7 @@ function main(port: PortWrapper): void {
 
   port.on("message", (message: MessageToWorker) => {
     switch (message.tag) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       case "StartPostprocess":
         elmWatchNode(message.args)
           .then((result) => {
@@ -67,18 +71,13 @@ async function elmWatchNode({
     return { tag: "ElmWatchNodeMissingScript" };
   }
 
-  const scriptPath: ElmWatchNodeScriptPath = {
-    tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptFileUrl: url
-      .pathToFileURL(path.resolve(cwd.absolutePath, userArgs[0]))
-      .toString(),
-  };
+  const scriptPath: ElmWatchNodeScriptPath = markAsElmWatchNodeScriptPath(
+    url.pathToFileURL(path.resolve(cwd, userArgs[0])).toString(),
+  );
 
   let imported;
   try {
-    imported = (await import(
-      scriptPath.theElmWatchNodeScriptFileUrl
-    )) as Record<string, unknown>;
+    imported = (await import(scriptPath)) as Record<string, unknown>;
   } catch (unknownError) {
     return {
       tag: "ElmWatchNodeImportError",
@@ -88,16 +87,16 @@ async function elmWatchNode({
     };
   }
 
-  if (typeof imported.default !== "function") {
+  if (typeof imported["default"] !== "function") {
     return {
       tag: "ElmWatchNodeDefaultExportNotFunction",
       scriptPath,
       imported: unknownValueAsString(
         // To/from entries is needed. Otherwise `repr` prints `"Module"`.
         Object.fromEntries(Object.entries(imported)),
-        (value) => repr(value, { maxObjectChildren: 10 })
+        (value) => Codec.repr(value, { maxObjectChildren: 10 }),
       ),
-      typeofDefault: typeof imported.default,
+      typeofDefault: typeof imported["default"],
       ...emptyStdio,
     };
   }
@@ -108,16 +107,13 @@ async function elmWatchNode({
     compilationMode,
     runMode,
     // Mimic `process.argv`: ["node", "/absolute/path/to/script", "arg1", "arg2", "..."].
-    argv: [
-      ELM_WATCH_NODE,
-      url.fileURLToPath(scriptPath.theElmWatchNodeScriptFileUrl),
-      ...userArgs.slice(1),
-    ],
+    argv: [ELM_WATCH_NODE, url.fileURLToPath(scriptPath), ...userArgs.slice(1)],
   };
 
   let returnValue: unknown;
   try {
-    returnValue = (await imported.default(args)) as unknown;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    returnValue = (await imported["default"](args)) as unknown;
   } catch (unknownError) {
     return {
       tag: "ElmWatchNodeRunError",
@@ -133,7 +129,7 @@ async function elmWatchNode({
       tag: "ElmWatchNodeBadReturnValue",
       scriptPath,
       args,
-      returnValue: unknownValueAsString(returnValue, repr),
+      returnValue: unknownValueAsString(returnValue, Codec.repr),
       ...emptyStdio,
     };
   }
@@ -143,7 +139,7 @@ async function elmWatchNode({
 
 function unknownValueAsString(
   value: unknown,
-  toString: (value: unknown) => string
+  toString: (value: unknown) => string,
 ): UnknownValueAsString {
   return {
     tag: "UnknownValueAsString",
@@ -153,11 +149,7 @@ function unknownValueAsString(
 
 function importErrorToString(error: unknown): string {
   const code: unknown = (error as { code: unknown } | undefined)?.code;
-  // `import()` is used for real (since it supports both CJS and MJS).
-  // In Jest tests it seems to be impossible to use `import()` so we have to
-  // support `require()` too.
-  return code === "ERR_MODULE_NOT_FOUND" || // `import()`
-    code === "MODULE_NOT_FOUND" // `require()`
+  return code === "ERR_MODULE_NOT_FOUND"
     ? (error as { message: string }).message
     : unknownErrorToString(error);
 }

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESM</title>
+  </head>
+  <body>
+    <button id="button">Add one more Elm app instance</button>
+    <script type="module">
+      import Elm from "/build/ESM.js";
+      function init() {
+        const node = document.createElement("div");
+        document.body.append(node);
+        Elm.HtmlMain.init({ node });
+      }
+      button.onclick = init;
+    </script>
+  </body>
+</html>

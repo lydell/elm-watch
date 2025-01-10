@@ -1,5 +1,6 @@
 .cache
 build
+build-*
 coverage
 dist
 elm-stuff

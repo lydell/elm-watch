@@ -1,7 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
+import { describe, expect, test } from "vitest";
 
-import { elmWatchCli } from "../src";
+import elmWatchCli from "../src";
 import { Env, NO_COLOR } from "../src/Env";
 import {
   assertExitCode,
@@ -16,12 +17,12 @@ import {
   TEST_ENV,
 } from "./Helpers";
 
-const FIXTURES_DIR = path.join(__dirname, "fixtures");
+const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures");
 
 async function run(
   fixture: string,
   args: Array<string>,
-  { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {}
+  { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {},
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const build = path.join(dir, "build");
@@ -41,7 +42,7 @@ async function run(
       ...TEST_ENV,
       ...env,
       PATH:
-        bin === undefined ? process.env.PATH : prependPATH(path.join(dir, bin)),
+        bin === undefined ? TEST_ENV["PATH"] : prependPATH(path.join(dir, bin)),
     },
     stdin: new SilentReadStream(),
     stdout,
@@ -51,7 +52,7 @@ async function run(
 
   const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(0, exitCode, stdoutString, stderr.content);
+  assertExitCode(0, exitCode, stdoutString, stderr.content, dir);
   expect(stderr.content).toBe("");
 
   return stdoutString;
@@ -93,7 +94,7 @@ describe("successful make", () => {
     expect(
       await run("successful-make", ["make"], {
         bin: "installed-packages-output-bin",
-      })
+      }),
     ).toMatchInlineSnapshot(`
       ✅ Dependencies
          ● elm/html 1.0.0
@@ -111,7 +112,7 @@ describe("successful make", () => {
 
   test("CI", async () => {
     expect(
-      await run("successful-make", ["make", "--optimize"], { isTTY: false })
+      await run("successful-make", ["make", "--optimize"], { isTTY: false }),
     ).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies
@@ -129,7 +130,7 @@ describe("successful make", () => {
       await run("successful-make", ["make", "--optimize"], {
         isTTY: false,
         env: { [NO_COLOR]: "" },
-      })
+      }),
     ).toMatchInlineSnapshot(`
       Dependencies: in progress
       Dependencies: success
@@ -252,7 +253,7 @@ describe("successful make", () => {
       ✅ 😎  Cool emoji⧙                                               1 ms Q | 1.23 s E⧘
       ✅ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in…
       ✅ 👋🏻 Skin tone⧙                                                1 ms Q | 1.23 s E⧘
-      ✅ ↪  Non-emoji symbol⧙                                         1 ms Q | 1.23 s E⧘
+      ✅ ↪ Non-emoji symbol⧙                                          1 ms Q | 1.23 s E⧘
       ✅ ↪️  Emoji version of symbol⧙                                  1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
@@ -263,7 +264,7 @@ describe("successful make", () => {
     expect(
       await run("emoji", ["make"], {
         env: { [NO_COLOR]: "" },
-      })
+      }),
     ).toMatchInlineSnapshot(`
       Dependencies: success
       No emoji: success                                              1 ms Q | 1.23 s E
@@ -271,7 +272,7 @@ describe("successful make", () => {
       Cool emoji: success                                            1 ms Q | 1.23 s E
       Flag emoji and really long target name that needs to be cut off to fit in the...
       Skin tone: success                                             1 ms Q | 1.23 s E
-      Non-emoji symbol: success                                      1 ms Q | 1.23 s E
+      ↪ Non-emoji symbol: success                                    1 ms Q | 1.23 s E
       Emoji version of symbol: success                               1 ms Q | 1.23 s E
 
       Compilation finished in 123 ms.
@@ -282,7 +283,7 @@ describe("successful make", () => {
     expect(
       await run("emoji", ["make"], {
         isTTY: false,
-      })
+      }),
     ).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ✅ Dependencies

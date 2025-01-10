@@ -15,21 +15,21 @@ jobs:
         working-directory: example
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       # Build elm-watch so we can use it in this example repo.
       - name: Internal cache node_modules
         id: internal-cache-node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
-          key: internal-node_modules-ubuntu-latest-20-${{ hashFiles('package.json', 'package-lock.json') }}
+          key: internal-node_modules-ubuntu-latest-22-${{ hashFiles('package.json', 'package-lock.json') }}
       - name: Internal npm ci
         if: steps.internal-cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
@@ -40,7 +40,7 @@ jobs:
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             example/node_modules
@@ -48,25 +48,22 @@ jobs:
           key: node_modules-${{ hashFiles('example/package.json', 'example/package-lock.json', 'example/public/submodules/seeds-game/package.json',  'example/public/submodules/seeds-game/package-lock.json') }}
 
       - name: Cache ~/.elm
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.elm
           key: elm-${{ hashFiles('example/elm.json', 'example/elm-tooling.json') }}
 
-      - name: npm ci
-        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+      - if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci --no-audit
         env:
           NO_ELM_TOOLING_INSTALL: 1
-        run: npm ci --no-audit
 
-      - name: elm-tooling install
-        run: npx elm-tooling install
+      - run: npx elm-tooling install
 
-      - name: elm-watch make
-        run: npx elm-watch make --optimize
+      # This line is usually just `npx elm-watch make --optimize`,
+      # but we do some internal trickery here as a workaround specific to the elm-watch repo.
+      - run: PATH="$PWD/../tests/elm-bin:$PWD/node_modules/.bin:$PATH" elm-watch make --optimize
 
-      - name: esbuild
-        run: npm run esbuild -- --minify
+      - run: npm run esbuild -- --minify
 
-      - name: elm-format
-        run: npx elm-format --validate src
+      - run: npx elm-format --validate src

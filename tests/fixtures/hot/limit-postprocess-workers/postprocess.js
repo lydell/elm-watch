@@ -1,7 +1,7 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-const lock = path.join(__dirname, "lock");
+const lock = path.join(import.meta.dirname, "lock");
 
 async function wait(ms) {
   return new Promise((resolve) => {
@@ -11,7 +11,7 @@ async function wait(ms) {
   });
 }
 
-module.exports = async ({ code }) => {
+export default async ({ code }) => {
   if (fs.existsSync(lock)) {
     fs.unlinkSync(lock);
   } else {

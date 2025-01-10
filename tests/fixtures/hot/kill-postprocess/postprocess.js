@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 async function read(stream) {
   const chunks = [];
@@ -19,27 +19,27 @@ async function wait(ms) {
 
 async function run() {
   const code = await read(process.stdin);
-  const tmp = path.join(__dirname, "postprocess.tmp");
+  const tmp = path.join(import.meta.dirname, "postprocess.tmp");
   const n = Number(fs.readFileSync(tmp, "utf8"));
   fs.writeFileSync(tmp, (n + 1).toString());
 
   switch (n) {
     case 1:
       process.stdout.write(
-        code.replace("REPLACE_ME", "postprocess content before")
+        code.replace("REPLACE_ME", "postprocess content before"),
       );
       break;
 
     case 2:
       await wait(10000);
       process.stdout.write(
-        code.replace("REPLACE_ME", "postprocess should have been killed")
+        code.replace("REPLACE_ME", "postprocess should have been killed"),
       );
       break;
 
     default:
       process.stdout.write(
-        code.replace("REPLACE_ME", "postprocess content after")
+        code.replace("REPLACE_ME", "postprocess content after"),
       );
       break;
   }
@@ -52,5 +52,5 @@ run(process.argv.slice(2)).then(
   (error) => {
     console.error("Uncaught error:", error);
     process.exit(1);
-  }
+  },
 );

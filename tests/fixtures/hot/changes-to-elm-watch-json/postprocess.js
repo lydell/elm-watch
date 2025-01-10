@@ -1,1 +1,1 @@
-module.exports = ({ code }) => code.replace("The text!", "THE TEXT!");
+export default ({ code }) => code.replace("The text!", "THE TEXT!");

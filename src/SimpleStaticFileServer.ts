@@ -2,8 +2,8 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 
-import { escapeHtml, join, toError } from "./Helpers";
-import { AbsolutePath, StaticFilesDir } from "./Types";
+import { escapeHtml, toError } from "./Helpers";
+import { AbsolutePath, markAsAbsolutePath, StaticFilesDir } from "./Types";
 
 // Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
 // Removed markdown – otherwise that causes downloads in Firefox instead of
@@ -62,16 +62,15 @@ function html(
   ...values: Array<Html | string>
 ): Html {
   return new Html(
-    join(
-      strings.flatMap((string, index) => {
+    strings
+      .flatMap((string, index) => {
         const value = values[index] ?? "";
         return [
           string,
           value instanceof Html ? value.toString() : escapeHtml(value),
         ];
-      }),
-      ""
-    )
+      })
+      .join(""),
   );
 }
 
@@ -111,8 +110,14 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
           }
           pre,
           code {
-            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas,
-              Liberation Mono, monospace;
+            font-family:
+              ui-monospace,
+              SFMono-Regular,
+              SF Mono,
+              Menlo,
+              Consolas,
+              Liberation Mono,
+              monospace;
           }
           @media (prefers-color-scheme: dark) {
             html {
@@ -145,7 +150,7 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
 
 function notFoundHtml(
   fsPath: FsPath,
-  statsTag: NotFileStat | "FileWithTrailingSlash"
+  statsTag: NotFileStat | "FileWithTrailingSlash",
 ): Html {
   switch (statsTag) {
     case "Directory":
@@ -164,8 +169,8 @@ function notFoundHtml(
             <a href="${DOCS_LINK_INDEX_HTML}">How index.html files work</a>
           </p>
           <p>This is the absolute file path the URL resolves to:</p>
-          <pre>${fsPath.theFsPath.absolutePath}</pre>
-        `
+          <pre>${fsPath.theFsPath}</pre>
+        `,
       );
 
     case "NotFound":
@@ -194,8 +199,8 @@ function notFoundHtml(
                 </p>
               `}
           <p>This is the absolute file path the URL resolves to:</p>
-          <pre>${fsPath.theFsPath.absolutePath}</pre>
-        `
+          <pre>${fsPath.theFsPath}</pre>
+        `,
       );
 
     case "Other":
@@ -209,8 +214,8 @@ function notFoundHtml(
             nor a directory. elm-watch only serves files.
           </p>
           <p>This is the absolute file path the URL resolves to:</p>
-          <pre>${fsPath.theFsPath.absolutePath}</pre>
-        `
+          <pre>${fsPath.theFsPath}</pre>
+        `,
       );
 
     case "FileWithTrailingSlash":
@@ -226,15 +231,15 @@ function notFoundHtml(
           <p>Servers typically don't allow trailing slashes on files.</p>
           <p>Suggestion: Remove the trailing slash from the URL.</p>
           <p>This is the absolute file path the URL resolves to:</p>
-          <pre>${fsPath.theFsPath.absolutePath}</pre>
-        `
+          <pre>${fsPath.theFsPath}</pre>
+        `,
       );
   }
 }
 
 function staticDirNotFoundHtml(
   staticFilesDir: StaticFilesDir,
-  statsTag: "File" | "NotFound" | "Other"
+  statsTag: "File" | "NotFound" | "Other",
 ): Html {
   return baseHtml(
     "🚨",
@@ -245,14 +250,14 @@ function staticDirNotFoundHtml(
         You have configured a static files directory in elm-watch.json which
         resolves to:
       </p>
-      <pre>${staticFilesDir.theStaticFilesDir.absolutePath}</pre>
+      <pre>${staticFilesDir}</pre>
       <p>${staticFilesDirDescription(statsTag)}</p>
-    `
+    `,
   );
 }
 
 function staticFilesDirDescription(
-  statsTag: "File" | "NotFound" | "Other"
+  statsTag: "File" | "NotFound" | "Other",
 ): string {
   switch (statsTag) {
     case "File":
@@ -266,7 +271,7 @@ function staticFilesDirDescription(
 
 function forbiddenHtml(
   staticFilesDir: StaticFilesDir,
-  forbiddenPath: AbsolutePath
+  forbiddenPath: AbsolutePath,
 ): Html {
   return baseHtml(
     "⛔️",
@@ -277,28 +282,28 @@ function forbiddenHtml(
         You have configured a static files directory in elm-watch.json which
         resolves to:
       </p>
-      <pre>${staticFilesDir.theStaticFilesDir.absolutePath}</pre>
+      <pre>${staticFilesDir}</pre>
       <p>
         However, the URL you requested points to a file outside of that
         directory:
       </p>
-      <pre>${forbiddenPath.absolutePath}</pre>
-    `
+      <pre>${forbiddenPath}</pre>
+    `,
   );
 }
 
 function indexHtmlInfo(
   fsPath: FsPath,
   indexFsPath: IndexFsPath,
-  statsTag: NotFileStat
+  statsTag: NotFileStat,
 ): {
   headers: Record<string, string>;
   comment: string;
 } {
   return {
     headers: {
-      "elm-watch-404": fsPath.theFsPath.absolutePath,
-      "elm-watch-index-html": indexFsPath.theIndexFsPath.absolutePath,
+      "elm-watch-404": fsPath.theFsPath,
+      "elm-watch-index-html": indexFsPath.theIndexFsPath,
       "elm-watch-learn-more": DOCS_LINK_INDEX_HTML,
     },
     // If you change the first line, also update the code in client.ts that removes this comment.
@@ -319,7 +324,7 @@ ${DOCS_LINK_INDEX_HTML}
 function indexHtmlDescription(
   fsPath: FsPath,
   indexFsPath: IndexFsPath,
-  statsTag: NotFileStat
+  statsTag: NotFileStat,
 ): string {
   switch (statsTag) {
     case "Directory":
@@ -327,10 +332,10 @@ function indexHtmlDescription(
 The URL you requested points to a directory. elm-watch only serves files.
 
 The closest index.html file was served instead:
-${indexFsPath.theIndexFsPath.absolutePath}
+${indexFsPath.theIndexFsPath}
 
 This is the directory:
-${fsPath.theFsPath.absolutePath}
+${fsPath.theFsPath}
 `.trim();
 
     case "NotFound":
@@ -341,10 +346,10 @@ This is for supporting Browser.application programs.
 
 If you expected a file to served rather than this HTML,
 make sure the URL is correct or that this file exists:
-${fsPath.theFsPath.absolutePath}
+${fsPath.theFsPath}
 
 This is the closest index.html file, which was served instead:
-${indexFsPath.theIndexFsPath.absolutePath}
+${indexFsPath.theIndexFsPath}
 `.trim();
 
     case "Other":
@@ -353,10 +358,10 @@ The URL you requested points to a something that is neither or file
 nor a directory. elm-watch only serves files.
 
 This is the absolute file path the URL resolves to:
-${fsPath.theFsPath.absolutePath}
+${fsPath.theFsPath}
 
 This is the closest index.html file, which was served instead:
-${indexFsPath.theIndexFsPath.absolutePath}
+${indexFsPath.theIndexFsPath}
 `.trim();
   }
 }
@@ -373,18 +378,18 @@ export function staticFileNotEnabledHtml(): Html {
       </p>
       <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
       <pre><code>"serve": "./folder/to/serve/"</code></pre>
-    `
+    `,
   );
 }
 
 export function errorHtml(errorMessage: string): Html {
   if (errorMessage.includes("\n")) {
-    const firstRow = join(errorMessage.split("\n").slice(0, 1), "");
+    const firstRow = errorMessage.split("\n").slice(0, 1).join("");
     return baseHtml(
       "🚨",
       firstRow,
       html`<h1>${firstRow}</h1>
-        <pre>${errorMessage}</pre>`
+        <pre>${errorMessage}</pre>`,
     );
   } else {
     return baseHtml("🚨", errorMessage, html`<h1>${errorMessage}</h1>`);
@@ -394,7 +399,7 @@ export function errorHtml(errorMessage: string): Html {
 export function respondHtml(
   response: http.ServerResponse,
   statusCode: number,
-  htmlValue: Html
+  htmlValue: Html,
 ): void {
   const htmlString = htmlValue.toString().trim();
   response.writeHead(statusCode, {
@@ -406,7 +411,7 @@ export function respondHtml(
 
 // Note: This function may throw file system errors.
 export function serveStatic(
-  staticFilesDir: StaticFilesDir
+  staticFilesDir: StaticFilesDir,
 ): http.RequestListener {
   return (request, response) => {
     switch (request.method) {
@@ -419,7 +424,7 @@ export function serveStatic(
           respondHtml(
             response,
             403,
-            forbiddenHtml(staticFilesDir, fsPath.forbiddenPath)
+            forbiddenHtml(staticFilesDir, fsPath.forbiddenPath),
           );
           return;
         }
@@ -432,7 +437,7 @@ export function serveStatic(
               respondHtml(
                 response,
                 404,
-                notFoundHtml(fsPath, "FileWithTrailingSlash")
+                notFoundHtml(fsPath, "FileWithTrailingSlash"),
               );
             } else {
               serveFile(fsPath, stats.size, request, response);
@@ -451,7 +456,7 @@ export function serveStatic(
                   for (const [name, value] of Object.entries(info.headers)) {
                     response.setHeader(
                       name,
-                      value.replace(HEADER_CHAR_REGEX, "?")
+                      value.replace(HEADER_CHAR_REGEX, "?"),
                     );
                   }
                   serveFile(
@@ -459,7 +464,7 @@ export function serveStatic(
                     indexStats.size,
                     request,
                     response,
-                    info.comment
+                    info.comment,
                   );
                   return;
                 }
@@ -471,9 +476,7 @@ export function serveStatic(
               }
             }
 
-            const staticFilesDirStats = statSync(
-              staticFilesDir.theStaticFilesDir
-            );
+            const staticFilesDirStats = statSync(staticFilesDir);
             switch (staticFilesDirStats.tag) {
               case "Directory":
                 respondHtml(response, 404, notFoundHtml(fsPath, stats.tag));
@@ -485,7 +488,10 @@ export function serveStatic(
                 respondHtml(
                   response,
                   404,
-                  staticDirNotFoundHtml(staticFilesDir, staticFilesDirStats.tag)
+                  staticDirNotFoundHtml(
+                    staticFilesDir,
+                    staticFilesDirStats.tag,
+                  ),
                 );
                 return;
             }
@@ -499,8 +505,8 @@ export function serveStatic(
           errorHtml(
             `Unsupported method
 
-Only GET and HEAD requests are supported. Got: ${request.method ?? "(none)"}`
-          )
+Only GET and HEAD requests are supported. Got: ${request.method ?? "(none)"}`,
+          ),
         );
         return;
     }
@@ -508,9 +514,7 @@ Only GET and HEAD requests are supported. Got: ${request.method ?? "(none)"}`
 }
 
 function getContentType(fsPath: FsPath | IndexFsPath): string | undefined {
-  return MIME_TYPES[
-    path.extname(toAbsolutePath(fsPath).absolutePath).toLowerCase()
-  ];
+  return MIME_TYPES[path.extname(toAbsolutePath(fsPath)).toLowerCase()];
 }
 
 function toAbsolutePath(fsPath: FsPath | IndexFsPath): AbsolutePath {
@@ -527,7 +531,7 @@ function serveFile(
   fsSize: number,
   request: http.IncomingMessage,
   response: http.ServerResponse,
-  extraContent?: string
+  extraContent?: string,
 ): void {
   const contentType =
     getContentType(fsPath) ??
@@ -550,15 +554,12 @@ function serveFile(
       const rangeHeader = request.headers.range;
       const range =
         rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
-      const readStream = fs.createReadStream(
-        toAbsolutePath(fsPath).absolutePath,
-        range
-      );
+      const readStream = fs.createReadStream(toAbsolutePath(fsPath), range);
       readStream.on("error", (error) => {
         respondHtml(
           response,
           500,
-          errorHtml(`Failed to read file\n\n${error.message}`)
+          errorHtml(`Failed to read file\n\n${error.message}`),
         );
       });
       readStream.on("open", () => {
@@ -591,15 +592,15 @@ function serveFile(
 type NotFileStat = "Directory" | "NotFound" | "Other";
 
 function statSync(
-  absolutePath: AbsolutePath
+  absolutePath: AbsolutePath,
 ): { tag: "File"; size: number } | { tag: NotFileStat } {
   try {
-    const stats = fs.statSync(absolutePath.absolutePath);
+    const stats = fs.statSync(absolutePath);
     return stats.isFile()
       ? { tag: "File", size: stats.size }
       : stats.isDirectory()
-      ? { tag: "Directory" }
-      : { tag: "Other" };
+        ? { tag: "Directory" }
+        : { tag: "Other" };
   } catch (unknownError) {
     const error = toError(unknownError);
     if (
@@ -618,7 +619,7 @@ function statSync(
 const RANGE_REGEX = /^bytes=(\d+)-(\d+)$/;
 
 function parseRangeHeader(
-  rangeHeader: string
+  rangeHeader: string,
 ): { start: number; end: number } | undefined {
   const match = RANGE_REGEX.exec(rangeHeader);
   if (match === null) {
@@ -642,16 +643,13 @@ type IndexFsPath = {
 
 function toFsPath(
   staticFilesDir: StaticFilesDir,
-  url: string
+  url: string,
 ): FsPath | { tag: "Forbidden"; forbiddenPath: AbsolutePath } {
   const urlWithoutQuery = decodePercentageEscapes(removeQuery(url));
 
   // Not using `absolutePathFromString` here since it uses `path.resolve`
   // but we need `path.join` (otherwise all URLs would resolve to the root of the file system).
-  const fsPathStringRaw = path.join(
-    staticFilesDir.theStaticFilesDir.absolutePath,
-    urlWithoutQuery
-  );
+  const fsPathStringRaw = path.join(staticFilesDir, urlWithoutQuery);
 
   const hadTrailingSlash = fsPathStringRaw.endsWith(path.sep);
 
@@ -659,16 +657,13 @@ function toFsPath(
     ? fsPathStringRaw.slice(0, -path.sep.length)
     : fsPathStringRaw;
 
-  const absoluteFsPath: AbsolutePath = {
-    tag: "AbsolutePath",
-    absolutePath: fsPathString,
-  };
+  const absoluteFsPath = markAsAbsolutePath(fsPathString);
 
-  const prefix = staticFilesDir.theStaticFilesDir.absolutePath + path.sep;
+  const prefix = staticFilesDir + path.sep;
 
   // Protect against reading files outside the static files dir.
   // For example: curl http://localhost:8000/%2e%2e/secret.txt
-  return fsPathString === staticFilesDir.theStaticFilesDir.absolutePath
+  return fsPathString === staticFilesDir
     ? {
         tag: "FsPath",
         theFsPath: absoluteFsPath,
@@ -676,33 +671,32 @@ function toFsPath(
         segments: [],
       }
     : fsPathString.startsWith(prefix)
-    ? {
-        tag: "FsPath",
-        theFsPath: absoluteFsPath,
-        hadTrailingSlash,
-        segments: fsPathString.slice(prefix.length).split(path.sep),
-      }
-    : {
-        tag: "Forbidden",
-        forbiddenPath: absoluteFsPath,
-      };
+      ? {
+          tag: "FsPath",
+          theFsPath: absoluteFsPath,
+          hadTrailingSlash,
+          segments: fsPathString.slice(prefix.length).split(path.sep),
+        }
+      : {
+          tag: "Forbidden",
+          forbiddenPath: absoluteFsPath,
+        };
 }
 
 function toIndexFsPath(
   staticFilesDir: StaticFilesDir,
   fsPath: FsPath,
-  numSegments: number
+  numSegments: number,
 ): IndexFsPath {
   return {
     tag: "IndexFsPath",
-    theIndexFsPath: {
-      tag: "AbsolutePath",
-      absolutePath: path.join(
-        staticFilesDir.theStaticFilesDir.absolutePath,
+    theIndexFsPath: markAsAbsolutePath(
+      path.join(
+        staticFilesDir,
         ...fsPath.segments.slice(0, numSegments),
-        "index.html"
+        "index.html",
       ),
-    },
+    ),
   };
 }
 

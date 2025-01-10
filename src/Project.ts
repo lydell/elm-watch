@@ -5,8 +5,6 @@ import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
 import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_WEBSOCKET_URL, Env } from "./Env";
-import { HashMap } from "./HashMap";
-import { HashSet } from "./HashSet";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -19,37 +17,37 @@ import {
 import { Postprocess } from "./Postprocess";
 import { PostprocessError } from "./PostprocessShared";
 import { RunElmMakeError } from "./SpawnElm";
-import type {
-  AbsolutePath,
-  BrowserUiPosition,
-  CompilationMode,
-  ElmJsonPath,
-  ElmWatchJsonPath,
-  ElmWatchStuffDir,
-  ElmWatchStuffJsonPath,
-  GetNow,
-  InputPath,
-  OutputPath,
-  StaticFilesDir,
-  UncheckedInputPath,
-  WriteOutputErrorReasonForWriting,
+import {
+  type AbsolutePath,
+  type BrowserUiPosition,
+  type CompilationMode,
+  type ElmJsonPath,
+  type ElmWatchJsonPath,
+  type ElmWatchStuffDir,
+  type ElmWatchStuffJsonPath,
+  type GetNow,
+  type InputPath,
+  markAsElmJsonPath,
+  markAsStaticFilesDir,
+  markAsTargetName,
+  type OutputPath,
+  type StaticFilesDir,
+  type UncheckedInputPath,
+  type WriteOutputErrorReasonForWriting,
 } from "./Types";
 import { WebSocketUrl } from "./WebSocketUrl";
 
 export type Project = {
-  // Path of the directories containing elm-watch.json, all elm.json, all source
-  // directories, as well as the static files directory (if any), without
-  // duplicates and where each directory does not contain any other. I tested
-  // watching both `folder/` and `folder/sub/` – when creating `folder/sub/file.txt`
-  // I got both a “created” and a “changed” event. When watching only `folder/` I
-  // only got “created” as expected.
-  watchRoots: HashSet<AbsolutePath>;
+  // Path of the directories containing elm-watch.json, all elm.json,
+  // and all source directories, without duplicates and where each
+  // directory does not contain any other.
+  watchRoots: Set<AbsolutePath>;
   staticFilesDir: StaticFilesDir | undefined;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
-  disabledOutputs: HashSet<OutputPath>;
+  disabledOutputs: Array<OutputPath>;
   elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
-  elmJsons: HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>;
+  elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   maxParallel: number;
   postprocess: Postprocess;
   webSocketUrl: WebSocketUrl | undefined;
@@ -77,7 +75,7 @@ export class OutputState {
 
   openErrorOverlay = false;
 
-  allRelatedElmFilePaths = new Set<string>();
+  allRelatedElmFilePaths = new Set<AbsolutePath>();
 
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
   // makes that more clear.
@@ -90,7 +88,7 @@ export class OutputState {
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
     openErrorOverlay: boolean,
-    private getNow: GetNow
+    private getNow: GetNow,
   ) {
     this.inputs = inputs;
     this.compilationMode = compilationMode;
@@ -199,7 +197,7 @@ export type OutputStatus =
     };
 
 export type OutputError =
-  | ElmJson.ParseError
+  | ElmJson.ElmJsonParseError
   | OutputFsError
   | PostprocessError
   | RunElmMakeError
@@ -331,33 +329,33 @@ export function initProject({
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
-  const disabledOutputs = new HashSet<OutputPath>();
+  const disabledOutputs: Array<OutputPath> = [];
   const elmJsonsErrors: Array<ElmJsonErrorWithMetadata> = [];
-  const elmJsons = new HashMap<ElmJsonPath, HashMap<OutputPath, OutputState>>();
-  const potentialOutputDuplicates = new HashMap<
+  const elmJsons = new Map<ElmJsonPath, Array<[OutputPath, OutputState]>>();
+  const potentialOutputDuplicates = new Map<
     AbsolutePath,
     NonEmptyArray<string>
   >();
 
   for (const [index, [targetName, target]] of Object.entries(
-    config.targets
+    config.targets,
   ).entries()) {
     const outputPath: OutputPath = {
       tag: "OutputPath",
       theOutputPath: absolutePathFromString(
-        absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-        target.output
+        absoluteDirname(elmWatchJsonPath),
+        target.output,
       ),
       temporaryOutputPath: absolutePathFromString(
-        elmWatchStuffDir.theElmWatchStuffDir,
-        `${index}.js`
+        elmWatchStuffDir,
+        `${index}.js`,
       ),
       originalString: target.output,
-      targetName,
+      targetName: markAsTargetName(targetName),
     };
 
     const previousOutput = potentialOutputDuplicates.get(
-      outputPath.theOutputPath
+      outputPath.theOutputPath,
     );
     if (previousOutput === undefined) {
       potentialOutputDuplicates.set(outputPath.theOutputPath, [
@@ -369,12 +367,12 @@ export function initProject({
 
     if (
       enabledTargetsSubstrings.some((substring) =>
-        targetName.includes(substring)
+        targetName.includes(substring),
       )
     ) {
       const resolveElmJsonResult = resolveElmJson(
         elmWatchJsonPath,
-        target.inputs
+        target.inputs,
       );
 
       const persisted = elmWatchStuffJson?.targets[targetName];
@@ -386,19 +384,17 @@ export function initProject({
 
       switch (resolveElmJsonResult.tag) {
         case "Success": {
-          const previous =
-            elmJsons.get(resolveElmJsonResult.elmJsonPath) ??
-            new HashMap<OutputPath, OutputState>();
-          previous.set(
+          const previous = elmJsons.get(resolveElmJsonResult.elmJsonPath) ?? [];
+          previous.push([
             outputPath,
             new OutputState(
               resolveElmJsonResult.inputs,
               thisCompilationMode,
               browserUiPosition,
               openErrorOverlay,
-              getNow
-            )
-          );
+              getNow,
+            ),
+          ]);
           elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
           break;
         }
@@ -414,7 +410,7 @@ export function initProject({
           break;
       }
     } else {
-      disabledOutputs.add(outputPath);
+      disabledOutputs.push(outputPath);
     }
   }
 
@@ -435,61 +431,21 @@ export function initProject({
   const staticFilesDir: StaticFilesDir | undefined =
     config.serve === undefined
       ? undefined
-      : {
-          tag: "StaticFilesDir",
-          theStaticFilesDir: absolutePathFromString(
-            absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-            config.serve
+      : markAsStaticFilesDir(
+          absolutePathFromString(
+            absoluteDirname(elmWatchJsonPath),
+            config.serve,
           ),
-        };
+        );
 
-  const watchRoots = new HashSet<AbsolutePath>(
-    [
-      absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-      ...(staticFilesDir === undefined
-        ? []
-        : [staticFilesDir.theStaticFilesDir]),
-      ...Array.from(elmJsons.keys()).flatMap(
-        (elmJsonPath): Array<AbsolutePath> => {
-          // This is a bit weird, but we can actually ignore errors here. Some facts:
-          // - We want to run Elm even if the elm.json is invalid, because Elm has
-          //   really nice error messages.
-          // - We run `ElmJson.readAndParse` again later and do report the errors then.
-          //   (But in practice you won’t see them because we show Elm’s errors instead.)
-          // - Regardless of whether we report the errors here we can’t know the
-          //   real watch root until it becomes valid. The best guess is to just
-          //   use the elm-watch.json and elm.json paths then.
-          const result = ElmJson.readAndParse(elmJsonPath);
-          switch (result.tag) {
-            case "Parsed":
-              return [
-                absoluteDirname(elmJsonPath.theElmJsonPath),
-                ...ElmJson.getSourceDirectories(
-                  elmJsonPath,
-                  result.elmJson
-                ).map((sourceDirectory) => sourceDirectory.theSourceDirectory),
-              ];
-
-            case "ElmJsonReadAsJsonError":
-            case "ElmJsonDecodeError":
-              return [absoluteDirname(elmJsonPath.theElmJsonPath)];
-          }
-        }
-      ),
-    ].filter((root, index, array) =>
-      array.every(
-        (root2, index2) =>
-          // Don’t compare to self.
-          index === index2 ||
-          // If any other root contains this one, discard this one.
-          !root.absolutePath.startsWith(root2.absolutePath + path.sep)
-      )
-    )
+  const watchRoots = getWatchRoots(
+    elmWatchJsonPath,
+    Array.from(elmJsons.keys()),
   );
 
   const maxParallel = silentlyReadIntEnvValue(
     env[__ELM_WATCH_MAX_PARALLEL],
-    os.cpus().length
+    os.cpus().length,
   );
 
   const postprocess: Postprocess =
@@ -497,13 +453,18 @@ export function initProject({
       ? { tag: "NoPostprocess" }
       : { tag: "Postprocess", postprocessArray: config.postprocess };
 
+  // TODO: Do this in a function.
   let { webSocketUrl } = config;
   const envWebSocketUrlString = env[ELM_WATCH_WEBSOCKET_URL];
   if (envWebSocketUrlString !== undefined) {
-    try {
-      webSocketUrl = WebSocketUrl("Env")(envWebSocketUrlString);
-    } catch {
-      // Invalid environment variables are silently ignored.
+    const decoderResult = WebSocketUrl("Env").decoder(envWebSocketUrlString);
+    switch (decoderResult.tag) {
+      case "Valid":
+        webSocketUrl = decoderResult.value;
+        break;
+      case "DecoderError":
+        // Invalid environment variables are silently ignored.
+        break;
     }
   }
 
@@ -524,6 +485,51 @@ export function initProject({
   };
 }
 
+function getWatchRoots(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  elmJsons: Array<ElmJsonPath>,
+): Set<AbsolutePath> {
+  return new Set<AbsolutePath>(
+    filterSubDirs(path.sep, [
+      absoluteDirname(elmWatchJsonPath),
+      ...elmJsons.flatMap((elmJsonPath): Array<AbsolutePath> => {
+        // This is a bit weird, but we can actually ignore errors here. Some facts:
+        // - We want to run Elm even if the elm.json is invalid, because Elm has
+        //   really nice error messages.
+        // - We run `ElmJson.readSourceDirectories` again later and do report the errors then.
+        //   (But in practice you won’t see them because we show Elm’s errors instead.)
+        // - Regardless of whether we report the errors here we can’t know the
+        //   real watch root until it becomes valid. The best guess is to just
+        //   use the elm-watch.json and elm.json paths then.
+        const result = ElmJson.readSourceDirectories(elmJsonPath);
+        switch (result.tag) {
+          case "Parsed":
+            return [absoluteDirname(elmJsonPath), ...result.sourceDirectories];
+
+          case "ElmJsonReadError":
+          case "ElmJsonDecodeError":
+            return [absoluteDirname(elmJsonPath)];
+        }
+      }),
+    ]),
+  );
+}
+
+export function filterSubDirs(
+  pathSep: string,
+  paths: Array<AbsolutePath>,
+): Array<AbsolutePath> {
+  return paths.filter((root, index) =>
+    paths.every(
+      (root2, index2) =>
+        // Don’t compare to self.
+        index === index2 ||
+        // If any other root contains this one, discard this one.
+        !root.startsWith(root2.endsWith(pathSep) ? root2 : root2 + pathSep),
+    ),
+  );
+}
+
 type ResolveElmJsonResult =
   | ElmJsonError
   | {
@@ -534,7 +540,7 @@ type ResolveElmJsonResult =
 
 function resolveElmJson(
   elmWatchJsonPath: ElmWatchJsonPath,
-  inputStrings: NonEmptyArray<string>
+  inputStrings: NonEmptyArray<string>,
 ): ResolveElmJsonResult {
   const inputs: Array<InputPath> = [];
   const inputsNotFound: Array<UncheckedInputPath> = [];
@@ -542,14 +548,14 @@ function resolveElmJson(
     inputPath: UncheckedInputPath;
     error: Error;
   }> = [];
-  const resolved = new HashMap<AbsolutePath, NonEmptyArray<InputPath>>();
+  const resolved = new Map<AbsolutePath, NonEmptyArray<InputPath>>();
 
   for (const inputString of inputStrings) {
     const uncheckedInputPath: UncheckedInputPath = {
       tag: "UncheckedInputPath",
       theUncheckedInputPath: absolutePathFromString(
-        absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath),
-        inputString
+        absoluteDirname(elmWatchJsonPath),
+        inputString,
       ),
       originalString: inputString,
     };
@@ -621,14 +627,14 @@ function resolveElmJson(
   for (const inputPath of inputs) {
     const elmJsonPathRaw = findClosest(
       "elm.json",
-      absoluteDirname(inputPath.theInputPath)
+      absoluteDirname(inputPath.theInputPath),
     );
     if (elmJsonPathRaw === undefined) {
       elmJsonNotFound.push(inputPath);
     } else {
       elmJsonPaths.push({
         inputPath,
-        elmJsonPath: { tag: "ElmJsonPath", theElmJsonPath: elmJsonPathRaw },
+        elmJsonPath: markAsElmJsonPath(elmJsonPathRaw),
       });
     }
   }
@@ -641,8 +647,8 @@ function resolveElmJson(
     };
   }
 
-  const elmJsonPathsSet = new HashSet(
-    elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath)
+  const elmJsonPathsSet = new Set(
+    elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath),
   );
 
   const uniqueElmJsonPath = getSetSingleton(elmJsonPathsSet);
@@ -673,30 +679,31 @@ export function getFlatOutputs(project: Project): Array<{
 }> {
   return Array.from(project.elmJsons.entries()).flatMap(
     ([elmJsonPath, outputs]) =>
-      Array.from(outputs, ([outputPath, outputState]) => ({
+      outputs.map(([outputPath, outputState]) => ({
         elmJsonPath,
         outputPath,
         outputState,
-      }))
+      })),
   );
 }
 
 export function projectToDebug(project: Project): unknown {
   return {
-    watchRoots: Array.from(project.watchRoots, (root) => root.absolutePath),
-    elmWatchJson: project.elmWatchJsonPath.theElmWatchJsonPath.absolutePath,
-    elmWatchStuffJson:
-      project.elmWatchStuffJsonPath.theElmWatchStuffJsonPath.absolutePath,
+    watchRoots: Array.from(project.watchRoots),
+    staticFilesDir: project.staticFilesDir,
+    webSocketUrl: project.webSocketUrl,
+    elmWatchJson: project.elmWatchJsonPath,
+    elmWatchStuffJson: project.elmWatchStuffJsonPath,
     maxParallel: project.maxParallel,
     postprocess: project.postprocess,
     enabledTargets: Array.from(project.elmJsons.entries()).flatMap(
       ([elmJsonPath, outputs]) =>
-        Array.from(outputs.entries(), ([outputPath, outputState]) => ({
+        outputs.map(([outputPath, outputState]) => ({
           ...outputPathToDebug(outputPath),
           compilationMode: outputState.compilationMode,
-          elmJson: elmJsonPath.theElmJsonPath.absolutePath,
+          elmJson: elmJsonPath,
           inputs: outputState.inputs.map(inputPathToDebug),
-        }))
+        })),
     ),
     disabledTargets: Array.from(project.disabledOutputs, outputPathToDebug),
     erroredTargets: project.elmJsonsErrors.map(
@@ -704,7 +711,7 @@ export function projectToDebug(project: Project): unknown {
         error: error.tag,
         ...outputPathToDebug(outputPath),
         compilationMode,
-      })
+      }),
     ),
   };
 }
@@ -712,16 +719,16 @@ export function projectToDebug(project: Project): unknown {
 function outputPathToDebug(outputPath: OutputPath): Record<string, unknown> {
   return {
     targetName: outputPath.targetName,
-    output: outputPath.theOutputPath.absolutePath,
-    temporaryOutput: outputPath.temporaryOutputPath.absolutePath,
+    output: outputPath.theOutputPath,
+    temporaryOutput: outputPath.temporaryOutputPath,
     originalString: outputPath.originalString,
   };
 }
 
 function inputPathToDebug(inputPath: InputPath): Record<string, unknown> {
   return {
-    input: inputPath.theInputPath.absolutePath,
-    realpath: inputPath.realpath.absolutePath,
+    input: inputPath.theInputPath,
+    realpath: inputPath.realpath,
     originalString: inputPath.originalString,
   };
 }

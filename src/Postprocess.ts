@@ -1,8 +1,9 @@
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 import { Worker } from "worker_threads";
 
 import { Env } from "./Env";
-import { toError } from "./Helpers";
+import { quote, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
 import {
@@ -50,7 +51,7 @@ export function runPostprocess({
 }): { promise: Promise<PostprocessResult>; kill: () => Promise<void> } {
   const commandName = postprocessArray[0];
   const userArgs = postprocessArray.slice(1);
-  const cwd = absoluteDirname(elmWatchJsonPath.theElmWatchJsonPath);
+  const cwd = absoluteDirname(elmWatchJsonPath);
 
   if (commandName === ELM_WATCH_NODE) {
     const worker = postprocessWorkerPool.getOrCreateAvailableWorker();
@@ -82,12 +83,15 @@ export function runPostprocess({
       case "OtherSpawnError":
         return spawnResult;
 
+      // This is covered on macOS and Windows, but not Linux.
+      /* v8 ignore start */
       case "StdinWriteError":
         return {
           tag: "PostprocessStdinWriteError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
+      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -141,7 +145,7 @@ export class PostprocessWorkerPool {
 
   getOrCreateAvailableWorker(): PostprocessWorker {
     const existingWorker = Array.from(this.workers).find((worker) =>
-      worker.isIdle()
+      worker.isIdle(),
     );
     if (existingWorker === undefined) {
       const newWorker = new PostprocessWorker(
@@ -151,7 +155,7 @@ export class PostprocessWorkerPool {
         },
         (worker) => {
           this.workers.delete(worker);
-        }
+        },
       );
       this.workers.add(newWorker);
       return newWorker;
@@ -165,7 +169,7 @@ export class PostprocessWorkerPool {
     const toKill = this.workers.size - this.calculateMax();
     if (toKill > 0) {
       await Promise.all(
-        idle.slice(-toKill).map((worker) => worker.terminate())
+        idle.slice(-toKill).map((worker) => worker.terminate()),
       );
     }
     return toKill;
@@ -173,7 +177,7 @@ export class PostprocessWorkerPool {
 
   async terminate(): Promise<void> {
     await Promise.all(
-      Array.from(this.workers).map((worker) => worker.terminate())
+      Array.from(this.workers).map((worker) => worker.terminate()),
     );
   }
 }
@@ -202,7 +206,7 @@ class PostprocessWorker {
   constructor(
     private onUnexpectedError: (error: Error) => void,
     private onIdle: (worker: PostprocessWorker) => void,
-    private onTerminated: (worker: PostprocessWorker) => void
+    private onTerminated: (worker: PostprocessWorker) => void,
   ) {
     const stdout: Array<Buffer> = [];
     const stderr: Array<Buffer> = [];
@@ -215,7 +219,7 @@ class PostprocessWorker {
       stderr.push(chunk);
     });
 
-    // istanbul ignore next
+    /* v8 ignore start */
     this.worker.on("error", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
@@ -223,8 +227,9 @@ class PostprocessWorker {
         this.onUnexpectedError(error);
       }
     });
+    /* v8 ignore stop */
 
-    // istanbul ignore next
+    /* v8 ignore start */
     this.worker.on("messageerror", (error) => {
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
@@ -232,35 +237,39 @@ class PostprocessWorker {
         this.onUnexpectedError(error);
       }
     });
+    /* v8 ignore stop */
 
     this.worker.on("exit", (exitCode) => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (this.status.tag !== "Terminated") {
         this.status = { tag: "Terminated" };
         this.onTerminated(this);
         this.onUnexpectedError(
           new Error(
-            `PostprocessWorker unexpectedly exited, with exit code ${exitCode}.`
-          )
+            `PostprocessWorker unexpectedly exited, with exit code ${exitCode}.`,
+          ),
         );
       }
+      /* v8 ignore stop */
     });
 
     this.worker.on("message", (message: MessageFromWorker) => {
       switch (message.tag) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         case "PostprocessDone":
           switch (this.status.tag) {
-            // istanbul ignore next
+            /* v8 ignore start */
             case "Idle":
               this.terminate().catch(this.onUnexpectedError);
               this.onUnexpectedError(
                 new Error(
-                  `PostprocessWorker received a ${JSON.stringify(
-                    message.tag
-                  )} message from the worker. This should only happen when "Busy" but the status is "Idle".`
-                )
+                  `PostprocessWorker received a ${quote(
+                    message.tag,
+                  )} message from the worker. This should only happen when "Busy" but the status is "Idle".`,
+                ),
               );
               break;
+            /* v8 ignore stop */
 
             case "Busy":
               switch (message.result.tag) {
@@ -273,23 +282,25 @@ class PostprocessWorker {
                           stdout: Buffer.concat(stdout).toString("utf8"),
                           stderr: Buffer.concat(stderr).toString("utf8"),
                         }
-                      : result
+                      : result,
                   );
                   break;
                 }
 
-                // istanbul ignore next
+                /* v8 ignore start */
                 case "Reject":
                   this.status.reject(toError(message.result.error));
                   break;
+                /* v8 ignore stop */
               }
               this.status = { tag: "Idle" };
               this.onIdle(this);
               break;
 
-            // istanbul ignore next
+            /* v8 ignore start */
             case "Terminated":
               break;
+            /* v8 ignore stop */
           }
 
           stdout.length = 0;
@@ -307,7 +318,7 @@ class PostprocessWorker {
   }
 
   async postprocess(
-    args: ElmWatchNodeInternalArgs
+    args: ElmWatchNodeInternalArgs,
   ): Promise<PostprocessResult> {
     switch (this.status.tag) {
       case "Idle":
@@ -316,15 +327,16 @@ class PostprocessWorker {
           this.postMessage({ tag: "StartPostprocess", args });
         });
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "Busy":
-      // istanbul ignore next
       case "Terminated":
         throw new Error(
-          `Cannot call PostprocessWorker#postprocess because \`this.status === ${JSON.stringify(
-            this.status
-          )}\` instead of the expected "Idle".`
+          `Cannot call PostprocessWorker#postprocess because \`this.status === ${Codec.JSON.stringify(
+            Codec.unknown,
+            this.status,
+          )}\` instead of the expected "Idle".`,
         );
+      /* v8 ignore stop */
     }
   }
 
@@ -345,9 +357,10 @@ class PostprocessWorker {
         break;
       }
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "Terminated":
       // Do nothing.
+      /* v8 ignore stop */
     }
   }
 }

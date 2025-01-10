@@ -159,6 +159,18 @@
                 "src/AllProgramTypes/ApplicationProgram.elm"
             ],
             "output": "build/AllProgramTypes.js"
+        },
+        "InitCmds": {
+            "inputs": [
+                "src/InitCmds.elm"
+            ],
+            "output": "build/InitCmds.js"
+        },
+        "InitCmdNone": {
+            "inputs": [
+                "src/InitCmdNone.elm"
+            ],
+            "output": "build/InitCmdNone.js"
         }
     }
 }

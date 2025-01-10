@@ -1,5 +1,5 @@
 import type { Readable, Writable } from "stream";
-import { DecoderError, repr } from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
 import { NonEmptyArray } from "./NonEmptyArray";
 
@@ -13,13 +13,6 @@ export type WriteStream = Writable & {
   isTTY: boolean;
   columns?: number;
 };
-
-/**
- * More type safe version of `Array#join`.
- */
-export function join(array: Array<string>, separator: string): string {
-  return array.join(separator);
-}
 
 export function split(string: string, splitter: string): NonEmptyArray<string> {
   return string.split(splitter) as NonEmptyArray<string>;
@@ -52,18 +45,24 @@ function pad(number: number): string {
   return number.toString().padStart(2, "0");
 }
 
+export function quote(string: string): string {
+  return Codec.JSON.stringify(Codec.string, string);
+}
+
 export function formatDate(date: Date): string {
-  return join(
-    [pad(date.getFullYear()), pad(date.getMonth() + 1), pad(date.getDate())],
-    "-"
-  );
+  return [
+    pad(date.getFullYear()),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join("-");
 }
 
 export function formatTime(date: Date): string {
-  return join(
-    [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())],
-    ":"
-  );
+  return [
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join(":");
 }
 
 const KiB = 1024;
@@ -118,58 +117,34 @@ export function escapeHtml(string: string): string {
         return "&quot;";
       case "'":
         return "&apos;";
-      // istanbul ignore next
+      /* v8 ignore start */
       default:
         return match;
+      /* v8 ignore stop */
     }
   });
 }
 
 export function silentlyReadIntEnvValue(
   value: string | undefined,
-  defaultValue: number
+  defaultValue: number,
 ): number {
   return /^\d+$/.test(value ?? "") ? Number(value) : defaultValue;
 }
 
-export const toError: ((arg: unknown) => NodeJS.ErrnoException) & {
-  jestWorkaround?: (arg: unknown) => NodeJS.ErrnoException;
-} = (arg) =>
-  // Workaround for https://github.com/facebook/jest/issues/2549
-  // In the tests we overwrite this.
-  // We could have used the jest-environment-node-single-context npm package,
-  // but it only works for the `node` environment, not `jsdom`.
-  // istanbul ignore next
-  toError.jestWorkaround !== undefined
-    ? toError.jestWorkaround(arg)
-    : arg instanceof Error
+export const toError: (arg: unknown) => NodeJS.ErrnoException = (arg) =>
+  /* v8 ignore start */
+  arg instanceof Error
     ? arg
     : new Error(
-        `Caught error not instanceof Error: ${unknownErrorToString(arg)}`
+        `Caught error not instanceof Error: ${unknownErrorToString(arg)}`,
       );
-
-export type JsonError = DecoderError | SyntaxError;
-
-export const toJsonError: ((arg: unknown) => JsonError) & {
-  jestWorkaround?: (arg: unknown) => JsonError;
-} = (arg) =>
-  // istanbul ignore next
-  arg instanceof DecoderError
-    ? arg
-    : toError.jestWorkaround !== undefined // See `toError.jestWorkaround`.
-    ? toError.jestWorkaround(arg)
-    : arg instanceof SyntaxError
-    ? arg
-    : new SyntaxError(
-        `Caught error not instanceof DecoderError or SyntaxError: ${unknownErrorToString(
-          arg
-        )}`
-      );
+/* v8 ignore stop */
 
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"
     ? (error as { stack: string }).stack
     : typeof (error as { message?: string } | undefined)?.message === "string"
-    ? (error as { message: string }).message
-    : repr(error);
+      ? (error as { message: string }).message
+      : Codec.repr(error);
 }

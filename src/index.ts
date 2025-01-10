@@ -9,7 +9,15 @@ import { makeLogger } from "./Logger";
 import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { run } from "./Run";
-import { CliArg, CreateServer, Cwd, GetNow } from "./Types";
+import {
+  CliArg,
+  CreateServer,
+  Cwd,
+  GetNow,
+  markAsAbsolutePath,
+  markAsCliArg,
+  markAsCwd,
+} from "./Types";
 
 // Note: This must be in sync with index.d.ts, which is used by the npm package.
 type Options = {
@@ -37,7 +45,7 @@ export default async function elmWatchCli(
       http.createServer(onRequest).on("upgrade", onUpgrade),
     logDebug = (message) => stderr.write(`${message}\n`),
     hotKillManager = { kill: undefined },
-  }: Options = {}
+  }: Options = {},
 ): Promise<number> {
   const getNow: GetNow = () => new Date();
   const logger = makeLogger({
@@ -48,25 +56,19 @@ export default async function elmWatchCli(
     stderr,
     logDebug,
   });
-  const cwd: Cwd = {
-    tag: "Cwd",
-    path: absolutePathFromString(
-      { tag: "AbsolutePath", absolutePath: process.cwd() },
-      cwdString
-    ),
-  };
+  const cwd: Cwd = markAsCwd(
+    absolutePathFromString(markAsAbsolutePath(process.cwd()), cwdString),
+  );
 
   const isHelp = args.some(
-    (arg) => arg === "-h" || arg === "-help" || arg === "--help"
+    (arg) => arg === "-h" || arg === "-help" || arg === "--help",
   );
   if (isHelp) {
     logger.write(Help.render(logger.config));
     return 0;
   }
 
-  const restArgs: Array<CliArg> = args
-    .slice(1)
-    .map((arg) => ({ tag: "CliArg", theArg: arg }));
+  const restArgs: Array<CliArg> = args.slice(1).map(markAsCliArg);
 
   switch (args[0]) {
     case undefined:
@@ -97,10 +99,11 @@ export default async function elmWatchCli(
                 ? new PostprocessWorkerPool(reject)
                 : result.postprocessWorkerPool,
               result === undefined ? undefined : result.webSocketState,
-              hotKillManager
+              hotKillManager,
             );
           } while (result.tag === "Restart");
           switch (result.tag) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             case "Exit":
               return result.exitCode;
           }
@@ -127,7 +130,7 @@ export default async function elmWatchCli(
   }
 }
 
-// istanbul ignore if
+/* v8 ignore start */
 if (require.main === module) {
   process.title = "elm-watch";
   elmWatchCli(process.argv.slice(2))
@@ -136,7 +139,7 @@ if (require.main === module) {
       process.exitCode = exitCode;
       if (process.stdout.isTTY) {
         process.stdout.write(
-          "Exiting elm-watch. Press ctrl+c (again) to force."
+          "Exiting elm-watch. Press ctrl+c (again) to force.",
         );
         process.once("exit", () => {
           process.stdout.cursorTo(0);
@@ -146,9 +149,10 @@ if (require.main === module) {
     })
     .catch((error: unknown) => {
       process.stderr.write(
-        `Unexpected error:\n${unknownErrorToString(error)}\n`
+        `Unexpected error:\n${unknownErrorToString(error)}\n`,
       );
       // Forcefully exit since the watcher might still be running.
       process.exit(1);
     });
 }
+/* v8 ignore stop */

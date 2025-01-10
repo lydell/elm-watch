@@ -9,7 +9,7 @@ async function read(stream) {
 async function run(args) {
   if (args.length !== 5) {
     console.error(
-      `Expected 5 args but got ${args.length}: ${JSON.stringify(args)}`
+      `Expected 5 args but got ${args.length}: ${JSON.stringify(args)}`,
     );
     return 1;
   }
@@ -20,8 +20,8 @@ async function run(args) {
   if (arg1 !== expectedArg1) {
     console.error(
       `Expected arg 1 to be ${JSON.stringify(
-        expectedArg1
-      )} but got: ${JSON.stringify(arg1)}`
+        expectedArg1,
+      )} but got: ${JSON.stringify(arg1)}`,
     );
     return 1;
   }
@@ -30,8 +30,8 @@ async function run(args) {
   if (arg2 !== expectedArg2) {
     console.error(
       `Expected arg 2 to be ${JSON.stringify(
-        expectedArg2
-      )} but got: ${JSON.stringify(arg2)}`
+        expectedArg2,
+      )} but got: ${JSON.stringify(arg2)}`,
     );
     return 1;
   }
@@ -40,8 +40,8 @@ async function run(args) {
   if (targetName != expectedTargetName) {
     console.error(
       `Expected targetName to be ${JSON.stringify(
-        expectedTargetName
-      )} but got: ${JSON.stringify(targetName)}`
+        expectedTargetName,
+      )} but got: ${JSON.stringify(targetName)}`,
     );
     return 1;
   }
@@ -71,7 +71,7 @@ async function run(args) {
       const probe = "console.warn";
       if (output.includes(probe)) {
         console.error(
-          `Expected stdin NOT to contain: ${JSON.stringify(probe)}`
+          `Expected stdin NOT to contain: ${JSON.stringify(probe)}`,
         );
         return 1;
       }
@@ -80,7 +80,7 @@ async function run(args) {
 
     default:
       console.error(
-        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`
+        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`,
       );
       return 1;
   }
@@ -109,5 +109,5 @@ run(process.argv.slice(2)).then(
   (error) => {
     console.error("Uncaught error:", error);
     process.exit(1);
-  }
+  },
 );

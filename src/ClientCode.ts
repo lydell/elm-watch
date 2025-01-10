@@ -5,21 +5,23 @@ import * as esbuild from "esbuild";
 import * as path from "path";
 
 import { clientEsbuildOptions } from "../scripts/Build";
+import { quote } from "./Helpers";
 
 const result = esbuild.buildSync(clientEsbuildOptions);
 
 function getOutput(name: string): string {
   const match = result.outputFiles.find(
-    (output) => path.basename(output.path) === name
+    (output) => path.basename(output.path) === name,
   );
-  // istanbul ignore if
+  /* v8 ignore start */
   if (match === undefined) {
     throw new Error(
-      `ClientCode: Found no output from esbuild matching ${JSON.stringify(
-        name
-      )} in ${JSON.stringify(result.outputFiles.map((output) => output.path))}`
+      `ClientCode: Found no output from esbuild matching ${quote(
+        name,
+      )} in ${result.outputFiles.map((output) => quote(output.path)).join(", ")}`,
     );
   }
+  /* v8 ignore stop */
   return match.text;
 }
 

@@ -1,4 +1,4 @@
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
 import { toError } from "./Helpers";
 import { Port } from "./Port";
@@ -17,45 +17,66 @@ export type WebSocketUrl = {
 };
 
 export function WebSocketUrl(
-  source: WebSocketUrl["source"]
-): Decode.Decoder<WebSocketUrl> {
-  return Decode.chain(Decode.string, (urlString): WebSocketUrl => {
-    let url;
-    try {
-      url = new URL(urlString);
-    } catch (unknownError) {
-      const error = toError(unknownError);
-      throw new Decode.DecoderError({
-        message: `Expected a valid URL (starting with ws: or wss:): ${error.message}`,
-        value: urlString,
-      });
-    }
-    if (url.protocol !== "ws:" && url.protocol !== "wss:") {
-      throw new Decode.DecoderError({
-        message: `Expected a WebSocket URL, starting with ws: or wss:.`,
-        value: urlString,
-      });
-    }
-    if (url.hash !== "" || url.href.endsWith("#")) {
-      throw new Decode.DecoderError({
-        message: `The WebSocket URL must not contain a fragment (hash).`,
-        value: urlString,
-      });
-    }
-    return {
-      tag: "UrlFromConfig",
-      url,
-      source,
-    };
+  source: WebSocketUrl["source"],
+): Codec.Codec<WebSocketUrl> {
+  return Codec.flatMap(Codec.string, {
+    decoder: (urlString) => {
+      let url;
+      try {
+        url = new URL(urlString);
+      } catch (unknownError) {
+        const error = toError(unknownError);
+        return {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: `Expected a valid URL (starting with ws: or wss:): ${error.message}`,
+            got: urlString,
+            path: [],
+          },
+        };
+      }
+      if (url.protocol !== "ws:" && url.protocol !== "wss:") {
+        return {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: `Expected a WebSocket URL, starting with ws: or wss:.`,
+            got: urlString,
+            path: [],
+          },
+        };
+      }
+      if (url.hash !== "" || url.href.endsWith("#")) {
+        return {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: `The WebSocket URL must not contain a fragment (hash).`,
+            got: urlString,
+            path: [],
+          },
+        };
+      }
+      return {
+        tag: "Valid",
+        value: {
+          tag: "UrlFromConfig",
+          url,
+          source,
+        },
+      };
+    },
+    encoder: (webSocketUrl) => webSocketUrl.url.href,
   });
 }
 
 export function webSocketConnectionToPrimitive(
-  webSocketConnection: WebSocketConnection
+  webSocketConnection: WebSocketConnection,
 ): number | string {
   switch (webSocketConnection.tag) {
     case "AutomaticUrl":
-      return webSocketConnection.port.thePort;
+      return webSocketConnection.port;
     case "UrlFromConfig":
       return webSocketConnection.url.toString();
   }

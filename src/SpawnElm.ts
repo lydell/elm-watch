@@ -1,23 +1,22 @@
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
+import * as Codec from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
 import { __ELM_WATCH_ELM_TIMEOUT_MS, __ELM_WATCH_TMP_DIR, Env } from "./Env";
 import * as Errors from "./Errors";
-import {
-  JsonError,
-  silentlyReadIntEnvValue,
-  toError,
-  toJsonError,
-} from "./Helpers";
+import { silentlyReadIntEnvValue, toError } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { Command, ExitReason, spawn, SpawnResult } from "./Spawn";
 import {
+  AbsolutePath,
   CompilationMode,
   ElmJsonPath,
   GetNow,
   InputPath,
+  markAsAbsolutePath,
   OutputPath,
 } from "./Types";
 
@@ -40,7 +39,7 @@ export type RunElmMakeError =
     }
   | {
       tag: "ElmMakeJsonParseError";
-      error: JsonError;
+      error: Codec.DecoderError;
       errorFilePath: Errors.ErrorFilePath;
       command: Command;
     }
@@ -61,7 +60,11 @@ export type RunElmMakeError =
       command: Command;
     };
 
-type NullOutputPath = { tag: "NullOutputPath" };
+type LocalOutputPath =
+  | { tag: "NullOutputPath" }
+  | (Pick<OutputPath, "tag" | "temporaryOutputPath" | "theOutputPath"> & {
+      writeToTemporaryDir: boolean;
+    });
 
 export function make({
   elmJsonPath,
@@ -73,25 +76,29 @@ export function make({
 }: {
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
-  inputs: NonEmptyArray<InputPath>;
-  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean });
+  inputs: NonEmptyArray<Pick<InputPath, "tag" | "theInputPath">>;
+  outputPath: LocalOutputPath;
   env: Env;
   getNow: GetNow;
 }): {
   promise: Promise<RunElmMakeResult>;
   kill: (options: { force: boolean }) => void;
 } {
+  const cwd = absoluteDirname(elmJsonPath);
   const command: Command = {
     command: "elm",
     args: [
       "make",
       "--report=json",
       ...maybeToArray(compilationModeToArg(compilationMode)),
-      `--output=${outputPathToAbsoluteString(outputPath)}`,
-      ...inputs.map((inputPath) => inputPath.theInputPath.absolutePath),
+      `--output=${outputPathToAbsoluteString(cwd, outputPath)}`,
+      // Use relative paths because:
+      // - Windows has a maximum command length. See: https://github.com/lydell/elm-watch/issues/86
+      // - It looks nicer in error messages (the printed commands are much shorter).
+      ...inputs.map((inputPath) => path.relative(cwd, inputPath.theInputPath)),
     ],
     options: {
-      cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+      cwd,
       env,
     },
   };
@@ -100,19 +107,20 @@ export function make({
 
   const handleSpawnResult = (spawnResult: SpawnResult): RunElmMakeResult => {
     switch (spawnResult.tag) {
-      // istanbul ignore next
+      /* v8 ignore start */
       case "CommandNotFoundError":
         return { tag: "ElmNotFoundError", command };
+      /* v8 ignore stop */
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "OtherSpawnError":
-      // istanbul ignore next
       case "StdinWriteError": // We never write to stdin.
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
+      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -136,11 +144,11 @@ export function make({
           stderr === ""
           ? { tag: "Success" }
           : exitReason.tag === "ExitCode" &&
-            exitReason.exitCode === 1 &&
-            stdout === ""
-          ? parsePotentialElmMakeJson(command, stderr) ??
-            unexpectedElmMakeOutput
-          : unexpectedElmMakeOutput;
+              exitReason.exitCode === 1 &&
+              stdout === ""
+            ? (parsePotentialElmMakeJson(command, stderr) ??
+              unexpectedElmMakeOutput)
+            : unexpectedElmMakeOutput;
       }
     }
   };
@@ -150,12 +158,13 @@ export function make({
   return {
     promise: promise.then(handleSpawnResult),
     kill: ({ force }) => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (force) {
         kill();
       } else {
         delayKill(promise, startTime, getNow, env, kill);
       }
+      /* v8 ignore stop */
     },
   };
 }
@@ -165,11 +174,11 @@ function delayKill(
   startTime: number,
   getNow: GetNow,
   env: Env,
-  kill: () => void
+  kill: () => void,
 ): void {
   const timeout = silentlyReadIntEnvValue(
     env[__ELM_WATCH_ELM_TIMEOUT_MS],
-    10000
+    10000,
   );
   const elapsed = getNow().getTime() - startTime;
   const timeoutId = setTimeout(kill, Math.max(0, timeout - elapsed));
@@ -179,7 +188,7 @@ function delayKill(
 }
 
 export function compilationModeToArg(
-  compilationMode: CompilationMode
+  compilationMode: CompilationMode,
 ): string | undefined {
   switch (compilationMode) {
     case "standard":
@@ -192,7 +201,8 @@ export function compilationModeToArg(
 }
 
 function outputPathToAbsoluteString(
-  outputPath: NullOutputPath | (OutputPath & { writeToTemporaryDir: boolean })
+  cwd: AbsolutePath,
+  outputPath: LocalOutputPath,
 ): string {
   switch (outputPath.tag) {
     case "OutputPath":
@@ -200,9 +210,12 @@ function outputPathToAbsoluteString(
       // If postprocessing fails, we don’t want to end up with a plain Elm file with
       // no hot reloading or web socket client. The only time we can write directly
       // to the output is when in "make" mode with no postprocessing.
-      return outputPath.writeToTemporaryDir
-        ? outputPath.temporaryOutputPath.absolutePath
-        : outputPath.theOutputPath.absolutePath;
+      return path.relative(
+        cwd,
+        outputPath.writeToTemporaryDir
+          ? outputPath.temporaryOutputPath
+          : outputPath.theOutputPath,
+      );
     case "NullOutputPath":
       return "/dev/null";
   }
@@ -214,7 +227,7 @@ function maybeToArray<T>(arg: T | undefined): Array<T> {
 
 function parsePotentialElmMakeJson(
   command: Command,
-  stderr: string
+  stderr: string,
 ): RunElmMakeResult | undefined {
   if (!stderr.endsWith("}")) {
     // This is a workaround for when Elm crashes, potentially half-way through printing the JSON.
@@ -249,64 +262,40 @@ function parsePotentialElmMakeJson(
 function parseActualElmMakeJson(
   command: Command,
   jsonString: string,
-  extraError: string | undefined
+  extraError: string | undefined,
 ): RunElmMakeResult {
-  let json: unknown;
+  // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
+  const parsed = Codec.JSON.parse(
+    ElmMakeError,
+    jsonString.replace(/\t/g, "\\t"),
+  );
+  switch (parsed.tag) {
+    case "DecoderError":
+      return {
+        tag: "ElmMakeJsonParseError",
+        error: parsed.error,
+        errorFilePath: Errors.tryWriteErrorFile({
+          cwd: command.options.cwd,
+          name: "ElmMakeJsonParseError",
+          content: Errors.toPlainString(
+            Errors.elmMakeJsonParseError(
+              { tag: "NoLocation" },
+              parsed.error,
+              { tag: "ErrorFileBadContent", content: jsonString },
+              command,
+            ),
+          ),
+          hash: jsonString,
+        }),
+        command,
+      };
 
-  try {
-    // We need to replace literal tab characters as a workaround for https://github.com/elm/compiler/issues/2259.
-    json = JSON.parse(jsonString.replace(/\t/g, "\\t"));
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmMakeJsonParseError",
-      error,
-      errorFilePath: Errors.tryWriteErrorFile({
-        cwd: command.options.cwd,
-        name: "ElmMakeJsonParseError",
-        content: Errors.toPlainString(
-          Errors.elmMakeJsonParseError(
-            { tag: "NoLocation" },
-            error,
-            { tag: "ErrorFileBadContent", content: jsonString },
-            command
-          )
-        ),
-        hash: jsonString,
-      }),
-      command,
-    };
-  }
-
-  try {
-    return {
-      tag: "ElmMakeError",
-      error: ElmMakeError(json),
-      extraError,
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "ElmMakeJsonParseError",
-      error,
-      errorFilePath: Errors.tryWriteErrorFile({
-        cwd: command.options.cwd,
-        name: "ElmMakeJsonParseError",
-        content: Errors.toPlainString(
-          Errors.elmMakeJsonParseError(
-            { tag: "NoLocation" },
-            error,
-            {
-              tag: "ErrorFileBadContent",
-              content: JSON.stringify(json, null, 2),
-            },
-            command
-          )
-        ),
-        hash: jsonString,
-      }),
-      command,
-    };
+    case "Valid":
+      return {
+        tag: "ElmMakeError",
+        error: parsed.value,
+        extraError,
+      };
   }
 }
 
@@ -364,15 +353,12 @@ export function install({
   kill: (options: { force: boolean }) => void;
 } {
   const dummy = absolutePathFromString(
-    {
-      tag: "AbsolutePath",
-      absolutePath: env[__ELM_WATCH_TMP_DIR] ?? os.tmpdir(),
-    },
-    "ElmWatchDummy.elm"
+    markAsAbsolutePath(env[__ELM_WATCH_TMP_DIR] ?? os.tmpdir()),
+    "ElmWatchDummy.elm",
   );
 
   try {
-    fs.writeFileSync(dummy.absolutePath, elmWatchDummy());
+    fs.writeFileSync(dummy, elmWatchDummy());
   } catch (unknownError) {
     const error = toError(unknownError);
     return {
@@ -381,10 +367,11 @@ export function install({
         error,
       }),
       kill:
-        // istanbul ignore next
+        /* v8 ignore start */
         () => {
           // Do nothing.
         },
+      /* v8 ignore stop */
     };
   }
 
@@ -393,9 +380,9 @@ export function install({
     // Don’t use `--report=json` here, because then Elm won’t print downloading
     // of packages. We unfortunately lose colors this way, but package download
     // errors aren’t very colorful anyway.
-    args: ["make", `--output=/dev/null`, dummy.absolutePath],
+    args: ["make", `--output=/dev/null`, dummy],
     options: {
-      cwd: absoluteDirname(elmJsonPath.theElmJsonPath),
+      cwd: absoluteDirname(elmJsonPath),
       env,
     },
   };
@@ -407,15 +394,15 @@ export function install({
       case "CommandNotFoundError":
         return { tag: "ElmNotFoundError", command };
 
-      // istanbul ignore next
+      /* v8 ignore start */
       case "OtherSpawnError":
-      // istanbul ignore next
       case "StdinWriteError": // We never write to stdin.
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
+      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -464,7 +451,6 @@ export function install({
             return { tag: "ElmJsonError" };
           }
 
-          // istanbul ignore else
           if (title !== undefined && message !== undefined) {
             return {
               tag: "ElmInstallError",
@@ -490,12 +476,13 @@ export function install({
   return {
     promise: promise.then(handleSpawnResult),
     kill: ({ force }) => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (force) {
         kill();
       } else {
         delayKill(promise, startTime, getNow, env, kill);
       }
+      /* v8 ignore stop */
     },
   };
 }

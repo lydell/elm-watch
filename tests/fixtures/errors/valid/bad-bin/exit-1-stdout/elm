@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-if (require("../elm-install")) {
+import installed from "../elm-install.js";
+if (installed) {
   process.stdout.write("some output\non stdout");
   process.exit(1);
 }

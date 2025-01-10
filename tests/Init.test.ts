@@ -1,7 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
+import { describe, expect, test } from "vitest";
 
-import { elmWatchCli } from "../src";
+import elmWatchCli from "../src";
 import {
   assertExitCode,
   clean,
@@ -14,10 +15,10 @@ import {
   testExceptWindows,
 } from "./Helpers";
 
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "init");
+const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "init");
 
 async function initSuccessHelper(
-  fixture: string
+  fixture: string,
 ): Promise<{ stdout: string; json: string }> {
   const dir = path.join(FIXTURES_DIR, fixture);
   const elmWatchJsonPath = path.join(dir, "elm-watch.json");
@@ -35,7 +36,7 @@ async function initSuccessHelper(
     logDebug,
   });
 
-  assertExitCode(0, exitCode, stdout.content, stderr.content);
+  assertExitCode(0, exitCode, stdout.content, stderr.content, dir);
   expect(stderr.content).toBe("");
 
   return {
@@ -62,7 +63,7 @@ async function initFailHelper(
     logDebug,
   });
 
-  assertExitCode(1, exitCode, stdout.content, stderr.content);
+  assertExitCode(1, exitCode, stdout.content, stderr.content, dir);
   expect(stdout.content).toBe("");
 
   return clean(stderr.content);

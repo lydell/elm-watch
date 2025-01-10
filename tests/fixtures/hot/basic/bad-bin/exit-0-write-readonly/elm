@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const spawn = require("cross-spawn");
-const fs = require("fs");
-const path = require("path");
+import spawn from "cross-spawn";
+import fs from "fs";
+import path from "path";
 
 const child = spawn("elm", process.argv.slice(2), {
   env: {
@@ -15,7 +15,13 @@ const child = spawn("elm", process.argv.slice(2), {
 
 child.on("exit", (exitCode) => {
   if (!process.argv.some((arg) => arg.includes("/dev/null"))) {
-    const file = path.join(__dirname, "..", "..", "build", "Readonly.js");
+    const file = path.join(
+      import.meta.dirname,
+      "..",
+      "..",
+      "build",
+      "Readonly.js",
+    );
     fs.chmodSync(file, "0444"); // readonly
   }
   process.exit(exitCode);

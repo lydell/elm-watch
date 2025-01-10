@@ -1,4 +1,6 @@
-import { elmWatchCli } from "../src";
+import { describe, expect, test } from "vitest";
+
+import elmWatchCli from "../src";
 import { Env, NO_COLOR } from "../src/Env";
 import {
   assertExitCode,
@@ -13,13 +15,13 @@ import {
 
 async function helpHelper(
   args: Array<string>,
-  env: Env = process.env
+  env: Env = process.env,
 ): Promise<string> {
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();
 
   const exitCode = await elmWatchCli(args, {
-    cwd: __dirname,
+    cwd: import.meta.dirname,
     env: {
       ...TEST_ENV,
       ...env,
@@ -32,7 +34,13 @@ async function helpHelper(
 
   const stdoutString = clean(stdout.getOutput());
 
-  assertExitCode(0, exitCode, stdoutString, stderr.content);
+  assertExitCode(
+    0,
+    exitCode,
+    stdoutString,
+    stderr.content,
+    import.meta.dirname,
+  );
   expect(stderr.content).toBe("");
 
   return stdoutString;

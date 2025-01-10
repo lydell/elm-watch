@@ -1,10 +1,12 @@
+import * as Codec from "tiny-decoders";
+
 import * as ClientCode from "./ClientCode";
-import { join } from "./Helpers";
 import {
   BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
   OutputPath,
+  TargetName,
 } from "./Types";
 import {
   WebSocketConnection,
@@ -39,7 +41,7 @@ const REPLACEMENTS: Record<string, string> = {
 function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
 	if (args === "__elmWatchReturnData") {
-		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType };
+		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType, _Platform_effectManagers: _Platform_effectManagers, _Scheduler_enqueue: _Scheduler_enqueue };
 	}
 
 	var flags = _Json_wrap(args ? args['flags'] : undefined);
@@ -47,8 +49,9 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	$elm$core$Result$isOk(flagResult) || _Debug_crash(2 /**/, _Json_errorToString(flagResult.a) /**/);
 	var managers = {};
 	var initUrl = programType === "Browser.application" ? _Browser_getUrl() : undefined;
-	globalThis.__ELM_WATCH.INIT_URL = initUrl;
+	globalThis.__ELM_WATCH_INIT_URL = initUrl;
 	var initPair = init(flagResult.a);
+	delete globalThis.__ELM_WATCH_INIT_URL;
 	var model = initPair.a;
 	var stepper = stepperBuilder(sendToApp, model);
 	var ports = _Platform_setupEffects(managers, sendToApp);
@@ -73,19 +76,19 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	setUpdateAndSubscriptions();
 	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-	function __elmWatchHotReload(newData, new_Platform_effectManagers, new_Scheduler_enqueue, moduleName) {
+	function __elmWatchHotReload(newData, shouldReloadDueToInitCmds) {
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
-		_Scheduler_enqueue = new_Scheduler_enqueue;
+		_Scheduler_enqueue = newData._Scheduler_enqueue;
 
 		var reloadReasons = [];
 
-		for (var key in new_Platform_effectManagers) {
-			var manager = new_Platform_effectManagers[key];
+		for (var key in newData._Platform_effectManagers) {
+			var manager = newData._Platform_effectManagers[key];
 			if (!(key in _Platform_effectManagers)) {
 				_Platform_effectManagers[key] = manager;
 				managers[key] = _Platform_instantiateManager(manager, sendToApp);
 				if (manager.a) {
-					reloadReasons.push("a new port '" + key + "' was added. The idea is to give JavaScript code a chance to set it up!");
+					reloadReasons.push({ tag: "NewPortAdded", name: key });
 					manager.a(key, sendToApp)
 				}
 			}
@@ -103,19 +106,23 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 
 		var newFlagResult = A2(_Json_run, newData.flagDecoder, flags);
 		if (!$elm$core$Result$isOk(newFlagResult)) {
-			return reloadReasons.concat("the flags type in \`" + moduleName + "\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\\nThis is the error:\\n" + _Json_errorToString(newFlagResult.a));
+			return reloadReasons.concat({ tag: "FlagsTypeChanged", jsonErrorMessage: _Json_errorToString(newFlagResult.a) });
 		}
 		if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
-			return reloadReasons.concat("the message type in \`" + moduleName + '\` changed in debug mode ("debug metadata" changed).');
+			return reloadReasons.concat({ tag: "MessageTypeChangedInDebugMode" });
 		}
 		init = impl.%init% || impl._impl.%init%;
 		if (isDebug) {
 			init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
 		}
-		globalThis.__ELM_WATCH.INIT_URL = initUrl;
+		globalThis.__ELM_WATCH_INIT_URL = initUrl;
 		var newInitPair = init(newFlagResult.a);
+		delete globalThis.__ELM_WATCH_INIT_URL;
 		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
-			return reloadReasons.concat("\`" + moduleName + ".init\` returned something different than last time. Let's start fresh!");
+			return reloadReasons.concat({ tag: "InitReturnValueChanged" });
+		}
+		if (shouldReloadDueToInitCmds && !_Utils_eq_elmWatchInternal(newInitPair.b, _Platform_batch(_List_Nil))) {
+			return reloadReasons.concat({ tag: "InitCmds" });
 		}
 
 		setUpdateAndSubscriptions();
@@ -232,7 +239,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 	var programType = "Html";
 
 	if (args === "__elmWatchReturnData") {
-		return { virtualNode: virtualNode, programType: programType };
+		return { virtualNode: virtualNode, programType: programType, _Platform_effectManagers: _Platform_effectManagers, _Scheduler_enqueue: _Scheduler_enqueue };
 	}
 
 	/**_UNUSED/ // always UNUSED with elm-watch
@@ -265,63 +272,30 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 				`.trim(),
 
   // ### _Platform_export
-  // New implementation (inspired by the original).
+  // Allow registering the exports, and skipping the usual merging of `window.Elm` (for hot reloading).
   _Platform_export: `
-// This whole function was changed by elm-watch.
 function _Platform_export(exports)
 {
-	var reloadReasons = _Platform_mergeExportsElmWatch('Elm', scope['Elm'] || (scope['Elm'] = {}), exports);
-	if (reloadReasons.length > 0) {
-		throw new Error(["ELM_WATCH_RELOAD_NEEDED"].concat(Array.from(new Set(reloadReasons))).join("\\n\\n---\\n\\n"));
-	}
-}
-
-// This whole function was added by elm-watch.
-function _Platform_mergeExportsElmWatch(moduleName, obj, exports)
-{
-	var reloadReasons = [];
-	for (var name in exports) {
-		if (name === "init") {
-			if ("init" in obj) {
-				if ("__elmWatchApps" in obj) {
-					var data = exports.init("__elmWatchReturnData");
-					for (var index = 0; index < obj.__elmWatchApps.length; index++) {
-						var app = obj.__elmWatchApps[index];
-						if (app.__elmWatchProgramType !== data.programType) {
-							reloadReasons.push("\`" + moduleName + ".main\` changed from \`" + app.__elmWatchProgramType + "\` to \`" + data.programType + "\`.");
-						} else {
-							try {
-								var innerReasons = app.__elmWatchHotReload(data, _Platform_effectManagers, _Scheduler_enqueue, moduleName);
-								reloadReasons = reloadReasons.concat(innerReasons);
-							} catch (error) {
-								reloadReasons.push("hot reload for \`" + moduleName + "\` failed, probably because of incompatible model changes.\\nThis is the error:\\n" + error + "\\n" + (error ? error.stack : ""));
-							}
-						}
-					}
-				} else {
-					throw new Error("elm-watch: I'm trying to create \`" + moduleName + ".init\`, but it already exists and wasn't created by elm-watch. Maybe a duplicate script is getting loaded accidentally?");
-				}
-			} else {
-				obj.__elmWatchApps = [];
-				obj.init = function() {
-					var app = exports.init.apply(exports, arguments);
-					obj.__elmWatchApps.push(app);
-					globalThis.__ELM_WATCH.ON_INIT();
-					return app;
-				};
-			}
+	// added by elm-watch
+	if (globalThis.__ELM_WATCH) {
+		var elmWatchTargetName = "";
+		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
+			globalThis.__ELM_WATCH.REGISTER(elmWatchTargetName, exports);
 		} else {
-			var innerReasons = _Platform_mergeExportsElmWatch(moduleName + "." + name, obj[name] || (obj[name] = {}), exports[name]);
-			reloadReasons = reloadReasons.concat(innerReasons);
+			globalThis.__ELM_WATCH.HOT_RELOAD(elmWatchTargetName, exports);
+			return;
 		}
 	}
-	return reloadReasons;
+
+	scope['Elm']
+		? _Platform_mergeExportsDebug('Elm', scope['Elm'], exports) // Always calls the debug version with elm-watch (the only difference is an error message).
+		: scope['Elm'] = exports;
 }
 				`.trim(),
 
   // ### _Browser_application
   // Don’t pluck things out of `impl`. Pass `impl` to `_Browser_document`. Init
-  // with URL given from `_Platform_initialize` (via `globalThis.__ELM_WATCH.INIT_URL`).
+  // with URL given from `_Platform_initialize` (via `globalThis.__ELM_WATCH_INIT_URL`).
   _Browser_application: `
 // This function was slightly modified by elm-watch.
 function _Browser_application(impl)
@@ -361,7 +335,7 @@ function _Browser_application(impl)
 		%init%: function(flags)
 		{
 			// return A3(impl.init, flags, _Browser_getUrl(), key); // commented out by elm-watch
-			return A3(impl.%init%, flags, globalThis.__ELM_WATCH.INIT_URL, key); // added by elm-watch
+			return A3(impl.%init%, flags, globalThis.__ELM_WATCH_INIT_URL, key); // added by elm-watch
 		},
 		// view: impl.view, // commented out by elm-watch
 		// update: impl.update, // commented out by elm-watch
@@ -719,21 +693,35 @@ function _Scheduler_step(proc)
 
 const REPLACEMENTS_WITHOUT_PLACEHOLDERS = updateReplacements({}, REPLACEMENTS);
 
-export function inject(compilationMode: CompilationMode, code: string): string {
+export function inject(
+  compilationMode: CompilationMode,
+  code: string,
+  targetName?: TargetName,
+): string {
   const replacements = getReplacements(compilationMode, code);
 
-  return code.replace(
-    REPLACEMENT_REGEX,
-    (match, name1: string, name: string = name1) =>
-      // istanbul ignore next
-      replacements[name] ??
-      `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
+  return (
+    code
+      .replace(
+        REPLACEMENT_REGEX,
+        (match, name1: string, name: string = name1) =>
+          /* v8 ignore start */
+          replacements[name] ??
+          `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`,
+        /* v8 ignore stop */
+      )
+      // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
+      .replace(
+        /^\t\tvar elmWatchTargetName = "";$/m,
+        /* v8 ignore next */
+        `\t\tvar elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
+      )
   );
 }
 
 function getReplacements(
   compilationMode: CompilationMode,
-  code: string
+  code: string,
 ): Record<string, string> {
   switch (compilationMode) {
     case "debug":
@@ -753,32 +741,33 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
   const match2 = /^\s*var divertHrefToApp = impl\.([\w$]+)/m.exec(code);
   const match3 =
     /^\s*var nextNode = _VirtualDom_node\('body'\)\(_List_Nil\)\(doc\.([\w$]+)\);/m.exec(
-      code
+      code,
     );
   const match4 = /^\s*\(title !== doc\.([\w$]+)\)/m.exec(code);
   const match5 =
     /^\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+)\..*/m.exec(
-      code
+      code,
     );
 
-  // istanbul ignore next
+  /* v8 ignore start */
   const [
     ,
     init = "init_missing",
     update = "update_missing",
     subscriptions = "subscriptions_missing",
   ] = match1 ?? [];
+  /* v8 ignore stop */
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [, setup = "setup_missing"] = match2 ?? [];
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [, body = "body_missing"] = match3 ?? [];
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [, title = "title_missing"] = match4 ?? [];
 
-  // istanbul ignore next
+  /* v8 ignore next */
   const [
     ,
     protocol = "protocol_missing",
@@ -789,9 +778,9 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
   const extra = Object.fromEntries(
     Array.from(
       code.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
-      // istanbul ignore next
-      ([, from = "from_missing", to = "to_missing"]) => [from, to]
-    )
+      /* v8 ignore next */
+      ([, from = "from_missing", to = "to_missing"]) => [from, to],
+    ),
   );
 
   return {
@@ -810,23 +799,23 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
 
 function updateReplacements(
   optimizeModeRecordNames: Record<string, string>,
-  replacements: Record<string, string>
+  replacements: Record<string, string>,
 ): Record<string, string> {
   return Object.fromEntries(
     Object.entries(replacements).map(([key, value]) => [
       key,
       updateString(optimizeModeRecordNames, value),
-    ])
+    ]),
   );
 }
 
 function updateString(
   optimizeModeRecordNames: Record<string, string>,
-  string: string
+  string: string,
 ): string {
   return string.replace(
     PLACEHOLDER_REGEX,
-    (_, name: string) => optimizeModeRecordNames[name] ?? name
+    (_, name: string) => optimizeModeRecordNames[name] ?? name,
   );
 }
 
@@ -835,16 +824,33 @@ export function proxyFile(
   elmCompiledTimestamp: number,
   browserUiPosition: BrowserUiPosition,
   webSocketConnection: WebSocketConnection,
-  debug: boolean
+  debug: boolean,
 ): string {
-  return `${clientCode(
+  const clientCodeString = clientCode(
     outputPath,
     elmCompiledTimestamp,
     "proxy",
     browserUiPosition,
     webSocketConnection,
-    debug
-  )}\n${ClientCode.proxy}`;
+    debug,
+  );
+  const proxyCodeString = ClientCode.proxy
+    .replace(
+      /"%TARGET_NAME%"/g,
+      Codec.JSON.stringify(Codec.string, outputPath.targetName),
+    )
+    .replace(/__this__ = window/g, "__this__ = this");
+  // In ESM, importing something that isn’t exported is an error.
+  // When ESM-ify:ing Elm’s output, the two most likely export names
+  // are `default` and `Elm`, so make those available. To not break
+  // regular scripts (non-ESM), where `export` is a syntax error,
+  // use this cursed polyglot syntax: https://stackoverflow.com/a/72314371
+  // If elm-watch users end up wanting different export names, I guess
+  // the solution would be to run the postprocessing step on the proxy
+  // files as well. Downsides with that approach are that it’ll take
+  // a little bit more time, and that the postprocessing user code needs
+  // to be able to handle code that isn’t the Elm output.
+  return `${clientCodeString}\n${proxyCodeString}\n0 && await/2//2; const Elm = globalThis.Elm; export { Elm as default, Elm as Elm }`;
 }
 
 export function clientCode(
@@ -853,7 +859,7 @@ export function clientCode(
   compilationMode: CompilationModeWithProxy,
   browserUiPosition: BrowserUiPosition,
   webSocketConnection: WebSocketConnection,
-  debug: boolean
+  debug: boolean,
 ): string {
   const replacements: Record<string, string> = {
     TARGET_NAME: outputPath.targetName,
@@ -867,10 +873,10 @@ export function clientCode(
   return (
     versionedIdentifier(outputPath.targetName, webSocketConnection) +
     ClientCode.client.replace(
-      new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
-      (match: string, name: string) =>
-        // istanbul ignore next
-        replacements[name] ?? match
+      new RegExp(`"%(${Object.keys(replacements).join("|")})%"`, "g"),
+      (_, name: string) =>
+        /* v8 ignore next */
+        Codec.JSON.stringify(Codec.string, replacements[name] ?? name),
     )
   );
 }
@@ -883,9 +889,9 @@ export function clientCode(
 // - And it used the same WebSocket url or port. (Otherwise it will never connect to us.)
 export function versionedIdentifier(
   targetName: string,
-  webSocketConnection: WebSocketConnection
+  webSocketConnection: WebSocketConnection,
 ): string {
-  return `// elm-watch hot ${JSON.stringify({
+  return `// elm-watch hot ${Codec.JSON.stringify(Codec.unknown, {
     version: "%VERSION%",
     targetName,
     webSocketConnection: webSocketConnectionToPrimitive(webSocketConnection),
@@ -900,7 +906,7 @@ const RECORD_FIELD_REGEX =
 
 export function getRecordFields(
   compilationMode: CompilationMode,
-  code: string
+  code: string,
 ): Set<string> | undefined {
   switch (compilationMode) {
     case "debug":
@@ -909,7 +915,7 @@ export function getRecordFields(
 
     // If the set of accessed record field names changes in optimize mode, we cannot hot reload.
     case "optimize": {
-      // istanbul ignore next
+      /* v8 ignore next */
       const matches = code.match(RECORD_FIELD_REGEX) ?? [];
       return new Set(matches.filter((string) => string.startsWith(".")));
     }
@@ -922,7 +928,7 @@ export function getRecordFields(
 // either side being `undefined`) does not count.
 export function recordFieldsChanged(
   oldSet: Set<string> | undefined,
-  newSet: Set<string> | undefined
+  newSet: Set<string> | undefined,
 ): boolean {
   return !(
     oldSet === undefined ||

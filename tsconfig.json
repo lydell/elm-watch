@@ -4,14 +4,16 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "checkJs": true,
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
-    "resolveJsonModule": true,
+    "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2020",
@@ -22,7 +24,12 @@
       "DOM.Iterable"
     ],
   },
-  "exclude": [
-    "example"
+  "include": [
+    "src",
+    "client",
+    "scripts",
+    "tests/*.ts",
+    "eslint.config.js",
+    "vitest.config.ts"
   ]
 }

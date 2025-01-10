@@ -2,7 +2,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
   initMutable: (
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: Result) => void,
-    rejectPromise: (error: Error) => void
+    rejectPromise: (error: Error) => void,
   ) => Mutable;
   init: [Model, Array<Cmd>];
   update: (msg: Msg, model: Model) => [Model, Array<Cmd>];
@@ -11,7 +11,7 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     mutable: Mutable,
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: Result) => void,
-    rejectPromise: (error: Error) => void
+    rejectPromise: (error: Error) => void,
   ) => void;
 }): Promise<Result> {
   return new Promise((resolve, reject) => {
@@ -21,10 +21,11 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     let killed = false;
 
     const dispatch = (dispatchedMsg: Msg): void => {
-      // istanbul ignore if
+      /* v8 ignore start */
       if (killed) {
         return;
       }
+      /* v8 ignore stop */
       const alreadyRunning = msgQueue.length > 0;
       msgQueue.push(dispatchedMsg);
       if (alreadyRunning) {
@@ -49,17 +50,19 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
             killed = true;
             resolve(result);
           },
-          // istanbul ignore next
+          /* v8 ignore start */
           (error) => {
             cmds.length = 0;
             killed = true;
             reject(error);
-          }
+          },
+          /* v8 ignore stop */
         );
-        // istanbul ignore next
+        /* v8 ignore start */
         if (killed) {
           break;
         }
+        /* v8 ignore stop */
       }
     };
 
@@ -69,11 +72,12 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
         killed = true;
         resolve(result);
       },
-      // istanbul ignore next
+      /* v8 ignore start */
       (error) => {
         killed = true;
         reject(error);
-      }
+      },
+      /* v8 ignore stop */
     );
 
     runCmds(initialCmds);

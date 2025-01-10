@@ -102,7 +102,7 @@ type TokenizerState = {
 
 function tokenize(
   char: number,
-  tokenizerState: TokenizerState
+  tokenizerState: TokenizerState,
 ): Token | undefined {
   switch (tokenizerState.tag) {
     case "Initial":
@@ -255,9 +255,10 @@ function parse(token: Token, parserState: ParserState): ModuleName | undefined {
 
     case "NewChunk":
       switch (token.tag) {
-        // istanbul ignore next
+        /* v8 ignore start */
         case "NewChunk":
           return undefined;
+        /* v8 ignore stop */
         case "Word":
           if (isImport(token.chars)) {
             parserState.tag = "Import";

@@ -1,5 +1,5 @@
 {
-  "postprocess": ["elm-watch-node", "postprocess.js"],
+  "postprocess": ["elm-watch-node", "postprocess.cjs"],
   "targets": {
     "main": {
       "inputs": ["../../src/Main.elm"],

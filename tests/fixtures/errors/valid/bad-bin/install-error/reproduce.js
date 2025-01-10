@@ -1,11 +1,11 @@
 // Run this script with your Internet connection turned off!
 
-const crossSpawn = require("cross-spawn");
-const fs = require("fs");
-const path = require("path");
+import crossSpawn from "cross-spawn";
+import fs from "fs";
+import path from "path";
 
-const elmHome = path.join(__dirname, "elm-home");
-const mainDir = path.join(__dirname, "..", "..");
+const elmHome = path.join(import.meta.dirname, "elm-home");
+const mainDir = path.join(import.meta.dirname, "..", "..");
 const elmStuff = path.join(mainDir, "elm-stuff");
 const input = path.join(mainDir, "src", "App.elm");
 

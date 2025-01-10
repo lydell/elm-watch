@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 async function wait(ms) {
   return new Promise((resolve) => {
@@ -9,8 +9,8 @@ async function wait(ms) {
   });
 }
 
-module.exports = async function run({ code }) {
-  const tmp = path.join(__dirname, "postprocess.tmp");
+export default async function run({ code }) {
+  const tmp = path.join(import.meta.dirname, "postprocess.tmp");
   const n = Number(fs.readFileSync(tmp, "utf8"));
   fs.writeFileSync(tmp, (n + 1).toString());
 
@@ -25,4 +25,4 @@ module.exports = async function run({ code }) {
     default:
       return code.replace("REPLACE_ME", "postprocess content after");
   }
-};
+}

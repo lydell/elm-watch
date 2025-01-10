@@ -12,6 +12,12 @@
                 "src/SlowPostprocess.elm"
             ],
             "output": "build/SlowPostprocess.js"
+        },
+        "ESM": {
+            "inputs": [
+                "src/ESM.elm"
+            ],
+            "output": "build/ESM.js"
         }
     }
 }

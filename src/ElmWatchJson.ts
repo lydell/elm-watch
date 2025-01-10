@@ -1,17 +1,20 @@
-import * as fs from "fs";
 import * as path from "path";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
-import { JsonError, toError, toJsonError } from "./Helpers";
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { findClosest } from "./PathHelpers";
+import { findClosest, readJsonFile } from "./PathHelpers";
 import { Port } from "./Port";
-import type { CliArg, Cwd, ElmWatchJsonPath } from "./Types";
+import {
+  type CliArg,
+  type Cwd,
+  type ElmWatchJsonPath,
+  markAsElmWatchJsonPath,
+} from "./Types";
 import { WebSocketUrl } from "./WebSocketUrl";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
@@ -35,75 +38,100 @@ function isValidTargetName(name: string): boolean {
   return TARGET_NAME.test(name);
 }
 
-type Target = ReturnType<typeof Target>;
-const Target = Decode.fieldsAuto(
+type Target = Codec.Infer<typeof Target>;
+const Target = Codec.fields(
   {
     inputs: NonEmptyArray(
-      Decode.chain(Decode.string, (string) => {
-        if (isValidInputName(string)) {
-          return string;
-        }
-        throw new Decode.DecoderError({
-          message: "Inputs must have a valid module name and end with .elm",
-          value: string,
-        });
-      })
+      Codec.flatMap(Codec.string, {
+        decoder: (string) =>
+          isValidInputName(string)
+            ? { tag: "Valid", value: string }
+            : {
+                tag: "DecoderError",
+                error: {
+                  tag: "custom",
+                  message:
+                    "Inputs must have a valid module name and end with .elm",
+                  got: string,
+                  path: [],
+                },
+              },
+        encoder: (value) => value,
+      }),
     ),
-    output: Decode.chain(Decode.string, (output) => {
-      if (isValidOutputName(output)) {
-        return output;
-      }
-      throw new Decode.DecoderError({
-        message: "Outputs must end with .js",
-        value: Decode.DecoderError.MISSING_VALUE,
-      });
+    output: Codec.flatMap(Codec.string, {
+      decoder: (output) =>
+        isValidOutputName(output)
+          ? { tag: "Valid", value: output }
+          : {
+              tag: "DecoderError",
+              error: {
+                tag: "custom",
+                message: "Outputs must end with .js",
+                got: output,
+                path: [],
+              },
+            },
+      encoder: (value) => value,
     }),
   },
-  { exact: "throw" }
+  { allowExtraFields: false },
 );
 
-function targetRecordHelper(
-  record: Record<string, Target>
-): Record<string, Target> {
-  const entries = Object.entries(record);
-  if (!isNonEmptyArray(entries)) {
-    throw new Decode.DecoderError({
-      message: "Expected a non-empty object",
-      value: record,
-    });
-  }
-  return Object.fromEntries(
-    entries.map(([key, value]) => {
-      if (isValidTargetName(key)) {
-        return [key, value];
+const TargetRecordHelper = {
+  decoder: (
+    record: Record<string, Target>,
+  ): Codec.DecoderResult<Record<string, Target>> => {
+    const keys = Object.keys(record);
+    for (const key of keys) {
+      if (!isValidTargetName(key)) {
+        return {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message:
+              "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
+            got: key,
+            path: [key],
+          },
+        };
       }
-      throw new Decode.DecoderError({
-        message:
-          "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
-        value: Decode.DecoderError.MISSING_VALUE,
-        key,
-      });
-    })
-  );
-}
+    }
 
-export type Config = ReturnType<typeof Config>;
-const Config = Decode.fieldsAuto(
-  {
-    targets: Decode.chain(Decode.record(Target), targetRecordHelper),
-    postprocess: Decode.optional(NonEmptyArray(Decode.string)),
-    port: Decode.optional(Port),
-    webSocketUrl: Decode.optional(WebSocketUrl("elm-watch.json")),
-    serve: Decode.optional(Decode.string),
+    return isNonEmptyArray(keys)
+      ? { tag: "Valid", value: record }
+      : {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: "Expected a non-empty object",
+            got: record,
+            path: [],
+          },
+        };
   },
-  { exact: "throw" }
+  encoder: (value: Record<string, Target>) => value,
+};
+
+export type Config = Codec.Infer<typeof Config>;
+const Config = Codec.fields(
+  {
+    targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
+    postprocess: Codec.field(NonEmptyArray(Codec.string), { optional: true }),
+    port: Codec.field(Port, { optional: true }),
+    webSocketUrl: Codec.field(WebSocketUrl("elm-watch.json"), {
+      optional: true,
+    }),
+    serve: Codec.field(Codec.string, { optional: true }),
+  },
+  { allowExtraFields: false },
 );
 
 type ParseResult =
   | {
-      tag: "DecodeError";
+      tag: "DecoderError";
       elmWatchJsonPath: ElmWatchJsonPath;
-      error: JsonError;
+      error: Codec.DecoderError;
     }
   | {
       tag: "ElmWatchJsonNotFound";
@@ -114,58 +142,50 @@ type ParseResult =
       config: Config;
     }
   | {
-      tag: "ReadAsJsonError";
+      tag: "ReadError";
       elmWatchJsonPath: ElmWatchJsonPath;
       error: Error;
     };
 
 export function findReadAndParse(cwd: Cwd): ParseResult {
-  const elmWatchJsonPathRaw = findClosest("elm-watch.json", cwd.path);
+  const elmWatchJsonPathRaw = findClosest("elm-watch.json", cwd);
   if (elmWatchJsonPathRaw === undefined) {
     return {
       tag: "ElmWatchJsonNotFound",
     };
   }
 
-  const elmWatchJsonPath: ElmWatchJsonPath = {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: elmWatchJsonPathRaw,
-  };
+  const elmWatchJsonPath: ElmWatchJsonPath =
+    markAsElmWatchJsonPath(elmWatchJsonPathRaw);
 
-  let json: unknown = undefined;
-  try {
-    json = JSON.parse(
-      fs.readFileSync(elmWatchJsonPathRaw.absolutePath, "utf-8")
-    );
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    return {
-      tag: "ReadAsJsonError",
-      elmWatchJsonPath,
-      error,
-    };
-  }
+  const parsed = readJsonFile(elmWatchJsonPathRaw, Config);
 
-  try {
-    return {
-      tag: "Parsed",
-      elmWatchJsonPath,
-      config: Config(json),
-    };
-  } catch (unknownError) {
-    const error = toJsonError(unknownError);
-    return {
-      tag: "DecodeError",
-      elmWatchJsonPath,
-      error,
-    };
+  switch (parsed.tag) {
+    case "DecoderError":
+      return {
+        tag: "DecoderError",
+        elmWatchJsonPath,
+        error: parsed.error,
+      };
+    case "ReadError":
+      return {
+        tag: "ReadError",
+        elmWatchJsonPath,
+        error: parsed.error,
+      };
+    case "Valid":
+      return {
+        tag: "Parsed",
+        elmWatchJsonPath,
+        config: parsed.value,
+      };
   }
 }
 
 export function example(
   cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
-  elmMakeParsed: ElmMakeParsed
+  elmMakeParsed: ElmMakeParsed,
 ): string {
   const { elmFiles, output = "build/main.js" } = elmMakeParsed;
 
@@ -178,12 +198,10 @@ export function example(
               // Windows), while backslashes only work on Windows.
               toUnixPath(
                 path.relative(
-                  path.dirname(
-                    elmWatchJsonPath.theElmWatchJsonPath.absolutePath
-                  ),
-                  path.resolve(cwd.path.absolutePath, file)
-                )
-              )
+                  path.dirname(elmWatchJsonPath),
+                  path.resolve(cwd, file),
+                ),
+              ),
             )
           : ["src/Main.elm"],
         output,
@@ -191,13 +209,12 @@ export function example(
     },
   };
 
-  return JSON.stringify(json, null, 4);
+  return Codec.JSON.stringify(Config, json, 4);
 }
 
 function toUnixPath(filePath: string): string {
-  return IS_WINDOWS
-    ? /* istanbul ignore next */ filePath.split(path.sep).join(path.posix.sep)
-    : filePath;
+  /* v8 ignore next */
+  return IS_WINDOWS ? filePath.split(path.sep).join(path.posix.sep) : filePath;
 }
 
 type ElmMakeParsed = {
@@ -205,11 +222,11 @@ type ElmMakeParsed = {
   output: string | undefined;
 };
 
-type IntermediaElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
+type IntermediateElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
 
 export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
-  return args.reduce<IntermediaElmMakeParsed>(
-    (passedParsed, { theArg: arg }): IntermediaElmMakeParsed => {
+  return args.reduce<IntermediateElmMakeParsed>(
+    (passedParsed, arg): IntermediateElmMakeParsed => {
       const parsed = { ...passedParsed, justSawOutputFlag: false };
       switch (arg) {
         case "--debug":
@@ -242,6 +259,6 @@ export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
       elmFiles: [],
       output: undefined,
       justSawOutputFlag: false,
-    }
+    },
   );
 }

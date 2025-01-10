@@ -5,6 +5,7 @@ import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
 import * as url from "url";
+import { describe, test } from "vitest";
 
 import { EMOJI } from "../src/Compile";
 import {
@@ -18,22 +19,8 @@ import {
   WT_SESSION,
 } from "../src/Env";
 import { printStdio } from "../src/Errors";
-import {
-  JsonError,
-  ReadStream,
-  toError,
-  toJsonError,
-  WriteStream,
-} from "../src/Helpers";
+import { ReadStream, WriteStream } from "../src/Helpers";
 import { IS_WINDOWS } from "../src/IsWindows";
-
-toError.jestWorkaround = (arg: unknown): NodeJS.ErrnoException => arg as Error;
-toJsonError.jestWorkaround = (arg: unknown): JsonError => arg as JsonError;
-
-const { JEST_RETRIES } = process.env;
-if (JEST_RETRIES !== undefined) {
-  jest.retryTimes(Number(JEST_RETRIES), { logErrorsBeforeRetry: true });
-}
 
 // Print date and time in UTC in snapshots.
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -45,10 +32,9 @@ Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
 Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
 /* eslint-enable @typescript-eslint/unbound-method */
 
-// This uses `console` rather than `process.stdout` so Jest can capture it.
-// And `.log` instead of `.error`, because Jest colors `.error` red.
+// This uses `console` rather than `process.stderr` so Vitest can capture it.
 // eslint-disable-next-line no-console
-export const logDebug = console.log;
+export const logDebug = console.error;
 
 // Read file with normalized line endings to make snapshotting easier
 // cross-platform.
@@ -56,7 +42,7 @@ export function readFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
 }
 
-export const TEST_ENV = {
+export const TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND = {
   [ELM_WATCH_OPEN_EDITOR]: undefined,
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
@@ -64,6 +50,14 @@ export const TEST_ENV = {
   [__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS]: "100000",
   [__ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS]: "0",
   [WT_SESSION]: "",
+};
+
+export const TEST_ENV = {
+  ...TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
+  // `elm-bin/` contains an `elm` wrapper which automatically retries a couple
+  // of times if Elm fails with for example “withBinaryFile: resource busy
+  // (file is locked)” or some other intermittent error.
+  PATH: prependPATH(path.join(import.meta.dirname, "elm-bin"), process.env),
 };
 
 export function badElmBinEnv(dir: string): Env {
@@ -78,17 +72,17 @@ export function badElmBinEnv(dir: string): Env {
   };
 }
 
-export function prependPATH(folder: string): string {
+export function prependPATH(folder: string, env: Env = TEST_ENV): string {
   // On Windows, create an `elm.cmd` next to fake `elm` binaries. Files without
   // extensions aren’t executable, but .cmd files are. The `elm.cmd` files
   // execute the `elm` file next to them using `node`.
   if (IS_WINDOWS && fs.existsSync(path.join(folder, "elm"))) {
     fs.writeFileSync(
       path.join(folder, "elm.cmd"),
-      `@echo off\r\nnode "%~dp0\\elm" %*`
+      `@echo off\r\nnode "%~dp0\\elm" %*`,
     );
   }
-  return `${folder}${path.delimiter}${process.env.PATH ?? ""}`;
+  return `${folder}${path.delimiter}${env["PATH"] ?? ""}`;
 }
 
 export async function waitOneFrame(): Promise<void> {
@@ -162,7 +156,7 @@ export class TerminalColorReadStream
 {
   override on<T>(
     eventName: string | symbol,
-    listener: (...args: Array<T>) => void
+    listener: (...args: Array<T>) => void,
   ): this {
     if (eventName === "data" && this.isRaw) {
       this.data.push(
@@ -173,7 +167,7 @@ export class TerminalColorReadStream
           }`;
         }),
         "\x1B]10;rgb:1111/2222/3333\x07",
-        "\x1B]11;rgb:aaaa/bbbb/cccc\x1B\\"
+        "\x1B]11;rgb:aaaa/bbbb/cccc\x1B\\",
       );
       this._read();
     }
@@ -191,14 +185,12 @@ export class CtrlCReadStream extends SilentReadStream implements ReadStream {
 export class MemoryWriteStream extends stream.Writable implements WriteStream {
   isTTY = true;
 
-  columns = undefined;
-
   content = "";
 
   override _write(
     chunk: Buffer | string,
     _encoding: BufferEncoding,
-    callback: (error?: Error | null) => void
+    callback: (error?: Error | null) => void,
   ): void {
     this.content += removeTerminalColorRequests(chunk.toString());
     callback();
@@ -249,7 +241,7 @@ type Escape =
 function parseEscape(
   char: string,
   num1: number | undefined,
-  num2: number | undefined
+  num2: number | undefined,
 ): Escape {
   switch (char) {
     case "A":
@@ -322,7 +314,7 @@ function stringLength(string: string): number {
 function colorAwareSlice(
   string: string,
   start: number,
-  end: number = string.length
+  end: number = string.length,
 ): string {
   let result = "";
   let index = 0;
@@ -340,8 +332,8 @@ function colorAwareSlice(
       start === 0 && end === 0
         ? false
         : start === 0
-        ? index >= 0 && index <= end
-        : index > start && index <= end
+          ? index >= 0 && index <= end
+          : index > start && index <= end
     ) {
       result += part;
     }
@@ -361,10 +353,10 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
   override _write(
     chunk: Buffer | string,
     _encoding: BufferEncoding,
-    callback: (error?: Error | null) => void
+    callback: (error?: Error | null) => void,
   ): void {
     const parts = removeTerminalColorRequests(chunk.toString()).split(
-      SPLIT_REGEX
+      SPLIT_REGEX,
     );
     for (const part of parts) {
       switch (part) {
@@ -383,7 +375,7 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
             const escape = parseEscape(
               match[3] as string,
               toNumber(match[1]),
-              toNumber(match[2])
+              toNumber(match[2]),
             );
 
             switch (escape.tag) {
@@ -395,14 +387,14 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                 this.lines[this.cursor.y] = colorAwareSlice(
                   this.lines[this.cursor.y] ?? "",
                   0,
-                  this.cursor.x
+                  this.cursor.x,
                 );
                 break;
 
               case "ClearLineToStart":
                 this.lines[this.cursor.y] = colorAwareSlice(
                   this.lines[this.cursor.y] ?? "",
-                  this.cursor.x
+                  this.cursor.x,
                 );
                 break;
 
@@ -419,8 +411,8 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                   index < this.cursor.y
                     ? line
                     : index === this.cursor.y
-                    ? colorAwareSlice(line, 0, this.cursor.x)
-                    : ""
+                      ? colorAwareSlice(line, 0, this.cursor.x)
+                      : "",
                 );
                 break;
 
@@ -429,9 +421,9 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                   index < this.cursor.y
                     ? ""
                     : index === this.cursor.y
-                    ? " ".repeat(this.cursor.x + 1) +
-                      colorAwareSlice(line, this.cursor.x + 1)
-                    : line
+                      ? " ".repeat(this.cursor.x + 1) +
+                        colorAwareSlice(line, this.cursor.x + 1)
+                      : line,
                 );
                 break;
 
@@ -442,11 +434,11 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
                   callback(
                     new Error(
                       `Cursor out of bounds: ${JSON.stringify(
-                        this.cursor
+                        this.cursor,
                       )} + ${JSON.stringify({ dx, dy })} = ${JSON.stringify(
-                        cursor
-                      )}`
-                    )
+                        cursor,
+                      )}`,
+                    ),
                   );
                   return;
                 } else {
@@ -494,9 +486,9 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
         `(${Object.values(EMOJI)
           .map(({ emoji }) => emoji)
           .join("|")})  `,
-        "g"
+        "g",
       ),
-      "$1 "
+      "$1 ",
     );
   }
 
@@ -511,63 +503,124 @@ function removeTerminalColorRequests(string: string): string {
 }
 
 export function clean(string: string): string {
-  const { root } = path.parse(__dirname);
+  const { root } = path.parse(import.meta.dirname);
 
   const project = path.join(root, "Users", "you", "project");
 
   // Replace start of absolute paths with hardcoded stuff so the tests pass on
   // more than one computer. Replace automatic port numbers with a fixed one.
-  // Replace colors for snapshots. Replace backslashes with slashes for Windows
+  // Replace colors for snapshots. Replace backslashes with slashes for Windows.
   // That can be extra tricky since we sometimes print JSON strings where the
   // backslashes end up escaped with another backslash. Normalize some error
   // messages between Windows and others, and between Node.js versions.
+  // Match a web socket disconnect followed by a connect, and replace them just
+  // with the connect. Sometimes in tests, we don’t get both messages.
   return string
-    .split(path.dirname(__dirname))
+    .split(path.dirname(import.meta.dirname))
     .join(project)
-    .split(path.dirname(__dirname).replace(/\\/g, "\\\\"))
+    .split(path.dirname(import.meta.dirname).replace(/\\/g, "\\\\"))
     .join(project)
-    .split(url.pathToFileURL(path.dirname(__dirname)).toString())
+    .split(url.pathToFileURL(path.dirname(import.meta.dirname)).toString())
     .join(
       url
         .pathToFileURL(project)
         .toString()
-        .replace(/[A-Z]:\//g, "")
+        .replace(/[A-Z]:\//g, ""),
     )
     .split(os.tmpdir())
     .join(path.join(root, "tmp", "fake"))
+    .replace(/\/private\//g, "/") // Ends up before `os.tmpdir()` on macOS in `fs` errors.
     .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘")
     .replace(
       /[A-Z]:\\(\S+)/g,
       (_match, rest: string) =>
-        `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`
+        `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`,
     )
+    .replace(/\S+\.(?:elm|js)/g, (match) => match.replace(/\\/g, "/"))
     .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
     .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
     .replace(
-      /Expected .+ in JSON at position \d+|Unexpected token . in JSON at position \d+|Unexpected end of JSON input/g,
-      "(JSON syntax error)"
+      /(?:Expected .+|Unexpected token .) in JSON at position \d+(?: \(line \d+ column \d+\))?|Unexpected end of JSON input/g,
+      "(JSON syntax error)",
     )
     .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
-    .replace(/EOF/g, "EPIPE");
+    .replace(/EOF/g, "EPIPE")
+    .replace(
+      /\n.+Web socket disconnected for: (.+)(\n.+Web socket connected (?:for|needing compilation of): \1)/g,
+      "$2",
+    )
+    .replace(
+      /\n.*web socket connections:.? 0.+\n\n.+Web socket disconnected for:.+\n.+Everything up to date.+\n/g,
+      "",
+    );
+}
+
+export function onlyErrorMessages(terminal: string): string {
+  const output = [];
+  let lines = terminal.split("\n");
+  while (lines.length > 0) {
+    const start = lines.findIndex((line) => /-- \S+(?:\s\S+)* --/.test(line));
+    if (start === -1) {
+      break;
+    }
+    lines = lines.slice(start);
+    const end = lines.findIndex((line) => line.includes("🚨"));
+    if (end <= 0) {
+      output.push(lines);
+      break;
+    } else {
+      output.push(lines.slice(0, end - 1));
+      lines = lines.slice(end + 1);
+    }
+  }
+  return output.length === 0
+    ? `NO ERROR MESSAGES FOUND!\n${terminal}`
+    : output.map((chunk) => chunk.join("\n")).join("\n\n…\n\n");
+}
+
+export function grep(string: string, pattern: RegExp): string {
+  return string
+    .split("\n")
+    .filter((line) => pattern.test(line))
+    .join("\n");
+}
+
+export function removeIndents(string: string): string {
+  return string.trim().replace(/^\s+/gm, "");
 }
 
 export function assertExitCode(
   expectedExitCode: number,
   actualExitCode: number,
   stdout: string,
-  stderr: string
+  stderr: string,
+  dir: string,
 ): void {
+  maybeClearElmStuff(stdout, dir);
   if (expectedExitCode !== actualExitCode) {
     throw new Error(
       `
 exit ${actualExitCode} (expected ${expectedExitCode})
 
 ${printStdio(stdout, stderr)(process.stdout.columns, (piece) => piece.text)}
-      `.trim()
+      `.trim(),
     );
+  }
+}
+
+export function maybeClearElmStuff(stdout: string, dir: string): void {
+  // In CI we retry failing tests. If a test got the “CORRUPT CACHE” error
+  // from Elm (or similar), try to make the next attempt more successful by removing
+  // elm-stuff/. We only remove elm-stuff/0.19.1/ because in some tests have
+  // fixtures in other parts of elm-stuff/.
+  if (stdout.includes("elm-stuff")) {
+    fs.rmSync(path.join(dir, "elm-stuff", "0.19.1"), {
+      recursive: true,
+      force: true,
+    });
   }
 }
 
@@ -583,9 +636,12 @@ export const stringSnapshotSerializer = {
 export const describeExceptWindows = IS_WINDOWS ? describe.skip : describe;
 export const testExceptWindows = IS_WINDOWS ? test.skip : test;
 
+// The stdin error test is not working on Linux and not worth it.
+export const testExceptLinux = process.platform === "linux" ? test.skip : test;
+
 export async function httpGet(
   urlString: string,
-  options: http.RequestOptions = {}
+  options: http.RequestOptions = {},
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     (urlString.startsWith("https:") ? https : http)
@@ -605,8 +661,12 @@ export async function httpGet(
               new Error(
                 `GET ${urlString} – expected status code 200 but got ${
                   res.statusCode ?? "(no status code)"
-                }:\n\n${body}`
-              )
+                }\n\nOptions:\n${JSON.stringify(
+                  options,
+                  null,
+                  2,
+                )}\nResponse:\n${body === "" ? "(none)" : body}`,
+              ),
             );
           }
         });

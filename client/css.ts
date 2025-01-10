@@ -1,19 +1,19 @@
 export async function reloadAllCssIfNeeded(
-  originalStyles: WeakMap<CSSStyleRule, string>
+  originalStyles: WeakMap<CSSStyleRule, string>,
 ): Promise<boolean> {
   const results = await Promise.allSettled(
     Array.from(document.styleSheets, (styleSheet) =>
-      reloadCssIfNeeded(originalStyles, styleSheet)
-    )
+      reloadCssIfNeeded(originalStyles, styleSheet),
+    ),
   );
   return results.some(
-    (result) => result.status === "fulfilled" && result.value
+    (result) => result.status === "fulfilled" && result.value,
   );
 }
 
 async function reloadCssIfNeeded(
   originalStyles: WeakMap<CSSStyleRule, string>,
-  styleSheet: CSSStyleSheet
+  styleSheet: CSSStyleSheet,
 ): Promise<boolean> {
   if (styleSheet.href === null) {
     return false;
@@ -41,7 +41,7 @@ async function reloadCssIfNeeded(
       // eslint-disable-next-line no-console
       console.warn(
         "elm-watch: Reloading CSS with @import is not possible in Firefox (not even in a comment or string). Style sheet:",
-        url.href
+        url.href,
       );
       return false;
     }
@@ -53,7 +53,7 @@ async function reloadCssIfNeeded(
   } else {
     const importUrls = getAllCssImports(url, styleSheet);
     await Promise.allSettled(
-      importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" }))
+      importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" })),
     );
     newStyleSheet = await parseCssWithImports(newCss);
   }
@@ -70,7 +70,7 @@ async function reloadCssIfNeeded(
 // Also, at the time of writing, Safari did not support constructing
 // `CSSStyleSheet`.
 async function parseCssWithImports(
-  css: string
+  css: string,
 ): Promise<CSSStyleSheet | undefined> {
   return new Promise((resolve) => {
     const style = document.createElement("style");
@@ -100,10 +100,10 @@ function makeUrl(urlString: string, base?: URL): URL | undefined {
 
 function getAllCssImports(
   styleSheetUrl: URL,
-  styleSheet: CSSStyleSheet
+  styleSheet: CSSStyleSheet,
 ): Array<URL> {
   return Array.from(styleSheet.cssRules).flatMap((rule) => {
-    if (rule instanceof CSSImportRule) {
+    if (rule instanceof CSSImportRule && rule.styleSheet !== null) {
       const url = makeUrl(rule.href, styleSheetUrl);
       if (url !== undefined && url.host === styleSheetUrl.host) {
         return [url, ...getAllCssImports(url, rule.styleSheet)];
@@ -127,12 +127,12 @@ function getAllCssImports(
 function updateStyleSheetIfNeeded(
   originalStyles: WeakMap<CSSStyleRule, string>,
   oldStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">,
-  newStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">
+  newStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">,
 ): boolean {
   let changed = false;
   const length = Math.min(
     oldStyleSheet.cssRules.length,
-    newStyleSheet.cssRules.length
+    newStyleSheet.cssRules.length,
   );
   /* eslint-disable @typescript-eslint/no-non-null-assertion */
   let index = 0;
@@ -156,15 +156,14 @@ function updateStyleSheetIfNeeded(
         oldStyleSheet.insertRule(newRule.cssText, index);
         originalStyles.set(
           oldStyleSheet.cssRules[index] as CSSStyleRule,
-          newRule.style.cssText
+          newRule.style.cssText,
         );
         changed = true;
       } else {
         const nestedChanged = updateStyleSheetIfNeeded(
           originalStyles,
-          // @ts-expect-error TypeScript does not know that `CSSStyleRule extends CSSGroupingRule` yet.
           oldRule,
-          newRule
+          newRule,
         );
         if (nestedChanged) {
           changed = true;
@@ -177,11 +176,14 @@ function updateStyleSheetIfNeeded(
       newRule instanceof CSSImportRule &&
       oldRule.cssText === newRule.cssText
     ) {
-      const nestedChanged = updateStyleSheetIfNeeded(
-        originalStyles,
-        oldRule.styleSheet,
-        newRule.styleSheet
-      );
+      const nestedChanged =
+        oldRule.styleSheet !== null && newRule.styleSheet !== null
+          ? updateStyleSheetIfNeeded(
+              originalStyles,
+              oldRule.styleSheet,
+              newRule.styleSheet,
+            )
+          : !(oldRule.styleSheet === null && newRule.styleSheet === null);
       if (nestedChanged) {
         changed = true;
         // Workaround for Chrome: Only the first update to the imported style
@@ -207,7 +209,7 @@ function updateStyleSheetIfNeeded(
       const nestedChanged = updateStyleSheetIfNeeded(
         originalStyles,
         oldRule,
-        newRule
+        newRule,
       );
       if (nestedChanged) {
         changed = true;

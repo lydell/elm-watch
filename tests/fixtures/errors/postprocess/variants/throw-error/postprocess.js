@@ -1,4 +1,4 @@
-module.exports = () => {
+export default () => {
   process.stdout.write("Some debug message");
 
   const error = new Error("Failed to run postprocess!");

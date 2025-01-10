@@ -9,7 +9,7 @@ const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.argv.length !== 3) {
   console.error(
-    "You must pass a valid port where `esbuild --serve=XXXX` runs."
+    "You must pass a valid port where `esbuild --serve=XXXX` runs.",
   );
   process.exit(1);
 }
@@ -26,7 +26,7 @@ const servers = [
         req,
         res,
         log,
-        looksLikeFile(req.url) ? req.url : "/ApplicationMain.html"
+        looksLikeFile(req.url) ? req.url : "/ApplicationMain.html",
       );
     },
   },
@@ -40,7 +40,7 @@ const servers = [
         log,
         looksLikeFile(req.url)
           ? `/submodules/azimutt/public${req.url}`
-          : "/submodules/azimutt/public/index.html"
+          : "/submodules/azimutt/public/index.html",
       );
     },
   },
@@ -57,7 +57,7 @@ const servers = [
           log,
           looksLikeFile(req.url)
             ? `/submodules/concourse/web${req.url}`
-            : "/submodules/concourse/web/public/index.html"
+            : "/submodules/concourse/web/public/index.html",
         );
       }
     },
@@ -72,7 +72,7 @@ const servers = [
         log,
         looksLikeFile(req.url)
           ? `/submodules/elm-spa-example${req.url}`
-          : "/submodules/elm-spa-example/index.html"
+          : "/submodules/elm-spa-example/index.html",
       );
     },
   },
@@ -86,7 +86,7 @@ const servers = [
         log,
         looksLikeFile(req.url)
           ? `/submodules/kite${req.url}`
-          : "/submodules/kite/src/index.html"
+          : "/submodules/kite/src/index.html",
       );
     },
   },
@@ -101,13 +101,13 @@ const servers = [
         req.url.startsWith("/build/")
           ? req.url
           : req.url.startsWith("/esbuild/")
-          ? `/build/public/submodules/seeds-game/src/${req.url.replace(
-              "/esbuild/",
-              ""
-            )}`
-          : looksLikeFile(req.url)
-          ? `/submodules/seeds-game${req.url}`
-          : "/submodules/seeds-game/src/index.html"
+            ? `/build/public/submodules/seeds-game/src/${req.url.replace(
+                "/esbuild/",
+                "",
+              )}`
+            : looksLikeFile(req.url)
+              ? `/submodules/seeds-game${req.url}`
+              : "/submodules/seeds-game/src/index.html",
       );
     },
   },
@@ -125,13 +125,13 @@ const servers = [
           req.url.startsWith("/build/")
             ? req.url
             : req.url.startsWith("/esbuild/")
-            ? `/build/public/submodules/codebase-ui/src/${req.url.replace(
-                "/esbuild/",
-                ""
-              )}`
-            : looksLikeFile(req.url)
-            ? `/submodules/codebase-ui${req.url}`
-            : "/submodules/codebase-ui/src/unisonShare.html"
+              ? `/build/public/submodules/codebase-ui/src/${req.url.replace(
+                  "/esbuild/",
+                  "",
+                )}`
+              : looksLikeFile(req.url)
+                ? `/submodules/codebase-ui${req.url}`
+                : "/submodules/codebase-ui/src/unisonShare.html",
         );
       }
     },
@@ -145,7 +145,7 @@ const servers = [
         req,
         res,
         log,
-        looksLikeFile(req.url) ? req.url : "/ApplicationMain.html"
+        looksLikeFile(req.url) ? req.url : "/ApplicationMain.html",
       );
     },
   },
@@ -186,7 +186,7 @@ function proxyToEsbuild(req, res, log) {
     log(503);
     res.writeHead(503);
     res.end(
-      `Failed to proxy to esbuild on port ${ESBUILD_PORT}. Is it not running?\n\n${error.stack}`
+      `Failed to proxy to esbuild on port ${ESBUILD_PORT}. Is it not running?\n\n${error.stack}`,
     );
   });
 
@@ -263,7 +263,7 @@ function indexPage(host = "", userAgent = "", url = "/", isHttps = false) {
                 ]
               : [
                   `${protocol}://${boringHost}:${serverConfig.port}${escapeHtml(
-                    url
+                    url,
                   )}`,
                   `${serverConfig.subdomain}: ${boringHost}:${serverConfig.port}`,
                 ];
@@ -309,7 +309,7 @@ function makeLog(req) {
       ...args,
       "|",
       Date.now() - startTime.getTime(),
-      "ms"
+      "ms",
     );
   };
 }
@@ -366,13 +366,13 @@ const convenienceServer = createServer((req, res) => {
 
   const serverConfig = servers.find(
     (serverConfig) =>
-      host === `${serverConfig.subdomain}.localhost:${DEV_SERVER_PORT}`
+      host === `${serverConfig.subdomain}.localhost:${DEV_SERVER_PORT}`,
   );
   if (serverConfig === undefined) {
     log(404);
     res.writeHead(404);
     res.end(
-      indexPage(host, req.headers["user-agent"], req.url, req.socket.encrypted)
+      indexPage(host, req.headers["user-agent"], req.url, req.socket.encrypted),
     );
   } else {
     serverConfig.serve(req, res, log);

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-if (require("../elm-install")) {
+import installed from "../elm-install.js";
+if (installed) {
   process.stderr.write(JSON.stringify({ type: "laser-error" }));
   process.exit(1);
 }

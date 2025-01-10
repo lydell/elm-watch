@@ -1,24 +1,41 @@
 import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
 
-const DIR = path.dirname(__dirname);
+const DIR = path.dirname(import.meta.dirname);
 const BUILD = path.join(DIR, "build");
 const CLIENT_DIR = path.join(DIR, "client");
 
-type Package = {
-  version: string;
-  dependencies: Record<string, string>;
-};
-
-function readPackage(name: string): Package {
-  return JSON.parse(fs.readFileSync(path.join(DIR, name), "utf8")) as Package;
+export function readPackage<T extends Record<string, unknown>>(
+  name: string,
+  codec: Codec.Codec<T>,
+): T & { raw: Record<string, unknown> } {
+  const raw = Codec.JSON.parse(
+    Codec.record(Codec.unknown),
+    fs.readFileSync(path.join(DIR, name), "utf8"),
+  );
+  if (raw.tag === "DecoderError") {
+    throw new Error(`Decoding ${name}:\n${Codec.format(raw.error)}`);
+  }
+  const decoded = codec.decoder(raw.value);
+  if (decoded.tag === "DecoderError") {
+    throw new Error(`Decoding ${name}:\n${Codec.format(decoded.error)}`);
+  }
+  return { ...decoded.value, raw: raw.value };
 }
 
-const PACKAGE = readPackage("package.json");
-const PACKAGE_REAL = readPackage("package-real.json");
+const PACKAGE = readPackage(
+  "package.json",
+  Codec.fields({ dependencies: Codec.record(Codec.string) }),
+);
 
-type FileToCopy = {
+const PACKAGE_REAL = readPackage(
+  "package-real.json",
+  Codec.fields({ version: Codec.string }),
+);
+
+export type FileToCopy = {
   src: string;
   dest?: string;
   transform?: (content: string) => string;
@@ -42,7 +59,7 @@ async function run(): Promise<void> {
     if (transform !== undefined) {
       fs.writeFileSync(
         path.join(BUILD, dest),
-        transform(fs.readFileSync(path.join(DIR, src), "utf8"))
+        transform(fs.readFileSync(path.join(DIR, src), "utf8")),
       );
     } else {
       fs.copyFileSync(path.join(DIR, src), path.join(BUILD, dest));
@@ -51,11 +68,11 @@ async function run(): Promise<void> {
 
   fs.writeFileSync(
     path.join(BUILD, "package.json"),
-    JSON.stringify(
-      { ...PACKAGE_REAL, dependencies: PACKAGE.dependencies },
-      null,
-      2
-    )
+    Codec.JSON.stringify(
+      Codec.unknown,
+      { ...PACKAGE_REAL.raw, dependencies: PACKAGE.dependencies },
+      2,
+    ),
   );
 
   fs.writeFileSync(
@@ -65,7 +82,7 @@ const fs = require("fs");
 const path = require("path");
 exports.client = fs.readFileSync(path.join(__dirname, "client.js"), "utf8");
 exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
-    `.trim()
+    `.trim(),
   );
 
   const clientResult = await esbuild.build(clientEsbuildOptions);
@@ -76,7 +93,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
       case "proxy.js":
         fs.writeFileSync(
           output.path,
-          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version)
+          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version),
         );
         break;
 
@@ -87,11 +104,12 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
 
   const result = await esbuild.build({
     bundle: true,
+    legalComments: "inline",
     entryPoints: [
       path.join(DIR, "src", "index.ts"),
       path.join(DIR, "src", "PostprocessWorker.ts"),
     ],
-    external: Object.keys(PACKAGE.dependencies),
+    packages: "external",
     outdir: BUILD,
     platform: "node",
     write: false,
@@ -104,29 +122,28 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
             {
               filter: /^\.\/ClientCode$/,
             },
-            (args) => ({ path: args.path, external: true })
+            (args) => ({ path: args.path, external: true }),
           );
         },
       },
     ],
   });
 
-  const toModuleRegex = /__toESM\((require\("[^"]+"\))\)/g;
-  const exportsRegex = /module.exports = .+/g;
+  const toModuleRegex = /__toESM\((require\("[^"]+"\))(?:, 1)?\)/g;
 
   for (const output of result.outputFiles) {
     switch (path.basename(output.path)) {
       case "index.js": {
         const replaced = output.text
-          .slice(
-            output.text.indexOf("module.exports"),
-            output.text.lastIndexOf("//")
+          // TODO: Check this
+          .replace(
+            /^[^]+\nmodule.exports = .+\s*/g,
+            "module.exports = elmWatchCli",
           )
           .replace(toModuleRegex, "$1")
-          .replace(exportsRegex, "module.exports = elmWatchCli;")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
           .trim();
-        const code = `#!/usr/bin/env node\n${replaced}`;
+        const code = `#!/usr/bin/env node\n"use strict";\n${replaced}`;
         fs.writeFileSync(output.path, code, { mode: "755" });
         break;
       }
@@ -135,8 +152,8 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         fs.writeFileSync(
           output.path,
           output.text
-            .slice(output.text.indexOf("//"))
-            .replace(toModuleRegex, "$1")
+            .slice(output.text.indexOf("// src/"))
+            .replace(toModuleRegex, "$1"),
         );
         break;
 
@@ -157,7 +174,8 @@ export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
   write: false,
 };
 
-if (require.main === module) {
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+if (process.argv[1]!.endsWith("Build.ts")) {
   run().catch((error: Error) => {
     process.stderr.write(`${error.message}\n`);
     process.exit(1);

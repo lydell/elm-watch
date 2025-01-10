@@ -1,10 +1,8 @@
 /* eslint-disable no-console */
 
-import * as fs from "fs";
-import * as Decode from "tiny-decoders";
+import * as Codec from "tiny-decoders";
 
-import { ElmJson, getSourceDirectories } from "../src/ElmJson";
-import { HashSet } from "../src/HashSet";
+import * as ElmJson from "../src/ElmJson";
 import { getSetSingleton } from "../src/Helpers";
 import { walkImports } from "../src/ImportWalker";
 import {
@@ -17,7 +15,14 @@ import {
   absolutePathFromString,
   findClosest,
 } from "../src/PathHelpers";
-import { Cwd, InputPath } from "../src/Types";
+import {
+  AbsolutePath,
+  Cwd,
+  ElmJsonPath,
+  markAsAbsolutePath,
+  markAsCwd,
+  markAsElmJsonPath,
+} from "../src/Types";
 
 function run(args: Array<string>): void {
   if (!isNonEmptyArray(args)) {
@@ -25,30 +30,20 @@ function run(args: Array<string>): void {
     process.exit(1);
   }
 
-  const cwd: Cwd = {
-    tag: "Cwd",
-    path: { tag: "AbsolutePath", absolutePath: process.cwd() },
-  };
+  const cwd: Cwd = markAsCwd(markAsAbsolutePath(process.cwd()));
 
-  const inputPaths: NonEmptyArray<InputPath> = mapNonEmptyArray(
+  const inputRealPaths: NonEmptyArray<AbsolutePath> = mapNonEmptyArray(
     args,
-    (elmFilePathRaw) => ({
-      tag: "InputPath",
-      theInputPath: absolutePathFromString(cwd.path, elmFilePathRaw),
-      originalString: elmFilePathRaw,
-      realpath: absolutePathFromString(cwd.path, elmFilePathRaw),
-    })
+    (elmFilePathRaw) => absolutePathFromString(cwd, elmFilePathRaw),
   );
 
-  const elmJsonPathsRaw = new HashSet(
+  const elmJsonPathsRaw = new Set<AbsolutePath>(
     mapNonEmptyArray(
-      inputPaths,
-      (inputPath) =>
-        findClosest("elm.json", absoluteDirname(inputPath.theInputPath)) ?? {
-          tag: "NotFound" as const,
-          inputPath,
-        }
-    )
+      inputRealPaths,
+      (inputRealPath) =>
+        findClosest("elm.json", absoluteDirname(inputRealPath)) ??
+        inputRealPath,
+    ),
   );
 
   const uniqueElmJsonPathRaw = getSetSingleton(elmJsonPathsRaw);
@@ -56,54 +51,34 @@ function run(args: Array<string>): void {
   if (uniqueElmJsonPathRaw === undefined) {
     console.error(
       "Could not find (a unique) elm.json for all of the input paths:",
-      inputPaths
+      inputRealPaths,
     );
     process.exit(1);
   }
 
-  if (uniqueElmJsonPathRaw.tag === "NotFound") {
-    console.error(
-      "Could not find elm.json for:",
-      uniqueElmJsonPathRaw.inputPath
-    );
+  if (!uniqueElmJsonPathRaw.endsWith("elm.json")) {
+    console.error("Could not find elm.json for:", uniqueElmJsonPathRaw);
     process.exit(1);
   }
 
-  const elmJsonPath = {
-    tag: "ElmJsonPath" as const,
-    theElmJsonPath: uniqueElmJsonPathRaw,
-  };
+  const elmJsonPath: ElmJsonPath = markAsElmJsonPath(uniqueElmJsonPathRaw);
 
-  let elmJson;
-  try {
-    elmJson = ElmJson(
-      JSON.parse(
-        fs.readFileSync(elmJsonPath.theElmJsonPath.absolutePath, "utf8")
-      )
-    );
-  } catch (error) {
-    console.error(
-      error instanceof Decode.DecoderError
-        ? error.format()
-        : error instanceof Error
-        ? error.message
-        : error
-    );
-    process.exit(1);
+  const elmJsonResult = ElmJson.readSourceDirectories(elmJsonPath);
+  switch (elmJsonResult.tag) {
+    case "ElmJsonDecodeError":
+      console.error(Codec.format(elmJsonResult.error));
+      process.exit(1);
+    case "ElmJsonReadError":
+      console.error(elmJsonResult.error.message);
+      process.exit(1);
+    case "Parsed":
+    // Keep going.
   }
 
-  const sourceDirectories = getSourceDirectories(elmJsonPath, elmJson);
-
-  console.log(
-    "Elm file(s):",
-    mapNonEmptyArray(
-      inputPaths,
-      (inputPath) => inputPath.theInputPath.absolutePath
-    )
-  );
-  console.log("elm.json:", elmJsonPath.theElmJsonPath.absolutePath);
+  console.log("Elm file(s):", inputRealPaths);
+  console.log("elm.json:", elmJsonPath);
   console.time("Run");
-  const result = walkImports(sourceDirectories, inputPaths);
+  const result = walkImports(elmJsonResult.sourceDirectories, inputRealPaths);
   console.timeEnd("Run");
   switch (result.tag) {
     case "Success":

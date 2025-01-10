@@ -1,33 +1,38 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as Codec from "tiny-decoders";
+import { expect } from "vitest";
 
 import {
   ElmModule,
   ReachedIdleStateReason,
   UppercaseLetter,
 } from "../client/client";
-import { elmWatchCli } from "../src";
-import { ElmWatchStuffJsonWritable } from "../src/ElmWatchStuffJson";
+import elmWatchCli from "../src";
+import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";
 import { HotKillManager } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
+import { markAsPort } from "../src/Port";
 import { BrowserUiPosition, CompilationMode } from "../src/Types";
 import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
   logDebug,
+  maybeClearElmStuff,
   MemoryWriteStream,
   rimraf,
   rm,
   SilentReadStream,
   TEST_ENV,
+  TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
   wait,
 } from "./Helpers";
 
 const CONTAINER_ID = "elm-watch";
-export const FIXTURES_DIR = path.join(__dirname, "fixtures", "hot");
+export const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "hot");
 
 let watcher: fs.FSWatcher | undefined = undefined;
 const hotKillManager: HotKillManager = { kill: undefined };
@@ -35,6 +40,7 @@ const hotKillManager: HotKillManager = { kill: undefined };
 export async function cleanupAfterEachTest(): Promise<void> {
   const { currentTestName } = expect.getState();
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (window.__ELM_WATCH?.KILL_MATCHING !== undefined) {
     // The idea is that we need no logging here – it’ll just result in double
     // logging since there will most likely be a running server as well.
@@ -45,7 +51,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
     // eslint-disable-next-line no-console
     console.error(
       "cleanupAfterEachTest: watcher never closed by itself – closing now. Test:",
-      currentTestName
+      currentTestName,
     );
     watcher.close();
     watcher = undefined;
@@ -55,7 +61,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
     // eslint-disable-next-line no-console
     console.error(
       "cleanupAfterEachTest: elm-watch never finished – killing. Test:",
-      currentTestName
+      currentTestName,
     );
     await hotKillManager.kill();
   }
@@ -63,7 +69,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
   document.getElementById(CONTAINER_ID)?.remove();
   window.history.replaceState(null, "", "/");
 
-  delete (window as unknown as Record<string, unknown>).__ELM_WATCH;
+  delete (window as unknown as Record<string, unknown>)["__ELM_WATCH"];
 }
 
 let bodyCounter = 0;
@@ -90,6 +96,7 @@ type SharedRunOptions = {
   cwd?: string;
   includeProxyReloads?: boolean;
   simulateHttpCacheOnReload?: boolean;
+  useElmErrorWorkaround?: boolean;
   stdin?: ReadStream;
 };
 
@@ -109,17 +116,19 @@ export async function run({
   cwd = ".",
   includeProxyReloads = false,
   simulateHttpCacheOnReload = false,
+  useElmErrorWorkaround = true,
   stdin = new SilentReadStream(),
 }: SharedRunOptions & {
   fixture: string;
   scripts: Array<string>;
   args?: Array<string>;
-  init: (node: HTMLDivElement) => void;
+  init: (node: HTMLDivElement, allExports: Array<unknown>) => void;
   onIdle: OnIdle;
 }): Promise<{
   terminal: string;
   browserConsole: string;
   renders: string;
+  onlyExpandedRenders: string;
   div: HTMLDivElement;
 }> {
   // eslint-disable-next-line no-console
@@ -170,16 +179,17 @@ export async function run({
     const loadBuiltFiles = (): void => {
       loads++;
 
-      delete (window as unknown as Record<string, unknown>).Elm;
-      (window as unknown as Record<string, unknown>).__ELM_WATCH = {};
+      delete (window as unknown as Record<string, unknown>)["Elm"];
+      (window as unknown as Record<string, unknown>)["__ELM_WATCH"] = {};
       setBasicElmWatchProperties();
 
       (async () => {
+        const allExports: Array<unknown> = [];
         for (const script of absoluteScripts) {
           // Copying the script does a couple of things:
           // - Avoiding require/import cache.
           // - Makes it easier to debug the tests since one can see all the outputs through time.
-          // - Lets us make a few replacements for Jest.
+          // - Lets us make a few replacements for Vitest.
           const newScript = numberedScript(script, loads);
           const content =
             loads > 2 && simulateHttpCacheOnReload
@@ -189,13 +199,14 @@ export async function run({
                   .replace(/\(this\)\);\s*$/, "(window));")
                   .replace(
                     /^(\s*var bodyNode) = .+;/m,
-                    `$1 = document.documentElement.children[${bodyIndex}];`
+                    `$1 = document.documentElement.children[${bodyIndex}];`,
                   );
           fs.writeFileSync(newScript, content);
-          await import(newScript);
+          allExports.push(await import(newScript));
         }
+        return allExports;
       })()
-        .then(() => {
+        .then((allExports) => {
           if (expandUiImmediately) {
             expandUi();
           }
@@ -204,7 +215,7 @@ export async function run({
             outerDiv.replaceChildren(innerDiv);
             body.replaceChildren(outerDiv);
             try {
-              init(innerDiv);
+              init(innerDiv, allExports);
             } catch (unknownError) {
               const isElmWatchProxyError =
                 typeof unknownError === "object" &&
@@ -220,7 +231,7 @@ export async function run({
         .catch(reject);
     };
 
-    (window as unknown as Record<string, unknown>).__ELM_WATCH = {};
+    (window as unknown as Record<string, unknown>)["__ELM_WATCH"] = {};
 
     window.__ELM_WATCH.MOCKED_TIMINGS = true;
 
@@ -259,7 +270,9 @@ export async function run({
       bin === undefined
         ? {
             ...process.env,
-            ...TEST_ENV,
+            ...(useElmErrorWorkaround
+              ? TEST_ENV
+              : TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND),
             ...env,
           }
         : {
@@ -287,11 +300,18 @@ export async function run({
       const fallbackMain = document.createElement("main");
       fallbackMain.textContent = "No `main` element found.";
       const main = actualMain ?? fallbackMain;
-      // Wait for logs to settle. This file is pretty slow to run through
+      // Wait for logs to settle. This type of tests is pretty slow to run through
       // anyway, so this wait is just a drop in the ocean.
       wait(100)
         .then(() =>
-          onIdle({ idle: localIdle, div: outerDiv, main, body, reason, stdout })
+          onIdle({
+            idle: localIdle,
+            div: outerDiv,
+            main,
+            body,
+            reason,
+            stdout,
+          }),
         )
         .then((result) => {
           switch (result) {
@@ -340,14 +360,24 @@ export async function run({
       .catch(reject);
   });
 
+  const stdoutString = clean(stdout.getOutput());
+
+  maybeClearElmStuff(stdoutString, dir);
   expect(stderr.content).toBe("");
 
   return {
-    terminal: clean(stdout.getOutput()),
+    terminal: stdoutString,
     browserConsole: browserConsole.join("\n\n"),
-    renders: clean(renders.join(`\n${"=".repeat(80)}\n`)),
+    renders: joinRenders(renders),
+    onlyExpandedRenders: joinRenders(
+      renders.filter((render) => render.includes("▲")),
+    ),
     div: outerDiv,
   };
+}
+
+function joinRenders(renders: Array<string>): string {
+  return clean(renders.join(`\n${"=".repeat(80)}\n`));
 }
 
 export function runHotReload({
@@ -370,9 +400,12 @@ export function runHotReload({
     | "Sandbox"
     | "Worker";
   compilationMode: CompilationMode;
-  init?: (node: HTMLDivElement) => ReturnType<ElmModule["init"]> | undefined;
+  init?: (
+    node: HTMLDivElement,
+    allExports: Array<unknown>,
+  ) => ReturnType<ElmModule["init"]> | undefined;
   extraScripts?: Array<string>;
-  extraElmWatchStuffJson?: ElmWatchStuffJsonWritable["targets"];
+  extraElmWatchStuffJson?: ElmWatchStuffJson["targets"];
 }): {
   replace: (f: (fileContent: string) => string) => void;
   write: (n: number) => void;
@@ -384,13 +417,11 @@ export function runHotReload({
   const dir = path.join(FIXTURES_DIR, fixture);
   const src = path.join(dir, "src");
 
-  const elmWatchStuffJson: ElmWatchStuffJsonWritable = {
-    port: 58888,
+  const elmWatchStuffJson: ElmWatchStuffJson = {
+    port: markAsPort(58888),
     targets: {
       [name]: {
         compilationMode,
-        browserUiPosition: "BottomLeft",
-        openErrorOverlay: false,
       },
       ...extraElmWatchStuffJson,
     },
@@ -419,7 +450,7 @@ export function runHotReload({
   const lastValueFromElm: { value: unknown } = { value: undefined };
 
   const sendToElm = (value: number): void => {
-    const send = app?.ports?.fromJs?.send;
+    const send = app?.ports?.["fromJs"]?.send;
     if (send === undefined) {
       throw new Error("Failed to find 'fromJs' send port.");
     }
@@ -432,19 +463,31 @@ export function runHotReload({
     removeInput,
     sendToElm,
     lastValueFromElm,
-    go: (onIdle: OnIdle) => {
+    go: async (onIdle: OnIdle) => {
       const elmWatchStuffJsonPath = path.join(
         dir,
         "elm-stuff",
         "elm-watch",
-        "stuff.json"
+        "stuff.json",
       );
       fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), { recursive: true });
       fs.writeFileSync(
         elmWatchStuffJsonPath,
-        JSON.stringify(elmWatchStuffJson)
+        Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
       );
+
+      // Here we write a file just before we start the watcher. I’ve seen this file
+      // be picked up by the watcher! But only when running all tests. Here’s the theory:
+      // 1. We write the file.
+      // 2. The operating system (macOS) takes note of the change. It is added to some
+      //    kind of batch of file system changes.
+      // 3. We start the watcher, which tells the OS that we are interested in file system changes.
+      // 4. The OS flushes its batch of file system changes to all subscribers.
+      // By waiting a little bit, we avoid getting updates about changes before we started watching.
+      // It’s a bad solution, but it does make tests less flaky. This type of tests is pretty slow
+      // to run through anyway, so this wait is just a drop in the ocean.
       write(1);
+      await wait(100);
 
       return run({
         fixture,
@@ -457,7 +500,7 @@ export function runHotReload({
             ? (node) => {
                 app = window.Elm?.[name]?.init({ node });
                 if (app?.ports !== undefined) {
-                  const subscribe = app.ports.toJs?.subscribe;
+                  const subscribe = app.ports["toJs"]?.subscribe;
                   if (subscribe === undefined) {
                     throw new Error("Failed to find 'toJs' subscribe port.");
                   }
@@ -466,8 +509,8 @@ export function runHotReload({
                   });
                 }
               }
-            : (node) => {
-                app = init(node);
+            : (node, allExports) => {
+                app = init(node, allExports);
               },
         onIdle,
       });
@@ -477,7 +520,8 @@ export function runHotReload({
 
 function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
   const shadowRoot =
-    document.getElementById(CONTAINER_ID)?.shadowRoot ?? undefined;
+    document.getElementById(CONTAINER_ID)?.firstElementChild?.shadowRoot ??
+    undefined;
 
   if (shadowRoot === undefined) {
     throw new Error(`Couldn’t find #${CONTAINER_ID}!`);
@@ -496,12 +540,12 @@ export function collapseUi(targetName?: string): void {
 
 function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `${
         targetName === undefined
           ? "[data-target]"
           : `[data-target="${targetName}"]`
-      } button[aria-expanded]`
+      } button[aria-expanded]`,
     );
     if (button instanceof HTMLElement) {
       if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
@@ -515,12 +559,12 @@ function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
 
 export function showErrors(targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `${
         targetName === undefined
           ? "[data-target]"
           : `[data-target="${targetName}"]`
-      } [data-test-id="ShowErrorOverlayButton"]`
+      } [data-test-id="ShowErrorOverlayButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -532,12 +576,12 @@ export function showErrors(targetName?: string): void {
 
 export function hideErrors(targetName?: string): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
+    const button = shadowRoot.querySelector(
       `${
         targetName === undefined
           ? "[data-target]"
           : `[data-target="${targetName}"]`
-      } [data-test-id="HideErrorOverlayButton"]`
+      } [data-test-id="HideErrorOverlayButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -549,8 +593,8 @@ export function hideErrors(targetName?: string): void {
 
 export function closeOverlay(): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
-      `[data-test-id="OverlayCloseButton"]`
+    const button = shadowRoot.querySelector(
+      `[data-test-id="OverlayCloseButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -563,7 +607,7 @@ export function closeOverlay(): void {
 export function getOverlay(): string {
   let result = "(Overlay not found)";
   withShadowRoot((shadowRoot) => {
-    const overlay = shadowRoot?.querySelector(`[data-test-id="Overlay"]`);
+    const overlay = shadowRoot.querySelector(`[data-test-id="Overlay"]`);
     if (overlay instanceof HTMLElement) {
       const children = Array.from(overlay.children, (child, index) => {
         const clone = child.cloneNode(true) as HTMLElement;
@@ -585,7 +629,7 @@ export function getOverlay(): string {
 
 export function clickFirstErrorLocation(): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(`[data-test-id="Overlay"] button`);
+    const button = shadowRoot.querySelector(`[data-test-id="Overlay"] button`);
     if (button instanceof HTMLButtonElement) {
       button.click();
     } else {
@@ -597,8 +641,8 @@ export function clickFirstErrorLocation(): void {
 export function moveUi(position: BrowserUiPosition): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot?.querySelector(
-      `button[data-position="${position}"]`
+    const button = shadowRoot.querySelector(
+      `button[data-position="${position}"]`,
     );
     if (button instanceof HTMLButtonElement) {
       button.click();
@@ -611,8 +655,8 @@ export function moveUi(position: BrowserUiPosition): void {
 export function switchCompilationMode(compilationMode: CompilationMode): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const radio = shadowRoot?.querySelector(
-      `input[type="radio"][value="${compilationMode}"]`
+    const radio = shadowRoot.querySelector(
+      `input[type="radio"][value="${compilationMode}"]`,
     );
     if (radio instanceof HTMLInputElement) {
       radio.click();
@@ -625,12 +669,12 @@ export function switchCompilationMode(compilationMode: CompilationMode): void {
 export function assertCompilationMode(compilationMode: CompilationMode): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const radio = shadowRoot?.querySelector(`input[type="radio"]:checked`);
+    const radio = shadowRoot.querySelector(`input[type="radio"]:checked`);
     if (radio instanceof HTMLInputElement) {
-      expect(radio.value).toMatchInlineSnapshot(compilationMode);
+      expect(radio.value).toStrictEqual(compilationMode);
     } else {
       throw new Error(
-        `Could not find a checked radio button (expecting to be ${compilationMode}).`
+        `Could not find a checked radio button (expecting to be ${compilationMode}).`,
       );
     }
   });
@@ -639,9 +683,9 @@ export function assertCompilationMode(compilationMode: CompilationMode): void {
 export function assertDebugDisabled(): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
-    const radio = shadowRoot?.querySelector('input[type="radio"]');
+    const radio = shadowRoot.querySelector('input[type="radio"]');
     if (radio instanceof HTMLInputElement) {
-      expect(radio.disabled).toMatchInlineSnapshot(`true`);
+      expect(radio.disabled).toBe(true);
     } else {
       throw new Error(`Could not find any radio button!`);
     }
@@ -651,12 +695,8 @@ export function assertDebugDisabled(): void {
 
 export function assertDebugger(body: HTMLBodyElement): void {
   expect(
-    Array.from(body.querySelectorAll("svg"), (element) => element.localName)
-  ).toMatchInlineSnapshot(`
-    [
-      svg,
-    ]
-  `);
+    Array.from(body.querySelectorAll("svg"), (element) => element.localName),
+  ).toStrictEqual(["svg"]);
 }
 
 function getTextContent(element: Node): string {
@@ -724,7 +764,7 @@ export function click(element: HTMLElement, selector: string): void {
     throw new Error(
       `Element to click is not considered clickable: ${selector} -> ${
         target === null ? "not found" : target.nodeName
-      }`
+      }`,
     );
   }
 }
