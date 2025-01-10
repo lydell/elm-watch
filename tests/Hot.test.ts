@@ -3495,7 +3495,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -3540,7 +3541,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -3591,7 +3593,7 @@ describe("hot", () => {
     expect(cleanedRenders).toMatchInlineSnapshot(`
       target HttpCaching
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -3604,7 +3606,7 @@ describe("hot", () => {
       ================================================================================
       target HttpCaching
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -3617,7 +3619,7 @@ describe("hot", () => {
       ================================================================================
       target HttpCaching
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -3630,7 +3632,7 @@ describe("hot", () => {
       ================================================================================
       target HttpCaching
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Reload trouble
       A while ago I reloaded the page to get new compiled JavaScript.
@@ -3668,7 +3670,8 @@ describe("hot", () => {
       ✅ Dependencies
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/elm-json-above-elm-watch-json/elm.json⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
@@ -3699,7 +3702,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/source-directories-above-elm-watch-json/src/Answer.elm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
