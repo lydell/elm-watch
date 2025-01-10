@@ -103,7 +103,7 @@ describe("hot reloading", () => {
       ================================================================================
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -130,7 +130,7 @@ describe("hot reloading", () => {
       ================================================================================
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -143,7 +143,7 @@ describe("hot reloading", () => {
       ================================================================================
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -156,7 +156,7 @@ describe("hot reloading", () => {
       ================================================================================
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -177,7 +177,7 @@ describe("hot reloading", () => {
       ================================================================================
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -1629,7 +1629,7 @@ describe("hot reloading", () => {
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Eval error
       Check the console in the browser developer tools to see errors!
@@ -1670,7 +1670,8 @@ describe("hot reloading", () => {
       ✅ OutputsWithoutAction⧙                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ OutputsWithoutActionOther1
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: OutputsWithoutAction⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -1861,22 +1862,20 @@ describe("hot reloading", () => {
     ]);
 
     expect(terminal).toMatchInlineSnapshot(`
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 0
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 0
       ⏳ InterruptElm: elm make (typecheck only)
       ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ InterruptElm: elm make
       ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: InterruptElm⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: InterruptElm⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -1947,7 +1946,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -1960,7 +1959,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -1973,7 +1972,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -1986,7 +1985,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Compilation error
       Compilation mode
@@ -2000,7 +1999,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -2014,7 +2013,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -2028,7 +2027,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -2042,7 +2041,7 @@ describe("hot reloading", () => {
       ================================================================================
       target DebugLog
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
