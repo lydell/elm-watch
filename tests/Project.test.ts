@@ -265,9 +265,9 @@ describe("Project", () => {
         ],
         "staticFilesDir": "/Users/you/project/public",
         "webSocketUrl": {
-          tag: "UrlFromConfig",
-          url: "ws://localhost:1234",
-          source: "elm-watch.json",
+          "tag": "UrlFromConfig",
+          "url": "ws://localhost:1234/",
+          "source": "elm-watch.json"
         },
         "elmWatchJson": "/Users/you/project/elm-watch.json",
         "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch/stuff.json",
@@ -356,6 +356,6 @@ describe("Project", () => {
           }
         ]
       }
-    `);
+      `);
   });
 });
