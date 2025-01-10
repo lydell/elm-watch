@@ -70,7 +70,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -109,23 +110,19 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 0
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Worker: elm make (typecheck only)
       ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Worker: elm make
       ✅ Worker⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Worker⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Worker⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -136,7 +133,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -146,7 +143,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -159,7 +156,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -174,7 +171,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -184,7 +181,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -194,7 +191,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -207,7 +204,7 @@ describe("hot", () => {
       ================================================================================
       target Worker
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -237,7 +234,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
 
-      web socket connections: 1 (ws://0.0.0.0:59123)
+      server: http://localhost:59123, network: http://192.168.0.1:59123
+      web socket connections: 1
 
       13:10:05 Web socket connected for: Html
       13:10:05 Everything up to date.
@@ -262,23 +260,19 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
+      server: http://localhost:59123, network: http://192.168.0.1:59123
+      web socket connections: 0
       Dependencies: in progress
       Dependencies: success
       Html: elm make (typecheck only)
       Html: success     1 ms Q | 765 ms T /  50 ms W
 
-      web socket connections: 0 (ws://0.0.0.0:59123)
-
       13:10:05 Compilation finished in 123 ms.
       Html: elm make
       Html: success     1 ms Q | 1.23 s E /  55 ms W |   9 ms I
 
-      web socket connections: 1 (ws://0.0.0.0:59123)
-
       13:10:05 Web socket connected needing compilation of: Html
       13:10:05 Compilation finished in 123 ms.
-
-      web socket connections: 1 (ws://0.0.0.0:59123)
 
       13:10:05 Web socket connected for: Html
       13:10:05 Everything up to date.
@@ -301,7 +295,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -361,7 +356,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -387,7 +383,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -397,7 +393,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -410,7 +406,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status elm.json or inputs error
       -- elm.json NOT FOUND ----------------------------------------------------------
@@ -454,7 +450,8 @@ describe("hot", () => {
 
       🚨 ⧙1⧘ error found
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Removed⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
@@ -463,7 +460,7 @@ describe("hot", () => {
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target Removed
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Compilation error
       Compilation mode
@@ -510,7 +507,8 @@ describe("hot", () => {
 
       🚨 ⧙1⧘ error found
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Readonly⧘
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
@@ -519,7 +517,7 @@ describe("hot", () => {
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target Readonly
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Compilation error
       Compilation mode
@@ -598,11 +596,11 @@ describe("hot", () => {
       ).toMatchInlineSnapshot(`
         target BadUrl
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/nope
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
-        I expected the web socket connection URL to start with:
+        I expected the web socket connection URL path to start with:
 
         /elm-watch?
 
@@ -639,7 +637,7 @@ describe("hot", () => {
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
         target ParamsDecodeError
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -653,12 +651,14 @@ describe("hot", () => {
 
         /elm-watch?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
 
-        The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
+
+        Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         ▲ ❌ 13:10:05 ParamsDecodeError
         ================================================================================
         target ParamsDecodeError
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Sleeping
         attempt 1
@@ -668,7 +668,7 @@ describe("hot", () => {
         ================================================================================
         target ParamsDecodeError
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Connecting
         attempt 1
@@ -678,7 +678,7 @@ describe("hot", () => {
         ================================================================================
         target ParamsDecodeError
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
@@ -691,7 +691,7 @@ describe("hot", () => {
         ================================================================================
         target ParamsDecodeError
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -705,7 +705,9 @@ describe("hot", () => {
 
         /elm-watch?elmWatchVersion=%25VERSION%25&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
 
-        The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
+
+        Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         ▲ ❌ 13:10:05 ParamsDecodeError
       `);
     });
@@ -743,7 +745,7 @@ describe("hot", () => {
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
         target WrongVersion
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -789,7 +791,7 @@ describe("hot", () => {
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
         target Enabled1
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -832,7 +834,7 @@ describe("hot", () => {
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -920,7 +922,7 @@ describe("hot", () => {
         ================================================================================
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -970,7 +972,7 @@ describe("hot", () => {
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
         target TargetDisabled
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -1041,7 +1043,7 @@ describe("hot", () => {
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
         target SendBadJson
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
@@ -1054,7 +1056,7 @@ describe("hot", () => {
         ================================================================================
         target SendBadJson
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
@@ -1067,7 +1069,7 @@ describe("hot", () => {
         ================================================================================
         target SendBadJson
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -1112,7 +1114,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Connecting
         attempt 1
@@ -1122,7 +1124,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Sleeping
         attempt 2
@@ -1132,7 +1134,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Connecting
         attempt 2
@@ -1142,7 +1144,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Sleeping
         attempt 3
@@ -1152,7 +1154,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Connecting
         attempt 3
@@ -1162,7 +1164,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
@@ -1175,7 +1177,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
@@ -1190,7 +1192,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Connecting
         attempt 1
@@ -1200,7 +1202,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Connecting
         attempt 1
@@ -1210,7 +1212,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Waiting for compilation
         Compilation mode
@@ -1223,7 +1225,7 @@ describe("hot", () => {
         ================================================================================
         target Reconnect
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Successfully compiled
         Compilation mode
@@ -1254,7 +1256,8 @@ describe("hot", () => {
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+        📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+        📊 ⧙web socket connections:⧘ 1
 
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
         ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
@@ -1594,7 +1597,7 @@ describe("hot", () => {
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status elm.json or inputs error
       -- elm.json NOT FOUND ----------------------------------------------------------
@@ -1616,7 +1619,7 @@ describe("hot", () => {
       ================================================================================
       target HtmlMain
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status elm.json or inputs error
       -- elm.json NOT FOUND ----------------------------------------------------------
@@ -2030,6 +2033,8 @@ describe("hot", () => {
     const adjustedTerminal = terminal.replace(/\w+\.elm/g, "File.elm");
 
     expect(adjustedTerminal).toMatchInlineSnapshot(`
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 0
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Html: elm make (typecheck only)
@@ -2037,18 +2042,12 @@ describe("hot", () => {
       ✅ Html⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
       ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
-
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Html: elm make
       ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -2057,8 +2056,6 @@ describe("hot", () => {
       ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ Worker: elm make (typecheck only)
       ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
@@ -2284,7 +2281,8 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
@@ -2425,9 +2423,7 @@ describe("hot", () => {
     // Remove duplicate lines.
     expect(grep(terminal, /worker/).replace(/\n(.+)(?:\n\1)+/g, "\n$1"))
       .toMatchInlineSnapshot(`
-        elm-watch-node workers: 1
-        elm-watch-node workers: 2
-        elm-watch-node workers: 1
+        web socket connections: 0, elm-watch-node workers: 1
         13:10:05 Terminated 1 superfluous worker
       `);
   });
@@ -2482,7 +2478,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -2492,7 +2488,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -2505,7 +2501,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -2520,7 +2516,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -2530,7 +2526,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -2540,7 +2536,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -2553,7 +2549,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -2644,7 +2640,8 @@ describe("hot", () => {
 
       1 error found
 
-      web socket connections: 1 (ws://0.0.0.0:9988)
+      server: http://localhost:9988, network: http://192.168.0.99:9988
+      web socket connections: 1
 
       13:10:05 Web socket connected needing compilation of: Main
       13:10:05 Everything up to date.
@@ -2753,7 +2750,7 @@ describe("hot", () => {
       expect(renders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:9988
+        web socket ws://localhost:9988/elm-watch
         updated 2022-02-05 13:10:05
         status Compilation error
         Compilation mode
@@ -2792,7 +2789,7 @@ describe("hot", () => {
       expect(cleanedRenders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:9988
+        web socket ws://localhost:9988/elm-watch
         updated 2022-02-05 13:10:05
         status Compilation error
         Compilation mode
@@ -2831,7 +2828,7 @@ describe("hot", () => {
       expect(renders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:9988
+        web socket ws://localhost:9988/elm-watch
         updated 2022-02-05 13:10:05
         status Compilation error
         Compilation mode
@@ -2869,7 +2866,7 @@ describe("hot", () => {
       expect(renders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:9988
+        web socket ws://localhost:9988/elm-watch
         updated 2022-02-05 13:10:05
         status Compilation error
         Compilation mode
@@ -2970,7 +2967,7 @@ describe("hot", () => {
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:9988
+      web socket ws://localhost:9988/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -3001,7 +2998,7 @@ describe("hot", () => {
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Connecting
       attempt 1
@@ -3011,7 +3008,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Waiting for compilation
       Compilation mode
@@ -3024,7 +3021,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -3037,7 +3034,7 @@ describe("hot", () => {
       ================================================================================
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
@@ -3281,7 +3278,7 @@ describe("hot", () => {
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       target Main
       elm-watch %VERSION%
-      web socket ws://localhost:59123
+      web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status Successfully compiled
       Compilation mode
