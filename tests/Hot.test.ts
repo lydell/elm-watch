@@ -2418,8 +2418,9 @@ describe("hot", () => {
     });
 
     // Remove duplicate lines.
-    expect(grep(terminal, /worker/).replace(/\n(.+)(?:\n\1)+/g, "\n$1"))
-      .toMatchInlineSnapshot(`13:10:05 Terminated 1 superfluous worker`);
+    expect(
+      grep(terminal, /worker/).replace(/\n(.+)(?:\n\1)+/g, "\n$1"),
+    ).toMatchInlineSnapshot(`13:10:05 Terminated 1 superfluous worker`);
   });
 
   test("persisted compilation mode", async () => {
@@ -3447,27 +3448,27 @@ describe("hot", () => {
 
     expect(mainHtml.replace(/<head>[^]*<\/head>/, "<head>…</head>"))
       .toMatchInlineSnapshot(`
-      <!DOCTYPE html>
-          <html lang="en">
-            <head>…</head>
-            <body>
-              
-            <h1>Enable elm-watch static file server?</h1>
-            <p>
-              If you want, you can enable a simple static file server for your
-              project.
-            </p>
-            <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
-            <pre><code>"serve": "./folder/to/serve/"</code></pre>
-          
-              <p style="margin-top: 2em">
-                <small
-                  >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small
-                >
+        <!DOCTYPE html>
+            <html lang="en">
+              <head>…</head>
+              <body>
+                <main>
+              <h1>Enable elm-watch static file server?</h1>
+              <p>
+                If you want, you can enable a simple static file server for your
+                project.
               </p>
-            </body>
-          </html>
-    `);
+              <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
+              <pre><code>"serve": "./folder/to/serve/"</code></pre>
+            </main>
+                <p style="margin-top: 2em">
+                  <small
+                    >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small
+                  >
+                </p>
+              </body>
+            </html>
+      `);
   });
 
   test("ctrl+c", async () => {

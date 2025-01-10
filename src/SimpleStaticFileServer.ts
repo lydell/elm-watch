@@ -137,7 +137,7 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
         </style>
       </head>
       <body>
-        ${body}
+        <main>${body}</main>
         <p style="margin-top: 2em">
           <small
             >ℹ️ This is the <a href="${DOCS_LINK}">elm-watch server</a>.</small
@@ -402,11 +402,52 @@ export function respondHtml(
   htmlValue: Html,
 ): void {
   const htmlString = htmlValue.toString().trim();
-  response.writeHead(statusCode, {
-    "Content-Type": "text/html; charset=utf-8",
-    "Content-Length": Buffer.byteLength(htmlString),
-  });
-  response.end(htmlString);
+  const contentLength = Buffer.byteLength(htmlString);
+  if (!response.headersSent) {
+    writeHead(response, statusCode, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Length": contentLength,
+    });
+    response.end(htmlString);
+  } else {
+    // This can happen:
+    // 1. We write the headers for responding.
+    // 2. Something throws an error, so we never send the intended content.
+    // 3. We catch that error, and want to respond with a 500 page.
+    //    But the headers (and status code) are already sent, so we can’t
+    //    change them now. Instead, try send the response using the already
+    //    sent headers.
+    const previousContentLength = response.getHeader("Content-Length");
+    if (typeof previousContentLength === "number") {
+      const newHtmlString =
+        previousContentLength >= contentLength
+          ? htmlString
+          : // Previously set content was shorter – try to extract the main info.
+            (/<main>([^]*)<\/main>/.exec(htmlString)?.[1] ?? htmlString);
+      const newContentLength = Buffer.byteLength(newHtmlString);
+      response.end(
+        newHtmlString +
+          // Pad the content to the previously set content if needed.
+          " ".repeat(Math.max(0, previousContentLength - newContentLength)),
+      );
+    } else {
+      // Content-Length not set previously, just try sending the whole thing.
+      response.end(htmlString);
+    }
+  }
+}
+
+function writeHead(
+  response: http.ServerResponse,
+  statusCode: number,
+  headers: Record<string, string | number>,
+): void {
+  // Use `.setHeader` rather than passing headers directly to `.writeHead`
+  // so that they can be read later via `.getHeader`.
+  for (const [name, value] of Object.entries(headers)) {
+    response.setHeader(name, value);
+  }
+  response.writeHead(statusCode);
 }
 
 // Note: This function may throw file system errors.
@@ -500,7 +541,7 @@ export function serveStatic(
       }
 
       default:
-        response.writeHead(405, { Allow: "GET, HEAD" });
+        writeHead(response, 405, { Allow: "GET, HEAD" });
         response.end(
           errorHtml(
             `Unsupported method
@@ -546,7 +587,7 @@ function serveFile(
 
   switch (request.method) {
     case "HEAD":
-      response.writeHead(200, contentTypeHeader);
+      writeHead(response, 200, contentTypeHeader);
       response.end();
       return;
 
@@ -564,7 +605,7 @@ function serveFile(
       });
       readStream.on("open", () => {
         if (range === undefined) {
-          response.writeHead(200, {
+          writeHead(response, 200, {
             ...contentTypeHeader,
             "Content-Length":
               fsSize +
@@ -576,7 +617,7 @@ function serveFile(
             response.write(extraContent);
           }
         } else {
-          response.writeHead(206, {
+          writeHead(response, 206, {
             ...contentTypeHeader,
             "Content-Range": `bytes ${range.start}-${range.end}/${fsSize}`,
             "Content-Length": range.end - range.start + 1,
