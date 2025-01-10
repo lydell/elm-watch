@@ -3437,7 +3437,6 @@ describe("hot", () => {
     const { port } = portResult.value;
 
     let mainHtml = "(not set)";
-    let variations: Array<string> = ["(not set)"];
 
     await run({
       fixture,
@@ -3448,69 +3447,32 @@ describe("hot", () => {
       },
       onIdle: async () => {
         mainHtml = await httpGet(`http://localhost:${port}`);
-        variations = await Promise.all([
-          httpGet(`https://localhost:${port}`),
-          httpGet(`http://localhost:${port}/accept`),
-          httpGet(`https://localhost:${port}/accept`),
-          httpGet(`https://localhost:${port}/accept`, {
-            headers: { referer: `http://localhost:${port + 1}/page` },
-          }),
-          httpGet(`https://localhost:${port}/elm-watch-https-accept`, {
-            headers: {
-              referer: `http://localhost:${port}/elm-watch-https-accept`,
-            },
-          }),
-        ]);
         return "Stop" as const;
       },
     });
 
-    expect(mainHtml).toMatchInlineSnapshot(`
+    expect(mainHtml.replace(/<head>[^]*<\/head>/, "<head>…</head>"))
+      .toMatchInlineSnapshot(`
       <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>elm-watch</title>
-          <style>
-            html {
-              font-family: system-ui, sans-serif;
-            }
-          </style>
-        </head>
-        <body>
-          <p>ℹ️ This is the elm-watch WebSocket server.</p>
-          <p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>
-        </body>
-      </html>
-    `);
-
-    const variationsString = variations
-      .map((html) => {
-        const match = /<body>\n( *)([^]*)<\/body>/.exec(html);
-        if (match === null) {
-          return `Unable to match '<body> ... </body>' in:\n${html}`;
-        }
-        const [, indent = "", content = "missing content"] = match;
-        return content.trim().replace(RegExp(`^ {${indent.length}}`, "gm"), "");
-      })
-      .join(`\n${"=".repeat(80)}\n`);
-
-    expect(variationsString).toMatchInlineSnapshot(`
-      <p>ℹ️ This is the elm-watch WebSocket server.</p>
-      <p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>
-      ================================================================================
-      <p>ℹ️ This is the elm-watch WebSocket server.</p>
-      <p>Did you mean to go to the <a href="https://localhost:9753/accept">HTTPS version of this page</a> to accept elm-watch's self-signed certificate?</p>
-      ================================================================================
-      <p>ℹ️ This is the elm-watch WebSocket server.</p>
-      <p>✅ Certificate accepted. You may now return to your page.</p>
-      ================================================================================
-      <p>ℹ️ This is the elm-watch WebSocket server.</p>
-      <p>✅ Certificate accepted. You may now <a href="http://localhost:9754/page">return to your page</a>.</p>
-      ================================================================================
-      <p>ℹ️ This is the elm-watch WebSocket server.</p>
-      <p>✅ Certificate accepted. You may now return to your page.</p>
+          <html lang="en">
+            <head>…</head>
+            <body>
+              
+            <h1>Enable elm-watch static file server?</h1>
+            <p>
+              If you want, you can enable a simple static file server for your
+              project.
+            </p>
+            <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
+            <pre><code>"serve": "./folder/to/serve/"</code></pre>
+          
+              <p style="margin-top: 2em">
+                <small
+                  >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small
+                >
+              </p>
+            </body>
+          </html>
     `);
   });
 
