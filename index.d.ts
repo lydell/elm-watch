@@ -18,7 +18,7 @@ type CreateServer = (listeners: {
   onUpgrade: (
     req: InstanceType<typeof http.IncomingMessage>,
     socket: stream.Duplex,
-    head: Buffer
+    head: Buffer,
   ) => void;
 }) =>
   | ReturnType<typeof http.createServer>
@@ -33,7 +33,7 @@ declare function elmWatch(
     stdout?: WriteStream;
     stderr?: WriteStream;
     createServer?: CreateServer;
-  }
+  },
 ): Promise<number>;
 
 export = elmWatch;
