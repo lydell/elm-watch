@@ -111,7 +111,6 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
-      📊 ⧙web socket connections:⧘ 0
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Worker: elm make (typecheck only)
@@ -261,7 +260,6 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       server: http://localhost:59123, network: http://192.168.0.1:59123
-      web socket connections: 0
       Dependencies: in progress
       Dependencies: success
       Html: elm make (typecheck only)
@@ -2034,7 +2032,6 @@ describe("hot", () => {
 
     expect(adjustedTerminal).toMatchInlineSnapshot(`
       📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
-      📊 ⧙web socket connections:⧘ 0
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Html: elm make (typecheck only)
@@ -2422,10 +2419,7 @@ describe("hot", () => {
 
     // Remove duplicate lines.
     expect(grep(terminal, /worker/).replace(/\n(.+)(?:\n\1)+/g, "\n$1"))
-      .toMatchInlineSnapshot(`
-        web socket connections: 0, elm-watch-node workers: 1
-        13:10:05 Terminated 1 superfluous worker
-      `);
+      .toMatchInlineSnapshot(`13:10:05 Terminated 1 superfluous worker`);
   });
 
   test("persisted compilation mode", async () => {

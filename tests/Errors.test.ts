@@ -1855,7 +1855,6 @@ describe("errors", () => {
 
       expect(adjustedOutput).toMatchInlineSnapshot(`
         📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
-        📊 ⧙web socket connections:⧘ 0
         ⏳ Main: elm make (typecheck only)
         ⏳ Main: interrupted
         ⏳ Main: elm make (typecheck only)

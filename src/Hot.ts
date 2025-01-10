@@ -586,11 +586,17 @@ const initMutable =
         writeElmWatchStuffJson(mutable);
         // When not running as a TTY the output is a simple log, and it gets
         // a bit tedious if the stats are printed after each event. Instead,
-        // we print it once at startup. This has to be done once the server
-        // is ready – we don’t know the final port to print until then.
+        // we print it once at startup, and only the server links (connections
+        // and workers are always 0 at that time).
+        // This has to be done once the server is ready – we don’t know the
+        // final port number to print until then.
         const isRestart = webSocketState !== undefined;
         if (!logger.config.isTTY && !isRestart) {
-          logger.write(printStats(logger.config, mutable, getHost(env)));
+          logger.write(
+            printStats(logger.config, [
+              printServerLinks(mutable.webSocketServer, getHost(env)),
+            ]),
+          );
         }
       })
       .catch(rejectPromise);
@@ -2892,7 +2898,7 @@ function infoMessageWithTimeline({
 }): string {
   return [
     loggerConfig.isTTY ? "" : undefined, // Empty line separator.
-    loggerConfig.isTTY ? printStats(loggerConfig, mutable, host) : undefined,
+    loggerConfig.isTTY ? printAllStats(loggerConfig, mutable, host) : undefined,
     "",
     printTimeline(loggerConfig, events),
     printMessageWithTimeAndEmoji({
@@ -2932,20 +2938,27 @@ function printMessageWithTimeAndEmoji({
   });
 }
 
-function printStats(
+function printAllStats(
   loggerConfig: LoggerConfig,
   mutable: Mutable,
   host: Host,
 ): string {
   const numWorkers = mutable.postprocessWorkerPool.getSize();
-  return [
+  return printStats(loggerConfig, [
     printServerLinks(mutable.webSocketServer, host),
     `${dim("web socket connections:")} ${mutable.webSocketConnections.length}${
       numWorkers > 0
         ? `${dim(`, ${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
         : ""
     }`,
-  ]
+  ]);
+}
+
+function printStats(
+  loggerConfig: LoggerConfig,
+  stats: NonEmptyArray<string>,
+): string {
+  return stats
     .map((part) =>
       Compile.printStatusLine({
         maxWidth: Infinity,

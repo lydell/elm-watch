@@ -1863,7 +1863,6 @@ describe("hot reloading", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
-      📊 ⧙web socket connections:⧘ 0
       ⏳ InterruptElm: elm make (typecheck only)
       ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
