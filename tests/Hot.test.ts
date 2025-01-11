@@ -2635,7 +2635,7 @@ describe("hot", () => {
 
       1 error found
 
-      server: http://localhost:9988, network: http://192.168.0.99:9988
+      server: http://localhost:59123, network: http://192.168.0.1:59123
       web socket connections: 1
 
       13:10:05 Web socket connected needing compilation of: Main
