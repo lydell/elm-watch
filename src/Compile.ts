@@ -29,7 +29,6 @@ import {
   nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
-import { Port } from "./Port";
 import {
   Postprocess,
   PostprocessWorkerPool,
@@ -56,6 +55,7 @@ import {
   RunMode,
   TargetName,
 } from "./Types";
+import { WebSocketConnection } from "./WebSocketUrl";
 
 export type InstallDependenciesResult =
   | { tag: "Error" }
@@ -559,7 +559,7 @@ export type HandleOutputActionResult =
 type RunModeWithExtraData =
   | {
       tag: "hot";
-      webSocketPort: Port;
+      webSocketConnection: WebSocketConnection;
     }
   | {
       tag: "make";
@@ -620,7 +620,7 @@ export async function handleOutputAction({
             elmJsonPath: action.elmJsonPath,
             outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
             total,
-            webSocketPort: runMode.webSocketPort,
+            webSocketConnection: runMode.webSocketConnection,
           });
           return { tag: "Nothing" };
       }
@@ -939,7 +939,7 @@ function onCompileSuccess(
                 elmCompiledTimestamp,
                 outputState.compilationMode,
                 outputState.browserUiPosition,
-                runMode.webSocketPort,
+                runMode.webSocketConnection,
                 loggerConfig.debug,
               ) + newCode,
             );
@@ -1124,7 +1124,7 @@ async function postprocessHelper({
               elmCompiledTimestamp,
               outputState.compilationMode,
               outputState.browserUiPosition,
-              runMode.webSocketPort,
+              runMode.webSocketConnection,
               logger.config.debug,
             );
             fs.writeFileSync(
@@ -1200,7 +1200,7 @@ async function typecheck({
   elmJsonPath,
   outputs,
   total,
-  webSocketPort,
+  webSocketConnection,
 }: {
   env: Env;
   logger: Logger;
@@ -1213,7 +1213,7 @@ async function typecheck({
     outputState: OutputState;
   }>;
   total: number;
-  webSocketPort: Port;
+  webSocketConnection: WebSocketConnection;
 }): Promise<void> {
   const startTimestamp = getNow().getTime();
   const outputsWithStatus: Array<{
@@ -1325,7 +1325,7 @@ async function typecheck({
     const proxyFileResult = needsToWriteProxyFile(
       outputPath.theOutputPath,
       Buffer.from(
-        Inject.versionedIdentifier(outputPath.targetName, webSocketPort),
+        Inject.versionedIdentifier(outputPath.targetName, webSocketConnection),
       ),
     );
 
@@ -1341,7 +1341,7 @@ async function typecheck({
               outputPath,
               getNow().getTime(),
               outputState.browserUiPosition,
-              webSocketPort,
+              webSocketConnection,
               logger.config.debug,
             ),
           );

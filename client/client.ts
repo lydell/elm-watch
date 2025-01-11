@@ -1,6 +1,7 @@
 import * as Codec from "tiny-decoders";
 
 import { formatDate, formatTime } from "../src/Helpers";
+import { NonEmptyArray } from "../src/NonEmptyArray";
 import { runTeaProgram } from "../src/TeaProgram";
 import {
   AbsolutePath,
@@ -9,6 +10,7 @@ import {
   CompilationModeWithProxy,
   GetNow,
 } from "../src/Types";
+import { reloadAllCssIfNeeded } from "./css";
 import {
   decodeWebSocketToClientMessage,
   ErrorLocation,
@@ -30,6 +32,9 @@ const HAS_WINDOW = window.window !== undefined;
 type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
+  CHANGED_CSS: Date;
+  CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
+  ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
   RELOAD_STATUSES: Map</* targetName */ string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
   TARGET_DATA: Map</* targetName */ string, TargetData>;
@@ -183,6 +188,12 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
     // Do nothing.
   },
 
+  CHANGED_CSS: new Date(0),
+
+  CHANGED_FILE_URL_PATHS: { timestamp: new Date(0), changed: new Set() },
+
+  ORIGINAL_STYLES: new WeakMap(),
+
   RELOAD_STATUSES: new Map(),
 
   RELOAD_PAGE: (message) => {
@@ -274,12 +285,18 @@ const ORIGINAL_COMPILATION_MODE =
 // as things change.
 const ORIGINAL_BROWSER_UI_POSITION =
   "%ORIGINAL_BROWSER_UI_POSITION%" as BrowserUiPosition;
-const WEBSOCKET_PORT = "%WEBSOCKET_PORT%";
+const WEBSOCKET_CONNECTION = "%WEBSOCKET_CONNECTION%";
 const CONTAINER_ID = "elm-watch";
 const DEBUG = String("%DEBUG%") === "true";
 
+// Public events:
+const ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT =
+  "elm-watch:changed-file-url-paths";
+// Internal events:
 const BROWSER_UI_MOVED_EVENT = "BROWSER_UI_MOVED_EVENT";
 const CLOSE_ALL_ERROR_OVERLAYS_EVENT = "CLOSE_ALL_ERROR_OVERLAYS_EVENT";
+
+const ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME = 10;
 
 // A compilation after moving the browser UI on a big app takes around 700 ms
 // for me. So more than double that should be plenty.
@@ -322,6 +339,10 @@ type Msg =
   | {
       tag: "PageVisibilityChangedToVisible";
       date: Date;
+    }
+  | {
+      tag: "ReloadAllCssDone";
+      didChange: boolean;
     }
   | {
       tag: "SleepBeforeReconnectDone";
@@ -377,7 +398,6 @@ type UiMsg =
 
 type Model = {
   status: Status;
-  previousStatusTag: Status["tag"];
   compilationMode: CompilationModeWithProxy;
   browserUiPosition: BrowserUiPosition;
   lastBrowserUiPositionChangeDate: Date | undefined;
@@ -390,6 +410,14 @@ type Cmd =
   | {
       tag: "Eval";
       code: string;
+    }
+  | {
+      tag: "Flash";
+      flashType: FlashType;
+    }
+  | {
+      tag: "HandleStaticFilesChanged";
+      changedFileUrlPaths: NonEmptyArray<string> | "AnyFileMayHaveChanged";
     }
   | {
       tag: "NoCmd";
@@ -532,6 +560,19 @@ function BrowserUiPositionWithFallback(value: unknown): BrowserUiPosition {
   }
 }
 
+// Removes the information comment added by SimpleStaticFileServer.ts
+// so that it does not take space in the element inspector (it is only
+// supposed to be read when viewing the source).
+function removeElmWatchIndexHtmlComment(): void {
+  const node = document.firstChild;
+  if (
+    node instanceof Comment &&
+    node.data.trimStart().startsWith("elm-watch debug information:")
+  ) {
+    node.remove();
+  }
+}
+
 function run(): void {
   let elmCompiledTimestampBeforeReload: number | undefined = undefined;
   try {
@@ -561,6 +602,10 @@ function run(): void {
       : BrowserUiPositionWithFallback(elements.container.dataset["position"]);
   const getNow: GetNow = () => new Date();
 
+  if (HAS_WINDOW) {
+    removeElmWatchIndexHtmlComment();
+  }
+
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, elements),
     init: init(getNow(), browserUiPosition, elmCompiledTimestampBeforeReload),
@@ -575,12 +620,26 @@ function run(): void {
       const newModel: Model = modelChanged
         ? {
             ...updatedModel,
-            previousStatusTag: model.status.tag,
             uiExpanded: reloadTrouble ? true : updatedModel.uiExpanded,
           }
         : model;
       const oldErrorOverlay = getErrorOverlay(model.status);
       const newErrorOverlay = getErrorOverlay(newModel.status);
+      const statusType = statusToStatusType(newModel.status.tag);
+      const statusTypeChanged =
+        statusType !== statusToStatusType(model.status.tag);
+      const statusFlashType = getStatusFlashType({
+        statusType,
+        statusTypeChanged,
+        hasReceivedHotReload:
+          newModel.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
+        uiRelatedUpdate: msg.tag === "UiMsg",
+        errorOverlayVisible: elements !== undefined && !elements.overlay.hidden,
+      });
+      const flashCmd: Array<Cmd> =
+        statusFlashType === undefined || cmds.some((cmd) => cmd.tag === "Flash")
+          ? []
+          : [{ tag: "Flash", flashType: statusFlashType }];
       const allCmds: Array<Cmd> = modelChanged
         ? [
             ...cmds,
@@ -591,7 +650,7 @@ function run(): void {
             },
             // This needs to be done before Render, since it depends on whether
             // the error overlay is visible or not.
-            newModel.status.tag === newModel.previousStatusTag &&
+            newModel.status.tag === model.status.tag &&
             oldErrorOverlay?.openErrorOverlay ===
               newErrorOverlay?.openErrorOverlay
               ? { tag: "NoCmd" }
@@ -605,11 +664,17 @@ function run(): void {
                       : newErrorOverlay.errors,
                   sendKey: statusToSpecialCaseSendKey(newModel.status),
                 },
-            {
-              tag: "Render",
-              model: newModel,
-              manageFocus: msg.tag === "UiMsg",
-            },
+            ...(elements !== undefined ||
+            newModel.status.tag !== model.status.tag
+              ? [
+                  {
+                    tag: "Render",
+                    model: newModel,
+                    manageFocus: msg.tag === "UiMsg",
+                  } as const,
+                ]
+              : []),
+            ...flashCmd,
             model.browserUiPosition === newModel.browserUiPosition
               ? { tag: "NoCmd" }
               : {
@@ -620,7 +685,7 @@ function run(): void {
               ? { tag: "TriggerReachedIdleState", reason: "ReloadTrouble" }
               : { tag: "NoCmd" },
           ]
-        : cmds;
+        : [...cmds, ...flashCmd];
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
@@ -1188,7 +1253,11 @@ function initWebSocket(
             : window.location.hostname,
           window.location.protocol === "https:" ? "wss" : "ws",
         ];
-  const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/elm-watch`);
+  const url = new URL(
+    /^\d+$/.test(WEBSOCKET_CONNECTION)
+      ? `${protocol}://${hostname}:${WEBSOCKET_CONNECTION}/elm-watch`
+      : WEBSOCKET_CONNECTION,
+  );
   url.searchParams.set("elmWatchVersion", VERSION);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
@@ -1233,7 +1302,6 @@ const init = (
 ): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
-    previousStatusTag: "Idle",
     compilationMode: ORIGINAL_COMPILATION_MODE,
     browserUiPosition,
     lastBrowserUiPositionChangeDate: undefined,
@@ -1302,14 +1370,17 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "FocusedTab":
       return [
-        // Force a re-render for the “Error” status type, so that the animation plays again.
-        statusToStatusType(model.status.tag) === "Error" ? { ...model } : model,
-        // Send these commands regardless of current status: We want to prioritize the target
-        // due to the focus no matter what, and after waking up on iOS we need to check the
-        // WebSocket connection no matter what as well. For example, it’s possible to lock
-        // the phone while Busy, and then we miss the “done” message, which makes us still
-        // have the Busy status when unlocking the phone.
+        model,
         [
+          // Replay the error animation.
+          ...(statusToStatusType(model.status.tag) === "Error"
+            ? [{ tag: "Flash", flashType: "error" } as const]
+            : []),
+          // Send these commands regardless of current status: We want to prioritize the target
+          // due to the focus no matter what, and after waking up on iOS we need to check the
+          // WebSocket connection no matter what as well. For example, it’s possible to lock
+          // the phone while Busy, and then we miss the “done” message, which makes us still
+          // have the Busy status when unlocking the phone.
           {
             tag: "SendMessage",
             message: { tag: "FocusedTab" },
@@ -1323,6 +1394,12 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
     case "PageVisibilityChangedToVisible":
       return reconnect(model, msg.date, { force: true });
+
+    case "ReloadAllCssDone":
+      return [
+        model,
+        msg.didChange ? [{ tag: "Flash", flashType: "success" }] : [],
+      ];
 
     case "SleepBeforeReconnectDone":
       return reconnect(model, msg.date, { force: false });
@@ -1508,6 +1585,28 @@ function onWebSocketToClientMessage(
           {
             tag: "TriggerReachedIdleState",
             reason: "OpenEditorFailed",
+          },
+        ],
+      ];
+
+    case "StaticFilesChanged":
+      return [
+        { ...model, status: { ...model.status, date } },
+        [
+          {
+            tag: "HandleStaticFilesChanged",
+            changedFileUrlPaths: msg.changedFileUrlPaths,
+          },
+        ],
+      ];
+
+    case "StaticFilesMayHaveChangedWhileDisconnected":
+      return [
+        { ...model, status: { ...model.status, date } },
+        [
+          {
+            tag: "HandleStaticFilesChanged",
+            changedFileUrlPaths: "AnyFileMayHaveChanged",
           },
         ],
       ];
@@ -1743,6 +1842,71 @@ const runCmd =
         });
         return;
 
+      case "Flash":
+        if (elements !== undefined) {
+          flash(elements, cmd.flashType);
+        }
+        return;
+
+      case "HandleStaticFilesChanged": {
+        const now = getNow();
+        let shouldReloadCss = false;
+        if (cmd.changedFileUrlPaths === "AnyFileMayHaveChanged") {
+          shouldReloadCss = true;
+        } else {
+          if (
+            now.getTime() -
+              __ELM_WATCH.CHANGED_FILE_URL_PATHS.timestamp.getTime() >
+            ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME
+          ) {
+            __ELM_WATCH.CHANGED_FILE_URL_PATHS = {
+              timestamp: now,
+              changed: new Set(),
+            };
+          }
+
+          const justChangedFileUrlPaths = new Set<string>();
+
+          for (const path of cmd.changedFileUrlPaths) {
+            if (path.toLowerCase().endsWith(".css")) {
+              shouldReloadCss = true;
+            } else if (!__ELM_WATCH.CHANGED_FILE_URL_PATHS.changed.has(path)) {
+              justChangedFileUrlPaths.add(path);
+            }
+          }
+
+          // There might be several targets on the page, all receiving the same
+          // changed file url paths. This fires the event only once per batch.
+          // (Every target most likely gets the same paths.)
+          if (justChangedFileUrlPaths.size > 0) {
+            for (const path of justChangedFileUrlPaths) {
+              __ELM_WATCH.CHANGED_FILE_URL_PATHS.changed.add(path);
+            }
+            window.dispatchEvent(
+              new CustomEvent(ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT, {
+                detail: justChangedFileUrlPaths,
+              }),
+            );
+          }
+        }
+
+        // Same thing here: Every target does not need to reload CSS.
+        if (
+          shouldReloadCss &&
+          now.getTime() - __ELM_WATCH.CHANGED_CSS.getTime() >
+            ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME
+        ) {
+          __ELM_WATCH.CHANGED_CSS = now;
+          reloadAllCssIfNeeded(__ELM_WATCH.ORIGINAL_STYLES)
+            .then((didChange) => {
+              dispatch({ tag: "ReloadAllCssDone", didChange });
+            })
+            .catch(rejectPromise);
+        }
+
+        return;
+      }
+
       case "NoCmd":
         return;
 
@@ -1762,23 +1926,19 @@ const runCmd =
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
           debugModeToggled: getDebugModeToggled(),
-          errorOverlayVisible:
-            elements !== undefined && !elements.overlay.hidden,
         };
         if (elements === undefined) {
-          if (model.status.tag !== model.previousStatusTag) {
-            const isError = statusToStatusType(model.status.tag) === "Error";
-            const isWebWorker =
-              typeof (window as unknown as { WorkerGlobalScope: unknown })
-                .WorkerGlobalScope !== "undefined" && !isError;
-            const consoleMethodName =
-              // `console.info` looks nicer in the browser console for Web Workers.
-              // On Node.js, we want to always print to stderr.
-              isError || !isWebWorker ? "error" : "info";
-            // eslint-disable-next-line no-console
-            const consoleMethod = console[consoleMethodName];
-            consoleMethod(renderWithoutDomElements(model, info));
-          }
+          const isError = statusToStatusType(model.status.tag) === "Error";
+          const isWebWorker =
+            typeof (window as unknown as { WorkerGlobalScope: unknown })
+              .WorkerGlobalScope !== "undefined" && !isError;
+          const consoleMethodName =
+            // `console.info` looks nicer in the browser console for Web Workers.
+            // On Node.js, we want to always print to stderr.
+            isError || !isWebWorker ? "error" : "info";
+          // eslint-disable-next-line no-console
+          const consoleMethod = console[consoleMethodName];
+          consoleMethod(renderWithoutDomElements(model, info));
         } else {
           const { targetRoot } = elements;
           render(getNow, targetRoot, dispatch, model, info, cmd.manageFocus);
@@ -2236,7 +2396,6 @@ type Info = {
   targetName: string;
   originalCompilationMode: CompilationModeWithProxy;
   debugModeToggled: Toggled;
-  errorOverlayVisible: boolean;
 };
 
 function renderWithoutDomElements(model: Model, info: Info): string {
@@ -2261,7 +2420,6 @@ function render(
       },
       model,
       info,
-      manageFocus,
     ),
   );
 
@@ -2284,8 +2442,7 @@ const CLASS = {
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
   expandedUiContainer: "expandedUiContainer",
-  flashError: "flashError",
-  flashSuccess: "flashSuccess",
+  flash: "flash",
   overlay: "overlay",
   overlayCloseButton: "overlayCloseButton",
   root: "root",
@@ -2295,7 +2452,7 @@ const CLASS = {
   targetRoot: "targetRoot",
 };
 
-function getStatusClass({
+function getStatusFlashType({
   statusType,
   statusTypeChanged,
   hasReceivedHotReload,
@@ -2307,22 +2464,30 @@ function getStatusClass({
   hasReceivedHotReload: boolean;
   uiRelatedUpdate: boolean;
   errorOverlayVisible: boolean;
-}): string | undefined {
+}): FlashType | undefined {
   switch (statusType) {
     case "Success":
-      return statusTypeChanged && hasReceivedHotReload
-        ? CLASS.flashSuccess
-        : undefined;
+      return statusTypeChanged && hasReceivedHotReload ? "success" : undefined;
     case "Error":
       return errorOverlayVisible
         ? statusTypeChanged && hasReceivedHotReload
-          ? CLASS.flashError
+          ? "error"
           : undefined
         : uiRelatedUpdate
           ? undefined
-          : CLASS.flashError;
+          : "error";
     case "Waiting":
       return undefined;
+  }
+}
+
+type FlashType = "error" | "success";
+
+function flash(elements: Elements, flashType: FlashType): void {
+  for (const element of elements.targetRoot.querySelectorAll(
+    `.${CLASS.flash}`,
+  )) {
+    element.setAttribute("data-flash", flashType);
   }
 }
 
@@ -2495,6 +2660,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 }
 
 .${CLASS.root} {
+  all: initial;
   --grey: #767676;
   display: flex;
   align-items: start;
@@ -2626,8 +2792,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   gap: 0.25em;
 }
 
-.${CLASS.flashError}::before,
-.${CLASS.flashSuccess}::before {
+[data-flash]::before {
   content: "";
   position: absolute;
   margin-top: 0.5em;
@@ -2640,11 +2805,11 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   pointer-events: none;
 }
 
-.${CLASS.flashError}::before {
+[data-flash="error"]::before {
   background-color: #eb0000;
 }
 
-.${CLASS.flashSuccess}::before {
+[data-flash="success"]::before {
   background-color: #00b600;
 }
 
@@ -2671,8 +2836,7 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .${CLASS.flashError}::before,
-  .${CLASS.flashSuccess}::before {
+  [data-flash]::before {
     transform: translate(-50%, -50%);
     width: 2em;
     height: 2em;
@@ -2694,7 +2858,6 @@ function view(
   dispatch: (msg: UiMsg) => void,
   passedModel: Model,
   info: Info,
-  manageFocus: boolean,
 ): HTMLElement {
   const model: Model = __ELM_WATCH.MOCKED_TIMINGS
     ? {
@@ -2710,19 +2873,6 @@ function view(
     ...statusIconAndText(model),
     ...viewStatus(dispatch, model, info),
   };
-
-  const statusType = statusToStatusType(model.status.tag);
-  const statusTypeChanged =
-    statusType !== statusToStatusType(model.previousStatusTag);
-
-  const statusClass = getStatusClass({
-    statusType,
-    statusTypeChanged,
-    hasReceivedHotReload:
-      model.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
-    uiRelatedUpdate: manageFocus,
-    errorOverlayVisible: info.errorOverlayVisible,
-  });
 
   return h(
     HTMLDivElement,
@@ -2757,24 +2907,18 @@ function view(
         ),
       ),
       compilationModeIcon(model.compilationMode),
-      icon(
-        statusData.icon,
-        statusData.status,
-        statusClass === undefined
-          ? {}
-          : {
-              className: statusClass,
-              onanimationend: (event) => {
-                // The animations are designed to work even without this (they
-                // stay on the last frame). We also have `pointer-events: none`.
-                // But remove the absolutely positioned animation element just
-                // in case.
-                if (event.currentTarget instanceof HTMLElement) {
-                  event.currentTarget.classList.remove(statusClass);
-                }
-              },
-            },
-      ),
+      icon(statusData.icon, statusData.status, {
+        className: CLASS.flash,
+        onanimationend: (event) => {
+          // The animations are designed to work even without this (they
+          // stay on the last frame). We also have `pointer-events: none`.
+          // But remove the absolutely positioned animation element just
+          // in case.
+          if (event.currentTarget instanceof HTMLElement) {
+            event.currentTarget.removeAttribute("data-flash");
+          }
+        },
+      }),
       h(
         HTMLTimeElement,
         { dateTime: model.status.date.toISOString() },
@@ -3245,7 +3389,7 @@ function printWebSocketUrl(url: URL): string {
   const hostname = url.hostname.endsWith(".localhost")
     ? "localhost"
     : url.hostname;
-  return `${url.protocol}//${hostname}:${url.port}`;
+  return `${url.protocol}//${hostname}:${url.port}${url.pathname}`;
 }
 
 function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
@@ -3256,20 +3400,11 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
           {},
           h(HTMLElement, { localName: "strong" }, "Having trouble connecting?"),
         ),
+        h(HTMLParagraphElement, {}, "Setting up HTTPS can be a bit tricky."),
         h(
           HTMLParagraphElement,
           {},
-          " You might need to ",
-          h(
-            HTMLAnchorElement,
-            { href: new URL(`https://${webSocketUrl.host}/accept`).href },
-            "accept elm-watch’s self-signed certificate",
-          ),
-          ". ",
-        ),
-        h(
-          HTMLParagraphElement,
-          {},
+          "Read all about ",
           h(
             HTMLAnchorElement,
             {
@@ -3277,7 +3412,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
               target: "_blank",
               rel: "noreferrer",
             },
-            "More information",
+            "HTTPS with elm-watch",
           ),
           ".",
         ),
@@ -3639,7 +3774,6 @@ function renderMockStatuses(
     webSocketUrl: new URL("ws://localhost:53167"),
     originalCompilationMode: "standard",
     debugModeToggled: { tag: "Enabled" },
-    errorOverlayVisible: false,
   };
 
   const mockStatuses: Record<
@@ -3823,7 +3957,6 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
     elements.root.append(targetRoot);
     const model: Model = {
       status,
-      previousStatusTag: status.tag,
       compilationMode: status.compilationMode ?? "standard",
       browserUiPosition: "BottomLeft",
       lastBrowserUiPositionChangeDate: undefined,

@@ -14,6 +14,7 @@ import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
 import {
   CliArg,
+  CreateServer,
   Cwd,
   ElmWatchJsonPath,
   ElmWatchStuffDir,
@@ -41,6 +42,7 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
+  createServer: CreateServer,
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.LatestEvent>,
@@ -255,6 +257,7 @@ export async function run(
                         env,
                         logger,
                         getNow,
+                        createServer,
                         restartReasons,
                         postprocessWorkerPool,
                         webSocketState,
