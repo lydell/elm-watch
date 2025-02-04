@@ -21,6 +21,7 @@ import {
   GetNow,
   markAsElmWatchStuffDir,
   markAsElmWatchStuffJsonPath,
+  markAsWebSocketToken,
   RunMode,
 } from "./Types";
 
@@ -258,6 +259,8 @@ export async function run(
                         restartReasons,
                         postprocessWorkerPool,
                         webSocketState,
+                        elmWatchStuffJson?.webSocketToken ??
+                          markAsWebSocketToken(crypto.randomUUID()),
                         project,
                         config.port !== undefined
                           ? { tag: "PortFromConfig", port: config.port }

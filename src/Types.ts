@@ -146,3 +146,9 @@ export function equalsInputPath(
 ): boolean {
   return inputPath.theInputPath === elmFile || inputPath.realpath === elmFile;
 }
+
+export type WebSocketToken = Brand<string, "WebSocketToken">;
+export const WebSocketToken = brand<WebSocketToken>();
+export function markAsWebSocketToken(string: string): WebSocketToken {
+  return string as WebSocketToken;
+}

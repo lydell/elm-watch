@@ -9,6 +9,7 @@ import {
   CompilationModeWithProxy,
   OutputPath,
   TargetName,
+  WebSocketToken,
 } from "./Types";
 
 // This matches full functions, declared either with `function name(` or `var name =`.
@@ -822,6 +823,7 @@ export function proxyFile(
   elmCompiledTimestamp: number,
   browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
+  webSocketToken: WebSocketToken,
   debug: boolean,
 ): string {
   const clientCodeString = clientCode(
@@ -830,6 +832,7 @@ export function proxyFile(
     "proxy",
     browserUiPosition,
     webSocketPort,
+    webSocketToken,
     debug,
   );
   const proxyCodeString = ClientCode.proxy
@@ -857,6 +860,7 @@ export function clientCode(
   compilationMode: CompilationModeWithProxy,
   browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
+  webSocketToken: WebSocketToken,
   debug: boolean,
 ): string {
   const replacements: Record<string, string> = {
@@ -865,10 +869,11 @@ export function clientCode(
     ORIGINAL_COMPILATION_MODE: compilationMode,
     ORIGINAL_BROWSER_UI_POSITION: browserUiPosition,
     WEBSOCKET_PORT: webSocketPort.toString(),
+    WEBSOCKET_TOKEN: webSocketToken,
     DEBUG: debug.toString(),
   };
   return (
-    versionedIdentifier(outputPath.targetName, webSocketPort) +
+    versionedIdentifier(outputPath.targetName, webSocketPort, webSocketToken) +
     ClientCode.client.replace(
       new RegExp(`"%(${Object.keys(replacements).join("|")})%"`, "g"),
       (_, name: string) =>
@@ -884,14 +889,17 @@ export function clientCode(
 // - And it was created by the same version of `elm-watch`. (Older versions could have bugs.)
 // - And it has the same target name. (It might have changed, and needs to match.)
 // - And it used the same WebSocket port. (Otherwise it will never connect to us.)
+// - And it used the same WebSocket token. (Otherwise we will reject the connection.)
 export function versionedIdentifier(
   targetName: TargetName,
   webSocketPort: Port,
+  webSocketToken: WebSocketToken,
 ): string {
   return `// elm-watch hot ${Codec.JSON.stringify(Codec.unknown, {
     version: "%VERSION%",
     targetName,
     webSocketPort,
+    webSocketToken,
   })}\n`;
 }
 

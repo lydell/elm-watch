@@ -258,6 +258,7 @@ for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
 }
 
 const VERSION = "%VERSION%";
+const WEBSOCKET_TOKEN = "%WEBSOCKET_TOKEN%";
 const TARGET_NAME = "%TARGET_NAME%";
 const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
   "%INITIAL_ELM_COMPILED_TIMESTAMP%",
@@ -1190,6 +1191,7 @@ function initWebSocket(
         ];
   const url = new URL(`${protocol}://${hostname}:${WEBSOCKET_PORT}/elm-watch`);
   url.searchParams.set("elmWatchVersion", VERSION);
+  url.searchParams.set("webSocketToken", WEBSOCKET_TOKEN);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
 

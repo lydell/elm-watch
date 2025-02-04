@@ -55,6 +55,7 @@ import {
   OutputPath,
   RunMode,
   TargetName,
+  WebSocketToken,
 } from "./Types";
 
 export type InstallDependenciesResult =
@@ -560,6 +561,7 @@ type RunModeWithExtraData =
   | {
       tag: "hot";
       webSocketPort: Port;
+      webSocketToken: WebSocketToken;
     }
   | {
       tag: "make";
@@ -621,6 +623,7 @@ export async function handleOutputAction({
             outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
             total,
             webSocketPort: runMode.webSocketPort,
+            webSocketToken: runMode.webSocketToken,
           });
           return { tag: "Nothing" };
       }
@@ -940,6 +943,7 @@ function onCompileSuccess(
                 outputState.compilationMode,
                 outputState.browserUiPosition,
                 runMode.webSocketPort,
+                runMode.webSocketToken,
                 loggerConfig.debug,
               ) + newCode,
             );
@@ -1125,6 +1129,7 @@ async function postprocessHelper({
               outputState.compilationMode,
               outputState.browserUiPosition,
               runMode.webSocketPort,
+              runMode.webSocketToken,
               logger.config.debug,
             );
             fs.writeFileSync(
@@ -1201,6 +1206,7 @@ async function typecheck({
   outputs,
   total,
   webSocketPort,
+  webSocketToken,
 }: {
   env: Env;
   logger: Logger;
@@ -1214,6 +1220,7 @@ async function typecheck({
   }>;
   total: number;
   webSocketPort: Port;
+  webSocketToken: WebSocketToken;
 }): Promise<void> {
   const startTimestamp = getNow().getTime();
   const outputsWithStatus: Array<{
@@ -1325,7 +1332,11 @@ async function typecheck({
     const proxyFileResult = needsToWriteProxyFile(
       outputPath.theOutputPath,
       Buffer.from(
-        Inject.versionedIdentifier(outputPath.targetName, webSocketPort),
+        Inject.versionedIdentifier(
+          outputPath.targetName,
+          webSocketPort,
+          webSocketToken,
+        ),
       ),
     );
 
@@ -1342,6 +1353,7 @@ async function typecheck({
               getNow().getTime(),
               outputState.browserUiPosition,
               webSocketPort,
+              webSocketToken,
               logger.config.debug,
             ),
           );
