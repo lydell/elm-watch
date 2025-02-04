@@ -2851,6 +2851,7 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
         ),
       ];
 
+    case "InvalidFilePath":
     case "CommandFailed":
       return [
         h(

@@ -2,6 +2,16 @@ import * as Decode from "tiny-decoders";
 
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
+const nonNegativeIntDecoder = Decode.chain(Decode.number, (value) => {
+  if (Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+  throw new Decode.DecoderError({
+    message: "Expected a non-negative integer",
+    value,
+  });
+});
+
 const FocusedTabAcknowledged = Decode.fieldsAuto({
   tag: () => "FocusedTabAcknowledged" as const,
 });
@@ -10,6 +20,10 @@ export type OpenEditorError = ReturnType<typeof OpenEditorError>;
 const OpenEditorError = Decode.fieldsUnion("tag", {
   EnvNotSet: Decode.fieldsAuto({
     tag: () => "EnvNotSet" as const,
+  }),
+  InvalidFilePath: Decode.fieldsAuto({
+    tag: () => "InvalidFilePath" as const,
+    message: Decode.string,
   }),
   CommandFailed: Decode.fieldsAuto({
     tag: () => "CommandFailed" as const,
@@ -126,8 +140,8 @@ export const WebSocketToServerMessage = Decode.fieldsUnion("tag", {
   PressedOpenEditor: Decode.fieldsAuto({
     tag: () => "PressedOpenEditor" as const,
     file: AbsolutePath,
-    line: Decode.number,
-    column: Decode.number,
+    line: nonNegativeIntDecoder,
+    column: nonNegativeIntDecoder,
   }),
 });
 
