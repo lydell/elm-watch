@@ -48,6 +48,12 @@
             ],
             "output": "build/WrongVersion.js"
         },
+        "WrongToken": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/WrongToken.js"
+        },
         "TargetDisabled": {
             "inputs": [
                 "src/HtmlMain.elm"

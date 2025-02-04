@@ -551,7 +551,11 @@ export function clean(string: string): string {
     )
     .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
-    .replace(/EOF/g, "EPIPE");
+    .replace(/EOF/g, "EPIPE")
+    .replace(
+      /&webSocketToken=[\da-f-]+/g,
+      "&webSocketToken=37476437-1911-402a-9c87-fd94405770d2"
+    );
 }
 
 export function assertExitCode(

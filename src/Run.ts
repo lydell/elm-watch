@@ -1,3 +1,5 @@
+import * as crypto from "crypto";
+
 import * as CliArgs from "./CliArgs";
 import * as Compile from "./Compile";
 import * as ElmWatchJson from "./ElmWatchJson";
@@ -267,6 +269,10 @@ export async function run(
                         restartReasons,
                         postprocessWorkerPool,
                         webSocketState,
+                        elmWatchStuffJson?.webSocketToken ?? {
+                          tag: "WebSocketToken",
+                          theWebSocketToken: crypto.randomUUID(),
+                        },
                         project,
                         config.port !== undefined
                           ? { tag: "PortFromConfig", port: config.port }

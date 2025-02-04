@@ -26,11 +26,18 @@ const Target = Decode.fieldsAuto({
 export type ElmWatchStuffJson = ReturnType<typeof ElmWatchStuffJson>;
 export const ElmWatchStuffJson = Decode.fieldsAuto({
   port: Port,
+  webSocketToken: Decode.optional(
+    Decode.chain(Decode.string, (token) => ({
+      tag: "WebSocketToken" as const,
+      theWebSocketToken: token,
+    }))
+  ),
   targets: Decode.record(Target),
 });
 
 export type ElmWatchStuffJsonWritable = {
   port: number;
+  webSocketToken?: string;
   targets: Record<string, Required<Target>>;
 };
 

@@ -1,5 +1,6 @@
 import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as Decode from "tiny-decoders";
@@ -67,6 +68,7 @@ import {
   equalsInputPath,
   GetNow,
   OutputPath,
+  WebSocketToken,
 } from "./Types";
 import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
 
@@ -378,6 +380,7 @@ export async function run(
   restartReasons: Array<LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
+  webSocketToken: WebSocketToken,
   project: Project,
   portChoice: PortChoice,
   hotKillManager: HotKillManager
@@ -391,6 +394,7 @@ export async function run(
       getNow,
       postprocessWorkerPool,
       webSocketState,
+      webSocketToken,
       project,
       portChoice,
       hotKillManager
@@ -416,7 +420,7 @@ export async function run(
       logger.debug(msg.tag, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
-    runCmd: runCmd(env, logger, getNow, exitOnError),
+    runCmd: runCmd(env, logger, getNow, exitOnError, webSocketToken),
   });
 
   delete hotKillManager.kill;
@@ -464,6 +468,7 @@ const initMutable =
     getNow: GetNow,
     postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
+    webSocketToken: WebSocketToken,
     project: Project,
     portChoice: PortChoice,
     hotKillManager: HotKillManager
@@ -540,6 +545,7 @@ const initMutable =
         getNow(),
         logger,
         mutable,
+        webSocketToken,
         dispatch,
         resolvePromise,
         rejectPromise,
@@ -561,7 +567,7 @@ const initMutable =
     // port is not available).
     webSocketServer.listening
       .then(() => {
-        writeElmWatchStuffJson(mutable);
+        writeElmWatchStuffJson(mutable, webSocketToken);
       })
       .catch(rejectPromise);
 
@@ -607,9 +613,13 @@ const initMutable =
     return mutable;
   };
 
-function writeElmWatchStuffJson(mutable: Mutable): void {
+function writeElmWatchStuffJson(
+  mutable: Mutable,
+  webSocketToken: WebSocketToken
+): void {
   const json: ElmWatchStuffJsonWritable = {
     port: mutable.webSocketServer.port.thePort,
+    webSocketToken: webSocketToken.theWebSocketToken,
     targets: Object.fromEntries([
       ...mutable.project.elmJsonsErrors.map(
         (error) =>
@@ -1351,7 +1361,13 @@ function runNextAction(
 }
 
 const runCmd =
-  (env: Env, logger: Logger, getNow: GetNow, exitOnError: boolean) =>
+  (
+    env: Env,
+    logger: Logger,
+    getNow: GetNow,
+    exitOnError: boolean,
+    webSocketToken: WebSocketToken
+  ) =>
   (
     cmd: Cmd,
     mutable: Mutable,
@@ -1362,17 +1378,17 @@ const runCmd =
     switch (cmd.tag) {
       case "ChangeBrowserUiPosition":
         cmd.outputState.browserUiPosition = cmd.browserUiPosition;
-        writeElmWatchStuffJson(mutable);
+        writeElmWatchStuffJson(mutable, webSocketToken);
         return;
 
       case "ChangeCompilationMode":
         cmd.outputState.compilationMode = cmd.compilationMode;
-        writeElmWatchStuffJson(mutable);
+        writeElmWatchStuffJson(mutable, webSocketToken);
         return;
 
       case "ChangeOpenErrorOverlay":
         cmd.outputState.openErrorOverlay = cmd.openErrorOverlay;
-        writeElmWatchStuffJson(mutable);
+        writeElmWatchStuffJson(mutable, webSocketToken);
         return;
 
       case "ClearScreen":
@@ -1416,6 +1432,7 @@ const runCmd =
               runMode: {
                 tag: "hot",
                 webSocketPort: mutable.webSocketServer.port,
+                webSocketToken,
               },
               elmWatchJsonPath: mutable.project.elmWatchJsonPath,
               total: outputActions.total,
@@ -1451,7 +1468,7 @@ const runCmd =
       case "HandleElmWatchStuffJsonWriteError":
         if (mutable.elmWatchStuffJsonWriteError !== undefined) {
           // Retry writing it.
-          writeElmWatchStuffJson(mutable);
+          writeElmWatchStuffJson(mutable, webSocketToken);
           // If still an error, print it.
           // istanbul ignore else
           if (mutable.elmWatchStuffJsonWriteError !== undefined) {
@@ -1768,6 +1785,7 @@ function onWebSocketServerMsg(
   now: Date,
   logger: Logger,
   mutable: Mutable,
+  webSocketToken: WebSocketToken,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
   rejectPromise: (error: Error) => void,
@@ -1777,6 +1795,7 @@ function onWebSocketServerMsg(
     case "WebSocketConnected": {
       const result = parseWebSocketConnectRequestUrl(
         mutable.project,
+        webSocketToken,
         msg.urlString
       );
       const webSocketConnection: WebSocketConnection = {
@@ -2123,6 +2142,7 @@ function webSocketConnectionIsForOutputPath(
 const WebSocketConnectedParams = Decode.fieldsAuto(
   {
     elmWatchVersion: Decode.string,
+    webSocketToken: Decode.string,
     targetName: Decode.string,
     elmCompiledTimestamp: Decode.chain(Decode.string, (string) => {
       const number = Number(string);
@@ -2176,6 +2196,9 @@ type ParseWebSocketConnectRequestUrlError =
       disabledOutputs: Array<OutputPath>;
     }
   | {
+      tag: "WrongToken";
+    }
+  | {
       tag: "WrongVersion";
       expectedVersion: "%VERSION%";
       actualVersion: string;
@@ -2188,6 +2211,7 @@ const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
 
 function parseWebSocketConnectRequestUrl(
   project: Project,
+  webSocketToken: WebSocketToken,
   urlString: string
 ): ParseWebSocketConnectRequestUrlResult {
   if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
@@ -2215,6 +2239,16 @@ function parseWebSocketConnectRequestUrl(
       error,
       actualUrlString: urlString,
     };
+  }
+
+  const actualToken = Buffer.from(webSocketConnectedParams.webSocketToken);
+  const expectedToken = Buffer.from(webSocketToken.theWebSocketToken);
+  const tokenIsCorrect =
+    Buffer.byteLength(actualToken) === Buffer.byteLength(expectedToken) &&
+    crypto.timingSafeEqual(actualToken, expectedToken);
+
+  if (!tokenIsCorrect) {
+    return { tag: "WrongToken" };
   }
 
   if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
@@ -2302,6 +2336,9 @@ function webSocketConnectRequestUrlErrorToString(
         error.error,
         error.actualUrlString
       );
+
+    case "WrongToken":
+      return Errors.webSocketWrongToken();
 
     case "WrongVersion":
       return Errors.webSocketWrongVersion(

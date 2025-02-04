@@ -111,3 +111,8 @@ export function equalsInputPath(
     inputPath.realpath.absolutePath === elmFile.absolutePath
   );
 }
+
+export type WebSocketToken = {
+  tag: "WebSocketToken";
+  theWebSocketToken: string;
+};

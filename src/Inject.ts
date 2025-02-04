@@ -6,6 +6,7 @@ import {
   CompilationMode,
   CompilationModeWithProxy,
   OutputPath,
+  WebSocketToken,
 } from "./Types";
 
 // This matches full functions, declared either with `function name(` or `var name =`.
@@ -832,6 +833,7 @@ export function proxyFile(
   elmCompiledTimestamp: number,
   browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
+  webSocketToken: WebSocketToken,
   debug: boolean
 ): string {
   return `${clientCode(
@@ -840,6 +842,7 @@ export function proxyFile(
     "proxy",
     browserUiPosition,
     webSocketPort,
+    webSocketToken,
     debug
   )}\n${ClientCode.proxy}`;
 }
@@ -850,6 +853,7 @@ export function clientCode(
   compilationMode: CompilationModeWithProxy,
   browserUiPosition: BrowserUiPosition,
   webSocketPort: Port,
+  webSocketToken: WebSocketToken,
   debug: boolean
 ): string {
   const replacements: Record<string, string> = {
@@ -858,10 +862,11 @@ export function clientCode(
     ORIGINAL_COMPILATION_MODE: compilationMode,
     ORIGINAL_BROWSER_UI_POSITION: browserUiPosition,
     WEBSOCKET_PORT: webSocketPort.thePort.toString(),
+    WEBSOCKET_TOKEN: webSocketToken.theWebSocketToken,
     DEBUG: debug.toString(),
   };
   return (
-    versionedIdentifier(outputPath.targetName, webSocketPort) +
+    versionedIdentifier(outputPath.targetName, webSocketPort, webSocketToken) +
     ClientCode.client.replace(
       new RegExp(`%(${join(Object.keys(replacements), "|")})%`, "g"),
       (match: string, name: string) =>
@@ -877,14 +882,17 @@ export function clientCode(
 // - And it was created by the same version of `elm-watch`. (Older versions could have bugs.)
 // - And it has the same target name. (It might have changed, and needs to match.)
 // - And it used the same WebSocket port. (Otherwise it will never connect to us.)
+// - And it used the same WebSocket token. (Otherwise we will reject the connection.)
 export function versionedIdentifier(
   targetName: string,
-  webSocketPort: Port
+  webSocketPort: Port,
+  webSocketToken: WebSocketToken
 ): string {
   return `// elm-watch hot ${JSON.stringify({
     version: "%VERSION%",
     targetName,
     webSocketPort: webSocketPort.thePort,
+    webSocketToken,
   })}\n`;
 }
 

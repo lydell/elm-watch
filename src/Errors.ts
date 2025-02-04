@@ -1369,6 +1369,14 @@ The web socket code I generate is supposed to always connect using a correct URL
   `;
 }
 
+export function webSocketWrongToken(): string {
+  return `
+The web socket connected with the wrong security token. The security token is used to block malicious connections.
+
+The web socket code I generate is supposed to always connect using the correct token, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+    `.trim();
+}
+
 export function webSocketWrongVersion(
   expectedVersion: string,
   actualVersion: string
