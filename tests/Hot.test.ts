@@ -2725,7 +2725,51 @@ describe("hot", () => {
   describe("click error location", () => {
     const fixture = "persisted-open-error-overlay";
 
-    const runFailClickErrorLocation = async (env: Env): Promise<string> => {
+    const originalWebSocket = WebSocket;
+
+    afterEach(() => {
+      window.WebSocket = originalWebSocket;
+    });
+
+    const runFailClickErrorLocation = async ({
+      env,
+      modifyPressedOpenEditor = (message) => message,
+    }: {
+      env: Env;
+      modifyPressedOpenEditor?: (
+        message: Extract<
+          WebSocketToServerMessage,
+          { tag: "PressedOpenEditor" }
+        >,
+      ) => Extract<WebSocketToServerMessage, { tag: "PressedOpenEditor" }>;
+    }): Promise<string> => {
+      class TestWebSocket extends WebSocket {
+        override send(
+          data: string | ArrayBufferLike | Blob | ArrayBufferView,
+        ): void {
+          if (typeof data === "string") {
+            const parsed = Codec.JSON.parse(WebSocketToServerMessage, data);
+            switch (parsed.tag) {
+              case "DecoderError":
+                throw new Error(Codec.format(parsed.error));
+              case "Valid":
+                if (parsed.value.tag === "PressedOpenEditor") {
+                  super.send(
+                    Codec.JSON.stringify(
+                      WebSocketToServerMessage,
+                      modifyPressedOpenEditor(parsed.value),
+                    ),
+                  );
+                  return;
+                }
+            }
+          }
+          super.send(data);
+        }
+      }
+
+      window.WebSocket = TestWebSocket;
+
       const { renders, onlyExpandedRenders } = await run({
         fixture,
         args: [],
@@ -2749,7 +2793,7 @@ describe("hot", () => {
     };
 
     test("env var not set", async () => {
-      const renders = await runFailClickErrorLocation({});
+      const renders = await runFailClickErrorLocation({ env: {} });
       expect(renders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
@@ -2770,9 +2814,100 @@ describe("hot", () => {
       `);
     });
 
+    test("invalid line number", async () => {
+      const renders = await runFailClickErrorLocation({
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: "true",
+        },
+        modifyPressedOpenEditor: (message) => ({
+          ...message,
+          line: -1,
+        }),
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
+
+        At root["line"]:
+        Expected a non-negative integer
+        Got: -1
+
+        The web socket code I generate is supposed to always send correct messages, so something is up here.
+        ▲ ❌ 13:10:05 Main
+      `);
+    });
+
+    test("invalid column number", async () => {
+      const renders = await runFailClickErrorLocation({
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: "true",
+        },
+        modifyPressedOpenEditor: (message) => ({
+          ...message,
+          column: 5.8,
+        }),
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
+
+        At root["column"]:
+        Expected a non-negative integer
+        Got: 5.8
+
+        The web socket code I generate is supposed to always send correct messages, so something is up here.
+        ▲ ❌ 13:10:05 Main
+      `);
+    });
+
+    test("invalid file", async () => {
+      const renders = await runFailClickErrorLocation({
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: "true",
+        },
+        modifyPressedOpenEditor: (message) => ({
+          ...message,
+          file: markAsAbsolutePath("; echo hacked #"),
+        }),
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I received a command to open the following file in your editor:
+
+        ; echo hacked #
+
+        However, no target imports that file. For security reasons, I never executed any command with that file.
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
     test("unknown command", async () => {
       const renders = await runFailClickErrorLocation({
-        [ELM_WATCH_OPEN_EDITOR]: "nope",
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: "nope",
+        },
       });
 
       const replacement = "nope: command not found";
@@ -2825,8 +2960,10 @@ describe("hot", () => {
 
     test("timeout", async () => {
       const renders = await runFailClickErrorLocation({
-        [ELM_WATCH_OPEN_EDITOR]: `node -e "setTimeout(() => process.exit(1), 10000)"`,
-        [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "10",
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: `node -e "setTimeout(() => process.exit(1), 10000)"`,
+          [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "10",
+        },
       });
       expect(renders).toMatchInlineSnapshot(`
         target Main
@@ -2864,7 +3001,9 @@ describe("hot", () => {
 
     test("exit 1", async () => {
       const renders = await runFailClickErrorLocation({
-        [ELM_WATCH_OPEN_EDITOR]: `node -e "process.exit(1)"`,
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: `node -e "process.exit(1)"`,
+        },
       });
       expect(renders).toMatchInlineSnapshot(`
         target Main

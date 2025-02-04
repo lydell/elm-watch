@@ -2,10 +2,30 @@ import * as Codec from "tiny-decoders";
 
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
+const nonNegativeIntCodec = Codec.flatMap(Codec.number, {
+  decoder: (value) =>
+    Number.isInteger(value) && value >= 0
+      ? { tag: "Valid", value }
+      : {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            path: [],
+            message: "Expected a non-negative integer",
+            got: value,
+          },
+        },
+  encoder: (value) => value,
+});
+
 export type OpenEditorError = Codec.Infer<typeof OpenEditorError>;
 const OpenEditorError = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("EnvNotSet"),
+  },
+  {
+    tag: Codec.tag("InvalidFilePath"),
+    message: Codec.string,
   },
   {
     tag: Codec.tag("CommandFailed"),
@@ -129,8 +149,10 @@ export const WebSocketToServerMessage = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("PressedOpenEditor"),
     file: AbsolutePath,
-    line: Codec.number,
-    column: Codec.number,
+    // Disallow negative numbers since they might be parsed as command line flags
+    // in the user’s command, potentially causing something unwanted.
+    line: nonNegativeIntCodec,
+    column: nonNegativeIntCodec,
   },
 ]);
 

@@ -39,16 +39,18 @@ import {
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
+import { absoluteDirname } from "./PathHelpers";
 import { PortChoice } from "./Port";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
 import {
   ElmJsonErrorWithMetadata,
   getFlatOutputs,
+  getPostprocessElmWatchNodeScriptPath,
   OutputError,
   OutputState,
   Project,
+  projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project";
 import { runTeaProgram } from "./TeaProgram";
 import * as Theme from "./Theme";
@@ -1177,43 +1179,24 @@ function onWatcherEvent(
       }
 
     default:
-      switch (project.postprocess.tag) {
-        case "Postprocess": {
-          const [commandName, scriptPathString] =
-            project.postprocess.postprocessArray;
-          if (
-            commandName === ELM_WATCH_NODE &&
-            scriptPathString !== undefined
-          ) {
-            const scriptPath = absolutePathFromString(
-              absoluteDirname(project.elmWatchJsonPath),
-              scriptPathString,
-            );
-            if (absolutePath === scriptPath) {
-              return [
-                compileNextAction(nextAction),
-                {
-                  ...makeWatcherEvent(eventName, absolutePath, now),
-                  affectsAnyTarget: true,
-                },
-                [
-                  {
-                    tag: "MarkAsDirty",
-                    outputs: getFlatOutputs(project),
-                    killInstallDependencies: false,
-                  },
-                  { tag: "RestartWorkers" },
-                ],
-              ];
-            }
-          }
-          return undefined;
-        }
-
-        case "NoPostprocess":
-          // Ignore other types of files.
-          return undefined;
-      }
+      return absolutePath === getPostprocessElmWatchNodeScriptPath(project)
+        ? [
+            compileNextAction(nextAction),
+            {
+              ...makeWatcherEvent(eventName, absolutePath, now),
+              affectsAnyTarget: true,
+            },
+            [
+              {
+                tag: "MarkAsDirty",
+                outputs: getFlatOutputs(project),
+                killInstallDependencies: false,
+              },
+              { tag: "RestartWorkers" },
+            ],
+          ]
+        : // Ignore other types of files.
+          undefined;
   }
 }
 
@@ -1592,22 +1575,32 @@ const runCmd =
 
       case "OpenEditor": {
         const command = env[ELM_WATCH_OPEN_EDITOR];
-        const cwd = absoluteDirname(mutable.project.elmWatchJsonPath);
-        const timeout = silentlyReadIntEnvValue(
-          env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
-          5000,
-        );
-        const extraEnv = {
-          file: cmd.file,
-          line: cmd.line.toString(),
-          column: cmd.column.toString(),
-        };
         if (command === undefined) {
           webSocketSend(cmd.webSocket, {
             tag: "OpenEditorFailed",
             error: { tag: "EnvNotSet" },
           });
+        } else if (
+          !projectHasFilePathThatCanBeOpenedInEditor(mutable.project, cmd.file)
+        ) {
+          webSocketSend(cmd.webSocket, {
+            tag: "OpenEditorFailed",
+            error: {
+              tag: "InvalidFilePath",
+              message: Errors.openEditorInvalidFilePath(cmd.file),
+            },
+          });
         } else {
+          const cwd = absoluteDirname(mutable.project.elmWatchJsonPath);
+          const timeout = silentlyReadIntEnvValue(
+            env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
+            5000,
+          );
+          const extraEnv = {
+            file: cmd.file,
+            line: cmd.line.toString(),
+            column: cmd.column.toString(),
+          };
           childProcess.exec(
             command,
             {

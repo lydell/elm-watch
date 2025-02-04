@@ -311,6 +311,7 @@ function escapeHtml(string: string): string {
   });
 }
 
+// This needs to be kept in sync with `Project.projectHasFilePathThatCanBeOpenedInEditor`.
 function fancyToPlainErrorLocation(
   location: FancyErrorLocation,
 ): ErrorLocation | undefined {
@@ -1479,6 +1480,16 @@ The compiled JavaScript code running in the browser seems to have sent a message
 ${printJsonError(error).text}
 
 The web socket code I generate is supposed to always send correct messages, so something is up here.
+  `.trim();
+}
+
+export function openEditorInvalidFilePath(file: string): string {
+  return `
+I received a command to open the following file in your editor:
+
+${file}
+
+However, no target imports that file. For security reasons, I never executed any command with that file.
   `.trim();
 }
 
