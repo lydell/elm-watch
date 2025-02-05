@@ -36,6 +36,9 @@ const REPLACEMENTS: Record<string, string> = {
   // `_Debugger_document`, not from `_Platform_worker`. (`Html` programs don’t
   // call `_Platform_initialize`.)
   _Platform_initialize: `
+// added by elm-watch
+var _elmWatchTargetName = "";
+
 // This whole function was changed by elm-watch.
 function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
@@ -73,9 +76,12 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	}
 
 	setUpdateAndSubscriptions();
-	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-	function __elmWatchHotReload(newData, shouldReloadDueToInitCmds) {
+	var skippedInitCmds = globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.SHOULD_SKIP_INIT_CMDS(_elmWatchTargetName) : false;
+
+	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, subscriptions(model));
+
+	function __elmWatchHotReload(newData) {
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
 		_Scheduler_enqueue = newData._Scheduler_enqueue;
 
@@ -120,20 +126,26 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
 			return reloadReasons.concat({ tag: "InitReturnValueChanged" });
 		}
-		if (shouldReloadDueToInitCmds && !_Utils_eq_elmWatchInternal(newInitPair.b, _Platform_batch(_List_Nil))) {
-			return reloadReasons.concat({ tag: "InitCmds" });
-		}
 
 		setUpdateAndSubscriptions();
 		stepper(model, true /* isSync */);
-		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
+		_Platform_enqueueEffects(managers, skippedInitCmds ? newInitPair.b : _Platform_batch(_List_Nil), subscriptions(model));
+		skippedInitCmds = false;
 		return reloadReasons;
+	}
+
+	function __elmWatchRunInitCmds() {
+		if (skippedInitCmds) {
+			_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
+			skippedInitCmds = false;
+		}
 	}
 
 	return Object.defineProperties(
 		ports ? { ports: ports } : {},
 		{
 			__elmWatchHotReload: { value: __elmWatchHotReload },
+			__elmWatchRunInitCmds: { value: __elmWatchRunInitCmds },
 			__elmWatchProgramType: { value: programType },
 		}
 	);
@@ -264,6 +276,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 		{},
 		{
 			__elmWatchHotReload: { value: __elmWatchHotReload },
+			__elmWatchRunInitCmds: { value: Function.prototype },
 			__elmWatchProgramType: { value: programType },
 		}
 	);
@@ -277,11 +290,10 @@ function _Platform_export(exports)
 {
 	// added by elm-watch
 	if (globalThis.__ELM_WATCH) {
-		var elmWatchTargetName = "";
 		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
-			globalThis.__ELM_WATCH.REGISTER(elmWatchTargetName, exports);
+			globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports);
 		} else {
-			globalThis.__ELM_WATCH.HOT_RELOAD(elmWatchTargetName, exports);
+			globalThis.__ELM_WATCH.HOT_RELOAD(_elmWatchTargetName, exports);
 			return;
 		}
 	}
@@ -711,9 +723,9 @@ export function inject(
       )
       // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
       .replace(
-        /^\t\tvar elmWatchTargetName = "";$/m,
+        /^var _elmWatchTargetName = "";$/m,
         /* v8 ignore next */
-        `\t\tvar elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
+        `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
       )
   );
 }

@@ -37,6 +37,7 @@ type __ELM_WATCH = {
   IS_REGISTERING: boolean;
   REGISTER: (targetName: string, elmExports: ElmExports) => void;
   HOT_RELOAD: (targetName: string, elmExports: ElmExports) => void;
+  SHOULD_SKIP_INIT_CMDS: (targetName: string) => boolean;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
   KILL_MATCHING: (targetName: RegExp) => Promise<void>;
@@ -104,8 +105,8 @@ type ElmApp = {
   >;
   __elmWatchHotReload: (
     elmWatchReturnData: ElmWatchReturnData,
-    shouldReloadDueToInitCmds: boolean,
   ) => Array<ReloadReason>;
+  __elmWatchRunInitCmds: () => void;
   __elmWatchProgramType: ProgramType;
 };
 
@@ -122,9 +123,6 @@ type ReloadReason =
   | {
       tag: "HotReloadCaughtError";
       caughtError: unknown;
-    }
-  | {
-      tag: "InitCmds";
     }
   | {
       tag: "InitReturnValueChanged";
@@ -228,6 +226,8 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
     // Do nothing.
   },
 
+  SHOULD_SKIP_INIT_CMDS: () => false,
+
   KILL_MATCHING: () => Promise.resolve(),
 
   DISCONNECT: () => {
@@ -290,7 +290,7 @@ __ELM_WATCH.SOME_TARGET_IS_PROXY ||= ORIGINAL_COMPILATION_MODE === "proxy";
 __ELM_WATCH.IS_REGISTERING = true;
 
 type Mutable = {
-  hasEverReachedIdleState: boolean;
+  shouldSkipInitCmds: boolean;
   removeListeners: () => void;
   webSocket: WebSocket;
   webSocketTimeoutId: NodeJS.Timeout | undefined;
@@ -932,7 +932,7 @@ const initMutable =
     let removeListeners: Array<() => void> = [];
 
     const mutable: Mutable = {
-      hasEverReachedIdleState: false,
+      shouldSkipInitCmds: true,
       removeListeners: () => {
         for (const removeListener of removeListeners) {
           removeListener();
@@ -1087,10 +1087,7 @@ const initMutable =
             });
           } else {
             try {
-              const innerReasons = app.__elmWatchHotReload(
-                data,
-                /* shouldReloadDueToInitCmds */ !mutable.hasEverReachedIdleState,
-              );
+              const innerReasons = app.__elmWatchHotReload(data);
               for (const innerReason of innerReasons) {
                 reloadReasons.push({ ...innerReason, moduleName });
               }
@@ -1104,6 +1101,7 @@ const initMutable =
           }
         }
       }
+      mutable.shouldSkipInitCmds = false;
       if (reloadReasons.length === 0) {
         dispatch({
           tag: "EvalSucceeded",
@@ -1117,6 +1115,11 @@ const initMutable =
         });
       }
     };
+
+    const originalShouldSkipInitCmds = __ELM_WATCH.SHOULD_SKIP_INIT_CMDS;
+    __ELM_WATCH.SHOULD_SKIP_INIT_CMDS = (targetName) =>
+      originalShouldSkipInitCmds(targetName) ||
+      (targetName === TARGET_NAME && mutable.shouldSkipInitCmds);
 
     const originalKillMatching = __ELM_WATCH.KILL_MATCHING;
     __ELM_WATCH.KILL_MATCHING = (targetName) =>
@@ -1851,6 +1854,7 @@ const runCmd =
         return;
 
       case "SleepBeforeReconnect":
+        runInitCmds(mutable);
         setTimeout(() => {
           if (
             typeof document === "undefined" ||
@@ -1862,7 +1866,7 @@ const runCmd =
         return;
 
       case "TriggerReachedIdleState":
-        mutable.hasEverReachedIdleState = true;
+        runInitCmds(mutable);
         // Let the cmd queue be emptied first.
         Promise.resolve()
           .then(() => {
@@ -1948,6 +1952,21 @@ const runCmd =
         return;
     }
   };
+
+function runInitCmds(mutable: Mutable): void {
+  if (!mutable.shouldSkipInitCmds) {
+    return;
+  }
+  const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
+  if (targetData !== undefined) {
+    for (const apps of targetData.initializedElmApps.values()) {
+      for (const app of apps) {
+        app.__elmWatchRunInitCmds();
+      }
+    }
+  }
+  mutable.shouldSkipInitCmds = false;
+}
 
 // In the Azimutt example, this method takes about 40 ms (which is about the same as
 // `f = new Function(code); f()` which doesn’t support modules).
@@ -3321,8 +3340,6 @@ function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
       return `the flags type in \`${reason.moduleName}\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\nThis is the error:\n${reason.jsonErrorMessage}`;
     case "HotReloadCaughtError":
       return `hot reload for \`${reason.moduleName}\` failed, probably because of incompatible model changes.\nThis is the error:\n${unknownErrorToString(reason.caughtError)}`;
-    case "InitCmds":
-      return `the page loaded with old compiled code, and Cmds returned from \`${reason.moduleName}.init\` started running before the new code arrived. Let's re-run those with the new code!`;
     case "InitReturnValueChanged":
       return `\`${reason.moduleName}.init\` returned something different than last time. Let's start fresh!`;
     case "MessageTypeChangedInDebugMode":
