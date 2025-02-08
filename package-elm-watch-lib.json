@@ -1,6 +1,6 @@
 {
   "name": "elm-watch-lib",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Simon Lydell",
   "license": "MIT",
   "description": "Parts of elm-watch as a library for use by other tools.",
