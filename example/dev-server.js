@@ -165,14 +165,15 @@ function looksLikeFile(url) {
 }
 
 function proxyToEsbuild(req, res, log) {
+  // Using 127.0.0.1 rather than localhost because of:
+  // https://github.com/nodejs/node/issues/40702#issuecomment-1103623246
+  const hostname = "127.0.0.1";
   const options = {
-    // Using 127.0.0.1 rather than localhost because of:
-    // https://github.com/nodejs/node/issues/40702#issuecomment-1103623246
-    hostname: "127.0.0.1",
+    hostname,
     port: ESBUILD_PORT,
     path: req.url,
     method: req.method,
-    headers: req.headers,
+    headers: { ...req.headers, host: hostname },
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
