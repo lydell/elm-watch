@@ -298,6 +298,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
   }
 }
 
+// This needs to be kept in sync with `Project.projectHasFilePathThatCanBeOpenedInEditor`.
 function fancyToPlainErrorLocation(
   location: FancyErrorLocation,
 ): ErrorLocation | undefined {
@@ -1444,6 +1445,14 @@ Or maybe the JavaScript code running in the browser was compiled with an older v
   `;
 }
 
+export function webSocketWrongToken(): string {
+  return `
+The web socket connected with the wrong security token. The security token is used to block malicious connections.
+
+The web socket code I generate is supposed to always connect using the correct token, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+    `.trim();
+}
+
 export function webSocketWrongVersion(
   expectedVersion: string,
   actualVersion: string,
@@ -1522,6 +1531,16 @@ The compiled JavaScript code running in the browser seems to have sent a message
 ${printJsonError(error).text}
 
 The web socket code I generate is supposed to always send correct messages, so something is up here.
+  `.trim();
+}
+
+export function openEditorInvalidFilePath(file: string): string {
+  return `
+I received a command to open the following file in your editor:
+
+${file}
+
+However, no target imports that file. For security reasons, I never executed any command with that file.
   `.trim();
 }
 

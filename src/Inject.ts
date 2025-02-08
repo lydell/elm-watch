@@ -7,6 +7,7 @@ import {
   CompilationModeWithProxy,
   OutputPath,
   TargetName,
+  WebSocketToken,
 } from "./Types";
 import {
   WebSocketConnection,
@@ -37,6 +38,9 @@ const REPLACEMENTS: Record<string, string> = {
   // `_Debugger_document`, not from `_Platform_worker`. (`Html` programs don’t
   // call `_Platform_initialize`.)
   _Platform_initialize: `
+// added by elm-watch
+var _elmWatchTargetName = "";
+
 // This whole function was changed by elm-watch.
 function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
@@ -74,9 +78,12 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	}
 
 	setUpdateAndSubscriptions();
-	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-	function __elmWatchHotReload(newData, shouldReloadDueToInitCmds) {
+	var skippedInitCmds = globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.SHOULD_SKIP_INIT_CMDS(_elmWatchTargetName) : false;
+
+	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, subscriptions(model));
+
+	function __elmWatchHotReload(newData) {
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
 		_Scheduler_enqueue = newData._Scheduler_enqueue;
 
@@ -121,20 +128,26 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		if (!_Utils_eq_elmWatchInternal(initPair, newInitPair)) {
 			return reloadReasons.concat({ tag: "InitReturnValueChanged" });
 		}
-		if (shouldReloadDueToInitCmds && !_Utils_eq_elmWatchInternal(newInitPair.b, _Platform_batch(_List_Nil))) {
-			return reloadReasons.concat({ tag: "InitCmds" });
-		}
 
 		setUpdateAndSubscriptions();
 		stepper(model, true /* isSync */);
-		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), subscriptions(model));
+		_Platform_enqueueEffects(managers, skippedInitCmds ? newInitPair.b : _Platform_batch(_List_Nil), subscriptions(model));
+		skippedInitCmds = false;
 		return reloadReasons;
+	}
+
+	function __elmWatchRunInitCmds() {
+		if (skippedInitCmds) {
+			_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
+			skippedInitCmds = false;
+		}
 	}
 
 	return Object.defineProperties(
 		ports ? { ports: ports } : {},
 		{
 			__elmWatchHotReload: { value: __elmWatchHotReload },
+			__elmWatchRunInitCmds: { value: __elmWatchRunInitCmds },
 			__elmWatchProgramType: { value: programType },
 		}
 	);
@@ -265,6 +278,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 		{},
 		{
 			__elmWatchHotReload: { value: __elmWatchHotReload },
+			__elmWatchRunInitCmds: { value: Function.prototype },
 			__elmWatchProgramType: { value: programType },
 		}
 	);
@@ -278,11 +292,10 @@ function _Platform_export(exports)
 {
 	// added by elm-watch
 	if (globalThis.__ELM_WATCH) {
-		var elmWatchTargetName = "";
 		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
-			globalThis.__ELM_WATCH.REGISTER(elmWatchTargetName, exports);
+			globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports);
 		} else {
-			globalThis.__ELM_WATCH.HOT_RELOAD(elmWatchTargetName, exports);
+			globalThis.__ELM_WATCH.HOT_RELOAD(_elmWatchTargetName, exports);
 			return;
 		}
 	}
@@ -454,7 +467,9 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
+			_VirtualDom_divertHrefToApp = divertHrefToApp; // added by elm-watch
 			var currNode = _VirtualDom_virtualize(bodyNode);
+			_VirtualDom_divertHrefToApp = 0; // added by elm-watch
 			return _Browser_makeAnimator(initialModel, function(model)
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
@@ -532,7 +547,8 @@ var _Debugger_element = F4(function(impl, flagDecoder, debugMetadata, args)
 				// view popout
 
 				_VirtualDom_doc = model.popout.b; // SWITCH TO POPOUT DOC
-				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b));
+				// currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b)); // commented out by elm-watch
+				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b.body)); // added by elm-watch
 				var nextPopout = $elm$browser$Debugger$Main$popoutView(model);
 				var popoutPatches = _VirtualDom_diff(currPopout, nextPopout);
 				_VirtualDom_applyPatches(model.popout.b.body, currPopout, popoutPatches, sendToApp);
@@ -564,7 +580,9 @@ var _Debugger_document = F4(function(impl, flagDecoder, debugMetadata, args)
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
+			_VirtualDom_divertHrefToApp = divertHrefToApp; // added by elm-watch
 			var currNode = _VirtualDom_virtualize(bodyNode);
+			_VirtualDom_divertHrefToApp = 0; // added by elm-watch
 			var currBlocker = $elm$browser$Debugger$Main$toBlockerType(initialModel);
 			var currPopout;
 
@@ -598,7 +616,8 @@ var _Debugger_document = F4(function(impl, flagDecoder, debugMetadata, args)
 				if (!model.popout.b) { currPopout = undefined; return; }
 
 				_VirtualDom_doc = model.popout.b; // SWITCH TO POPOUT DOC
-				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b));
+				// currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b)); // commented out by elm-watch
+				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b.body)); // added by elm-watch
 				var nextPopout = $elm$browser$Debugger$Main$popoutView(model);
 				var popoutPatches = _VirtualDom_diff(currPopout, nextPopout);
 				_VirtualDom_applyPatches(model.popout.b.body, currPopout, popoutPatches, sendToApp);
@@ -712,9 +731,9 @@ export function inject(
       )
       // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
       .replace(
-        /^\t\tvar elmWatchTargetName = "";$/m,
+        /^var _elmWatchTargetName = "";$/m,
         /* v8 ignore next */
-        `\t\tvar elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
+        `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
       )
   );
 }
@@ -824,6 +843,7 @@ export function proxyFile(
   elmCompiledTimestamp: number,
   browserUiPosition: BrowserUiPosition,
   webSocketConnection: WebSocketConnection,
+  webSocketToken: WebSocketToken,
   debug: boolean,
 ): string {
   const clientCodeString = clientCode(
@@ -832,6 +852,7 @@ export function proxyFile(
     "proxy",
     browserUiPosition,
     webSocketConnection,
+    webSocketToken,
     debug,
   );
   const proxyCodeString = ClientCode.proxy
@@ -859,6 +880,7 @@ export function clientCode(
   compilationMode: CompilationModeWithProxy,
   browserUiPosition: BrowserUiPosition,
   webSocketConnection: WebSocketConnection,
+  webSocketToken: WebSocketToken,
   debug: boolean,
 ): string {
   const replacements: Record<string, string> = {
@@ -868,10 +890,15 @@ export function clientCode(
     ORIGINAL_BROWSER_UI_POSITION: browserUiPosition,
     WEBSOCKET_CONNECTION:
       webSocketConnectionToPrimitive(webSocketConnection).toString(),
+    WEBSOCKET_TOKEN: webSocketToken,
     DEBUG: debug.toString(),
   };
   return (
-    versionedIdentifier(outputPath.targetName, webSocketConnection) +
+    versionedIdentifier(
+      outputPath.targetName,
+      webSocketConnection,
+      webSocketToken,
+    ) +
     ClientCode.client.replace(
       new RegExp(`"%(${Object.keys(replacements).join("|")})%"`, "g"),
       (_, name: string) =>
@@ -887,14 +914,17 @@ export function clientCode(
 // - And it was created by the same version of `elm-watch`. (Older versions could have bugs.)
 // - And it has the same target name. (It might have changed, and needs to match.)
 // - And it used the same WebSocket url or port. (Otherwise it will never connect to us.)
+// - And it used the same WebSocket token. (Otherwise we will reject the connection.)
 export function versionedIdentifier(
-  targetName: string,
+  targetName: TargetName,
   webSocketConnection: WebSocketConnection,
+  webSocketToken: WebSocketToken,
 ): string {
   return `// elm-watch hot ${Codec.JSON.stringify(Codec.unknown, {
     version: "%VERSION%",
     targetName,
     webSocketConnection: webSocketConnectionToPrimitive(webSocketConnection),
+    webSocketToken,
   })}\n`;
 }
 

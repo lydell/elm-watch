@@ -2164,14 +2164,14 @@ describe("hot reloading", () => {
     }
   });
 
-  test("Reload due to init Cmds", async () => {
+  test("Delay init Cmds until first hot reload", async () => {
     const { replace, go } = runHotReload({
       name: "InitCmds",
       programType: "Element",
       compilationMode: "standard",
     });
 
-    const { browserConsole } = await go(async ({ idle, div }) => {
+    await go(async ({ idle, div }) => {
       switch (idle) {
         case 1: {
           expectInit(div);
@@ -2184,7 +2184,10 @@ describe("hot reloading", () => {
           replace((content) => content.replace("OLD", "NEW"));
           await wait(100);
 
-          // Open the tab again:
+          // Open the tab again. It is first going to load the old code,
+          // and then immediately get a hot reload with the new code.
+          // By delaying the init Cmds until then, we get the Cmds handled
+          // with the new code without a page reload.
           window.__ELM_WATCH.RELOAD_PAGE(undefined);
           return "KeepGoing";
         }
@@ -2193,11 +2196,6 @@ describe("hot reloading", () => {
           return "Stop";
       }
     });
-
-    expect(browserConsole).toMatchInlineSnapshot(`
-      elm-watch: I did a full page reload because the page loaded with old compiled code, and Cmds returned from \`Elm.InitCmds.init\` started running before the new code arrived. Let's re-run those with the new code!
-      (target: InitCmds)
-    `);
 
     function expectInit(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(
@@ -2209,46 +2207,6 @@ describe("hot reloading", () => {
       expect(div.outerHTML).toMatchInlineSnapshot(
         `<div>Model set via Cmd from NEW code</div>`,
       );
-    }
-  });
-
-  // This test is identical to "Reload due to init Cmds", except that this version
-  // returns `Cmd.none` in `init`, which means that we never need to reload the page
-  // due to Cmds, since `Cmd.none` can’t do anything.
-  test("No reload due to init Cmd.none", async () => {
-    const { replace, go } = runHotReload({
-      name: "InitCmdNone",
-      programType: "Element",
-      compilationMode: "standard",
-    });
-
-    const { browserConsole } = await go(async ({ idle, div }) => {
-      switch (idle) {
-        case 1: {
-          expectInit(div);
-
-          // Close the tab:
-          await window.__ELM_WATCH.KILL_MATCHING(/^/);
-          div.replaceChildren();
-
-          // Make a change with the tab closed:
-          replace((content) => content.replace("OLD", "NEW"));
-          await wait(100);
-
-          // Open the tab again:
-          window.__ELM_WATCH.RELOAD_PAGE(undefined);
-          return "KeepGoing";
-        }
-        default:
-          expectInit(div);
-          return "Stop";
-      }
-    });
-
-    expect(browserConsole).toMatchInlineSnapshot(``);
-
-    function expectInit(div: HTMLDivElement): void {
-      expect(div.outerHTML).toStrictEqual(`<div>init</div>`);
     }
   });
 

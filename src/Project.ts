@@ -15,7 +15,7 @@ import {
   findClosest,
 } from "./PathHelpers";
 import { Postprocess } from "./Postprocess";
-import { PostprocessError } from "./PostprocessShared";
+import { ELM_WATCH_NODE, PostprocessError } from "./PostprocessShared";
 import { RunElmMakeError } from "./SpawnElm";
 import {
   type AbsolutePath,
@@ -689,6 +689,44 @@ export function getFlatOutputs(project: Project): Array<{
         outputState,
       })),
   );
+}
+
+// This needs to be kept in sync with `Errors.fancyToPlainErrorLocation`.
+export function projectHasFilePathThatCanBeOpenedInEditor(
+  project: Project,
+  filePath: AbsolutePath,
+): boolean {
+  return (
+    filePath === project.elmWatchJsonPath ||
+    filePath === project.elmWatchStuffJsonPath ||
+    filePath === getPostprocessElmWatchNodeScriptPath(project) ||
+    getFlatOutputs(project).some(
+      ({ elmJsonPath, outputState }) =>
+        filePath === elmJsonPath ||
+        outputState.allRelatedElmFilePaths.has(filePath),
+    )
+  );
+}
+
+export function getPostprocessElmWatchNodeScriptPath(
+  project: Project,
+): AbsolutePath | undefined {
+  switch (project.postprocess.tag) {
+    case "Postprocess": {
+      const [commandName, scriptPathString] =
+        project.postprocess.postprocessArray;
+      if (commandName === ELM_WATCH_NODE && scriptPathString !== undefined) {
+        return absolutePathFromString(
+          absoluteDirname(project.elmWatchJsonPath),
+          scriptPathString,
+        );
+      }
+      return undefined;
+    }
+
+    case "NoPostprocess":
+      return undefined;
+  }
 }
 
 export function projectToDebug(project: Project): unknown {

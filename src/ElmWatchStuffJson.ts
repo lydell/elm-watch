@@ -6,6 +6,7 @@ import {
   BrowserUiPosition,
   CompilationMode,
   ElmWatchStuffJsonPath,
+  WebSocketToken,
 } from "./Types";
 
 // elm-stuff/elm-watch/stuff.json stores things between runs.
@@ -25,6 +26,7 @@ const Target = Codec.fields({
 export type ElmWatchStuffJson = Codec.Infer<typeof ElmWatchStuffJson>;
 export const ElmWatchStuffJson = Codec.fields({
   port: Port,
+  webSocketToken: Codec.field(WebSocketToken, { optional: true }),
   targets: Codec.record(Target),
 });
 

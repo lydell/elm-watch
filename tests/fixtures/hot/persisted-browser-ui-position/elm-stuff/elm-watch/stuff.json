@@ -1,5 +1,6 @@
 {
     "port": 9988,
+    "webSocketToken": "c0dc6264-3e42-49fa-8151-5833566e5d45",
     "targets": {
         "Main": {
             "compilationMode": "standard",
