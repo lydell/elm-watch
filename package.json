@@ -15,7 +15,7 @@
     "@vitest/coverage-v8": "3.0.5",
     "@vitest/eslint-plugin": "1.1.27",
     "elm-tooling": "1.15.1",
-    "esbuild": "0.24.2",
+    "esbuild": "0.25.0",
     "eslint": "9.20.0",
     "eslint-plugin-simple-import-sort": "12.1.1",
     "globals": "15.14.0",
