@@ -1,3 +1,5 @@
+import * as crypto from "crypto";
+
 import * as CliArgs from "./CliArgs";
 import * as Compile from "./Compile";
 import * as ElmWatchJson from "./ElmWatchJson";
