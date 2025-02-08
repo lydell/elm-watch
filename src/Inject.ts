@@ -465,7 +465,9 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
+			_VirtualDom_divertHrefToApp = divertHrefToApp; // added by elm-watch
 			var currNode = _VirtualDom_virtualize(bodyNode);
+			_VirtualDom_divertHrefToApp = 0; // added by elm-watch
 			return _Browser_makeAnimator(initialModel, function(model)
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
@@ -543,7 +545,8 @@ var _Debugger_element = F4(function(impl, flagDecoder, debugMetadata, args)
 				// view popout
 
 				_VirtualDom_doc = model.popout.b; // SWITCH TO POPOUT DOC
-				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b));
+				// currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b)); // commented out by elm-watch
+				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b.body)); // added by elm-watch
 				var nextPopout = $elm$browser$Debugger$Main$popoutView(model);
 				var popoutPatches = _VirtualDom_diff(currPopout, nextPopout);
 				_VirtualDom_applyPatches(model.popout.b.body, currPopout, popoutPatches, sendToApp);
@@ -575,7 +578,9 @@ var _Debugger_document = F4(function(impl, flagDecoder, debugMetadata, args)
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
+			_VirtualDom_divertHrefToApp = divertHrefToApp; // added by elm-watch
 			var currNode = _VirtualDom_virtualize(bodyNode);
+			_VirtualDom_divertHrefToApp = 0; // added by elm-watch
 			var currBlocker = $elm$browser$Debugger$Main$toBlockerType(initialModel);
 			var currPopout;
 
@@ -609,7 +614,8 @@ var _Debugger_document = F4(function(impl, flagDecoder, debugMetadata, args)
 				if (!model.popout.b) { currPopout = undefined; return; }
 
 				_VirtualDom_doc = model.popout.b; // SWITCH TO POPOUT DOC
-				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b));
+				// currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b)); // commented out by elm-watch
+				currPopout || (currPopout = _VirtualDom_virtualize(model.popout.b.body)); // added by elm-watch
 				var nextPopout = $elm$browser$Debugger$Main$popoutView(model);
 				var popoutPatches = _VirtualDom_diff(currPopout, nextPopout);
 				_VirtualDom_applyPatches(model.popout.b.body, currPopout, popoutPatches, sendToApp);
