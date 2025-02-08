@@ -776,7 +776,7 @@ describe("hot", () => {
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
         target WrongToken
         elm-watch %VERSION%
-        web socket ws://localhost:59123
+        web socket ws://localhost:59123/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -2847,7 +2847,7 @@ describe("hot", () => {
       expect(renders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:9988
+        web socket ws://localhost:9988/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -2875,7 +2875,7 @@ describe("hot", () => {
       expect(renders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:9988
+        web socket ws://localhost:9988/elm-watch
         updated 2022-02-05 13:10:05
         status Unexpected error
         I ran into an unexpected error! This is the error message:
@@ -2903,7 +2903,7 @@ describe("hot", () => {
       expect(renders).toMatchInlineSnapshot(`
         target Main
         elm-watch %VERSION%
-        web socket ws://localhost:9988
+        web socket ws://localhost:9988/elm-watch
         updated 2022-02-05 13:10:05
         status Compilation error
         Compilation mode
