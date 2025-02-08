@@ -43,6 +43,7 @@ export type FileToCopy = {
 
 const FILES_TO_COPY: Array<FileToCopy> = [
   { src: "LICENSE" },
+  { src: "index.d.ts" },
   { src: "elm-watch-node.d.ts" },
   {
     src: "README.md",
@@ -134,7 +135,10 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
     switch (path.basename(output.path)) {
       case "index.js": {
         const replaced = output.text
-          .replace(/^[^]+\nmodule.exports = .+\s*/g, "")
+          .replace(
+            /^[^]+\nmodule.exports = .+\s*/g,
+            "module.exports = elmWatchCli;\n",
+          )
           .replace(toModuleRegex, "$1")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
           .trim();

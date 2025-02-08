@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import { elmWatchCli } from "../src";
+import elmWatchCli from "../src";
 import {
   assertExitCode,
   clean,
