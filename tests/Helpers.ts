@@ -647,6 +647,8 @@ export const testExceptWindows = IS_WINDOWS ? test.skip : test;
 // The stdin error test is not working on Linux and not worth it.
 export const testExceptLinux = process.platform === "linux" ? test.skip : test;
 
+const IGNORED_HEADERS = new Set(["date", "connection", "keep-alive"]);
+
 export async function httpGet(
   urlString: string,
   options: http.RequestOptions = {},
@@ -662,21 +664,21 @@ export async function httpGet(
 
         res.on("end", () => {
           const body = Buffer.concat(chunks).toString();
-          if (res.statusCode === 200) {
-            resolve(body);
-          } else {
-            reject(
-              new Error(
-                `GET ${urlString} – expected status code 200 but got ${
-                  res.statusCode ?? "(no status code)"
-                }\n\nOptions:\n${JSON.stringify(
-                  options,
-                  null,
-                  2,
-                )}\nResponse:\n${body === "" ? "(none)" : body}`,
-              ),
+          const headers = Object.entries(res.headers)
+            .filter(([key]) => !IGNORED_HEADERS.has(key))
+            .map(
+              ([key, value]) =>
+                `${key}: ${value === undefined ? "(undefined)" : Array.isArray(value) ? JSON.stringify(value) : value}`,
             );
-          }
+          resolve(
+            [
+              res.statusCode === undefined
+                ? "(no status code)"
+                : res.statusCode.toString(),
+              ...headers,
+              body,
+            ].join("\n"),
+          );
         });
       })
       .on("error", reject);

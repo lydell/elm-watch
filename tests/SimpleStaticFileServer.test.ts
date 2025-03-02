@@ -40,28 +40,32 @@ describe("SimpleStaticFileServer", () => {
       },
     });
 
-    expect(mainHtml.replace(/<head>[^]*<\/head>/, "<head>…</head>"))
-      .toMatchInlineSnapshot(`
-        <!DOCTYPE html>
-            <html lang="en">
-              <head>…</head>
-              <body>
-                <main>
-              <h1>Enable elm-watch static file server?</h1>
-              <p>
-                If you want, you can enable a simple static file server for your
-                project.
+    expect(
+      mainHtml.replace(/<head>[^]*<\/head>/, "<head>…</head>"),
+    ).toMatchInlineSnapshot(`
+      200
+      content-type: text/html; charset=utf-8
+      content-length: 2142
+      <!DOCTYPE html>
+          <html lang="en">
+            <head>…</head>
+            <body>
+              <main>
+            <h1>Enable elm-watch static file server?</h1>
+            <p>
+              If you want, you can enable a simple static file server for your
+              project.
+            </p>
+            <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
+            <pre><code>"serve": "./folder/to/serve/"</code></pre>
+          </main>
+              <p style="margin-top: 2em">
+                <small
+                  >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small
+                >
               </p>
-              <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
-              <pre><code>"serve": "./folder/to/serve/"</code></pre>
-            </main>
-                <p style="margin-top: 2em">
-                  <small
-                    >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small
-                  >
-                </p>
-              </body>
-            </html>
-      `);
+            </body>
+          </html>
+    `);
   });
 });
