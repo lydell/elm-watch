@@ -260,7 +260,11 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 	var node = args && args['node'] ? args['node'] : _Debug_crash(0);
 	//*/
 
-	var nextNode = _VirtualDom_render(virtualNode, function() {});
+	var childTNode = typeof _VirtualDom_createTNode === 'function' ? _VirtualDom_createTNode(undefined) : undefined;
+	var nextNode = _VirtualDom_render(virtualNode, function() {}, childTNode);
+	if (childTNode !== undefined) {
+		nextNode.elmTree = childTNode;
+	}
 	node.parentNode.replaceChild(nextNode, node);
 	node = nextNode;
 	var sendToApp = function() {};
