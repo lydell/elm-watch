@@ -2,9 +2,10 @@
 // pre-compiled JS from a file.
 
 import * as esbuild from "esbuild";
+import * as fs from "fs";
 import * as path from "path";
 
-import { clientEsbuildOptions } from "../scripts/Build";
+import { clientEsbuildOptions, PROXY_SRC_PATH } from "../scripts/Build";
 import { quote } from "./Helpers";
 
 const result = esbuild.buildSync(clientEsbuildOptions);
@@ -26,4 +27,4 @@ function getOutput(name: string): string {
 }
 
 export const client = getOutput("client.js");
-export const proxy = getOutput("proxy.js");
+export const proxy = fs.readFileSync(PROXY_SRC_PATH, "utf8");

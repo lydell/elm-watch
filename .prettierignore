@@ -7,5 +7,6 @@ elm-stuff
 *.json
 _config.yml
 submodules
+client/proxy.js
 tests/fixtures/hot/changes-to-postprocess/src/postprocess.js
 **/*.txt/*.md

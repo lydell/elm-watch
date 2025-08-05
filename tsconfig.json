@@ -31,5 +31,8 @@
     "tests/*.ts",
     "eslint.config.js",
     "vitest.config.ts"
+  ],
+  "exclude": [
+    "client/proxy.js"
   ]
 }
