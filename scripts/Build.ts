@@ -41,12 +41,18 @@ export type FileToCopy = {
   transform?: (content: string) => string;
 };
 
+export const PROXY_SRC_PATH = path.join(DIR, "client", "proxy.js");
+
 const FILES_TO_COPY: Array<FileToCopy> = [
   { src: "LICENSE" },
   { src: "elm-watch-node.d.ts" },
   {
     src: "README.md",
     transform: (content) => content.replace(/^##[^]*/m, "").trim(),
+  },
+  {
+    src: PROXY_SRC_PATH,
+    dest: "proxy.js",
   },
 ];
 
@@ -57,11 +63,11 @@ async function run(): Promise<void> {
   for (const { src, dest = src, transform } of FILES_TO_COPY) {
     if (transform !== undefined) {
       fs.writeFileSync(
-        path.join(BUILD, dest),
-        transform(fs.readFileSync(path.join(DIR, src), "utf8")),
+        path.resolve(BUILD, dest),
+        transform(fs.readFileSync(path.resolve(DIR, src), "utf8")),
       );
     } else {
-      fs.copyFileSync(path.join(DIR, src), path.join(BUILD, dest));
+      fs.copyFileSync(path.resolve(DIR, src), path.resolve(BUILD, dest));
     }
   }
 
@@ -89,7 +95,6 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
   for (const output of clientResult.outputFiles) {
     switch (path.basename(output.path)) {
       case "client.js":
-      case "proxy.js":
         fs.writeFileSync(
           output.path,
           output.text.replace(/%VERSION%/g, PACKAGE_REAL.version),
@@ -160,10 +165,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
 
 export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
   bundle: true,
-  entryPoints: [
-    path.join(CLIENT_DIR, "client.ts"),
-    path.join(CLIENT_DIR, "proxy.ts"),
-  ],
+  entryPoints: [path.join(CLIENT_DIR, "client.ts")],
   outdir: BUILD,
   platform: "browser",
   write: false,

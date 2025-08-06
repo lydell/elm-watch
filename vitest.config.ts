@@ -24,6 +24,7 @@ export default defineConfig({
         url: "http://localhost",
       },
     },
+    include: ["tests/*.test.ts"],
     coverage: {
       include: ["src/**/*.ts"],
       exclude: [
