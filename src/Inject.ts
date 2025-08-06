@@ -260,14 +260,14 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 	var node = args && args['node'] ? args['node'] : _Debug_crash(0);
 	//*/
 
-	var childTNode = typeof _VirtualDom_createTNode === 'function' ? _VirtualDom_createTNode(undefined) : undefined;
-	var nextNode = _VirtualDom_render(virtualNode, function() {}, childTNode);
-	if (childTNode !== undefined) {
-		nextNode.elmTree = childTNode;
+	var sendToApp = function() {};
+	var tNode = typeof _VirtualDom_createTNode === 'function' ? _VirtualDom_createTNode(undefined) : undefined;
+	var nextNode = _VirtualDom_render(virtualNode, sendToApp, tNode);
+	if (tNode !== undefined) {
+		nextNode.elmTree = tNode;
 	}
 	node.parentNode.replaceChild(nextNode, node);
 	node = nextNode;
-	var sendToApp = function() {};
 
 	function __elmWatchHotReload(newData) {
 		var patches = _VirtualDom_diff(virtualNode, newData.virtualNode);
