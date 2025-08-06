@@ -13,10 +13,10 @@
     "dev": "npm --prefix .. run build && elm-watch hot"
   },
   "devDependencies": {
-    "@swc/core": "1.10.15",
-    "elm-tooling": "1.15.1",
+    "@swc/core": "1.13.3",
+    "elm-tooling": "1.16.0",
     "elm-watch": "file:../build",
-    "esbuild": "0.25.0",
+    "esbuild": "0.25.8",
     "run-pty": "5.0.0"
   }
 }
