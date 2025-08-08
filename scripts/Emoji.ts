@@ -1,43 +1,34 @@
 /* eslint-disable no-console */
 
-import * as https from "https";
-
 import { STARTS_WITH_EMOJI_REGEX } from "../src/EmojiRegex";
 import { bold } from "../src/Helpers";
 
 const matching: Array<string> = [];
 const nonMatching: Array<string> = [];
 
-https
-  .get(
+async function run(): Promise<void> {
+  const response = await fetch(
     // Tested on this commit:
-    // https://raw.githubusercontent.com/mathiasbynens/emoji-test-regex-pattern/85a0059035a7650f46294647482b95d50e84ad22/dist/latest/index-strings.txt
+    // "https://raw.githubusercontent.com/mathiasbynens/emoji-test-regex-pattern/700ac302b80845324648a068738f9f809b7fce8c/dist/latest/index-strings.txt",
     "https://raw.githubusercontent.com/mathiasbynens/emoji-test-regex-pattern/main/dist/latest/index-strings.txt",
-    (response) => {
-      response.setEncoding("utf8");
+  );
 
-      response.on("data", (chunk: string) => {
-        for (const emoji of chunk.split("\n")) {
-          if (STARTS_WITH_EMOJI_REGEX.test(`${emoji} `)) {
-            matching.push(emoji);
-          } else {
-            nonMatching.push(emoji);
-          }
-        }
-      });
+  const text = await response.text();
 
-      response.on("end", () => {
-        console.log(printEmojis("MATCHING", matching));
-        console.log();
-        console.log();
-        console.log();
-        console.log(printEmojis("NOT MATCHING", nonMatching));
-      });
+  for (const emoji of text.split("\n")) {
+    if (STARTS_WITH_EMOJI_REGEX.test(`${emoji} `)) {
+      matching.push(emoji);
+    } else {
+      nonMatching.push(emoji);
+    }
+  }
 
-      response.on("error", onError);
-    },
-  )
-  .on("error", onError);
+  console.log(printEmojis("MATCHING", matching));
+  console.log();
+  console.log();
+  console.log();
+  console.log(printEmojis("NOT MATCHING", nonMatching));
+}
 
 function printEmojis(title: string, emojis: Array<string>): string {
   return `
@@ -47,6 +38,6 @@ ${emojis.join(" ")}
   `.trim();
 }
 
-function onError(error: Error): void {
-  console.error("Request failed!", error);
-}
+run().catch((error) => {
+  console.error(error);
+});

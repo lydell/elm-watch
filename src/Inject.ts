@@ -262,10 +262,14 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 	var node = args && args['node'] ? args['node'] : _Debug_crash(0);
 	//*/
 
-	var nextNode = _VirtualDom_render(virtualNode, function() {});
+	var sendToApp = function() {};
+	var tNode = typeof _VirtualDom_createTNode === 'function' ? _VirtualDom_createTNode(undefined) : undefined;
+	var nextNode = _VirtualDom_render(virtualNode, sendToApp, tNode);
+	if (tNode !== undefined) {
+		nextNode.elmTree = tNode;
+	}
 	node.parentNode.replaceChild(nextNode, node);
 	node = nextNode;
-	var sendToApp = function() {};
 
 	function __elmWatchHotReload(newData) {
 		var patches = _VirtualDom_diff(virtualNode, newData.virtualNode);
@@ -855,23 +859,11 @@ export function proxyFile(
     webSocketToken,
     debug,
   );
-  const proxyCodeString = ClientCode.proxy
-    .replace(
-      /"%TARGET_NAME%"/g,
-      Codec.JSON.stringify(Codec.string, outputPath.targetName),
-    )
-    .replace(/__this__ = window/g, "__this__ = this");
-  // In ESM, importing something that isn’t exported is an error.
-  // When ESM-ify:ing Elm’s output, the two most likely export names
-  // are `default` and `Elm`, so make those available. To not break
-  // regular scripts (non-ESM), where `export` is a syntax error,
-  // use this cursed polyglot syntax: https://stackoverflow.com/a/72314371
-  // If elm-watch users end up wanting different export names, I guess
-  // the solution would be to run the postprocessing step on the proxy
-  // files as well. Downsides with that approach are that it’ll take
-  // a little bit more time, and that the postprocessing user code needs
-  // to be able to handle code that isn’t the Elm output.
-  return `${clientCodeString}\n${proxyCodeString}\n0 && await/2//2; const Elm = globalThis.Elm; export { Elm as default, Elm as Elm }`;
+  const proxyCodeString = ClientCode.proxy.replace(
+    /"%TARGET_NAME%"/g,
+    Codec.JSON.stringify(Codec.string, outputPath.targetName),
+  );
+  return `${clientCodeString}\n${proxyCodeString}`;
 }
 
 export function clientCode(
