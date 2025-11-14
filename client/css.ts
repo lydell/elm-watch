@@ -43,7 +43,7 @@ async function reloadCssIfNeeded(
   await Promise.allSettled(
     importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" })),
   );
-  const newStyleSheet = await parseCssWithImports(newCss);
+  const newStyleSheet = await parseCssWithImports(url, newCss);
 
   return newStyleSheet === undefined
     ? false
@@ -57,12 +57,19 @@ async function reloadCssIfNeeded(
 // Also, at the time of writing, Safari did not support constructing
 // `CSSStyleSheet`.
 async function parseCssWithImports(
+  styleSheetUrl: URL,
   css: string,
 ): Promise<CSSStyleSheet | undefined> {
   return new Promise((resolve) => {
     const style = document.createElement("style");
     style.media = "print";
     style.textContent = css;
+
+    // Set the base URL for relative URL:s to the URL of the style sheet.
+    // Otherwise `@import`:s will be relative to the URL of the page instead.
+    const base = document.createElement("base");
+    base.href = styleSheetUrl.href;
+
     // The "load" event fires when all the CSS has been parsed, including
     // `@import`s. Chrome and Safari make `style.sheet` available immediately,
     // with `.styleSheet` on `@import` rules set to `null` until it loads,
@@ -71,9 +78,13 @@ async function parseCssWithImports(
     // while Safari fires the "error" event instead.
     style.onerror = style.onload = () => {
       resolve(style.sheet ?? undefined);
+      base.remove();
       style.remove();
     };
-    document.head.append(style);
+
+    // We use `prepend` instead of `append` here because the first `<base>` element
+    // in the document seems to win.
+    document.head.prepend(base, style);
   });
 }
 
