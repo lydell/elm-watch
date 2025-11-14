@@ -31,11 +31,7 @@ async function reloadCssIfNeeded(
 
   const newCss = await response.text();
 
-  // Note: We can't use the user agent to detect Firefox, because this needs to work
-  // even when the responsive design mode is enabled (which also swaps the user agent).
-  const isFirefox =
-    typeof (window as { scrollMaxX?: number }).scrollMaxX === "number";
-  if (isFirefox && /@import\b/i.test(newCss)) {
+  if (isFirefox() && /@import\b/i.test(newCss)) {
     // eslint-disable-next-line no-console
     console.warn(
       "elm-watch: In Firefox, @import:ed CSS files are not hot reloaded due to over eager caching by Firefox. Style sheet:",
@@ -43,7 +39,7 @@ async function reloadCssIfNeeded(
     );
   }
 
-  const importUrls = getAllCssImports(url, styleSheet);
+  const importUrls = isFirefox() ? [] : getAllCssImports(url, styleSheet);
   await Promise.allSettled(
     importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" })),
   );
@@ -165,7 +161,9 @@ function updateStyleSheetIfNeeded(
     } else if (
       oldRule instanceof CSSImportRule &&
       newRule instanceof CSSImportRule &&
-      oldRule.cssText === newRule.cssText
+      oldRule.cssText === newRule.cssText &&
+      // Exclude Firefox since imported style sheets often returned old, cached versions.
+      !isFirefox()
     ) {
       const nestedChanged =
         oldRule.styleSheet !== null && newRule.styleSheet !== null
@@ -223,4 +221,10 @@ function updateStyleSheetIfNeeded(
   }
   /* eslint-enable @typescript-eslint/no-non-null-assertion */
   return changed;
+}
+
+// Note: We can't use the user agent to detect Firefox, because this needs to work
+// even when the responsive design mode is enabled (which also swaps the user agent).
+function isFirefox(): boolean {
+  return typeof (window as { scrollMaxX?: number }).scrollMaxX === "number";
 }
