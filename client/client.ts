@@ -1899,7 +1899,8 @@ const runCmd =
         if (
           shouldReloadCss &&
           now.getTime() - __ELM_WATCH.CHANGED_CSS.getTime() >
-            ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME
+            ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME &&
+          HAS_WINDOW
         ) {
           __ELM_WATCH.CHANGED_CSS = now;
           reloadAllCssIfNeeded(__ELM_WATCH.ORIGINAL_STYLES)
