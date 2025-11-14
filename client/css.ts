@@ -31,7 +31,10 @@ async function reloadCssIfNeeded(
 
   const newCss = await response.text();
 
-  const isFirefox = "MozAppearance" in document.documentElement.style;
+  // Note: We can't use the user agent to detect Firefox, because this needs to work
+  // even when the responsive design mode is enabled (which also swaps the user agent).
+  const isFirefox =
+    typeof (window as { scrollMaxX?: number }).scrollMaxX === "number";
   if (isFirefox && /@import\b/i.test(newCss)) {
     // eslint-disable-next-line no-console
     console.warn(
