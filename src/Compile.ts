@@ -132,10 +132,12 @@ export function installDependencies(
       const onError = (
         error: Errors.ErrorTemplate,
       ): InstallDependenciesResult => {
-        clearLoadingMessage();
-        logger.write(printStatusLineHelper("Error", message, "error"));
-        logger.write("");
-        logger.errorTemplate(error);
+        logger.withSynchronizedOutput(() => {
+          clearLoadingMessage();
+          logger.write(printStatusLineHelper("Error", message, "error"));
+          logger.write("");
+          logger.errorTemplate(error);
+        });
         return { tag: "Error" };
       };
 
@@ -153,26 +155,39 @@ export function installDependencies(
         case "ElmJsonError":
         case "ElmStuffError":
           if (didWriteLoadingMessage) {
-            clearLoadingMessage();
-            logger.write(printStatusLineHelper("Skipped", message, "skipped"));
+            logger.withSynchronizedOutput(() => {
+              clearLoadingMessage();
+              logger.write(
+                printStatusLineHelper("Skipped", message, "skipped"),
+              );
+            });
           }
           break;
 
         case "Killed":
           if (didWriteLoadingMessage) {
-            clearLoadingMessage();
-            logger.write(printStatusLineHelper("Busy", message, "interrupted"));
+            logger.withSynchronizedOutput(() => {
+              clearLoadingMessage();
+              logger.write(
+                printStatusLineHelper("Busy", message, "interrupted"),
+              );
+            });
           }
           return { tag: "Killed" };
 
         case "Success": {
           const gotOutput = result.elmInstallOutput !== "";
-          if (didWriteLoadingMessage || gotOutput) {
+          if (gotOutput) {
+            logger.withSynchronizedOutput(() => {
+              clearLoadingMessage();
+              logger.write(
+                printStatusLineHelper("Success", message, "success"),
+              );
+              logger.write(result.elmInstallOutput);
+            });
+          } else if (didWriteLoadingMessage) {
             clearLoadingMessage();
             logger.write(printStatusLineHelper("Success", message, "success"));
-          }
-          if (gotOutput) {
-            logger.write(result.elmInstallOutput);
           }
           break;
         }
@@ -1561,10 +1576,12 @@ function updateStatusLine({
   index: number;
   total: number;
 }): void {
-  logger.moveCursor(0, -total + index);
-  logger.clearLine(0);
-  logger.write(statusLine(logger.config, runMode, outputPath, outputState));
-  logger.moveCursor(0, total - index - 1);
+  logger.withSynchronizedOutput(() => {
+    logger.moveCursor(0, -total + index);
+    logger.clearLine(0);
+    logger.write(statusLine(logger.config, runMode, outputPath, outputState));
+    logger.moveCursor(0, total - index - 1);
+  });
 }
 
 export type EmojiName = keyof typeof EMOJI;

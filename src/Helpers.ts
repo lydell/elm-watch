@@ -22,6 +22,10 @@ export function getSetSingleton<T>(set: Set<T>): T | undefined {
   return set.size === 1 ? Array.from(set)[0] : undefined;
 }
 
+// https://github.com/contour-terminal/vt-extensions/blob/master/synchronized-output.md
+export const BEGIN_SYNC_UPDATE = "\x1B[?2026h";
+export const END_SYNC_UPDATE = "\x1B[?2026l";
+
 export const CLEAR = "\x1B[2J\x1B[3J\x1B[H";
 export const RESET_COLOR = "\x1B[0m";
 

@@ -44,8 +44,6 @@ export async function run(
     prioritizedOutputs: "AllEqualPriority",
   });
 
-  Compile.printStatusLinesForElmJsonsErrors(logger, project);
-
   // `make` uses “fail fast.” _One_ of these error categories are shown at a time:
   // 1. All elm.json errors.
   // 2. All `elm make` errors.
@@ -55,7 +53,10 @@ export async function run(
     isNonEmptyArray(initialOutputActions.actions) &&
     !isNonEmptyArray(project.elmJsonsErrors)
   ) {
-    Compile.printSpaceForOutputs(logger, "make", initialOutputActions);
+    logger.withSynchronizedOutput(() => {
+      Compile.printStatusLinesForElmJsonsErrors(logger, project);
+      Compile.printSpaceForOutputs(logger, "make", initialOutputActions);
+    });
 
     await new Promise<void>((resolve, reject) => {
       const cycle = (outputActions: Compile.OutputActions): void => {
@@ -84,6 +85,10 @@ export async function run(
       };
       cycle(initialOutputActions);
     });
+  } else {
+    logger.withSynchronizedOutput(() => {
+      Compile.printStatusLinesForElmJsonsErrors(logger, project);
+    });
   }
 
   const numWorkers = postprocessWorkerPool.getSize();
@@ -93,20 +98,22 @@ export async function run(
   const errors = Compile.extractErrors(project);
   const failed = isNonEmptyArray(errors);
 
-  if (failed) {
-    Compile.printErrors(logger, errors);
-  }
+  logger.withSynchronizedOutput(() => {
+    if (failed) {
+      Compile.printErrors(logger, errors);
+    }
 
-  const duration = getNow().getTime() - startTimestamp;
-  logger.write("");
-  logger.write(
-    compileFinishedMessage({
-      loggerConfig: logger.config,
-      duration,
-      numWorkers,
-      hasErrors: failed,
-    }),
-  );
+    const duration = getNow().getTime() - startTimestamp;
+    logger.write("");
+    logger.write(
+      compileFinishedMessage({
+        loggerConfig: logger.config,
+        duration,
+        numWorkers,
+        hasErrors: failed,
+      }),
+    );
+  });
 
   return failed ? { tag: "Error" } : { tag: "Success" };
 }
