@@ -22,9 +22,9 @@ jobs:
       ELM_HOME: "${{ github.workspace }}/elm-stuff/elm-home"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "${{ matrix.node-version }}"
 
@@ -35,13 +35,13 @@ jobs:
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: node_modules
           key: internal-node_modules-${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package.json', 'package-lock.json') }}
 
       - name: Cache ELM_HOME
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: "${{ env.ELM_HOME }}"
           key: elm-${{ matrix.os }}-${{ hashFiles('elm-tooling.json') }}

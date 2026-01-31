@@ -15,18 +15,18 @@ jobs:
         working-directory: example
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
 
       # Build elm-watch so we can use it in this example repo.
       - name: Internal cache node_modules
         id: internal-cache-node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: node_modules
           key: internal-node_modules-ubuntu-latest-24-${{ hashFiles('package.json', 'package-lock.json') }}
@@ -40,7 +40,7 @@ jobs:
 
       - name: Cache node_modules
         id: cache-node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             example/node_modules
@@ -48,7 +48,7 @@ jobs:
           key: node_modules-${{ hashFiles('example/package.json', 'example/package-lock.json', 'example/public/submodules/seeds-game/package.json',  'example/public/submodules/seeds-game/package-lock.json') }}
 
       - name: Cache ~/.elm
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.elm
           key: elm-${{ hashFiles('example/elm.json', 'example/elm-tooling.json') }}
