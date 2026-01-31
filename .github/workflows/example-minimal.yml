@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       # Build elm-watch so we can use it in this example repo.
       - name: Internal cache node_modules
@@ -27,7 +27,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: internal-node_modules-ubuntu-latest-22-${{ hashFiles('package.json', 'package-lock.json') }}
+          key: internal-node_modules-ubuntu-latest-24-${{ hashFiles('package.json', 'package-lock.json') }}
       - name: Internal npm ci
         if: steps.internal-cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
