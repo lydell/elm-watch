@@ -1,3 +1,10 @@
+import type {
+  createServer as createHttpServer,
+  IncomingMessage,
+  RequestListener,
+} from "http";
+import type { createServer as createHttpsServer } from "https";
+import type { Duplex } from "stream";
 import * as Codec from "tiny-decoders";
 
 export type Brand<T extends string, Name extends string> = T & {
@@ -38,6 +45,14 @@ export const BrowserUiPosition = Codec.primitiveUnion([
   "BottomLeft",
   "BottomRight",
 ]);
+
+// If the user has enabled the simple static file server.
+export type StaticFilesDir = Brand<AbsolutePath, "StaticFilesDir">;
+export function markAsStaticFilesDir(
+  absolutePath: AbsolutePath,
+): StaticFilesDir {
+  return absolutePath as StaticFilesDir;
+}
 
 // elm-watch.json
 export type ElmWatchJsonPath = Brand<AbsolutePath, "ElmWatchJsonPath">;
@@ -139,6 +154,17 @@ export type WriteOutputErrorReasonForWriting =
   | "Postprocess";
 
 export type GetNow = () => Date;
+
+export type CreateServer = (listeners: {
+  onRequest: RequestListener;
+  onUpgrade: (
+    req: InstanceType<typeof IncomingMessage>,
+    socket: Duplex,
+    head: Buffer,
+  ) => void;
+}) =>
+  | ReturnType<typeof createHttpServer>
+  | ReturnType<typeof createHttpsServer>;
 
 export function equalsInputPath(
   elmFile: AbsolutePath,
