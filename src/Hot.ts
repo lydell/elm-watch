@@ -373,6 +373,7 @@ type HotRunResult =
       restartReasons: Array<LatestEvent>;
       postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: WebSocketState | undefined;
+      webSocketToken: WebSocketToken;
     };
 
 export type WebSocketState = {
@@ -1508,15 +1509,25 @@ const runCmd =
 
         switch (cmd.mode) {
           case "AfterInstallDependencies":
-            Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
-            Compile.printSpaceForOutputs(logger, "hot", outputActions);
+            logger.withSynchronizedOutput(() => {
+              Compile.printStatusLinesForElmJsonsErrors(
+                logger,
+                mutable.project,
+              );
+              Compile.printSpaceForOutputs(logger, "hot", outputActions);
+            });
             break;
 
           case "AfterIdle":
-            logger.clearScreen();
-            mutable.lastInfoMessage = undefined;
-            Compile.printStatusLinesForElmJsonsErrors(logger, mutable.project);
-            Compile.printSpaceForOutputs(logger, "hot", outputActions);
+            logger.withSynchronizedOutput(() => {
+              logger.clearScreen();
+              mutable.lastInfoMessage = undefined;
+              Compile.printStatusLinesForElmJsonsErrors(
+                logger,
+                mutable.project,
+              );
+              Compile.printSpaceForOutputs(logger, "hot", outputActions);
+            });
             break;
 
           case "ContinueCompilation":
@@ -1639,10 +1650,6 @@ const runCmd =
         return;
 
       case "LogInfoMessageWithTimeline": {
-        if (mutable.lastInfoMessage !== undefined) {
-          logger.moveCursor(0, -mutable.lastInfoMessage.split("\n").length);
-          logger.clearScreenDown();
-        }
         const fullMessage = infoMessageWithTimeline({
           loggerConfig: logger.config,
           date: getNow(),
@@ -1652,10 +1659,16 @@ const runCmd =
           events: filterLatestEvents(cmd.events),
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
         });
-        logger.write(fullMessage);
-        // For the `run-pty` tool: Let it know that it’s safe to render the
-        // keyboard shortcuts below the cursor text again.
-        logger.clearScreenDown();
+        logger.withSynchronizedOutput(() => {
+          if (mutable.lastInfoMessage !== undefined) {
+            logger.moveCursor(0, -mutable.lastInfoMessage.split("\n").length);
+            logger.clearScreenDown();
+          }
+          logger.write(fullMessage);
+          // For the `run-pty` tool: Let it know that it’s safe to render the
+          // keyboard shortcuts below the cursor text again.
+          logger.clearScreenDown();
+        });
         mutable.lastInfoMessage = fullMessage;
         if (
           __ELM_WATCH_EXIT_ON_WORKER_LIMIT in env &&
@@ -1765,7 +1778,9 @@ const runCmd =
       }
 
       case "PrintCompileErrors":
-        Compile.printErrors(logger, cmd.errors);
+        logger.withSynchronizedOutput(() => {
+          Compile.printErrors(logger, cmd.errors);
+        });
         return;
 
       case "Restart": {
@@ -1798,6 +1813,7 @@ const runCmd =
                     webSocketServer: mutable.webSocketServer,
                     webSocketConnections: mutable.webSocketConnections,
                   },
+              webSocketToken,
             });
           })
           .catch(rejectPromise);

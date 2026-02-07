@@ -2443,8 +2443,15 @@ describe("errors", () => {
     });
 
     test("wrong default export, with console.log and console.error", async () => {
-      expect(await run("postprocess/variants/wrong-default-export", ["make"]))
-        .toMatchInlineSnapshot(`
+      const output = await run("postprocess/variants/wrong-default-export", [
+        "make",
+      ]);
+      const normalized = output.replace(
+        // Only Node.js 24+ includes this line.
+        /\s+"module\.exports": Object\(1\),/,
+        "",
+      );
+      expect(normalized).toMatchInlineSnapshot(`
         ⧙-- MISSING POSTPROCESS DEFAULT EXPORT ------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/postprocess/variants/wrong-default-export/postprocess.cjs
 

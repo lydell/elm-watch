@@ -246,6 +246,7 @@ describe("successful make", () => {
     // Note: It’s really difficult to tell how these align in the editor:
     // - It depends on how your editor renders the emoji: 1, 1.5 or 2 columns?
     // - It depends on how the ad-hoc test terminal escape interpreter handles characters of length 2.
+    // - The non-emoji symbol used to not count as emoji, but now it does. It’s ok, though.
     expect(await run("emoji", ["make"])).toMatchInlineSnapshot(`
       ✅ Dependencies
       ✅ No emoji⧙                                                    1 ms Q | 1.23 s E⧘
@@ -253,7 +254,7 @@ describe("successful make", () => {
       ✅ 😎  Cool emoji⧙                                               1 ms Q | 1.23 s E⧘
       ✅ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in…
       ✅ 👋🏻 Skin tone⧙                                                1 ms Q | 1.23 s E⧘
-      ✅ ↪ Non-emoji symbol⧙                                          1 ms Q | 1.23 s E⧘
+      ✅ ↪  Non-emoji symbol⧙                                         1 ms Q | 1.23 s E⧘
       ✅ ↪️  Emoji version of symbol⧙                                  1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
@@ -272,7 +273,7 @@ describe("successful make", () => {
       Cool emoji: success                                            1 ms Q | 1.23 s E
       Flag emoji and really long target name that needs to be cut off to fit in the...
       Skin tone: success                                             1 ms Q | 1.23 s E
-      ↪ Non-emoji symbol: success                                    1 ms Q | 1.23 s E
+      Non-emoji symbol: success                                      1 ms Q | 1.23 s E
       Emoji version of symbol: success                               1 ms Q | 1.23 s E
 
       Compilation finished in 123 ms.

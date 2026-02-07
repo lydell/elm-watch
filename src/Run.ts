@@ -26,6 +26,7 @@ import {
   markAsElmWatchStuffJsonPath,
   markAsWebSocketToken,
   RunMode,
+  WebSocketToken,
 } from "./Types";
 
 type RunResult =
@@ -38,6 +39,7 @@ type RunResult =
       restartReasons: Array<Hot.LatestEvent>;
       postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: Hot.WebSocketState | undefined;
+      webSocketToken: WebSocketToken | undefined;
     };
 
 export async function run(
@@ -51,6 +53,7 @@ export async function run(
   restartReasons: Array<Hot.LatestEvent>,
   postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: Hot.WebSocketState | undefined,
+  webSocketTokenFromPreviousRun: WebSocketToken | undefined,
   hotKillManager: Hot.HotKillManager,
 ): Promise<RunResult> {
   const parseResult = ElmWatchJson.findReadAndParse(cwd);
@@ -69,6 +72,7 @@ export async function run(
         runMode,
         parseResult.elmWatchJsonPath,
         postprocessWorkerPool,
+        webSocketTokenFromPreviousRun,
       );
 
     case "DecoderError":
@@ -84,6 +88,7 @@ export async function run(
         runMode,
         parseResult.elmWatchJsonPath,
         postprocessWorkerPool,
+        webSocketTokenFromPreviousRun,
       );
 
     case "ElmWatchJsonNotFound":
@@ -216,6 +221,7 @@ export async function run(
                     runMode,
                     parseResult.elmWatchJsonPath,
                     postprocessWorkerPool,
+                    webSocketTokenFromPreviousRun,
                   );
 
                 case "Project": {
@@ -265,6 +271,7 @@ export async function run(
                         postprocessWorkerPool,
                         webSocketState,
                         elmWatchStuffJson?.webSocketToken ??
+                          webSocketTokenFromPreviousRun ??
                           markAsWebSocketToken(crypto.randomUUID()),
                         project,
                         config.port !== undefined
@@ -312,6 +319,7 @@ async function handleElmWatchJsonError(
   runMode: RunMode,
   elmWatchJsonPath: ElmWatchJsonPath,
   postprocessWorkerPool: PostprocessWorkerPool,
+  webSocketTokenFromPreviousRun: WebSocketToken | undefined,
 ): Promise<RunResult> {
   switch (runMode) {
     case "make":
@@ -330,6 +338,7 @@ async function handleElmWatchJsonError(
         restartReasons: [{ ...elmWatchJsonEvent, affectsAnyTarget: true }],
         postprocessWorkerPool,
         webSocketState: undefined,
+        webSocketToken: webSocketTokenFromPreviousRun,
       };
     }
   }

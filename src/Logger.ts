@@ -14,8 +14,10 @@ import {
 } from "./Env";
 import * as Errors from "./Errors";
 import {
+  BEGIN_SYNC_UPDATE,
   bold,
   CLEAR,
+  END_SYNC_UPDATE,
   ReadStream,
   removeColor,
   silentlyReadIntEnvValue,
@@ -45,6 +47,7 @@ export type Logger = {
     escapes: string,
     isDone: (stdin: string) => boolean,
   ) => Promise<string | undefined>;
+  withSynchronizedOutput: (callback: () => void) => void;
 };
 
 export type LoggerConfig = {
@@ -241,6 +244,15 @@ export function makeLogger({
             queryTerminalMaxAgeMs
             ? queryTerminalStatus.stdin
             : run();
+      }
+    },
+    withSynchronizedOutput: (callback) => {
+      if (config.isTTY) {
+        stdout.write(BEGIN_SYNC_UPDATE);
+        callback();
+        stdout.write(END_SYNC_UPDATE);
+      } else {
+        callback();
       }
     },
     config,

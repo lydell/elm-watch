@@ -192,7 +192,9 @@ export class MemoryWriteStream extends stream.Writable implements WriteStream {
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ): void {
-    this.content += removeTerminalColorRequests(chunk.toString());
+    this.content += removeTerminalColorRequestsAndSyncOutputChanges(
+      chunk.toString(),
+    );
     callback();
   }
 }
@@ -355,9 +357,9 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ): void {
-    const parts = removeTerminalColorRequests(chunk.toString()).split(
-      SPLIT_REGEX,
-    );
+    const parts = removeTerminalColorRequestsAndSyncOutputChanges(
+      chunk.toString(),
+    ).split(SPLIT_REGEX);
     for (const part of parts) {
       switch (part) {
         case "":
@@ -498,8 +500,10 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
   }
 }
 
-function removeTerminalColorRequests(string: string): string {
-  return string.replace(/\x1B\][^\x1B]+\x1B\\/g, "");
+function removeTerminalColorRequestsAndSyncOutputChanges(
+  string: string,
+): string {
+  return string.replace(/\x1B\[\?2026[hl]|\x1B\][^\x1B]+\x1B\\/g, "");
 }
 
 export function clean(string: string): string {
