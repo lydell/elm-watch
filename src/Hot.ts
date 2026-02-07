@@ -354,6 +354,7 @@ type HotRunResult =
       restartReasons: Array<LatestEvent>;
       postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: WebSocketState | undefined;
+      webSocketToken: WebSocketToken;
     };
 
 export type WebSocketState = {
@@ -1695,6 +1696,7 @@ const runCmd =
                     webSocketServer: mutable.webSocketServer,
                     webSocketConnections: mutable.webSocketConnections,
                   },
+              webSocketToken,
             });
           })
           .catch(rejectPromise);

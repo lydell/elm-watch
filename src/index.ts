@@ -89,6 +89,7 @@ export async function elmWatchCli(
                 ? new PostprocessWorkerPool(reject)
                 : result.postprocessWorkerPool,
               result === undefined ? undefined : result.webSocketState,
+              result === undefined ? undefined : result.webSocketToken,
               hotKillManager,
             );
           } while (result.tag === "Restart");
