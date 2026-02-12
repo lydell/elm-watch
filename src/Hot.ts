@@ -1,6 +1,5 @@
 import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
-import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
@@ -68,7 +67,11 @@ import {
   TargetName,
   WebSocketToken,
 } from "./Types";
-import { WebSocketServer, WebSocketServerMsg } from "./WebSocketServer";
+import {
+  WebSocketConnectionRejectedReason,
+  WebSocketServer,
+  WebSocketServerMsg,
+} from "./WebSocketServer";
 
 type WatcherEventName = "added" | "changed" | "removed";
 
@@ -110,6 +113,12 @@ type WebSocketRelatedEvent =
   | {
       tag: "WebSocketConnectedWithErrors";
       date: Date;
+    }
+  | {
+      tag: "WebSocketConnectionRejected";
+      date: Date;
+      origin: string | undefined;
+      reason: WebSocketConnectionRejectedReason;
     }
   | {
       tag: "WorkersLimitedAfterWebSocketClosed";
@@ -189,6 +198,12 @@ type Msg =
       date: Date;
       webSocket: WebSocket;
       parseWebSocketConnectRequestUrlResult: ParseWebSocketConnectRequestUrlResult;
+    }
+  | {
+      tag: "WebSocketConnectionRejected";
+      date: Date;
+      origin: string | undefined;
+      reason: WebSocketConnectionRejectedReason;
     }
   | {
       tag: "WebSocketMessageReceived";
@@ -516,7 +531,7 @@ const initMutable =
     );
 
     const {
-      webSocketServer = new WebSocketServer(portChoice),
+      webSocketServer = new WebSocketServer(portChoice, webSocketToken),
       webSocketConnections = [],
     } = webSocketState ?? {};
 
@@ -540,7 +555,6 @@ const initMutable =
         getNow(),
         logger,
         mutable,
-        webSocketToken,
         dispatch,
         resolvePromise,
         rejectPromise,
@@ -1053,6 +1067,23 @@ function update(
           ];
       }
     }
+
+    case "WebSocketConnectionRejected":
+      return [
+        {
+          ...model,
+          latestEvents: [
+            ...model.latestEvents,
+            {
+              tag: "WebSocketConnectionRejected",
+              date: msg.date,
+              origin: msg.origin,
+              reason: msg.reason,
+            },
+          ],
+        },
+        [],
+      ];
 
     case "WebSocketMessageReceived": {
       const result = parseWebSocketToServerMessage(msg.data);
@@ -1788,7 +1819,6 @@ function onWebSocketServerMsg(
   now: Date,
   logger: Logger,
   mutable: Mutable,
-  webSocketToken: WebSocketToken,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
   rejectPromise: (error: Error) => void,
@@ -1798,8 +1828,7 @@ function onWebSocketServerMsg(
     case "WebSocketConnected": {
       const result = parseWebSocketConnectRequestUrl(
         mutable.project,
-        webSocketToken,
-        msg.urlString,
+        msg.urlParams,
       );
       const webSocketConnection: WebSocketConnection = {
         webSocket: msg.webSocket,
@@ -1815,6 +1844,15 @@ function onWebSocketServerMsg(
       });
       return;
     }
+
+    case "WebSocketConnectionRejected":
+      dispatch({
+        tag: "WebSocketConnectionRejected",
+        date: now,
+        origin: msg.origin,
+        reason: msg.reason,
+      });
+      return;
 
     case "WebSocketClosed": {
       const removedConnection = mutable.webSocketConnections.find(
@@ -2188,14 +2226,9 @@ type ParseWebSocketConnectRequestUrlResult =
 
 type ParseWebSocketConnectRequestUrlError =
   | {
-      tag: "BadUrl";
-      expectedStart: typeof WEBSOCKET_URL_EXPECTED_START;
-      actualUrlString: string;
-    }
-  | {
       tag: "ParamsDecodeError";
       error: Codec.DecoderError;
-      actualUrlString: string;
+      urlParams: URLSearchParams;
     }
   | {
       tag: "TargetDisabled";
@@ -2210,58 +2243,26 @@ type ParseWebSocketConnectRequestUrlError =
       disabledOutputs: Array<OutputPath>;
     }
   | {
-      tag: "WrongToken";
-    }
-  | {
       tag: "WrongVersion";
       expectedVersion: "%VERSION%";
       actualVersion: string;
     };
 
-// We used to require `/?`. Putting “elm-watch” in the path is useful for people
-// running elm-watch behind a proxy: They can use the same port for both the web
-// site and elm-watch, and direct traffic by path matching.
-const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
-
 function parseWebSocketConnectRequestUrl(
   project: Project,
-  webSocketToken: WebSocketToken,
-  urlString: string,
+  urlParams: URLSearchParams,
 ): ParseWebSocketConnectRequestUrlResult {
-  if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
-    return {
-      tag: "BadUrl",
-      expectedStart: WEBSOCKET_URL_EXPECTED_START,
-      actualUrlString: urlString,
-    };
-  }
-
-  // This never throws as far as I can tell.
-  const params = new URLSearchParams(
-    urlString.slice(WEBSOCKET_URL_EXPECTED_START.length),
-  );
-
   const webSocketConnectedParamsResult = WebSocketConnectedParams.decoder(
-    Object.fromEntries(params),
+    Object.fromEntries(urlParams),
   );
   if (webSocketConnectedParamsResult.tag === "DecoderError") {
     return {
       tag: "ParamsDecodeError",
       error: webSocketConnectedParamsResult.error,
-      actualUrlString: urlString,
+      urlParams,
     };
   }
   const webSocketConnectedParams = webSocketConnectedParamsResult.value;
-
-  const actualToken = Buffer.from(webSocketConnectedParams.webSocketToken);
-  const expectedToken = Buffer.from(webSocketToken);
-  const tokenIsCorrect =
-    Buffer.byteLength(actualToken) === Buffer.byteLength(expectedToken) &&
-    crypto.timingSafeEqual(actualToken, expectedToken);
-
-  if (!tokenIsCorrect) {
-    return { tag: "WrongToken" };
-  }
 
   if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
     return {
@@ -2340,17 +2341,8 @@ function webSocketConnectRequestUrlErrorToString(
   error: ParseWebSocketConnectRequestUrlError,
 ): string {
   switch (error.tag) {
-    case "BadUrl":
-      return Errors.webSocketBadUrl(error.expectedStart, error.actualUrlString);
-
     case "ParamsDecodeError":
-      return Errors.webSocketParamsDecodeError(
-        error.error,
-        error.actualUrlString,
-      );
-
-    case "WrongToken":
-      return Errors.webSocketWrongToken();
+      return Errors.webSocketParamsDecodeError(error.error, error.urlParams);
 
     case "WrongVersion":
       return Errors.webSocketWrongVersion(
@@ -2763,6 +2755,7 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     case "WebSocketConnectedNeedingCompilation":
     case "WebSocketConnectedNeedingNoAction":
     case "WebSocketConnectedWithErrors":
+    case "WebSocketConnectionRejected":
     case "WorkersLimitedAfterWebSocketClosed":
       return 100;
 
@@ -2923,6 +2916,12 @@ function printEventMessage(event: LatestEvent): string {
     case "WebSocketConnectedWithErrors":
       return `Web socket connected with errors (see the browser for details)`;
 
+    case "WebSocketConnectionRejected": {
+      const origin =
+        event.origin === undefined ? "unknown origin" : quote(event.origin);
+      return `Web socket connection from ${origin} rejected due to: ${printWebSocketConnectionRejectedReason(event.reason)}`;
+    }
+
     case "WebSocketChangedBrowserUiPosition":
       return `Changed browser UI position to ${quote(
         event.browserUiPosition,
@@ -2964,4 +2963,15 @@ function printEventsMessage(
   )
     ? `FYI: The above Elm ${what1} not imported by ${what2}. Nothing to do!`
     : "Everything up to date.";
+}
+
+function printWebSocketConnectionRejectedReason(
+  reason: WebSocketConnectionRejectedReason,
+): string {
+  switch (reason.tag) {
+    case "BadUrl":
+      return `wrong URL prefix – ${quote(reason.expectedStart)} != ${quote(reason.actualUrlString.slice(0, reason.expectedStart.length))}`;
+    case "WrongToken":
+      return "invalid security token";
+  }
 }
