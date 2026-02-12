@@ -578,40 +578,42 @@ describe("hot", () => {
     }
 
     test("bad url", async () => {
+      // elm-watch responds with 401 when trying to connect the web socket with a bad URL.
+      // It is unfortunately not possible to tell the difference between different types of
+      // errors with web sockets, so we try to reconnect in this case. The indirect way of
+      // testing this is passing the wrong token just the first time.
+      let i = 0;
       modifyUrl((url) => {
-        url.pathname = "nope";
+        i++;
+        if (i === 0) {
+          url.pathname = "nope";
+        }
       });
 
-      const { onlyExpandedRenders } = await run({
+      const { renders } = await run({
         fixture: "basic",
         args: ["BadUrl"],
         scripts: ["BadUrl.js"],
-        init: failInit,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
         onIdle: () => "Stop",
       });
 
-      expect(
-        onlyExpandedRenders.replace(
-          /elmCompiledTimestamp=\d+/,
-          "elmCompiledTimestamp=1644064438938",
-        ),
-      ).toMatchInlineSnapshot(`
-        target BadUrl
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Unexpected error
-        I ran into an unexpected error! This is the error message:
-        I expected the web socket connection URL to start with:
-
-        /elm-watch?
-
-        But it looks like this:
-
-        /nope?elmWatchVersion=%25VERSION%25&webSocketToken=37476437-1911-402a-9c87-fd94405770d2&targetName=BadUrl&elmCompiledTimestamp=1644064438938
-
-        The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
-        ▲ ❌ 13:10:05 BadUrl
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 BadUrl
+        ================================================================================
+        ▼ ⏳ 13:10:05 BadUrl
+        ================================================================================
+        ▼ ⏳ 13:10:05 BadUrl
+        ================================================================================
+        ▼ 🔌 13:10:05 BadUrl
+        ================================================================================
+        ▼ 🔌 13:10:05 BadUrl
+        ================================================================================
+        ▼ ⏳ 13:10:05 BadUrl
+        ================================================================================
+        ▼ ✅ 13:10:05 BadUrl
       `);
     });
 
@@ -649,9 +651,9 @@ describe("hot", () => {
         Expected a number
         Got: "2021-12-11"
 
-        The URL looks like this:
+        The URL parameters look like this:
 
-        /elm-watch?elmWatchVersion=%25VERSION%25&webSocketToken=37476437-1911-402a-9c87-fd94405770d2&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+        elmWatchVersion=%25VERSION%25&webSocketToken=37476437-1911-402a-9c87-fd94405770d2&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         ▲ ❌ 13:10:05 ParamsDecodeError
@@ -701,9 +703,9 @@ describe("hot", () => {
         Expected a number
         Got: "2021-12-11"
 
-        The URL looks like this:
+        The URL parameters look like this:
 
-        /elm-watch?elmWatchVersion=%25VERSION%25&webSocketToken=37476437-1911-402a-9c87-fd94405770d2&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+        elmWatchVersion=%25VERSION%25&webSocketToken=37476437-1911-402a-9c87-fd94405770d2&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
 
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         ▲ ❌ 13:10:05 ParamsDecodeError
@@ -761,29 +763,42 @@ describe("hot", () => {
     });
 
     test("wrong token", async () => {
+      // elm-watch responds with 401 when trying to connect the web socket with a wrong token.
+      // It is unfortunately not possible to tell the difference between different types of
+      // errors with web sockets, so we try to reconnect in this case. The indirect way of
+      // testing this is passing the wrong token just the first time.
+      let i = 0;
       modifyUrl((url) => {
-        url.searchParams.set("webSocketToken", "wrong");
+        i++;
+        if (i === 0) {
+          url.searchParams.set("webSocketToken", "wrong");
+        }
       });
 
-      const { onlyExpandedRenders } = await run({
+      const { renders } = await run({
         fixture: "basic",
         args: ["WrongToken"],
         scripts: ["WrongToken.js"],
-        init: failInit,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
         onIdle: () => "Stop",
       });
 
-      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target WrongToken
-        elm-watch %VERSION%
-        web socket ws://localhost:59123
-        updated 2022-02-05 13:10:05
-        status Unexpected error
-        I ran into an unexpected error! This is the error message:
-        The web socket connected with the wrong security token. The security token is used to block malicious connections.
-
-        The web socket code I generate is supposed to always connect using the correct token, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        ▲ ❌ 13:10:05 WrongToken
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 WrongToken
+        ================================================================================
+        ▼ ⏳ 13:10:05 WrongToken
+        ================================================================================
+        ▼ ⏳ 13:10:05 WrongToken
+        ================================================================================
+        ▼ 🔌 13:10:05 WrongToken
+        ================================================================================
+        ▼ 🔌 13:10:05 WrongToken
+        ================================================================================
+        ▼ ⏳ 13:10:05 WrongToken
+        ================================================================================
+        ▼ ✅ 13:10:05 WrongToken
       `);
     });
 

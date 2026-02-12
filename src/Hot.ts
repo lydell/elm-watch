@@ -1,6 +1,5 @@
 import * as childProcess from "child_process";
 import * as chokidar from "chokidar";
-import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
@@ -516,7 +515,7 @@ const initMutable =
     );
 
     const {
-      webSocketServer = new WebSocketServer(portChoice),
+      webSocketServer = new WebSocketServer(portChoice, webSocketToken),
       webSocketConnections = [],
     } = webSocketState ?? {};
 
@@ -540,7 +539,6 @@ const initMutable =
         getNow(),
         logger,
         mutable,
-        webSocketToken,
         dispatch,
         resolvePromise,
         rejectPromise,
@@ -1788,7 +1786,6 @@ function onWebSocketServerMsg(
   now: Date,
   logger: Logger,
   mutable: Mutable,
-  webSocketToken: WebSocketToken,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
   rejectPromise: (error: Error) => void,
@@ -1798,8 +1795,7 @@ function onWebSocketServerMsg(
     case "WebSocketConnected": {
       const result = parseWebSocketConnectRequestUrl(
         mutable.project,
-        webSocketToken,
-        msg.urlString,
+        msg.urlParams,
       );
       const webSocketConnection: WebSocketConnection = {
         webSocket: msg.webSocket,
@@ -2188,14 +2184,9 @@ type ParseWebSocketConnectRequestUrlResult =
 
 type ParseWebSocketConnectRequestUrlError =
   | {
-      tag: "BadUrl";
-      expectedStart: typeof WEBSOCKET_URL_EXPECTED_START;
-      actualUrlString: string;
-    }
-  | {
       tag: "ParamsDecodeError";
       error: Codec.DecoderError;
-      actualUrlString: string;
+      urlParams: URLSearchParams;
     }
   | {
       tag: "TargetDisabled";
@@ -2210,58 +2201,26 @@ type ParseWebSocketConnectRequestUrlError =
       disabledOutputs: Array<OutputPath>;
     }
   | {
-      tag: "WrongToken";
-    }
-  | {
       tag: "WrongVersion";
       expectedVersion: "%VERSION%";
       actualVersion: string;
     };
 
-// We used to require `/?`. Putting “elm-watch” in the path is useful for people
-// running elm-watch behind a proxy: They can use the same port for both the web
-// site and elm-watch, and direct traffic by path matching.
-const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
-
 function parseWebSocketConnectRequestUrl(
   project: Project,
-  webSocketToken: WebSocketToken,
-  urlString: string,
+  urlParams: URLSearchParams,
 ): ParseWebSocketConnectRequestUrlResult {
-  if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
-    return {
-      tag: "BadUrl",
-      expectedStart: WEBSOCKET_URL_EXPECTED_START,
-      actualUrlString: urlString,
-    };
-  }
-
-  // This never throws as far as I can tell.
-  const params = new URLSearchParams(
-    urlString.slice(WEBSOCKET_URL_EXPECTED_START.length),
-  );
-
   const webSocketConnectedParamsResult = WebSocketConnectedParams.decoder(
-    Object.fromEntries(params),
+    Object.fromEntries(urlParams),
   );
   if (webSocketConnectedParamsResult.tag === "DecoderError") {
     return {
       tag: "ParamsDecodeError",
       error: webSocketConnectedParamsResult.error,
-      actualUrlString: urlString,
+      urlParams,
     };
   }
   const webSocketConnectedParams = webSocketConnectedParamsResult.value;
-
-  const actualToken = Buffer.from(webSocketConnectedParams.webSocketToken);
-  const expectedToken = Buffer.from(webSocketToken);
-  const tokenIsCorrect =
-    Buffer.byteLength(actualToken) === Buffer.byteLength(expectedToken) &&
-    crypto.timingSafeEqual(actualToken, expectedToken);
-
-  if (!tokenIsCorrect) {
-    return { tag: "WrongToken" };
-  }
 
   if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
     return {
@@ -2340,17 +2299,11 @@ function webSocketConnectRequestUrlErrorToString(
   error: ParseWebSocketConnectRequestUrlError,
 ): string {
   switch (error.tag) {
-    case "BadUrl":
-      return Errors.webSocketBadUrl(error.expectedStart, error.actualUrlString);
-
     case "ParamsDecodeError":
       return Errors.webSocketParamsDecodeError(
         error.error,
-        error.actualUrlString,
+        error.urlParams,
       );
-
-    case "WrongToken":
-      return Errors.webSocketWrongToken();
 
     case "WrongVersion":
       return Errors.webSocketWrongVersion(
