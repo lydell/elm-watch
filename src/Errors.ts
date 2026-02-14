@@ -1379,26 +1379,28 @@ ${text(error.message)}
   `;
 }
 
-export function webSocketBadUrl(
+export function webSocketParamsDecodeError(
   webSocketUrl: WebSocketUrl | undefined,
-  expectedStart: string,
-  actualUrlString: string,
+  error: Codec.DecoderError,
+  urlParams: URLSearchParams,
 ): string {
   return `
-I expected the web socket connection URL path to start with:
+I ran into trouble parsing the web socket connection URL parameters:
 
-${expectedStart}
+${printJsonError(error).text}
 
-But it looks like this:
+The URL parameters look like this:
 
-${actualUrlString}
+${urlParams.toString()}
 
 ${
   webSocketUrl === undefined
     ? "The web socket code I generate is supposed to always connect using a correct URL, so something is up here."
     : webSocketUrlDescription(webSocketUrl)
 }
-  `.trim();
+
+Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+  `;
 }
 
 function webSocketUrlDescription(webSocketUrl: WebSocketUrl): string {
@@ -1419,38 +1421,6 @@ function webSocketUrlSourceDescription(source: WebSocketUrl["source"]): string {
     case "Env":
       return `using the ${ELM_WATCH_WEBSOCKET_URL} environment variable`;
   }
-}
-
-export function webSocketParamsDecodeError(
-  webSocketUrl: WebSocketUrl | undefined,
-  error: Codec.DecoderError,
-  actualUrlString: string,
-): string {
-  return `
-I ran into trouble parsing the web socket connection URL parameters:
-
-${printJsonError(error).text}
-
-The URL looks like this:
-
-${actualUrlString}
-
-${
-  webSocketUrl === undefined
-    ? "The web socket code I generate is supposed to always connect using a correct URL, so something is up here."
-    : webSocketUrlDescription(webSocketUrl)
-}
-
-Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-  `;
-}
-
-export function webSocketWrongToken(): string {
-  return `
-The web socket connected with the wrong security token. The security token is used to block malicious connections.
-
-The web socket code I generate is supposed to always connect using the correct token, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-    `.trim();
 }
 
 export function webSocketWrongVersion(

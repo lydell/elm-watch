@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import * as https from "https";
 import type { AddressInfo } from "net";
 import type { Duplex } from "stream";
@@ -9,6 +10,12 @@ import { Host } from "./Host";
 import { markAsPort, Port, PortChoice } from "./Port";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
 import { CreateServer, StaticFilesDir } from "./Types";
+import { WebSocketToken } from "./Types";
+
+// We used to require `/?`. Putting “elm-watch” in the path is useful for people
+// running elm-watch behind a proxy: They can use the same port for both the web
+// site and elm-watch, and direct traffic by path matching.
+const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
 
 export type WebSocketServerMsg =
   | {
@@ -18,7 +25,12 @@ export type WebSocketServerMsg =
   | {
       tag: "WebSocketConnected";
       webSocket: WebSocket;
-      urlString: string;
+      urlParams: URLSearchParams;
+    }
+  | {
+      tag: "WebSocketConnectionRejected";
+      origin: string | undefined;
+      reason: WebSocketConnectionRejectedReason;
     }
   | {
       tag: "WebSocketMessageReceived";
@@ -46,6 +58,16 @@ type WebSocketServerError =
       error: Error;
     };
 
+export type WebSocketConnectionRejectedReason =
+  | {
+      tag: "BadUrl";
+      expectedStart: typeof WEBSOCKET_URL_EXPECTED_START;
+      actualUrlString: string;
+    }
+  | {
+      tag: "WrongToken";
+    };
+
 export class WebSocketServer {
   private polyHttpServer: ReturnType<CreateServer>;
 
@@ -68,6 +90,7 @@ export class WebSocketServer {
     portChoice: PortChoice,
     host: Host,
     staticFilesDirectory: StaticFilesDir | undefined,
+    webSocketToken: WebSocketToken,
   ) {
     this.polyHttpServer = createServer({
       onRequest: (request, response) => {
@@ -93,12 +116,90 @@ export class WebSocketServer {
         }
       },
       onUpgrade: (request, socket, head) => {
+        // `request.url` is always a string here, but the types says it can be undefined:
+        // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
+        const urlString =
+          /* v8 ignore next */
+          request.url ?? "/";
+
+        const { origin } = request.headers;
+
+        if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
+          error401(socket, "Invalid URL");
+          this.dispatch({
+            tag: "WebSocketConnectionRejected",
+            origin,
+            reason: {
+              tag: "BadUrl",
+              expectedStart: WEBSOCKET_URL_EXPECTED_START,
+              actualUrlString: urlString,
+            },
+          });
+          return;
+        }
+
+        // This never throws as far as I can tell.
+        const urlParams = new URLSearchParams(
+          urlString.slice(WEBSOCKET_URL_EXPECTED_START.length),
+        );
+
+        const urlToken = urlParams.get("webSocketToken") ?? "";
+
+        const actualToken = Buffer.from(urlToken);
+        const expectedToken = Buffer.from(webSocketToken);
+        const tokenIsCorrect =
+          Buffer.byteLength(actualToken) === Buffer.byteLength(expectedToken) &&
+          crypto.timingSafeEqual(actualToken, expectedToken);
+
+        if (!tokenIsCorrect) {
+          error401(socket, "Invalid token");
+          this.dispatch({
+            tag: "WebSocketConnectionRejected",
+            origin,
+            reason: { tag: "WrongToken" },
+          });
+          return;
+        }
+
         this.webSocketServer.handleUpgrade(
           request,
           socket,
           head,
           (webSocket) => {
-            this.webSocketServer.emit("connection", webSocket, request);
+            (
+              webSocket as WebSocket & {
+                [util.inspect.custom]: util.CustomInspectFunction;
+              }
+            )[util.inspect.custom] =
+              /* v8 ignore next */
+              (_depth, options) => options.stylize("WebSocket", "special");
+
+            this.dispatch({
+              tag: "WebSocketConnected",
+              webSocket,
+              urlParams,
+            });
+
+            webSocket.on("message", (data) => {
+              this.dispatch({
+                tag: "WebSocketMessageReceived",
+                webSocket,
+                data,
+              });
+            });
+
+            webSocket.on("close", () => {
+              this.dispatch({ tag: "WebSocketClosed", webSocket });
+            });
+
+            /* v8 ignore start */
+            webSocket.on("error", (error) => {
+              this.dispatch({
+                tag: "WebSocketServerError",
+                error: { tag: "OtherError", error },
+              });
+            });
+            /* v8 ignore stop */
           },
         );
       },
@@ -107,47 +208,6 @@ export class WebSocketServer {
     this.isHTTPS = this.polyHttpServer instanceof https.Server;
 
     this.dispatch = this.dispatchToQueue;
-
-    this.webSocketServer.on("connection", (webSocket, request) => {
-      (
-        webSocket as WebSocket & {
-          [util.inspect.custom]: util.CustomInspectFunction;
-        }
-      )[util.inspect.custom] =
-        /* v8 ignore next */
-        (_depth, options) => options.stylize("WebSocket", "special");
-
-      this.dispatch({
-        tag: "WebSocketConnected",
-        webSocket,
-        // `request.url` is always a string here, but the types says it can be undefined:
-        // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
-        urlString:
-          /* v8 ignore next */
-          request.url ?? "/",
-      });
-
-      webSocket.on("message", (data) => {
-        this.dispatch({
-          tag: "WebSocketMessageReceived",
-          webSocket,
-          data,
-        });
-      });
-
-      webSocket.on("close", () => {
-        this.dispatch({ tag: "WebSocketClosed", webSocket });
-      });
-
-      /* v8 ignore start */
-      webSocket.on("error", (error) => {
-        this.dispatch({
-          tag: "WebSocketServerError",
-          error: { tag: "OtherError", error },
-        });
-      });
-      /* v8 ignore stop */
-    });
 
     this.polyHttpServer.on("error", (error: NodeJS.ErrnoException) => {
       this.dispatch({
@@ -224,4 +284,9 @@ export class WebSocketServer {
       webSocket.close();
     }
   }
+}
+
+function error401(socket: Duplex, message: string): void {
+  socket.write(`HTTP/1.1 401 Unauthorized\r\nX-Reason: ${message}\r\n\r\n`);
+  socket.destroy();
 }

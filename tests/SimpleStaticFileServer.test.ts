@@ -40,9 +40,8 @@ describe("SimpleStaticFileServer", () => {
       },
     });
 
-    expect(
-      mainHtml.replace(/<head>[^]*<\/head>/, "<head>…</head>"),
-    ).toMatchInlineSnapshot(`
+    expect(mainHtml.replace(/<head>[^]*<\/head>/, "<head>…</head>"))
+      .toMatchInlineSnapshot(`
       200
       content-type: text/html; charset=utf-8
       content-length: 2142
