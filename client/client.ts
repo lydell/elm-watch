@@ -779,6 +779,7 @@ function getOrCreateTargetRoot(): Elements {
     overlay = h(HTMLDivElement, {
       className: CLASS.overlay,
       attrs: { "data-test-id": "Overlay" },
+      hidden: true,
     });
     shadowRoot.append(overlay);
   }
