@@ -1,0 +1,11 @@
+html {
+  display: flex;
+  height: 100%;
+  background-color: #edf;
+  color: black;
+}
+
+body {
+  margin: auto;
+  font-family: system-ui;
+}

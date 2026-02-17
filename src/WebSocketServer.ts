@@ -1,13 +1,15 @@
 import * as crypto from "crypto";
-import * as http from "http";
 import * as https from "https";
-import * as net from "net";
+import type { AddressInfo } from "net";
 import type { Duplex } from "stream";
 import * as util from "util";
 import WebSocket, { WebSocketServer as WsServer } from "ws";
 
-import { CERTIFICATE } from "./Certificate";
+import { toError } from "./Helpers";
+import { Host } from "./Host";
 import { markAsPort, Port, PortChoice } from "./Port";
+import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
+import { CreateServer, StaticFilesDir } from "./Types";
 import { WebSocketToken } from "./Types";
 
 // We used to require `/?`. Putting “elm-watch” in the path is useful for people
@@ -42,6 +44,11 @@ export type WebSocketServerMsg =
 
 type WebSocketServerError =
   | {
+      tag: "HostNotFound";
+      host: Host;
+      error: Error;
+    }
+  | {
       tag: "OtherError";
       error: Error;
     }
@@ -61,87 +68,14 @@ export type WebSocketConnectionRejectedReason =
       tag: "WrongToken";
     };
 
-// Inspired by: https://stackoverflow.com/a/42019773
-class PolyHttpServer {
-  private net = net.createServer();
-
-  private http = http.createServer();
-
-  private https = https.createServer(CERTIFICATE);
-
-  constructor() {
-    this.net.on("connection", (socket) => {
-      socket.once("data", (buffer) => {
-        socket.pause();
-        const server = buffer[0] === 22 ? this.https : this.http;
-        socket.unshift(buffer);
-        server.emit("connection", socket);
-        server.on("close", () => {
-          socket.destroy();
-        });
-        process.nextTick(() => socket.resume());
-      });
-    });
-  }
-
-  listen(port: number): void {
-    this.net.listen(port);
-  }
-
-  async close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      let numClosed = 0;
-      const callback = (
-        error: (Error & { code?: string }) | undefined,
-      ): void => {
-        numClosed++;
-        /* v8 ignore start */
-        if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
-          reject(error);
-        } else if (numClosed === 3) {
-          resolve();
-        }
-        /* v8 ignore stop */
-      };
-      this.net.close(callback);
-      this.http.close(callback);
-      this.https.close(callback);
-    });
-  }
-
-  onRequest(listener: (isHttps: boolean) => http.RequestListener): void {
-    this.http.on("request", listener(false));
-    this.https.on("request", listener(true));
-  }
-
-  onUpgrade(
-    listener: (
-      req: InstanceType<typeof http.IncomingMessage>,
-      socket: Duplex,
-      head: Buffer,
-    ) => void,
-  ): void {
-    this.http.on("upgrade", listener);
-    this.https.on("upgrade", listener);
-  }
-
-  onError(listener: (error: Error & { code?: string }) => void): void {
-    this.net.on("error", listener);
-    this.http.on("error", listener);
-    this.https.on("error", listener);
-  }
-
-  onceListening(listener: (address: net.AddressInfo) => void): void {
-    this.net.once("listening", () => {
-      listener(this.net.address() as net.AddressInfo);
-    });
-  }
-}
-
 export class WebSocketServer {
-  private polyHttpServer = new PolyHttpServer();
+  private polyHttpServer: ReturnType<CreateServer>;
 
   private webSocketServer = new WsServer({ noServer: true });
+
+  private sockets = new Set<Duplex>();
+
+  isHTTPS: boolean;
 
   port: Port;
 
@@ -151,111 +85,154 @@ export class WebSocketServer {
 
   listening: Promise<void>;
 
-  constructor(portChoice: PortChoice, webSocketToken: WebSocketToken) {
-    this.dispatch = this.dispatchToQueue;
-
-    this.polyHttpServer.onUpgrade((request, socket, head) => {
-      // `request.url` is always a string here, but the types says it can be undefined:
-      // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
-      const urlString =
-        /* v8 ignore next */
-        request.url ?? "/";
-
-      const { origin } = request.headers;
-
-      if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
-        error401(socket, "Invalid URL");
-        this.dispatch({
-          tag: "WebSocketConnectionRejected",
-          origin,
-          reason: {
-            tag: "BadUrl",
-            expectedStart: WEBSOCKET_URL_EXPECTED_START,
-            actualUrlString: urlString,
-          },
-        });
-        return;
-      }
-
-      // This never throws as far as I can tell.
-      const urlParams = new URLSearchParams(
-        urlString.slice(WEBSOCKET_URL_EXPECTED_START.length),
-      );
-
-      const urlToken = urlParams.get("webSocketToken") ?? "";
-
-      const actualToken = Buffer.from(urlToken);
-      const expectedToken = Buffer.from(webSocketToken);
-      const tokenIsCorrect =
-        Buffer.byteLength(actualToken) === Buffer.byteLength(expectedToken) &&
-        crypto.timingSafeEqual(actualToken, expectedToken);
-
-      if (!tokenIsCorrect) {
-        error401(socket, "Invalid token");
-        this.dispatch({
-          tag: "WebSocketConnectionRejected",
-          origin,
-          reason: { tag: "WrongToken" },
-        });
-        return;
-      }
-
-      this.webSocketServer.handleUpgrade(request, socket, head, (webSocket) => {
-        (
-          webSocket as WebSocket & {
-            [util.inspect.custom]: util.CustomInspectFunction;
+  constructor(
+    createServer: CreateServer,
+    portChoice: PortChoice,
+    host: Host,
+    staticFilesDirectory: StaticFilesDir | undefined,
+    webSocketToken: WebSocketToken,
+  ) {
+    this.polyHttpServer = createServer({
+      onRequest: (request, response) => {
+        if (staticFilesDirectory !== undefined) {
+          try {
+            SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
+              request,
+              response,
+            );
+          } catch (unknownError) {
+            SimpleStaticFileServer.respondHtml(
+              response,
+              500,
+              SimpleStaticFileServer.errorHtml(toError(unknownError).message),
+            );
           }
-        )[util.inspect.custom] =
+        } else {
+          SimpleStaticFileServer.respondHtml(
+            response,
+            200,
+            SimpleStaticFileServer.staticFileNotEnabledHtml(),
+          );
+        }
+      },
+      onUpgrade: (request, socket, head) => {
+        // `request.url` is always a string here, but the types says it can be undefined:
+        // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
+        const urlString =
           /* v8 ignore next */
-          (_depth, options) => options.stylize("WebSocket", "special");
+          request.url ?? "/";
 
-        this.dispatch({
-          tag: "WebSocketConnected",
-          webSocket,
-          urlParams,
-        });
+        const { origin } = request.headers;
 
-        webSocket.on("message", (data) => {
+        if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
+          error401(socket, "Invalid URL");
           this.dispatch({
-            tag: "WebSocketMessageReceived",
-            webSocket,
-            data,
+            tag: "WebSocketConnectionRejected",
+            origin,
+            reason: {
+              tag: "BadUrl",
+              expectedStart: WEBSOCKET_URL_EXPECTED_START,
+              actualUrlString: urlString,
+            },
           });
-        });
+          return;
+        }
 
-        webSocket.on("close", () => {
-          this.dispatch({ tag: "WebSocketClosed", webSocket });
-        });
+        // This never throws as far as I can tell.
+        const urlParams = new URLSearchParams(
+          urlString.slice(WEBSOCKET_URL_EXPECTED_START.length),
+        );
 
-        /* v8 ignore start */
-        webSocket.on("error", (error) => {
+        const urlToken = urlParams.get("webSocketToken") ?? "";
+
+        const actualToken = Buffer.from(urlToken);
+        const expectedToken = Buffer.from(webSocketToken);
+        const tokenIsCorrect =
+          Buffer.byteLength(actualToken) === Buffer.byteLength(expectedToken) &&
+          crypto.timingSafeEqual(actualToken, expectedToken);
+
+        if (!tokenIsCorrect) {
+          error401(socket, "Invalid token");
           this.dispatch({
-            tag: "WebSocketServerError",
-            error: { tag: "OtherError", error },
+            tag: "WebSocketConnectionRejected",
+            origin,
+            reason: { tag: "WrongToken" },
           });
-        });
-        /* v8 ignore stop */
-      });
+          return;
+        }
+
+        this.webSocketServer.handleUpgrade(
+          request,
+          socket,
+          head,
+          (webSocket) => {
+            (
+              webSocket as WebSocket & {
+                [util.inspect.custom]: util.CustomInspectFunction;
+              }
+            )[util.inspect.custom] =
+              /* v8 ignore next */
+              (_depth, options) => options.stylize("WebSocket", "special");
+
+            this.dispatch({
+              tag: "WebSocketConnected",
+              webSocket,
+              urlParams,
+            });
+
+            webSocket.on("message", (data) => {
+              this.dispatch({
+                tag: "WebSocketMessageReceived",
+                webSocket,
+                data,
+              });
+            });
+
+            webSocket.on("close", () => {
+              this.dispatch({ tag: "WebSocketClosed", webSocket });
+            });
+
+            /* v8 ignore start */
+            webSocket.on("error", (error) => {
+              this.dispatch({
+                tag: "WebSocketServerError",
+                error: { tag: "OtherError", error },
+              });
+            });
+            /* v8 ignore stop */
+          },
+        );
+      },
     });
 
-    this.polyHttpServer.onError((error) => {
+    this.isHTTPS = this.polyHttpServer instanceof https.Server;
+
+    this.dispatch = this.dispatchToQueue;
+
+    this.polyHttpServer.on("error", (error: NodeJS.ErrnoException) => {
       this.dispatch({
         tag: "WebSocketServerError",
         error:
           error.code === "EADDRINUSE"
             ? { tag: "PortConflict", portChoice, error }
-            : /* v8 ignore next */
-              { tag: "OtherError", error },
+            : error.code === "ENOTFOUND"
+              ? { tag: "HostNotFound", host, error }
+              : /* v8 ignore next */
+                { tag: "OtherError", error },
       });
     });
 
-    this.polyHttpServer.onRequest((isHttps) => (request, response) => {
-      response.end(html(isHttps, request));
+    this.polyHttpServer.on("connection", (socket: Duplex) => {
+      this.sockets.add(socket);
+      socket.once("close", () => {
+        this.sockets.delete(socket);
+      });
     });
 
     this.port = markAsPort(0);
     this.listening = new Promise((resolve) => {
-      this.polyHttpServer.onceListening((address) => {
+      this.polyHttpServer.once("listening", () => {
+        const address = this.polyHttpServer.address() as AddressInfo;
         this.port = markAsPort(address.port);
         resolve();
       });
@@ -264,6 +241,7 @@ export class WebSocketServer {
     this.polyHttpServer.listen(
       // If `port` is 0, the operating system will assign an arbitrary unused port.
       portChoice.tag === "NoPort" ? 0 : portChoice.port,
+      host,
     );
   }
 
@@ -290,54 +268,22 @@ export class WebSocketServer {
     this.unsetDispatch();
     // This terminates all connections.
     this.webSocketServer.close();
-    await this.polyHttpServer.close();
+    for (const socket of this.sockets) {
+      socket.destroy();
+    }
+    await new Promise<void>((resolve, reject) => {
+      this.polyHttpServer.close((error: NodeJS.ErrnoException | undefined) => {
+        if (error !== undefined && error.code !== "ERR_SERVER_NOT_RUNNING") {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
     for (const webSocket of this.webSocketServer.clients) {
       webSocket.close();
     }
   }
-}
-
-function html(isHttps: boolean, request: http.IncomingMessage): string {
-  const { host, referer } = request.headers;
-  return `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>elm-watch</title>
-    <style>
-      html {
-        font-family: system-ui, sans-serif;
-      }
-    </style>
-  </head>
-  <body>
-    <p>ℹ️ This is the elm-watch WebSocket server.</p>
-    ${
-      request.url === "/accept"
-        ? isHttps
-          ? `<p>✅ Certificate accepted. You may now ${maybeLink(
-              referer !== undefined && new URL(referer).host !== host
-                ? referer
-                : undefined,
-              "return to your page",
-            )}.</p>`
-          : `<p>Did you mean to go to the ${maybeLink(
-              /* v8 ignore start */ host !== undefined
-                ? `https://${host}${request.url}`
-                : undefined /* v8 ignore stop */,
-              "HTTPS version of this page",
-            )} to accept elm-watch's self-signed certificate?</p>`
-        : `<p>There's nothing interesting to see here: <a href="https://lydell.github.io/elm-watch/getting-started/#your-responsibilities">elm-watch is not a file server</a>.</p>`
-    }
-  </body>
-</html>
-  `.trim();
-}
-
-function maybeLink(href: string | undefined, text: string): string {
-  return href === undefined ? text : `<a href="${href}">${text}</a>`;
 }
 
 function error401(socket: Duplex, message: string): void {

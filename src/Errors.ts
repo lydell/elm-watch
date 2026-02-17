@@ -7,13 +7,20 @@ import * as url from "url";
 
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
-import { ELM_WATCH_OPEN_EDITOR, Env } from "./Env";
+import {
+  ELM_WATCH_HOST,
+  ELM_WATCH_OPEN_EDITOR,
+  ELM_WATCH_WEBSOCKET_URL,
+  Env,
+} from "./Env";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
+  escapeHtml,
   RESET_COLOR,
   toError,
 } from "./Helpers";
+import { Host } from "./Host";
 import { IS_WINDOWS } from "./IsWindows";
 import { DEFAULT_COLUMNS } from "./Logger";
 import {
@@ -47,6 +54,7 @@ import {
   UncheckedInputPath,
   WriteOutputErrorReasonForWriting,
 } from "./Types";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 function bold(string: string): Piece {
   return { tag: "Bold", text: string };
@@ -288,27 +296,6 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
     case "Text":
       return escapeHtml(piece.text);
   }
-}
-
-function escapeHtml(string: string): string {
-  return string.replace(/[&<>"']/g, (match) => {
-    switch (match) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      case "'":
-        return "&apos;";
-      /* v8 ignore start */
-      default:
-        return match;
-      /* v8 ignore stop */
-    }
-  });
 }
 
 // This needs to be kept in sync with `Project.projectHasFilePathThatCanBeOpenedInEditor`.
@@ -1354,6 +1341,30 @@ remove "port" from ${elmWatchJson} (which will use an arbitrary available port.)
   `;
 }
 
+export function hostNotFound(host: Host, error: Error): ErrorTemplate {
+  return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
+This environment variable is set:
+
+${text(ELM_WATCH_HOST)}=${text(host)}
+
+But that host was not found!
+
+It’s common to set it to the following to restrict elm-watch’s HTTP server to
+your computer:
+
+${text(ELM_WATCH_HOST)}=127.0.0.1
+
+If unset, the default host is 0.0.0.0, which exposes the HTTP server on the
+local network.
+
+Try setting the environment variable to something else, or remove it altogether.
+
+This is the error message I got:
+
+${text(error.message)}
+  `;
+}
+
 export function watcherError(error: Error): ErrorTemplate {
   return fancyError("WATCHER ERROR", { tag: "NoLocation" })`
 The file watcher encountered an error, which means that it cannot continue.
@@ -1369,6 +1380,7 @@ ${text(error.message)}
 }
 
 export function webSocketParamsDecodeError(
+  webSocketUrl: WebSocketUrl | undefined,
   error: Codec.DecoderError,
   urlParams: URLSearchParams,
 ): string {
@@ -1381,8 +1393,34 @@ The URL parameters look like this:
 
 ${urlParams.toString()}
 
-The web socket code I generate is supposed to always connect using a correct URL, so something is up here. Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+${
+  webSocketUrl === undefined
+    ? "The web socket code I generate is supposed to always connect using a correct URL, so something is up here."
+    : webSocketUrlDescription(webSocketUrl)
+}
+
+Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
   `;
+}
+
+function webSocketUrlDescription(webSocketUrl: WebSocketUrl): string {
+  const description = webSocketUrlSourceDescription(webSocketUrl.source);
+  return `
+You have configured the web socket URL ${description} to:
+
+${webSocketUrl.url.href}
+
+Check if that URL is correct! If it goes to a proxy, make sure the proxy forwards to the correct URL.
+  `.trim();
+}
+
+function webSocketUrlSourceDescription(source: WebSocketUrl["source"]): string {
+  switch (source) {
+    case "elm-watch.json":
+      return "in elm-watch.json";
+    case "Env":
+      return `using the ${ELM_WATCH_WEBSOCKET_URL} environment variable`;
+  }
 }
 
 export function webSocketWrongVersion(

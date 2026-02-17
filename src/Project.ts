@@ -4,7 +4,7 @@ import * as path from "path";
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
-import { __ELM_WATCH_MAX_PARALLEL, Env } from "./Env";
+import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_WEBSOCKET_URL, Env } from "./Env";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
 import { WalkImportsError } from "./ImportWalker";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
@@ -28,17 +28,21 @@ import {
   type GetNow,
   type InputPath,
   markAsElmJsonPath,
+  markAsStaticFilesDir,
   markAsTargetName,
   type OutputPath,
+  type StaticFilesDir,
   type UncheckedInputPath,
   type WriteOutputErrorReasonForWriting,
 } from "./Types";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 export type Project = {
   // Path of the directories containing elm-watch.json, all elm.json,
   // and all source directories, without duplicates and where each
   // directory does not contain any other.
   watchRoots: Set<AbsolutePath>;
+  staticFilesDir: StaticFilesDir | undefined;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: Array<OutputPath>;
@@ -46,6 +50,7 @@ export type Project = {
   elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   maxParallel: number;
   postprocess: Postprocess;
+  webSocketUrl: WebSocketUrl | undefined;
 };
 
 // The code base leans towards pure functions, but this data structure is going
@@ -423,6 +428,16 @@ export function initProject({
     };
   }
 
+  const staticFilesDir: StaticFilesDir | undefined =
+    config.serve === undefined
+      ? undefined
+      : markAsStaticFilesDir(
+          absolutePathFromString(
+            absoluteDirname(elmWatchJsonPath),
+            config.serve,
+          ),
+        );
+
   const watchRoots = getWatchRoots(
     elmWatchJsonPath,
     Array.from(elmJsons.keys()),
@@ -438,10 +453,13 @@ export function initProject({
       ? { tag: "NoPostprocess" }
       : { tag: "Postprocess", postprocessArray: config.postprocess };
 
+  const webSocketUrl = getWebSocketUrlFromEnv(env) ?? config.webSocketUrl;
+
   return {
     tag: "Project",
     project: {
       watchRoots,
+      staticFilesDir,
       elmWatchJsonPath,
       elmWatchStuffJsonPath,
       disabledOutputs,
@@ -449,6 +467,7 @@ export function initProject({
       elmJsons,
       maxParallel,
       postprocess,
+      webSocketUrl,
     },
   };
 }
@@ -496,6 +515,23 @@ export function filterSubDirs(
         !root.startsWith(root2.endsWith(pathSep) ? root2 : root2 + pathSep),
     ),
   );
+}
+
+function getWebSocketUrlFromEnv(env: Env): WebSocketUrl | undefined {
+  const envWebSocketUrlString = env[ELM_WATCH_WEBSOCKET_URL];
+
+  if (envWebSocketUrlString === undefined) {
+    return undefined;
+  }
+
+  const decoderResult = WebSocketUrl("Env").decoder(envWebSocketUrlString);
+  switch (decoderResult.tag) {
+    case "Valid":
+      return decoderResult.value;
+    case "DecoderError":
+      // Invalid environment variables are silently ignored.
+      return undefined;
+  }
 }
 
 type ResolveElmJsonResult =
@@ -696,6 +732,8 @@ export function getPostprocessElmWatchNodeScriptPath(
 export function projectToDebug(project: Project): unknown {
   return {
     watchRoots: Array.from(project.watchRoots),
+    staticFilesDir: project.staticFilesDir,
+    webSocketUrl: project.webSocketUrl,
     elmWatchJson: project.elmWatchJsonPath,
     elmWatchStuffJson: project.elmWatchStuffJsonPath,
     maxParallel: project.maxParallel,
