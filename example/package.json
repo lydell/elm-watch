@@ -17,6 +17,7 @@
     "elm-tooling": "1.16.0",
     "elm-watch": "file:../build",
     "esbuild": "0.25.8",
+    "howler": "2.2.4",
     "run-pty": "5.0.0"
   }
 }
