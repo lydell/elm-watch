@@ -2184,7 +2184,7 @@ function webSocketConnectionIsForOutputPath(
 
 const WebSocketConnectedParams = Codec.fields(
   {
-    elmWatchVersion: Codec.string,
+    elmWatchVersion: Codec.field(Codec.string, { optional: true }),
     webSocketToken: Codec.string,
     targetName: TargetName,
     elmCompiledTimestamp: Codec.flatMap(Codec.string, {
@@ -2264,7 +2264,10 @@ function parseWebSocketConnectRequestUrl(
   }
   const webSocketConnectedParams = webSocketConnectedParamsResult.value;
 
-  if (webSocketConnectedParams.elmWatchVersion !== "%VERSION%") {
+  if (
+    webSocketConnectedParams.elmWatchVersion !== undefined &&
+    webSocketConnectedParams.elmWatchVersion !== "%VERSION%"
+  ) {
     return {
       tag: "WrongVersion",
       expectedVersion: "%VERSION%",

@@ -747,6 +747,33 @@ describe("hot", () => {
       `);
     });
 
+    test("omitting the version is ok (useful for third party clients)", async () => {
+      modifyUrl((url) => {
+        url.searchParams.delete("elmWatchVersion");
+      });
+
+      const { onlyExpandedRenders, terminal } = await run({
+        fixture: "basic",
+        args: ["Html"],
+        scripts: ["Html.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(``);
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+      `);
+    });
+
     test("wrong token", async () => {
       let i = 0;
       modifyUrl((url) => {
