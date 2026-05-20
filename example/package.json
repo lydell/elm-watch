@@ -3,7 +3,7 @@
   "type": "module",
   "name": "example",
   "scripts": {
-    "postinstall": "npm --prefix public/submodules/seeds-game ci && elm-tooling install",
+    "postinstall": "elm-tooling install",
     "start": "run-pty % elm-watch hot % npm run esbuild -- --serve=9000 --servedir=public % node dev-server.js 9000 % node --watch nodejs-program.js",
     "start-advanced": "run-pty run-pty.json",
     "try-production": "run-pty % esbuild --serve=9000 --servedir=public % node dev-server.js 9000 % node nodejs-program.js",
