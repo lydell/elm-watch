@@ -2214,7 +2214,7 @@ describe("hot reloading", () => {
     }
   });
 
-  test.only("List.sortWith bug", async () => {
+  test("List.sortWith bug", async () => {
     const { replace, go } = runHotReload({
       name: "SortWithBug",
       programType: "Sandbox",
@@ -2245,7 +2245,7 @@ describe("hot reloading", () => {
     function assertHotReload(div: HTMLDivElement): void {
       // The text in the `div` is supposed to say “ab” (not “ba”) even after the hot reload.
       expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><div title="simple text change">ba</div></div>`,
+        `<div><div title="simple text change">ab</div></div>`,
       );
     }
   });
