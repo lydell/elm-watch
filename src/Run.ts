@@ -14,6 +14,7 @@ import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
+import * as SpawnElm from "./SpawnElm";
 import {
   CliArg,
   CreateServer,
@@ -191,10 +192,16 @@ export async function run(
                   ? elmWatchStuffJsonParseResult.elmWatchStuffJson
                   : undefined;
 
+              const elmVersion = await SpawnElm.version({
+                elmWatchJsonPath: parseResult.elmWatchJsonPath,
+                env,
+              });
+
               const initProjectResult = initProject({
                 env,
                 getNow,
                 compilationMode: parseArgsResult.compilationMode,
+                elmVersion,
                 elmWatchJsonPath: parseResult.elmWatchJsonPath,
                 config: parseResult.config,
                 enabledTargetsSubstrings: isNonEmptyArray(

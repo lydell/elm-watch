@@ -10,6 +10,7 @@ import {
   GetNow,
   markAsAbsolutePath,
   markAsElmJsonPath,
+  markAsElmVersion,
   markAsElmWatchJsonPath,
   markAsElmWatchStuffJsonPath,
   markAsStaticFilesDir,
@@ -29,6 +30,7 @@ const project: Project = {
     url: new URL("ws://localhost:1234"),
     source: "elm-watch.json",
   },
+  elmVersion: markAsElmVersion("0.19.1"),
   elmWatchJsonPath: markAsElmWatchJsonPath(
     markAsAbsolutePath("/Users/you/project/elm-watch.json"),
   ),

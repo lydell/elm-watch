@@ -22,6 +22,7 @@ import {
   type BrowserUiPosition,
   type CompilationMode,
   type ElmJsonPath,
+  ElmVersion,
   type ElmWatchJsonPath,
   type ElmWatchStuffDir,
   type ElmWatchStuffJsonPath,
@@ -43,6 +44,7 @@ export type Project = {
   // directory does not contain any other.
   watchRoots: Set<AbsolutePath>;
   staticFilesDir: StaticFilesDir | undefined;
+  elmVersion: ElmVersion;
   elmWatchJsonPath: ElmWatchJsonPath;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: Array<OutputPath>;
@@ -312,6 +314,7 @@ export function initProject({
   env,
   getNow,
   compilationMode,
+  elmVersion,
   elmWatchJsonPath,
   config,
   enabledTargetsSubstrings,
@@ -322,6 +325,7 @@ export function initProject({
   env: Env;
   getNow: GetNow;
   compilationMode: CompilationMode;
+  elmVersion: ElmVersion;
   elmWatchJsonPath: ElmWatchJsonPath;
   config: ElmWatchJson.Config;
   enabledTargetsSubstrings: NonEmptyArray<string>;
@@ -460,6 +464,7 @@ export function initProject({
     project: {
       watchRoots,
       staticFilesDir,
+      elmVersion,
       elmWatchJsonPath,
       elmWatchStuffJsonPath,
       disabledOutputs,

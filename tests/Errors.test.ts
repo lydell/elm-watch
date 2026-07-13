@@ -1650,6 +1650,24 @@ describe("errors", () => {
       `);
     });
 
+    test("type error with Elm 0.19.2", async () => {
+      // This is supposed to be identical to the above test, despite Elm reporting
+      // line 2 column 8 instead of line 3 column 9.
+      expect(await runWithBadElmBin("elm-0.19.2-off-by-one"))
+        .toMatchInlineSnapshot(`
+        ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
+
+        I cannot do addition with ⧙String⧘ values like this one:
+
+        3| error = "a" + 1
+                   ⧙^^^⧘
+        The (+) operator only works with ⧙Int⧘ and ⧙Float⧘ values.
+
+        ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
+      `);
+    });
+
     test("missing main", async () => {
       expect(await run("compilation-errors", ["make", "MissingMain"]))
         .toMatchInlineSnapshot(`
