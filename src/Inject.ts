@@ -18,7 +18,7 @@ import {
 // The regex is anchored to the beginning of lines, which should make it
 // impossible to match within strings in the user’s program.
 const REPLACEMENT_REGEX =
-  /^(?:function (F|_Platform_initialize|_Platform_export|_Browser_application|_Scheduler_binding|_Scheduler_step)\(|var (_VirtualDom_init|\$elm\$browser\$Browser\$sandbox|_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) =).*\r?\n?\{(?:.*\r?\n)*?\}\)?;?$/gm;
+  /^(?:function (F|_Platform_initialize|_Platform_export|_Browser_application|_Scheduler_binding|_Scheduler_step)\(|var (_VirtualDom_init|\$elm\$browser\$Browser\$sandbox|_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document|_List_sortWith) =).*\r?\n?\{(?:.*\r?\n)*?\}\)?;?$/gm;
 
 // Some object properties are marked with `%`, like `%prop%`. They need to be
 // replaced with shorter names in `optimize` mode.
@@ -709,6 +709,26 @@ function _Scheduler_step(proc)
 		}
 	}
 }
+  `.trim(),
+
+  // ### _List_sortWith
+  // This is the only place (that I have found) where Elm compares custom type variants
+  // with `===` object identity, instead of comparing the tags (`.$`). This is not good
+  // for hot reloading, because if you hold on to references to `LT`, `GT` or `EQ` in the model –
+  // either directly or indirectly via a function such as `compare` – `List.sortWith` won’t
+  // work with those after a hot reload. The “new” `List.compare` has references to new
+  // `LT`, `GT` and `EQ` objects, while the model has references to old such objects,
+  // which are equivalent but not the same object instances.
+  _List_sortWith: `
+// This function was slightly modified by elm-watch.
+var _List_sortWith = F2(function(f, xs)
+{
+	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
+		var ord = A2(f, a, b);
+		// return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1; // commented out by elm-watch
+		return ord.$ === $elm$core$Basics$EQ.$ ? 0 : ord.$ === $elm$core$Basics$LT.$ ? -1 : 1; // added by elm-watch
+	}));
+});
   `.trim(),
 };
 
