@@ -165,6 +165,12 @@
                 "src/InitCmds.elm"
             ],
             "output": "build/InitCmds.js"
+        },
+        "SortWithBug": {
+            "inputs": [
+                "src/SortWithBug.elm"
+            ],
+            "output": "build/SortWithBug.js"
         }
     }
 }
