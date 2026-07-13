@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+import installed from "../elm-install.js";
+if (installed) {
+  if (process.argv.includes("--version")) {
+    process.stdout.write("0.19.2\n");
+    process.exit(0);
+  } else {
+    // This is the output of `make --output=/dev/null --report=json src/TypeError.elm`
+    // in `tests/fixtures/errors/compilation-errors/` with Elm 0.19.2. The numbers in
+    // `"region"` are one too low, but the line number in the actual error message is correct.
+    process.stderr.write(
+      String.raw`{"type":"compile-errors","errors":[{"path":"/Users/you/project/tests/fixtures/errors/compilation-errors/src/TypeError.elm","name":"TypeError","problems":[{"title":"TYPE MISMATCH","region":{"start":{"line":2,"column":8},"end":{"line":2,"column":11}},"message":["I cannot do addition with ",{"bold":false,"underline":false,"color":"yellow","string":"String"}," values like this one:\n\n3| error = \"a\" + 1\n           ",{"bold":false,"underline":false,"color":"RED","string":"^^^"},"\nThe (+) operator only works with ",{"bold":false,"underline":false,"color":"yellow","string":"Int"}," and ",{"bold":false,"underline":false,"color":"yellow","string":"Float"}," values.\n\n",{"bold":false,"underline":true,"color":null,"string":"Hint"},": Switch to the ",{"bold":false,"underline":false,"color":"GREEN","string":"(++)"}," operator to append strings!"]}]}]}`,
+    );
+    process.exit(1);
+  }
+}

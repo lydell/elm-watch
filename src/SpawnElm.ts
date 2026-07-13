@@ -14,9 +14,12 @@ import {
   AbsolutePath,
   CompilationMode,
   ElmJsonPath,
+  ElmVersion,
+  ElmWatchJsonPath,
   GetNow,
   InputPath,
   markAsAbsolutePath,
+  markAsElmVersion,
   OutputPath,
 } from "./Types";
 
@@ -496,4 +499,49 @@ dummy : ()
 dummy =
     ()
   `.trim();
+}
+
+export async function version({
+  elmWatchJsonPath,
+  env,
+}: {
+  elmWatchJsonPath: ElmWatchJsonPath;
+  env: Env;
+}): Promise<ElmVersion> {
+  const command: Command = {
+    command: "elm",
+    args: ["--version"],
+    options: {
+      cwd: absoluteDirname(elmWatchJsonPath),
+      env,
+    },
+  };
+
+  const spawnResult = await spawn(command).promise;
+
+  switch (spawnResult.tag) {
+    // This function ignores all errors, because it is not used for anything critical.
+    // Errors will surface later anyway, when we invoke the Elm compiler to compile stuff.
+    /* v8 ignore start */
+    case "CommandNotFoundError":
+    case "OtherSpawnError":
+    case "StdinWriteError":
+    case "Killed":
+      return markAsElmVersion("unknown");
+    /* v8 ignore end */
+
+    case "Exit": {
+      const { exitReason } = spawnResult;
+      const stdout = spawnResult.stdout.toString("utf8");
+      const stderr = spawnResult.stderr.toString("utf8");
+
+      /* v8 ignore start */
+      return exitReason.tag === "ExitCode" &&
+        exitReason.exitCode === 0 &&
+        stderr === ""
+        ? markAsElmVersion(stdout.trim())
+        : markAsElmVersion("unknown");
+      /* v8 ignore end */
+    }
+  }
 }

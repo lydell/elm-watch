@@ -10,6 +10,7 @@ import {
   GetNow,
   markAsAbsolutePath,
   markAsElmJsonPath,
+  markAsElmVersion,
   markAsElmWatchJsonPath,
   markAsElmWatchStuffJsonPath,
   markAsTargetName,
@@ -20,6 +21,7 @@ const getNow: GetNow = () => new Date();
 
 const project: Project = {
   watchRoots: new Set([markAsAbsolutePath("/Users/you/project")]),
+  elmVersion: markAsElmVersion("0.19.1"),
   elmWatchJsonPath: markAsElmWatchJsonPath(
     markAsAbsolutePath("/Users/you/project/elm-watch.json"),
   ),

@@ -152,3 +152,9 @@ export const WebSocketToken = brand<WebSocketToken>();
 export function markAsWebSocketToken(string: string): WebSocketToken {
   return string as WebSocketToken;
 }
+
+export type ElmVersion = Brand<string, "ElmVersion">;
+export const ElmVersion = brand<ElmVersion>();
+export function markAsElmVersion(string: string): ElmVersion {
+  return string as ElmVersion;
+}

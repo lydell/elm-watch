@@ -59,6 +59,7 @@ import {
   BrowserUiPosition,
   CompilationMode,
   ElmJsonPath,
+  ElmVersion,
   ElmWatchJsonPath,
   equalsInputPath,
   GetNow,
@@ -853,6 +854,7 @@ function update(
           const duration = msg.date.getTime() - model.hotState.start.getTime();
 
           const cmd = handleOutputActionResultToCmd(
+            project.elmVersion,
             project.elmWatchJsonPath,
             msg.handleOutputActionResult,
           );
@@ -993,6 +995,7 @@ function update(
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
             msg.date,
             model,
+            project.elmVersion,
             project.elmWatchJsonPath,
             result.elmJsonPath,
             result.outputPath,
@@ -1091,6 +1094,7 @@ function update(
       switch (result.tag) {
         case "Success":
           return onWebSocketToServerMessage(
+            project.elmVersion,
             project.elmWatchJsonPath,
             model,
             msg.date,
@@ -1972,6 +1976,7 @@ function portChoiceError(
 }
 
 function handleOutputActionResultToCmd(
+  elmVersion: ElmVersion,
   elmWatchJsonPath: ElmWatchJsonPath,
   handleOutputActionResult: Compile.HandleOutputActionResult,
 ): Cmd {
@@ -1985,6 +1990,7 @@ function handleOutputActionResultToCmd(
           handleOutputActionResult.outputState.browserUiPosition,
         openErrorOverlay: handleOutputActionResult.outputState.openErrorOverlay,
         errors: Compile.renderOutputErrors(
+          elmVersion,
           elmWatchJsonPath,
           handleOutputActionResult.elmJsonPath,
           handleOutputActionResult.outputPath,
@@ -2405,6 +2411,7 @@ function parseWebSocketToServerMessage(
 function onWebSocketConnected(
   date: Date,
   model: Model,
+  elmVersion: ElmVersion,
   elmWatchJsonPath: ElmWatchJsonPath,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
@@ -2498,6 +2505,7 @@ function onWebSocketConnected(
                 browserUiPosition: outputState.browserUiPosition,
                 openErrorOverlay: outputState.openErrorOverlay,
                 errors: Compile.renderOutputErrors(
+                  elmVersion,
                   elmWatchJsonPath,
                   elmJsonPath,
                   outputPath,
@@ -2570,6 +2578,7 @@ function compileNextAction(nextAction: NextAction): NextAction {
 }
 
 function onWebSocketToServerMessage(
+  elmVersion: ElmVersion,
   elmWatchJsonPath: ElmWatchJsonPath,
   model: Model,
   date: Date,
@@ -2659,6 +2668,7 @@ function onWebSocketToServerMessage(
 
         case "Output": {
           const errors = Compile.renderOutputErrors(
+            elmVersion,
             elmWatchJsonPath,
             output.elmJsonPath,
             output.outputPath,
