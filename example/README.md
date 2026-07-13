@@ -3,9 +3,9 @@
 This is an example that uses:
 
 - elm-watch for Elm compilation
-- [esbuild] for TypeScript compilation
-- [SWC] for minification (`postprocess.js`)
-- A little Node.js dev server for routing and proxying, with no dependencies (`dev-server.js`)
+- [esbuild] for TypeScript compilation, and for minification
+- [SWC] for extra minification ([postprocess.js](./postprocess.js))
+- A custom little Node.js dev server for routing and proxying, with no dependencies ([dev-server.js](./dev-server.js))
 - [run-pty] to run the above with just one command
 - [elm-tooling] to install Elm and elm-format
 
@@ -24,11 +24,11 @@ See also the [minimal elm-watch example][example-minimal].
 5. Run `git submodule update --init` to fetch some real-world Elm apps for demoing.
 6. Run `npm ci` to install dependencies for this example.
 7. Run `npm start` to start elm-watch, esbuild and the Node.js dev server for development, using run-pty. Alternatively, run `npm run start-advanced` for some extra run-pty goodness (see `run-pty.json` if you’re interested).
-8. Visit some Elm app in the browser (see below): Go to http://localhost:8000 (the dev server, recommended), or http://localhost:9000 (raw esbuild server).
+8. Visit some Elm app in the browser (see below for which apps are available): Go to http://localhost:8000 (which is the custom dev server).
 9. Edit an Elm file in `src/` or `public/submodules/` and watch the browser be automatically updated.
 10. Stop elm-watch, esbuild and the dev server.
 11. Run `npm run build` to build for production, using elm-watch, esbuild and SWC.
-12. Run `npm run try-production` to to try out the production build. It uses esbuild only for serving static files, and the Node.js dev server for proxying. It’s the same URLs as before: http://localhost:8000 and http://localhost:9000. (Note: This command is for trying out the production build locally, not something you’d actually run in production to serve the files.)
+12. Run `npm run try-production` to to try out the production build. It uses esbuild only for serving static files, and the Node.js dev server for proxying. It’s the same URL as before: http://localhost:8000. (Note: This command is for trying out the production build locally, not something you’d actually run in production to serve the files.)
 
 This example has many Elm apps (many targets in `elm-watch.json`):
 

@@ -17,6 +17,7 @@ import { initProject, projectToDebug } from "./Project";
 import * as SpawnElm from "./SpawnElm";
 import {
   CliArg,
+  CreateServer,
   Cwd,
   ElmWatchJsonPath,
   ElmWatchStuffDir,
@@ -47,6 +48,7 @@ export async function run(
   env: Env,
   logger: Logger,
   getNow: GetNow,
+  createServer: CreateServer,
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.LatestEvent>,
@@ -271,6 +273,7 @@ export async function run(
                         env,
                         logger,
                         getNow,
+                        createServer,
                         restartReasons,
                         postprocessWorkerPool,
                         webSocketState,

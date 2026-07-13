@@ -29,7 +29,6 @@ import {
   nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
-import { Port } from "./Port";
 import {
   Postprocess,
   PostprocessWorkerPool,
@@ -58,6 +57,7 @@ import {
   TargetName,
   WebSocketToken,
 } from "./Types";
+import { WebSocketConnection } from "./WebSocketUrl";
 
 export type InstallDependenciesResult =
   | { tag: "Error" }
@@ -576,7 +576,7 @@ export type HandleOutputActionResult =
 type RunModeWithExtraData =
   | {
       tag: "hot";
-      webSocketPort: Port;
+      webSocketConnection: WebSocketConnection;
       webSocketToken: WebSocketToken;
     }
   | {
@@ -638,7 +638,7 @@ export async function handleOutputAction({
             elmJsonPath: action.elmJsonPath,
             outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
             total,
-            webSocketPort: runMode.webSocketPort,
+            webSocketConnection: runMode.webSocketConnection,
             webSocketToken: runMode.webSocketToken,
           });
           return { tag: "Nothing" };
@@ -958,7 +958,7 @@ function onCompileSuccess(
                 elmCompiledTimestamp,
                 outputState.compilationMode,
                 outputState.browserUiPosition,
-                runMode.webSocketPort,
+                runMode.webSocketConnection,
                 runMode.webSocketToken,
                 loggerConfig.debug,
               ) + newCode,
@@ -1144,7 +1144,7 @@ async function postprocessHelper({
               elmCompiledTimestamp,
               outputState.compilationMode,
               outputState.browserUiPosition,
-              runMode.webSocketPort,
+              runMode.webSocketConnection,
               runMode.webSocketToken,
               logger.config.debug,
             );
@@ -1221,7 +1221,7 @@ async function typecheck({
   elmJsonPath,
   outputs,
   total,
-  webSocketPort,
+  webSocketConnection,
   webSocketToken,
 }: {
   env: Env;
@@ -1235,7 +1235,7 @@ async function typecheck({
     outputState: OutputState;
   }>;
   total: number;
-  webSocketPort: Port;
+  webSocketConnection: WebSocketConnection;
   webSocketToken: WebSocketToken;
 }): Promise<void> {
   const startTimestamp = getNow().getTime();
@@ -1350,7 +1350,7 @@ async function typecheck({
       Buffer.from(
         Inject.versionedIdentifier(
           outputPath.targetName,
-          webSocketPort,
+          webSocketConnection,
           webSocketToken,
         ),
       ),
@@ -1368,7 +1368,7 @@ async function typecheck({
               outputPath,
               getNow().getTime(),
               outputState.browserUiPosition,
-              webSocketPort,
+              webSocketConnection,
               webSocketToken,
               logger.config.debug,
             ),

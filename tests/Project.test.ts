@@ -13,6 +13,7 @@ import {
   markAsElmVersion,
   markAsElmWatchJsonPath,
   markAsElmWatchStuffJsonPath,
+  markAsStaticFilesDir,
   markAsTargetName,
 } from "../src/Types";
 import { stringSnapshotSerializer } from "./Helpers";
@@ -21,6 +22,14 @@ const getNow: GetNow = () => new Date();
 
 const project: Project = {
   watchRoots: new Set([markAsAbsolutePath("/Users/you/project")]),
+  staticFilesDir: markAsStaticFilesDir(
+    markAsAbsolutePath("/Users/you/project/public"),
+  ),
+  webSocketUrl: {
+    tag: "UrlFromConfig",
+    url: new URL("ws://localhost:1234"),
+    source: "elm-watch.json",
+  },
   elmVersion: markAsElmVersion("0.19.1"),
   elmWatchJsonPath: markAsElmWatchJsonPath(
     markAsAbsolutePath("/Users/you/project/elm-watch.json"),
@@ -256,6 +265,12 @@ describe("Project", () => {
         "watchRoots": [
           "/Users/you/project"
         ],
+        "staticFilesDir": "/Users/you/project/public",
+        "webSocketUrl": {
+          "tag": "UrlFromConfig",
+          "url": "ws://localhost:1234/",
+          "source": "elm-watch.json"
+        },
         "elmWatchJson": "/Users/you/project/elm-watch.json",
         "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch/stuff.json",
         "maxParallel": 12,
@@ -343,6 +358,6 @@ describe("Project", () => {
           }
         ]
       }
-    `);
+      `);
   });
 });

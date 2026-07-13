@@ -1,4 +1,5 @@
 {
+    "serve": ".",
     "targets": {
         "Main": {
             "inputs": [
