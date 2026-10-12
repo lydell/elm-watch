@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+import spawn from "cross-spawn";
+import fs from "fs";
+import path from "path";
+import WebSocket from "ws";
+
+// elm-watch runs `elm --version` on every (re)start. During a restart (for
+// example when elm.json changes), the WebSocket server keeps running, but
+// queues incoming messages until the new run is set up. Connect during that
+// time, so that a message is queued. On the first start there is no stuff.json
+// yet (it is written once the WebSocket server is listening), so nothing is
+// done then.
+async function connectIfRestarting() {
+  const stuffJsonPath = path.join("elm-stuff", "elm-watch", "stuff.json");
+  if (!process.argv.includes("--version") || !fs.existsSync(stuffJsonPath)) {
+    return;
+  }
+
+  const { port, webSocketToken } = JSON.parse(
+    fs.readFileSync(stuffJsonPath, "utf8"),
+  );
+  const url = new URL(`ws://localhost:${port}/elm-watch`);
+  url.searchParams.set("webSocketToken", webSocketToken);
+  url.searchParams.set("targetName", "Html");
+  url.searchParams.set("elmCompiledTimestamp", "0");
+
+  const webSocket = new WebSocket(url);
+  await new Promise((resolve, reject) => {
+    webSocket.on("open", resolve);
+    webSocket.on("error", reject);
+  });
+  webSocket.close();
+  await new Promise((resolve) => {
+    webSocket.on("close", resolve);
+  });
+}
+
+await connectIfRestarting();
+
+const child = spawn("elm", process.argv.slice(2), {
+  env: {
+    ...process.env,
+    PATH: process.env.PATH.split(path.delimiter)
+      .filter((part) => !part.includes("bad-bin"))
+      .join(path.delimiter),
+  },
+  stdio: "inherit",
+});
+
+child.on("exit", (exitCode) => {
+  process.exit(exitCode);
+});

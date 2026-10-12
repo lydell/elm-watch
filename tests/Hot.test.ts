@@ -1682,6 +1682,66 @@ describe("hot", () => {
     }
   });
 
+  test("WebSocket message during restart", async () => {
+    // When elm.json changes, elm-watch restarts but keeps the WebSocket server.
+    // Messages received during the restart are queued and replayed once the
+    // new run is set up. Replaying them used to crash with:
+    // ReferenceError: Cannot access 'mutable' before initialization
+    // The fake `elm` connects to the WebSocket server when `elm --version` is
+    // run during the restart, so that a message is queued.
+    const elmJsonPath = path.join(FIXTURES_DIR, "basic", "elm.json");
+
+    const { terminal } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      isTTY: false,
+      bin: "connect-during-restart",
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            touch(elmJsonPath);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ⏳ Html: elm make (typecheck only)
+      ✅ Html⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⏳ Html: elm make
+      ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      ⏳ Html: elm make
+      ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/basic/elm.json⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket disconnected for: Html⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
   test("changes to elm.json – typecheck only", async () => {
     const fixture = "changes-to-elm-json";
     const dir = path.join(FIXTURES_DIR, fixture);
