@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { elmWatchCli } from "../src";
+import elmWatchCli from "../src";
 import { Env, NO_COLOR } from "../src/Env";
 import {
   assertExitCode,
@@ -105,6 +105,13 @@ describe("help", () => {
           ⧙ELM_WATCH_EXIT_ON_STDIN_END⧘
               Exit elm-watch when stdin ends
 
+          ⧙ELM_WATCH_HOST⧘
+              Defaults to 0.0.0.0 (expose on local network)
+              Set it to 127.0.0.1 to restrict to your computer
+
+          ⧙ELM_WATCH_WEBSOCKET_URL⧘
+              Override "webSocketUrl" in ⧙elm-watch.json⧘ dynamically
+
       ⧙Documentation:⧘
           https://lydell.github.io/elm-watch/
 
@@ -167,6 +174,13 @@ describe("help", () => {
 
           ELM_WATCH_EXIT_ON_STDIN_END
               Exit elm-watch when stdin ends
+
+          ELM_WATCH_HOST
+              Defaults to 0.0.0.0 (expose on local network)
+              Set it to 127.0.0.1 to restrict to your computer
+
+          ELM_WATCH_WEBSOCKET_URL
+              Override "webSocketUrl" in elm-watch.json dynamically
 
       Documentation:
           https://lydell.github.io/elm-watch/

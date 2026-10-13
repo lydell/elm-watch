@@ -8,7 +8,7 @@ import {
   ReachedIdleStateReason,
   UppercaseLetter,
 } from "../client/client";
-import { elmWatchCli } from "../src";
+import elmWatchCli from "../src";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";

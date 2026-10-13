@@ -6,7 +6,9 @@
   "description": "`elm make` in watch mode. Fast and reliable.",
   "repository": "lydell/elm-watch",
   "type": "commonjs",
-  "exports": {},
+  "exports": {
+    ".": "./index.js"
+  },
   "bin": "./index.js",
   "keywords": ["elm", "watch", "watcher"]
 }

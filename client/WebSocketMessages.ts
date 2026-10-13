@@ -1,5 +1,6 @@
 import * as Codec from "tiny-decoders";
 
+import { NonEmptyArray } from "../src/NonEmptyArray";
 import { AbsolutePath, BrowserUiPosition, CompilationMode } from "../src/Types";
 
 const nonNegativeIntCodec = Codec.flatMap(Codec.number, {
@@ -113,6 +114,13 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("OpenEditorFailed"),
     error: OpenEditorError,
+  },
+  {
+    tag: Codec.tag("StaticFilesChanged"),
+    changedFileUrlPaths: NonEmptyArray(Codec.string),
+  },
+  {
+    tag: Codec.tag("StaticFilesMayHaveChangedWhileDisconnected"),
   },
   {
     tag: Codec.tag("StatusChanged"),

@@ -15,6 +15,7 @@ import {
   type ElmWatchJsonPath,
   markAsElmWatchJsonPath,
 } from "./Types";
+import { WebSocketUrl } from "./WebSocketUrl";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
@@ -118,6 +119,10 @@ const Config = Codec.fields(
     targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
     postprocess: Codec.field(NonEmptyArray(Codec.string), { optional: true }),
     port: Codec.field(Port, { optional: true }),
+    webSocketUrl: Codec.field(WebSocketUrl("elm-watch.json"), {
+      optional: true,
+    }),
+    serve: Codec.field(Codec.string, { optional: true }),
   },
   { allowExtraFields: false },
 );

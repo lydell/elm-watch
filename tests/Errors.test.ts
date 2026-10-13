@@ -6,7 +6,7 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { elmWatchCli } from "../src";
+import elmWatchCli from "../src";
 import * as ElmWatchJson from "../src/ElmWatchJson";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import {
@@ -1861,6 +1861,7 @@ describe("errors", () => {
       );
 
       expect(adjustedOutput).toMatchInlineSnapshot(`
+        📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
         ⏳ Main: elm make (typecheck only)
         ⏳ Main: interrupted
         ⏳ Main: elm make (typecheck only)
@@ -1889,8 +1890,6 @@ describe("errors", () => {
             """⧘
 
         🚨 ⧙1⧘ error found
-
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
         ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
         🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
@@ -2716,7 +2715,8 @@ describe("errors", () => {
 
         The file contains nothing essential, but something weird is going on.
 
-        📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+        📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+        📊 ⧙web socket connections:⧘ 0
 
         ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       `);
@@ -2837,7 +2837,8 @@ describe("errors", () => {
 
       🚨 ⧙1⧘ error found
 
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 0
 
       🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);

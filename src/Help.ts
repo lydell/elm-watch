@@ -1,7 +1,9 @@
 import { EMOJI, emojiWidthFix } from "./Compile";
 import {
   ELM_WATCH_EXIT_ON_STDIN_END,
+  ELM_WATCH_HOST,
   ELM_WATCH_OPEN_EDITOR,
+  ELM_WATCH_WEBSOCKET_URL,
   NO_COLOR,
 } from "./Env";
 import { bold, dim } from "./Helpers";
@@ -69,6 +71,13 @@ ${bold("Environment variables:")}
 
     ${bold(ELM_WATCH_EXIT_ON_STDIN_END)}
         Exit elm-watch when stdin ends
+
+    ${bold(ELM_WATCH_HOST)}
+        Defaults to 0.0.0.0 (expose on local network)
+        Set it to 127.0.0.1 to restrict to your computer
+
+    ${bold(ELM_WATCH_WEBSOCKET_URL)}
+        Override "webSocketUrl" in ${elmWatchJson} dynamically
 
 ${bold("Documentation:")}
     https://lydell.github.io/elm-watch/
