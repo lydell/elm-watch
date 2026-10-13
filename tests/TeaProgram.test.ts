@@ -455,4 +455,36 @@ describe("runTeaProgram", () => {
 
     expect(events).toStrictEqual(["update RunCmds", "before"]);
   });
+
+  test("exception in initMutable", async () => {
+    const error = new Error("Thrown");
+    const { promise, events, callbacks } = runProgram({
+      initCmds: [{ tag: "Log", message: "init" }],
+      onInitMutable: ({ dispatch }) => {
+        dispatch({ tag: "Increment" });
+        throw error;
+      },
+    });
+
+    await expect(promise).rejects.toBe(error);
+
+    // Dispatching after the program has finished does nothing.
+    callbacks.dispatch({ tag: "Increment" });
+
+    expect(events).toStrictEqual([]);
+  });
+
+  test("non-Error exception in initMutable", async () => {
+    const { promise } = runProgram({
+      initCmds: [],
+      onInitMutable: () => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw "Thrown";
+      },
+    });
+
+    await expect(promise).rejects.toThrow(
+      'Caught error not instanceof Error: "Thrown"',
+    );
+  });
 });

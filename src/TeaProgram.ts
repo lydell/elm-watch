@@ -78,18 +78,17 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
       }
     };
 
-    const mutable = options.initMutable(
-      dispatch,
-      resolveProgram,
-      rejectProgram,
-    );
+    // Only used once `initMutable` has returned (see `running` above).
+    let mutable: Mutable;
 
     try {
+      mutable = options.initMutable(dispatch, resolveProgram, rejectProgram);
       runCmds(initialCmds);
     } catch (error) {
       rejectProgram(toError(error));
     }
 
+    // If anything above failed, this just clears the queue, since `killed` is set.
     runMsgQueue();
   });
 }
