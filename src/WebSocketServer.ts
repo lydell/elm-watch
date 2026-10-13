@@ -251,13 +251,21 @@ export class WebSocketServer {
 
   setDispatch(dispatch: (msg: WebSocketServerMsg) => void): void {
     this.dispatch = dispatch;
-    // When testing, a change to elm.json gives a 5 ms room where queueing is needed.
-    // That’s very unlikely to even be needed, and very hard to test.
-    /* v8 ignore start */
-    for (const msg of this.msgQueue) {
-      dispatch(msg);
+    // Messages received while restarting (for example when elm.json changes)
+    // are queued, and replayed here. Clear the queue so the messages aren’t
+    // replayed again on the next `setDispatch`. Replay them in a microtask,
+    // since the caller might not be ready to receive messages until
+    // `setDispatch` returns. Use `this.dispatch` in case `unsetDispatch` is
+    // called before then (re-queueing the messages).
+    const { msgQueue } = this;
+    this.msgQueue = [];
+    if (msgQueue.length > 0) {
+      queueMicrotask(() => {
+        for (const msg of msgQueue) {
+          this.dispatch(msg);
+        }
+      });
     }
-    /* v8 ignore stop */
   }
 
   unsetDispatch(): void {

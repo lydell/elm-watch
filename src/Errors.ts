@@ -739,8 +739,9 @@ I tried to make sure all packages are installed by running the following command
 
 ${printCommand(command)}
 
-I expected it to either exit 0 with no output (success),
-or exit 1 with an error I can recognize (using regex) on stderr.
+The file is not supposed to exist, so I expected it to exit 1 with
+a FILE NOT FOUND error (success), or with another error I can recognize
+(using regex) on stderr.
 
 ${bold("But it exited like this:")}
 
@@ -1056,21 +1057,6 @@ I thought that all outputs had finished compiling, but my inner state says
 this target is still in the ${bold(state)} phase.
 
 ${bold("This is not supposed to ever happen.")}
-`;
-}
-
-export function creatingDummyFailed(
-  elmJsonPath: ElmJsonPath,
-  error: Error,
-): ErrorTemplate {
-  return fancyError("FILE SYSTEM TROUBLE", {
-    tag: "ElmJsonPath",
-    theElmJsonPath: elmJsonPath,
-  })`
-I tried to make sure that all packages are installed. To do that, I need to
-create a temporary dummy .elm file but that failed:
-
-${text(error.message)}
 `;
 }
 

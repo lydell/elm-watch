@@ -193,9 +193,6 @@ export function installDependencies(
           break;
         }
 
-        case "CreatingDummyFailed":
-          return onError(Errors.creatingDummyFailed(elmJsonPath, result.error));
-
         case "ElmNotFoundError":
           return onError(
             Errors.elmNotFoundError(

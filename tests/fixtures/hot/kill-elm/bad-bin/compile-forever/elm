@@ -8,7 +8,9 @@ const inputPath = path.join(import.meta.dirname, "..", "..", "src", "Main.elm");
 const lockPath = path.join(import.meta.dirname, "..", "..", "lock");
 const lockFile = fs.readFileSync(lockPath, "utf8");
 
-const isInstall = process.argv.some((arg) => arg.includes("ElmWatchDummy"));
+const isInstall = process.argv.some((arg) =>
+  arg.includes("ElmWatchNonExistentFile"),
+);
 
 function touch(filePath) {
   const now = new Date();

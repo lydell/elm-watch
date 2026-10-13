@@ -1,3 +1,5 @@
+import { toError } from "./Helpers";
+
 export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
   initMutable: (
     dispatch: (msg: Msg) => void,
@@ -19,67 +21,74 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     let model: Model = initialModel;
     const msgQueue: Array<Msg> = [];
     let killed = false;
+    // Messages dispatched while running are queued, and handled in order once
+    // the current work is done. This starts out as `true`, since `initMutable`
+    // might call `dispatch` synchronously, before `mutable` has been assigned,
+    // and since the initial commands should all run before any message is
+    // handled.
+    let running = true;
 
-    const dispatch = (dispatchedMsg: Msg): void => {
-      /* v8 ignore start */
+    const resolveProgram = (result: Result): void => {
+      killed = true;
+      resolve(result);
+    };
+
+    const rejectProgram = (error: Error): void => {
+      killed = true;
+      reject(error);
+    };
+
+    const dispatch = (msg: Msg): void => {
       if (killed) {
         return;
       }
-      /* v8 ignore stop */
-      const alreadyRunning = msgQueue.length > 0;
-      msgQueue.push(dispatchedMsg);
-      if (alreadyRunning) {
-        return;
+      msgQueue.push(msg);
+      if (!running) {
+        runMsgQueue();
       }
-      for (const msg of msgQueue) {
-        const [newModel, cmds] = options.update(msg, model);
-        model = newModel;
-        runCmds(cmds);
+    };
+
+    const runMsgQueue = (): void => {
+      running = true;
+      try {
+        for (const msg of msgQueue) {
+          if (killed) {
+            break;
+          }
+          const [newModel, cmds] = options.update(msg, model);
+          model = newModel;
+          runCmds(cmds);
+        }
+      } catch (error) {
+        rejectProgram(toError(error));
+      } finally {
+        // Always reset, so that the program can’t get stuck with messages that
+        // are never handled.
+        msgQueue.length = 0;
+        running = false;
       }
-      msgQueue.length = 0;
     };
 
     const runCmds = (cmds: Array<Cmd>): void => {
       for (const cmd of cmds) {
-        options.runCmd(
-          cmd,
-          mutable,
-          dispatch,
-          (result) => {
-            cmds.length = 0;
-            killed = true;
-            resolve(result);
-          },
-          /* v8 ignore start */
-          (error) => {
-            cmds.length = 0;
-            killed = true;
-            reject(error);
-          },
-          /* v8 ignore stop */
-        );
-        /* v8 ignore start */
         if (killed) {
           break;
         }
-        /* v8 ignore stop */
+        options.runCmd(cmd, mutable, dispatch, resolveProgram, rejectProgram);
       }
     };
 
-    const mutable = options.initMutable(
-      dispatch,
-      (result) => {
-        killed = true;
-        resolve(result);
-      },
-      /* v8 ignore start */
-      (error) => {
-        killed = true;
-        reject(error);
-      },
-      /* v8 ignore stop */
-    );
+    // Only used once `initMutable` has returned (see `running` above).
+    let mutable: Mutable;
 
-    runCmds(initialCmds);
+    try {
+      mutable = options.initMutable(dispatch, resolveProgram, rejectProgram);
+      runCmds(initialCmds);
+    } catch (error) {
+      rejectProgram(toError(error));
+    }
+
+    // If anything above failed, this just clears the queue, since `killed` is set.
+    runMsgQueue();
   });
 }
