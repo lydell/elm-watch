@@ -12,7 +12,6 @@ import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_MAX_PARALLEL,
-  __ELM_WATCH_TMP_DIR,
   Env,
   NO_COLOR,
 } from "../src/Env";
@@ -122,7 +121,12 @@ async function runWithBadElmBin(
   {
     postprocess = false,
     exitHotOnError = false,
-  }: { postprocess?: boolean; exitHotOnError?: boolean } = {},
+    originalStdout = false,
+  }: {
+    postprocess?: boolean;
+    exitHotOnError?: boolean;
+    originalStdout?: boolean;
+  } = {},
 ): Promise<string> {
   const dir = path.join(FIXTURES_DIR, "valid");
   const BUILD = path.join(dir, "build");
@@ -133,6 +137,7 @@ async function runWithBadElmBin(
     {
       env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
       exitHotOnError,
+      originalStdout,
     },
   );
 }
@@ -1136,33 +1141,14 @@ describe("errors", () => {
   });
 
   describe("elm install errors", () => {
-    test("dummy file creation error", async () => {
-      const fixture = "valid";
-      const tmpDir = path.join(FIXTURES_DIR, fixture, "bad-tmp");
+    test("elm install error", async () => {
       expect(
-        await run(fixture, ["make", "app"], {
-          env: {
-            ...process.env,
-            ...TEST_ENV,
-            [__ELM_WATCH_TMP_DIR]: tmpDir,
-          },
+        await runWithBadElmBin("install-error", {
           originalStdout: true, // Check that we get "🚨 Dependencies" below (one test is enough).
         }),
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
 
-        ⧙-- FILE SYSTEM TROUBLE ---------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/valid/elm.json
-
-        I tried to make sure that all packages are installed. To do that, I need to
-        create a temporary dummy .elm file but that failed:
-
-        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/bad-tmp/ElmWatchDummy.elm'
-      `);
-    });
-
-    test("elm install error", async () => {
-      expect(await runWithBadElmBin("install-error")).toMatchInlineSnapshot(`
         ⧙-- PROBLEM LOADING PACKAGE LIST ------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
@@ -1214,10 +1200,11 @@ describe("errors", () => {
           I tried to make sure all packages are installed by running the following commands:
 
           cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
+          elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with an error I can recognize (using regex) on stderr.
+          The file is not supposed to exist, so I expected it to exit 1 with
+          a FILE NOT FOUND error (success), or with another error I can recognize
+          (using regex) on stderr.
 
           ⧙But it exited like this:⧘
 
@@ -1236,10 +1223,11 @@ describe("errors", () => {
           I tried to make sure all packages are installed by running the following commands:
 
           cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
+          elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with an error I can recognize (using regex) on stderr.
+          The file is not supposed to exist, so I expected it to exit 1 with
+          a FILE NOT FOUND error (success), or with another error I can recognize
+          (using regex) on stderr.
 
           ⧙But it exited like this:⧘
 
@@ -1261,10 +1249,11 @@ describe("errors", () => {
           I tried to make sure all packages are installed by running the following commands:
 
           cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --output=/dev/null /tmp/fake/ElmWatchDummy.elm
+          elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
 
-          I expected it to either exit 0 with no output (success),
-          or exit 1 with an error I can recognize (using regex) on stderr.
+          The file is not supposed to exist, so I expected it to exit 1 with
+          a FILE NOT FOUND error (success), or with another error I can recognize
+          (using regex) on stderr.
 
           ⧙But it exited like this:⧘
 

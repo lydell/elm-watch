@@ -1,10 +1,12 @@
 import crossSpawn from "cross-spawn";
 import path from "path";
 
-const isInstall = process.argv.some((arg) => arg.includes("ElmWatchDummy"));
+const isInstall = process.argv.some((arg) =>
+  arg.includes("ElmWatchNonExistentFile"),
+);
 
 if (isInstall) {
-  crossSpawn("elm", process.argv.slice(2), {
+  const child = crossSpawn("elm", process.argv.slice(2), {
     env: {
       ...process.env,
       PATH: process.env.PATH.split(path.delimiter)
@@ -12,6 +14,10 @@ if (isInstall) {
         .join(path.delimiter),
     },
     stdio: "inherit",
+  });
+
+  child.on("exit", (exitCode) => {
+    process.exit(exitCode);
   });
 }
 

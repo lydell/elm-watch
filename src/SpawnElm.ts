@@ -1,14 +1,12 @@
-import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError";
-import { __ELM_WATCH_ELM_TIMEOUT_MS, __ELM_WATCH_TMP_DIR, Env } from "./Env";
+import { __ELM_WATCH_ELM_TIMEOUT_MS, Env } from "./Env";
 import * as Errors from "./Errors";
-import { silentlyReadIntEnvValue, toError } from "./Helpers";
+import { silentlyReadIntEnvValue } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
+import { absoluteDirname } from "./PathHelpers";
 import { Command, ExitReason, spawn, SpawnResult } from "./Spawn";
 import {
   AbsolutePath,
@@ -18,7 +16,6 @@ import {
   ElmWatchJsonPath,
   GetNow,
   InputPath,
-  markAsAbsolutePath,
   markAsElmVersion,
   OutputPath,
 } from "./Types";
@@ -304,10 +301,6 @@ function parseActualElmMakeJson(
 
 type ElmInstallResult =
   | {
-      tag: "CreatingDummyFailed";
-      error: Error;
-    }
-  | {
       tag: "ElmInstallError";
       title: string;
       message: string;
@@ -340,8 +333,24 @@ type ElmInstallResult =
 
 const elmJsonErrorMessageRegex = /^-- (.+) -+( elm\.json)?\r?\n([^]+)$/;
 
+const fileNotFoundErrorMessageRegex = /^-- FILE NOT FOUND -+\r?\n/;
+
 const elmStuffErrorMessagePrefixRegex =
   /^\+-+\r?\n(?:\|.*\r?\n)+\+-+\r?\n\r?\n/;
+
+// To install packages, we run `elm make` on a file that does not exist. Elm
+// installs and verifies all packages (writing elm-stuff/0.19.x/d.dat and
+// friends) before it notices that the file is missing. That makes it fail with
+// "FILE NOT FOUND", which we treat as success. We used to compile a dummy file
+// instead, but then Elm writes d.dat twice: First in a background thread after
+// verifying the packages, and then again after compiling the dummy file. When
+// there is no elm-stuff/ (like in CI), the second write could happen while the
+// first one was still in progress, failing with "withBinaryFile: resource busy
+// (file is locked)". With a missing file, Elm stops before the second write.
+// https://github.com/elm/compiler/issues/2258
+// We run `elm` in the directory of elm.json, and since elm.json is a file, a
+// path "inside" it can never exist.
+const nonExistentFile = "elm.json/ElmWatchNonExistentFile.elm";
 
 export function install({
   elmJsonPath,
@@ -355,35 +364,12 @@ export function install({
   promise: Promise<ElmInstallResult>;
   kill: (options: { force: boolean }) => void;
 } {
-  const dummy = absolutePathFromString(
-    markAsAbsolutePath(env[__ELM_WATCH_TMP_DIR] ?? os.tmpdir()),
-    "ElmWatchDummy.elm",
-  );
-
-  try {
-    fs.writeFileSync(dummy, elmWatchDummy());
-  } catch (unknownError) {
-    const error = toError(unknownError);
-    return {
-      promise: Promise.resolve({
-        tag: "CreatingDummyFailed",
-        error,
-      }),
-      kill:
-        /* v8 ignore start */
-        () => {
-          // Do nothing.
-        },
-      /* v8 ignore stop */
-    };
-  }
-
   const command: Command = {
     command: "elm",
     // Don’t use `--report=json` here, because then Elm won’t print downloading
     // of packages. We unfortunately lose colors this way, but package download
     // errors aren’t very colorful anyway.
-    args: ["make", `--output=/dev/null`, dummy],
+    args: ["make", `--output=/dev/null`, nonExistentFile],
     options: {
       cwd: absoluteDirname(elmJsonPath),
       env,
@@ -417,8 +403,11 @@ export function install({
 
         if (
           exitReason.tag === "ExitCode" &&
-          exitReason.exitCode === 0 &&
-          stderr === ""
+          ((exitReason.exitCode === 1 &&
+            fileNotFoundErrorMessageRegex.test(stderr)) ||
+            // In case `elm` is a wrapper that exits 0 without output (like
+            // some fake `elm` binaries in the tests).
+            (exitReason.exitCode === 0 && stderr === ""))
         ) {
           return {
             tag: "Success",
@@ -488,17 +477,6 @@ export function install({
       /* v8 ignore stop */
     },
   };
-}
-
-function elmWatchDummy(): string {
-  return `
-module ElmWatchDummy exposing (dummy)
-
-
-dummy : ()
-dummy =
-    ()
-  `.trim();
 }
 
 export async function version({
