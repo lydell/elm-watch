@@ -19,6 +19,10 @@ type Msg =
   | {
       tag: "RunCmds";
       cmds: Array<Cmd>;
+    }
+  | {
+      tag: "Throw";
+      error: Error;
     };
 
 type Cmd =
@@ -37,6 +41,10 @@ type Cmd =
   | {
       tag: "Resolve";
       result: Result;
+    }
+  | {
+      tag: "Throw";
+      error: Error;
     };
 
 type Result = string;
@@ -88,6 +96,8 @@ function runProgram({
         }
         case "RunCmds":
           return [model, msg.cmds];
+        case "Throw":
+          throw msg.error;
       }
     },
     runCmd: (cmd, mutableArg, dispatch, resolvePromise, rejectPromise) => {
@@ -104,6 +114,8 @@ function runProgram({
         case "Resolve":
           resolvePromise(cmd.result);
           return;
+        case "Throw":
+          throw cmd.error;
       }
     },
   });
@@ -209,6 +221,27 @@ describe("runTeaProgram", () => {
     ]);
   });
 
+  test("messages dispatched during initial commands are handled after all initial commands", async () => {
+    const { promise, events } = runProgram({
+      initCmds: [
+        { tag: "Dispatch", msg: { tag: "Increment" } },
+        { tag: "Log", message: "init" },
+        {
+          tag: "Dispatch",
+          msg: { tag: "RunCmds", cmds: [{ tag: "Resolve", result: "Done" }] },
+        },
+      ],
+    });
+
+    await expect(promise).resolves.toBe("Done");
+    expect(events).toStrictEqual([
+      "init",
+      "update Increment",
+      "count 1",
+      "update RunCmds",
+    ]);
+  });
+
   test("stop running commands and processing messages after resolve in initial command", async () => {
     const { promise, events, callbacks } = runProgram({
       initCmds: [
@@ -251,25 +284,26 @@ describe("runTeaProgram", () => {
   });
 
   test("stop running commands and processing messages after resolve in queued message", async () => {
+    const cmds: Array<Cmd> = [
+      { tag: "Log", message: "finish" },
+      { tag: "Resolve", result: "Done" },
+      { tag: "Log", message: "after finish" },
+    ];
     const { promise, events, callbacks } = runProgram({
       initCmds: [
         { tag: "Log", message: "init" },
         { tag: "Log", message: "after init" },
       ],
       onInitMutable: ({ dispatch }) => {
-        dispatch({
-          tag: "RunCmds",
-          cmds: [
-            { tag: "Log", message: "finish" },
-            { tag: "Resolve", result: "Done" },
-            { tag: "Log", message: "after finish" },
-          ],
-        });
+        dispatch({ tag: "RunCmds", cmds });
         dispatch({ tag: "Increment" });
       },
     });
 
     await expect(promise).resolves.toBe("Done");
+
+    // The commands array returned by `update` is left as-is.
+    expect(cmds).toHaveLength(3);
 
     // Dispatching after the program has finished does nothing.
     callbacks.dispatch({ tag: "Increment" });
@@ -340,5 +374,85 @@ describe("runTeaProgram", () => {
     callbacks.dispatch({ tag: "Increment" });
 
     expect(events).toStrictEqual(["update Increment", "count 1"]);
+  });
+
+  test("resolve synchronously in initMutable", async () => {
+    const { promise, events, callbacks } = runProgram({
+      initCmds: [{ tag: "Log", message: "init" }],
+      onInitMutable: ({ dispatch, resolve }) => {
+        dispatch({ tag: "Increment" });
+        resolve("Done");
+      },
+    });
+
+    await expect(promise).resolves.toBe("Done");
+
+    // Dispatching after the program has finished does nothing.
+    callbacks.dispatch({ tag: "Increment" });
+
+    expect(events).toStrictEqual([]);
+  });
+
+  test("exception in initial command", async () => {
+    const error = new Error("Thrown");
+    const { promise, events, callbacks } = runProgram({
+      initCmds: [
+        { tag: "Log", message: "init" },
+        { tag: "Throw", error },
+        { tag: "Log", message: "after init" },
+      ],
+      onInitMutable: ({ dispatch }) => {
+        dispatch({ tag: "Increment" });
+      },
+    });
+
+    await expect(promise).rejects.toBe(error);
+
+    // Dispatching after the program has finished does nothing.
+    callbacks.dispatch({ tag: "Increment" });
+
+    expect(events).toStrictEqual(["init"]);
+  });
+
+  test("exception in update", async () => {
+    const error = new Error("Thrown");
+    const { promise, events, callbacks } = runProgram({ initCmds: [] });
+
+    callbacks.dispatch({
+      tag: "RunCmds",
+      cmds: [
+        { tag: "Dispatch", msg: { tag: "Throw", error } },
+        { tag: "Dispatch", msg: { tag: "Increment" } },
+      ],
+    });
+
+    await expect(promise).rejects.toBe(error);
+
+    // Dispatching after the program has finished does nothing.
+    callbacks.dispatch({ tag: "Increment" });
+
+    expect(events).toStrictEqual(["update RunCmds", "update Throw"]);
+  });
+
+  test("exception in command", async () => {
+    const error = new Error("Thrown");
+    const { promise, events, callbacks } = runProgram({ initCmds: [] });
+
+    callbacks.dispatch({
+      tag: "RunCmds",
+      cmds: [
+        { tag: "Log", message: "before" },
+        { tag: "Throw", error },
+        { tag: "Log", message: "after" },
+        { tag: "Dispatch", msg: { tag: "Increment" } },
+      ],
+    });
+
+    await expect(promise).rejects.toBe(error);
+
+    // Dispatching after the program has finished does nothing.
+    callbacks.dispatch({ tag: "Increment" });
+
+    expect(events).toStrictEqual(["update RunCmds", "before"]);
   });
 });
