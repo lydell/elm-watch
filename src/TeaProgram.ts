@@ -19,19 +19,27 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
     let model: Model = initialModel;
     const msgQueue: Array<Msg> = [];
     let killed = false;
+    // `initMutable` might call `dispatch` synchronously, before `mutable` has
+    // been assigned. Queue those messages until `mutable` is ready.
+    let initialized = false;
 
     const dispatch = (dispatchedMsg: Msg): void => {
-      /* v8 ignore start */
       if (killed) {
         return;
       }
-      /* v8 ignore stop */
       const alreadyRunning = msgQueue.length > 0;
       msgQueue.push(dispatchedMsg);
-      if (alreadyRunning) {
+      if (alreadyRunning || !initialized) {
         return;
       }
+      runMsgQueue();
+    };
+
+    const runMsgQueue = (): void => {
       for (const msg of msgQueue) {
+        if (killed) {
+          break;
+        }
         const [newModel, cmds] = options.update(msg, model);
         model = newModel;
         runCmds(cmds);
@@ -50,19 +58,15 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
             killed = true;
             resolve(result);
           },
-          /* v8 ignore start */
           (error) => {
             cmds.length = 0;
             killed = true;
             reject(error);
           },
-          /* v8 ignore stop */
         );
-        /* v8 ignore start */
         if (killed) {
           break;
         }
-        /* v8 ignore stop */
       }
     };
 
@@ -72,14 +76,14 @@ export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
         killed = true;
         resolve(result);
       },
-      /* v8 ignore start */
       (error) => {
         killed = true;
         reject(error);
       },
-      /* v8 ignore stop */
     );
 
+    initialized = true;
     runCmds(initialCmds);
+    runMsgQueue();
   });
 }
