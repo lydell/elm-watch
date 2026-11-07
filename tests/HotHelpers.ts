@@ -31,7 +31,6 @@ import {
   SilentReadStream,
   TEST_ENV,
   TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
-  wait,
   waitFor,
   waitOneFrame,
 } from "./Helpers";
@@ -747,18 +746,7 @@ export function runHotReload({
         }),
       );
 
-      // Here we write a file just before we start the watcher. I’ve seen this file
-      // be picked up by the watcher! But only when running all tests. Here’s the theory:
-      // 1. We write the file.
-      // 2. The operating system (macOS) takes note of the change. It is added to some
-      //    kind of batch of file system changes.
-      // 3. We start the watcher, which tells the OS that we are interested in file system changes.
-      // 4. The OS flushes its batch of file system changes to all subscribers.
-      // By waiting a little bit, we avoid getting updates about changes before we started watching.
-      // It’s a bad solution, but it does make tests less flaky. This type of tests is pretty slow
-      // to run through anyway, so this wait is just a drop in the ocean.
       write(1);
-      await wait(100);
 
       return run({
         fixture,
