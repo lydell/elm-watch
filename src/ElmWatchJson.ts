@@ -1,23 +1,23 @@
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import { AllowedHost } from "./AllowedHosts";
-import type { Config, Target as ConfigTarget } from "./Config";
-import { IS_WINDOWS } from "./IsWindows";
+import { AllowedHost } from "./AllowedHosts.ts";
+import type { Config, Target as ConfigTarget } from "./Config.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
-} from "./NonEmptyArray";
-import { absoluteDirname, findClosest, readJsonFile } from "./PathHelpers";
-import { Port } from "./Port";
+} from "./NonEmptyArray.ts";
+import { absoluteDirname, findClosest, readJsonFile } from "./PathHelpers.ts";
+import { Port } from "./Port.ts";
 import {
   type CliArg,
   type Cwd,
   type ElmWatchJsonPath,
   markAsElmWatchJsonPath,
-} from "./Types";
-import { WebSocketUrl } from "./WebSocketUrl";
+} from "./Types.ts";
+import { WebSocketUrl } from "./WebSocketUrl.ts";
 
 // First char uppercase: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L263-L267
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335

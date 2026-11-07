@@ -2,31 +2,43 @@ import * as os from "os";
 import * as path from "path";
 
 import {
-  AllowedHost,
+  type AllowedHost,
   allowedHostFromUrl,
   getAllowedHostsFromEnv,
-} from "./AllowedHosts";
-import type { Config, ConfigSource } from "./Config";
-import * as ElmJson from "./ElmJson";
-import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
-import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_WEBSOCKET_URL, Env } from "./Env";
-import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
-import { WalkImportsError } from "./ImportWalker";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+} from "./AllowedHosts.ts";
+import type { Config, ConfigSource } from "./Config.ts";
+import * as ElmJson from "./ElmJson.ts";
+import type { ElmWatchStuffJson } from "./ElmWatchStuffJson.ts";
+import {
+  __ELM_WATCH_MAX_PARALLEL,
+  ELM_WATCH_WEBSOCKET_URL,
+  type Env,
+} from "./Env.ts";
+import {
+  getSetSingleton,
+  silentlyReadIntEnvValue,
+  toError,
+} from "./Helpers.ts";
+import type { WalkImportsError } from "./ImportWalker.ts";
+import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
   absoluteRealpath,
   findClosest,
-} from "./PathHelpers";
-import { Postprocess, PostprocessError, PostprocessToRun } from "./Postprocess";
-import { RunElmMakeError } from "./SpawnElm";
+} from "./PathHelpers.ts";
+import type {
+  Postprocess,
+  PostprocessError,
+  PostprocessToRun,
+} from "./Postprocess.ts";
+import type { RunElmMakeError } from "./SpawnElm.ts";
 import {
   type AbsolutePath,
   type BrowserUiPosition,
   type CompilationMode,
   type ElmJsonPath,
-  ElmVersion,
+  type ElmVersion,
   type ElmWatchStuffDir,
   type ElmWatchStuffJsonPath,
   type GetNow,
@@ -38,8 +50,8 @@ import {
   type StaticFilesDir,
   type UncheckedInputPath,
   type WriteOutputErrorReasonForWriting,
-} from "./Types";
-import { WebSocketUrl } from "./WebSocketUrl";
+} from "./Types.ts";
+import { WebSocketUrl } from "./WebSocketUrl.ts";
 
 export type Project = {
   // Path of the directories containing elm-watch.json, all elm.json,
@@ -91,14 +103,17 @@ export class OutputState {
 
   dirty = true;
 
+  private getNow: GetNow;
+
   constructor(
     inputs: NonEmptyArray<InputPath>,
     postprocess: Postprocess,
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
     openErrorOverlay: boolean,
-    private getNow: GetNow,
+    getNow: GetNow,
   ) {
+    this.getNow = getNow;
     this.inputs = inputs;
     this.postprocess = postprocess;
     this.compilationMode = compilationMode;

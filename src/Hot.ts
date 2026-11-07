@@ -5,27 +5,27 @@ import * as os from "os";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 import * as url from "url";
-import { URLSearchParams } from "url";
+import type { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
 import {
   encodeWebSocketToClientMessage,
-  WebSocketToClientMessage,
+  type WebSocketToClientMessage,
   WebSocketToServerMessage,
-} from "../client/WebSocketMessages";
-import { ALLOWED_HOSTS_DOCS_LINK, RejectedHost } from "./AllowedHosts";
-import * as Compile from "./Compile";
-import type { ConfigSource } from "./Config";
-import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
+} from "../client/WebSocketMessages.ts";
+import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
+import * as Compile from "./Compile.ts";
+import type { ConfigSource } from "./Config.ts";
+import { ElmWatchStuffJson, type Target } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   ELM_WATCH_ALLOWED_HOSTS,
   ELM_WATCH_OPEN_EDITOR,
-  Env,
-} from "./Env";
-import * as Errors from "./Errors";
-import { ErrorTemplate } from "./Errors";
+  type Env,
+} from "./Env.ts";
+import * as Errors from "./Errors.ts";
+import type { ErrorTemplate } from "./Errors.ts";
 import {
   bold,
   capitalize,
@@ -35,48 +35,48 @@ import {
   quote,
   silentlyReadIntEnvValue,
   toError,
-} from "./Helpers";
-import { getHost, Host } from "./Host";
-import type { Logger, LoggerConfig } from "./Logger";
+} from "./Helpers.ts";
+import { getHost, type Host } from "./Host.ts";
+import type { Logger, LoggerConfig } from "./Logger.ts";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
-  NonEmptyArray,
-} from "./NonEmptyArray";
-import { absoluteDirname } from "./PathHelpers";
-import { PortChoice } from "./Port";
+  type NonEmptyArray,
+} from "./NonEmptyArray.ts";
+import { absoluteDirname } from "./PathHelpers.ts";
+import type { PortChoice } from "./Port.ts";
 import {
-  ElmJsonErrorWithMetadata,
+  type ElmJsonErrorWithMetadata,
   getFlatOutputs,
-  OutputError,
-  OutputState,
-  Project,
+  type OutputError,
+  type OutputState,
+  type Project,
   projectHasFilePathThatCanBeOpenedInEditor,
-} from "./Project";
-import { waitForRunningCommands } from "./Spawn";
-import { runTeaProgram } from "./TeaProgram";
-import * as Theme from "./Theme";
+} from "./Project.ts";
+import { waitForRunningCommands } from "./Spawn.ts";
+import { runTeaProgram } from "./TeaProgram.ts";
+import * as Theme from "./Theme.ts";
 import {
-  AbsolutePath,
-  BrowserUiPosition,
-  CompilationMode,
-  CreateServer,
-  ElmJsonPath,
-  ElmVersion,
-  ElmWatchJsonPath,
+  type AbsolutePath,
+  type BrowserUiPosition,
+  type CompilationMode,
+  type CreateServer,
+  type ElmJsonPath,
+  type ElmVersion,
+  type ElmWatchJsonPath,
   equalsInputPath,
-  GetNow,
+  type GetNow,
   markAsAbsolutePath,
-  OutputPath,
+  type OutputPath,
   TargetName,
-  WebSocketToken,
-} from "./Types";
+  type WebSocketToken,
+} from "./Types.ts";
 import {
-  WebSocketConnectionRejectedReason,
+  type WebSocketConnectionRejectedReason,
   WebSocketServer,
-  WebSocketServerMsg,
-} from "./WebSocketServer";
-import { WebSocketUrl } from "./WebSocketUrl";
+  type WebSocketServerMsg,
+} from "./WebSocketServer.ts";
+import type { WebSocketUrl } from "./WebSocketUrl.ts";
 
 type WatcherEventName = "added" | "changed" | "removed";
 

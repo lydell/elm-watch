@@ -3,21 +3,21 @@ import * as os from "os";
 import * as path from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import * as ElmWatchJson from "../src/ElmWatchJson";
-import { NO_COLOR } from "../src/Env";
+import type * as ElmWatchJson from "../src/ElmWatchJson.ts";
+import { NO_COLOR } from "../src/Env.ts";
 import {
   elmBinAlwaysSucceedEnv,
   fixtureDir,
   run,
   runAbsolute,
-} from "./ErrorsHelpers";
+} from "./ErrorsHelpers.ts";
 import {
   describeExceptWindows,
   rimraf,
   stringSnapshotSerializer,
   TEST_ENV,
   testExceptWindows,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

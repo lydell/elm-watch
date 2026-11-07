@@ -2,27 +2,27 @@
 
 import * as Codec from "tiny-decoders";
 
-import * as ElmJson from "../src/ElmJson";
-import { getSetSingleton } from "../src/Helpers";
-import { walkImports } from "../src/ImportWalker";
+import * as ElmJson from "../src/ElmJson.ts";
+import { getSetSingleton } from "../src/Helpers.ts";
+import { walkImports } from "../src/ImportWalker.ts";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
-  NonEmptyArray,
-} from "../src/NonEmptyArray";
+  type NonEmptyArray,
+} from "../src/NonEmptyArray.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
   findClosest,
-} from "../src/PathHelpers";
+} from "../src/PathHelpers.ts";
 import {
-  AbsolutePath,
-  Cwd,
-  ElmJsonPath,
+  type AbsolutePath,
+  type Cwd,
+  type ElmJsonPath,
   markAsAbsolutePath,
   markAsCwd,
   markAsElmJsonPath,
-} from "../src/Types";
+} from "../src/Types.ts";
 
 function run(args: Array<string>): void {
   if (!isNonEmptyArray(args)) {

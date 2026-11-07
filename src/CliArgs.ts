@@ -1,5 +1,5 @@
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import type { CliArg, CompilationMode, RunMode } from "./Types";
+import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
+import type { CliArg, CompilationMode, RunMode } from "./Types.ts";
 
 type ParseArgsResult =
   | {

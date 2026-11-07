@@ -1,10 +1,10 @@
 import * as fs from "fs";
 import * as Codec from "tiny-decoders";
 
-import * as ElmJson from "./ElmJson";
-import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex";
-import { __ELM_WATCH_LOADING_MESSAGE_DELAY, Env } from "./Env";
-import * as Errors from "./Errors";
+import * as ElmJson from "./ElmJson.ts";
+import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex.ts";
+import { __ELM_WATCH_LOADING_MESSAGE_DELAY, type Env } from "./Env.ts";
+import * as Errors from "./Errors.ts";
 import {
   bold,
   cursorHorizontalAbsolute,
@@ -13,46 +13,46 @@ import {
   printFileSize,
   silentlyReadIntEnvValue,
   toError,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   walkImports,
-  WalkImportsError,
-  WalkImportsResult,
-} from "./ImportWalker";
-import * as Inject from "./Inject";
-import { Logger, LoggerConfig } from "./Logger";
+  type WalkImportsError,
+  type WalkImportsResult,
+} from "./ImportWalker.ts";
+import * as Inject from "./Inject.ts";
+import type { Logger, LoggerConfig } from "./Logger.ts";
 import {
   flattenNonEmptyArray,
   isNonEmptyArray,
   mapNonEmptyArray,
-  NonEmptyArray,
+  type NonEmptyArray,
   nonEmptyArrayUniqueBy,
-} from "./NonEmptyArray";
-import { absoluteDirname } from "./PathHelpers";
-import { PostprocessToRun, runPostprocess } from "./Postprocess";
-import {
+} from "./NonEmptyArray.ts";
+import { absoluteDirname } from "./PathHelpers.ts";
+import { type PostprocessToRun, runPostprocess } from "./Postprocess.ts";
+import type {
   Duration,
   ElmJsonErrorWithMetadata,
   OutputError,
   OutputState,
   OutputStatus,
   Project,
-} from "./Project";
-import * as SpawnElm from "./SpawnElm";
+} from "./Project.ts";
+import * as SpawnElm from "./SpawnElm.ts";
 import {
-  AbsolutePath,
-  CompilationMode,
-  ElmJsonPath,
-  ElmVersion,
-  GetNow,
-  InputPath,
+  type AbsolutePath,
+  type CompilationMode,
+  type ElmJsonPath,
+  type ElmVersion,
+  type GetNow,
+  type InputPath,
   markAsTargetName,
-  OutputPath,
-  RunMode,
-  TargetName,
-  WebSocketToken,
-} from "./Types";
-import { WebSocketConnection } from "./WebSocketUrl";
+  type OutputPath,
+  type RunMode,
+  type TargetName,
+  type WebSocketToken,
+} from "./Types.ts";
+import type { WebSocketConnection } from "./WebSocketUrl.ts";
 
 export type InstallDependenciesResult =
   | { tag: "Error" }

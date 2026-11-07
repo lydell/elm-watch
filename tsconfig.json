@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "module": "Preserve",
-    "moduleResolution": "Bundler",
-    "isolatedModules": true,
+    "module": "NodeNext",
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
     "checkJs": true,
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,

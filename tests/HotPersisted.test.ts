@@ -4,22 +4,22 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { WebSocketToServerMessage } from "../client/WebSocketMessages";
+import { WebSocketToServerMessage } from "../client/WebSocketMessages.ts";
 import {
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   ELM_WATCH_OPEN_EDITOR,
-  Env,
+  type Env,
   NO_COLOR,
-} from "../src/Env";
-import { IS_WINDOWS } from "../src/IsWindows";
-import { markAsAbsolutePath } from "../src/Types";
+} from "../src/Env.ts";
+import { IS_WINDOWS } from "../src/IsWindows.ts";
+import { markAsAbsolutePath } from "../src/Types.ts";
 import {
   clean,
   onlyErrorMessages,
   rm,
   stringSnapshotSerializer,
   wait,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   assertDebugger,
   cleanupAfterEachTest,
@@ -30,7 +30,7 @@ import {
   run,
   showErrors,
   switchCompilationMode,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

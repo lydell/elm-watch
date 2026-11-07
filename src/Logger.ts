@@ -8,23 +8,23 @@ import {
   __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
   ELM_WATCH_EXIT_ON_STDIN_END,
-  Env,
+  type Env,
   NO_COLOR,
   WT_SESSION,
-} from "./Env";
-import * as Errors from "./Errors";
+} from "./Env.ts";
+import * as Errors from "./Errors.ts";
 import {
   BEGIN_SYNC_UPDATE,
   bold,
   CLEAR,
   END_SYNC_UPDATE,
-  ReadStream,
+  type ReadStream,
   removeColor,
   silentlyReadIntEnvValue,
-  WriteStream,
-} from "./Helpers";
-import { IS_WINDOWS } from "./IsWindows";
-import { GetNow } from "./Types";
+  type WriteStream,
+} from "./Helpers.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
+import type { GetNow } from "./Types.ts";
 
 export const DEFAULT_COLUMNS = 80;
 

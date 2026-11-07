@@ -1,7 +1,7 @@
 import type { Readable, Writable } from "stream";
 import * as Codec from "tiny-decoders";
 
-import { NonEmptyArray } from "./NonEmptyArray";
+import type { NonEmptyArray } from "./NonEmptyArray.ts";
 
 export type ReadStream = Readable & {
   isTTY: boolean;

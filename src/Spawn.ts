@@ -2,9 +2,9 @@ import * as childProcess from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
-import { Env } from "./Env";
-import { IS_WINDOWS } from "./IsWindows";
-import { AbsolutePath } from "./Types";
+import type { Env } from "./Env.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
+import type { AbsolutePath } from "./Types.ts";
 
 export type SpawnResult =
   | {

@@ -1,19 +1,19 @@
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import { Env } from "../src/Env";
-import * as Errors from "../src/Errors";
+import type { Env } from "../src/Env.ts";
+import * as Errors from "../src/Errors.ts";
 import {
   run,
   runWithBadElmBin,
   runWithBadElmBinAndWrittenError,
-} from "./ErrorsHelpers";
+} from "./ErrorsHelpers.ts";
 import {
   clean,
   stringSnapshotSerializer,
   TEST_ENV,
   testExceptWindows,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

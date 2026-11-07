@@ -3,15 +3,15 @@
 import * as fs from "fs";
 import * as Codec from "tiny-decoders";
 
-import { inject } from "../src/Inject";
-import { absolutePathFromString } from "../src/PathHelpers";
+import { inject } from "../src/Inject.ts";
+import { absolutePathFromString } from "../src/PathHelpers.ts";
 import {
   CompilationMode,
-  Cwd,
+  type Cwd,
   markAsAbsolutePath,
   markAsCwd,
   markAsTargetName,
-} from "../src/Types";
+} from "../src/Types.ts";
 
 class KnownError extends Error {}
 

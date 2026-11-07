@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import elmWatchCli from "../src";
+import elmWatchCli from "../src/index.ts";
 import {
   assertExitCode,
   clean,
@@ -13,7 +13,7 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   testExceptWindows,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "init");
 

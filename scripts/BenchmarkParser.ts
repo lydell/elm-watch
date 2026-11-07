@@ -5,10 +5,15 @@ import * as fs from "fs";
 import * as fsPromises from "fs/promises";
 import * as Codec from "tiny-decoders";
 
-import { isNonEmptyArray } from "../src/NonEmptyArray";
-import * as Parser from "../src/Parser";
-import { absolutePathFromString } from "../src/PathHelpers";
-import { AbsolutePath, Cwd, markAsAbsolutePath, markAsCwd } from "../src/Types";
+import { isNonEmptyArray } from "../src/NonEmptyArray.ts";
+import * as Parser from "../src/Parser.ts";
+import { absolutePathFromString } from "../src/PathHelpers.ts";
+import {
+  type AbsolutePath,
+  type Cwd,
+  markAsAbsolutePath,
+  markAsCwd,
+} from "../src/Types.ts";
 
 class KnownError extends Error {}
 

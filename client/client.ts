@@ -1,24 +1,24 @@
 import * as Codec from "tiny-decoders";
 
-import { formatDate, formatTime } from "../src/Helpers";
-import { NonEmptyArray } from "../src/NonEmptyArray";
-import { runTeaProgram } from "../src/TeaProgram";
+import { formatDate, formatTime } from "../src/Helpers.ts";
+import type { NonEmptyArray } from "../src/NonEmptyArray.ts";
+import { runTeaProgram } from "../src/TeaProgram.ts";
 import {
-  AbsolutePath,
+  type AbsolutePath,
   BrowserUiPosition,
-  CompilationMode,
-  CompilationModeWithProxy,
-  GetNow,
-} from "../src/Types";
-import { reloadAllCssIfNeeded } from "./css";
+  type CompilationMode,
+  type CompilationModeWithProxy,
+  type GetNow,
+} from "../src/Types.ts";
+import { reloadAllCssIfNeeded } from "./css.ts";
 import {
   decodeWebSocketToClientMessage,
-  ErrorLocation,
-  OpenEditorError,
-  StatusChange,
-  WebSocketToClientMessage,
+  type ErrorLocation,
+  type OpenEditorError,
+  type StatusChange,
+  type WebSocketToClientMessage,
   WebSocketToServerMessage,
-} from "./WebSocketMessages";
+} from "./WebSocketMessages.ts";
 
 // Support environments, such as Web Workers, where `window` does not exist.
 const window = globalThis as unknown as Window;

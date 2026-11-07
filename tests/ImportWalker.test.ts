@@ -1,16 +1,23 @@
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import { walkImports } from "../src/ImportWalker";
-import { mapNonEmptyArray, NonEmptyArray } from "../src/NonEmptyArray";
-import { absolutePathFromString, absoluteRealpath } from "../src/PathHelpers";
+import { walkImports } from "../src/ImportWalker.ts";
+import { mapNonEmptyArray, type NonEmptyArray } from "../src/NonEmptyArray.ts";
 import {
-  AbsolutePath,
+  absolutePathFromString,
+  absoluteRealpath,
+} from "../src/PathHelpers.ts";
+import {
+  type AbsolutePath,
   markAsAbsolutePath,
   markAsSourceDirectory,
-  SourceDirectory,
-} from "../src/Types";
-import { clean, stringSnapshotSerializer, testExceptWindows } from "./Helpers";
+  type SourceDirectory,
+} from "../src/Types.ts";
+import {
+  clean,
+  stringSnapshotSerializer,
+  testExceptWindows,
+} from "./Helpers.ts";
 
 const FIXTURES_DIR: AbsolutePath = markAsAbsolutePath(
   path.join(import.meta.dirname, "fixtures", "ImportWalker"),

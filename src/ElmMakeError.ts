@@ -1,7 +1,7 @@
 import * as Codec from "tiny-decoders";
 
-import { NonEmptyArray } from "./NonEmptyArray";
-import { AbsolutePath } from "./Types";
+import { NonEmptyArray } from "./NonEmptyArray.ts";
+import { AbsolutePath } from "./Types.ts";
 
 // https://github.com/elm/compiler/blob/94715a520f499591ac6901c8c822bc87cd1af24f/compiler/src/Reporting/Doc.hs#L412-L431
 // Lowercase means “dull” and uppercase means “vivid”:

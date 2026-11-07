@@ -5,7 +5,7 @@ import {
   removeIndents,
   stringSnapshotSerializer,
   waitOneFrame,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   assertCompilationMode,
   assertDebugDisabled,
@@ -14,7 +14,7 @@ import {
   click,
   runHotReload,
   switchCompilationMode,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

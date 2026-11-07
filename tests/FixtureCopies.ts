@@ -5,7 +5,7 @@ import * as os from "os";
 import * as path from "path";
 import { expect, onTestFinished } from "vitest";
 
-import { rimraf, TEST_ENV } from "./Helpers";
+import { rimraf, TEST_ENV } from "./Helpers.ts";
 import { spawnSync } from "./Spawn.js";
 
 const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures");

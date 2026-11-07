@@ -1,8 +1,8 @@
 import { isIP } from "net";
 import * as Codec from "tiny-decoders";
 
-import { ELM_WATCH_ALLOWED_HOSTS, Env } from "./Env";
-import { Brand } from "./Types";
+import { ELM_WATCH_ALLOWED_HOSTS, type Env } from "./Env.ts";
+import type { Brand } from "./Types.ts";
 
 // elm-watch’s server only accepts requests where the `Host` header (and for
 // WebSockets, also the `Origin` header) is one of the allowed hosts:

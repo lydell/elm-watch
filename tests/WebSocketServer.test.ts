@@ -3,12 +3,15 @@ import * as net from "net";
 import { describe, expect, test } from "vitest";
 import WebSocket from "ws";
 
-import { AllowedHost } from "../src/AllowedHosts";
-import { markAsHost } from "../src/Host";
-import { markAsPort } from "../src/Port";
-import { markAsWebSocketToken } from "../src/Types";
-import { WebSocketServer, WebSocketServerMsg } from "../src/WebSocketServer";
-import { stringSnapshotSerializer } from "./Helpers";
+import { AllowedHost } from "../src/AllowedHosts.ts";
+import { markAsHost } from "../src/Host.ts";
+import { markAsPort } from "../src/Port.ts";
+import { markAsWebSocketToken } from "../src/Types.ts";
+import {
+  WebSocketServer,
+  type WebSocketServerMsg,
+} from "../src/WebSocketServer.ts";
+import { stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

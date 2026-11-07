@@ -1,4 +1,4 @@
-import { toError } from "./Helpers";
+import { toError } from "./Helpers.ts";
 
 export async function runTeaProgram<Mutable, Msg, Model, Cmd, Result>(options: {
   initMutable: (

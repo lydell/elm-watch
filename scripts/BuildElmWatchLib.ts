@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import { FileToCopy, readPackage } from "./Build";
+import { type FileToCopy, readPackage } from "./Build.ts";
 
 const DIR = path.dirname(import.meta.dirname);
 const BUILD = path.join(DIR, "build-elm-watch-lib");
@@ -93,9 +93,9 @@ ${PACKAGE_REAL.description}
         setup(build) {
           build.onResolve(
             {
-              filter: /^\.\/ClientCode$/,
+              filter: /^\.\/ClientCode\.ts$/,
             },
-            (args) => ({ path: args.path, external: true }),
+            () => ({ path: "./ClientCode", external: true }),
           );
         },
       },

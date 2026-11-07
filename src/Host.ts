@@ -1,4 +1,4 @@
-import { ELM_WATCH_HOST, Env } from "./Env";
+import { ELM_WATCH_HOST, type Env } from "./Env.ts";
 
 export type Host = string & {
   readonly Host: never;

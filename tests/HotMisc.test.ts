@@ -3,10 +3,10 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, describe, expect, onTestFinished, test } from "vitest";
 
-import { ELM_WATCH_EXIT_ON_STDIN_END } from "../src/Env";
-import { LatestEvent, printTimeline } from "../src/Hot";
-import { LoggerConfig } from "../src/Logger";
-import { markAsAbsolutePath, markAsTargetName } from "../src/Types";
+import { ELM_WATCH_EXIT_ON_STDIN_END } from "../src/Env.ts";
+import { type LatestEvent, printTimeline } from "../src/Hot.ts";
+import type { LoggerConfig } from "../src/Logger.ts";
+import { markAsAbsolutePath, markAsTargetName } from "../src/Types.ts";
 import {
   clean,
   CtrlCReadStream,
@@ -18,7 +18,7 @@ import {
   testExceptWindows,
   touch,
   wait,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   expandUi,
@@ -26,7 +26,7 @@ import {
   moveUi,
   run,
   switchCompilationMode,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

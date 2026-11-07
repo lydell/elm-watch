@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import elmWatchCli from "../src";
-import { copyFixture } from "./FixtureCopies";
+import elmWatchCli from "../src/index.ts";
+import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
   clean,
@@ -13,7 +13,7 @@ import {
   readFile,
   SilentReadStream,
   stringSnapshotSerializer,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

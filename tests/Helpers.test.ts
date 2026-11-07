@@ -6,8 +6,8 @@ import {
   printDurationMs,
   printFileSize,
   unknownErrorToString,
-} from "../src/Helpers";
-import { stringSnapshotSerializer } from "./Helpers";
+} from "../src/Helpers.ts";
+import { stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

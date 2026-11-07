@@ -1,12 +1,16 @@
 import * as fs from "fs";
-import * as http from "http";
+import type * as http from "http";
 import * as path from "path";
 
-import { ALLOWED_HOSTS_DOCS_LINK, RejectedHost } from "./AllowedHosts";
-import type { ConfigSource } from "./Config";
-import { ELM_WATCH_ALLOWED_HOSTS } from "./Env";
-import { escapeHtml, toError } from "./Helpers";
-import { AbsolutePath, markAsAbsolutePath, StaticFilesDir } from "./Types";
+import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
+import type { ConfigSource } from "./Config.ts";
+import { ELM_WATCH_ALLOWED_HOSTS } from "./Env.ts";
+import { escapeHtml, toError } from "./Helpers.ts";
+import {
+  type AbsolutePath,
+  markAsAbsolutePath,
+  type StaticFilesDir,
+} from "./Types.ts";
 
 // Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
 // Removed markdown – otherwise that causes downloads in Firefox instead of
@@ -53,7 +57,11 @@ const DOCS_LINK = "https://lydell.github.io/elm-watch/server/";
 const DOCS_LINK_INDEX_HTML = `${DOCS_LINK}#indexhtml`;
 
 class Html {
-  constructor(private escapedHtml: string) {}
+  private escapedHtml: string;
+
+  constructor(escapedHtml: string) {
+    this.escapedHtml = escapedHtml;
+  }
 
   toString(): string {
     return this.escapedHtml;

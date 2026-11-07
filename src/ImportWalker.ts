@@ -2,10 +2,14 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { toError } from "./Helpers";
-import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import * as Parser from "./Parser";
-import { AbsolutePath, markAsAbsolutePath, SourceDirectory } from "./Types";
+import { toError } from "./Helpers.ts";
+import { mapNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
+import * as Parser from "./Parser.ts";
+import {
+  type AbsolutePath,
+  markAsAbsolutePath,
+  type SourceDirectory,
+} from "./Types.ts";
 
 export type WalkImportsResult =
   | WalkImportsError

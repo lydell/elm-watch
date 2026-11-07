@@ -39,6 +39,10 @@ export default defineConfig({
           },
         ],
         "typescript/consistent-type-definitions": [warn, "type"],
+        "typescript/consistent-type-imports": [
+          error,
+          { fixStyle: "inline-type-imports" },
+        ],
         "typescript/explicit-function-return-type": [
           warn,
           { allowExpressions: true },
@@ -54,6 +58,7 @@ export default defineConfig({
         "typescript/no-floating-promises": error,
         "typescript/no-for-in-array": warn,
         "typescript/no-implied-eval": error,
+        "typescript/no-import-type-side-effects": error,
         "typescript/no-inferrable-types": [warn, { ignoreParameters: true }],
         "typescript/no-invalid-void-type": error,
         "typescript/no-misused-promises": error,

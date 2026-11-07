@@ -3,10 +3,10 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import { quote } from "../src/Helpers";
-import { absolutePathFromString, readJsonFile } from "../src/PathHelpers";
-import { AbsolutePath, markAsAbsolutePath } from "../src/Types";
-import mainElmJson from "../tests/install-packages/elm.json";
+import { quote } from "../src/Helpers.ts";
+import { absolutePathFromString, readJsonFile } from "../src/PathHelpers.ts";
+import { type AbsolutePath, markAsAbsolutePath } from "../src/Types.ts";
+import mainElmJson from "../tests/install-packages/elm.json" with { type: "json" };
 
 const PACKAGES_TO_INSTALL: Record<string, string> = {
   ...mainElmJson.dependencies.direct,

@@ -2,9 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import { toError } from "./Helpers";
-import { NonEmptyArray } from "./NonEmptyArray";
-import { AbsolutePath, markAsAbsolutePath } from "./Types";
+import { toError } from "./Helpers.ts";
+import type { NonEmptyArray } from "./NonEmptyArray.ts";
+import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 
 export function absolutePathFromString(
   from: AbsolutePath,

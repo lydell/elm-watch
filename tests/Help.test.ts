@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import elmWatchCli from "../src";
-import { Env, NO_COLOR } from "../src/Env";
+import { type Env, NO_COLOR } from "../src/Env.ts";
+import elmWatchCli from "../src/index.ts";
 import {
   assertExitCode,
   clean,
@@ -11,7 +11,7 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 async function helpHelper(
   args: Array<string>,

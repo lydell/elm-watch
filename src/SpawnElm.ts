@@ -1,23 +1,28 @@
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import { ElmMakeError } from "./ElmMakeError";
-import { __ELM_WATCH_ELM_TIMEOUT_MS, Env } from "./Env";
-import * as Errors from "./Errors";
-import { silentlyReadIntEnvValue } from "./Helpers";
-import { NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname } from "./PathHelpers";
-import { Command, ExitReason, spawn, SpawnResult } from "./Spawn";
+import { ElmMakeError } from "./ElmMakeError.ts";
+import { __ELM_WATCH_ELM_TIMEOUT_MS, type Env } from "./Env.ts";
+import * as Errors from "./Errors.ts";
+import { silentlyReadIntEnvValue } from "./Helpers.ts";
+import type { NonEmptyArray } from "./NonEmptyArray.ts";
+import { absoluteDirname } from "./PathHelpers.ts";
 import {
-  AbsolutePath,
-  CompilationMode,
-  ElmJsonPath,
-  ElmVersion,
-  GetNow,
-  InputPath,
+  type Command,
+  type ExitReason,
+  spawn,
+  type SpawnResult,
+} from "./Spawn.ts";
+import {
+  type AbsolutePath,
+  type CompilationMode,
+  type ElmJsonPath,
+  type ElmVersion,
+  type GetNow,
+  type InputPath,
   markAsElmVersion,
-  OutputPath,
-} from "./Types";
+  type OutputPath,
+} from "./Types.ts";
 
 export type RunElmMakeResult =
   | RunElmMakeError

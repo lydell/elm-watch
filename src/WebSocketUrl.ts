@@ -1,7 +1,7 @@
 import * as Codec from "tiny-decoders";
 
-import { toError } from "./Helpers";
-import { Port } from "./Port";
+import { toError } from "./Helpers.ts";
+import type { Port } from "./Port.ts";
 
 export type WebSocketConnection =
   | WebSocketUrl

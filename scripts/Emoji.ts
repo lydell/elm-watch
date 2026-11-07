@@ -1,7 +1,7 @@
 /* oxlint-disable no-console */
 
-import { STARTS_WITH_EMOJI_REGEX } from "../src/EmojiRegex";
-import { bold } from "../src/Helpers";
+import { STARTS_WITH_EMOJI_REGEX } from "../src/EmojiRegex.ts";
+import { bold } from "../src/Helpers.ts";
 
 const matching: Array<string> = [];
 const nonMatching: Array<string> = [];

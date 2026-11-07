@@ -5,13 +5,13 @@ import {
   removeIndents,
   stringSnapshotSerializer,
   waitOneFrame,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   click,
   expandUi,
   runHotReload,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

@@ -13,14 +13,14 @@ import {
   touch,
   wait,
   waitFor,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   collapseUi,
   expandUi,
   fixtureDir,
   run,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

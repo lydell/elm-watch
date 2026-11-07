@@ -2,8 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import { fixtureDir, run, runWithBadElmBin } from "./ErrorsHelpers";
-import { fixtureOptions, rm, stringSnapshotSerializer } from "./Helpers";
+import { fixtureDir, run, runWithBadElmBin } from "./ErrorsHelpers.ts";
+import { fixtureOptions, rm, stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

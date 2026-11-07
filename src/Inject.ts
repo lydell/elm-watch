@@ -1,18 +1,18 @@
 import * as Codec from "tiny-decoders";
 
-import * as ClientCode from "./ClientCode";
-import {
+import * as ClientCode from "./ClientCode.ts";
+import type {
   BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
   OutputPath,
   TargetName,
   WebSocketToken,
-} from "./Types";
+} from "./Types.ts";
 import {
-  WebSocketConnection,
+  type WebSocketConnection,
   webSocketConnectionToPrimitive,
-} from "./WebSocketUrl";
+} from "./WebSocketUrl.ts";
 
 // This matches full functions, declared either with `function name(` or `var name =`.
 // NOTE: All function names in the regex must also be mentioned in the

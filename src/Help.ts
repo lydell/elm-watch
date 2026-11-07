@@ -1,4 +1,4 @@
-import { EMOJI, emojiWidthFix } from "./Compile";
+import { EMOJI, emojiWidthFix } from "./Compile.ts";
 import {
   ELM_WATCH_ALLOWED_HOSTS,
   ELM_WATCH_EXIT_ON_STDIN_END,
@@ -6,9 +6,9 @@ import {
   ELM_WATCH_OPEN_EDITOR,
   ELM_WATCH_WEBSOCKET_URL,
   NO_COLOR,
-} from "./Env";
-import { bold, dim } from "./Helpers";
-import { LoggerConfig } from "./Logger";
+} from "./Env.ts";
+import { bold, dim } from "./Helpers.ts";
+import type { LoggerConfig } from "./Logger.ts";
 
 const elmWatchJson = bold("elm-watch.json");
 

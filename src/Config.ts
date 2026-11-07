@@ -1,13 +1,13 @@
-import type { AllowedHost } from "./AllowedHosts";
-import type { NonEmptyArray } from "./NonEmptyArray";
-import type { Port } from "./Port";
+import type { AllowedHost } from "./AllowedHosts.ts";
+import type { NonEmptyArray } from "./NonEmptyArray.ts";
+import type { Port } from "./Port.ts";
 import type {
   AbsolutePath,
   CompilationMode,
   ElmWatchJsonPath,
   RunMode,
-} from "./Types";
-import type { WebSocketUrl } from "./WebSocketUrl";
+} from "./Types.ts";
+import type { WebSocketUrl } from "./WebSocketUrl.ts";
 
 // The validated configuration, regardless of where it came from.
 export type Config = {

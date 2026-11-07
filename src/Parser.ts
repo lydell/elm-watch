@@ -1,5 +1,5 @@
-import { split } from "./Helpers";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import { split } from "./Helpers.ts";
+import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 
 // Note: This was initially written in a beatiful, immutable way. But I changed
 // it to use mutation, since it turned out to be much faster. Basically, every

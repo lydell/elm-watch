@@ -7,8 +7,8 @@ import {
   checkHostHeader,
   checkOriginHeader,
   getAllowedHostsFromEnv,
-} from "../src/AllowedHosts";
-import { stringSnapshotSerializer } from "./Helpers";
+} from "../src/AllowedHosts.ts";
+import { stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

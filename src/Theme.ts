@@ -1,6 +1,6 @@
-import { Color } from "./ElmMakeError";
-import { IS_WINDOWS } from "./IsWindows";
-import { Logger } from "./Logger";
+import type { Color } from "./ElmMakeError.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
+import type { Logger } from "./Logger.ts";
 
 export type Theme = {
   foreground: string;

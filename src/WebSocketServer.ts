@@ -4,21 +4,22 @@ import type { AddressInfo } from "net";
 import * as net from "net";
 import type { Duplex } from "stream";
 import * as util from "util";
-import WebSocket, { WebSocketServer as WsServer } from "ws";
+import type WebSocket from "ws";
+import { WebSocketServer as WsServer } from "ws";
 
 import {
-  AllowedHost,
+  type AllowedHost,
   checkHostHeader,
   checkOriginHeader,
-  RejectedHost,
-} from "./AllowedHosts";
-import type { ConfigSource } from "./Config";
-import { toError } from "./Helpers";
-import { Host } from "./Host";
-import { markAsPort, Port, PortChoice } from "./Port";
-import * as SimpleStaticFileServer from "./SimpleStaticFileServer";
-import { CreateServer, StaticFilesDir } from "./Types";
-import { WebSocketToken } from "./Types";
+  type RejectedHost,
+} from "./AllowedHosts.ts";
+import type { ConfigSource } from "./Config.ts";
+import { toError } from "./Helpers.ts";
+import type { Host } from "./Host.ts";
+import { markAsPort, type Port, type PortChoice } from "./Port.ts";
+import * as SimpleStaticFileServer from "./SimpleStaticFileServer.ts";
+import type { CreateServer, StaticFilesDir } from "./Types.ts";
+import type { WebSocketToken } from "./Types.ts";
 
 // We used to require `/?`. Putting “elm-watch” in the path is useful for people
 // running elm-watch behind a proxy: They can use the same port for both the web

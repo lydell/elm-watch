@@ -1,34 +1,34 @@
 import * as crypto from "crypto";
 
-import * as CliArgs from "./CliArgs";
-import * as Compile from "./Compile";
-import type { Config } from "./Config";
-import * as ElmWatchJson from "./ElmWatchJson";
-import * as ElmWatchStuffJson from "./ElmWatchStuffJson";
-import { Env } from "./Env";
-import * as Errors from "./Errors";
-import * as Hot from "./Hot";
-import type { Logger } from "./Logger";
-import * as Make from "./Make";
-import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray";
-import { absolutePathFromString } from "./PathHelpers";
-import { initProject, projectToDebug } from "./Project";
-import * as SpawnElm from "./SpawnElm";
+import * as CliArgs from "./CliArgs.ts";
+import * as Compile from "./Compile.ts";
+import type { Config } from "./Config.ts";
+import * as ElmWatchJson from "./ElmWatchJson.ts";
+import * as ElmWatchStuffJson from "./ElmWatchStuffJson.ts";
+import type { Env } from "./Env.ts";
+import * as Errors from "./Errors.ts";
+import * as Hot from "./Hot.ts";
+import type { Logger } from "./Logger.ts";
+import * as Make from "./Make.ts";
+import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray.ts";
+import { absolutePathFromString } from "./PathHelpers.ts";
+import { initProject, projectToDebug } from "./Project.ts";
+import * as SpawnElm from "./SpawnElm.ts";
 import {
-  CliArg,
-  CompilationMode,
-  CreateServer,
-  Cwd,
-  ElmWatchJsonPath,
-  ElmWatchStuffDir,
-  ElmWatchStuffJsonPath,
-  GetNow,
+  type CliArg,
+  type CompilationMode,
+  type CreateServer,
+  type Cwd,
+  type ElmWatchJsonPath,
+  type ElmWatchStuffDir,
+  type ElmWatchStuffJsonPath,
+  type GetNow,
   markAsElmWatchStuffDir,
   markAsElmWatchStuffJsonPath,
   markAsWebSocketToken,
-  RunMode,
-  WebSocketToken,
-} from "./Types";
+  type RunMode,
+  type WebSocketToken,
+} from "./Types.ts";
 
 export type RunResult =
   | {

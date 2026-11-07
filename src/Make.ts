@@ -1,10 +1,10 @@
-import * as Compile from "./Compile";
-import { Env } from "./Env";
-import { bold, printDurationMs } from "./Helpers";
-import type { Logger, LoggerConfig } from "./Logger";
-import { isNonEmptyArray } from "./NonEmptyArray";
-import { Project } from "./Project";
-import { GetNow } from "./Types";
+import * as Compile from "./Compile.ts";
+import type { Env } from "./Env.ts";
+import { bold, printDurationMs } from "./Helpers.ts";
+import type { Logger, LoggerConfig } from "./Logger.ts";
+import { isNonEmptyArray } from "./NonEmptyArray.ts";
+import type { Project } from "./Project.ts";
+import type { GetNow } from "./Types.ts";
 
 type MakeResult = { tag: "Error" } | { tag: "Success" };
 

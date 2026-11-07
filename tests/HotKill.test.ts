@@ -3,20 +3,20 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { __ELM_WATCH_ELM_TIMEOUT_MS } from "../src/Env";
+import { __ELM_WATCH_ELM_TIMEOUT_MS } from "../src/Env.ts";
 import {
   grep,
   stringSnapshotSerializer,
   TEST_ENV,
   touch,
   waitFor,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   fixtureDir,
   run,
   sendSigterm,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

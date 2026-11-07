@@ -4,14 +4,14 @@ import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 import NodeWebSocket from "ws";
 
-import { WebSocketToServerMessage } from "../client/WebSocketMessages";
-import { NO_COLOR } from "../src/Env";
+import type { WebSocketToServerMessage } from "../client/WebSocketMessages.ts";
+import { NO_COLOR } from "../src/Env.ts";
 import {
   grep,
   onlyErrorMessages,
   rm,
   stringSnapshotSerializer,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   expandUi,
@@ -22,7 +22,7 @@ import {
   switchCompilationMode,
   waitForElmWatchIdle,
   withoutConnectionAttempts,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

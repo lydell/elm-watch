@@ -2,9 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import elmWatchCli, { elmWatch } from "../src";
-import { Env, NO_COLOR } from "../src/Env";
-import { copyFixture } from "./FixtureCopies";
+import { type Env, NO_COLOR } from "../src/Env.ts";
+import elmWatchCli, { elmWatch } from "../src/index.ts";
+import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
   clean,
@@ -18,7 +18,7 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 function fixtureDir(fixture: string): string {
   return copyFixture(".", fixture);

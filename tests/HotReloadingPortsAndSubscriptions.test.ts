@@ -8,14 +8,14 @@ import {
   stringSnapshotSerializer,
   touch,
   waitOneFrame,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   assertDebugger,
   cleanupAfterEachTest,
   click,
   fixtureDir,
   runHotReload,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

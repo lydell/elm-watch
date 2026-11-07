@@ -4,19 +4,19 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
+import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_MAX_PARALLEL,
   NO_COLOR,
-} from "../src/Env";
-import * as Errors from "../src/Errors";
-import { markAsPort } from "../src/Port";
+} from "../src/Env.ts";
+import * as Errors from "../src/Errors.ts";
+import { markAsPort } from "../src/Port.ts";
 import {
   markAsAbsolutePath,
   markAsElmJsonPath,
   markAsTargetName,
-} from "../src/Types";
+} from "../src/Types.ts";
 import {
   elmBinAlwaysSucceedEnv,
   fixtureDir,
@@ -24,7 +24,7 @@ import {
   run,
   runAbsolute,
   runWithBadElmBin,
-} from "./ErrorsHelpers";
+} from "./ErrorsHelpers.ts";
 import {
   badElmBinEnv,
   fixtureOptions,
@@ -33,7 +33,7 @@ import {
   stringSnapshotSerializer,
   TEST_ENV,
   wait,
-} from "./Helpers";
+} from "./Helpers.ts";
 import { spawnSync } from "./Spawn.js";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);

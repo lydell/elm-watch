@@ -1,8 +1,8 @@
 import * as Codec from "tiny-decoders";
 
-import type { PostprocessFunction } from "./Config";
-import { unknownErrorToString } from "./Helpers";
-import type { CompilationMode, RunMode } from "./Types";
+import type { PostprocessFunction } from "./Config.ts";
+import { unknownErrorToString } from "./Helpers.ts";
+import type { CompilationMode, RunMode } from "./Types.ts";
 
 export type Postprocess =
   | {

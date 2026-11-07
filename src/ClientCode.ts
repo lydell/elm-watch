@@ -5,8 +5,8 @@ import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
 
-import { clientEsbuildOptions, PROXY_SRC_PATH } from "../scripts/Build";
-import { quote } from "./Helpers";
+import { clientEsbuildOptions, PROXY_SRC_PATH } from "../scripts/Build.ts";
+import { quote } from "./Helpers.ts";
 
 const result = esbuild.buildSync(clientEsbuildOptions);
 

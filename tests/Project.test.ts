@@ -3,11 +3,11 @@ import { describe, expect, test } from "vitest";
 import {
   filterSubDirs,
   OutputState,
-  Project,
+  type Project,
   projectToDebug,
-} from "../src/Project";
+} from "../src/Project.ts";
 import {
-  GetNow,
+  type GetNow,
   markAsAbsolutePath,
   markAsElmJsonPath,
   markAsElmVersion,
@@ -15,8 +15,8 @@ import {
   markAsElmWatchStuffJsonPath,
   markAsStaticFilesDir,
   markAsTargetName,
-} from "../src/Types";
-import { stringSnapshotSerializer } from "./Helpers";
+} from "../src/Types.ts";
+import { stringSnapshotSerializer } from "./Helpers.ts";
 
 const getNow: GetNow = () => new Date();
 

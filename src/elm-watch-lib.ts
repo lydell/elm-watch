@@ -6,18 +6,18 @@
 //
 // If you use `elm-watch-lib` in a project not listed above, please let me know!
 
-import { Env } from "./Env";
-import { mapNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray";
-import { make, type RunElmMakeResult } from "./SpawnElm";
+import type { Env } from "./Env.ts";
+import { mapNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
+import { make, type RunElmMakeResult } from "./SpawnElm.ts";
 import {
   type CompilationMode,
   markAsAbsolutePath,
   markAsElmJsonPath,
-} from "./Types";
+} from "./Types.ts";
 
-export { readSourceDirectories } from "./ElmJson";
-export { walkImports } from "./ImportWalker";
-export { inject } from "./Inject";
+export { readSourceDirectories } from "./ElmJson.ts";
+export { walkImports } from "./ImportWalker.ts";
+export { inject } from "./Inject.ts";
 
 export function elmMake({
   elmJsonPath,

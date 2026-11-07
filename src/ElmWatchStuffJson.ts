@@ -1,13 +1,13 @@
 import * as Codec from "tiny-decoders";
 
-import { readJsonFile } from "./PathHelpers";
-import { Port } from "./Port";
+import { readJsonFile } from "./PathHelpers.ts";
+import { Port } from "./Port.ts";
 import {
   BrowserUiPosition,
   CompilationMode,
-  ElmWatchStuffJsonPath,
+  type ElmWatchStuffJsonPath,
   WebSocketToken,
-} from "./Types";
+} from "./Types.ts";
 
 // elm-stuff/elm-watch/stuff.json stores things between runs.
 // Configuration is stored in elm-watch.json.

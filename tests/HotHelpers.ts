@@ -3,20 +3,20 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { expect } from "vitest";
 
-import {
+import type {
   ElmModule,
   ReachedIdleStateReason,
   UppercaseLetter,
-} from "../client/client";
-import elmWatchCli, { elmWatch } from "../src";
-import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
-import { Env } from "../src/Env";
-import { ReadStream } from "../src/Helpers";
-import { HotTestHooks, Msg } from "../src/Hot";
-import { makeLogger } from "../src/Logger";
-import { markAsPort } from "../src/Port";
-import { BrowserUiPosition, CompilationMode } from "../src/Types";
-import { copyFixture } from "./FixtureCopies";
+} from "../client/client.ts";
+import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson.ts";
+import type { Env } from "../src/Env.ts";
+import type { ReadStream } from "../src/Helpers.ts";
+import type { HotTestHooks, Msg } from "../src/Hot.ts";
+import elmWatchCli, { elmWatch } from "../src/index.ts";
+import { makeLogger } from "../src/Logger.ts";
+import { markAsPort } from "../src/Port.ts";
+import type { BrowserUiPosition, CompilationMode } from "../src/Types.ts";
+import { copyFixture } from "./FixtureCopies.ts";
 import {
   badElmBinEnv,
   clean,
@@ -31,7 +31,7 @@ import {
   TEST_ENV,
   waitFor,
   waitOneFrame,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 const CONTAINER_ID = "elm-watch";
 export function fixtureDir(fixture: string): string {

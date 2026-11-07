@@ -2,11 +2,11 @@ import * as fs from "fs";
 import * as path from "path";
 import { expect } from "vitest";
 
-import elmWatchCli, { elmWatch } from "../src";
-import { __ELM_WATCH_EXIT_ON_ERROR, Env } from "../src/Env";
-import * as Errors from "../src/Errors";
-import { toError } from "../src/Helpers";
-import { copyFixture } from "./FixtureCopies";
+import { __ELM_WATCH_EXIT_ON_ERROR, type Env } from "../src/Env.ts";
+import * as Errors from "../src/Errors.ts";
+import { toError } from "../src/Helpers.ts";
+import elmWatchCli, { elmWatch } from "../src/index.ts";
+import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
   badElmBinEnv,
@@ -21,7 +21,7 @@ import {
   rm,
   SilentReadStream,
   TEST_ENV,
-} from "./Helpers";
+} from "./Helpers.ts";
 
 export function fixtureDir(fixture: string): string {
   return copyFixture("errors", fixture);

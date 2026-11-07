@@ -1,24 +1,28 @@
 import * as http from "http";
 
-import { Env } from "./Env";
-import * as Errors from "./Errors";
-import * as Help from "./Help";
-import { ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
-import { HotTestHooks } from "./Hot";
-import { init } from "./Init";
-import { makeLogger } from "./Logger";
-import { decodeOptions } from "./Options";
-import { absolutePathFromString } from "./PathHelpers";
-import { run, runConfig, RunResult } from "./Run";
+import type { Env } from "./Env.ts";
+import * as Errors from "./Errors.ts";
+import * as Help from "./Help.ts";
 import {
-  CliArg,
-  CreateServer,
-  Cwd,
-  GetNow,
+  type ReadStream,
+  unknownErrorToString,
+  type WriteStream,
+} from "./Helpers.ts";
+import type { HotTestHooks } from "./Hot.ts";
+import { init } from "./Init.ts";
+import { makeLogger } from "./Logger.ts";
+import { decodeOptions } from "./Options.ts";
+import { absolutePathFromString } from "./PathHelpers.ts";
+import { run, runConfig, type RunResult } from "./Run.ts";
+import {
+  type CliArg,
+  type CreateServer,
+  type Cwd,
+  type GetNow,
   markAsAbsolutePath,
   markAsCliArg,
   markAsCwd,
-} from "./Types";
+} from "./Types.ts";
 
 // Note: This must be in sync with index.d.ts, which is used by the npm package.
 type Options = {
@@ -214,7 +218,7 @@ const defaultCreateServer: CreateServer = ({ onRequest, onUpgrade }) =>
   http.createServer(onRequest).on("upgrade", onUpgrade);
 
 /* v8 ignore start */
-if (require.main === module) {
+if (import.meta.main) {
   process.title = "elm-watch";
   elmWatchCli(process.argv.slice(2))
     .then((exitCode) => {

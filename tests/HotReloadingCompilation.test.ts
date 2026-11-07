@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS } from "../src/Env";
+import { __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS } from "../src/Env.ts";
 import {
   grep,
   onlyErrorMessages,
@@ -13,7 +13,7 @@ import {
   touch,
   wait,
   waitFor,
-} from "./Helpers";
+} from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   closeOverlay,
@@ -26,7 +26,7 @@ import {
   showErrors,
   switchCompilationMode,
   waitForElmWatchIdle,
-} from "./HotHelpers";
+} from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

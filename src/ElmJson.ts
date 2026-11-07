@@ -1,12 +1,16 @@
 import * as Codec from "tiny-decoders";
 
-import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import { mapNonEmptyArray, NonEmptyArray } from "./NonEmptyArray.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
   readJsonFile,
-} from "./PathHelpers";
-import { ElmJsonPath, markAsSourceDirectory, SourceDirectory } from "./Types";
+} from "./PathHelpers.ts";
+import {
+  type ElmJsonPath,
+  markAsSourceDirectory,
+  type SourceDirectory,
+} from "./Types.ts";
 
 export type ElmJson = Codec.Infer<typeof ElmJson>;
 export const ElmJson = Codec.taggedUnion("type", [

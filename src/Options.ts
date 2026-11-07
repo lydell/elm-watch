@@ -1,18 +1,18 @@
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import { AllowedHost } from "./AllowedHosts";
-import type { Config, PostprocessFunction } from "./Config";
-import { Inputs, Output, TargetName } from "./ElmWatchJson";
-import { NonEmptyArray } from "./NonEmptyArray";
-import { Port } from "./Port";
+import { AllowedHost } from "./AllowedHosts.ts";
+import type { Config, PostprocessFunction } from "./Config.ts";
+import { Inputs, Output, TargetName } from "./ElmWatchJson.ts";
+import { NonEmptyArray } from "./NonEmptyArray.ts";
+import { Port } from "./Port.ts";
 import {
   type AbsolutePath,
   CompilationMode,
   markAsAbsolutePath,
   type RunMode,
-} from "./Types";
-import { WebSocketUrl } from "./WebSocketUrl";
+} from "./Types.ts";
+import { WebSocketUrl } from "./WebSocketUrl.ts";
 
 // The options passed to `elmWatch()` are typed in index.d.ts, but we still
 // validate them at runtime for JavaScript users (and for nicer error messages).

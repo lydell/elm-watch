@@ -7,7 +7,7 @@ import * as stream from "stream";
 import * as url from "url";
 import { describe, test } from "vitest";
 
-import { EMOJI } from "../src/Compile";
+import { EMOJI } from "../src/Compile.ts";
 import {
   __ELM_WATCH_LOADING_MESSAGE_DELAY,
   __ELM_WATCH_MAX_PARALLEL,
@@ -15,12 +15,12 @@ import {
   __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
   ELM_WATCH_OPEN_EDITOR,
-  Env,
+  type Env,
   WT_SESSION,
-} from "../src/Env";
-import { printStdio } from "../src/Errors";
-import { ReadStream, WriteStream } from "../src/Helpers";
-import { IS_WINDOWS } from "../src/IsWindows";
+} from "../src/Env.ts";
+import { printStdio } from "../src/Errors.ts";
+import type { ReadStream, WriteStream } from "../src/Helpers.ts";
+import { IS_WINDOWS } from "../src/IsWindows.ts";
 
 // Print date and time in UTC in snapshots.
 /* oxlint-disable typescript/unbound-method */

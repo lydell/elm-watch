@@ -1,8 +1,8 @@
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import type { ElmWatchJsonWithLegacyPostprocess } from "./ElmWatchJson";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import type { ElmWatchJsonWithLegacyPostprocess } from "./ElmWatchJson.ts";
+import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 
 export type EntrypointLanguage = "javascript" | "typescript";
 

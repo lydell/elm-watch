@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import * as Parser from "../src/Parser";
+import * as Parser from "../src/Parser.ts";
 
 function parse(elmFile: string): Array<Parser.ModuleName> {
   const readState = Parser.initialReadState();

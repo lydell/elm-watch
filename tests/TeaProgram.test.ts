@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { runTeaProgram } from "../src/TeaProgram";
+import { runTeaProgram } from "../src/TeaProgram.ts";
 
 // `Log` commands write to `mutable.events`, which also verifies that `runCmd`
 // is given the `mutable` returned by `initMutable`.

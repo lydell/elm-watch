@@ -1,7 +1,7 @@
 /* oxlint-disable no-console */
 
-import { makeLogger } from "../src/Logger";
-import { getThemeFromTerminal } from "../src/Theme";
+import { makeLogger } from "../src/Logger.ts";
+import { getThemeFromTerminal } from "../src/Theme.ts";
 
 const logger = makeLogger({
   env: process.env,

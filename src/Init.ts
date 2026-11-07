@@ -1,26 +1,26 @@
 import * as fs from "fs";
 
-import * as ElmWatchJson from "./ElmWatchJson";
-import * as Errors from "./Errors";
+import * as ElmWatchJson from "./ElmWatchJson.ts";
+import * as Errors from "./Errors.ts";
 import {
   ENTRYPOINT_NAMES,
-  EntrypointLanguage,
+  type EntrypointLanguage,
   generateEntrypoint,
-} from "./GenerateEntrypoint";
-import { bold, toError } from "./Helpers";
-import { Logger } from "./Logger";
+} from "./GenerateEntrypoint.ts";
+import { bold, toError } from "./Helpers.ts";
+import type { Logger } from "./Logger.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
   findClosest,
-} from "./PathHelpers";
+} from "./PathHelpers.ts";
 import {
-  AbsolutePath,
-  CliArg,
-  Cwd,
-  ElmWatchJsonPath,
+  type AbsolutePath,
+  type CliArg,
+  type Cwd,
+  type ElmWatchJsonPath,
   markAsElmWatchJsonPath,
-} from "./Types";
+} from "./Types.ts";
 
 const elmWatchJson = bold("elm-watch.json");
 

@@ -9,22 +9,22 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { describe, expect, test } from "vitest";
 
-import type { ConfigSource } from "../src/Config";
-import { markAsHost } from "../src/Host";
-import { errorHtml, respondHtml } from "../src/SimpleStaticFileServer";
+import type { ConfigSource } from "../src/Config.ts";
+import { markAsHost } from "../src/Host.ts";
+import { errorHtml, respondHtml } from "../src/SimpleStaticFileServer.ts";
 import {
   markAsAbsolutePath,
   markAsElmWatchJsonPath,
   markAsStaticFilesDir,
   markAsWebSocketToken,
-} from "../src/Types";
-import { WebSocketServer } from "../src/WebSocketServer";
+} from "../src/Types.ts";
+import { WebSocketServer } from "../src/WebSocketServer.ts";
 import {
   httpGet,
   stringSnapshotSerializer,
   testExceptWindows,
-} from "./Helpers";
-import { fixtureDir, run } from "./HotHelpers";
+} from "./Helpers.ts";
+import { fixtureDir, run } from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 

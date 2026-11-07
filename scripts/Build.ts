@@ -114,6 +114,8 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
     outdir: BUILD,
     platform: "node",
     write: false,
+    // The build is CommonJS, which does not support `import.meta`.
+    define: { "import.meta.main": "IMPORT_META_MAIN" },
     plugins: [
       {
         // I didn’t manage to do this with the `external` option, so using a plugin instead.
@@ -121,9 +123,9 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         setup(build) {
           build.onResolve(
             {
-              filter: /^\.\/ClientCode$/,
+              filter: /^\.\/ClientCode\.ts$/,
             },
-            (args) => ({ path: args.path, external: true }),
+            () => ({ path: "./ClientCode", external: true }),
           );
         },
       },
@@ -141,6 +143,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
             "exports.elmWatch = elmWatch;\n",
           )
           .replace(toModuleRegex, "$1")
+          .replace(/\bIMPORT_META_MAIN\b/g, "require.main === module")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)
           .trim();
         const code = `#!/usr/bin/env node\n"use strict";\n${replaced}`;

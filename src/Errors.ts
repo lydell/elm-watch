@@ -1,54 +1,54 @@
-import { ExecException } from "child_process";
+import type { ExecException } from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
-import type { ConfigSource } from "./Config";
-import * as ElmMakeError from "./ElmMakeError";
-import * as ElmWatchJson from "./ElmWatchJson";
+import type { ConfigSource } from "./Config.ts";
+import type * as ElmMakeError from "./ElmMakeError.ts";
+import * as ElmWatchJson from "./ElmWatchJson.ts";
 import {
   ELM_WATCH_HOST,
   ELM_WATCH_OPEN_EDITOR,
   ELM_WATCH_WEBSOCKET_URL,
-  Env,
-} from "./Env";
+  type Env,
+} from "./Env.ts";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
   escapeHtml,
   RESET_COLOR,
   toError,
-} from "./Helpers";
-import { Host } from "./Host";
-import { IS_WINDOWS } from "./IsWindows";
-import { DEFAULT_COLUMNS } from "./Logger";
+} from "./Helpers.ts";
+import type { Host } from "./Host.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
+import { DEFAULT_COLUMNS } from "./Logger.ts";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
-  NonEmptyArray,
-} from "./NonEmptyArray";
-import { absolutePathFromString } from "./PathHelpers";
-import { Port } from "./Port";
-import { Command, ExitReason } from "./Spawn";
-import * as Theme from "./Theme";
+  type NonEmptyArray,
+} from "./NonEmptyArray.ts";
+import { absolutePathFromString } from "./PathHelpers.ts";
+import type { Port } from "./Port.ts";
+import type { Command, ExitReason } from "./Spawn.ts";
+import * as Theme from "./Theme.ts";
 import {
-  AbsolutePath,
-  CliArg,
-  Cwd,
-  ElmJsonPath,
-  ElmVersion,
-  ElmWatchJsonPath,
-  ElmWatchStuffJsonPath,
-  InputPath,
+  type AbsolutePath,
+  type CliArg,
+  type Cwd,
+  type ElmJsonPath,
+  type ElmVersion,
+  type ElmWatchJsonPath,
+  type ElmWatchStuffJsonPath,
+  type InputPath,
   markAsElmWatchJsonPath,
-  OutputPath,
-  RunMode,
-  TargetName,
-  UncheckedInputPath,
-  WriteOutputErrorReasonForWriting,
-} from "./Types";
-import { WebSocketUrl } from "./WebSocketUrl";
+  type OutputPath,
+  type RunMode,
+  type TargetName,
+  type UncheckedInputPath,
+  type WriteOutputErrorReasonForWriting,
+} from "./Types.ts";
+import type { WebSocketUrl } from "./WebSocketUrl.ts";
 
 function bold(string: string): Piece {
   return { tag: "Bold", text: string };
