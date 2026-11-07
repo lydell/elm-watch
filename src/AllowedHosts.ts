@@ -1,4 +1,4 @@
-import * as net from "net";
+import { isIP } from "net";
 import * as Codec from "tiny-decoders";
 
 import { ELM_WATCH_ALLOWED_HOSTS, Env } from "./Env";
@@ -21,6 +21,9 @@ import { Brand } from "./Types";
 // Wildcards are not supported on purpose: They are unsafe for shared domains
 // like ngrok’s. List each host exactly instead (the environment variable is
 // useful for hosts that change).
+
+export const ALLOWED_HOSTS_DOCS_LINK =
+  "https://lydell.github.io/elm-watch/server/#allowed-hosts";
 
 // A normalized hostname: Lowercase, punycode and no trailing dot.
 export type AllowedHost = Brand<string, "AllowedHost">;
@@ -103,8 +106,9 @@ export function allowedHostFromUrl(url: URL): AllowedHost {
   return markAsAllowedHost(normalizeHostname(url.hostname));
 }
 
-export type HostCheckResult =
-  | { tag: "Allowed" }
+export type HostCheckResult = { tag: "Allowed" } | RejectedHost;
+
+export type RejectedHost =
   | { tag: "NotAllowed"; hostname: string }
   | { tag: "Invalid"; value: string | undefined };
 
@@ -160,7 +164,7 @@ function isAlwaysAllowed(hostname: string): boolean {
       ? hostname.slice(1, -1)
       : hostname;
   return (
-    net.isIP(unbracketed) !== 0 ||
+    isIP(unbracketed) !== 0 ||
     hostname === "localhost" ||
     hostname.endsWith(".localhost") ||
     hostname.endsWith(".local")

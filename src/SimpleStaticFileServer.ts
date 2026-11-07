@@ -2,6 +2,8 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 
+import { ALLOWED_HOSTS_DOCS_LINK, RejectedHost } from "./AllowedHosts";
+import { ELM_WATCH_ALLOWED_HOSTS } from "./Env";
 import { escapeHtml, toError } from "./Helpers";
 import { AbsolutePath, markAsAbsolutePath, StaticFilesDir } from "./Types";
 
@@ -363,6 +365,52 @@ ${fsPath.theFsPath}
 This is the closest index.html file, which was served instead:
 ${indexFsPath.theIndexFsPath}
 `.trim();
+  }
+}
+
+export function hostNotAllowedHtml(rejectedHost: RejectedHost): Html {
+  switch (rejectedHost.tag) {
+    case "NotAllowed":
+      return baseHtml(
+        "⛔️",
+        "Host not allowed",
+        html`
+          <h1>Host not allowed</h1>
+          <p>
+            To protect against
+            <a href="https://en.wikipedia.org/wiki/DNS_rebinding"
+              >DNS rebinding</a
+            >
+            attacks, elm-watch only accepts requests for certain hosts. This
+            request was for:
+          </p>
+          <pre>${rejectedHost.hostname}</pre>
+          <p>
+            localhost, *.localhost, *.local and IP addresses are always allowed.
+            To allow this host too, add it to <strong>elm-watch.json</strong>:
+          </p>
+          <pre><code>"allowedHosts": ["${rejectedHost.hostname}"]</code></pre>
+          <p>Or set an environment variable (useful if the host changes):</p>
+          <pre><code>${ELM_WATCH_ALLOWED_HOSTS}=${rejectedHost.hostname}</code></pre>
+          <p>
+            👉
+            <a href="${ALLOWED_HOSTS_DOCS_LINK}"
+              >Learn more about allowed hosts</a
+            >
+          </p>
+        `,
+      );
+
+    case "Invalid":
+      return baseHtml(
+        "⛔️",
+        "Invalid Host header",
+        html`
+          <h1>Invalid Host header</h1>
+          <p>The request had an invalid or missing Host header:</p>
+          <pre>${rejectedHost.value ?? "(missing)"}</pre>
+        `,
+      );
   }
 }
 

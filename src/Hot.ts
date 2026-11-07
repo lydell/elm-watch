@@ -13,6 +13,7 @@ import {
   WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages";
+import { ALLOWED_HOSTS_DOCS_LINK, RejectedHost } from "./AllowedHosts";
 import * as Compile from "./Compile";
 import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
 import {
@@ -20,6 +21,7 @@ import {
   __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
+  ELM_WATCH_ALLOWED_HOSTS,
   ELM_WATCH_OPEN_EDITOR,
   Env,
 } from "./Env";
@@ -563,6 +565,7 @@ const initMutable =
         getHost(env),
         project.staticFilesDir,
         webSocketToken,
+        project.allowedHosts,
       ),
       webSocketConnections = [],
     } = webSocketState ?? {};
@@ -3166,7 +3169,20 @@ function printWebSocketConnectionRejectedReason(
   switch (reason.tag) {
     case "BadUrl":
       return `wrong URL prefix – ${quote(reason.expectedStart)} != ${quote(reason.actualUrlString.slice(0, reason.expectedStart.length))}`;
+    case "HostNotAllowed":
+      return printRejectedHost("Host header", reason.rejectedHost);
+    case "OriginNotAllowed":
+      return printRejectedHost("origin", reason.rejectedHost);
     case "WrongToken":
       return "invalid security token";
+  }
+}
+
+function printRejectedHost(what: string, rejectedHost: RejectedHost): string {
+  switch (rejectedHost.tag) {
+    case "NotAllowed":
+      return `${what} not allowed – add ${quote(rejectedHost.hostname)} to "allowedHosts" in elm-watch.json or to ${ELM_WATCH_ALLOWED_HOSTS} (see ${ALLOWED_HOSTS_DOCS_LINK})`;
+    case "Invalid":
+      return `invalid ${what}: ${rejectedHost.value === undefined ? "(missing)" : quote(rejectedHost.value)}`;
   }
 }

@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   AllowedHost,
+  allowedHostFromUrl,
   checkHostHeader,
   checkOriginHeader,
   getAllowedHostsFromEnv,
@@ -95,6 +96,18 @@ describe("AllowedHosts", () => {
     });
   });
 
+  test("encoder", () => {
+    expect(
+      Codec.array(AllowedHost).encoder(decodeAllowedHosts(["Dev.Example.com"])),
+    ).toStrictEqual(["dev.example.com"]);
+  });
+
+  test("allowedHostFromUrl", () => {
+    expect(
+      allowedHostFromUrl(new URL("wss://Dev.Example.com.:8443/elm-watch")),
+    ).toBe("dev.example.com");
+  });
+
   test("getAllowedHostsFromEnv", () => {
     expect(getAllowedHostsFromEnv({})).toStrictEqual([]);
     expect(
@@ -167,6 +180,7 @@ describe("AllowedHosts", () => {
       for (const host of [
         undefined,
         "",
+        ".",
         ":8000",
         "evil.com/",
         "evil.com@localhost",

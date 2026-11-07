@@ -54,6 +54,12 @@
             ],
             "output": "build/WrongToken.js"
         },
+        "HostOrOriginNotAllowed": {
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/HostOrOriginNotAllowed.js"
+        },
         "TargetDisabled": {
             "inputs": [
                 "src/HtmlMain.elm"

@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { afterEach, describe, expect, onTestFinished, test } from "vitest";
+import NodeWebSocket from "ws";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages";
 import {
@@ -796,6 +797,44 @@ describe("hot", () => {
       expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(
         `ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "http://localhost" rejected due to: invalid security token⧘`,
       );
+    });
+
+    test("host or origin not allowed", async () => {
+      let webSocketUrl: string | undefined = undefined;
+      modifyUrl((url) => {
+        webSocketUrl = url.href;
+      });
+
+      const { terminal } = await run({
+        fixture: "basic",
+        args: ["HostOrOriginNotAllowed"],
+        scripts: ["HostOrOriginNotAllowed.js"],
+        isTTY: false,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async () => {
+          if (webSocketUrl === undefined) {
+            throw new Error("Expected webSocketUrl to be set.");
+          }
+          for (const headers of [
+            { Host: "evil.com:1234" },
+            { Host: "evil.com/" },
+            { Origin: "https://evil.com" },
+            { Origin: "not a url" },
+          ]) {
+            await connectRejectedNodeWebSocket(webSocketUrl, headers);
+          }
+          return "Stop" as const;
+        },
+      });
+
+      expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(`
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: Host header not allowed – add "evil.com" to "allowedHosts" in elm-watch.json or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: invalid Host header: "evil.com/"⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "https://evil.com" rejected due to: origin not allowed – add "evil.com" to "allowedHosts" in elm-watch.json or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "not a url" rejected due to: invalid origin: "not a url"⧘
+      `);
     });
 
     test("target not found", async () => {
@@ -4029,3 +4068,20 @@ describe("hot", () => {
     });
   });
 });
+
+async function connectRejectedNodeWebSocket(
+  url: string,
+  headers: Record<string, string>,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const webSocket = new NodeWebSocket(url, { headers });
+    webSocket.on("open", () => {
+      webSocket.close();
+      reject(new Error(`Expected the connection to be rejected: ${url}`));
+    });
+    webSocket.on("unexpected-response", () => {
+      resolve();
+    });
+    webSocket.on("error", reject);
+  });
+}

@@ -5,6 +5,12 @@ import type { Duplex } from "stream";
 import * as util from "util";
 import WebSocket, { WebSocketServer as WsServer } from "ws";
 
+import {
+  AllowedHost,
+  checkHostHeader,
+  checkOriginHeader,
+  RejectedHost,
+} from "./AllowedHosts";
 import { toError } from "./Helpers";
 import { Host } from "./Host";
 import { markAsPort, Port, PortChoice } from "./Port";
@@ -65,6 +71,14 @@ export type WebSocketConnectionRejectedReason =
       actualUrlString: string;
     }
   | {
+      tag: "HostNotAllowed";
+      rejectedHost: RejectedHost;
+    }
+  | {
+      tag: "OriginNotAllowed";
+      rejectedHost: RejectedHost;
+    }
+  | {
       tag: "WrongToken";
     };
 
@@ -91,9 +105,20 @@ export class WebSocketServer {
     host: Host,
     staticFilesDirectory: StaticFilesDir | undefined,
     webSocketToken: WebSocketToken,
+    allowedHosts: ReadonlyArray<AllowedHost>,
   ) {
     this.polyHttpServer = createServer({
       onRequest: (request, response) => {
+        const hostCheck = checkHostHeader(allowedHosts, request.headers.host);
+        if (hostCheck.tag !== "Allowed") {
+          SimpleStaticFileServer.respondHtml(
+            response,
+            403,
+            SimpleStaticFileServer.hostNotAllowedHtml(hostCheck),
+          );
+          return;
+        }
+
         if (staticFilesDirectory !== undefined) {
           try {
             SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
@@ -124,8 +149,19 @@ export class WebSocketServer {
 
         const { origin } = request.headers;
 
+        const hostCheck = checkHostHeader(allowedHosts, request.headers.host);
+        if (hostCheck.tag !== "Allowed") {
+          rejectUpgrade(socket, "403 Forbidden", "Host not allowed");
+          this.dispatch({
+            tag: "WebSocketConnectionRejected",
+            origin,
+            reason: { tag: "HostNotAllowed", rejectedHost: hostCheck },
+          });
+          return;
+        }
+
         if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
-          error401(socket, "Invalid URL");
+          rejectUpgrade(socket, "401 Unauthorized", "Invalid URL");
           this.dispatch({
             tag: "WebSocketConnectionRejected",
             origin,
@@ -134,6 +170,17 @@ export class WebSocketServer {
               expectedStart: WEBSOCKET_URL_EXPECTED_START,
               actualUrlString: urlString,
             },
+          });
+          return;
+        }
+
+        const originCheck = checkOriginHeader(allowedHosts, origin);
+        if (originCheck.tag !== "Allowed") {
+          rejectUpgrade(socket, "403 Forbidden", "Origin not allowed");
+          this.dispatch({
+            tag: "WebSocketConnectionRejected",
+            origin,
+            reason: { tag: "OriginNotAllowed", rejectedHost: originCheck },
           });
           return;
         }
@@ -152,7 +199,7 @@ export class WebSocketServer {
           crypto.timingSafeEqual(actualToken, expectedToken);
 
         if (!tokenIsCorrect) {
-          error401(socket, "Invalid token");
+          rejectUpgrade(socket, "401 Unauthorized", "Invalid token");
           this.dispatch({
             tag: "WebSocketConnectionRejected",
             origin,
@@ -294,7 +341,11 @@ export class WebSocketServer {
   }
 }
 
-function error401(socket: Duplex, message: string): void {
-  socket.write(`HTTP/1.1 401 Unauthorized\r\nX-Reason: ${message}\r\n\r\n`);
+function rejectUpgrade(
+  socket: Duplex,
+  status: "401 Unauthorized" | "403 Forbidden",
+  message: string,
+): void {
+  socket.write(`HTTP/1.1 ${status}\r\nX-Reason: ${message}\r\n\r\n`);
   socket.destroy();
 }
