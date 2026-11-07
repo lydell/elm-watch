@@ -1,9 +1,0 @@
-{
-  "postprocess": ["node", "-e", "console.log(Array.from({length:101}, (_, i) => `${i + 1} | stdout line`).join('\\n')); process.exit(1)"],
-  "targets": {
-    "main": {
-      "inputs": ["../../src/Main.elm"],
-      "output": "../../build/exit-1-stdout.js"
-    }
-  }
-}

@@ -43,13 +43,6 @@ const project: Project = {
     markAsAbsolutePath("/Users/you/project/elm-stuff/elm-watch/stuff.json"),
   ),
   maxParallel: 12,
-  postprocess: {
-    tag: "Postprocess",
-    postprocessArray: ["elm-watch-node", "postprocess.js"],
-    elmWatchJsonPath: markAsElmWatchJsonPath(
-      markAsAbsolutePath("/Users/you/project/elm-watch.json"),
-    ),
-  },
   disabledOutputs: [
     {
       originalString: "public/build/HtmlMain.js",
@@ -286,14 +279,6 @@ describe("Project", () => {
           "elmWatchJson": "/Users/you/project/elm-watch.json",
           "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch/stuff.json",
           "maxParallel": 12,
-          "postprocess": {
-            "tag": "Postprocess",
-            "postprocessArray": [
-              "elm-watch-node",
-              "postprocess.js"
-            ],
-            "elmWatchJsonPath": "/Users/you/project/elm-watch.json"
-          },
           "enabledTargets": [
             {
               "targetName": "Element",
@@ -301,6 +286,7 @@ describe("Project", () => {
               "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/4.js",
               "originalString": "public/build/ElementMain.js",
               "compilationMode": "optimize",
+              "postprocess": false,
               "elmJson": "/Users/you/project/elm.json",
               "inputs": [
                 {
@@ -316,6 +302,7 @@ describe("Project", () => {
               "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/5.js",
               "originalString": "public/build/Frankenstein.js",
               "compilationMode": "standard",
+              "postprocess": false,
               "elmJson": "/Users/you/project/elm.json",
               "inputs": [
                 {
@@ -336,6 +323,7 @@ describe("Project", () => {
               "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/6.js",
               "originalString": "public/submodules/concourse/web/public/elm.min.js",
               "compilationMode": "optimize",
+              "postprocess": false,
               "elmJson": "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
               "inputs": [
                 {

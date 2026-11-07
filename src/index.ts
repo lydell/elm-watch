@@ -9,7 +9,6 @@ import { init } from "./Init";
 import { makeLogger } from "./Logger";
 import { decodeOptions } from "./Options";
 import { absolutePathFromString } from "./PathHelpers";
-import { PostprocessWorkerPool } from "./Postprocess";
 import { run, runConfig, RunResult } from "./Run";
 import {
   CliArg,
@@ -93,7 +92,6 @@ export default async function elmWatchCli(
           runMode,
           restArgs,
           previous.restartReasons,
-          previous.postprocessWorkerPool,
           previous.webSocketState,
           previous.webSocketToken,
           hotTestHooks,
@@ -109,16 +107,22 @@ export default async function elmWatchCli(
 
 // Note: The options must be in sync with index.d.ts, which is used by the npm package.
 export async function elmWatch(options: unknown): Promise<number> {
+  // Not covered by tests: Passing a non-object would print to the real stdout.
+  /* v8 ignore start */
+  const isObject = typeof options === "object" && options !== null;
+  /* v8 ignore stop */
+
   const {
     env = process.env,
     stdin = process.stdin,
     stdout = process.stdout,
     stderr = process.stderr,
     createServer = defaultCreateServer,
+    /* v8 ignore next -- @preserve */
     logDebug = (message) => stderr.write(`${message}\n`),
     hotTestHooks = { kill: undefined },
     ...publicOptions
-  } = (typeof options === "object" && options !== null ? options : {}) as Omit<
+  } = (isObject ? options : /* v8 ignore next -- @preserve */ {}) as Omit<
     Options,
     "cwd"
   >;
@@ -134,9 +138,9 @@ export async function elmWatch(options: unknown): Promise<number> {
   });
 
   const decoded = decodeOptions(
-    typeof options === "object" && options !== null
+    isObject
       ? { env, stdin, stdout, stderr, createServer, ...publicOptions }
-      : options,
+      : /* v8 ignore next -- @preserve */ options,
   );
 
   switch (decoded.tag) {
@@ -156,7 +160,6 @@ export async function elmWatch(options: unknown): Promise<number> {
           targetsSubstrings: [],
           config: decoded.config,
           restartReasons: previous.restartReasons,
-          postprocessWorkerPool: previous.postprocessWorkerPool,
           webSocketState: previous.webSocketState,
           webSocketTokenFromPreviousRun: previous.webSocketToken,
           hotTestHooks,
@@ -176,7 +179,6 @@ async function runUntilExit(
     const doIt = async (): Promise<number> => {
       let previous: PreviousRun = {
         restartReasons: [],
-        postprocessWorkerPool: new PostprocessWorkerPool(reject),
         webSocketState: undefined,
         webSocketToken: undefined,
       };

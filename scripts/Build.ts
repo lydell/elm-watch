@@ -46,7 +46,6 @@ export const PROXY_SRC_PATH = path.join(DIR, "client", "proxy.js");
 const FILES_TO_COPY: Array<FileToCopy> = [
   { src: "LICENSE" },
   { src: "index.d.ts" },
-  { src: "elm-watch-node.d.ts" },
   {
     src: "README.md",
     transform: (content) => content.replace(/^##[^]*/m, "").trim(),
@@ -110,10 +109,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
   const result = await esbuild.build({
     bundle: true,
     legalComments: "inline",
-    entryPoints: [
-      path.join(DIR, "src", "index.ts"),
-      path.join(DIR, "src", "PostprocessWorker.ts"),
-    ],
+    entryPoints: [path.join(DIR, "src", "index.ts")],
     packages: "external",
     outdir: BUILD,
     platform: "node",
@@ -151,15 +147,6 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         fs.writeFileSync(output.path, code, { mode: "755" });
         break;
       }
-
-      case "PostprocessWorker.js":
-        fs.writeFileSync(
-          output.path,
-          output.text
-            .slice(output.text.indexOf("// src/"))
-            .replace(toModuleRegex, "$1"),
-        );
-        break;
 
       default:
         throw new Error(`Unexpected output: ${output.path}`);

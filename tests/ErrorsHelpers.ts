@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { expect } from "vitest";
 
-import elmWatchCli from "../src";
+import elmWatchCli, { elmWatch } from "../src";
 import { __ELM_WATCH_EXIT_ON_ERROR, Env } from "../src/Env";
 import * as Errors from "../src/Errors";
 import { toError } from "../src/Helpers";
@@ -12,6 +12,7 @@ import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
+  fixtureOptions,
   logDebug,
   MemoryWriteStream,
   onlyErrorMessages,
@@ -29,15 +30,19 @@ export function fixtureDir(fixture: string): string {
 export async function run(
   fixture: string,
   args: Array<string>,
-  options?: {
-    env?: Env;
-    isTTY?: boolean;
-    exitHotOnError?: boolean;
-    originalStdout?: boolean;
-  },
+  options?: RunOptions,
 ): Promise<string> {
   return runAbsolute(fixtureDir(fixture), args, options);
 }
+
+type RunOptions = {
+  env?: Env;
+  isTTY?: boolean;
+  exitHotOnError?: boolean;
+  originalStdout?: boolean;
+  // Use `elmWatch()` with these options instead of the CLI with `args`.
+  elmWatchOptions?: Record<string, unknown>;
+};
 
 export async function runAbsolute(
   dir: string,
@@ -47,12 +52,8 @@ export async function runAbsolute(
     isTTY = true,
     exitHotOnError = false,
     originalStdout = false,
-  }: {
-    env?: Env;
-    isTTY?: boolean;
-    exitHotOnError?: boolean;
-    originalStdout?: boolean;
-  } = {},
+    elmWatchOptions,
+  }: RunOptions = {},
 ): Promise<string> {
   const stdout = new CursorWriteStream();
   const stderr = new MemoryWriteStream();
@@ -60,8 +61,7 @@ export async function runAbsolute(
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
-  const exitCode = await elmWatchCli(args, {
-    cwd: dir,
+  const sharedOptions = {
     env: {
       ...(exitHotOnError ? { [__ELM_WATCH_EXIT_ON_ERROR]: "" } : {}),
       ...(env ?? { ...process.env, ...TEST_ENV }),
@@ -70,7 +70,12 @@ export async function runAbsolute(
     stdout,
     stderr,
     logDebug,
-  });
+  };
+
+  const exitCode =
+    elmWatchOptions === undefined
+      ? await elmWatchCli(args, { cwd: dir, ...sharedOptions })
+      : await elmWatch({ ...elmWatchOptions, ...sharedOptions });
 
   const stdoutString = clean(stdout.getOutput());
 
@@ -103,13 +108,27 @@ export async function runWithBadElmBin(
   const dir = fixtureDir("valid");
   const BUILD = path.join(dir, "build");
   await rimraf(BUILD);
+  const postprocessDir = path.join(dir, "postprocess");
   return runAbsolute(
-    postprocess ? path.join(dir, "postprocess") : dir,
+    postprocess ? postprocessDir : dir,
     [exitHotOnError ? "hot" : "make", "app"],
     {
       env: badElmBinEnv(path.join(dir, "bad-bin", fixture)),
       exitHotOnError,
       originalStdout,
+      ...(postprocess
+        ? {
+            elmWatchOptions: await fixtureOptions(postprocessDir).then(
+              (options) => ({
+                ...options,
+                runMode: exitHotOnError ? "hot" : "make",
+                targets: options.targets.filter(
+                  (target) => target.name === "app",
+                ),
+              }),
+            ),
+          }
+        : {}),
     },
   );
 }

@@ -1,5 +1,4 @@
 {
-  "postprocess": ["node", "postprocess.js"],
   "targets": {
     "app": {
       "inputs": ["../app/Main.elm"],

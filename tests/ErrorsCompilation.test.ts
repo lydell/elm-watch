@@ -28,6 +28,7 @@ import {
 } from "./ErrorsHelpers";
 import {
   badElmBinEnv,
+  fixtureOptions,
   rimraf,
   rm,
   stringSnapshotSerializer,
@@ -541,7 +542,7 @@ describe("errors", () => {
       EISDIR: illegal operation on a directory, read
 
       (I still managed to compile your code, but the watcher will not work properly
-      and "postprocess" was not run.)
+      and postprocess was not run.)
     `);
   });
 
@@ -650,12 +651,30 @@ describe("errors", () => {
     const getAppPath = (): string =>
       path.join(fixtureDir("ci"), "build", "app.js");
 
+    const ciOptions = async (
+      onlyTarget?: string,
+    ): Promise<Record<string, unknown>> => {
+      const options = await fixtureOptions(fixtureDir("ci"));
+      return {
+        ...options,
+        runMode: "make",
+        targets: options.targets.filter(
+          (target) => onlyTarget === undefined || target.name === onlyTarget,
+        ),
+      };
+    };
+
     test("CI scenario", async () => {
       rm(getAppPath());
 
       // Note: Postprocess is skipped when there are `elm make` errors.
-      expect(await run("ci", ["make"], { isTTY: false, originalStdout: true }))
-        .toMatchInlineSnapshot(`
+      expect(
+        await run("ci", [], {
+          isTTY: false,
+          originalStdout: true,
+          elmWatchOptions: await ciOptions(),
+        }),
+      ).toMatchInlineSnapshot(`
         ⏳ Dependencies
         ✅ Dependencies
         ⏳ admin: elm make
@@ -701,9 +720,10 @@ describe("errors", () => {
 
       // Postprocess error.
       expect(
-        await run("ci", ["make", "postprocess-error"], {
+        await run("ci", [], {
           isTTY: false,
           originalStdout: true,
+          elmWatchOptions: await ciOptions("postprocess-error"),
         }),
       ).toMatchInlineSnapshot(`
         ⏳ Dependencies
@@ -716,15 +736,11 @@ describe("errors", () => {
         ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
         ⧙Target: postprocess-error⧘
 
-        I ran your postprocess command:
+        I ran your postprocess function for this target.
 
-        cd /Users/you/project/tests/fixtures/errors/ci
-        printf '(function(...;}(this));' | node -e 'process.exit(1)' postprocess-error standard make
+        ⧙It threw an error:⧘
 
-        ⧙It exited with an error:⧘
-
-        exit 1
-        ⧙(no output)⧘
+        "Postprocess failed"
 
         🚨 ⧙1⧘ error found
 
@@ -737,7 +753,7 @@ describe("errors", () => {
 
       // Note: Postprocess is skipped when there are `elm make` errors.
       expect(
-        await run("ci", ["make"], {
+        await run("ci", [], {
           env: {
             ...process.env,
             ...TEST_ENV,
@@ -745,6 +761,7 @@ describe("errors", () => {
           },
           isTTY: false,
           originalStdout: true,
+          elmWatchOptions: await ciOptions(),
         }),
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
@@ -792,7 +809,7 @@ describe("errors", () => {
 
       // Postprocess error.
       expect(
-        await run("ci", ["make", "postprocess-error"], {
+        await run("ci", [], {
           env: {
             ...process.env,
             ...TEST_ENV,
@@ -800,6 +817,7 @@ describe("errors", () => {
           },
           isTTY: false,
           originalStdout: true,
+          elmWatchOptions: await ciOptions("postprocess-error"),
         }),
       ).toMatchInlineSnapshot(`
         Dependencies: in progress
@@ -812,15 +830,11 @@ describe("errors", () => {
         -- POSTPROCESS ERROR -----------------------------------------------------------
         Target: postprocess-error
 
-        I ran your postprocess command:
+        I ran your postprocess function for this target.
 
-        cd /Users/you/project/tests/fixtures/errors/ci
-        printf '(function(...;}(this));' | node -e 'process.exit(1)' postprocess-error standard make
+        It threw an error:
 
-        It exited with an error:
-
-        exit 1
-        (no output)
+        "Postprocess failed"
 
         1 error found
 
@@ -906,7 +920,7 @@ describe("errors", () => {
     test("ExitReason Signal", () => {
       expect(
         printError(
-          Errors.postprocessNonZeroExit(
+          Errors.unexpectedElmMakeOutput(
             {
               tag: "OutputPath",
               theOutputPath: markAsAbsolutePath("/build/main.js"),
@@ -920,8 +934,8 @@ describe("errors", () => {
             "",
             "",
             {
-              command: "node",
-              args: ["postprocess.js"],
+              command: "elm",
+              args: ["make", "src/Main.elm"],
               options: {
                 cwd: markAsAbsolutePath("/Users/you/project"),
                 env: {},
@@ -930,15 +944,18 @@ describe("errors", () => {
           ),
         ),
       ).toMatchInlineSnapshot(`
-        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: main⧘
 
-        I ran your postprocess command:
+        I ran the following commands:
 
         cd /Users/you/project
-        node postprocess.js
+        elm make src/Main.elm
 
-        ⧙It exited with an error:⧘
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
+
+        ⧙But it exited like this:⧘
 
         signal SIGABRT
         ⧙(no output)⧘
@@ -948,7 +965,7 @@ describe("errors", () => {
     test("ExitReason Unknown", () => {
       expect(
         printError(
-          Errors.postprocessNonZeroExit(
+          Errors.unexpectedElmMakeOutput(
             {
               tag: "OutputPath",
               theOutputPath: markAsAbsolutePath("/build/main.js"),
@@ -962,8 +979,8 @@ describe("errors", () => {
             "",
             "",
             {
-              command: "node",
-              args: ["postprocess.js"],
+              command: "elm",
+              args: ["make", "src/Main.elm"],
               options: {
                 cwd: markAsAbsolutePath("/Users/you/project"),
                 env: {},
@@ -972,19 +989,135 @@ describe("errors", () => {
           ),
         ),
       ).toMatchInlineSnapshot(`
-        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
         ⧙Target: main⧘
 
-        I ran your postprocess command:
+        I ran the following commands:
 
         cd /Users/you/project
-        node postprocess.js
+        elm make src/Main.elm
 
-        ⧙It exited with an error:⧘
+        I expected it to either exit 0 with no output (success),
+        or exit 1 with JSON on stderr (compile errors).
+
+        ⧙But it exited like this:⧘
 
         unknown exit reason
         ⧙(no output)⧘
       `);
+    });
+
+    test("portConflictForPortFromConfig with options", () => {
+      expect(
+        printError(
+          Errors.portConflictForPortFromConfig(
+            { tag: "Options" },
+            markAsPort(9876),
+          ),
+        ),
+      ).toMatchInlineSnapshot(`
+        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+
+        In your ⧙elm-watch options⧘ you have this:
+
+        port: 9876
+
+        But something else seems to already be running on that port!
+        You might already have elm-watch running somewhere, or it could be a completely
+        different program.
+
+        You need to either find and stop that other thing, switch to another port or
+        remove "port" from ⧙elm-watch options⧘ (which will use an arbitrary available port.)
+      `);
+    });
+
+    describe("long stdout and stderr", () => {
+      const unexpectedOutput = (stdout: string, stderr: string): string =>
+        printError(
+          Errors.unexpectedElmMakeOutput(
+            {
+              tag: "OutputPath",
+              theOutputPath: markAsAbsolutePath("/build/main.js"),
+              temporaryOutputPath: markAsAbsolutePath(
+                "/elm-stuff/elm-watch/1.js",
+              ),
+              originalString: "main.js",
+              targetName: markAsTargetName("main"),
+            },
+            { tag: "ExitCode", exitCode: 2 },
+            stdout,
+            stderr,
+            {
+              command: "elm",
+              args: ["make", "src/Main.elm"],
+              options: {
+                cwd: markAsAbsolutePath("/Users/you/project"),
+                env: {},
+              },
+            },
+          ),
+        );
+
+      test("many lines", () => {
+        const output = unexpectedOutput(
+          Array.from({ length: 102 }, (_, i) => `line ${i + 1}`).join("\n"),
+          "",
+        );
+        expect(output.split("\n").slice(-3).join("\n")).toMatchInlineSnapshot(`
+          line 99
+          line 100
+          ⧙2 more lines⧘
+        `);
+      });
+
+      test("one more line", () => {
+        const output = unexpectedOutput(
+          Array.from({ length: 101 }, (_, i) => `line ${i + 1}`).join("\n"),
+          "",
+        );
+        expect(output.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(`
+          line 100
+          ⧙1 more line⧘
+        `);
+      });
+
+      test("long line", () => {
+        const output = unexpectedOutput("", "x".repeat(80 * 100 + 1));
+        expect(output.split("\n").at(-1)?.slice(-30)).toMatchInlineSnapshot(
+          `xxxxxxxxxxx ⧙1 more character⧘`,
+        );
+      });
+
+      test("long line, many characters", () => {
+        const output = unexpectedOutput("", "x".repeat(80 * 100 + 5));
+        expect(output.split("\n").at(-1)?.slice(-30)).toMatchInlineSnapshot(
+          `xxxxxxxxxx ⧙5 more characters⧘`,
+        );
+      });
+
+      test("both stdout and stderr", () => {
+        expect(unexpectedOutput("out", "err")).toMatchInlineSnapshot(`
+          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙Target: main⧘
+
+          I ran the following commands:
+
+          cd /Users/you/project
+          elm make src/Main.elm
+
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
+
+          ⧙But it exited like this:⧘
+
+          exit 2
+          STDOUT:
+          out
+
+          STDERR:
+          err
+        `);
+      });
     });
 
     test("portConflictForNoPort", () => {
@@ -1000,47 +1133,6 @@ describe("errors", () => {
 
         The operating system is supposed to always be able to find an available port,
         but it looks like that wasn't the case this time!
-
-        This is the error message I got:
-
-        The error message
-      `);
-    });
-
-    test("postprocessStdinWriteError", () => {
-      expect(
-        printError(
-          Errors.postprocessStdinWriteError(
-            {
-              tag: "ElmJsonPath",
-              theElmJsonPath: markAsElmJsonPath(
-                markAsAbsolutePath("/Users/you/project/elm.json"),
-              ),
-            },
-            new Error("The error message"),
-            {
-              command: "node",
-              args: ["postprocess.js"],
-              options: {
-                cwd: markAsAbsolutePath("/Users/you/project"),
-                env: {},
-              },
-            },
-          ),
-        ),
-      ).toMatchInlineSnapshot(`
-        ⧙-- POSTPROCESS STDIN TROUBLE ---------------------------------------------------⧘
-        /Users/you/project/elm.json
-
-        I tried to run your postprocess command:
-
-        cd /Users/you/project
-        node postprocess.js
-
-        Trying to write to its ⧙stdin⧘, I got an error!
-        ⧙Did you forget to read stdin, maybe?⧘
-
-        Note: If you don't need stdin in some case, you can pipe it to stdout!
 
         This is the error message I got:
 

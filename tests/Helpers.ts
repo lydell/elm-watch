@@ -701,3 +701,44 @@ export async function httpGet(
       .on("error", reject);
   });
 }
+
+type FixtureTarget = {
+  name: string;
+  inputs: Array<string>;
+  output: string;
+  postprocess?: (code: string, info: Record<string, unknown>) => unknown;
+};
+
+// Turns a fixture’s elm-watch.json into options for `elmWatch()`. If the
+// fixture has a postprocess.js, its default export is used as the postprocess
+// function for all targets, and it is also passed the target name.
+export async function fixtureOptions(
+  dir: string,
+): Promise<{ root: string; targets: Array<FixtureTarget> }> {
+  const elmWatchJson = JSON.parse(
+    fs.readFileSync(path.join(dir, "elm-watch.json"), "utf8"),
+  ) as { targets: Record<string, { inputs: Array<string>; output: string }> };
+
+  const postprocessPath = path.join(dir, "postprocess.js");
+  const postprocess = fs.existsSync(postprocessPath)
+    ? (
+        (await import(url.pathToFileURL(postprocessPath).href)) as {
+          default: (args: Record<string, unknown>) => unknown;
+        }
+      ).default
+    : undefined;
+
+  return {
+    root: dir,
+    targets: Object.entries(elmWatchJson.targets).map(([name, target]) => ({
+      name,
+      ...target,
+      ...(postprocess === undefined
+        ? {}
+        : {
+            postprocess: (code: string, info: Record<string, unknown>) =>
+              postprocess({ code, targetName: name, ...info }),
+          }),
+    })),
+  };
+}

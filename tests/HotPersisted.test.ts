@@ -278,6 +278,7 @@ describe("hot", () => {
       fixture: "error-overlay-bold-and-dim",
       args: [],
       scripts: ["Main.js"],
+      bin: "exit-2-in-optimize",
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });
       },
@@ -297,32 +298,38 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+      ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
       ⧙Target: Main⧘
 
-      I ran your postprocess command:
+      I ran the following commands:
 
       cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
-      printf '(function(...;}(this));' | node postprocess.js Main optimize hot
+      elm make --report=json --optimize --output=elm-stuff/elm-watch/0.js src/Main.elm
 
-      ⧙It exited with an error:⧘
+      I expected it to either exit 0 with no output (success),
+      or exit 1 with JSON on stderr (compile errors).
 
-      exit 1
+      ⧙But it exited like this:⧘
+
+      exit 2
       ⧙(no output)⧘
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30);">
       <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">POSTPROCESS ERROR</span><p>Target: Main</p></summary>
-      <pre>I ran your postprocess command:
+      <summary><span style="background-color: rgb(32, 30, 30);">UNEXPECTED ELM OUTPUT</span><p>Target: Main</p></summary>
+      <pre>I ran the following commands:
 
       cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
-      printf '(function(...;}(this));' | node postprocess.js Main optimize hot
+      elm make --report=json --optimize --output=elm-stuff/elm-watch/0.js src/Main.elm
 
-      <b>It exited with an error:</b>
+      I expected it to either exit 0 with no output (success),
+      or exit 1 with JSON on stderr (compile errors).
 
-      exit 1
+      <b>But it exited like this:</b>
+
+      exit 2
       <span style="opacity: 0.6">(no output)</span></pre></details>
       </overlay>
     `);

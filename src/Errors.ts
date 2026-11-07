@@ -3,7 +3,6 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
-import * as url from "url";
 
 import type { ConfigSource } from "./Config";
 import * as ElmMakeError from "./ElmMakeError";
@@ -31,11 +30,6 @@ import {
 } from "./NonEmptyArray";
 import { absolutePathFromString } from "./PathHelpers";
 import { Port } from "./Port";
-import {
-  ELM_WATCH_NODE,
-  ElmWatchNodePublicArgs,
-  UnknownValueAsString,
-} from "./PostprocessShared";
 import { Command, ExitReason } from "./Spawn";
 import * as Theme from "./Theme";
 import {
@@ -45,10 +39,8 @@ import {
   ElmJsonPath,
   ElmVersion,
   ElmWatchJsonPath,
-  ElmWatchNodeScriptPath,
   ElmWatchStuffJsonPath,
   InputPath,
-  markAsAbsolutePath,
   markAsElmWatchJsonPath,
   OutputPath,
   RunMode,
@@ -131,10 +123,6 @@ type FancyErrorLocation =
   | {
       tag: "ElmWatchJsonPath";
       theElmWatchJsonPath: ElmWatchJsonPath;
-    }
-  | {
-      tag: "ElmWatchNodeScriptPath";
-      theElmWatchNodeScriptPath: ElmWatchNodeScriptPath;
     }
   | {
       tag: "ElmWatchStuffJsonPath";
@@ -334,13 +322,6 @@ function fancyToPlainErrorLocation(
       return { tag: "FileOnly", file: location.theElmWatchStuffJsonPath };
     case "OutputPath":
       return { tag: "Target", targetName: location.targetName };
-    case "ElmWatchNodeScriptPath":
-      return {
-        tag: "FileOnly",
-        file: markAsAbsolutePath(
-          url.fileURLToPath(location.theElmWatchNodeScriptPath),
-        ),
-      };
     case "FileWithLineAndColumn":
       return location;
     case "NoLocation":
@@ -692,19 +673,6 @@ installation: ${bold("npx elm-watch")}
 `;
 }
 
-export function commandNotFoundError(
-  outputPath: OutputPath,
-  command: Command,
-): ErrorTemplate {
-  return fancyError("COMMAND NOT FOUND", outputPath)`
-I tried to execute ${bold(command.command)}, but it does not appear to exist!
-
-${printPATH(command.options.env, IS_WINDOWS)}
-
-Is ${bold(command.command)} installed?
-`;
-}
-
 export function otherSpawnError(
   location: ElmJsonPathOrOutputPath,
   error: Error,
@@ -769,46 +737,6 @@ ${printStdio(stdout, stderr)}
 `;
 }
 
-export function postprocessStdinWriteError(
-  location: ElmJsonPathOrOutputPath,
-  error: Error,
-  command: Command,
-): ErrorTemplate {
-  return fancyError("POSTPROCESS STDIN TROUBLE", location)`
-I tried to run your postprocess command:
-
-${printCommand(command)}
-
-Trying to write to its ${bold("stdin")}, I got an error!
-${bold("Did you forget to read stdin, maybe?")}
-
-Note: If you don't need stdin in some case, you can pipe it to stdout!
-
-This is the error message I got:
-
-${text(error.message)}
-`;
-}
-
-export function postprocessNonZeroExit(
-  outputPath: OutputPath,
-  exitReason: ExitReason,
-  stdout: string,
-  stderr: string,
-  command: Command,
-): ErrorTemplate {
-  return fancyError("POSTPROCESS ERROR", outputPath)`
-I ran your postprocess command:
-
-${printCommand(command)}
-
-${bold("It exited with an error:")}
-
-${printExitReason(exitReason)}
-${printStdio(stdout, stderr)}
-`;
-}
-
 export function postprocessFunctionError(
   outputPath: OutputPath,
   error: string,
@@ -832,134 +760,6 @@ I ran your postprocess function for this target.
 I expected it to return a string (or a promise of a string), but it returned:
 
 ${text(returnValue)}
-`;
-}
-
-export function elmWatchNodeMissingScript(
-  elmWatchJsonPath: ElmWatchJsonPath,
-): ErrorTemplate {
-  return fancyError("MISSING POSTPROCESS SCRIPT", {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: elmWatchJsonPath,
-  })`
-You have specified this in ${elmWatchJson}:
-
-"postprocess": [${json(ELM_WATCH_NODE)}]
-
-You need to specify a JavaScript file to run as well, like so:
-
-"postprocess": [${json(ELM_WATCH_NODE)}, "postprocess.js"]
-`;
-}
-
-export function elmWatchNodeImportError(
-  scriptPath: ElmWatchNodeScriptPath,
-  error: UnknownValueAsString,
-  stdout: string,
-  stderr: string,
-): ErrorTemplate {
-  return fancyError("POSTPROCESS IMPORT ERROR", {
-    tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptPath: scriptPath,
-  })`
-I tried to import your postprocess file:
-
-${printElmWatchNodeImportCommand(scriptPath)}
-
-But that resulted in this error:
-
-${printUnknownValueAsString(error)}
-
-${printElmWatchNodeStdio(stdout, stderr)}
-`;
-}
-
-export function elmWatchNodeDefaultExportNotFunction(
-  scriptPath: ElmWatchNodeScriptPath,
-  imported: UnknownValueAsString,
-  typeofDefault: string,
-  stdout: string,
-  stderr: string,
-): ErrorTemplate {
-  // This is in a variable to avoid a regex in scripts/Build.ts removing the line.
-  const moduleExports = text("module.exports");
-  return fancyError("MISSING POSTPROCESS DEFAULT EXPORT", {
-    tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptPath: scriptPath,
-  })`
-I imported your postprocess file:
-
-${printElmWatchNodeImportCommand(scriptPath)}
-
-I expected ${bold("imported.default")} to be a function, but it isn't!
-
-typeof imported.default === ${json(typeofDefault)}
-
-${bold("imported")} is:
-
-${printUnknownValueAsString(imported)}
-
-Here is a sample function to get you started:
-
-// CJS
-${moduleExports} = async function postprocess({ code, targetName, compilationMode }) {
-  return code;
-};
-
-// MJS
-export default async function postprocess({ code, targetName, compilationMode }) {
-  return code;
-};
-
-${printElmWatchNodeStdio(stdout, stderr)}
-`;
-}
-
-export function elmWatchNodeRunError(
-  scriptPath: ElmWatchNodeScriptPath,
-  args: ElmWatchNodePublicArgs,
-  error: UnknownValueAsString,
-  stdout: string,
-  stderr: string,
-): ErrorTemplate {
-  return fancyError("POSTPROCESS RUN ERROR", {
-    tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptPath: scriptPath,
-  })`
-I tried to run your postprocess command:
-
-${printElmWatchNodeImportCommand(scriptPath)}
-${printElmWatchNodeRunCommand(args)}
-
-But that resulted in this error:
-
-${printUnknownValueAsString(error)}
-
-${printElmWatchNodeStdio(stdout, stderr)}
-`;
-}
-
-export function elmWatchNodeBadReturnValue(
-  scriptPath: ElmWatchNodeScriptPath,
-  args: ElmWatchNodePublicArgs,
-  returnValue: UnknownValueAsString,
-  stdout: string,
-  stderr: string,
-): ErrorTemplate {
-  return fancyError("INVALID POSTPROCESS RESULT", {
-    tag: "ElmWatchNodeScriptPath",
-    theElmWatchNodeScriptPath: scriptPath,
-  })`
-I ran your postprocess command:
-
-${printElmWatchNodeImportCommand(scriptPath)}
-${printElmWatchNodeRunCommand(args)}
-
-I expected ${bold("result")} to be a string, but it is:
-
-${printUnknownValueAsString(returnValue)}
-
-${printElmWatchNodeStdio(stdout, stderr)}
 `;
 }
 
@@ -1131,7 +931,7 @@ ${bold("I had trouble reading it:")}
 ${text(error.message)}
 
 (I still managed to compile your code, but the watcher will not work properly
-and "postprocess" was not run.)
+and postprocess was not run.)
 `;
 }
 
@@ -1151,7 +951,7 @@ ${bold("I had trouble with the JSON inside:")}
 ${printJsonError(error)}
 
 (I still managed to compile your code, but the watcher will not work properly
-and "postprocess" was not run.)
+and postprocess was not run.)
 `;
 }
 
@@ -1222,7 +1022,7 @@ Doing so I encountered this error:
 ${text(error.message)}
 
 (I still managed to compile your code, but the watcher will not work properly
-and "postprocess" was not run.)
+and postprocess was not run.)
 `;
 }
 
@@ -1290,7 +1090,7 @@ function printWriteOutputErrorReasonForWriting(
 
     case "Postprocess":
       return text(
-        "After running your postprocess command, I tried to write the result of that to the output path:",
+        "After running your postprocess function, I tried to write the result of that to the output path:",
       );
   }
 }
@@ -1647,16 +1447,9 @@ ${pathEntriesString}
 }
 
 function printCommand(command: Command): Piece {
-  const stdin =
-    command.stdin === undefined
-      ? ""
-      : `${commandToPresentationName([
-          "printf",
-          truncate(command.stdin.toString("utf8")),
-        ])} | `;
   return text(`
 ${commandToPresentationName(["cd", command.options.cwd])}
-${stdin}${commandToPresentationName([command.command, ...command.args])}
+${commandToPresentationName([command.command, ...command.args])}
 `);
 }
 
@@ -1700,18 +1493,6 @@ export function printStdio(stdout: string, stderr: string): Template {
       : stdout === "" && stderr === ""
         ? template`${dim("(no output)")}`
         : template`
-STDOUT:
-${limitStdio(stdout)}
-
-STDERR:
-${limitStdio(stderr)}
-`;
-}
-
-function printElmWatchNodeStdio(stdout: string, stderr: string): Template {
-  return stdout === "" && stderr === ""
-    ? template``
-    : template`
 STDOUT:
 ${limitStdio(stdout)}
 
@@ -1791,38 +1572,6 @@ This is the data that caused the error:
 ${text(errorFilePath.content)}
       `;
   }
-}
-
-function printUnknownValueAsString(value: UnknownValueAsString): Piece {
-  switch (value.tag) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    case "UnknownValueAsString":
-      return text(value.value);
-  }
-}
-
-function printElmWatchNodeImportCommand(
-  scriptPath: ElmWatchNodeScriptPath,
-): Template {
-  return template`const imported = await import(${json(scriptPath)})`;
-}
-
-function printElmWatchNodeRunCommand(args: ElmWatchNodePublicArgs): Template {
-  const truncated = {
-    ...args,
-    code: truncate(args.code),
-  };
-  return template`const result = await imported.default(${json(truncated, 2)})`;
-}
-
-function truncate(string: string): string {
-  const roughLimit = 20;
-  const half = Math.floor(roughLimit / 2);
-  /* v8 ignore start */
-  return string.length <= roughLimit
-    ? string
-    : `${string.slice(0, half)}...${string.slice(-half)}`;
-  /* v8 ignore stop */
 }
 
 export function invalidOptions(error: Codec.DecoderError): ErrorTemplate {

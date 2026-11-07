@@ -113,7 +113,6 @@ export function make({
 
       /* v8 ignore start */
       case "OtherSpawnError":
-      case "StdinWriteError": // We never write to stdin.
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
@@ -384,7 +383,6 @@ export function install({
 
       /* v8 ignore start */
       case "OtherSpawnError":
-      case "StdinWriteError": // We never write to stdin.
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
@@ -502,7 +500,6 @@ export async function version({
     /* v8 ignore start */
     case "CommandNotFoundError":
     case "OtherSpawnError":
-    case "StdinWriteError":
     case "Killed":
       return markAsElmVersion("unknown");
     /* v8 ignore stop */

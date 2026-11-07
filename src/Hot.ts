@@ -18,9 +18,7 @@ import * as Compile from "./Compile";
 import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
-  __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
-  __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
   ELM_WATCH_ALLOWED_HOSTS,
   ELM_WATCH_OPEN_EDITOR,
   Env,
@@ -46,12 +44,9 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
 import { PortChoice } from "./Port";
-import { PostprocessWorkerPool } from "./Postprocess";
-import { ELM_WATCH_NODE } from "./PostprocessShared";
 import {
   ElmJsonErrorWithMetadata,
   getFlatOutputs,
-  getPostprocessElmWatchNodeScriptPath,
   OutputError,
   OutputState,
   Project,
@@ -137,11 +132,6 @@ type WebSocketRelatedEvent =
       date: Date;
       origin: string | undefined;
       reason: WebSocketConnectionRejectedReason;
-    }
-  | {
-      tag: "WorkersLimitedAfterWebSocketClosed";
-      date: Date;
-      numTerminatedWorkers: number;
     };
 
 export type LatestEvent =
@@ -150,12 +140,8 @@ export type LatestEvent =
 
 type Mutable = {
   watcher: chokidar.FSWatcher;
-  postprocessWorkerPool: PostprocessWorkerPool;
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
-  lastWebSocketCloseTimestamp: number | undefined;
-  workerLimitTimeoutMs: number;
-  workerLimitTimeoutId: NodeJS.Timeout | undefined;
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
@@ -229,14 +215,6 @@ export type Msg =
       output: WebSocketMessageReceivedOutput;
       webSocket: WebSocket;
       data: WebSocket.Data;
-    }
-  | {
-      tag: "WorkerLimitTimeoutPassed";
-    }
-  | {
-      tag: "WorkersLimited";
-      date: Date;
-      numTerminatedWorkers: number;
     };
 
 type Model = {
@@ -306,9 +284,6 @@ type Cmd =
       tag: "InstallDependencies";
     }
   | {
-      tag: "LimitWorkers";
-    }
-  | {
       tag: "LogInfoMessageWithTimeline";
       message: string;
       events: Array<LatestEvent>;
@@ -338,9 +313,6 @@ type Cmd =
   | {
       tag: "Restart";
       restartReasons: Array<LatestEvent>;
-    }
-  | {
-      tag: "RestartWorkers";
     }
   | {
       tag: "SleepBeforeNextAction";
@@ -389,7 +361,6 @@ type HotRunResult =
   | {
       tag: "Restart";
       restartReasons: Array<LatestEvent>;
-      postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: WebSocketState | undefined;
       webSocketToken: WebSocketToken;
     };
@@ -424,7 +395,6 @@ export async function run(
   getNow: GetNow,
   createServer: CreateServer,
   restartReasons: Array<LatestEvent>,
-  postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: WebSocketState | undefined,
   webSocketToken: WebSocketToken,
   project: Project,
@@ -439,7 +409,6 @@ export async function run(
       logger,
       getNow,
       createServer,
-      postprocessWorkerPool,
       webSocketState,
       webSocketToken,
       project,
@@ -520,7 +489,6 @@ const initMutable =
     logger: Logger,
     getNow: GetNow,
     createServer: CreateServer,
-    postprocessWorkerPool: PostprocessWorkerPool,
     webSocketState: WebSocketState | undefined,
     webSocketToken: WebSocketToken,
     project: Project,
@@ -532,16 +500,6 @@ const initMutable =
     resolvePromise: (result: HotRunResult) => void,
     rejectPromise: (error: Error) => void,
   ): Mutable => {
-    // The more targets that are enabled by connecting WebSockets, the more
-    // workers we might have. Terminate unnecessary idle workers as WebSockets
-    // close. But wait a while first: We don’t want to terminate workers just
-    // because the user refreshed the page (which results in a disconnect +
-    // connect).
-    const workerLimitTimeoutMs = silentlyReadIntEnvValue(
-      env[__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS],
-      10000,
-    );
-
     const watcher = chokidar.watch(Array.from(project.watchRoots), {
       ignoreInitial: true,
       // Note: Forward slashes must be used here even on Windows. (Using
@@ -595,12 +553,8 @@ const initMutable =
 
     const mutable: Mutable = {
       watcher,
-      postprocessWorkerPool,
       webSocketServer,
       webSocketConnections,
-      lastWebSocketCloseTimestamp: undefined,
-      workerLimitTimeoutMs,
-      workerLimitTimeoutId: undefined,
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
@@ -620,16 +574,6 @@ const initMutable =
       );
     });
 
-    postprocessWorkerPool.setCalculateMax(() =>
-      mutable.lastWebSocketCloseTimestamp !== undefined &&
-      getNow().getTime() >=
-        mutable.lastWebSocketCloseTimestamp + workerLimitTimeoutMs
-        ? // Save one worker, so we always have one “warmed up” worker ready to go
-          // when needed.
-          Math.max(1, makePrioritizedOutputs(mutable.webSocketConnections).size)
-        : Infinity,
-    );
-
     // The port isn’t finalized until a few moments later (when the persisted
     // port is not available).
     webSocketServer.listening
@@ -638,7 +582,7 @@ const initMutable =
         // When not running as a TTY the output is a simple log, and it gets
         // a bit tedious if the stats are printed after each event. Instead,
         // we print it once at startup, and only the server links (connections
-        // and workers are always 0 at that time).
+        // are always 0 at that time).
         // This has to be done once the server is ready – we don’t know the
         // final port number to print until then.
         const isRestart = webSocketState !== undefined;
@@ -658,13 +602,11 @@ const initMutable =
         if (mutable.killInstallDependencies !== undefined) {
           mutable.killInstallDependencies({ force: true });
         }
-        await Promise.all(
-          getFlatOutputs(project).map(({ outputState }) =>
-            "kill" in outputState.status
-              ? outputState.status.kill({ force: true })
-              : Promise.resolve(),
-          ),
-        );
+        for (const { outputState } of getFlatOutputs(project)) {
+          if ("kill" in outputState.status) {
+            outputState.status.kill({ force: true });
+          }
+        }
         await closeAll(logger, mutable);
       } catch (unknownError) {
         const error = toError(unknownError);
@@ -1224,25 +1166,6 @@ function update(
           ];
       }
     }
-
-    case "WorkerLimitTimeoutPassed":
-      return [model, [{ tag: "LimitWorkers" }]];
-
-    case "WorkersLimited":
-      return [
-        {
-          ...model,
-          latestEvents: [
-            ...model.latestEvents,
-            {
-              tag: "WorkersLimitedAfterWebSocketClosed",
-              date: msg.date,
-              numTerminatedWorkers: msg.numTerminatedWorkers,
-            },
-          ],
-        },
-        [],
-      ];
   }
 }
 
@@ -1331,24 +1254,6 @@ function onWatcherEvent(
       }
 
     default:
-      if (absolutePath === getPostprocessElmWatchNodeScriptPath(project)) {
-        return [
-          compileNextAction(nextAction),
-          {
-            ...makeWatcherEvent(eventName, absolutePath, now),
-            affectsAnyTarget: true,
-          },
-          [
-            {
-              tag: "MarkAsDirty",
-              outputs: getFlatOutputs(project),
-              killInstallDependencies: false,
-            },
-            { tag: "RestartWorkers" },
-          ],
-        ];
-      }
-
       if (project.staticFilesDir !== undefined) {
         const prefix = project.staticFilesDir + path.sep;
         if (
@@ -1613,7 +1518,6 @@ const runCmd =
               },
               total: outputActions.total,
               action,
-              postprocessWorkerPool: mutable.postprocessWorkerPool,
             })
               .then((handleOutputActionResult) => {
                 dispatch({
@@ -1695,21 +1599,6 @@ const runCmd =
         return;
       }
 
-      case "LimitWorkers":
-        mutable.postprocessWorkerPool
-          .limit()
-          .then((numTerminatedWorkers) => {
-            if (numTerminatedWorkers > 0) {
-              dispatch({
-                tag: "WorkersLimited",
-                date: getNow(),
-                numTerminatedWorkers,
-              });
-            }
-          })
-          .catch(rejectPromise);
-        return;
-
       case "LogInfoMessageWithTimeline": {
         const fullMessage = infoMessageWithTimeline({
           loggerConfig: logger.config,
@@ -1731,18 +1620,6 @@ const runCmd =
           logger.clearScreenDown();
         });
         mutable.lastInfoMessage = fullMessage;
-        if (
-          __ELM_WATCH_EXIT_ON_WORKER_LIMIT in env &&
-          cmd.events.some(
-            (event) => event.tag === "WorkersLimitedAfterWebSocketClosed",
-          )
-        ) {
-          closeAll(logger, mutable)
-            .then(() => {
-              resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
-            })
-            .catch(rejectPromise);
-        }
         return;
       }
 
@@ -1756,9 +1633,7 @@ const runCmd =
         for (const { outputPath, outputState } of cmd.outputs) {
           outputState.dirty = true;
           if ("kill" in outputState.status) {
-            Promise.resolve(outputState.status.kill({ force: false })).catch(
-              rejectPromise,
-            );
+            outputState.status.kill({ force: false });
           }
           webSocketSendToOutput(
             outputPath,
@@ -1861,13 +1736,11 @@ const runCmd =
         });
         closeAll(logger, mutable, {
           killWebSocketServer: elmWatchJsonChanged,
-          killPostprocessWorkerPool: elmWatchJsonChanged,
         })
           .then(() => {
             resolvePromise({
               tag: "Restart",
               restartReasons: cmd.restartReasons,
-              postprocessWorkerPool: mutable.postprocessWorkerPool,
               webSocketState: elmWatchJsonChanged
                 ? undefined
                 : {
@@ -1880,15 +1753,6 @@ const runCmd =
           .catch(rejectPromise);
         return;
       }
-
-      case "RestartWorkers":
-        mutable.postprocessWorkerPool
-          .terminate()
-          .then(() => {
-            mutable.postprocessWorkerPool.getOrCreateAvailableWorker();
-          })
-          .catch(rejectPromise);
-        return;
 
       case "ExitOnIdle":
         closeAll(logger, mutable)
@@ -2014,14 +1878,6 @@ function onWebSocketServerMsg(
       mutable.webSocketConnections = mutable.webSocketConnections.filter(
         (connection) => connection.webSocket !== msg.webSocket,
       );
-      mutable.lastWebSocketCloseTimestamp = now.getTime();
-      if (mutable.workerLimitTimeoutId !== undefined) {
-        clearTimeout(mutable.workerLimitTimeoutId);
-      }
-      mutable.workerLimitTimeoutId = setTimeout(() => {
-        mutable.workerLimitTimeoutId = undefined;
-        dispatch({ tag: "WorkerLimitTimeoutPassed" });
-      }, mutable.workerLimitTimeoutMs);
       dispatch({
         tag: "WebSocketClosed",
         date: now,
@@ -2187,15 +2043,9 @@ function handleOutputActionResultToCmd(
 async function closeAll(
   logger: Logger,
   mutable: Mutable,
-  { killWebSocketServer = true, killPostprocessWorkerPool = true } = {},
+  { killWebSocketServer = true } = {},
 ): Promise<void> {
   logger.reset();
-
-  /* v8 ignore start */
-  if (mutable.workerLimitTimeoutId !== undefined) {
-    clearTimeout(mutable.workerLimitTimeoutId);
-  }
-  /* v8 ignore stop */
 
   /* v8 ignore start */
   if (mutable.watcherTimeoutId !== undefined) {
@@ -2216,9 +2066,6 @@ async function closeAll(
   await Promise.all([
     watcherClosed,
     killWebSocketServer ? mutable.webSocketServer.close() : undefined,
-    killPostprocessWorkerPool
-      ? mutable.postprocessWorkerPool.terminate()
-      : undefined,
   ]);
 }
 
@@ -2939,7 +2786,6 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     case "WebSocketConnectedNeedingNoAction":
     case "WebSocketConnectedWithErrors":
     case "WebSocketConnectionRejected":
-    case "WorkersLimitedAfterWebSocketClosed":
       return 100;
 
     // When switching compilation mode or browser UI position, sleep a short
@@ -3023,14 +2869,9 @@ function printAllStats(
   mutable: Mutable,
   host: Host,
 ): string {
-  const numWorkers = mutable.postprocessWorkerPool.getSize();
   return printStats(loggerConfig, [
     printServerLinks(mutable.webSocketServer, host),
-    `${dim("web socket connections:")} ${mutable.webSocketConnections.length}${
-      numWorkers > 0
-        ? `${dim(`, ${ELM_WATCH_NODE} workers:`)} ${numWorkers}`
-        : ""
-    }`,
+    `${dim("web socket connections:")} ${mutable.webSocketConnections.length}`,
   ]);
 }
 
@@ -3155,12 +2996,6 @@ function printEventMessage(event: LatestEvent): string {
     case "WebSocketChangedCompilationMode":
       return `Changed compilation mode to ${quote(event.compilationMode)} of: ${
         event.outputPath.targetName
-      }`;
-
-    case "WorkersLimitedAfterWebSocketClosed":
-      return `Terminated ${event.numTerminatedWorkers} superfluous ${
-        /* v8 ignore next -- @preserve */
-        event.numTerminatedWorkers === 1 ? "worker" : "workers"
       }`;
   }
 }

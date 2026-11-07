@@ -1,9 +1,0 @@
-{
-  "postprocess": ["echo"],
-  "targets": {
-    "main": {
-      "inputs": ["../../src/Main.elm"],
-      "output": "../../build/no-stdin-read.js"
-    }
-  }
-}

@@ -8,7 +8,7 @@ import {
   ReachedIdleStateReason,
   UppercaseLetter,
 } from "../client/client";
-import elmWatchCli from "../src";
+import elmWatchCli, { elmWatch } from "../src";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";
@@ -21,6 +21,7 @@ import {
   badElmBinEnv,
   clean,
   CursorWriteStream,
+  fixtureOptions,
   logDebug,
   maybeClearElmStuff,
   MemoryWriteStream,
@@ -150,6 +151,9 @@ type SharedRunOptions = {
   includeProxyReloads?: boolean;
   simulateHttpCacheOnReload?: boolean;
   stdin?: ReadStream;
+  // Use `elmWatch()` with these options (and `runMode: "hot"`) instead of the
+  // CLI with `args`. The fixture’s postprocess.js is used for all targets.
+  useElmWatchFunction?: boolean;
 };
 
 export async function run({
@@ -169,6 +173,7 @@ export async function run({
   includeProxyReloads = false,
   simulateHttpCacheOnReload = false,
   stdin = new SilentReadStream(),
+  useElmWatchFunction = false,
 }: SharedRunOptions & {
   fixture: string;
   scripts: Array<string>;
@@ -211,6 +216,10 @@ export async function run({
 
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
+
+  const elmWatchOptions = useElmWatchFunction
+    ? await fixtureOptions(path.join(dir, cwd))
+    : undefined;
 
   const bodyIndex = bodyCounter + 2; // head + original body
   const body = document.createElement("body");
@@ -410,15 +419,22 @@ export async function run({
       watcher.on("error", reject);
     }
 
-    elmWatchCli(["hot", ...args], {
-      cwd: path.join(dir, cwd),
+    const sharedOptions = {
       env: fullEnv,
       stdin,
       stdout,
       stderr,
       logDebug,
       hotTestHooks,
-    })
+    };
+
+    (elmWatchOptions === undefined
+      ? elmWatchCli(["hot", ...args], {
+          cwd: path.join(dir, cwd),
+          ...sharedOptions,
+        })
+      : elmWatch({ ...elmWatchOptions, runMode: "hot", ...sharedOptions })
+    )
       .then(resolve)
       .catch(reject);
   });

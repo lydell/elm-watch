@@ -90,6 +90,8 @@ export const TargetName = Codec.flatMap(Codec.string, {
             path: [],
           },
         },
+  // Encoding is never used.
+  /* v8 ignore next -- @preserve */
   encoder: (value) => value,
 });
 
@@ -136,11 +138,31 @@ const TargetRecordHelper = {
   encoder: (value: Record<string, Target>) => value,
 };
 
+// elm-watch 1 supported "postprocess" in elm-watch.json. Give a helpful error
+// for people upgrading.
+const PostprocessNoLongerSupported: Codec.Codec<undefined> = {
+  decoder: (value) => ({
+    tag: "DecoderError",
+    error: {
+      tag: "custom",
+      message: `"postprocess" is no longer supported in elm-watch.json.
+Instead, create a JavaScript file that imports elm-watch and calls \`elmWatch()\`
+with your targets, and give each target a \`postprocess\` function.
+Learn more: https://lydell.github.io/elm-watch/postprocess/`,
+      got: value,
+      path: [],
+    },
+  }),
+  // Encoding is never used.
+  /* v8 ignore next -- @preserve */
+  encoder: (value) => value,
+};
+
 export type ElmWatchJson = Codec.Infer<typeof ElmWatchJson>;
 const ElmWatchJson = Codec.fields(
   {
     targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
-    postprocess: Codec.field(NonEmptyArray(Codec.string), { optional: true }),
+    postprocess: Codec.field(PostprocessNoLongerSupported, { optional: true }),
     port: Codec.field(Port, { optional: true }),
     webSocketUrl: Codec.field(WebSocketUrl("elm-watch.json"), {
       optional: true,
@@ -220,7 +242,6 @@ function toConfig(
       output: target.output,
       postprocess: undefined,
     })) as NonEmptyArray<ConfigTarget>,
-    postprocess: json.postprocess,
     port: json.port,
     webSocketUrl: json.webSocketUrl,
     staticFilesDir: json.serve,

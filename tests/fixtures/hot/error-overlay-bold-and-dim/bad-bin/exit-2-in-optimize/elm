@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+import { args, fakeElm, realElm } from "#fake-elm";
+
+// Exit with an unexpected exit code and no output in optimize mode, to get an
+// error that contains both bold and dim text.
+fakeElm({
+  make: () => (args.includes("--optimize") ? 2 : realElm()),
+});

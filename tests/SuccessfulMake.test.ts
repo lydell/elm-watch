@@ -2,13 +2,14 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import elmWatchCli from "../src";
+import elmWatchCli, { elmWatch } from "../src";
 import { Env, NO_COLOR } from "../src/Env";
 import { copyFixture } from "./FixtureCopies";
 import {
   assertExitCode,
   clean,
   CursorWriteStream,
+  fixtureOptions,
   grep,
   logDebug,
   MemoryWriteStream,
@@ -26,7 +27,18 @@ function fixtureDir(fixture: string): string {
 async function run(
   fixture: string,
   args: Array<string>,
-  { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {},
+  {
+    isTTY = true,
+    bin,
+    env,
+    elmWatchOptions,
+  }: {
+    isTTY?: boolean;
+    bin?: string;
+    env?: Env;
+    // Use `elmWatch()` with these options instead of the CLI with `args`.
+    elmWatchOptions?: (dir: string) => Promise<Record<string, unknown>>;
+  } = {},
 ): Promise<string> {
   const dir = fixtureDir(fixture);
   const build = path.join(dir, "build");
@@ -39,8 +51,7 @@ async function run(
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
-  const exitCode = await elmWatchCli(args, {
-    cwd: dir,
+  const sharedOptions = {
     env: {
       ...process.env,
       ...TEST_ENV,
@@ -51,7 +62,12 @@ async function run(
     stdout,
     stderr,
     logDebug,
-  });
+  };
+
+  const exitCode =
+    elmWatchOptions === undefined
+      ? await elmWatchCli(args, { cwd: dir, ...sharedOptions })
+      : await elmWatch({ ...(await elmWatchOptions(dir)), ...sharedOptions });
 
   const stdoutString = clean(stdout.getOutput());
 
@@ -67,7 +83,7 @@ describe("successful make", () => {
   test("standard mode", async () => {
     expect(await run("successful-make", ["make"])).toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -76,21 +92,21 @@ describe("successful make", () => {
   test("--debug", async () => {
     expect(await run("successful-make", ["make", "--debug"]))
       .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+        ✅ Dependencies
+        ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
 
-      ✅ Compilation finished in ⧙123 ms⧘.
-    `);
+        ✅ Compilation finished in ⧙123 ms⧘.
+      `);
   });
 
   test("--optimize", async () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ main⧙   88.5 KiB → 88.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 …⧘
+        ✅ Dependencies
+        ✅ main⧙                                           88.5 KiB     1 ms Q | 1.23 s E⧘
 
-      ✅ Compilation finished in ⧙123 ms⧘.
-    `);
+        ✅ Compilation finished in ⧙123 ms⧘.
+      `);
   });
 
   test("installed packages output", async () => {
@@ -107,7 +123,7 @@ describe("successful make", () => {
          ● elm/json 1.1.3
          ● elm/url 1.0.0
          ● elm/core 1.0.5
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -120,9 +136,7 @@ describe("successful make", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ main: elm make --optimize
-      🟢 main: elm make done
-      ⏳ main: postprocess
-      ✅ main⧙   88.5 KiB → 88.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      ✅ main⧙   88.5 KiB     1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -138,73 +152,35 @@ describe("successful make", () => {
       Dependencies: in progress
       Dependencies: success
       main: elm make --optimize
-      main: elm make done
-      main: postprocess
-      main: success   88.5 KiB -> 88.1 KiB (99.6 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P
+      main: success   88.5 KiB     1 ms Q | 1.23 s E
 
       Compilation finished in 123 ms.
-    `);
-  });
-
-  test("postprocess with elm-watch-node (cjs default)", async () => {
-    expect(await run("postprocess-elm-watch-node", ["make"]))
-      .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-
-      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
-    `);
-  });
-
-  test("postprocess with elm-watch-node (cjs)", async () => {
-    expect(await run("postprocess-elm-watch-node/cjs", ["make"]))
-      .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-
-      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
-    `);
-  });
-
-  test("postprocess with elm-watch-node (mjs)", async () => {
-    expect(await run("postprocess-elm-watch-node/mjs", ["make"]))
-      .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-
-      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
-    `);
-  });
-
-  test("postprocess with elm-watch-node (mjs default)", async () => {
-    expect(await run("postprocess-elm-watch-node/mjs-default", ["make"]))
-      .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-
-      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 1 elm-watch-node worker).⧘
     `);
   });
 
   test("multiple elm.json", async () => {
     expect(await run("multiple-elm-json/config", ["make"]))
       .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ Dependencies (2/2)
-      ✅ app⧙                                   1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      ✅ admin⧙                                 1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+        ✅ Dependencies
+        ✅ Dependencies (2/2)
+        ✅ app⧙                                                         1 ms Q | 1.23 s E⧘
+        ✅ admin⧙                                                       1 ms Q | 1.23 s E⧘
 
-      ✅ Compilation finished in ⧙123 ms⧘.
-    `);
+        ✅ Compilation finished in ⧙123 ms⧘.
+      `);
   });
 
-  test("multiple elm-watch-node, with queued postprocess", async () => {
-    const fixture = "multiple-elm-watch-node";
+  test("multiple postprocess, with queued postprocess", async () => {
+    const fixture = "multiple-postprocess";
     const lock = path.join(fixtureDir(fixture), "lock");
     fs.writeFileSync(lock, "");
-    const output = await run(fixture, ["make"], {
+    const output = await run(fixture, [], {
       isTTY: false,
       bin: "test-bin",
+      elmWatchOptions: async (dir) => ({
+        ...(await fixtureOptions(dir)),
+        runMode: "make",
+      }),
     });
 
     // The order of the lines in the middle depends on timing, so only
@@ -216,11 +192,11 @@ describe("successful make", () => {
       ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      ✅ Compilation finished in ⧙123 ms⧘⧙ (using 2 elm-watch-node workers).⧘
+      ✅ Compilation finished in ⧙123 ms⧘.
     `);
 
-    // There are only 2 workers, so postprocess for the third target has to
-    // wait until the first one is done.
+    // Only 2 things run in parallel (`__ELM_WATCH_MAX_PARALLEL` in the tests),
+    // so postprocess for the third target has to wait until the first one is done.
     expect(output.indexOf("⏳ third: postprocess")).toBeGreaterThan(
       output.indexOf("✅ main"),
     );

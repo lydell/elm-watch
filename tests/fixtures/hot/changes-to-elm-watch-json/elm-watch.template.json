@@ -1,5 +1,4 @@
 {
-    "postprocess": ["elm-watch-node", "postprocess.js"],
     "targets": {
         "HtmlMain": {
             "inputs": [

@@ -19,8 +19,7 @@ import {
   absoluteRealpath,
   findClosest,
 } from "./PathHelpers";
-import { Postprocess, PostprocessToRun } from "./Postprocess";
-import { ELM_WATCH_NODE, PostprocessError } from "./PostprocessShared";
+import { Postprocess, PostprocessError, PostprocessToRun } from "./Postprocess";
 import { RunElmMakeError } from "./SpawnElm";
 import {
   type AbsolutePath,
@@ -56,7 +55,6 @@ export type Project = {
   elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
   elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   maxParallel: number;
-  postprocess: Postprocess;
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
 };
@@ -189,7 +187,7 @@ export type OutputStatus =
     }
   | {
       tag: "Postprocess";
-      kill: () => Promise<void> | void;
+      kill: () => void;
     }
   | {
       tag: "QueuedForElmMake";
@@ -349,15 +347,6 @@ export function initProject({
     NonEmptyArray<string>
   >();
 
-  const postprocess: Postprocess =
-    config.postprocess === undefined || config.source.tag !== "ElmWatchJson"
-      ? { tag: "NoPostprocess" }
-      : {
-          tag: "Postprocess",
-          postprocessArray: config.postprocess,
-          elmWatchJsonPath: config.source.elmWatchJsonPath,
-        };
-
   for (const [index, target] of config.targets.entries()) {
     const targetName = target.name;
     const outputPath: OutputPath = {
@@ -404,9 +393,9 @@ export function initProject({
             new OutputState(
               resolveElmJsonResult.inputs,
               target.postprocess === undefined
-                ? postprocess
+                ? { tag: "NoPostprocess" }
                 : {
-                    tag: "PostprocessFunction",
+                    tag: "Postprocess",
                     postprocessFunction: target.postprocess,
                   },
               thisCompilationMode,
@@ -489,7 +478,6 @@ export function initProject({
       elmJsonsErrors,
       elmJsons,
       maxParallel,
-      postprocess,
       webSocketUrl,
       allowedHosts,
     },
@@ -721,32 +709,12 @@ export function projectHasFilePathThatCanBeOpenedInEditor(
     (project.configSource.tag === "ElmWatchJson" &&
       filePath === project.configSource.elmWatchJsonPath) ||
     filePath === project.elmWatchStuffJsonPath ||
-    filePath === getPostprocessElmWatchNodeScriptPath(project) ||
     getFlatOutputs(project).some(
       ({ elmJsonPath, outputState }) =>
         filePath === elmJsonPath ||
         outputState.allRelatedElmFilePaths.has(filePath),
     )
   );
-}
-
-export function getPostprocessElmWatchNodeScriptPath(
-  project: Project,
-): AbsolutePath | undefined {
-  switch (project.postprocess.tag) {
-    case "Postprocess": {
-      const [commandName, scriptPathString] =
-        project.postprocess.postprocessArray;
-      if (commandName === ELM_WATCH_NODE && scriptPathString !== undefined) {
-        return absolutePathFromString(project.root, scriptPathString);
-      }
-      return undefined;
-    }
-
-    case "NoPostprocess":
-    case "PostprocessFunction":
-      return undefined;
-  }
 }
 
 export function projectToDebug(project: Project): unknown {
@@ -761,12 +729,12 @@ export function projectToDebug(project: Project): unknown {
         : undefined,
     elmWatchStuffJson: project.elmWatchStuffJsonPath,
     maxParallel: project.maxParallel,
-    postprocess: project.postprocess,
     enabledTargets: Array.from(project.elmJsons.entries()).flatMap(
       ([elmJsonPath, outputs]) =>
         outputs.map(([outputPath, outputState]) => ({
           ...outputPathToDebug(outputPath),
           compilationMode: outputState.compilationMode,
+          postprocess: outputState.postprocess.tag === "Postprocess",
           elmJson: elmJsonPath,
           inputs: outputState.inputs.map(inputPathToDebug),
         })),

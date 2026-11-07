@@ -12,8 +12,6 @@ import type { Logger } from "./Logger";
 import * as Make from "./Make";
 import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray";
 import { absolutePathFromString } from "./PathHelpers";
-import { PostprocessWorkerPool } from "./Postprocess";
-import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
 import * as SpawnElm from "./SpawnElm";
 import {
@@ -40,7 +38,6 @@ export type RunResult =
   | {
       tag: "Restart";
       restartReasons: Array<Hot.LatestEvent>;
-      postprocessWorkerPool: PostprocessWorkerPool;
       webSocketState: Hot.WebSocketState | undefined;
       webSocketToken: WebSocketToken | undefined;
     };
@@ -54,7 +51,6 @@ export async function run(
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.LatestEvent>,
-  postprocessWorkerPool: PostprocessWorkerPool,
   webSocketState: Hot.WebSocketState | undefined,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
   hotTestHooks: Hot.HotTestHooks,
@@ -74,7 +70,6 @@ export async function run(
         getNow,
         runMode,
         parseResult.elmWatchJsonPath,
-        postprocessWorkerPool,
         webSocketTokenFromPreviousRun,
       );
 
@@ -90,7 +85,6 @@ export async function run(
         getNow,
         runMode,
         parseResult.elmWatchJsonPath,
-        postprocessWorkerPool,
         webSocketTokenFromPreviousRun,
       );
 
@@ -157,7 +151,6 @@ export async function run(
             targetsSubstrings: parseArgsResult.targetsSubstrings,
             config,
             restartReasons,
-            postprocessWorkerPool,
             webSocketState,
             webSocketTokenFromPreviousRun,
             hotTestHooks,
@@ -178,7 +171,6 @@ export async function runConfig({
   targetsSubstrings,
   config,
   restartReasons,
-  postprocessWorkerPool,
   webSocketState,
   webSocketTokenFromPreviousRun,
   hotTestHooks,
@@ -192,7 +184,6 @@ export async function runConfig({
   targetsSubstrings: Array<string>;
   config: Config;
   restartReasons: Array<Hot.LatestEvent>;
-  postprocessWorkerPool: PostprocessWorkerPool;
   webSocketState: Hot.WebSocketState | undefined;
   webSocketTokenFromPreviousRun: WebSocketToken | undefined;
   hotTestHooks: Hot.HotTestHooks;
@@ -272,7 +263,6 @@ export async function runConfig({
                 getNow,
                 runMode,
                 config.source.elmWatchJsonPath,
-                postprocessWorkerPool,
                 webSocketTokenFromPreviousRun,
               );
             case "Options":
@@ -285,27 +275,9 @@ export async function runConfig({
 
           logger.debug("Project", projectToDebug(project));
 
-          switch (project.postprocess.tag) {
-            case "NoPostprocess":
-            case "PostprocessFunction":
-              break;
-            case "Postprocess":
-              if (project.postprocess.postprocessArray[0] === ELM_WATCH_NODE) {
-                // Warm up one worker, since we’re going to need it.
-                postprocessWorkerPool.getOrCreateAvailableWorker();
-              }
-              break;
-          }
-
           switch (runMode) {
             case "make": {
-              const result = await Make.run(
-                env,
-                logger,
-                getNow,
-                project,
-                postprocessWorkerPool,
-              );
+              const result = await Make.run(env, logger, getNow, project);
               switch (result.tag) {
                 case "Error":
                   return { tag: "Exit", exitCode: 1 };
@@ -322,7 +294,6 @@ export async function runConfig({
                 getNow,
                 createServer,
                 restartReasons,
-                postprocessWorkerPool,
                 webSocketState,
                 elmWatchStuffJson?.webSocketToken ??
                   webSocketTokenFromPreviousRun ??
@@ -366,7 +337,6 @@ async function handleElmWatchJsonError(
   getNow: GetNow,
   runMode: RunMode,
   elmWatchJsonPath: ElmWatchJsonPath,
-  postprocessWorkerPool: PostprocessWorkerPool,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
 ): Promise<RunResult> {
   switch (runMode) {
@@ -388,7 +358,6 @@ async function handleElmWatchJsonError(
       return {
         tag: "Restart",
         restartReasons: [{ ...elmWatchJsonEvent, affectsAnyTarget: true }],
-        postprocessWorkerPool,
         webSocketState: undefined,
         webSocketToken: webSocketTokenFromPreviousRun,
       };

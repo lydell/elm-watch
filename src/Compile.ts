@@ -29,11 +29,7 @@ import {
   nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
-import {
-  PostprocessToRun,
-  PostprocessWorkerPool,
-  runPostprocess,
-} from "./Postprocess";
+import { PostprocessToRun, runPostprocess } from "./Postprocess";
 import {
   Duration,
   ElmJsonErrorWithMetadata,
@@ -586,7 +582,6 @@ export async function handleOutputAction({
   runMode,
   total,
   action,
-  postprocessWorkerPool,
 }: {
   env: Env;
   logger: Logger;
@@ -594,7 +589,6 @@ export async function handleOutputAction({
   runMode: RunModeWithExtraData;
   total: number;
   action: OutputAction;
-  postprocessWorkerPool: PostprocessWorkerPool;
 }): Promise<HandleOutputActionResult> {
   switch (action.tag) {
     case "NeedsElmMake":
@@ -637,13 +631,11 @@ export async function handleOutputAction({
 
     case "NeedsPostprocess":
       return postprocessHelper({
-        env,
         logger,
         runMode,
         total,
         ...action.output,
         postprocess: action.postprocess,
-        postprocessWorkerPool,
         code: action.code,
         elmCompiledTimestamp: action.elmCompiledTimestamp,
         recordFields: action.recordFields,
@@ -862,8 +854,7 @@ function onCompileSuccess(
           return { tag: "Nothing" };
         }
 
-        case "Postprocess":
-        case "PostprocessFunction": {
+        case "Postprocess": {
           let buffer;
           try {
             buffer = fs.readFileSync(outputPath.temporaryOutputPath);
@@ -994,8 +985,7 @@ function onCompileSuccess(
               };
         }
 
-        case "Postprocess":
-        case "PostprocessFunction": {
+        case "Postprocess": {
           outputState.setStatus({
             tag: "QueuedForPostprocess",
             postprocess,
@@ -1051,7 +1041,6 @@ function needsToWriteProxyFile(
 }
 
 async function postprocessHelper({
-  env,
   logger,
   runMode,
   elmJsonPath,
@@ -1060,12 +1049,10 @@ async function postprocessHelper({
   index,
   total,
   postprocess,
-  postprocessWorkerPool,
   code,
   elmCompiledTimestamp,
   recordFields,
 }: {
-  env: Env;
   logger: Logger;
   runMode: RunModeWithExtraData;
   elmJsonPath: ElmJsonPath;
@@ -1074,7 +1061,6 @@ async function postprocessHelper({
   index: number;
   total: number;
   postprocess: PostprocessToRun;
-  postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
   elmCompiledTimestamp: number;
   recordFields: Set<string> | undefined;
@@ -1091,13 +1077,10 @@ async function postprocessHelper({
   };
 
   const { promise, kill } = runPostprocess({
-    env,
+    postprocess,
+    code,
     compilationMode: outputState.compilationMode,
     runMode: runMode.tag,
-    outputPath,
-    postprocess,
-    postprocessWorkerPool,
-    code,
   });
 
   outputState.setStatus({ tag: "Postprocess", kill });
@@ -1834,16 +1817,8 @@ function statusLine(
 
     /* v8 ignore next -- @preserve */
     case "ElmNotFoundError":
-    case "CommandNotFoundError":
     case "OtherSpawnError":
     case "UnexpectedElmMakeOutput":
-    case "PostprocessStdinWriteError":
-    case "PostprocessNonZeroExit":
-    case "ElmWatchNodeMissingScript":
-    case "ElmWatchNodeImportError":
-    case "ElmWatchNodeDefaultExportNotFunction":
-    case "ElmWatchNodeRunError":
-    case "ElmWatchNodeBadReturnValue":
     case "PostprocessFunctionError":
     case "PostprocessFunctionBadReturnValue":
     case "ElmMakeCrashError":
@@ -2116,9 +2091,6 @@ export function renderOutputErrors(
       return [Errors.elmNotFoundError(outputPath, status.command)];
     /* v8 ignore stop */
 
-    case "CommandNotFoundError":
-      return [Errors.commandNotFoundError(outputPath, status.command)];
-
     /* v8 ignore start */
     case "OtherSpawnError":
       return [Errors.otherSpawnError(outputPath, status.error, status.command)];
@@ -2136,73 +2108,6 @@ export function renderOutputErrors(
       ];
 
     // This is covered on macOS and Windows, but not Linux.
-    /* v8 ignore start */
-    case "PostprocessStdinWriteError":
-      return [
-        Errors.postprocessStdinWriteError(
-          outputPath,
-          status.error,
-          status.command,
-        ),
-      ];
-    /* v8 ignore stop */
-
-    case "PostprocessNonZeroExit":
-      return [
-        Errors.postprocessNonZeroExit(
-          outputPath,
-          status.exitReason,
-          status.stdout,
-          status.stderr,
-          status.command,
-        ),
-      ];
-
-    case "ElmWatchNodeMissingScript":
-      return [Errors.elmWatchNodeMissingScript(status.elmWatchJsonPath)];
-
-    case "ElmWatchNodeImportError":
-      return [
-        Errors.elmWatchNodeImportError(
-          status.scriptPath,
-          status.error,
-          status.stdout,
-          status.stderr,
-        ),
-      ];
-
-    case "ElmWatchNodeDefaultExportNotFunction":
-      return [
-        Errors.elmWatchNodeDefaultExportNotFunction(
-          status.scriptPath,
-          status.imported,
-          status.typeofDefault,
-          status.stdout,
-          status.stderr,
-        ),
-      ];
-
-    case "ElmWatchNodeRunError":
-      return [
-        Errors.elmWatchNodeRunError(
-          status.scriptPath,
-          status.args,
-          status.error,
-          status.stdout,
-          status.stderr,
-        ),
-      ];
-
-    case "ElmWatchNodeBadReturnValue":
-      return [
-        Errors.elmWatchNodeBadReturnValue(
-          status.scriptPath,
-          status.args,
-          status.returnValue,
-          status.stdout,
-          status.stderr,
-        ),
-      ];
 
     case "PostprocessFunctionError":
       return [Errors.postprocessFunctionError(outputPath, status.error)];

@@ -26,7 +26,7 @@ let fixtureFiles: Array<string> | undefined = undefined;
 // done while holding a global lock in ~/.elm), elm-stuff/ is seeded with
 // cached dependency information (see `seedElmStuff`).
 // `base` is relative to tests/fixtures/, like "hot". `fixture` is relative to
-// `base`, and can be nested, like "postprocess/variants/no-stdin-read". The
+// `base`, and can be nested, like "valid/postprocess". The
 // whole top-level folder ("postprocess") is copied, since nested fixtures can
 // refer to files further up. Returns the path to `fixture` in the copy.
 export function copyFixture(base: string, fixture: string): string {

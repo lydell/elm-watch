@@ -65,10 +65,8 @@ describe("hot", () => {
               elmWatchJsonString.slice(0, -10),
             );
             await waitFor(() => countErrorsFound() > errorsFound);
-            fs.writeFileSync(
-              elmWatchJsonPath,
-              elmWatchJsonString.replace(/"postprocess":.*/, ""),
-            );
+            // Fix elm-watch.json again.
+            fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
             return "KeepGoing" as const;
           case 2:
             assert2(div);
@@ -137,7 +135,7 @@ describe("hot", () => {
     `);
 
     function assert1(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>THE TEXT!</div>`);
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
     }
 
     function assert2(div: HTMLDivElement): void {
@@ -566,95 +564,6 @@ describe("hot", () => {
     `);
   });
 
-  test("changes to elm-watch-node JS file", async () => {
-    const fixture = "changes-to-postprocess";
-    const postprocessPath = path.join(fixtureDir(fixture), "postprocess.js");
-    const postprocessTemplatePath = path.join(
-      fixtureDir(fixture),
-      "postprocess.template.js",
-    );
-    const roguePath = path.join(fixtureDir(fixture), "src", "postprocess.js");
-    const postprocessString = fs
-      .readFileSync(postprocessTemplatePath, "utf8")
-      .replace(/\r\n/g, "\n");
-    fs.writeFileSync(postprocessPath, postprocessString);
-    fs.writeFileSync(roguePath, "ROGUE");
-
-    const { terminal } = await run({
-      fixture,
-      args: ["HtmlMain"],
-      scripts: ["HtmlMain.js"],
-      isTTY: false,
-      init: (node) => {
-        window.Elm?.["HtmlMain"]?.init({ node });
-      },
-      onIdle: ({ idle, div }) => {
-        switch (idle) {
-          case 1:
-            assert1(div);
-            fs.writeFileSync(postprocessPath, postprocessString.slice(0, -10));
-            touch(roguePath);
-            return "KeepGoing";
-          case 2:
-            fs.writeFileSync(
-              postprocessPath,
-              postprocessString.replace("toUpperCase", "toLowerCase"),
-            );
-            return "KeepGoing";
-          case 3:
-            assert2(div);
-            fs.unlinkSync(postprocessPath);
-            return "KeepGoing";
-          case 4:
-            fs.writeFileSync(postprocessPath, postprocessString);
-            return "KeepGoing";
-          default:
-            assert3(div);
-            return "Stop";
-        }
-      },
-    });
-
-    expect(onlyErrorMessages(terminal.replace(/^ +at.+\n/gm, "")))
-      .toMatchInlineSnapshot(`
-      ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
-      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js
-
-      I tried to import your postprocess file:
-
-      const imported = await import("file:///Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
-
-      But that resulted in this error:
-
-      SyntaxError: missing ) after argument list
-
-      …
-
-      ⧙-- POSTPROCESS IMPORT ERROR ----------------------------------------------------⧘
-      /Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js
-
-      I tried to import your postprocess file:
-
-      const imported = await import("file:///Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js")
-
-      But that resulted in this error:
-
-      Cannot find module '/Users/you/project/tests/fixtures/hot/changes-to-postprocess/postprocess.js' imported from /Users/you/project/src/PostprocessWorker.ts
-    `);
-
-    function assert1(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>THE TEXT!</div>`);
-    }
-
-    function assert2(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>the text!</div>`);
-    }
-
-    function assert3(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>THE TEXT!</div>`);
-    }
-  });
-
   // - Create and delete directories named `Something.elm`.
   // - Create and delete a file named like a package (`Html.elm`).
   test("changes to .elm files", async () => {
@@ -702,7 +611,7 @@ describe("hot", () => {
       EISDIR: illegal operation on a directory, read
 
       (I still managed to compile your code, but the watcher will not work properly
-      and "postprocess" was not run.)
+      and postprocess was not run.)
 
       …
 

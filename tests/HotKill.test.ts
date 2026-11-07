@@ -3,15 +3,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 
-import {
-  __ELM_WATCH_ELM_TIMEOUT_MS,
-  __ELM_WATCH_EXIT_ON_WORKER_LIMIT,
-  __ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS,
-  NO_COLOR,
-} from "../src/Env";
+import { __ELM_WATCH_ELM_TIMEOUT_MS } from "../src/Env";
 import {
   grep,
-  rm,
   stringSnapshotSerializer,
   TEST_ENV,
   touch,
@@ -131,56 +125,7 @@ describe("hot", () => {
       args: [],
       scripts: ["Main.js"],
       isTTY: false,
-      init: (node) => {
-        window.Elm?.["Main"]?.init({ node });
-      },
-      onIdle: async ({ idle, div }) => {
-        switch (idle) {
-          case 1:
-            assert1(div);
-            touch(input);
-            // Wait for Elm to finish and postprocess to start.
-            await waitFor(() => fs.readFileSync(tmp, "utf8") === "3");
-            touch(input); // Touch while postprocessing.
-            return "KeepGoing";
-          default:
-            assert2(div);
-            return "Stop";
-        }
-      },
-    });
-
-    expect(grep(terminal, /: (?:postprocess|interrupted)/))
-      .toMatchInlineSnapshot(`
-      ⏳ Main: postprocess
-      ⏳ Main: postprocess
-      ⏳ Main: interrupted
-      ⏳ Main: postprocess
-    `);
-
-    function assert1(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>postprocess content before</div>`,
-      );
-    }
-
-    function assert2(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>postprocess content after</div>`,
-      );
-    }
-  });
-
-  test("kill postprocess (elm-watch-node)", async () => {
-    const fixture = "kill-postprocess-elm-watch-node";
-    const input = path.join(fixtureDir(fixture), "src", "Main.elm");
-    const tmp = path.join(fixtureDir(fixture), "postprocess.tmp");
-    fs.writeFileSync(tmp, "1");
-    const { terminal } = await run({
-      fixture,
-      args: [],
-      scripts: ["Main.js"],
-      isTTY: false,
+      useElmWatchFunction: true,
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });
       },
@@ -219,44 +164,5 @@ describe("hot", () => {
         `<div>postprocess content after</div>`,
       );
     }
-  });
-
-  test("limit postprocess workers", async () => {
-    const fixture = "limit-postprocess-workers";
-    const lock = path.join(fixtureDir(fixture), "lock");
-    rm(lock);
-
-    const { terminal } = await run({
-      fixture,
-      args: [],
-      scripts: ["One.js", "Two.js"],
-      isTTY: false,
-      env: {
-        [__ELM_WATCH_WORKER_LIMIT_TIMEOUT_MS]: "150",
-        [__ELM_WATCH_EXIT_ON_WORKER_LIMIT]: "",
-        [NO_COLOR]: "",
-      },
-      init: (node) => {
-        const node1 = document.createElement("div");
-        const node2 = document.createElement("div");
-        node.append(node1, node2);
-        window.Elm?.["One"]?.init({ node: node1 });
-        window.Elm?.["Two"]?.init({ node: node2 });
-      },
-      onIdle: async ({ idle }) => {
-        switch (idle) {
-          case 1:
-            return "KeepGoing"; // First script has loaded.
-          default:
-            await window.__ELM_WATCH.KILL_MATCHING(/^/);
-            return "KeepGoing" as const;
-        }
-      },
-    });
-
-    // Remove duplicate lines.
-    expect(
-      grep(terminal, /worker/).replace(/\n(.+)(?:\n\1)+/g, "\n$1"),
-    ).toMatchInlineSnapshot(`13:10:05 Terminated 1 superfluous worker`);
   });
 });

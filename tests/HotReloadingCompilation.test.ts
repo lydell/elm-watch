@@ -341,6 +341,7 @@ describe("hot reloading", () => {
   test("Changed record fields in optimize with postprocess", async () => {
     const { replace, go } = runHotReload({
       fixture: "hot-reload-postprocess",
+      useElmWatchFunction: true,
       name: "ChangedRecordFields",
       programType: "Element",
       compilationMode: "optimize",
@@ -381,6 +382,7 @@ describe("hot reloading", () => {
   test("Connect while compiling", async () => {
     const { go } = runHotReload({
       fixture: "hot-reload-postprocess",
+      useElmWatchFunction: true,
       name: "SlowPostprocess",
       programType: "Html",
       compilationMode: "standard",
@@ -408,6 +410,7 @@ describe("hot reloading", () => {
   test("hot reload code postprocessed to ESM", async () => {
     const { go, replace } = runHotReload({
       fixture: "hot-reload-postprocess",
+      useElmWatchFunction: true,
       name: "ESM",
       programType: "Html",
       compilationMode: "standard",

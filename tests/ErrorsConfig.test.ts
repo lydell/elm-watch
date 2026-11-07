@@ -818,7 +818,7 @@ describe("errors", () => {
         EISDIR: illegal operation on a directory, read
 
         (I still managed to compile your code, but the watcher will not work properly
-        and "postprocess" was not run.)
+        and postprocess was not run.)
       `);
     });
 
@@ -841,7 +841,7 @@ describe("errors", () => {
         SyntaxError: (JSON syntax error)
 
         (I still managed to compile your code, but the watcher will not work properly
-        and "postprocess" was not run.)
+        and postprocess was not run.)
       `);
     });
 
@@ -867,7 +867,7 @@ describe("errors", () => {
         Got: "hackage"
 
         (I still managed to compile your code, but the watcher will not work properly
-        and "postprocess" was not run.)
+        and postprocess was not run.)
       `);
     });
   });

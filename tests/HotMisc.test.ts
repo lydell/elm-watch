@@ -340,7 +340,7 @@ describe("hot", () => {
 
     const { onlyExpandedRenders, div } = await run({
       fixture: "missing-window-elm",
-      args: ["Main"],
+      useElmWatchFunction: true,
       scripts: ["Main.js"],
       init: (node) => {
         expect(window.Elm).toBeUndefined();

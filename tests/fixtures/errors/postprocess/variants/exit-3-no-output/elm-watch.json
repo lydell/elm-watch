@@ -1,9 +1,0 @@
-{
-  "postprocess": ["node", "-e", "process.exit(3)"],
-  "targets": {
-    "main": {
-      "inputs": ["../../src/Main.elm"],
-      "output": "../../build/exit-3-no-output.js"
-    }
-  }
-}

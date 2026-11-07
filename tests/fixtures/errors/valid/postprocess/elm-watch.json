@@ -1,5 +1,4 @@
 {
-  "postprocess": ["node", "-e", "process.stdin.pipe(process.stdout)"],
   "targets": {
     "app": {
       "inputs": ["../src/App.elm"],

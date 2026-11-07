@@ -1,10 +1,8 @@
 import * as Compile from "./Compile";
 import { Env } from "./Env";
-import { bold, dim, printDurationMs } from "./Helpers";
+import { bold, printDurationMs } from "./Helpers";
 import type { Logger, LoggerConfig } from "./Logger";
 import { isNonEmptyArray } from "./NonEmptyArray";
-import { PostprocessWorkerPool } from "./Postprocess";
-import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { Project } from "./Project";
 import { GetNow } from "./Types";
 
@@ -15,7 +13,6 @@ export async function run(
   logger: Logger,
   getNow: GetNow,
   project: Project,
-  postprocessWorkerPool: PostprocessWorkerPool,
 ): Promise<MakeResult> {
   const startTimestamp = getNow().getTime();
 
@@ -29,7 +26,6 @@ export async function run(
   switch (installResult.tag) {
     case "Error":
     case "Killed":
-      await postprocessWorkerPool.terminate();
       return { tag: "Error" };
 
     case "Success":
@@ -68,7 +64,6 @@ export async function run(
             runMode: { tag: "make" },
             total: outputActions.total,
             action,
-            postprocessWorkerPool,
           })
             .then(() => {
               const nextOutputActions = getNextOutputActions(project);
@@ -89,10 +84,6 @@ export async function run(
     });
   }
 
-  const numWorkers = postprocessWorkerPool.getSize();
-
-  await postprocessWorkerPool.terminate();
-
   const errors = Compile.extractErrors(project);
   const failed = isNonEmptyArray(errors);
 
@@ -107,7 +98,6 @@ export async function run(
       compileFinishedMessage({
         loggerConfig: logger.config,
         duration,
-        numWorkers,
         hasErrors: failed,
       }),
     );
@@ -137,23 +127,12 @@ function getNextOutputActions(project: Project): Compile.OutputActions {
 function compileFinishedMessage({
   loggerConfig,
   duration,
-  numWorkers,
   hasErrors,
 }: {
   loggerConfig: LoggerConfig;
   duration: number;
-  numWorkers: number;
   hasErrors: boolean;
 }): string {
-  const workersString =
-    numWorkers > 0
-      ? dim(
-          ` (using ${numWorkers} ${ELM_WATCH_NODE} ${
-            numWorkers === 1 ? "worker" : "workers"
-          }).`,
-        )
-      : ".";
-
   return Compile.printStatusLine({
     maxWidth: Infinity,
     fancy: loggerConfig.fancy,
@@ -165,6 +144,6 @@ function compileFinishedMessage({
           ? 123
           : /* v8 ignore next -- @preserve */ duration,
       ).trim(),
-    )}${workersString}`,
+    )}.`,
   });
 }

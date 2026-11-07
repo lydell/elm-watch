@@ -31,6 +31,8 @@ function functionCodec<T extends object>(): Codec.Codec<T> {
               path: [],
             },
           },
+    // Encoding is never used.
+    /* v8 ignore next -- @preserve */
     encoder: (value) => value,
   });
 }
@@ -49,6 +51,8 @@ const Root = Codec.flatMap(Codec.string, {
             path: [],
           },
         },
+  // Encoding is never used.
+  /* v8 ignore next -- @preserve */
   encoder: (value): string => value,
 });
 
@@ -83,6 +87,8 @@ const Targets = Codec.flatMap(NonEmptyArray(Target), {
     }
     return { tag: "Valid", value: targets };
   },
+  // Encoding is never used.
+  /* v8 ignore next -- @preserve */
   encoder: (value) => value,
 });
 
@@ -120,6 +126,8 @@ const Options = Codec.flatMap(
             },
           }
         : { tag: "Valid", value: options },
+    // Encoding is never used.
+    /* v8 ignore next -- @preserve */
     encoder: (value) => value,
   },
 );
@@ -157,7 +165,6 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
             output: target.output,
             postprocess: target.postprocess,
           })) as NonEmptyArray<Config["targets"][number]>,
-          postprocess: undefined,
           port: value.port,
           webSocketUrl: value.webSocketUrl,
           staticFilesDir: value.staticFilesDir,

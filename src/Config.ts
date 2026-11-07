@@ -15,8 +15,6 @@ export type Config = {
   root: AbsolutePath;
   source: ConfigSource;
   targets: NonEmptyArray<Target>;
-  // Only available in elm-watch.json.
-  postprocess: NonEmptyArray<string> | undefined;
   port: Port | undefined;
   webSocketUrl: WebSocketUrl | undefined;
   staticFilesDir: string | undefined;
