@@ -136,13 +136,20 @@ describe("hot", () => {
       },
     });
 
-    expect(grep(terminal, /elm make/)).toMatchInlineSnapshot(`
+    const lines = grep(terminal, /elm make/).split("\n");
+
+    // Main3 and Main4 connect at about the same time, so the order of their
+    // first full compilation depends on timing.
+    expect(lines.splice(4, 2).sort()).toStrictEqual([
+      "⏳ Main3: elm make",
+      "⏳ Main4: elm make",
+    ]);
+
+    expect(lines.join("\n")).toMatchInlineSnapshot(`
       ⏳ Main1: elm make (typecheck only)
       ⏳ Main2: elm make (typecheck only)
       ⏳ Main3: elm make (typecheck only)
       ⏳ Main4: elm make (typecheck only)
-      ⏳ Main4: elm make
-      ⏳ Main3: elm make
       ⏳ Main4: elm make
       ⏳ Main3: elm make
       ⏳ Main1: elm make (typecheck only)
