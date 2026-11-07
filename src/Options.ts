@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
+import type * as Public from "../index.d.ts";
 import { AllowedHost } from "./AllowedHosts.ts";
 import type { Config, PostprocessFunction } from "./Config.ts";
 import { Inputs, Output, TargetName } from "./ElmWatchJson.ts";
@@ -111,6 +112,28 @@ const Options = Codec.fields(
   },
   { allowExtraFields: false },
 );
+
+// The codecs decode to stricter types than index.d.ts (branded strings, etc.),
+// so the types can’t be compared directly. But make sure that they have the
+// same fields, and the same optional fields.
+type OptionalKeys<T> = {
+  [K in keyof T]-?: object extends Pick<T, K> ? K : never;
+}[keyof T];
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Check<T extends true> = T;
+export type OptionsInSyncWithIndexDts = [
+  Check<Same<keyof Public.Options, keyof Codec.Infer<typeof Options>>>,
+  Check<
+    Same<
+      OptionalKeys<Public.Options>,
+      OptionalKeys<Codec.Infer<typeof Options>>
+    >
+  >,
+  Check<Same<keyof Public.Target, keyof Codec.Infer<typeof Target>>>,
+  Check<
+    Same<OptionalKeys<Public.Target>, OptionalKeys<Codec.Infer<typeof Target>>>
+  >,
+];
 
 export type DecodeOptionsResult =
   | {
