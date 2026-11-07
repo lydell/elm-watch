@@ -192,24 +192,26 @@ function notFoundHtml(
         html`
           <h1>404 – Not Found</h1>
           <p>The URL you requested does not point to any existing file.</p>
-          ${getContentType(fsPath) === undefined
-            ? html`
-                <p>
-                  👉
-                  <a href="${DOCS_LINK_INDEX_HTML}"
-                    >How index.html files work</a
-                  >
-                  (for <code>Browser.application</code> programs)
-                </p>
-              `
-            : html`
-                <p>
-                  👉
-                  <a href="${DOCS_LINK_INDEX_HTML}"
-                    >File not found troubleshooting</a
-                  >
-                </p>
-              `}
+          ${
+            getContentType(fsPath) === undefined
+              ? html`
+                  <p>
+                    👉
+                    <a href="${DOCS_LINK_INDEX_HTML}"
+                      >How index.html files work</a
+                    >
+                    (for <code>Browser.application</code> programs)
+                  </p>
+                `
+              : html`
+                  <p>
+                    👉
+                    <a href="${DOCS_LINK_INDEX_HTML}"
+                      >File not found troubleshooting</a
+                    >
+                  </p>
+                `
+          }
           <p>This is the absolute file path the URL resolves to:</p>
           <pre>${fsPath.theFsPath}</pre>
         `,
@@ -405,9 +407,11 @@ export function hostNotAllowedHtml(
             To allow this host too, add it to
             ${configSourceStrong(configSource)}:
           </p>
-          <pre><code>${configSource.tag === "ElmWatchJson"
-            ? html`"allowedHosts": ["${rejectedHost.hostname}"]`
-            : html`allowedHosts: ["${rejectedHost.hostname}"],`}</code></pre>
+          <pre><code>${
+            configSource.tag === "ElmWatchJson"
+              ? html`"allowedHosts": ["${rejectedHost.hostname}"]`
+              : html`allowedHosts: ["${rejectedHost.hostname}"],`
+          }</code></pre>
           <p>Or set an environment variable (useful if the host changes):</p>
           <pre><code>${ELM_WATCH_ALLOWED_HOSTS}=${rejectedHost.hostname}</code></pre>
           <p>
@@ -443,9 +447,11 @@ export function staticFileNotEnabledHtml(configSource: ConfigSource): Html {
         project.
       </p>
       <p>Add the following to ${configSourceStrong(configSource)}:</p>
-      <pre><code>${configSource.tag === "ElmWatchJson"
-        ? html`"serve": "./folder/to/serve/"`
-        : html`staticFilesDir: "./folder/to/serve/",`}</code></pre>
+      <pre><code>${
+        configSource.tag === "ElmWatchJson"
+          ? html`"serve": "./folder/to/serve/"`
+          : html`staticFilesDir: "./folder/to/serve/",`
+      }</code></pre>
     `,
   );
 }

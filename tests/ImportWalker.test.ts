@@ -33,10 +33,8 @@ function walkImportsHelper(
   );
 
   const result = walkImports(
-    mapNonEmptyArray(
-      sourceDirectories,
-      (sourceDirectory): SourceDirectory =>
-        markAsSourceDirectory(absolutePathFromString(dir, sourceDirectory)),
+    mapNonEmptyArray(sourceDirectories, (sourceDirectory): SourceDirectory =>
+      markAsSourceDirectory(absolutePathFromString(dir, sourceDirectory)),
     ),
     inputRealPaths,
   );

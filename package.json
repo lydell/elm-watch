@@ -8,7 +8,7 @@
   },
   "scripts": {
     "install-test-elm-dependencies": "tsx scripts/InstallTestDependencies.ts",
-    "pretest": "run-pty --auto-exit % prettier --check . % eslint . --report-unused-disable-directives % tsc % tsx scripts/EnsureTestDependencies.ts % npm run build",
+    "pretest": "run-pty --auto-exit % oxfmt --check % eslint . --report-unused-disable-directives % tsc % tsx scripts/EnsureTestDependencies.ts % npm run build",
     "test": "vitest run --coverage",
     "build": "tsx scripts/Build.ts && tsx scripts/BuildElmWatchLib.ts"
   },
@@ -24,7 +24,7 @@
     "eslint-plugin-simple-import-sort": "12.1.1",
     "globals": "15.14.0",
     "jsdom": "26.0.0",
-    "prettier": "3.4.2",
+    "oxfmt": "0.74.0",
     "run-pty": "5.0.0",
     "tsx": "4.23.15",
     "typescript": "5.7.3",

@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "proseWrap": "never",
+  "printWidth": 80,
+  "sortPackageJson": false,
+  "overrides": [
+    {
+      "files": [
+        "src/**/*.ts",
+        "client/**/*.ts",
+        "scripts/**/*.ts",
+        "tests/*.ts"
+      ],
+      "options": {
+        "sortImports": {
+          "groups": [
+            "side_effect",
+            ["builtin", "external"],
+            "subpath",
+            ["parent", "sibling", "index"]
+          ]
+        }
+      }
+    }
+  ],
+  "ignorePatterns": [
+    ".cache",
+    "build",
+    "build-*",
+    "coverage",
+    "dist",
+    "elm-stuff",
+    "*.json",
+    "_config.yml",
+    "submodules",
+    "client/proxy.js",
+    "tests/fixtures/hot/changes-to-postprocess/src/postprocess.js",
+    "**/*.txt/*.md",
+    "tests/fixtures-copies"
+  ]
+}

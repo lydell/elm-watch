@@ -778,21 +778,17 @@ const init = (
   [
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
-    ...elmJsonsErrors.map(
-      (elmJsonError): Cmd => ({
-        tag: "WebSocketSendToOutput",
-        outputPath: elmJsonError.outputPath,
-        message: {
-          tag: "StatusChanged",
-          status: {
-            tag: "ElmJsonError",
-            error: Errors.toPlainString(
-              Compile.renderElmJsonError(elmJsonError),
-            ),
-          },
+    ...elmJsonsErrors.map((elmJsonError): Cmd => ({
+      tag: "WebSocketSendToOutput",
+      outputPath: elmJsonError.outputPath,
+      message: {
+        tag: "StatusChanged",
+        status: {
+          tag: "ElmJsonError",
+          error: Errors.toPlainString(Compile.renderElmJsonError(elmJsonError)),
         },
-      }),
-    ),
+      },
+    })),
   ],
 ];
 
