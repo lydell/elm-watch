@@ -1,4 +1,6 @@
 import * as childProcess from "child_process";
+import spawn from "cross-spawn";
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
@@ -35,6 +37,8 @@ import {
 const CONTAINER_ID = "elm-watch";
 const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "hot");
 const FIXTURE_COPIES_DIR = path.join(import.meta.dirname, "fixtures-copies");
+const ELM_STUFF_CACHE_DIR = path.join(FIXTURE_COPIES_DIR, "elm-stuff-cache");
+const ELM_JSON_MTIME = new Date("2000-01-01T00:00:00Z");
 
 const fixtureCopies = new Map<string, string>();
 let fixtureFiles: Array<string> | undefined = undefined;
@@ -45,6 +49,9 @@ let fixtureFiles: Array<string> | undefined = undefined;
 // are copied. The copies are removed after passing tests, but kept after
 // failing tests to help with debugging.
 // `clean` maps the paths of the copies back to the original fixture paths.
+// To avoid compiling all dependencies from scratch (which is slow, and is
+// done while holding a global lock in ~/.elm), elm-stuff/ is seeded with
+// cached dependency information (see `seedElmStuff`).
 export function fixtureDir(fixture: string): string {
   const { currentTestName = "unknown", testPath = "unknown" } =
     expect.getState();
@@ -83,6 +90,12 @@ export function fixtureDir(fixture: string): string {
       fs.cpSync(path.join(original, relative), target, {
         verbatimSymlinks: true,
       });
+    }
+  }
+
+  for (const file of fixtureFiles) {
+    if (file.startsWith(prefix) && path.basename(file) === "elm.json") {
+      seedElmStuff(path.join(copy, file.slice(prefix.length)));
     }
   }
 
@@ -439,6 +452,107 @@ export async function run({
 }
 
 const RENDER_SEPARATOR = `\n${"=".repeat(80)}\n`;
+
+// Elm caches information about the dependencies in elm-stuff/*/{d,i,o}.dat.
+// That information only depends on elm.json – both the contents and the
+// modification time. So by giving all copies of elm.json the same modification
+// time, the cache can be reused between all copies with the same elm.json
+// contents.
+function seedElmStuff(elmJsonPath: string): void {
+  const content = fs.readFileSync(elmJsonPath, "utf8");
+  fs.utimesSync(elmJsonPath, ELM_JSON_MTIME, ELM_JSON_MTIME);
+
+  let sourceDirectories: Array<string>;
+  try {
+    const json = JSON.parse(content) as {
+      type?: unknown;
+      "source-directories"?: unknown;
+    };
+    if (
+      json.type !== "application" ||
+      !Array.isArray(json["source-directories"]) ||
+      !json["source-directories"].every((dir) => typeof dir === "string")
+    ) {
+      return;
+    }
+    sourceDirectories = json["source-directories"];
+  } catch {
+    return;
+  }
+
+  const hash = crypto.createHash("sha256").update(content).digest("hex");
+  const cacheDir = path.join(ELM_STUFF_CACHE_DIR, hash);
+
+  if (!fs.existsSync(cacheDir)) {
+    warmElmStuffCache(cacheDir, content, sourceDirectories);
+  }
+
+  if (fs.existsSync(cacheDir)) {
+    fs.cpSync(cacheDir, path.join(path.dirname(elmJsonPath), "elm-stuff"), {
+      recursive: true,
+    });
+  }
+}
+
+function warmElmStuffCache(
+  cacheDir: string,
+  elmJsonContent: string,
+  sourceDirectories: Array<string>,
+): void {
+  const tmp = `${cacheDir}.tmp-${process.pid}-${crypto.randomUUID()}`;
+  // Nest elm.json deep enough for source directories like "../src" to stay
+  // within the temporary directory.
+  const depth = Math.max(
+    0,
+    ...sourceDirectories.map(
+      (dir) => dir.split(/[\\/]/).filter((part) => part === "..").length,
+    ),
+  );
+  const dir = path.join(tmp, ...Array.from({ length: depth }, () => "x"));
+  const elmJsonPath = path.join(dir, "elm.json");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(elmJsonPath, elmJsonContent);
+  fs.utimesSync(elmJsonPath, ELM_JSON_MTIME, ELM_JSON_MTIME);
+  for (const sourceDirectory of sourceDirectories) {
+    fs.mkdirSync(path.resolve(dir, sourceDirectory), { recursive: true });
+  }
+  const input = path.resolve(
+    dir,
+    sourceDirectories[0] ?? ".",
+    "ElmWatchWarmup.elm",
+  );
+  fs.writeFileSync(
+    input,
+    "module ElmWatchWarmup exposing (x)\n\n\nx =\n    1\n",
+  );
+
+  const result = spawn.sync("elm", ["make", input, "--output=/dev/null"], {
+    cwd: dir,
+    env: { ...process.env, ...TEST_ENV },
+  });
+
+  if (result.status === 0) {
+    const elmStuff = path.join(dir, "elm-stuff");
+    const staging = `${tmp}-cache`;
+    for (const version of fs.readdirSync(elmStuff)) {
+      for (const file of ["d.dat", "i.dat", "o.dat"]) {
+        const source = path.join(elmStuff, version, file);
+        if (fs.existsSync(source)) {
+          fs.mkdirSync(path.join(staging, version), { recursive: true });
+          fs.copyFileSync(source, path.join(staging, version, file));
+        }
+      }
+    }
+    try {
+      // Atomic, in case another test file warms the same cache at the same time.
+      fs.renameSync(staging, cacheDir);
+    } catch {
+      fs.rmSync(staging, { recursive: true, force: true });
+    }
+  }
+
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
 
 function joinRenders(renders: Array<string>): string {
   return clean(renders.join(RENDER_SEPARATOR));
