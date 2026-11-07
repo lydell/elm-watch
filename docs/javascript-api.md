@@ -61,11 +61,13 @@ That’s the same as having this `elm-watch.json` and running `elm-watch hot`:
 
 When using the JavaScript API, elm-watch does not read `elm-watch.json` at all.
 
-## Switching from elm-watch.json
+## Getting started
 
-Run `elm-watch eject` to create an `elm-watch.mjs` file from your `elm-watch.json`. It works just like the `elm-watch` command, including target name filtering and `--debug`/`--optimize`, and also migrates `"postprocess"` from elm-watch 1. Then change it however you like!
+Run `elm-watch init --javascript` to create an `elm-watch.mjs` file. It works just like the `elm-watch` command, including target name filtering and `--debug`/`--optimize`. Then change it however you like!
 
-Run `elm-watch eject --typescript` to create `elm-watch.mts` instead. Node.js can run TypeScript files directly (by default since Node.js 22.18), by stripping the types. It does not type check, though – use your editor or `tsc` for that. (`elm-watch.mjs` is type checked too, if you have type checking enabled for JavaScript files in your editor, thanks to the `// @ts-check` comment at the top.)
+If you already have an `elm-watch.json`, `elm-watch init --javascript` migrates it: The new file is created next to your `elm-watch.json`, with all your targets and options (and `"postprocess"` from elm-watch 1, turned into a function), and then `elm-watch.json` is removed. Remember to update your `package.json` scripts and CI to run the new file.
+
+Run `elm-watch init --typescript` to create `elm-watch.mts` instead. Node.js can run TypeScript files directly (by default since Node.js 22.18), by stripping the types. It does not type check, though – use your editor or `tsc` for that. (`elm-watch.mjs` is type checked too, if you have type checking enabled for JavaScript files in your editor, thanks to the `// @ts-check` comment at the top.)
 
 ## node --watch
 

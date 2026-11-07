@@ -148,7 +148,8 @@ const PostprocessNoLongerSupported: Codec.Codec<undefined> = {
       message: `"postprocess" is no longer supported in elm-watch.json.
 Instead, create a JavaScript file that imports elm-watch and calls \`elmWatch()\`
 with your targets, and give each target a \`postprocess\` function.
-Run \`elm-watch eject\` to create such a file from your elm-watch.json.
+Run \`elm-watch init --javascript\` to create such a file from your
+elm-watch.json.
 Learn more: https://lydell.github.io/elm-watch/postprocess/`,
       got: value,
       path: [],
@@ -178,7 +179,8 @@ const ElmWatchJson = Codec.fields(
   { allowExtraFields: false },
 );
 
-// Used by `elm-watch eject`, which migrates "postprocess" to the JavaScript API.
+// Used by `elm-watch init --javascript`, which migrates "postprocess" to the
+// JavaScript API.
 export type ElmWatchJsonWithLegacyPostprocess = Codec.Infer<
   typeof ElmWatchJsonWithLegacyPostprocess
 >;
@@ -284,9 +286,21 @@ export function example(
   elmWatchJsonPath: ElmWatchJsonPath,
   elmMakeParsed: ElmMakeParsed,
 ): string {
+  return Codec.JSON.stringify(
+    ElmWatchJson,
+    exampleJson(cwd, elmWatchJsonPath, elmMakeParsed),
+    4,
+  );
+}
+
+export function exampleJson(
+  cwd: Cwd,
+  elmWatchJsonPath: ElmWatchJsonPath,
+  elmMakeParsed: ElmMakeParsed,
+): Pick<ElmWatchJson, "targets"> {
   const { elmFiles, output = "build/main.js" } = elmMakeParsed;
 
-  const json: ElmWatchJson = {
+  return {
     targets: {
       "My target name": {
         inputs: isNonEmptyArray(elmFiles)
@@ -305,8 +319,6 @@ export function example(
       },
     },
   };
-
-  return Codec.JSON.stringify(ElmWatchJson, json, 4);
 }
 
 function toUnixPath(filePath: string): string {

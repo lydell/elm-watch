@@ -73,26 +73,46 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("init", () => {
   test("too many arguments", async () => {
-    expect(await initFailHelper("already-exists", "something"))
-      .toMatchInlineSnapshot(`
-      ⧙elm-watch init⧘ takes no arguments.
-
-    `);
+    expect(
+      await initFailHelper("already-exists", "something"),
+    ).toMatchInlineSnapshot(
+      `⧙elm-watch init⧘ takes either no arguments, ⧙--javascript⧘ or ⧙--typescript⧘.`,
+    );
   });
 
   test("already exists", async () => {
     expect(await initFailHelper("already-exists")).toMatchInlineSnapshot(`
-      ⧙elm-watch.json⧘ already exists in the current directory!
+      ⧙elm-watch.json⧘ already exists:
 
+      /Users/you/project/tests/fixtures/init/already-exists/elm-watch.json
+    `);
+  });
+
+  test("already exists further up", async () => {
+    expect(await initFailHelper("already-exists/sub")).toMatchInlineSnapshot(`
+      ⧙elm-watch.json⧘ already exists:
+
+      /Users/you/project/tests/fixtures/init/already-exists/elm-watch.json
+    `);
+  });
+
+  test("JavaScript API entrypoint already exists", async () => {
+    expect(await initFailHelper("existing-entrypoint")).toMatchInlineSnapshot(`
+      You already use the JavaScript API (instead of ⧙elm-watch.json⧘):
+
+      /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.mjs
+
+      Documentation: https://lydell.github.io/elm-watch/javascript-api/
     `);
   });
 
   test("already exists as folder", async () => {
     expect(await initFailHelper("already-exists-as-folder"))
       .toMatchInlineSnapshot(`
-      ⧙elm-watch.json⧘ already exists in the current directory!
+        ⧙elm-watch.json⧘ already exists:
 
-    `);
+        /Users/you/project/tests/fixtures/init/already-exists-as-folder/elm-watch.json
+      `);
   });
 
   testExceptWindows("fail to write", async () => {
@@ -105,6 +125,19 @@ describe("init", () => {
 
       EACCES: permission denied, open '/Users/you/project/tests/fixtures/init/readonly/elm-watch.json'
 
+    `);
+  });
+
+  testExceptWindows("fail to write, --javascript", async () => {
+    fs.mkdirSync(path.join(FIXTURES_DIR, "readonly"), {
+      recursive: true,
+      mode: "0444", // readonly
+    });
+    expect(await initFailHelper("readonly", "--javascript"))
+      .toMatchInlineSnapshot(`
+      Failed to write ⧙elm-watch.mjs⧘:
+
+      EACCES: permission denied, open '/Users/you/project/tests/fixtures/init/readonly/elm-watch.mjs'
     `);
   });
 

@@ -53,12 +53,11 @@ describe("help", () => {
     const output = await helpHelper(["help"]);
 
     expect(output).toMatchInlineSnapshot(`
-      ⧙elm-watch init⧘
+      ⧙elm-watch init [--javascript|--typescript]⧘
           Create a minimal ⧙elm-watch.json⧘ in the current directory.
-
-      ⧙elm-watch eject [--typescript]⧘
-          Create elm-watch.mjs (or elm-watch.mts) from ⧙elm-watch.json⧘,
-          for using the JavaScript API.
+          With ⧙--javascript⧘ or ⧙--typescript⧘: Create elm-watch.mjs
+          or elm-watch.mts instead, for using the JavaScript API. If you
+          already have an ⧙elm-watch.json⧘, it is migrated to the new file.
           https://lydell.github.io/elm-watch/javascript-api/
 
       ⧙elm-watch make [--debug|--optimize] [target names...]⧘
@@ -142,12 +141,11 @@ describe("help", () => {
   test("NO_COLOR", async () => {
     expect(await helpHelper(["help"], { [NO_COLOR]: "" }))
       .toMatchInlineSnapshot(`
-        elm-watch init
+        elm-watch init [--javascript|--typescript]
             Create a minimal elm-watch.json in the current directory.
-
-        elm-watch eject [--typescript]
-            Create elm-watch.mjs (or elm-watch.mts) from elm-watch.json,
-            for using the JavaScript API.
+            With --javascript or --typescript: Create elm-watch.mjs
+            or elm-watch.mts instead, for using the JavaScript API. If you
+            already have an elm-watch.json, it is migrated to the new file.
             https://lydell.github.io/elm-watch/javascript-api/
 
         elm-watch make [--debug|--optimize] [target names...]

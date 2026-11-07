@@ -59,6 +59,9 @@ npx elm-watch init
 }
 ```
 
+{: .info }  
+ℹ️ If you know from the start that you need [postprocessing](../postprocess/) or a [custom server](../server/#custom-server), run `npx elm-watch init --javascript` (or `--typescript`) instead, and see [JavaScript API](../javascript-api/).
+
 Start watching with hot reloading:
 
 ```

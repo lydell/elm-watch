@@ -149,7 +149,7 @@ Debugging tip: `console.log` in your postprocess function competes with elm-watc
 
 In elm-watch 1, postprocess was configured in `elm-watch.json` with `"postprocess"`, which could run any command (reading stdin and writing stdout), or a Node.js file via `elm-watch-node` in a worker thread. elm-watch 2 instead uses a function per target, which is both simpler and more flexible. `"postprocess"` in `elm-watch.json` is now an error.
 
-The easiest way to migrate is to run `elm-watch eject`. It creates an `elm-watch.mjs` file from your `elm-watch.json`, with your `"postprocess"` turned into a function. Read on to learn what it does.
+The easiest way to migrate is to run `elm-watch init --javascript` (or `--typescript`). It replaces your `elm-watch.json` with an `elm-watch.mjs` file, with your `"postprocess"` turned into a function. Read on to learn what it does.
 
 If you used `elm-watch-node`, you can keep your postprocess file and adapt it to the new function signature in your entrypoint:
 
