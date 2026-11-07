@@ -11,15 +11,16 @@ import {
   onlyErrorMessages,
   rm,
   stringSnapshotSerializer,
-  wait,
 } from "./Helpers";
 import {
   cleanupAfterEachTest,
   expandUi,
   failInit,
   fixtureDir,
+  nextMsg,
   run,
   switchCompilationMode,
+  waitForElmWatchIdle,
   withoutConnectionAttempts,
 } from "./HotHelpers";
 
@@ -672,6 +673,10 @@ describe("hot", () => {
         scripts: ["WrongVersion.js"],
         init: failInit,
         onIdle: async () => {
+          let received = 0;
+          const allReceived = nextMsg(
+            (msg) => msg.tag === "WebSocketMessageReceived" && ++received === 3,
+          );
           send({
             tag: "ChangedCompilationMode",
             compilationMode: "optimize",
@@ -686,7 +691,8 @@ describe("hot", () => {
           });
           // Wait for the above messages to be processed before stopping (needed
           // for code coverage).
-          await wait(100);
+          await allReceived;
+          await waitForElmWatchIdle();
           return "Stop" as const;
         },
       });

@@ -16,7 +16,7 @@ import {
   TEST_ENV,
   TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
   touch,
-  wait,
+  waitFor,
 } from "./Helpers";
 import { cleanupAfterEachTest, fixtureDir, run } from "./HotHelpers";
 
@@ -140,7 +140,8 @@ describe("hot", () => {
           case 1:
             assert1(div);
             touch(input);
-            await wait(1000); // Wait for Elm to finish and postprocess to start.
+            // Wait for Elm to finish and postprocess to start.
+            await waitFor(() => fs.readFileSync(tmp, "utf8") === "3");
             touch(input); // Touch while postprocessing.
             return "KeepGoing";
           default:
@@ -189,7 +190,8 @@ describe("hot", () => {
           case 1:
             assert1(div);
             touch(input);
-            await wait(1000); // Wait for Elm to finish and postprocess to start.
+            // Wait for Elm to finish and postprocess to start.
+            await waitFor(() => fs.readFileSync(tmp, "utf8") === "3");
             touch(input); // Touch while postprocessing.
             return "KeepGoing";
           default:

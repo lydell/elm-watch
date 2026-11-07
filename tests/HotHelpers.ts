@@ -15,7 +15,7 @@ import elmWatchCli from "../src";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson";
 import { Env } from "../src/Env";
 import { ReadStream } from "../src/Helpers";
-import { HotKillManager } from "../src/Hot";
+import { HotTestHooks, Msg } from "../src/Hot";
 import { makeLogger } from "../src/Logger";
 import { markAsPort } from "../src/Port";
 import { BrowserUiPosition, CompilationMode } from "../src/Types";
@@ -32,6 +32,8 @@ import {
   TEST_ENV,
   TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
   wait,
+  waitFor,
+  waitOneFrame,
 } from "./Helpers";
 
 const CONTAINER_ID = "elm-watch";
@@ -110,7 +112,53 @@ export function fixtureDir(fixture: string): string {
 }
 
 let watcher: fs.FSWatcher | undefined = undefined;
-const hotKillManager: HotKillManager = { kill: undefined };
+let elmWatchIsIdle = false;
+let watcherIsReady = false;
+const msgListeners = new Set<(msg: Msg) => void>();
+const hotTestHooks: HotTestHooks = {
+  kill: undefined,
+  onUpdate: (msg, isIdle) => {
+    elmWatchIsIdle = isIdle;
+    for (const listener of msgListeners) {
+      listener(msg);
+    }
+  },
+  onWatcherReadyChange: (isReady) => {
+    watcherIsReady = isReady;
+  },
+};
+
+// Resolves once elm-watch has handled a message matching `predicate`. Call this
+// _before_ doing the thing that causes the message, and await the returned
+// promise after. For example, to wait for the watcher to pick up a file change:
+//
+//     const changed = nextMsg((msg) => msg.tag === "GotWatcherEvent");
+//     touch(file);
+//     await changed;
+export async function nextMsg(predicate: (msg: Msg) => boolean): Promise<void> {
+  return new Promise((resolve) => {
+    const listener = (msg: Msg): void => {
+      if (predicate(msg)) {
+        msgListeners.delete(listener);
+        resolve();
+      }
+    };
+    msgListeners.add(listener);
+  });
+}
+
+// Like `nextMsg`, but resolves once elm-watch has picked up a file change _and_
+// acted on it (which happens after a short debounce).
+export async function nextWatcherEventHandled(): Promise<void> {
+  await nextMsg((msg) => msg.tag === "GotWatcherEvent");
+  await nextMsg((msg) => msg.tag === "SleepBeforeNextActionDone");
+}
+
+// Resolves once elm-watch has nothing more to do (until something happens),
+// and is ready to pick up file changes.
+export async function waitForElmWatchIdle(): Promise<void> {
+  await waitFor(() => elmWatchIsIdle && watcherIsReady);
+}
 let describeUnfinishedRun: (() => string) | undefined = undefined;
 
 export async function cleanupAfterEachTest(): Promise<void> {
@@ -133,7 +181,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
     watcher = undefined;
   }
 
-  if (hotKillManager.kill !== undefined) {
+  if (hotTestHooks.kill !== undefined) {
     // eslint-disable-next-line no-console
     console.error(
       "cleanupAfterEachTest: elm-watch never finished – killing. Test:",
@@ -142,7 +190,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
       // when a test times out.
       `\n${describeUnfinishedRun?.() ?? ""}`,
     );
-    await hotKillManager.kill();
+    await hotTestHooks.kill();
   }
 
   document.getElementById(CONTAINER_ID)?.remove();
@@ -254,10 +302,14 @@ export async function run({
   const renders: Array<string> = [];
   let loads = 0;
   let idle = 0;
+  elmWatchIsIdle = false;
+  watcherIsReady = false;
+  msgListeners.clear();
 
   describeUnfinishedRun = () =>
     [
       `Idle states reached: ${idle}`,
+      `elm-watch idle: ${elmWatchIsIdle.toString()}, watcher ready: ${watcherIsReady.toString()}`,
       `Terminal:\n${clean(stdout.getOutput())}`,
       `stderr:\n${clean(stderr.content)}`,
       `Browser console:\n${browserConsole.join("\n\n")}`,
@@ -388,9 +440,10 @@ export async function run({
       const fallbackMain = document.createElement("main");
       fallbackMain.textContent = "No `main` element found.";
       const main = actualMain ?? fallbackMain;
-      // Wait for logs to settle. This type of tests is pretty slow to run through
-      // anyway, so this wait is just a drop in the ocean.
-      wait(100)
+      // Wait for elm-watch to finish logging, and for Elm to render and run
+      // Cmds after a hot reload.
+      waitForElmWatchIdle()
+        .then(waitOneFrame)
         .then(() =>
           onIdle({
             idle: localIdle,
@@ -408,9 +461,9 @@ export async function run({
             case "Stop":
               return Promise.all([
                 window.__ELM_WATCH.KILL_MATCHING(/^/),
-                hotKillManager.kill === undefined
+                hotTestHooks.kill === undefined
                   ? undefined
-                  : hotKillManager.kill(),
+                  : hotTestHooks.kill(),
               ]);
           }
         })
@@ -442,7 +495,7 @@ export async function run({
       stdout,
       stderr,
       logDebug,
-      hotKillManager,
+      hotTestHooks,
     })
       .then(resolve)
       .catch(reject);

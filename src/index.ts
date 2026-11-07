@@ -3,7 +3,7 @@ import * as http from "http";
 import { Env } from "./Env";
 import * as Help from "./Help";
 import { ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
-import { HotKillManager } from "./Hot";
+import { HotTestHooks } from "./Hot";
 import { init } from "./Init";
 import { makeLogger } from "./Logger";
 import { absolutePathFromString } from "./PathHelpers";
@@ -30,7 +30,7 @@ type Options = {
 
   // Not exposed in the type annotations in the npm package:
   logDebug?: (message: string) => void;
-  hotKillManager?: HotKillManager;
+  hotTestHooks?: HotTestHooks;
 };
 
 export default async function elmWatchCli(
@@ -44,7 +44,7 @@ export default async function elmWatchCli(
     createServer = ({ onRequest, onUpgrade }) =>
       http.createServer(onRequest).on("upgrade", onUpgrade),
     logDebug = (message) => stderr.write(`${message}\n`),
-    hotKillManager = { kill: undefined },
+    hotTestHooks = { kill: undefined },
   }: Options = {},
 ): Promise<number> {
   const getNow: GetNow = () => new Date();
@@ -100,7 +100,7 @@ export default async function elmWatchCli(
                 : result.postprocessWorkerPool,
               result === undefined ? undefined : result.webSocketState,
               result === undefined ? undefined : result.webSocketToken,
-              hotKillManager,
+              hotTestHooks,
             );
           } while (result.tag === "Restart");
           switch (result.tag) {

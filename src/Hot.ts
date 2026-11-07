@@ -180,7 +180,7 @@ type WebSocketMessageReceivedOutput =
       outputState: OutputState;
     };
 
-type Msg =
+export type Msg =
   | {
       tag: "CompilationPartDone";
       date: Date;
@@ -399,12 +399,21 @@ export type WebSocketState = {
   webSocketConnections: Array<WebSocketConnection>;
 };
 
-export type HotKillManager = {
+// This is only used in tests.
+export type HotTestHooks = {
   // You are supposed to pass `undefined` initially. While running, this is
   // mutated to the function. Once successfully run, it is set back to
-  // `undefined` again.
-  // This is only used in tests, to clean up between each test.
+  // `undefined` again. Used to clean up between each test.
   kill: (() => Promise<void>) | undefined;
+  // Called after each message has been handled. `isIdle` is true when there
+  // is nothing more to do until something happens (nothing compiling, and no
+  // pending events to handle or print). Lets tests wait for things to happen
+  // instead of sleeping.
+  onUpdate?: (msg: Msg, isIdle: boolean) => void;
+  // Called with `false` when a file watcher is created, and with `true` once
+  // it has scanned all files. Changes made before that might be missed (such as
+  // the removal of a file the watcher hasn’t seen yet).
+  onWatcherReadyChange?: (isReady: boolean) => void;
 };
 
 // This uses something inspired by The Elm Architecture, since it’s all about
@@ -420,7 +429,7 @@ export async function run(
   webSocketToken: WebSocketToken,
   project: Project,
   portChoice: PortChoice,
-  hotKillManager: HotKillManager,
+  hotTestHooks: HotTestHooks,
 ): Promise<HotRunResult> {
   const exitOnError = __ELM_WATCH_EXIT_ON_ERROR in env;
 
@@ -435,7 +444,7 @@ export async function run(
       webSocketToken,
       project,
       portChoice,
-      hotKillManager,
+      hotTestHooks,
     ),
     init: init(getNow(), restartReasons, project.elmJsonsErrors),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
@@ -456,12 +465,18 @@ export async function run(
           : { tag: "NoCmd" },
       ];
       logger.debug(msg.tag, msg, newModel, allCmds);
+      hotTestHooks.onUpdate?.(
+        msg,
+        newModel.nextAction.tag === "NoAction" &&
+          newModel.hotState.tag === "Idle" &&
+          newModel.latestEvents.length === 0,
+      );
       return [newModel, allCmds];
     },
     runCmd: runCmd(env, logger, getNow, exitOnError, webSocketToken),
   });
 
-  hotKillManager.kill = undefined;
+  hotTestHooks.kill = undefined;
 
   return result;
 }
@@ -510,7 +525,7 @@ const initMutable =
     webSocketToken: WebSocketToken,
     project: Project,
     portChoice: PortChoice,
-    hotKillManager: HotKillManager,
+    hotTestHooks: HotTestHooks,
   ) =>
   (
     dispatch: (msg: Msg) => void,
@@ -537,6 +552,11 @@ const initMutable =
       // https://github.com/lydell/elm-watch/issues/106.
       ignored: /\/(elm-stuff|node_modules|\.stack-work)\//,
       disableGlobbing: true,
+    });
+
+    hotTestHooks.onWatcherReadyChange?.(false);
+    watcher.on("ready", () => {
+      hotTestHooks.onWatcherReadyChange?.(true);
     });
 
     watcherOnAll(
@@ -652,10 +672,10 @@ const initMutable =
       }
       /* v8 ignore stop */
 
-      hotKillManager.kill = undefined;
+      hotTestHooks.kill = undefined;
     };
 
-    hotKillManager.kill = async () => {
+    hotTestHooks.kill = async () => {
       dispatch({ tag: "ExitRequested", date: getNow() });
       await kill();
       resolvePromise({ tag: "ExitOnIdle", reason: "Other" });

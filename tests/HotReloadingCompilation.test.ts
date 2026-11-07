@@ -12,6 +12,7 @@ import {
   testExceptWindows,
   touch,
   wait,
+  waitFor,
 } from "./Helpers";
 import {
   cleanupAfterEachTest,
@@ -20,9 +21,11 @@ import {
   fixtureDir,
   getOverlay,
   hideErrors,
+  nextWatcherEventHandled,
   runHotReload,
   showErrors,
   switchCompilationMode,
+  waitForElmWatchIdle,
 } from "./HotHelpers";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -47,24 +50,18 @@ describe("hot reloading", () => {
 
     const { terminal } = await go(async ({ idle, div }) => {
       switch (idle) {
-        case 1:
+        case 1: {
           assertInit(div);
           fs.writeFileSync(lockFile, "Delay");
           replace((content) => content.replace("1", "2"));
-          await new Promise<void>((resolve) => {
-            (function rec() {
-              if (fs.readFileSync(lockFile, "utf8") === "DelayAck") {
-                resolve();
-              } else {
-                setTimeout(rec, 10);
-              }
-            })();
-          });
+          await waitFor(() => fs.readFileSync(lockFile, "utf8") === "DelayAck");
+          const changed = nextWatcherEventHandled();
           replace((content) => content.replace("2", "3"));
           // Wait for the watcher to pick up the change before releasing the previous compilation.
-          await wait(100);
+          await changed;
           fs.writeFileSync(lockFile, "Normal");
           return "KeepGoing";
+        }
         default:
           assertHotReload(div);
           return "Stop";
@@ -102,23 +99,17 @@ describe("hot reloading", () => {
 
     const { terminal } = await go(async ({ idle }) => {
       switch (idle) {
-        case 1:
+        case 1: {
           fs.writeFileSync(lockFile, "Delay");
           replace((content) => content.replace("1", "2"));
-          await new Promise<void>((resolve) => {
-            (function rec() {
-              if (fs.readFileSync(lockFile, "utf8") === "DelayAck") {
-                resolve();
-              } else {
-                setTimeout(rec, 10);
-              }
-            })();
-          });
+          await waitFor(() => fs.readFileSync(lockFile, "utf8") === "DelayAck");
+          const changed = nextWatcherEventHandled();
           touch(elmJsonPath);
           // Wait for the watcher to pick up the change before releasing the previous compilation.
-          await wait(100);
+          await changed;
           fs.writeFileSync(lockFile, "Normal");
           return "KeepGoing";
+        }
         default:
           return "Stop";
       }
@@ -148,18 +139,11 @@ describe("hot reloading", () => {
     const [{ terminal }] = await Promise.all([
       go(() => "Stop"),
       (async () => {
-        await new Promise<void>((resolve) => {
-          (function rec() {
-            if (fs.readFileSync(lockFile, "utf8") === "DelayAck") {
-              resolve();
-            } else {
-              setTimeout(rec, 10);
-            }
-          })();
-        });
+        await waitFor(() => fs.readFileSync(lockFile, "utf8") === "DelayAck");
+        const changed = nextWatcherEventHandled();
         touch(elmJsonPath);
         // Wait for the watcher to pick up the change before releasing the previous compilation.
-        await wait(100);
+        await changed;
         fs.writeFileSync(lockFile, "Normal");
       })(),
     ]);
@@ -484,8 +468,10 @@ describe("hot reloading", () => {
           div.replaceChildren();
 
           // Make a change with the tab closed:
+          const changed = nextWatcherEventHandled();
           replace((content) => content.replace("OLD", "NEW"));
-          await wait(100);
+          await changed;
+          await waitForElmWatchIdle();
 
           // Open the tab again. It is first going to load the old code,
           // and then immediately get a hot reload with the new code.
