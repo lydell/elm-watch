@@ -14,6 +14,7 @@
     "build": "tsx scripts/Build.ts && tsx scripts/BuildElmWatchLib.ts"
   },
   "devDependencies": {
+    "@types/node": "22.20.5",
     "@types/ws": "8.5.14",
     "@vitest/coverage-v8": "5.0.5",
     "@vitest/eslint-plugin": "1.1.27",
@@ -28,13 +29,12 @@
     "tsx": "4.20.3",
     "typescript": "5.7.3",
     "typescript-eslint": "8.23.0",
+    "vite": "7.3.7",
     "vitest": "5.0.5"
   },
   "dependencies": {
-    "@types/node": "22.20.5",
     "chokidar": "^3.5.3",
     "tiny-decoders": "^23.0.0",
-    "vite": "7.3.7",
     "ws": "^8.18.0"
   }
 }
