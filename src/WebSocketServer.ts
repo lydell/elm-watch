@@ -111,6 +111,8 @@ export class WebSocketServer {
     allowedHosts: ReadonlyArray<AllowedHost>,
   ) {
     this.polyHttpServer = createServer({
+      isAllowedHost: (request) =>
+        checkHostHeader(allowedHosts, request.headers.host).tag === "Allowed",
       onRequest: (request, response) => {
         const hostCheck = checkHostHeader(allowedHosts, request.headers.host);
         if (hostCheck.tag !== "Allowed") {

@@ -1,5 +1,5 @@
 import * as http from "http";
-import type { AddressInfo } from "net";
+import * as net from "net";
 import { describe, expect, test } from "vitest";
 import WebSocket from "ws";
 
@@ -118,6 +118,38 @@ describe("WebSocketServer", () => {
     });
   });
 
+  test("isAllowedHost for custom request handlers", async () => {
+    let isAllowedHost:
+      | ((request: http.IncomingMessage) => boolean)
+      | undefined = undefined;
+    const server = new WebSocketServer(
+      ({ onRequest, onUpgrade, isAllowedHost: givenIsAllowedHost }) => {
+        isAllowedHost = givenIsAllowedHost;
+        return http.createServer(onRequest).on("upgrade", onUpgrade);
+      },
+      { tag: "NoPort" },
+      markAsHost("127.0.0.1"),
+      undefined,
+      markAsWebSocketToken(TOKEN),
+      [],
+    );
+    server.setDispatch(() => {
+      // Do nothing.
+    });
+    await server.listening;
+    await server.close();
+
+    const check = (host: string | undefined): boolean | undefined => {
+      const request = new http.IncomingMessage(new net.Socket());
+      request.headers.host = host;
+      return isAllowedHost?.(request);
+    };
+    expect(check("localhost:1234")).toBe(true);
+    expect(check("127.0.0.1")).toBe(true);
+    expect(check("evil.com")).toBe(false);
+    expect(check(undefined)).toBe(false);
+  });
+
   test("WebSocket: Host and Origin headers", async () => {
     await withServer(["dev.example.com"], async ({ connect, rejections }) => {
       expect(await connect({})).toMatchInlineSnapshot(`open`);
@@ -222,7 +254,7 @@ describe("WebSocketServer", () => {
     for (const otherHost of [undefined, "::", "0.0.0.0", "127.0.0.1", "::1"]) {
       test(`other program listening on ${otherHost ?? "(default)"}`, async () => {
         const other = await listenOther(otherHost);
-        const { port } = other.address() as AddressInfo;
+        const { port } = other.address() as net.AddressInfo;
         const server = createServer(port);
         const result = await new Promise<string>((resolve, reject) => {
           server.setDispatch((msg) => {
@@ -244,7 +276,7 @@ describe("WebSocketServer", () => {
 
     test("closing while checking the port", async () => {
       const temporary = await listenOther("127.0.0.1");
-      const { port } = temporary.address() as AddressInfo;
+      const { port } = temporary.address() as net.AddressInfo;
       await closeServer(temporary);
 
       const server = createServer(port);

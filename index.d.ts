@@ -26,6 +26,10 @@ export type CreateServer = (listeners: {
     socket: stream.Duplex,
     head: Buffer,
   ) => void;
+  // `onRequest` and `onUpgrade` only accept requests for allowed hosts (to
+  // protect against DNS rebinding attacks). Use this to do the same check in
+  // your own request handlers, before for example proxying a request.
+  isAllowedHost: (req: InstanceType<typeof http.IncomingMessage>) => boolean;
 }) =>
   | ReturnType<typeof http.createServer>
   | ReturnType<typeof https.createServer>;

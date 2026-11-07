@@ -162,6 +162,7 @@ export type CreateServer = (listeners: {
     socket: Duplex,
     head: Buffer,
   ) => void;
+  isAllowedHost: (req: InstanceType<typeof IncomingMessage>) => boolean;
 }) =>
   | ReturnType<typeof createHttpServer>
   | ReturnType<typeof createHttpsServer>;
