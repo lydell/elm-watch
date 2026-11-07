@@ -9,6 +9,6 @@
   "exports": {
     ".": "./index.js"
   },
-  "bin": "./index.js",
+  "bin": "./bin.js",
   "keywords": ["elm", "watch", "watcher"]
 }

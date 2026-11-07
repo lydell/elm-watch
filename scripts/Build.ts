@@ -104,28 +104,32 @@ export const proxy = fs.readFileSync(path.join(import.meta.dirname, "proxy.js"),
   );
 
   const result = await build({
-    input: path.join(DIR, "src", "index.ts"),
+    input: {
+      index: path.join(DIR, "src", "index.ts"),
+      bin: path.join(DIR, "src", "bin.ts"),
+    },
     platform: "node",
     external: isPackage,
     plugins: [clientCodeExternalPlugin],
-    output: { format: "esm" },
+    output: { format: "esm", chunkFileNames: "[name].js" },
     write: false,
   });
 
-  // `elmWatchCli` is only exported for the tests.
-  const exportsLine = "export { elmWatchCli as default, elmWatch };";
-  const code = getOnlyChunk(result.output);
-  if (!code.includes(exportsLine)) {
-    throw new Error(`Expected index.js to contain: ${exportsLine}`);
+  for (const chunk of result.output) {
+    if (chunk.type !== "chunk") {
+      throw new Error(`Unexpected output: ${chunk.fileName}`);
+    }
+    const code = chunk.code.replace(/%VERSION%/g, PACKAGE_REAL.version);
+    if (chunk.fileName === "bin.js") {
+      fs.writeFileSync(
+        path.join(BUILD, chunk.fileName),
+        `#!/usr/bin/env node\n${code}`,
+        { mode: "755" },
+      );
+    } else {
+      fs.writeFileSync(path.join(BUILD, chunk.fileName), code);
+    }
   }
-  fs.writeFileSync(
-    path.join(BUILD, "index.js"),
-    `#!/usr/bin/env node\n${code
-      .replace(exportsLine, "export { elmWatch };")
-      .replace(/%VERSION%/g, PACKAGE_REAL.version)
-      .trim()}\n`,
-    { mode: "755" },
-  );
 }
 
 export function getOnlyChunk(output: RolldownOutput["output"]): string {

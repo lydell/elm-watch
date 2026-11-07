@@ -2,8 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
+import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
 import { type Env, NO_COLOR } from "../src/Env.ts";
-import elmWatchCli, { elmWatch } from "../src/index.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,

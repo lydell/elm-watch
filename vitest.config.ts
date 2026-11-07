@@ -35,6 +35,8 @@ export default defineConfig({
         // There is no need for tests for this file – it’s basically just re-exports.
         // It needs to be tested manually against the projects that use it anyway.
         "src/elm-watch-lib.ts",
+        // The CLI entrypoint. The tests call `elmWatchCli` directly instead.
+        "src/bin.ts",
       ],
       thresholds: {
         ...(process.platform === "win32" ? windowsCoverage : requireCoverage),

@@ -8,11 +8,11 @@ import type {
   ReachedIdleStateReason,
   UppercaseLetter,
 } from "../client/client.ts";
+import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson.ts";
 import type { Env } from "../src/Env.ts";
 import type { ReadStream } from "../src/Helpers.ts";
 import type { HotTestHooks, Msg } from "../src/Hot.ts";
-import elmWatchCli, { elmWatch } from "../src/index.ts";
 import { makeLogger } from "../src/Logger.ts";
 import { markAsPort } from "../src/Port.ts";
 import type { BrowserUiPosition, CompilationMode } from "../src/Types.ts";

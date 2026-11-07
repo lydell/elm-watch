@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import elmWatchCli from "../src/ElmWatch.ts";
 import { type Env, NO_COLOR } from "../src/Env.ts";
-import elmWatchCli from "../src/index.ts";
 import {
   assertExitCode,
   clean,

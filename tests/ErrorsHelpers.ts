@@ -2,10 +2,10 @@ import * as fs from "fs";
 import * as path from "path";
 import { expect } from "vitest";
 
+import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
 import { __ELM_WATCH_EXIT_ON_ERROR, type Env } from "../src/Env.ts";
 import * as Errors from "../src/Errors.ts";
 import { toError } from "../src/Helpers.ts";
-import elmWatchCli, { elmWatch } from "../src/index.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
