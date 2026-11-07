@@ -605,6 +605,193 @@ describe("hot", () => {
     `);
   });
 
+  test("move directory out of and into source directory", async () => {
+    const fixture = "watched-directories";
+    const dir = fixtureDir(fixture);
+    const inside = path.join(dir, "src", "Dir");
+    const outside = path.join(dir, "Dir");
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assert(div);
+            // Moving a directory only results in a watcher event for the
+            // directory itself, not for the files inside it.
+            fs.renameSync(inside, outside);
+            return "KeepGoing";
+          case 2:
+            fs.renameSync(outside, inside);
+            return "KeepGoing";
+          default:
+            assert(div);
+            return "Stop";
+        }
+      },
+    });
+
+    expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
+      ⧙-- MODULE NOT FOUND ------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/watched-directories/src/Main.elm:3:8
+
+      You are trying to import a \`Dir.Text\` module:
+
+      3| import Dir.Text
+                ⧙^^^^^^^^⧘
+      I checked the "dependencies" and "source-directories" listed in your elm.json,
+      but I cannot find it! Maybe it is a typo for one of these names?
+
+      ⧙    Dict
+          Process
+          Set
+          Array⧘
+
+      ⧙Hint⧘: If it is not a typo, check the "dependencies" and "source-directories" of
+      your elm.json to make sure all the packages you need are listed there!
+    `);
+
+    expect(grep(terminal, /ℹ️.*(?:Changed|Removed)/)).toMatchInlineSnapshot(`
+      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/watched-directories/src/Dir⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/src/Dir⧘
+    `);
+
+    function assert(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>Text from Dir</div>`);
+    }
+  });
+
+  test("remove directory containing an input", async () => {
+    const fixture = "watched-directories";
+    const dir = fixtureDir(fixture);
+    const inside = path.join(dir, "src", "Other");
+    const outside = path.join(dir, "Other");
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Main", "Other"],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: ({ idle }) => {
+        switch (idle) {
+          case 1:
+            fs.renameSync(inside, outside);
+            return "KeepGoing";
+          case 2:
+            fs.renameSync(outside, inside);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
+      ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+      ⧙Target: Other⧘
+
+      You asked me to compile these inputs:
+
+      src/Other/Main.elm ⧙(/Users/you/project/tests/fixtures/hot/watched-directories/src/Other/Main.elm)⧘
+
+      ⧙But they don't exist!⧘
+
+      Is something misspelled? Or do you need to create them?
+    `);
+
+    expect(grep(terminal, /ℹ️.*(?:Changed|Removed)/)).toMatchInlineSnapshot(`
+      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/watched-directories/src/Other⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/src/Other⧘
+    `);
+  });
+
+  test("source directory created after startup", async () => {
+    const fixture = "watched-directories";
+    const dir = fixtureDir(fixture);
+    const elmJsonPath = path.join(dir, "elm.json");
+    const lib = path.join(dir, "lib");
+    const libTmp = path.join(dir, "lib-tmp");
+    const textPath = path.join(lib, "Lib", "Text.elm");
+
+    const elmJson = JSON.parse(fs.readFileSync(elmJsonPath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    elmJson["source-directories"] = ["src", "lib"];
+    fs.writeFileSync(elmJsonPath, JSON.stringify(elmJson, null, 4));
+    fs.writeFileSync(
+      path.join(dir, "src", "Main.elm"),
+      "module Main exposing (main)\n\nimport Html\nimport Lib.Text\n\n\nmain =\n    Html.text Lib.Text.text\n",
+    );
+    fs.mkdirSync(path.join(libTmp, "Lib"), { recursive: true });
+    fs.writeFileSync(
+      path.join(libTmp, "Lib", "Text.elm"),
+      'module Lib.Text exposing (text)\n\n\ntext =\n    "Text from lib"\n',
+    );
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            fs.renameSync(libTmp, lib);
+            return "KeepGoing";
+          case 2:
+            assert1(div);
+            // Changes inside the new source directory are picked up.
+            fs.writeFileSync(
+              textPath,
+              fs.readFileSync(textPath, "utf8").replace("lib", "lib!"),
+            );
+            return "KeepGoing";
+          default:
+            assert2(div);
+            return "Stop";
+        }
+      },
+    });
+
+    expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
+      ⧙-- MISSING SOURCE DIRECTORY ----------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/watched-directories/elm.json
+
+      I need a valid elm.json file, but the "source-directories" field lists the
+      following directory:
+
+          ⧙lib⧘
+
+      I cannot find it though. Is it missing? Is there a typo?
+    `);
+
+    expect(grep(terminal, /ℹ️.*(?:Changed|Removed)/)).toMatchInlineSnapshot(`
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/lib⧘
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/lib/Lib/Text.elm⧘
+    `);
+
+    function assert1(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>Text from lib</div>`);
+    }
+
+    function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>Text from lib!</div>`);
+    }
+  });
+
   // - Create and delete directories named `Something.elm`.
   // - Create and delete a file named like a package (`Html.elm`).
   test("changes to .elm files", async () => {
