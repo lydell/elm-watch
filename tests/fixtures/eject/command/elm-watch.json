@@ -1,0 +1,9 @@
+{
+  "postprocess": ["node", "postprocess.js", "first arg"],
+  "targets": {
+    "Main": {
+      "inputs": ["src/Main.elm"],
+      "output": "build/main.js"
+    }
+  }
+}

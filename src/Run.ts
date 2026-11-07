@@ -117,7 +117,7 @@ export async function run(
           return { tag: "Exit", exitCode: 1 };
 
         case "Success": {
-          const { config } = parseResult;
+          const { value: config } = parseResult;
           const knownTargets = mapNonEmptyArray(
             config.targets,
             (target) => target.name,

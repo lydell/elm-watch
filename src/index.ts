@@ -1,5 +1,6 @@
 import * as http from "http";
 
+import { eject } from "./Eject";
 import { Env } from "./Env";
 import * as Errors from "./Errors";
 import * as Help from "./Help";
@@ -78,6 +79,9 @@ export default async function elmWatchCli(
 
     case "init":
       return init(cwd, logger, restArgs);
+
+    case "eject":
+      return eject(cwd, logger, restArgs);
 
     case "make":
     case "hot": {

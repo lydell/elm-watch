@@ -69,6 +69,7 @@ describe("errors", () => {
         "postprocess" is no longer supported in elm-watch.json.
         Instead, create a JavaScript file that imports elm-watch and calls \`elmWatch()\`
         with your targets, and give each target a \`postprocess\` function.
+        Run \`elm-watch eject\` to create such a file from your elm-watch.json.
         Learn more: https://lydell.github.io/elm-watch/postprocess/
         Got: [
           "elm-watch-node",

@@ -148,6 +148,7 @@ const PostprocessNoLongerSupported: Codec.Codec<undefined> = {
       message: `"postprocess" is no longer supported in elm-watch.json.
 Instead, create a JavaScript file that imports elm-watch and calls \`elmWatch()\`
 with your targets, and give each target a \`postprocess\` function.
+Run \`elm-watch eject\` to create such a file from your elm-watch.json.
 Learn more: https://lydell.github.io/elm-watch/postprocess/`,
       got: value,
       path: [],
@@ -158,22 +159,38 @@ Learn more: https://lydell.github.io/elm-watch/postprocess/`,
   encoder: (value) => value,
 };
 
+const elmWatchJsonFields = {
+  targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
+  port: Codec.field(Port, { optional: true }),
+  webSocketUrl: Codec.field(WebSocketUrl("elm-watch.json"), {
+    optional: true,
+  }),
+  serve: Codec.field(Codec.string, { optional: true }),
+  allowedHosts: Codec.field(Codec.array(AllowedHost), { optional: true }),
+};
+
 export type ElmWatchJson = Codec.Infer<typeof ElmWatchJson>;
 const ElmWatchJson = Codec.fields(
   {
-    targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
+    ...elmWatchJsonFields,
     postprocess: Codec.field(PostprocessNoLongerSupported, { optional: true }),
-    port: Codec.field(Port, { optional: true }),
-    webSocketUrl: Codec.field(WebSocketUrl("elm-watch.json"), {
-      optional: true,
-    }),
-    serve: Codec.field(Codec.string, { optional: true }),
-    allowedHosts: Codec.field(Codec.array(AllowedHost), { optional: true }),
   },
   { allowExtraFields: false },
 );
 
-type ParseResult =
+// Used by `elm-watch eject`, which migrates "postprocess" to the JavaScript API.
+export type ElmWatchJsonWithLegacyPostprocess = Codec.Infer<
+  typeof ElmWatchJsonWithLegacyPostprocess
+>;
+const ElmWatchJsonWithLegacyPostprocess = Codec.fields(
+  {
+    ...elmWatchJsonFields,
+    postprocess: Codec.field(NonEmptyArray(Codec.string), { optional: true }),
+  },
+  { allowExtraFields: false },
+);
+
+type ParseResult<T> =
   | {
       tag: "DecoderError";
       elmWatchJsonPath: ElmWatchJsonPath;
@@ -185,7 +202,7 @@ type ParseResult =
   | {
       tag: "Parsed";
       elmWatchJsonPath: ElmWatchJsonPath;
-      config: Config;
+      value: T;
     }
   | {
       tag: "ReadError";
@@ -193,7 +210,20 @@ type ParseResult =
       error: Error;
     };
 
-export function findReadAndParse(cwd: Cwd): ParseResult {
+export function findReadAndParse(cwd: Cwd): ParseResult<Config> {
+  const result = findReadAndDecode(cwd, ElmWatchJson);
+  return result.tag === "Parsed"
+    ? { ...result, value: toConfig(result.elmWatchJsonPath, result.value) }
+    : result;
+}
+
+export function findReadAndParseWithLegacyPostprocess(
+  cwd: Cwd,
+): ParseResult<ElmWatchJsonWithLegacyPostprocess> {
+  return findReadAndDecode(cwd, ElmWatchJsonWithLegacyPostprocess);
+}
+
+function findReadAndDecode<T>(cwd: Cwd, codec: Codec.Codec<T>): ParseResult<T> {
   const elmWatchJsonPathRaw = findClosest("elm-watch.json", cwd);
   if (elmWatchJsonPathRaw === undefined) {
     return {
@@ -204,7 +234,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
   const elmWatchJsonPath: ElmWatchJsonPath =
     markAsElmWatchJsonPath(elmWatchJsonPathRaw);
 
-  const parsed = readJsonFile(elmWatchJsonPathRaw, ElmWatchJson);
+  const parsed = readJsonFile(elmWatchJsonPathRaw, codec);
 
   switch (parsed.tag) {
     case "DecoderError":
@@ -223,7 +253,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
       return {
         tag: "Parsed",
         elmWatchJsonPath,
-        config: toConfig(elmWatchJsonPath, parsed.value),
+        value: parsed.value,
       };
   }
 }

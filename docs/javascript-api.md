@@ -61,6 +61,10 @@ That’s the same as having this `elm-watch.json` and running `elm-watch hot`:
 
 When using the JavaScript API, elm-watch does not read `elm-watch.json` at all.
 
+## Switching from elm-watch.json
+
+Run `elm-watch eject` to create an `elm-watch.mjs` file from your `elm-watch.json`. It works just like the `elm-watch` command, including target name filtering and `--debug`/`--optimize`, and also migrates `"postprocess"` from elm-watch 1. Then change it however you like!
+
 ## node --watch
 
 When using `elm-watch.json`, elm-watch restarts itself when you change it. When using the JavaScript API, let Node.js do that instead: [node --watch] restarts your script when it changes, or any file it imports changes (such as a separate file with your postprocess function).

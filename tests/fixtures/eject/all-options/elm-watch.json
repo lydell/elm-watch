@@ -1,0 +1,16 @@
+{
+  "port": 9876,
+  "serve": "public/",
+  "webSocketUrl": "wss://dev.example.com/elm-watch",
+  "allowedHosts": ["other.example.com"],
+  "targets": {
+    "App \"quoted\"": {
+      "inputs": ["src/App.elm", "src/Other.elm"],
+      "output": "public/build/app.js"
+    },
+    "😎 Admin": {
+      "inputs": ["src/Admin.elm"],
+      "output": "public/build/admin.js"
+    }
+  }
+}

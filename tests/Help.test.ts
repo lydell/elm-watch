@@ -56,6 +56,10 @@ describe("help", () => {
       ⧙elm-watch init⧘
           Create a minimal ⧙elm-watch.json⧘ in the current directory.
 
+      ⧙elm-watch eject⧘
+          Create elm-watch.mjs from ⧙elm-watch.json⧘, for using the JavaScript API.
+          https://lydell.github.io/elm-watch/javascript-api/
+
       ⧙elm-watch make [--debug|--optimize] [target names...]⧘
           Compile Elm code into JS. Similar to ⧙elm make⧘.
 
@@ -137,62 +141,66 @@ describe("help", () => {
   test("NO_COLOR", async () => {
     expect(await helpHelper(["help"], { [NO_COLOR]: "" }))
       .toMatchInlineSnapshot(`
-      elm-watch init
-          Create a minimal elm-watch.json in the current directory.
+        elm-watch init
+            Create a minimal elm-watch.json in the current directory.
 
-      elm-watch make [--debug|--optimize] [target names...]
-          Compile Elm code into JS. Similar to elm make.
+        elm-watch eject
+            Create elm-watch.mjs from elm-watch.json, for using the JavaScript API.
+            https://lydell.github.io/elm-watch/javascript-api/
 
-      elm-watch hot [target names...]
-          Recompile whenever your Elm files change,
-          and reload the compiled JS in the browser.
-          You can switch to --debug and --optimize
-          mode in the browser.
+        elm-watch make [--debug|--optimize] [target names...]
+            Compile Elm code into JS. Similar to elm make.
 
-      By default all targets in the closest elm-watch.json are built.
-      Pass target names to only build some. Names are matched by substring!
+        elm-watch hot [target names...]
+            Recompile whenever your Elm files change,
+            and reload the compiled JS in the browser.
+            You can switch to --debug and --optimize
+            mode in the browser.
 
-      ---
+        By default all targets in the closest elm-watch.json are built.
+        Pass target names to only build some. Names are matched by substring!
 
-      Durations legend:
+        ---
 
-          Q queued for elm make
-          E elm make
-          T elm make (typecheck only)
-          W find all related Elm file paths
-          I inject hot reloading code
-          R queued for postprocess
-          P postprocess
-          / next is run in parallel
+        Durations legend:
 
-      ---
+            Q queued for elm make
+            E elm make
+            T elm make (typecheck only)
+            W find all related Elm file paths
+            I inject hot reloading code
+            R queued for postprocess
+            P postprocess
+            / next is run in parallel
 
-      Environment variables:
-          NO_COLOR
-              Disable colored output
+        ---
 
-          ELM_WATCH_OPEN_EDITOR
-              Open your editor when clicking error locations in the browser
-              https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+        Environment variables:
+            NO_COLOR
+                Disable colored output
 
-          ELM_WATCH_EXIT_ON_STDIN_END
-              Exit elm-watch when stdin ends
+            ELM_WATCH_OPEN_EDITOR
+                Open your editor when clicking error locations in the browser
+                https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-          ELM_WATCH_HOST
-              Defaults to 127.0.0.1 (only your computer)
-              Set it to 0.0.0.0 to expose on the local network
+            ELM_WATCH_EXIT_ON_STDIN_END
+                Exit elm-watch when stdin ends
 
-          ELM_WATCH_WEBSOCKET_URL
-              Override "webSocketUrl" in elm-watch.json dynamically
+            ELM_WATCH_HOST
+                Defaults to 127.0.0.1 (only your computer)
+                Set it to 0.0.0.0 to expose on the local network
 
-          ELM_WATCH_ALLOWED_HOSTS
-              Comma-separated hosts to allow in addition to "allowedHosts"
+            ELM_WATCH_WEBSOCKET_URL
+                Override "webSocketUrl" in elm-watch.json dynamically
 
-      Documentation:
-          https://lydell.github.io/elm-watch/
+            ELM_WATCH_ALLOWED_HOSTS
+                Comma-separated hosts to allow in addition to "allowedHosts"
 
-      Version:
-          %VERSION%
-    `);
+        Documentation:
+            https://lydell.github.io/elm-watch/
+
+        Version:
+            %VERSION%
+      `);
   });
 });
