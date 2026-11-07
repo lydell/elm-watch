@@ -1,6 +1,6 @@
 [
   {
-    "command": ["elm-watch", "hot"],
+    "command": ["node", "--watch", "elm-watch.mjs", "hot"],
     "title": "elm-watch",
     "status": {
       "⏳": ["⏳", "W"],

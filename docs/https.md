@@ -1,6 +1,6 @@
 ---
 title: HTTPS
-nav_order: 11
+nav_order: 12
 ---
 
 # HTTPS
@@ -37,35 +37,36 @@ Using a self-signed certificate isn’t ideal, and cannot be used by everyone. A
 
 Like in elm-watch 1.1, if you use `https://` then you might see how elm-watch’s WebSocket gets stuck in the 🔌 connecting state. That’s because it tries to connect with `wss://` over HTTPS, but elm-watch only runs an HTTP server. In the [browser UI](../browser-ui/), instead of showing a link to a page where you can accept a self-signed certificate, `elm-watch@beta` now just links to this page instead, where you can read up on how to get HTTPS going.
 
-If you use your own HTTPS server, you can set the `"webSocketUrl"` option in [elm-watch.json](../elm-watch.json/) or the `ELM_WATCH_WEBSOCKET_URL` environment variable to make elm-watch connect to your HTTPS server instead of directly to elm-watch’s HTTP server. In your HTTPS server you need to proxy the WebSocket to elm-watch. Alternatively, you can set up a separate HTTPS proxy server just for elm-watch’s WebSocket if you prefer. The host of `"webSocketUrl"` is automatically [allowed](../server/#allowed-hosts). If your page is served on another host, you need to add it to [allowedHosts](../server/#allowed-hosts).
+If you use your own HTTPS server, you can set the `"webSocketUrl"` option in [elm-watch.json](../elm-watch.json/) (or the `webSocketUrl` option of the [JavaScript API](../javascript-api/)) or the `ELM_WATCH_WEBSOCKET_URL` environment variable to make elm-watch connect to your HTTPS server instead of directly to elm-watch’s HTTP server. In your HTTPS server you need to proxy the WebSocket to elm-watch. Alternatively, you can set up a separate HTTPS proxy server just for elm-watch’s WebSocket if you prefer. The host of `"webSocketUrl"` is automatically [allowed](../server/#allowed-hosts). If your page is served on another host, you need to add it to [allowedHosts](../server/#allowed-hosts).
 
-You can also run elm-watch in an alternate way with a [custom server](../server/#custom-server) to set up HTTPS:
+You can also use the [JavaScript API](../javascript-api/) with a [custom server](../server/#custom-server) to set up HTTPS:
 
 ```js
+// elm-watch.mjs
 import * as fs from "node:fs";
 import * as https from "node:https";
 import * as path from "node:path";
-import * as url from "node:url";
-import elmWatch from "elm-watch";
-
-const DIRNAME = path.dirname(url.fileURLToPath(import.meta.url));
+import { elmWatch } from "elm-watch";
 
 // Deal with certificates and HTTPS options in whatever way you’d like:
 const CERTIFICATE = {
-  key: fs.readFileSync(path.join(DIRNAME, "certificate", "dev.key")),
-  cert: fs.readFileSync(path.join(DIRNAME, "certificate", "dev.crt")),
+  key: fs.readFileSync(
+    path.join(import.meta.dirname, "certificate", "dev.key"),
+  ),
+  cert: fs.readFileSync(
+    path.join(import.meta.dirname, "certificate", "dev.crt"),
+  ),
 };
 
-elmWatch(process.argv.slice(2), {
+process.exitCode = await elmWatch({
+  root: import.meta.dirname,
+  runMode: "hot",
+  targets: [
+    { name: "Main", inputs: ["src/Main.elm"], output: "build/main.js" },
+  ],
   createServer: ({ onRequest, onUpgrade }) =>
     https.createServer(CERTIFICATE, onRequest).on("upgrade", onUpgrade),
-})
-  .then((exitCode) => {
-    process.exit(exitCode);
-  })
-  .catch((error) => {
-    console.error("Unexpected elm-watch error:", error);
-  });
+});
 ```
 
 ## Research

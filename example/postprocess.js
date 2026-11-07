@@ -2,26 +2,22 @@
 import * as swc from "@swc/core";
 
 /**
- * @type {import("elm-watch/elm-watch-node").Postprocess}
+ * Creates the postprocess function for a target.
+ *
+ * @param {string} targetName
+ * @returns {import("elm-watch").Postprocess}
  */
-export default async function postprocess({
-  code,
-  targetName,
-  compilationMode,
-}) {
-  switch (compilationMode) {
-    case "standard":
-    case "debug":
-      return patch(targetName, code);
+export function postprocessFor(targetName) {
+  return async (code, { compilationMode }) => {
+    switch (compilationMode) {
+      case "standard":
+      case "debug":
+        return patch(targetName, code);
 
-    case "optimize":
-      return minify(patch(targetName, code));
-
-    default:
-      throw new Error(
-        `Unknown compilation mode: ${JSON.stringify(compilationMode)}`,
-      );
-  }
+      case "optimize":
+        return minify(patch(targetName, code));
+    }
+  };
 }
 
 /**

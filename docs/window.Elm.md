@@ -1,6 +1,6 @@
 ---
 title: window.Elm
-nav_order: 12
+nav_order: 13
 ---
 
 # window.Elm
@@ -57,7 +57,7 @@ If you use a bundler, `import`ing the built Elm JS can have additional downsides
 - The bundler might rewrite that global `this` mentioned above to `exports` (a local object) in an attempt to support `import`ing old-school packages. However, then `window.Elm` won’t be created.
 - The bundler might waste time parsing the whole built Elm JS file for nothing.
 
-elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](../postprocess/) script, though, if you really feel like it.
+elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](../postprocess/) function, though, if you really feel like it.
 
 Having `window.Elm.Main.init()` in your code might feel ugly and old-school compared to using `import`, but I think it’s fine:
 
@@ -70,7 +70,7 @@ Having `window.Elm.Main.init()` in your code might feel ugly and old-school comp
 If you _really_ want to `import` your Elm code, you can postprocess the code into an actual ECMAScript module:
 
 ```js
-function postprocess({ code }) {
+function postprocess(code) {
   return `const output = {}; (function(){${code}}).call(output); export default output.Elm;`;
 }
 ```

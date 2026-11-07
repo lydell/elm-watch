@@ -5,7 +5,10 @@ nav_order: 8
 
 # elm-watch.json
 
-An `elm-watch.json` file is required to be able to use `elm-watch`. There’s not that much to know about it.
+An `elm-watch.json` file is required to be able to use the `elm-watch` command. There’s not that much to know about it.
+
+{: .info }  
+ℹ️ If you need more flexibility – for example to compute your targets, [postprocess](../postprocess/) Elm’s output or customize the HTTP server – use the [JavaScript API](../javascript-api/) instead of `elm-watch.json`.
 
 You can place it anywhere, basically. elm-watch uses the closest `elm-watch.json` file it finds up the directory tree. You can have a single `elm-watch.json` for several apps with different `elm.json` if you want.
 
@@ -15,7 +18,6 @@ The contents of `elm-watch.json` looks like this (TypeScript definition):
 type NonEmptyArray<T> = [T, ...Array<T>];
 
 type ElmWatchJson = {
-  postprocess?: NonEmptyArray<string>;
   port?: number;
   webSocketUrl?: string; // ⚠️ elm-watch@beta only
   serve?: string; // ⚠️ elm-watch@beta only
@@ -33,7 +35,6 @@ Example:
 <!-- prettier-ignore -->
 ```json
 {
-    "postprocess": ["elm-watch-node", "postprocess.js"],
     "port": 9876,
     "targets": {
         "My target name": {
@@ -56,7 +57,6 @@ Example:
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
-| [postprocess](../postprocess/) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | The port for elm-watch’s HTTP and WebSocket server, used for hot reloading and as a simple file server. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
 | ⚠️ webSocketUrl | `string` | `` `ws://${currentHostname}:${port}/elm-watch` `` (sort of) | **Only available in `elm-watch@beta`.** This lets you customize how the elm-watch client connects its WebSocket for advanced use cases. You can also use the `ELM_WATCH_WEBSOCKET_URL` environment variable for dynamically setting it (the environment variable takes precedence). The value must be a valid URL starting with `ws:` or `wss:`. |
 | ⚠️ serve | `string` | unset | **Only available in `elm-watch@beta`.** A directory of static files to [serve](../server/). |
@@ -66,7 +66,7 @@ Example:
 
 There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
 
-It’s an object. The keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](../postprocess/) script. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
+It’s an object. The keys can be whatever you want, basically. They’re displayed in the terminal UI. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
 
 For each target, provide the following:
 

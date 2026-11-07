@@ -63,6 +63,10 @@ npx elm-watch --help
 
 👉 https://lydell.github.io/elm-watch/elm-watch.json/#targets
 
+## JavaScript API
+
+👉 https://lydell.github.io/elm-watch/javascript-api/
+
 ### postprocess
 
 👉 https://lydell.github.io/elm-watch/postprocess/
@@ -73,11 +77,11 @@ npx elm-watch --help
 
 #### External process
 
-👉 https://lydell.github.io/elm-watch/postprocess/#external-process
+👉 https://lydell.github.io/elm-watch/postprocess/#migrating-from-elm-watch-1
 
 #### elm-watch-node
 
-👉 https://lydell.github.io/elm-watch/postprocess/#elm-watch-node
+👉 https://lydell.github.io/elm-watch/postprocess/#migrating-from-elm-watch-1
 
 #### Postprocess notes
 

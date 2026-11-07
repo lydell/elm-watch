@@ -4,7 +4,7 @@ This is an example that uses:
 
 - elm-watch for Elm compilation
 - [esbuild] for TypeScript compilation, and for minification
-- [SWC] for extra minification ([postprocess.js](./postprocess.js))
+- elm-watch’s [JavaScript API](https://lydell.github.io/elm-watch/javascript-api/) ([elm-watch.mjs](./elm-watch.mjs)), with [SWC] for extra minification ([postprocess.js](./postprocess.js))
 - A custom little Node.js dev server for routing and proxying, with no dependencies ([dev-server.js](./dev-server.js))
 - [run-pty] to run the above with just one command
 - [elm-tooling] to install Elm and elm-format
@@ -30,7 +30,7 @@ See also the [minimal elm-watch example][example-minimal].
 11. Run `npm run build` to build for production, using elm-watch, esbuild and SWC.
 12. Run `npm run try-production` to to try out the production build. It uses esbuild only for serving static files, and the Node.js dev server for proxying. It’s the same URL as before: http://localhost:8000. (Note: This command is for trying out the production build locally, not something you’d actually run in production to serve the files.)
 
-This example has many Elm apps (many targets in `elm-watch.json`):
+This example has many Elm apps (many targets in `elm-watch.mjs`):
 
 - Some simpler demo/test apps in `src/` just need an HTML file served to work. Visit http://localhost:9000 – which is just esbuild’s static file server – to get links to them. These are useful when developing elm-watch itself but pretty boring as a demo.
 - There are also some real world apps in `public/submodules/`. They use `Browser.application`, so they need a proper server to work fully – that’s where `dev-server.js` comes into play. Visit http://localhost:8000 to get links to them. These are much more fun demo material.

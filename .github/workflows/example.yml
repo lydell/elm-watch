@@ -59,9 +59,9 @@ jobs:
 
       - run: npx elm-tooling install
 
-      # This line is usually just `npx elm-watch make --optimize`,
+      # This line is usually just `node elm-watch.mjs make --optimize`,
       # but we do some internal trickery here as a workaround specific to the elm-watch repo.
-      - run: PATH="$PWD/../tests/elm-bin:$PWD/node_modules/.bin:$PATH" elm-watch make --optimize
+      - run: PATH="$PWD/../tests/elm-bin:$PWD/node_modules/.bin:$PATH" node elm-watch.mjs make --optimize
 
       - run: npm run esbuild -- --minify
 

@@ -1,6 +1,6 @@
 ---
 title: Server
-nav_order: 10
+nav_order: 11
 ---
 
 # Server
@@ -19,6 +19,8 @@ For example:
 ```json
 "serve": "./public/"
 ```
+
+With the [JavaScript API](../javascript-api/), use the `staticFilesDir` option instead: `staticFilesDir: "./public/"`.
 
 The simple static file server tries to be useful by default through strong conventions, and extensible enough for more advanced use cases, while still being light weight.
 
@@ -239,69 +241,48 @@ The simple static file server follows symlinks, even if they point outside of th
 
 ## Custom server
 
-An alternative way of running for example `elm-watch hot` is:
-
-```
-node my-server.mjs
-```
+When using the [JavaScript API](../javascript-api/), you can pass a `createServer` option. Here’s what it looks like if you pass the default for that option in:
 
 ```js
-// my-server.mjs
-import elmWatch from "elm-watch";
-
-elmWatch(["hot"])
-  .then((exitCode) => {
-    process.exit(exitCode);
-  })
-  .catch((error) => {
-    console.error("Unexpected elm-watch error:", error);
-  });
-```
-
-Instead of hard coding `hot` you can forward all CLI arguments if you want:
-
-```
-node my-server.mjs hot
-```
-
-```diff
--elmWatch(["hot"])
-+elmWatch(process.argv.slice(2))
-```
-
-That `elmWatch` function also takes a `createServer` option. Here’s what it looks like if you pass the default for that option in:
-
-```js
+// elm-watch.mjs
 import * as http from "node:http";
-import elmWatch from "elm-watch";
+import { elmWatch } from "elm-watch";
 
-elmWatch(process.argv.slice(2), {
+process.exitCode = await elmWatch({
+  root: import.meta.dirname,
+  runMode: "hot",
+  staticFilesDir: "public",
+  targets: [
+    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+  ],
   createServer: ({ onRequest, onUpgrade }) =>
     http.createServer(onRequest).on("upgrade", onUpgrade),
-})
-  .then((exitCode) => {
-    process.exit(exitCode);
-  })
-  .catch((error) => {
-    console.error("Unexpected elm-watch error:", error);
-  });
+});
 ```
 
-- `onRequest` is not strictly needed for the core of elm-watch to work, but is very interesting because it lets you do a lot of stuff. By default, all `onRequest` is doing is responding to regular HTTP requests (WebSocket connection HTTP requests are handled by `onUpgrade`) with a simple HTML page that tells you how to enable elm-watch’s [static file server](../server/). If you enable the static file server, the `onRequest` instead looks for files in the static file directory and serves them. You can wrap `onRequest` to do whatever you want before letting elm-watch server static files.
+- `onRequest` is not strictly needed for the core of elm-watch to work, but is very interesting because it lets you do a lot of stuff. By default, all `onRequest` is doing is responding to regular HTTP requests (WebSocket connection HTTP requests are handled by `onUpgrade`) with a simple HTML page that tells you how to enable elm-watch’s [static file server](../server/). If you enable the static file server, the `onRequest` instead looks for files in the static file directory and serves them. You can wrap `onRequest` to do whatever you want before letting elm-watch serve static files.
 - `onUpgrade` is important, but only interesting if your project uses WebSockets too. If you also have your own WebSocket in your project, you can wrap `onUpgrade` to also handle your WebSocket. If you forget `.on("upgrade", onUpgrade)`, then elm-watch’s WebSockets will never connect.
+- `isAllowedHost` tells if a request is for one of the [allowed hosts](#allowed-hosts). `onRequest` and `onUpgrade` check that for you, but if you handle some requests yourself (without calling `onRequest`), use `isAllowedHost` to protect them against [DNS rebinding] too.
 - If you were wondering, you don’t need to add `.on("error", (error) => {...})`. elm-watch does that for you.
 
 For example, you can proxy URLs starting with `/api/` to your backend server:
 
 ```js
+// elm-watch.mjs
 import * as http from "node:http";
-import elmWatch from "elm-watch";
+import { elmWatch } from "elm-watch";
 
-elmWatch(process.argv.slice(2), {
-  createServer: ({ onRequest, onUpgrade }) =>
+process.exitCode = await elmWatch({
+  root: import.meta.dirname,
+  runMode: "hot",
+  staticFilesDir: "public",
+  targets: [
+    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+  ],
+  createServer: ({ onRequest, onUpgrade, isAllowedHost }) =>
     http
       .createServer((request, response) => {
-        if (request.url.startsWith("/api/")) {
+        if (request.url.startsWith("/api/") && isAllowedHost(request)) {
           // Proxy /api/* to localhost:9000.
           localhostProxy(request, response, 9000);
         } else {
@@ -310,13 +291,7 @@ elmWatch(process.argv.slice(2), {
         }
       })
       .on("upgrade", onUpgrade),
-})
-  .then((exitCode) => {
-    process.exit(exitCode);
-  })
-  .catch((error) => {
-    console.error("Unexpected elm-watch error:", error);
-  });
+});
 
 function localhostProxy(request, response, port) {
   const options = {
@@ -343,11 +318,14 @@ function localhostProxy(request, response, port) {
 }
 ```
 
+(If the host is not allowed, `onRequest` responds with an error page explaining why.)
+
 Here’s the same `/api/` example again, but using the [http-proxy] npm package. If you don’t mind the extra dependencies, http-proxy can help if you have a lot of different things to proxy to, including remote servers and WebSockets.
 
 ```js
+// elm-watch.mjs
 import * as http from "node:http";
-import elmWatch from "elm-watch";
+import { elmWatch } from "elm-watch";
 import httpProxy from "http-proxy";
 
 const proxy = new httpProxy.createProxyServer({
@@ -357,11 +335,17 @@ const proxy = new httpProxy.createProxyServer({
   },
 });
 
-elmWatch(process.argv.slice(2), {
-  createServer: ({ onRequest, onUpgrade }) =>
+process.exitCode = await elmWatch({
+  root: import.meta.dirname,
+  runMode: "hot",
+  staticFilesDir: "public",
+  targets: [
+    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+  ],
+  createServer: ({ onRequest, onUpgrade, isAllowedHost }) =>
     http
       .createServer((request, response) => {
-        if (request.url.startsWith("/api/")) {
+        if (request.url.startsWith("/api/") && isAllowedHost(request)) {
           // Proxy /api/* to localhost:9000.
           proxy.web(request, response);
         } else {
@@ -370,44 +354,40 @@ elmWatch(process.argv.slice(2), {
         }
       })
       .on("upgrade", onUpgrade),
-})
-  .then((exitCode) => {
-    process.exit(exitCode);
-  })
-  .catch((error) => {
-    console.error("Unexpected elm-watch error:", error);
-  });
+});
 ```
 
 As you can see, this pretty small API surface from elm-watch gives you full control to do what you need in your project (at the expense of being slightly more verbose for the simplest of cases).
 
-On top of that, it also lets you set up HTTPS:
+On top of that, it also lets you set up [HTTPS](../https/):
 
 ```js
+// elm-watch.mjs
 import * as fs from "node:fs";
 import * as https from "node:https";
 import * as path from "node:path";
-import * as url from "node:url";
-import elmWatch from "elm-watch";
-
-const DIRNAME = path.dirname(url.fileURLToPath(import.meta.url));
+import { elmWatch } from "elm-watch";
 
 // Deal with certificates and HTTPS options in whatever way you’d like:
 const CERTIFICATE = {
-  key: fs.readFileSync(path.join(DIRNAME, "certificate", "dev.key")),
-  cert: fs.readFileSync(path.join(DIRNAME, "certificate", "dev.crt")),
+  key: fs.readFileSync(
+    path.join(import.meta.dirname, "certificate", "dev.key"),
+  ),
+  cert: fs.readFileSync(
+    path.join(import.meta.dirname, "certificate", "dev.crt"),
+  ),
 };
 
-elmWatch(process.argv.slice(2), {
+process.exitCode = await elmWatch({
+  root: import.meta.dirname,
+  runMode: "hot",
+  staticFilesDir: "public",
+  targets: [
+    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+  ],
   createServer: ({ onRequest, onUpgrade }) =>
     https.createServer(CERTIFICATE, onRequest).on("upgrade", onUpgrade),
-})
-  .then((exitCode) => {
-    process.exit(exitCode);
-  })
-  .catch((error) => {
-    console.error("Unexpected elm-watch error:", error);
-  });
+});
 ```
 
 {: .warning }  

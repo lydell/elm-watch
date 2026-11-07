@@ -69,7 +69,9 @@ export type Options = {
   // Usually: `import.meta.dirname`.
   root: string;
 
-  targets: NonEmptyArray<Target>;
+  // At least one target is required. (This is not `NonEmptyArray<Target>`,
+  // to make it easy to `.filter()` targets.)
+  targets: Array<Target>;
 
   // Port for the HTTP and WebSocket server.
   // Default: An arbitrary available port, re-using the one from last time if possible.
