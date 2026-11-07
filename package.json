@@ -10,7 +10,7 @@
     "install-test-elm-dependencies": "node scripts/InstallTestDependencies.ts",
     "pretest": "run-pty --auto-exit % oxfmt --check % oxlint --deny-warnings --report-unused-disable-directives % tsc % node scripts/EnsureTestDependencies.ts % npm run build",
     "test": "vitest run --coverage",
-    "build": "node scripts/Build.ts && node scripts/BuildElmWatchLib.ts"
+    "build": "node scripts/Build.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

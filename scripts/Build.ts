@@ -1,20 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
-import {
-  build,
-  type BuildOptions,
-  type Plugin,
-  type RolldownOutput,
-} from "rolldown";
+import { build, type Plugin, type RolldownOutput } from "rolldown";
 import * as Codec from "tiny-decoders";
 
+import * as ClientCode from "../src/ClientCode.ts";
 import { CLIENT_CONFIG_IDENTIFIER } from "../src/ClientConfig.ts";
 
 const DIR = path.dirname(import.meta.dirname);
 const BUILD = path.join(DIR, "build");
-const CLIENT_DIR = path.join(DIR, "client");
+const BUILD_ELM_WATCH_LIB = path.join(DIR, "build-elm-watch-lib");
+const CLIENT_CODE_PATH = path.join(DIR, "src", "ClientCode.ts");
 
-export function readPackage<T extends Record<string, unknown>>(
+function readPackage<T extends Record<string, unknown>>(
   name: string,
   codec: Codec.Codec<T>,
 ): T & { raw: Record<string, unknown> } {
@@ -37,73 +34,87 @@ const PACKAGE = readPackage(
   Codec.fields({ dependencies: Codec.record(Codec.string) }),
 );
 
-const PACKAGE_REAL = readPackage(
-  "package-real.json",
-  Codec.fields({ version: Codec.string }),
-);
-
-export type FileToCopy = {
+type FileToCopy = {
   src: string;
   dest?: string;
   transform?: (content: string) => string;
 };
 
-export const PROXY_SRC_PATH = path.join(DIR, "client", "proxy.js");
+function resetDir(dir: string): void {
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir);
+}
 
-const FILES_TO_COPY: Array<FileToCopy> = [
-  { src: "LICENSE" },
-  { src: "index.d.ts" },
-  {
-    src: "README.md",
-    transform: (content) => content.replace(/^##[^]*/m, "").trim(),
-  },
-  {
-    src: PROXY_SRC_PATH,
-    dest: "proxy.js",
-  },
-];
-
-async function run(): Promise<void> {
-  fs.rmSync(BUILD, { recursive: true, force: true });
-  fs.mkdirSync(BUILD);
-
-  for (const { src, dest = src, transform } of FILES_TO_COPY) {
+function copyFiles(dir: string, files: Array<FileToCopy>): void {
+  for (const { src, dest = src, transform } of files) {
     if (transform !== undefined) {
       fs.writeFileSync(
-        path.resolve(BUILD, dest),
-        transform(fs.readFileSync(path.resolve(DIR, src), "utf8")),
+        path.join(dir, dest),
+        transform(fs.readFileSync(path.join(DIR, src), "utf8")),
       );
     } else {
-      fs.copyFileSync(path.resolve(DIR, src), path.resolve(BUILD, dest));
+      fs.copyFileSync(path.join(DIR, src), path.join(dir, dest));
     }
   }
+}
 
+function writePackageJson(dir: string, json: Record<string, unknown>): void {
   fs.writeFileSync(
-    path.join(BUILD, "package.json"),
-    Codec.JSON.stringify(
-      Codec.unknown,
-      { ...PACKAGE_REAL.raw, dependencies: PACKAGE.dependencies },
-      2,
-    ),
+    path.join(dir, "package.json"),
+    Codec.JSON.stringify(Codec.unknown, json, 2),
+  );
+}
+
+function isPackage(id: string): boolean {
+  return !id.startsWith(".") && !path.isAbsolute(id);
+}
+
+// src/ClientCode.ts bundles the client code at runtime, using rolldown. In the
+// build, replace it with the result of that, as strings.
+const inlineClientCodePlugin: Plugin = {
+  name: "Inline ClientCode.ts",
+  load(id) {
+    return path.normalize(id) === CLIENT_CODE_PATH
+      ? [
+          `export const client = ${Codec.JSON.stringify(Codec.string, ClientCode.client)};`,
+          `export const proxy = ${Codec.JSON.stringify(Codec.string, ClientCode.proxy)};`,
+        ].join("\n")
+      : null;
+  },
+};
+
+function getChunks(
+  output: RolldownOutput["output"],
+): Array<{ fileName: string; code: string }> {
+  return output.map((item) => {
+    if (item.type !== "chunk") {
+      throw new Error(`Unexpected output: ${item.fileName}`);
+    }
+    return item;
+  });
+}
+
+async function buildElmWatch(): Promise<void> {
+  const PACKAGE_REAL = readPackage(
+    "package-real.json",
+    Codec.fields({ version: Codec.string }),
   );
 
-  fs.writeFileSync(
-    path.join(BUILD, "ClientCode.js"),
-    `
-import * as fs from "fs";
-import * as path from "path";
-export const client = fs.readFileSync(path.join(import.meta.dirname, "client.js"), "utf8");
-export const proxy = fs.readFileSync(path.join(import.meta.dirname, "proxy.js"), "utf8");
-    `.trim(),
-  );
+  resetDir(BUILD);
 
-  const clientResult = await build(clientBuildOptions);
-  const clientCode = getOnlyChunk(clientResult.output);
-  checkClientConfigIdentifier(clientCode);
-  fs.writeFileSync(
-    path.join(BUILD, "client.js"),
-    clientCode.replace(/%VERSION%/g, PACKAGE_REAL.version),
-  );
+  copyFiles(BUILD, [
+    { src: "LICENSE" },
+    { src: "index.d.ts" },
+    {
+      src: "README.md",
+      transform: (content) => content.replace(/^##[^]*/m, "").trim(),
+    },
+  ]);
+
+  writePackageJson(BUILD, {
+    ...PACKAGE_REAL.raw,
+    dependencies: PACKAGE.dependencies,
+  });
 
   const result = await build({
     input: {
@@ -112,15 +123,18 @@ export const proxy = fs.readFileSync(path.join(import.meta.dirname, "proxy.js"),
     },
     platform: "node",
     external: isPackage,
-    plugins: [clientCodeExternalPlugin],
+    plugins: [inlineClientCodePlugin],
     output: { format: "esm", chunkFileNames: "[name].js" },
     write: false,
   });
 
-  for (const chunk of result.output) {
-    if (chunk.type !== "chunk") {
-      throw new Error(`Unexpected output: ${chunk.fileName}`);
-    }
+  const chunks = getChunks(result.output);
+
+  if (!chunks.some((chunk) => chunk.code.includes(CLIENT_CONFIG_IDENTIFIER))) {
+    throw new Error("Expected the client code to be inlined.");
+  }
+
+  for (const chunk of chunks) {
     const code = chunk.code.replace(/%VERSION%/g, PACKAGE_REAL.version);
     if (chunk.fileName === "bin.js") {
       fs.writeFileSync(
@@ -134,52 +148,78 @@ export const proxy = fs.readFileSync(path.join(import.meta.dirname, "proxy.js"),
   }
 }
 
-export function getOnlyChunk(output: RolldownOutput["output"]): string {
-  const [chunk, ...rest] = output;
-  if (rest.length > 0) {
-    throw new Error(
-      `Expected a single chunk, but got: ${output.map((item) => item.fileName).join(", ")}`,
-    );
-  }
-  return chunk.code;
-}
+async function buildElmWatchLib(): Promise<void> {
+  const PACKAGE_REAL = readPackage(
+    "package-elm-watch-lib.json",
+    Codec.fields({
+      description: Codec.string,
+      dependencies: Codec.record(Codec.string),
+    }),
+  );
 
-// Make sure that the client config identifier survived bundling, exactly once
-// (so that the config object isn’t duplicated).
-export function checkClientConfigIdentifier(code: string): void {
-  const count = code.split(CLIENT_CONFIG_IDENTIFIER).length - 1;
-  if (count !== 1) {
-    throw new Error(
-      `Expected ${CLIENT_CONFIG_IDENTIFIER} to occur exactly once in the built client code, but found it ${count} times.`,
-    );
-  }
-}
+  resetDir(BUILD_ELM_WATCH_LIB);
 
-export function isPackage(id: string): boolean {
-  return !id.startsWith(".") && !path.isAbsolute(id);
-}
+  copyFiles(BUILD_ELM_WATCH_LIB, [
+    { src: "LICENSE" },
+    { src: "elm-watch-lib.d.ts", dest: "index.d.ts" },
+  ]);
 
-// In production, src/ClientCode.ts is replaced with a file that reads the
-// pre-built client code from disk.
-export const clientCodeExternalPlugin: Plugin = {
-  name: "ClientCode.ts external",
-  resolveId(source) {
-    return source === "./ClientCode.ts"
-      ? { id: "./ClientCode.js", external: true, moduleSideEffects: false }
-      : null;
-  },
-};
-
-export const clientBuildOptions: BuildOptions & { write: false } = {
-  input: path.join(CLIENT_DIR, "client.ts"),
-  platform: "browser",
-  output: { format: "iife", strict: true },
-  write: false,
-};
-
-if (import.meta.main) {
-  run().catch((error: Error) => {
-    process.stderr.write(`${error.message}\n`);
-    process.exit(1);
+  writePackageJson(BUILD_ELM_WATCH_LIB, {
+    ...PACKAGE_REAL.raw,
+    dependencies: Object.fromEntries(
+      Object.entries(PACKAGE_REAL.dependencies).map(([name, version]) => {
+        if (version !== "*") {
+          throw new Error(
+            `${name}: Expected version to be * but got: ${version}`,
+          );
+        }
+        const actualVersion = PACKAGE.dependencies[name];
+        if (actualVersion === undefined) {
+          throw new Error(
+            `${name}: Expected the main package.json to have this dependency too, but it does not.`,
+          );
+        }
+        return [name, actualVersion];
+      }),
+    ),
   });
+
+  fs.writeFileSync(
+    path.join(BUILD_ELM_WATCH_LIB, "README.md"),
+    `
+# elm-watch-lib
+
+${PACKAGE_REAL.description}
+    `.trim(),
+  );
+
+  const result = await build({
+    input: path.join(DIR, "src", "elm-watch-lib.ts"),
+    platform: "node",
+    external: isPackage,
+    plugins: [inlineClientCodePlugin],
+    output: { format: "esm" },
+    write: false,
+  });
+
+  const [chunk, ...rest] = getChunks(result.output);
+  if (chunk === undefined || rest.length > 0) {
+    throw new Error(
+      `Expected a single chunk, but got: ${result.output.map((item) => item.fileName).join(", ")}`,
+    );
+  }
+  if (chunk.code.includes(CLIENT_CONFIG_IDENTIFIER)) {
+    throw new Error("Expected the client code to be tree shaken away.");
+  }
+  fs.writeFileSync(path.join(BUILD_ELM_WATCH_LIB, "index.js"), chunk.code);
 }
+
+async function run(): Promise<void> {
+  await buildElmWatch();
+  await buildElmWatchLib();
+}
+
+run().catch((error: Error) => {
+  process.stderr.write(`${error.message}\n`);
+  process.exit(1);
+});
