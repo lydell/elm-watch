@@ -471,6 +471,8 @@ export function respondHtml(
         previousContentLength >= contentLength
           ? htmlString
           : // Previously set content was shorter – try to extract the main info.
+            // All HTML we produce has a <main> element, so the fallback is never used.
+            /* v8 ignore next */
             (/<main>([^]*)<\/main>/.exec(htmlString)?.[1] ?? htmlString);
       const newContentLength = Buffer.byteLength(newHtmlString);
       response.end(
@@ -588,7 +590,9 @@ export function serveStatic(
         }
       }
 
-      default:
+      default: {
+        // `request.method` is always a string here, but the types say it can be undefined.
+        const { method = "(none)" } = request;
         response.setHeader("Allow", "GET, HEAD");
         respondHtml(
           response,
@@ -596,10 +600,11 @@ export function serveStatic(
           errorHtml(
             `Unsupported method
 
-Only GET and HEAD requests are supported. Got: ${request.method ?? "(none)"}`,
+Only GET and HEAD requests are supported. Got: ${method}`,
           ),
         );
         return;
+      }
     }
   };
 }
@@ -657,7 +662,7 @@ function serveFile(
           errorHtml(
             `Range Not Satisfiable
 
-Requested range: ${rangeHeader ?? "(none)"}
+Requested range: ${range.rangeHeader}
 File size: ${fsSize} bytes`,
           ),
         );
@@ -735,7 +740,7 @@ function parseRangeHeader(
   fsSize: number,
 ):
   | { tag: "Range"; start: number; end: number }
-  | { tag: "Unsatisfiable" }
+  | { tag: "Unsatisfiable"; rangeHeader: string }
   | undefined {
   const match = RANGE_REGEX.exec(rangeHeader);
   if (match === null) {
@@ -750,7 +755,7 @@ function parseRangeHeader(
     return undefined;
   }
   if (start >= fsSize) {
-    return { tag: "Unsatisfiable" };
+    return { tag: "Unsatisfiable", rangeHeader };
   }
   return { tag: "Range", start, end: Math.min(end, fsSize - 1) };
 }
