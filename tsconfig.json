@@ -1,11 +1,8 @@
 {
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
     "module": "Preserve",
     "moduleResolution": "Bundler",
+    "isolatedModules": true,
     "checkJs": true,
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
@@ -17,12 +14,8 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2020",
-    "useUnknownInCatchVariables": true,
-    "lib": [
-      "ES2020",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["node"]
   },
   "include": [
     "src",
@@ -32,7 +25,5 @@
     "oxlint.config.ts",
     "vitest.config.ts"
   ],
-  "exclude": [
-    "client/proxy.js"
-  ]
+  "exclude": ["client/proxy.js"]
 }

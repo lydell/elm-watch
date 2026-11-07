@@ -26,7 +26,7 @@
     "oxlint-tsgolint": "7.0.2005",
     "run-pty": "5.0.0",
     "tsx": "4.23.15",
-    "typescript": "5.7.3",
+    "typescript": "7.0.2",
     "vitest": "5.0.5"
   },
   "dependencies": {

@@ -357,9 +357,7 @@ describe("hot", () => {
       ) => Extract<WebSocketToServerMessage, { tag: "PressedOpenEditor" }>;
     }): Promise<string> => {
       class TestWebSocket extends WebSocket {
-        override send(
-          data: string | ArrayBufferLike | Blob | ArrayBufferView,
-        ): void {
+        override send(data: Parameters<WebSocket["send"]>[0]): void {
           if (typeof data === "string") {
             const parsed = Codec.JSON.parse(WebSocketToServerMessage, data);
             switch (parsed.tag) {

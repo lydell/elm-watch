@@ -10,7 +10,7 @@ class ESBuildAndJSDOMCompatibleTextEncoder extends TextEncoder {
     super();
   }
 
-  override encode(input: string): Uint8Array {
+  override encode(input: string): Uint8Array<ArrayBuffer> {
     if (typeof input !== "string") {
       throw new TypeError("`input` must be a string");
     }
