@@ -2,7 +2,7 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import { AllowedHost } from "./AllowedHosts";
-import type { Config } from "./Config";
+import type { Config, Target as ConfigTarget } from "./Config";
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
@@ -40,42 +40,64 @@ function isValidTargetName(name: string): boolean {
   return TARGET_NAME.test(name);
 }
 
+export const Inputs = NonEmptyArray(
+  Codec.flatMap(Codec.string, {
+    decoder: (string) =>
+      isValidInputName(string)
+        ? { tag: "Valid", value: string }
+        : {
+            tag: "DecoderError",
+            error: {
+              tag: "custom",
+              message: "Inputs must have a valid module name and end with .elm",
+              got: string,
+              path: [],
+            },
+          },
+    encoder: (value) => value,
+  }),
+);
+
+export const Output = Codec.flatMap(Codec.string, {
+  decoder: (output) =>
+    isValidOutputName(output)
+      ? { tag: "Valid", value: output }
+      : {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: "Outputs must end with .js",
+            got: output,
+            path: [],
+          },
+        },
+  encoder: (value) => value,
+});
+
+const TARGET_NAME_ERROR_MESSAGE =
+  "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character";
+
+export const TargetName = Codec.flatMap(Codec.string, {
+  decoder: (name) =>
+    isValidTargetName(name)
+      ? { tag: "Valid", value: name }
+      : {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: TARGET_NAME_ERROR_MESSAGE,
+            got: name,
+            path: [],
+          },
+        },
+  encoder: (value) => value,
+});
+
 type Target = Codec.Infer<typeof Target>;
 const Target = Codec.fields(
   {
-    inputs: NonEmptyArray(
-      Codec.flatMap(Codec.string, {
-        decoder: (string) =>
-          isValidInputName(string)
-            ? { tag: "Valid", value: string }
-            : {
-                tag: "DecoderError",
-                error: {
-                  tag: "custom",
-                  message:
-                    "Inputs must have a valid module name and end with .elm",
-                  got: string,
-                  path: [],
-                },
-              },
-        encoder: (value) => value,
-      }),
-    ),
-    output: Codec.flatMap(Codec.string, {
-      decoder: (output) =>
-        isValidOutputName(output)
-          ? { tag: "Valid", value: output }
-          : {
-              tag: "DecoderError",
-              error: {
-                tag: "custom",
-                message: "Outputs must end with .js",
-                got: output,
-                path: [],
-              },
-            },
-      encoder: (value) => value,
-    }),
+    inputs: Inputs,
+    output: Output,
   },
   { allowExtraFields: false },
 );
@@ -91,8 +113,7 @@ const TargetRecordHelper = {
           tag: "DecoderError",
           error: {
             tag: "custom",
-            message:
-              "Target names must start with a non-whitespace character except `-`,\ncannot contain newlines and must end with a non-whitespace character",
+            message: TARGET_NAME_ERROR_MESSAGE,
             got: key,
             path: [key],
           },
@@ -191,12 +212,18 @@ function toConfig(
 ): Config {
   return {
     root: absoluteDirname(elmWatchJsonPath),
-    elmWatchJsonPath,
-    targets: json.targets,
+    source: { tag: "ElmWatchJson", elmWatchJsonPath },
+    // The decoder validates that there’s at least one target.
+    targets: Object.entries(json.targets).map(([name, target]) => ({
+      name,
+      inputs: target.inputs,
+      output: target.output,
+      postprocess: undefined,
+    })) as NonEmptyArray<ConfigTarget>,
     postprocess: json.postprocess,
     port: json.port,
     webSocketUrl: json.webSocketUrl,
-    serve: json.serve,
+    staticFilesDir: json.serve,
     allowedHosts: json.allowedHosts ?? [],
   };
 }

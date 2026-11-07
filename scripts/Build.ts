@@ -142,7 +142,7 @@ exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
         const replaced = output.text
           .replace(
             /^[^]+\nmodule.exports = .+\s*/g,
-            "module.exports = elmWatchCli;\n",
+            "exports.elmWatch = elmWatch;\n",
           )
           .replace(toModuleRegex, "$1")
           .replace(/%VERSION%/g, PACKAGE_REAL.version)

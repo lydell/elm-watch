@@ -13,7 +13,7 @@ export type WebSocketConnection =
 export type WebSocketUrl = {
   tag: "UrlFromConfig";
   url: URL;
-  source: "elm-watch.json" | "Env";
+  source: "elm-watch.json" | "Env" | "Options";
 };
 
 export function WebSocketUrl(

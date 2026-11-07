@@ -2,8 +2,9 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { Worker } from "worker_threads";
 
+import type { PostprocessFunction } from "./Config";
 import { Env } from "./Env";
-import { quote, toError } from "./Helpers";
+import { quote, toError, unknownErrorToString } from "./Helpers";
 import { NonEmptyArray } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
 import {
@@ -28,9 +29,101 @@ export type Postprocess =
   | {
       tag: "Postprocess";
       postprocessArray: NonEmptyArray<string>;
+      elmWatchJsonPath: ElmWatchJsonPath;
+    }
+  | {
+      tag: "PostprocessFunction";
+      postprocessFunction: PostprocessFunction;
     };
 
+export type PostprocessToRun = Exclude<Postprocess, { tag: "NoPostprocess" }>;
+
 export function runPostprocess({
+  env,
+  compilationMode,
+  runMode,
+  outputPath: output,
+  postprocess,
+  code,
+  postprocessWorkerPool,
+}: {
+  env: Env;
+  compilationMode: CompilationMode;
+  runMode: RunMode;
+  outputPath: OutputPath;
+  postprocess: PostprocessToRun;
+  postprocessWorkerPool: PostprocessWorkerPool;
+  code: Buffer | string;
+}): { promise: Promise<PostprocessResult>; kill: () => Promise<void> } {
+  switch (postprocess.tag) {
+    case "PostprocessFunction":
+      return runPostprocessFunction(
+        postprocess.postprocessFunction,
+        code.toString("utf8"),
+        compilationMode,
+        runMode,
+      );
+
+    case "Postprocess":
+      return runPostprocessArray({
+        env,
+        elmWatchJsonPath: postprocess.elmWatchJsonPath,
+        compilationMode,
+        runMode,
+        outputPath: output,
+        postprocessArray: postprocess.postprocessArray,
+        code,
+        postprocessWorkerPool,
+      });
+  }
+}
+
+// A function cannot be killed. Instead, we stop waiting for it and ignore
+// whatever it results in.
+function runPostprocessFunction(
+  postprocessFunction: PostprocessFunction,
+  code: string,
+  compilationMode: CompilationMode,
+  runMode: RunMode,
+): { promise: Promise<PostprocessResult>; kill: () => Promise<void> } {
+  let resolveKilled: (result: PostprocessResult) => void = () => {
+    // Replaced below.
+  };
+  const killed = new Promise<PostprocessResult>((resolve) => {
+    resolveKilled = resolve;
+  });
+
+  const run = async (): Promise<PostprocessResult> => {
+    let returnValue;
+    try {
+      returnValue = await postprocessFunction(code, {
+        compilationMode,
+        runMode,
+      });
+    } catch (error) {
+      return {
+        tag: "PostprocessFunctionError",
+        error: unknownErrorToString(error),
+      };
+    }
+    return typeof returnValue === "string"
+      ? { tag: "Success", code: returnValue }
+      : {
+          tag: "PostprocessFunctionBadReturnValue",
+          returnValue: Codec.repr(returnValue),
+        };
+  };
+
+  return {
+    promise: Promise.race([run(), killed]),
+    kill: () => {
+      resolveKilled({ tag: "Killed" });
+      return Promise.resolve();
+    },
+  };
+}
+
+function runPostprocessArray({
   env,
   elmWatchJsonPath,
   compilationMode,
@@ -57,6 +150,7 @@ export function runPostprocess({
     const worker = postprocessWorkerPool.getOrCreateAvailableWorker();
     return {
       promise: worker.postprocess({
+        elmWatchJsonPath,
         cwd,
         code: code.toString("utf8"),
         targetName: output.targetName,

@@ -60,6 +60,7 @@ function main(port: PortWrapper): void {
 }
 
 async function elmWatchNode({
+  elmWatchJsonPath,
   cwd,
   code,
   targetName,
@@ -68,7 +69,7 @@ async function elmWatchNode({
   userArgs,
 }: ElmWatchNodeInternalArgs): Promise<PostprocessResult> {
   if (!isNonEmptyArray(userArgs)) {
-    return { tag: "ElmWatchNodeMissingScript" };
+    return { tag: "ElmWatchNodeMissingScript", elmWatchJsonPath };
   }
 
   const scriptPath: ElmWatchNodeScriptPath = markAsElmWatchNodeScriptPath(

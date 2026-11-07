@@ -944,7 +944,6 @@ function update(
 
           const cmd = handleOutputActionResultToCmd(
             project.elmVersion,
-            project.elmWatchJsonPath,
             msg.handleOutputActionResult,
           );
 
@@ -1096,7 +1095,6 @@ function update(
             msg.date,
             model,
             project.elmVersion,
-            project.elmWatchJsonPath,
             result.elmJsonPath,
             result.outputPath,
             result.outputState,
@@ -1200,7 +1198,6 @@ function update(
         case "Success":
           return onWebSocketToServerMessage(
             project.elmVersion,
-            project.elmWatchJsonPath,
             model,
             msg.date,
             msg.output,
@@ -1268,6 +1265,10 @@ function onWatcherEvent(
 
   switch (basename) {
     case "elm-watch.json":
+      // elm-watch.json files are irrelevant when not using elm-watch.json.
+      if (project.configSource.tag !== "ElmWatchJson") {
+        return undefined;
+      }
       switch (eventName) {
         case "added":
           return makeRestartNextAction(
@@ -1277,7 +1278,7 @@ function onWatcherEvent(
 
         case "changed":
         case "removed":
-          if (absolutePath === project.elmWatchJsonPath) {
+          if (absolutePath === project.configSource.elmWatchJsonPath) {
             return makeRestartNextAction(
               makeWatcherEvent(eventName, absolutePath, now),
               project,
@@ -1610,10 +1611,8 @@ const runCmd =
                 },
                 webSocketToken,
               },
-              elmWatchJsonPath: mutable.project.elmWatchJsonPath,
               total: outputActions.total,
               action,
-              postprocess: mutable.project.postprocess,
               postprocessWorkerPool: mutable.postprocessWorkerPool,
             })
               .then((handleOutputActionResult) => {
@@ -2132,7 +2131,7 @@ function portChoiceError(
 
     case "PortFromConfig":
       return Errors.portConflictForPortFromConfig(
-        project.elmWatchJsonPath,
+        project.configSource,
         portChoice.port,
       );
   }
@@ -2140,7 +2139,6 @@ function portChoiceError(
 
 function handleOutputActionResultToCmd(
   elmVersion: ElmVersion,
-  elmWatchJsonPath: ElmWatchJsonPath,
   handleOutputActionResult: Compile.HandleOutputActionResult,
 ): Cmd {
   switch (handleOutputActionResult.tag) {
@@ -2154,7 +2152,6 @@ function handleOutputActionResultToCmd(
         openErrorOverlay: handleOutputActionResult.outputState.openErrorOverlay,
         errors: Compile.renderOutputErrors(
           elmVersion,
-          elmWatchJsonPath,
           handleOutputActionResult.elmJsonPath,
           handleOutputActionResult.outputPath,
           handleOutputActionResult.outputState.status,
@@ -2589,7 +2586,6 @@ function onWebSocketConnected(
   date: Date,
   model: Model,
   elmVersion: ElmVersion,
-  elmWatchJsonPath: ElmWatchJsonPath,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   outputState: OutputState,
@@ -2683,7 +2679,6 @@ function onWebSocketConnected(
                 openErrorOverlay: outputState.openErrorOverlay,
                 errors: Compile.renderOutputErrors(
                   elmVersion,
-                  elmWatchJsonPath,
                   elmJsonPath,
                   outputPath,
                   outputState.status,
@@ -2756,7 +2751,6 @@ function compileNextAction(nextAction: NextAction): NextAction {
 
 function onWebSocketToServerMessage(
   elmVersion: ElmVersion,
-  elmWatchJsonPath: ElmWatchJsonPath,
   model: Model,
   date: Date,
   output: WebSocketMessageReceivedOutput,
@@ -2846,7 +2840,6 @@ function onWebSocketToServerMessage(
         case "Output": {
           const errors = Compile.renderOutputErrors(
             elmVersion,
-            elmWatchJsonPath,
             output.elmJsonPath,
             output.outputPath,
             output.outputState.status,

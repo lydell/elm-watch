@@ -2,6 +2,7 @@ import { Command, ExitReason } from "./Spawn";
 import {
   AbsolutePath,
   CompilationMode,
+  ElmWatchJsonPath,
   ElmWatchNodeScriptPath,
   RunMode,
   TargetName,
@@ -10,6 +11,7 @@ import {
 export const ELM_WATCH_NODE = "elm-watch-node";
 
 export type ElmWatchNodeInternalArgs = {
+  elmWatchJsonPath: ElmWatchJsonPath;
   cwd: AbsolutePath;
   code: string;
   targetName: TargetName;
@@ -78,6 +80,15 @@ export type PostprocessError =
     }
   | {
       tag: "ElmWatchNodeMissingScript";
+      elmWatchJsonPath: ElmWatchJsonPath;
+    }
+  | {
+      tag: "PostprocessFunctionError";
+      error: string;
+    }
+  | {
+      tag: "PostprocessFunctionBadReturnValue";
+      returnValue: string;
     }
   | {
       tag: "ElmWatchNodeRunError";

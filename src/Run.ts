@@ -10,7 +10,7 @@ import * as Errors from "./Errors";
 import * as Hot from "./Hot";
 import type { Logger } from "./Logger";
 import * as Make from "./Make";
-import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
+import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray";
 import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
@@ -32,7 +32,7 @@ import {
   WebSocketToken,
 } from "./Types";
 
-type RunResult =
+export type RunResult =
   | {
       tag: "Exit";
       exitCode: number;
@@ -122,7 +122,31 @@ export async function run(
           logger.errorTemplate(Errors.debugOptimizeClash());
           return { tag: "Exit", exitCode: 1 };
 
-        case "Success":
+        case "Success": {
+          const { config } = parseResult;
+          const knownTargets = mapNonEmptyArray(
+            config.targets,
+            (target) => target.name,
+          );
+          const unknownTargetsSubstrings =
+            parseArgsResult.targetsSubstrings.filter(
+              (substring) =>
+                !knownTargets.some((targetName) =>
+                  targetName.includes(substring),
+                ),
+            );
+
+          if (isNonEmptyArray(unknownTargetsSubstrings)) {
+            logger.errorTemplate(
+              Errors.unknownTargetsSubstrings(
+                parseResult.elmWatchJsonPath,
+                knownTargets,
+                unknownTargetsSubstrings,
+              ),
+            );
+            return { tag: "Exit", exitCode: 1 };
+          }
+
           return runConfig({
             env,
             logger,
@@ -131,13 +155,14 @@ export async function run(
             runMode,
             compilationMode: parseArgsResult.compilationMode,
             targetsSubstrings: parseArgsResult.targetsSubstrings,
-            config: parseResult.config,
+            config,
             restartReasons,
             postprocessWorkerPool,
             webSocketState,
             webSocketTokenFromPreviousRun,
             hotTestHooks,
           });
+        }
       }
     }
   }
@@ -172,25 +197,6 @@ export async function runConfig({
   webSocketTokenFromPreviousRun: WebSocketToken | undefined;
   hotTestHooks: Hot.HotTestHooks;
 }): Promise<RunResult> {
-  // The decoder validates that there’s at least one output.
-  const knownTargets = Object.keys(config.targets) as NonEmptyArray<string>;
-
-  const unknownTargetsSubstrings = targetsSubstrings.filter(
-    (substring) =>
-      !knownTargets.some((targetName) => targetName.includes(substring)),
-  );
-
-  if (isNonEmptyArray(unknownTargetsSubstrings)) {
-    logger.errorTemplate(
-      Errors.unknownTargetsSubstrings(
-        config.elmWatchJsonPath,
-        knownTargets,
-        unknownTargetsSubstrings,
-      ),
-    );
-    return { tag: "Exit", exitCode: 1 };
-  }
-
   const elmWatchStuffDir: ElmWatchStuffDir = markAsElmWatchStuffDir(
     absolutePathFromString(config.root, "elm-stuff", "elm-watch"),
   );
@@ -245,7 +251,7 @@ export async function runConfig({
         config,
         enabledTargetsSubstrings: isNonEmptyArray(targetsSubstrings)
           ? targetsSubstrings
-          : knownTargets,
+          : mapNonEmptyArray(config.targets, (target) => target.name),
         elmWatchStuffDir,
         elmWatchStuffJsonPath,
         elmWatchStuffJson,
@@ -255,18 +261,24 @@ export async function runConfig({
         case "DuplicateOutputs":
           logger.errorTemplate(
             Errors.duplicateOutputs(
-              config.elmWatchJsonPath,
+              config.source,
               initProjectResult.duplicates,
             ),
           );
-          return handleElmWatchJsonError(
-            logger,
-            getNow,
-            runMode,
-            config.elmWatchJsonPath,
-            postprocessWorkerPool,
-            webSocketTokenFromPreviousRun,
-          );
+          switch (config.source.tag) {
+            case "ElmWatchJson":
+              return handleElmWatchJsonError(
+                logger,
+                getNow,
+                runMode,
+                config.source.elmWatchJsonPath,
+                postprocessWorkerPool,
+                webSocketTokenFromPreviousRun,
+              );
+            case "Options":
+              // The options can only change by restarting the whole program.
+              return { tag: "Exit", exitCode: 1 };
+          }
 
         case "Project": {
           const { project } = initProjectResult;
@@ -275,6 +287,7 @@ export async function runConfig({
 
           switch (project.postprocess.tag) {
             case "NoPostprocess":
+            case "PostprocessFunction":
               break;
             case "Postprocess":
               if (project.postprocess.postprocessArray[0] === ELM_WATCH_NODE) {

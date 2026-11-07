@@ -30,7 +30,7 @@ import {
 } from "./NonEmptyArray";
 import { absoluteDirname } from "./PathHelpers";
 import {
-  Postprocess,
+  PostprocessToRun,
   PostprocessWorkerPool,
   runPostprocess,
 } from "./Postprocess";
@@ -48,7 +48,6 @@ import {
   CompilationMode,
   ElmJsonPath,
   ElmVersion,
-  ElmWatchJsonPath,
   GetNow,
   InputPath,
   markAsTargetName,
@@ -276,7 +275,7 @@ type NeedsElmMakeTypecheckOnlyOutputAction = {
 type NeedsPostprocessOutputAction = {
   tag: "NeedsPostprocess";
   output: IndexedOutput;
-  postprocessArray: NonEmptyArray<string>;
+  postprocess: PostprocessToRun;
   priority: number;
   code: Buffer | string;
   elmCompiledTimestamp: number;
@@ -371,7 +370,7 @@ export function getOutputActions({
           postprocessActions.push({
             tag: "NeedsPostprocess",
             output,
-            postprocessArray: outputState.status.postprocessArray,
+            postprocess: outputState.status.postprocess,
             priority:
               /* v8 ignore next -- @preserve */
               priority ?? 0,
@@ -585,20 +584,16 @@ export async function handleOutputAction({
   logger,
   getNow,
   runMode,
-  elmWatchJsonPath,
   total,
   action,
-  postprocess,
   postprocessWorkerPool,
 }: {
   env: Env;
   logger: Logger;
   getNow: GetNow;
   runMode: RunModeWithExtraData;
-  elmWatchJsonPath: ElmWatchJsonPath;
   total: number;
   action: OutputAction;
-  postprocess: Postprocess;
   postprocessWorkerPool: PostprocessWorkerPool;
 }): Promise<HandleOutputActionResult> {
   switch (action.tag) {
@@ -610,7 +605,6 @@ export async function handleOutputAction({
         runMode,
         total,
         ...action.output,
-        postprocess,
       });
 
     case "NeedsElmMakeTypecheckOnly":
@@ -646,10 +640,9 @@ export async function handleOutputAction({
         env,
         logger,
         runMode,
-        elmWatchJsonPath,
         total,
         ...action.output,
-        postprocessArray: action.postprocessArray,
+        postprocess: action.postprocess,
         postprocessWorkerPool,
         code: action.code,
         elmCompiledTimestamp: action.elmCompiledTimestamp,
@@ -678,7 +671,6 @@ async function compileOneOutput({
   outputState,
   index,
   total,
-  postprocess,
 }: {
   env: Env;
   logger: Logger;
@@ -689,7 +681,6 @@ async function compileOneOutput({
   outputState: OutputState;
   index: number;
   total: number;
-  postprocess: Postprocess;
 }): Promise<HandleOutputActionResult> {
   const startTimestamp = getNow().getTime();
 
@@ -715,7 +706,8 @@ async function compileOneOutput({
     outputPath: {
       ...outputPath,
       writeToTemporaryDir: !(
-        runMode.tag === "make" && postprocess.tag === "NoPostprocess"
+        runMode.tag === "make" &&
+        outputState.postprocess.tag === "NoPostprocess"
       ),
     },
     env,
@@ -790,7 +782,6 @@ async function compileOneOutput({
         outputPath,
         outputState,
         outputStatus,
-        postprocess,
       );
 
     case "elm make success + walker failure":
@@ -835,9 +826,9 @@ function onCompileSuccess(
   outputPath: OutputPath,
   outputState: OutputState,
   outputStatus: Extract<OutputStatus, { tag: "ElmMake" }>,
-  postprocess: Postprocess,
 ): HandleOutputActionResult {
   const elmCompiledTimestamp = getNow().getTime();
+  const { postprocess } = outputState;
 
   switch (runMode.tag) {
     case "make":
@@ -871,7 +862,8 @@ function onCompileSuccess(
           return { tag: "Nothing" };
         }
 
-        case "Postprocess": {
+        case "Postprocess":
+        case "PostprocessFunction": {
           let buffer;
           try {
             buffer = fs.readFileSync(outputPath.temporaryOutputPath);
@@ -892,7 +884,7 @@ function onCompileSuccess(
           }
           outputState.setStatus({
             tag: "QueuedForPostprocess",
-            postprocessArray: postprocess.postprocessArray,
+            postprocess,
             code: buffer,
             elmCompiledTimestamp,
             recordFields: undefined,
@@ -1002,10 +994,11 @@ function onCompileSuccess(
               };
         }
 
-        case "Postprocess": {
+        case "Postprocess":
+        case "PostprocessFunction": {
           outputState.setStatus({
             tag: "QueuedForPostprocess",
-            postprocessArray: postprocess.postprocessArray,
+            postprocess,
             code: newCode,
             elmCompiledTimestamp,
             recordFields,
@@ -1061,13 +1054,12 @@ async function postprocessHelper({
   env,
   logger,
   runMode,
-  elmWatchJsonPath,
   elmJsonPath,
   outputPath,
   outputState,
   index,
   total,
-  postprocessArray,
+  postprocess,
   postprocessWorkerPool,
   code,
   elmCompiledTimestamp,
@@ -1076,13 +1068,12 @@ async function postprocessHelper({
   env: Env;
   logger: Logger;
   runMode: RunModeWithExtraData;
-  elmWatchJsonPath: ElmWatchJsonPath;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
   index: number;
   total: number;
-  postprocessArray: NonEmptyArray<string>;
+  postprocess: PostprocessToRun;
   postprocessWorkerPool: PostprocessWorkerPool;
   code: Buffer | string;
   elmCompiledTimestamp: number;
@@ -1101,11 +1092,10 @@ async function postprocessHelper({
 
   const { promise, kill } = runPostprocess({
     env,
-    elmWatchJsonPath,
     compilationMode: outputState.compilationMode,
     runMode: runMode.tag,
     outputPath,
-    postprocessArray,
+    postprocess,
     postprocessWorkerPool,
     code,
   });
@@ -1854,6 +1844,8 @@ function statusLine(
     case "ElmWatchNodeDefaultExportNotFunction":
     case "ElmWatchNodeRunError":
     case "ElmWatchNodeBadReturnValue":
+    case "PostprocessFunctionError":
+    case "PostprocessFunctionBadReturnValue":
     case "ElmMakeCrashError":
     case "ElmMakeJsonParseError":
     case "ElmMakeError":
@@ -2048,7 +2040,6 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
       Array.from(outputs).flatMap(([outputPath, { status }]) =>
         renderOutputErrors(
           project.elmVersion,
-          project.elmWatchJsonPath,
           elmJsonPath,
           outputPath,
           status,
@@ -2093,7 +2084,6 @@ export function renderElmJsonError({
 
 export function renderOutputErrors(
   elmVersion: ElmVersion,
-  elmWatchJsonPath: ElmWatchJsonPath,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   status: OutputStatus,
@@ -2169,7 +2159,7 @@ export function renderOutputErrors(
       ];
 
     case "ElmWatchNodeMissingScript":
-      return [Errors.elmWatchNodeMissingScript(elmWatchJsonPath)];
+      return [Errors.elmWatchNodeMissingScript(status.elmWatchJsonPath)];
 
     case "ElmWatchNodeImportError":
       return [
@@ -2211,6 +2201,17 @@ export function renderOutputErrors(
           status.returnValue,
           status.stdout,
           status.stderr,
+        ),
+      ];
+
+    case "PostprocessFunctionError":
+      return [Errors.postprocessFunctionError(outputPath, status.error)];
+
+    case "PostprocessFunctionBadReturnValue":
+      return [
+        Errors.postprocessFunctionBadReturnValue(
+          outputPath,
+          status.returnValue,
         ),
       ];
 

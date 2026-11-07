@@ -1,14 +1,16 @@
 import * as http from "http";
 
 import { Env } from "./Env";
+import * as Errors from "./Errors";
 import * as Help from "./Help";
 import { ReadStream, unknownErrorToString, WriteStream } from "./Helpers";
 import { HotTestHooks } from "./Hot";
 import { init } from "./Init";
 import { makeLogger } from "./Logger";
+import { decodeOptions } from "./Options";
 import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
-import { run } from "./Run";
+import { run, runConfig, RunResult } from "./Run";
 import {
   CliArg,
   CreateServer,
@@ -41,8 +43,7 @@ export default async function elmWatchCli(
     stdin = process.stdin,
     stdout = process.stdout,
     stderr = process.stderr,
-    createServer = ({ onRequest, onUpgrade }) =>
-      http.createServer(onRequest).on("upgrade", onUpgrade),
+    createServer = defaultCreateServer,
     logDebug = (message) => stderr.write(`${message}\n`),
     hotTestHooks = { kill: undefined },
   }: Options = {},
@@ -82,48 +83,22 @@ export default async function elmWatchCli(
     case "make":
     case "hot": {
       const runMode = args[0];
-      return new Promise((resolve, reject) => {
-        const doIt = async (): Promise<number> => {
-          let result;
-          do {
-            result = await run(
-              cwd,
-              env,
-              logger,
-              getNow,
-              createServer,
-              runMode,
-              restArgs,
-              result === undefined ? [] : result.restartReasons,
-              result === undefined
-                ? new PostprocessWorkerPool(reject)
-                : result.postprocessWorkerPool,
-              result === undefined ? undefined : result.webSocketState,
-              result === undefined ? undefined : result.webSocketToken,
-              hotTestHooks,
-            );
-          } while (result.tag === "Restart");
-          switch (result.tag) {
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            case "Exit":
-              return result.exitCode;
-          }
-        };
-        doIt()
-          .then(resolve)
-          .catch(reject)
-          .finally(() => {
-            // Turn off raw mode so that ctrl+c automatically kills things left behind
-            // accidentally on the event loop. That’s of course a bug, but if it
-            // happens it should at least be possible to exit with a simple ctrl+c.
-            // Note: `.setRawMode` is `undefined` when stdin is not a TTY, but this is
-            // not reflected in the type definitions.
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            if (stdin.setRawMode !== undefined && stdin.isRaw) {
-              stdin.setRawMode(false);
-            }
-          });
-      });
+      return runUntilExit(stdin, (previous) =>
+        run(
+          cwd,
+          env,
+          logger,
+          getNow,
+          createServer,
+          runMode,
+          restArgs,
+          previous.restartReasons,
+          previous.postprocessWorkerPool,
+          previous.webSocketState,
+          previous.webSocketToken,
+          hotTestHooks,
+        ),
+      );
     }
 
     default:
@@ -131,6 +106,110 @@ export default async function elmWatchCli(
       return 1;
   }
 }
+
+// Note: The options must be in sync with index.d.ts, which is used by the npm package.
+export async function elmWatch(options: unknown): Promise<number> {
+  const {
+    env = process.env,
+    stdin = process.stdin,
+    stdout = process.stdout,
+    stderr = process.stderr,
+    createServer = defaultCreateServer,
+    logDebug = (message) => stderr.write(`${message}\n`),
+    hotTestHooks = { kill: undefined },
+    ...publicOptions
+  } = (typeof options === "object" && options !== null ? options : {}) as Omit<
+    Options,
+    "cwd"
+  >;
+
+  const getNow: GetNow = () => new Date();
+  const logger = makeLogger({
+    env,
+    getNow,
+    stdin,
+    stdout,
+    stderr,
+    logDebug,
+  });
+
+  const decoded = decodeOptions(
+    typeof options === "object" && options !== null
+      ? { env, stdin, stdout, stderr, createServer, ...publicOptions }
+      : options,
+  );
+
+  switch (decoded.tag) {
+    case "DecoderError":
+      logger.errorTemplate(Errors.invalidOptions(decoded.error));
+      return 1;
+
+    case "Valid":
+      return runUntilExit(stdin, (previous) =>
+        runConfig({
+          env,
+          logger,
+          getNow,
+          createServer,
+          runMode: decoded.runMode,
+          compilationMode: decoded.compilationMode,
+          targetsSubstrings: [],
+          config: decoded.config,
+          restartReasons: previous.restartReasons,
+          postprocessWorkerPool: previous.postprocessWorkerPool,
+          webSocketState: previous.webSocketState,
+          webSocketTokenFromPreviousRun: previous.webSocketToken,
+          hotTestHooks,
+        }),
+      );
+  }
+}
+
+type PreviousRun = Omit<Extract<RunResult, { tag: "Restart" }>, "tag">;
+
+// Restarts elm-watch (for example when elm.json changes) until it exits.
+async function runUntilExit(
+  stdin: ReadStream,
+  runOnce: (previous: PreviousRun) => Promise<RunResult>,
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const doIt = async (): Promise<number> => {
+      let previous: PreviousRun = {
+        restartReasons: [],
+        postprocessWorkerPool: new PostprocessWorkerPool(reject),
+        webSocketState: undefined,
+        webSocketToken: undefined,
+      };
+      for (;;) {
+        const result = await runOnce(previous);
+        switch (result.tag) {
+          case "Exit":
+            return result.exitCode;
+          case "Restart":
+            previous = result;
+            break;
+        }
+      }
+    };
+    doIt()
+      .then(resolve)
+      .catch(reject)
+      .finally(() => {
+        // Turn off raw mode so that ctrl+c automatically kills things left behind
+        // accidentally on the event loop. That’s of course a bug, but if it
+        // happens it should at least be possible to exit with a simple ctrl+c.
+        // Note: `.setRawMode` is `undefined` when stdin is not a TTY, but this is
+        // not reflected in the type definitions.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (stdin.setRawMode !== undefined && stdin.isRaw) {
+          stdin.setRawMode(false);
+        }
+      });
+  });
+}
+
+const defaultCreateServer: CreateServer = ({ onRequest, onUpgrade }) =>
+  http.createServer(onRequest).on("upgrade", onUpgrade);
 
 /* v8 ignore start */
 if (require.main === module) {

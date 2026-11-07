@@ -5,6 +5,7 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import * as url from "url";
 
+import type { ConfigSource } from "./Config";
 import * as ElmMakeError from "./ElmMakeError";
 import * as ElmWatchJson from "./ElmWatchJson";
 import {
@@ -100,6 +101,27 @@ function joinTemplate(
 const elmJson = bold("elm.json");
 const elmWatchJson = bold("elm-watch.json");
 const elmWatchStuffJson = bold("elm-stuff/elm-watch/stuff.json");
+
+function configSourceName(configSource: ConfigSource): Piece {
+  switch (configSource.tag) {
+    case "ElmWatchJson":
+      return elmWatchJson;
+    case "Options":
+      return bold("elm-watch options");
+  }
+}
+
+function configSourceLocation(configSource: ConfigSource): FancyErrorLocation {
+  switch (configSource.tag) {
+    case "ElmWatchJson":
+      return {
+        tag: "ElmWatchJsonPath",
+        theElmWatchJsonPath: configSource.elmWatchJsonPath,
+      };
+    case "Options":
+      return { tag: "NoLocation" };
+  }
+}
 
 type FancyErrorLocation =
   | {
@@ -633,16 +655,13 @@ ${text(symlinkText)}
 }
 
 export function duplicateOutputs(
-  elmWatchJsonPath: ElmWatchJsonPath,
+  configSource: ConfigSource,
   duplicates: NonEmptyArray<{
     originalOutputPathStrings: NonEmptyArray<string>;
     absolutePath: AbsolutePath;
   }>,
 ): ErrorTemplate {
-  return fancyError("DUPLICATE OUTPUTS", {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: elmWatchJsonPath,
-  })`
+  return fancyError("DUPLICATE OUTPUTS", configSourceLocation(configSource))`
 Some of your outputs seem to be duplicates!
 
 ${joinTemplate(
@@ -787,6 +806,32 @@ ${bold("It exited with an error:")}
 
 ${printExitReason(exitReason)}
 ${printStdio(stdout, stderr)}
+`;
+}
+
+export function postprocessFunctionError(
+  outputPath: OutputPath,
+  error: string,
+): ErrorTemplate {
+  return fancyError("POSTPROCESS ERROR", outputPath)`
+I ran your postprocess function for this target.
+
+${bold("It threw an error:")}
+
+${text(error)}
+`;
+}
+
+export function postprocessFunctionBadReturnValue(
+  outputPath: OutputPath,
+  returnValue: string,
+): ErrorTemplate {
+  return fancyError("INVALID POSTPROCESS RESULT", outputPath)`
+I ran your postprocess function for this target.
+
+I expected it to return a string (or a promise of a string), but it returned:
+
+${text(returnValue)}
 `;
 }
 
@@ -1312,23 +1357,21 @@ Then I will ask the operating system for a new arbitrary available port.
 }
 
 export function portConflictForPortFromConfig(
-  elmWatchJsonPath: ElmWatchJsonPath,
+  configSource: ConfigSource,
   port: Port,
 ): ErrorTemplate {
-  return fancyError("PORT CONFLICT", {
-    tag: "ElmWatchJsonPath",
-    theElmWatchJsonPath: elmWatchJsonPath,
-  })`
-In your ${elmWatchJson} you have this:
+  const config = configSourceName(configSource);
+  return fancyError("PORT CONFLICT", configSourceLocation(configSource))`
+In your ${config} you have this:
 
-"port": ${json(port)}
+${text(configSource.tag === "ElmWatchJson" ? '"port"' : "port")}: ${json(port)}
 
 But something else seems to already be running on that port!
 You might already have elm-watch running somewhere, or it could be a completely
 different program.
 
 You need to either find and stop that other thing, switch to another port or
-remove "port" from ${elmWatchJson} (which will use an arbitrary available port.)
+remove "port" from ${config} (which will use an arbitrary available port.)
   `;
 }
 
@@ -1409,6 +1452,8 @@ function webSocketUrlSourceDescription(source: WebSocketUrl["source"]): string {
   switch (source) {
     case "elm-watch.json":
       return "in elm-watch.json";
+    case "Options":
+      return "in the elm-watch options";
     case "Env":
       return `using the ${ELM_WATCH_WEBSOCKET_URL} environment variable`;
   }
@@ -1778,6 +1823,14 @@ function truncate(string: string): string {
     ? string
     : `${string.slice(0, half)}...${string.slice(-half)}`;
   /* v8 ignore stop */
+}
+
+export function invalidOptions(error: Codec.DecoderError): ErrorTemplate {
+  return fancyError("INVALID elm-watch OPTIONS", { tag: "NoLocation" })`
+I got invalid options passed to ${bold("elmWatch()")}:
+
+${printJsonError(error)}
+`;
 }
 
 function printJsonError(error: Codec.DecoderError): Piece {

@@ -33,9 +33,12 @@ const project: Project = {
   },
   allowedHosts: [],
   elmVersion: markAsElmVersion("0.19.1"),
-  elmWatchJsonPath: markAsElmWatchJsonPath(
-    markAsAbsolutePath("/Users/you/project/elm-watch.json"),
-  ),
+  configSource: {
+    tag: "ElmWatchJson",
+    elmWatchJsonPath: markAsElmWatchJsonPath(
+      markAsAbsolutePath("/Users/you/project/elm-watch.json"),
+    ),
+  },
   elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
     markAsAbsolutePath("/Users/you/project/elm-stuff/elm-watch/stuff.json"),
   ),
@@ -43,6 +46,9 @@ const project: Project = {
   postprocess: {
     tag: "Postprocess",
     postprocessArray: ["elm-watch-node", "postprocess.js"],
+    elmWatchJsonPath: markAsElmWatchJsonPath(
+      markAsAbsolutePath("/Users/you/project/elm-watch.json"),
+    ),
   },
   disabledOutputs: [
     {
@@ -127,6 +133,7 @@ const project: Project = {
                 ),
               },
             ],
+            { tag: "NoPostprocess" },
             "optimize",
             "BottomLeft",
             false,
@@ -168,6 +175,7 @@ const project: Project = {
                 ),
               },
             ],
+            { tag: "NoPostprocess" },
             "standard",
             "BottomLeft",
             false,
@@ -208,6 +216,7 @@ const project: Project = {
                 ),
               },
             ],
+            { tag: "NoPostprocess" },
             "optimize",
             "BottomLeft",
             false,
@@ -263,104 +272,105 @@ describe("Project", () => {
   test("projectToDebug", () => {
     expect(JSON.stringify(projectToDebug(project), null, 2))
       .toMatchInlineSnapshot(`
-      {
-        "watchRoots": [
-          "/Users/you/project"
-        ],
-        "staticFilesDir": "/Users/you/project/public",
-        "webSocketUrl": {
-          "tag": "UrlFromConfig",
-          "url": "ws://localhost:1234/",
-          "source": "elm-watch.json"
-        },
-        "allowedHosts": [],
-        "elmWatchJson": "/Users/you/project/elm-watch.json",
-        "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch/stuff.json",
-        "maxParallel": 12,
-        "postprocess": {
-          "tag": "Postprocess",
-          "postprocessArray": [
-            "elm-watch-node",
-            "postprocess.js"
+        {
+          "watchRoots": [
+            "/Users/you/project"
+          ],
+          "staticFilesDir": "/Users/you/project/public",
+          "webSocketUrl": {
+            "tag": "UrlFromConfig",
+            "url": "ws://localhost:1234/",
+            "source": "elm-watch.json"
+          },
+          "allowedHosts": [],
+          "elmWatchJson": "/Users/you/project/elm-watch.json",
+          "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch/stuff.json",
+          "maxParallel": 12,
+          "postprocess": {
+            "tag": "Postprocess",
+            "postprocessArray": [
+              "elm-watch-node",
+              "postprocess.js"
+            ],
+            "elmWatchJsonPath": "/Users/you/project/elm-watch.json"
+          },
+          "enabledTargets": [
+            {
+              "targetName": "Element",
+              "output": "/Users/you/project/public/build/ElementMain.js",
+              "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/4.js",
+              "originalString": "public/build/ElementMain.js",
+              "compilationMode": "optimize",
+              "elmJson": "/Users/you/project/elm.json",
+              "inputs": [
+                {
+                  "input": "/Users/you/project/src/ElementMain.elm",
+                  "realpath": "/Users/you/project/src/ElementMain.elm",
+                  "originalString": "src/ElementMain.elm"
+                }
+              ]
+            },
+            {
+              "targetName": "Frankenstein",
+              "output": "/Users/you/project/public/build/Frankenstein.js",
+              "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/5.js",
+              "originalString": "public/build/Frankenstein.js",
+              "compilationMode": "standard",
+              "elmJson": "/Users/you/project/elm.json",
+              "inputs": [
+                {
+                  "input": "/Users/you/project/src/ApplicationMain.elm",
+                  "realpath": "/Users/you/project/src/ApplicationMain.elm",
+                  "originalString": "src/ApplicationMain.elm"
+                },
+                {
+                  "input": "/Users/you/project/src/DocumentMain.elm",
+                  "realpath": "/Users/you/project/src/DocumentMain.elm",
+                  "originalString": "src/DocumentMain.elm"
+                }
+              ]
+            },
+            {
+              "targetName": "Concourse",
+              "output": "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
+              "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/6.js",
+              "originalString": "public/submodules/concourse/web/public/elm.min.js",
+              "compilationMode": "optimize",
+              "elmJson": "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
+              "inputs": [
+                {
+                  "input": "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
+                  "realpath": "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
+                  "originalString": "src/ElementMain.elm"
+                }
+              ]
+            }
+          ],
+          "disabledTargets": [
+            {
+              "targetName": "Html",
+              "output": "/Users/you/project/public/build/HtmlMain.js",
+              "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/1.js",
+              "originalString": "public/build/HtmlMain.js"
+            },
+            {
+              "targetName": "Azimutt",
+              "output": "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
+              "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/2.js",
+              "originalString": "public/submodules/azimutt/public/dist/elm.js"
+            }
+          ],
+          "erroredTargets": [
+            {
+              "error": "InputsNotFound",
+              "targetName": "Sandbox",
+              "output": "/Users/you/project/public/build/SandboxMain.js",
+              "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/3.js",
+              "originalString": "public/build/SandboxMain.js",
+              "compilationMode": "standard"
+            }
           ]
-        },
-        "enabledTargets": [
-          {
-            "targetName": "Element",
-            "output": "/Users/you/project/public/build/ElementMain.js",
-            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/4.js",
-            "originalString": "public/build/ElementMain.js",
-            "compilationMode": "optimize",
-            "elmJson": "/Users/you/project/elm.json",
-            "inputs": [
-              {
-                "input": "/Users/you/project/src/ElementMain.elm",
-                "realpath": "/Users/you/project/src/ElementMain.elm",
-                "originalString": "src/ElementMain.elm"
-              }
-            ]
-          },
-          {
-            "targetName": "Frankenstein",
-            "output": "/Users/you/project/public/build/Frankenstein.js",
-            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/5.js",
-            "originalString": "public/build/Frankenstein.js",
-            "compilationMode": "standard",
-            "elmJson": "/Users/you/project/elm.json",
-            "inputs": [
-              {
-                "input": "/Users/you/project/src/ApplicationMain.elm",
-                "realpath": "/Users/you/project/src/ApplicationMain.elm",
-                "originalString": "src/ApplicationMain.elm"
-              },
-              {
-                "input": "/Users/you/project/src/DocumentMain.elm",
-                "realpath": "/Users/you/project/src/DocumentMain.elm",
-                "originalString": "src/DocumentMain.elm"
-              }
-            ]
-          },
-          {
-            "targetName": "Concourse",
-            "output": "/Users/you/project/public/submodules/concourse/web/public/elm.min.js",
-            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/6.js",
-            "originalString": "public/submodules/concourse/web/public/elm.min.js",
-            "compilationMode": "optimize",
-            "elmJson": "/Users/you/project/public/submodules/concourse/web/elm/elm.json",
-            "inputs": [
-              {
-                "input": "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
-                "realpath": "/Users/you/project/public/submodules/concourse/web/elm/src/Main.elm",
-                "originalString": "src/ElementMain.elm"
-              }
-            ]
-          }
-        ],
-        "disabledTargets": [
-          {
-            "targetName": "Html",
-            "output": "/Users/you/project/public/build/HtmlMain.js",
-            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/1.js",
-            "originalString": "public/build/HtmlMain.js"
-          },
-          {
-            "targetName": "Azimutt",
-            "output": "/Users/you/project/public/submodules/azimutt/public/dist/elm.js",
-            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/2.js",
-            "originalString": "public/submodules/azimutt/public/dist/elm.js"
-          }
-        ],
-        "erroredTargets": [
-          {
-            "error": "InputsNotFound",
-            "targetName": "Sandbox",
-            "output": "/Users/you/project/public/build/SandboxMain.js",
-            "temporaryOutput": "/Users/you/project/elm-stuff/elm-watch/3.js",
-            "originalString": "public/build/SandboxMain.js",
-            "compilationMode": "standard"
-          }
-        ]
-      }
+        }
       `);
   });
 });

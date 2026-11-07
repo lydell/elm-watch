@@ -66,10 +66,8 @@ export async function run(
             logger,
             getNow,
             runMode: { tag: "make" },
-            elmWatchJsonPath: project.elmWatchJsonPath,
             total: outputActions.total,
             action,
-            postprocess: project.postprocess,
             postprocessWorkerPool,
           })
             .then(() => {
