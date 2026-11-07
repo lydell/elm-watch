@@ -1,7 +1,8 @@
+import * as childProcess from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
-import { expect } from "vitest";
+import { expect, onTestFinished } from "vitest";
 
 import {
   ElmModule,
@@ -32,7 +33,68 @@ import {
 } from "./Helpers";
 
 const CONTAINER_ID = "elm-watch";
-export const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "hot");
+const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "hot");
+const FIXTURE_COPIES_DIR = path.join(import.meta.dirname, "fixtures-copies");
+
+const fixtureCopies = new Map<string, string>();
+let fixtureFiles: Array<string> | undefined = undefined;
+
+// Each test gets its own copy of the fixtures it uses, so that tests can’t
+// affect each other via leftover files (elm-stuff/, build/, lock files, etc.),
+// and so that tests can run in parallel. Only files that aren’t ignored by git
+// are copied. The copies are removed after passing tests, but kept after
+// failing tests to help with debugging.
+// `clean` maps the paths of the copies back to the original fixture paths.
+export function fixtureDir(fixture: string): string {
+  const { currentTestName = "unknown", testPath = "unknown" } =
+    expect.getState();
+  const key = `${testPath}\0${currentTestName}\0${fixture}`;
+  const existing = fixtureCopies.get(key);
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  fixtureFiles ??= childProcess
+    .execFileSync(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "."],
+      { cwd: FIXTURES_DIR, encoding: "utf8" },
+    )
+    .split("\0")
+    .filter((file) => file !== "");
+
+  const original = path.join(FIXTURES_DIR, fixture);
+  const testDir = path.join(
+    FIXTURE_COPIES_DIR,
+    path.basename(testPath),
+    // Tests within a file run in sequence, so a collision after shortening is
+    // not a problem. The copy is recreated from scratch below.
+    currentTestName.replace(/[^\w-]+/g, "-").slice(0, 50),
+  );
+  const copy = path.join(testDir, "hot", fixture);
+
+  fs.rmSync(copy, { recursive: true, force: true });
+  const prefix = `${fixture}/`;
+  for (const file of fixtureFiles) {
+    if (file.startsWith(prefix)) {
+      const relative = file.slice(prefix.length);
+      const target = path.join(copy, relative);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.cpSync(path.join(original, relative), target, {
+        verbatimSymlinks: true,
+      });
+    }
+  }
+
+  fixtureCopies.set(key, copy);
+  onTestFinished(async ({ task }) => {
+    fixtureCopies.delete(key);
+    if (task.result?.state === "pass") {
+      await rimraf(testDir);
+    }
+  });
+  return copy;
+}
 
 let watcher: fs.FSWatcher | undefined = undefined;
 const hotKillManager: HotKillManager = { kill: undefined };
@@ -136,7 +198,7 @@ export async function run({
     // Disable Elm’s “Compiled in DEV mode” logs.
   };
 
-  const dir = path.join(FIXTURES_DIR, fixture);
+  const dir = fixtureDir(fixture);
   const build = path.join(dir, "build");
   const absoluteScripts = scripts.map((script) => path.join(build, script));
   const elmStuff = path.join(dir, "elm-stuff");
@@ -426,7 +488,7 @@ export function runHotReload({
   lastValueFromElm: { value: unknown };
   go: (onIdle: OnIdle) => ReturnType<typeof run>;
 } {
-  const dir = path.join(FIXTURES_DIR, fixture);
+  const dir = fixtureDir(fixture);
   const src = path.join(dir, "src");
 
   const elmWatchStuffJson: ElmWatchStuffJson = {

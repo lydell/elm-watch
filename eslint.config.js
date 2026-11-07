@@ -277,6 +277,7 @@ export default typescriptEslint.config(
       "example-minimal",
       "*.d.ts",
       "tests/fixtures",
+      "tests/fixtures-copies",
       "submodules",
     ],
   },

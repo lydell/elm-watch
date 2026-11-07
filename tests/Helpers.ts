@@ -101,6 +101,13 @@ export async function wait(ms: number): Promise<void> {
   });
 }
 
+// Poll until `condition` is true. Relies on the test timeout if it never is.
+export async function waitFor(condition: () => boolean): Promise<void> {
+  while (!condition()) {
+    await wait(10);
+  }
+}
+
 export function touch(filePath: string): void {
   const now = new Date();
   fs.utimesSync(filePath, now, now);
@@ -512,7 +519,8 @@ export function clean(string: string): string {
   const project = path.join(root, "Users", "you", "project");
 
   // Replace start of absolute paths with hardcoded stuff so the tests pass on
-  // more than one computer. Replace automatic port numbers with a fixed one.
+  // more than one computer. Map fixture copies (see `fixtureDir`) back to the
+  // original fixture paths. Replace automatic port numbers with a fixed one.
   // Replace colors for snapshots. Replace backslashes with slashes for Windows.
   // That can be extra tricky since we sometimes print JSON strings where the
   // backslashes end up escaped with another backslash. Normalize some error
@@ -531,6 +539,10 @@ export function clean(string: string): string {
         .pathToFileURL(project)
         .toString()
         .replace(/[A-Z]:\//g, ""),
+    )
+    .replace(
+      /fixtures-copies[\\/]+[^\\/\s]+[\\/]+[^\\/\s]+(?=[\\/])/g,
+      "fixtures",
     )
     .split(os.tmpdir())
     .join(path.join(root, "tmp", "fake"))

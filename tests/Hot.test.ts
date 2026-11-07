@@ -35,6 +35,7 @@ import {
   testExceptWindows,
   touch,
   wait,
+  waitFor,
 } from "./Helpers";
 import {
   assertDebugger,
@@ -43,7 +44,7 @@ import {
   collapseUi,
   expandUi,
   failInit,
-  FIXTURES_DIR,
+  fixtureDir,
   getOverlay,
   moveUi,
   run,
@@ -338,7 +339,7 @@ describe("hot", () => {
 
   test("connect with elm.json error", async () => {
     const fixture = "connect-with-elm-json-error";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     fs.copyFileSync(
       path.join(dir, "elm.template.json"),
       path.join(dir, "elm.json"),
@@ -925,7 +926,7 @@ describe("hot", () => {
 
     test("change target name", async () => {
       const fixture = "change-target-name";
-      const dir = path.join(FIXTURES_DIR, fixture);
+      const dir = fixtureDir(fixture);
       const elmWatchJsonPath = path.join(dir, "elm-watch.json");
       const elmWatchJsonTemplatePath = path.join(
         dir,
@@ -1358,7 +1359,7 @@ describe("hot", () => {
 
   test("changes to elm-watch.json", async () => {
     const fixture = "changes-to-elm-watch-json";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const elmWatchJsonPath = path.join(dir, "elm-watch.json");
     const elmWatchJsonPath2 = path.join(dir, "src", "elm-watch.json");
     const elmWatchJsonTemplatePath = path.join(dir, "elm-watch.template.json");
@@ -1379,7 +1380,7 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
-      onIdle: async ({ idle, div }) => {
+      onIdle: async ({ idle, div, stdout }) => {
         switch (idle) {
           case 1:
             assert1(div);
@@ -1388,7 +1389,9 @@ describe("hot", () => {
               elmWatchJsonPath,
               elmWatchJsonString.slice(0, -10),
             );
-            await wait(1000);
+            await waitFor(() =>
+              stdout.getOutput().includes("I had trouble with the JSON inside"),
+            );
             fs.writeFileSync(
               elmWatchJsonPath,
               elmWatchJsonString.replace(/"postprocess":.*/, ""),
@@ -1397,7 +1400,9 @@ describe("hot", () => {
           case 2:
             assert2(div);
             fs.writeFileSync(elmWatchJsonPath2, "{}");
-            await wait(100);
+            await waitFor(() =>
+              stdout.getOutput().includes('a field called: "targets"'),
+            );
             fs.unlinkSync(elmWatchJsonPath2);
             return "KeepGoing";
           case 3:
@@ -1475,7 +1480,7 @@ describe("hot", () => {
 
   test("changes to elm.json", async () => {
     const fixture = "changes-to-elm-json";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const elmJsonPath = path.join(dir, "elm.json");
     const elmJsonPathSub = path.join(dir, "src", "Sub", "elm.json");
     const elmJsonTemplatePath = path.join(dir, "elm.template.json");
@@ -1723,7 +1728,7 @@ describe("hot", () => {
     // ReferenceError: Cannot access 'mutable' before initialization
     // The fake `elm` connects to the WebSocket server when `elm --version` is
     // run during the restart, so that a message is queued.
-    const elmJsonPath = path.join(FIXTURES_DIR, "basic", "elm.json");
+    const elmJsonPath = path.join(fixtureDir("basic"), "elm.json");
 
     const { terminal } = await run({
       fixture: "basic",
@@ -1771,7 +1776,7 @@ describe("hot", () => {
 
   test("changes to elm.json – typecheck only", async () => {
     const fixture = "changes-to-elm-json";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const elmJsonPath = path.join(dir, "elm.json");
     const elmJsonTemplatePath = path.join(dir, "elm.template.json");
     const elmJsonString = fs
@@ -1832,7 +1837,7 @@ describe("hot", () => {
 
   test("delete elm-stuff", async () => {
     const fixture = "delete-elm-stuff";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const elmStuff = path.join(dir, "elm-stuff");
     const elmStuff2 = path.join(dir, "src", "elm-stuff");
     const iDat = path.join(elmStuff, "0.19.1", "i.dat");
@@ -1893,13 +1898,12 @@ describe("hot", () => {
 
   test("changes to elm-watch-node JS file", async () => {
     const fixture = "changes-to-postprocess";
-    const postprocessPath = path.join(FIXTURES_DIR, fixture, "postprocess.js");
+    const postprocessPath = path.join(fixtureDir(fixture), "postprocess.js");
     const postprocessTemplatePath = path.join(
-      FIXTURES_DIR,
-      fixture,
+      fixtureDir(fixture),
       "postprocess.template.js",
     );
-    const roguePath = path.join(FIXTURES_DIR, fixture, "src", "postprocess.js");
+    const roguePath = path.join(fixtureDir(fixture), "src", "postprocess.js");
     const postprocessString = fs
       .readFileSync(postprocessTemplatePath, "utf8")
       .replace(/\r\n/g, "\n");
@@ -1985,7 +1989,7 @@ describe("hot", () => {
   // - Create and delete a file named like a package (`Html.elm`).
   test("changes to .elm files", async () => {
     const fixture = "changes-to-elm-files";
-    const htmlPath = path.join(FIXTURES_DIR, fixture, "src", "Html.elm");
+    const htmlPath = path.join(fixtureDir(fixture), "src", "Html.elm");
     rm(htmlPath);
 
     const { terminal } = await run({
@@ -2054,7 +2058,7 @@ describe("hot", () => {
 
   test("non interesting .elm files changed, with disabled targets", async () => {
     const fixture = "non-interesting-elm-files-changed-disabled-targets";
-    const unusedFolder = path.join(FIXTURES_DIR, fixture, "src", "Unused");
+    const unusedFolder = path.join(fixtureDir(fixture), "src", "Unused");
 
     const { terminal } = await run({
       fixture,
@@ -2095,7 +2099,7 @@ describe("hot", () => {
 
   test("non interesting .elm files changed, with all targets enabled", async () => {
     const fixture = "non-interesting-elm-files-changed-all-targets";
-    const unusedFile1 = path.join(FIXTURES_DIR, fixture, "src", "Unused.elm");
+    const unusedFile1 = path.join(fixtureDir(fixture), "src", "Unused.elm");
 
     const { terminal } = await run({
       fixture,
@@ -2127,7 +2131,7 @@ describe("hot", () => {
     // Note: This uses its own fixture because it has a tendency to write files
     // to `build/` while the next test is removing `build/` – on Windows only.
     const fixture = "two-changes-at-the-same-time";
-    const src = path.join(FIXTURES_DIR, fixture, "src");
+    const src = path.join(fixtureDir(fixture), "src");
     const inputFile1 = path.join(src, "HtmlMain.elm");
     const inputFile2 = path.join(src, "Worker.elm");
 
@@ -2250,7 +2254,7 @@ describe("hot", () => {
   test("elm compilation errors from the start, with terminal resize", async () => {
     const fixture = "compile-error";
 
-    const main = path.join(FIXTURES_DIR, fixture, "src", "Main.elm");
+    const main = path.join(fixtureDir(fixture), "src", "Main.elm");
 
     const { terminal } = await run({
       fixture,
@@ -2317,7 +2321,7 @@ describe("hot", () => {
 
   test("kill Elm", async () => {
     const fixture = "kill-elm";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const input = path.join(dir, "src", "Main.elm");
     const lock = path.join(dir, "lock");
 
@@ -2379,7 +2383,7 @@ describe("hot", () => {
 
   test("kill Elm while installing dependencies in TTY mode", async () => {
     const fixture = "kill-elm";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const lock = path.join(dir, "lock");
 
     // Hang on installing dependencies.
@@ -2414,8 +2418,8 @@ describe("hot", () => {
 
   test("kill postprocess", async () => {
     const fixture = "kill-postprocess";
-    const input = path.join(FIXTURES_DIR, fixture, "src", "Main.elm");
-    const tmp = path.join(FIXTURES_DIR, fixture, "postprocess.tmp");
+    const input = path.join(fixtureDir(fixture), "src", "Main.elm");
+    const tmp = path.join(fixtureDir(fixture), "postprocess.tmp");
     fs.writeFileSync(tmp, "1");
     const { terminal } = await run({
       fixture,
@@ -2463,8 +2467,8 @@ describe("hot", () => {
 
   test("kill postprocess (elm-watch-node)", async () => {
     const fixture = "kill-postprocess-elm-watch-node";
-    const input = path.join(FIXTURES_DIR, fixture, "src", "Main.elm");
-    const tmp = path.join(FIXTURES_DIR, fixture, "postprocess.tmp");
+    const input = path.join(fixtureDir(fixture), "src", "Main.elm");
+    const tmp = path.join(fixtureDir(fixture), "postprocess.tmp");
     fs.writeFileSync(tmp, "1");
     const { terminal } = await run({
       fixture,
@@ -2512,7 +2516,7 @@ describe("hot", () => {
 
   test("limit postprocess workers", async () => {
     const fixture = "limit-postprocess-workers";
-    const lock = path.join(FIXTURES_DIR, fixture, "lock");
+    const lock = path.join(fixtureDir(fixture), "lock");
     rm(lock);
 
     const { terminal } = await run({
@@ -3159,8 +3163,7 @@ describe("hot", () => {
 
     test("successful execution", async () => {
       const outputFile = path.join(
-        FIXTURES_DIR,
-        fixture,
+        fixtureDir(fixture),
         "click-error-location.txt",
       );
       rm(outputFile);
@@ -3309,8 +3312,8 @@ describe("hot", () => {
 
   test("typecheck only", async () => {
     const fixture = "typecheck-only";
-    const main4Path = path.join(FIXTURES_DIR, fixture, "src", "Main4.elm");
-    const sharedPath = path.join(FIXTURES_DIR, fixture, "src", "Shared.elm");
+    const main4Path = path.join(fixtureDir(fixture), "src", "Main4.elm");
+    const sharedPath = path.join(fixtureDir(fixture), "src", "Shared.elm");
 
     const { terminal } = await run({
       fixture,
@@ -3360,7 +3363,7 @@ describe("hot", () => {
 
   test("prioritize last focused target", async () => {
     const fixture = "prioritization";
-    const sharedFile = path.join(FIXTURES_DIR, fixture, "src", "Shared.elm");
+    const sharedFile = path.join(fixtureDir(fixture), "src", "Shared.elm");
     const { terminal } = await run({
       fixture,
       args: [],
@@ -3424,7 +3427,7 @@ describe("hot", () => {
 
   testExceptWindows("duplicate inputs", async () => {
     const fixture = "duplicate-inputs";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const elmJsonPath = path.join(dir, "elm.json");
     const main = path.join(dir, "src", "Main.elm");
     const main2 = path.join(dir, "src", "Main2.elm");
@@ -3852,7 +3855,7 @@ describe("hot", () => {
 
   test("elm.json further up than elm-watch.json", async () => {
     const fixture = "elm-json-above-elm-watch-json";
-    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+    const elmJsonPath = path.join(fixtureDir(fixture), "elm.json");
 
     const { terminal } = await run({
       fixture: path.join(fixture, "example"),
@@ -3885,7 +3888,7 @@ describe("hot", () => {
 
   test("source-directories further up than elm.json and elm-watch.json", async () => {
     const fixture = "source-directories-above-elm-watch-json";
-    const elmFile = path.join(FIXTURES_DIR, fixture, "src", "Answer.elm");
+    const elmFile = path.join(fixtureDir(fixture), "src", "Answer.elm");
 
     const { terminal } = await run({
       fixture: path.join(fixture, "app", "example"),

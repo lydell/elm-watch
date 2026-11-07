@@ -8,3 +8,4 @@ node_modules
 elm-watch-*.txt
 lock
 elm.cmd
+tests/fixtures-copies

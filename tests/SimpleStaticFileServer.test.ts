@@ -22,7 +22,7 @@ import {
   stringSnapshotSerializer,
   testExceptWindows,
 } from "./Helpers";
-import { FIXTURES_DIR, run } from "./HotHelpers";
+import { fixtureDir, run } from "./HotHelpers";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
@@ -135,7 +135,7 @@ async function http10RequestWithoutHost(port: number): Promise<string> {
 describe("SimpleStaticFileServer", () => {
   test("WebSocket server HTTP HTML page", async () => {
     const fixture = "websocket-server-http-html";
-    const dir = path.join(FIXTURES_DIR, fixture);
+    const dir = fixtureDir(fixture);
     const elmWatchJsonPath = path.join(dir, "elm-watch.json");
     const elmWatchJson: unknown = JSON.parse(
       fs.readFileSync(elmWatchJsonPath, "utf8"),

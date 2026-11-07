@@ -16,7 +16,6 @@ import {
   grep,
   onlyErrorMessages,
   removeIndents,
-  rimraf,
   stringSnapshotSerializer,
   TerminalColorReadStream,
   testExceptWindows,
@@ -32,7 +31,7 @@ import {
   click,
   closeOverlay,
   expandUi,
-  FIXTURES_DIR,
+  fixtureDir,
   getOverlay,
   hideErrors,
   runHotReload,
@@ -830,7 +829,7 @@ describe("hot reloading", () => {
   });
 
   test("remove input file", async () => {
-    const elmJsonPath = path.join(FIXTURES_DIR, "hot-reload", "elm.json");
+    const elmJsonPath = path.join(fixtureDir("hot-reload"), "elm.json");
 
     const { replace, removeInput, go } = runHotReload({
       name: "RemoveInput",
@@ -1729,7 +1728,7 @@ describe("hot reloading", () => {
 
   test("Change Elm file while `elm make` is running", async () => {
     const fixture = "hot-reload";
-    const lockFile = path.join(FIXTURES_DIR, fixture, "lock");
+    const lockFile = path.join(fixtureDir(fixture), "lock");
 
     fs.writeFileSync(lockFile, "Normal");
 
@@ -1783,8 +1782,8 @@ describe("hot reloading", () => {
 
   test("Restart while `elm make` is running", async () => {
     const fixture = "hot-reload";
-    const lockFile = path.join(FIXTURES_DIR, fixture, "lock");
-    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+    const lockFile = path.join(fixtureDir(fixture), "lock");
+    const elmJsonPath = path.join(fixtureDir(fixture), "elm.json");
 
     fs.writeFileSync(lockFile, "Normal");
 
@@ -1828,8 +1827,8 @@ describe("hot reloading", () => {
 
   test("Restart while installing dependencies", async () => {
     const fixture = "hot-reload";
-    const lockFile = path.join(FIXTURES_DIR, fixture, "lock");
-    const elmJsonPath = path.join(FIXTURES_DIR, fixture, "elm.json");
+    const lockFile = path.join(fixtureDir(fixture), "lock");
+    const elmJsonPath = path.join(fixtureDir(fixture), "elm.json");
 
     fs.writeFileSync(lockFile, "Delay");
 
@@ -2248,14 +2247,11 @@ describe("hot reloading", () => {
 
   describe("error overlay", () => {
     const fixture = "error-overlay";
-    const dir = path.join(FIXTURES_DIR, fixture);
-    const template = path.join(dir, "template");
-    const src = path.join(dir, "src");
-
     const replaceHelper = (
       name: string,
       f: (content: string) => string,
     ): void => {
+      const src = path.join(fixtureDir(fixture), "src");
       fs.writeFileSync(
         path.join(src, name),
         f(fs.readFileSync(path.join(src, name), "utf-8")),
@@ -2265,8 +2261,10 @@ describe("hot reloading", () => {
     const joinOverlays = (overlays: Array<string>): string =>
       overlays.join(`\n${"=".repeat(80)}\n`);
 
-    beforeEach(async () => {
-      await rimraf(src);
+    beforeEach(() => {
+      const dir = fixtureDir(fixture);
+      const template = path.join(dir, "template");
+      const src = path.join(dir, "src");
       fs.mkdirSync(src);
       for (const name of fs.readdirSync(template)) {
         fs.copyFileSync(path.join(template, name), path.join(src, name));
