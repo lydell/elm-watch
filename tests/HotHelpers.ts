@@ -28,7 +28,6 @@ import {
   rm,
   SilentReadStream,
   TEST_ENV,
-  TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
   waitFor,
   waitOneFrame,
 } from "./Helpers";
@@ -150,7 +149,6 @@ type SharedRunOptions = {
   cwd?: string;
   includeProxyReloads?: boolean;
   simulateHttpCacheOnReload?: boolean;
-  useElmErrorWorkaround?: boolean;
   stdin?: ReadStream;
 };
 
@@ -170,7 +168,6 @@ export async function run({
   cwd = ".",
   includeProxyReloads = false,
   simulateHttpCacheOnReload = false,
-  useElmErrorWorkaround = true,
   stdin = new SilentReadStream(),
 }: SharedRunOptions & {
   fixture: string;
@@ -338,9 +335,7 @@ export async function run({
       bin === undefined
         ? {
             ...process.env,
-            ...(useElmErrorWorkaround
-              ? TEST_ENV
-              : TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND),
+            ...TEST_ENV,
             ...env,
           }
         : {

@@ -519,7 +519,6 @@ describe("hot", () => {
       args: [],
       scripts: ["Main.js"],
       isTTY: false,
-      useElmErrorWorkaround: false,
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });
       },

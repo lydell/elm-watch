@@ -245,9 +245,7 @@ describe("errors", () => {
         );
       }
       fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
-      expect(
-        await run(fixture, ["make", "Main"], { useElmErrorWorkaround: false }),
-      ).toMatchInlineSnapshot(`
+      expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
         ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
         ⧙Target: Main⧘
 

@@ -20,7 +20,6 @@ import {
   rm,
   SilentReadStream,
   TEST_ENV,
-  TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
 } from "./Helpers";
 
 export function fixtureDir(fixture: string): string {
@@ -35,7 +34,6 @@ export async function run(
     isTTY?: boolean;
     exitHotOnError?: boolean;
     originalStdout?: boolean;
-    useElmErrorWorkaround?: boolean;
   },
 ): Promise<string> {
   return runAbsolute(fixtureDir(fixture), args, options);
@@ -49,13 +47,11 @@ export async function runAbsolute(
     isTTY = true,
     exitHotOnError = false,
     originalStdout = false,
-    useElmErrorWorkaround = true,
   }: {
     env?: Env;
     isTTY?: boolean;
     exitHotOnError?: boolean;
     originalStdout?: boolean;
-    useElmErrorWorkaround?: boolean;
   } = {},
 ): Promise<string> {
   const stdout = new CursorWriteStream();
@@ -68,12 +64,7 @@ export async function runAbsolute(
     cwd: dir,
     env: {
       ...(exitHotOnError ? { [__ELM_WATCH_EXIT_ON_ERROR]: "" } : {}),
-      ...(env ?? {
-        ...process.env,
-        ...(useElmErrorWorkaround
-          ? TEST_ENV
-          : TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND),
-      }),
+      ...(env ?? { ...process.env, ...TEST_ENV }),
     },
     stdin: new SilentReadStream(),
     stdout,

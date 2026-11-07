@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Used by .github/workflows/example.yml (no longer by the tests).
 import spawn from "cross-spawn";
 import fs from "fs";
 import path from "path";

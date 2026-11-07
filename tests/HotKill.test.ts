@@ -14,7 +14,6 @@ import {
   rm,
   stringSnapshotSerializer,
   TEST_ENV,
-  TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
   touch,
   waitFor,
 } from "./Helpers";
@@ -43,7 +42,7 @@ describe("hot", () => {
       isTTY: false,
       bin: "compile-forever",
       env: {
-        ...TEST_ENV_WITHOUT_ELM_ERROR_WORKAROUND,
+        ...TEST_ENV,
         [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
       },
       init: (node) => {
