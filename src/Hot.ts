@@ -184,7 +184,6 @@ export type Msg =
   | {
       tag: "GotWatcherEvent";
       date: Date;
-      eventName: WatcherEventName;
       absolutePath: AbsolutePath;
     }
   | {
@@ -195,6 +194,8 @@ export type Msg =
   | {
       tag: "SleepBeforeNextActionDone";
       date: Date;
+      // The `pendingWatcherEvents` paths that don’t exist.
+      removedPaths: Set<AbsolutePath>;
     }
   | {
       tag: "WebSocketClosed";
@@ -225,6 +226,16 @@ type Model = {
   nextAction: NextAction;
   hotState: HotState;
   latestEvents: Array<LatestEvent>;
+  // Watcher events are handled once the sleep before the next action is done.
+  // Then we check if the paths exist. Atomic saves (write to a temporary
+  // file, then rename it over the original) can briefly make a file look
+  // removed, so we don’t want to check right away.
+  pendingWatcherEvents: Array<PendingWatcherEvent>;
+};
+
+type PendingWatcherEvent = {
+  date: Date;
+  absolutePath: AbsolutePath;
 };
 
 type NextAction =
@@ -321,6 +332,8 @@ type Cmd =
   | {
       tag: "SleepBeforeNextAction";
       sleepMs: number;
+      // Check which of these exist once the sleep is done.
+      watcherPaths: Array<AbsolutePath>;
     }
   | {
       tag: "Throw";
@@ -441,10 +454,14 @@ export async function run(
       );
       const allCmds: Array<Cmd> = [
         ...cmds,
-        newModel.latestEvents.length > model.latestEvents.length
+        newModel.latestEvents.length > model.latestEvents.length ||
+        newModel.pendingWatcherEvents.length > model.pendingWatcherEvents.length
           ? {
               tag: "SleepBeforeNextAction",
-              sleepMs: getNextActionSleepMs(newModel.latestEvents),
+              sleepMs: getNextActionSleepMs(newModel),
+              watcherPaths: newModel.pendingWatcherEvents.map(
+                (event) => event.absolutePath,
+              ),
             }
           : { tag: "NoCmd" },
       ];
@@ -453,7 +470,8 @@ export async function run(
         msg,
         newModel.nextAction.tag === "NoAction" &&
           newModel.hotState.tag === "Idle" &&
-          newModel.latestEvents.length === 0,
+          newModel.latestEvents.length === 0 &&
+          newModel.pendingWatcherEvents.length === 0,
       );
       return [newModel, allCmds];
     },
@@ -516,11 +534,10 @@ const initMutable =
     hotTestHooks.onWatcherReadyChange?.(false);
     const watcher = Watcher.watch(
       project.watchDirs,
-      ({ absolutePath, exists }) => {
+      (absolutePath) => {
         dispatch({
           tag: "GotWatcherEvent",
           date: getNow(),
-          eventName: exists ? "changed" : "removed",
           absolutePath,
         });
       },
@@ -725,6 +742,7 @@ const init = (
       start: now,
     },
     latestEvents: restartReasons,
+    pendingWatcherEvents: [],
   },
   [
     { tag: "ClearScreen" },
@@ -751,30 +769,17 @@ function update(
   model: Model,
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
-    case "GotWatcherEvent": {
-      const result = onWatcherEvent(
-        msg.date,
-        project,
-        msg.eventName,
-        msg.absolutePath,
-        model.nextAction,
-      );
-
-      if (result === undefined) {
-        return [model, []];
-      }
-
-      const [updatedNextAction, latestEvent, cmds] = result;
-
+    case "GotWatcherEvent":
       return [
         {
           ...model,
-          nextAction: updatedNextAction,
-          latestEvents: [...model.latestEvents, latestEvent],
+          pendingWatcherEvents: [
+            ...model.pendingWatcherEvents,
+            { date: msg.date, absolutePath: msg.absolutePath },
+          ],
         },
-        cmds,
+        [],
       ];
-    }
 
     case "ExitRequested":
       /* v8 ignore start */
@@ -815,18 +820,30 @@ function update(
       }
 
     case "SleepBeforeNextActionDone": {
-      const staticFilesDirPaths = model.latestEvents.flatMap((event) =>
-        event.tag === "WatcherEvent" && event.file.tag === "StaticFilesDirPath"
-          ? [event.file.urlPath]
-          : [],
+      const [modelWithEvents, watcherCmds] = handlePendingWatcherEvents(
+        project,
+        msg.removedPaths,
+        model,
       );
-      const [newModel, cmds] = runNextAction(msg.date, project, model);
+      const staticFilesDirPaths = modelWithEvents.latestEvents.flatMap(
+        (event) =>
+          event.tag === "WatcherEvent" &&
+          event.file.tag === "StaticFilesDirPath"
+            ? [event.file.urlPath]
+            : [],
+      );
+      const [newModel, cmds] = runNextAction(
+        msg.date,
+        project,
+        modelWithEvents,
+      );
       return [
         {
           ...newModel,
           nextAction: { tag: "NoAction" },
         },
         [
+          ...watcherCmds,
           ...(isNonEmptyArray(staticFilesDirPaths)
             ? [
                 {
@@ -1156,6 +1173,45 @@ function update(
       }
     }
   }
+}
+
+function handlePendingWatcherEvents(
+  project: Project,
+  removedPaths: Set<AbsolutePath>,
+  model: Model,
+): [Model, Array<Cmd>] {
+  // Editors and file systems often emit several events for the same file.
+  // Only handle the latest one for each path.
+  const latestByPath = new Map<AbsolutePath, PendingWatcherEvent>();
+  for (const event of model.pendingWatcherEvents) {
+    latestByPath.delete(event.absolutePath);
+    latestByPath.set(event.absolutePath, event);
+  }
+
+  let { nextAction } = model;
+  const latestEvents = [...model.latestEvents];
+  const cmds: Array<Cmd> = [];
+
+  for (const { date, absolutePath } of latestByPath.values()) {
+    const result = onWatcherEvent(
+      date,
+      project,
+      removedPaths.has(absolutePath) ? "removed" : "changed",
+      absolutePath,
+      nextAction,
+    );
+    if (result !== undefined) {
+      const [updatedNextAction, latestEvent, newCmds] = result;
+      nextAction = updatedNextAction;
+      latestEvents.push(latestEvent);
+      cmds.push(...newCmds);
+    }
+  }
+
+  return [
+    { ...model, nextAction, latestEvents, pendingWatcherEvents: [] },
+    cmds,
+  ];
 }
 
 function onWatcherEvent(
@@ -1788,7 +1844,15 @@ const runCmd =
         }
         mutable.watcherTimeoutId = setTimeout(() => {
           mutable.watcherTimeoutId = undefined;
-          dispatch({ tag: "SleepBeforeNextActionDone", date: getNow() });
+          dispatch({
+            tag: "SleepBeforeNextActionDone",
+            date: getNow(),
+            removedPaths: new Set(
+              cmd.watcherPaths.filter(
+                (absolutePath) => !fs.existsSync(absolutePath),
+              ),
+            ),
+          });
         }, cmd.sleepMs);
         return;
 
@@ -2798,18 +2862,25 @@ function webSocketSendToOutput(
   }
 }
 
-function getNextActionSleepMs(events: Array<LatestEvent>): number {
-  return Math.max(0, ...events.map(getLatestEventSleepMs));
+function getNextActionSleepMs(model: Model): number {
+  return Math.max(
+    0,
+    ...model.latestEvents.map(getLatestEventSleepMs),
+    ...(model.pendingWatcherEvents.length > 0 ? [WATCHER_EVENT_SLEEP_MS] : []),
+  );
 }
+
+// Sleep for a little bit to avoid unnecessary recompilation when using “save
+// all” in an editor, or when running `git switch some-branch` or `git restore
+// .`. These operations results in many files being added/changed/deleted,
+// usually with 0-1 ms between each event. This also lets atomic saves finish
+// before we check if files exist.
+const WATCHER_EVENT_SLEEP_MS = 10;
 
 function getLatestEventSleepMs(event: LatestEvent): number {
   switch (event.tag) {
-    // Sleep for a little bit to avoid unnecessary recompilation when using
-    // “save all” in an editor, or when running `git switch some-branch` or `git
-    // restore .`. These operations results in many files being
-    // added/changed/deleted, usually with 0-1 ms between each event.
     case "WatcherEvent":
-      return 10;
+      return WATCHER_EVENT_SLEEP_MS;
 
     // Also sleep for a little bit when web sockets connect and disconnect.
     // That’s useful when there are burst connections because of multiple

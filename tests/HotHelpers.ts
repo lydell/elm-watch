@@ -88,10 +88,16 @@ export async function nextMsg(predicate: (msg: Msg) => boolean): Promise<void> {
   });
 }
 
-// Like `nextMsg`, but resolves once elm-watch has picked up a file change _and_
-// acted on it (which happens after a short debounce).
-export async function nextWatcherEventHandled(): Promise<void> {
-  await nextMsg((msg) => msg.tag === "GotWatcherEvent");
+// Like `nextMsg`, but resolves once elm-watch has picked up a change to
+// `absolutePath` _and_ acted on it (which happens after a short debounce).
+// Waiting for a specific path is important, since there might be late events
+// for other files (such as lock files written by the fake `elm` binaries).
+export async function nextWatcherEventHandled(
+  absolutePath: string,
+): Promise<void> {
+  await nextMsg(
+    (msg) => msg.tag === "GotWatcherEvent" && msg.absolutePath === absolutePath,
+  );
   await nextMsg((msg) => msg.tag === "SleepBeforeNextActionDone");
 }
 
@@ -527,6 +533,7 @@ export function runHotReload({
   extraScripts?: Array<string>;
   extraElmWatchStuffJson?: ElmWatchStuffJson["targets"];
 }): {
+  inputPath: string;
   replace: (f: (fileContent: string) => string) => void;
   write: (n: number) => void;
   removeInput: () => void;
@@ -577,6 +584,7 @@ export function runHotReload({
   };
 
   return {
+    inputPath: path.join(src, `${name}.elm`),
     replace,
     write,
     removeInput,

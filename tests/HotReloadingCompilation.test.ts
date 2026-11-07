@@ -39,7 +39,7 @@ describe("hot reloading", () => {
 
     fs.writeFileSync(lockFile, "Normal");
 
-    const { replace, go } = runHotReload({
+    const { inputPath, replace, go } = runHotReload({
       fixture,
       name: "InterruptElm",
       programType: "Html",
@@ -55,7 +55,7 @@ describe("hot reloading", () => {
           fs.writeFileSync(lockFile, "Delay");
           replace((content) => content.replace("1", "2"));
           await waitFor(() => fs.readFileSync(lockFile, "utf8") === "DelayAck");
-          const changed = nextWatcherEventHandled();
+          const changed = nextWatcherEventHandled(inputPath);
           replace((content) => content.replace("2", "3"));
           // Wait for the watcher to pick up the change before releasing the previous compilation.
           await changed;
@@ -103,7 +103,7 @@ describe("hot reloading", () => {
           fs.writeFileSync(lockFile, "Delay");
           replace((content) => content.replace("1", "2"));
           await waitFor(() => fs.readFileSync(lockFile, "utf8") === "DelayAck");
-          const changed = nextWatcherEventHandled();
+          const changed = nextWatcherEventHandled(elmJsonPath);
           touch(elmJsonPath);
           // Wait for the watcher to pick up the change before releasing the previous compilation.
           await changed;
@@ -140,7 +140,7 @@ describe("hot reloading", () => {
       go(() => "Stop"),
       (async () => {
         await waitFor(() => fs.readFileSync(lockFile, "utf8") === "DelayAck");
-        const changed = nextWatcherEventHandled();
+        const changed = nextWatcherEventHandled(elmJsonPath);
         touch(elmJsonPath);
         // Wait for the watcher to pick up the change before releasing the previous compilation.
         await changed;
@@ -455,7 +455,7 @@ describe("hot reloading", () => {
   });
 
   test("Delay init Cmds until first hot reload", async () => {
-    const { replace, go } = runHotReload({
+    const { inputPath, replace, go } = runHotReload({
       name: "InitCmds",
       programType: "Element",
       compilationMode: "standard",
@@ -471,7 +471,7 @@ describe("hot reloading", () => {
           div.replaceChildren();
 
           // Make a change with the tab closed:
-          const changed = nextWatcherEventHandled();
+          const changed = nextWatcherEventHandled(inputPath);
           replace((content) => content.replace("OLD", "NEW"));
           await changed;
           await waitForElmWatchIdle();

@@ -9,7 +9,8 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 //
 // - The event type (`"rename"` or `"change"`) is not reliable. For example,
 //   on macOS almost everything is `"rename"`, including saving a file in vim.
-//   So we don’t use it. Instead we report whether the path exists or not.
+//   So we don’t use it. Instead we only report the path. The caller can check
+//   if it exists.
 // - Moving a directory into or out of a watched directory results in a single
 //   event for the directory itself, not one per file inside it. So every
 //   reported path must be treated as a potential directory.
@@ -25,19 +26,9 @@ export type WatchDir = {
   dir: AbsolutePath;
 };
 
-export type WatcherEvent = {
-  absolutePath: AbsolutePath;
-  exists: boolean;
-};
-
 export type Watcher = {
   close: () => void;
 };
-
-// Atomic saves (write to a temporary file, then rename it over the original)
-// can briefly make a file look removed. Wait this long before reporting a
-// missing path as removed, to see if it comes back.
-const REMOVAL_DELAY_MS = 50;
 
 // The filenames passed to these are relative to the watched directory. The last
 // part of the filename can be both a file and a directory – we can’t know.
@@ -66,39 +57,16 @@ type RootState =
 
 export function watch(
   watchDirs: Array<WatchDir>,
-  onEvent: (event: WatcherEvent) => void,
+  onEvent: (absolutePath: AbsolutePath) => void,
   onError: (error: Error) => void,
 ): Watcher {
   const rootStates = new Map<AbsolutePath, RootState>();
-  const pendingRemovals = new Map<AbsolutePath, NodeJS.Timeout>();
   let closed = false;
 
   const report = (absolutePath: AbsolutePath): void => {
-    if (closed) {
-      return;
+    if (!closed) {
+      onEvent(absolutePath);
     }
-
-    const pending = pendingRemovals.get(absolutePath);
-    if (pending !== undefined) {
-      clearTimeout(pending);
-      pendingRemovals.delete(absolutePath);
-    }
-
-    if (fs.existsSync(absolutePath)) {
-      onEvent({ absolutePath, exists: true });
-      return;
-    }
-
-    pendingRemovals.set(
-      absolutePath,
-      setTimeout(() => {
-        pendingRemovals.delete(absolutePath);
-        if (closed) {
-          return;
-        }
-        onEvent({ absolutePath, exists: fs.existsSync(absolutePath) });
-      }, REMOVAL_DELAY_MS),
-    );
   };
 
   const closeRoot = (root: AbsolutePath): void => {
@@ -208,10 +176,6 @@ export function watch(
       for (const root of rootStates.keys()) {
         closeRoot(root);
       }
-      for (const timeoutId of pendingRemovals.values()) {
-        clearTimeout(timeoutId);
-      }
-      pendingRemovals.clear();
     },
   };
 }

@@ -713,6 +713,46 @@ describe("hot", () => {
     }
   });
 
+  test("atomic save of input file", async () => {
+    const fixture = "two-changes-at-the-same-time";
+    const inputFile = path.join(fixtureDir(fixture), "src", "HtmlMain.elm");
+    const backupFile = `${inputFile}~`;
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Html"],
+      scripts: ["Html.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1: {
+            // Like vim with `backupcopy=no`: The input file briefly does not
+            // exist. That should not be treated as a removal (which would
+            // cause a restart).
+            const content = fs.readFileSync(inputFile, "utf8");
+            fs.renameSync(inputFile, backupFile);
+            fs.writeFileSync(inputFile, content);
+            fs.unlinkSync(backupFile);
+            return "KeepGoing";
+          }
+          default:
+            await wait(100);
+            return "Stop";
+        }
+      },
+    });
+
+    // The events might be split over two debounce windows, causing two
+    // “Changed” lines and an extra compilation. But never “Removed” or a
+    // restart (which would mean a second “Dependencies” line).
+    expect(grep(terminal, /HtmlMain\.elm|Dependencies/)).toMatch(
+      /^⏳ Dependencies\n✅ Dependencies\n(?:ℹ️ .*Changed .*HtmlMain\.elm.*\n?)+$/,
+    );
+  });
+
   test("two changes at the same time", async () => {
     // Note: This uses its own fixture because it has a tendency to write files
     // to `build/` while the next test is removing `build/` – on Windows only.
