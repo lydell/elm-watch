@@ -197,6 +197,8 @@ export type Msg =
       date: Date;
       // The `pendingWatcherEvents` paths that don’t exist.
       removedPaths: Set<AbsolutePath>;
+      // Source directories that have been added or removed since start.
+      changedSourceDirectories: Array<AbsolutePath>;
     }
   | {
       tag: "WebSocketClosed";
@@ -818,6 +820,7 @@ function update(
       const [modelWithEvents, watcherCmds] = handlePendingWatcherEvents(
         project,
         msg.removedPaths,
+        msg.changedSourceDirectories,
         model,
       );
       const staticFilesDirPaths = modelWithEvents.latestEvents.flatMap(
@@ -1166,8 +1169,39 @@ function update(
 function handlePendingWatcherEvents(
   project: Project,
   removedPaths: Set<AbsolutePath>,
+  changedSourceDirectories: Array<AbsolutePath>,
   model: Model,
 ): [Model, Array<Cmd>] {
+  // Elm errors if a source directory is missing. Restart if a missing one
+  // appears, or an existing one is removed. This is checked separately from
+  // the events, since on macOS there can be events for a directory itself when
+  // files inside it change, so we can’t restart on any such event. And if a
+  // parent of a missing source directory is added, we only get an event for
+  // the parent.
+  const [changedSourceDirectory] = changedSourceDirectories;
+  const [firstEvent] = model.pendingWatcherEvents;
+  if (changedSourceDirectory !== undefined && firstEvent !== undefined) {
+    const [nextAction, latestEvent, cmds] = makeRestartNextAction(
+      makeWatcherEvent(
+        project.missingSourceDirectories.has(changedSourceDirectory)
+          ? "changed"
+          : "removed",
+        changedSourceDirectory,
+        firstEvent.date,
+      ),
+      project,
+    );
+    return [
+      {
+        ...model,
+        nextAction,
+        latestEvents: [...model.latestEvents, latestEvent],
+        pendingWatcherEvents: [],
+      },
+      cmds,
+    ];
+  }
+
   // Editors and file systems often emit several events for the same file.
   // Only handle the latest one for each path.
   const latestByPath = new Map<AbsolutePath, PendingWatcherEvent>();
@@ -1851,6 +1885,14 @@ const runCmd =
               cmd.watcherPaths.filter(
                 (absolutePath) => !fs.existsSync(absolutePath),
               ),
+            ),
+            changedSourceDirectories: mutable.project.watchDirs.flatMap(
+              ({ tag, dir }) =>
+                tag === "SourceDirectory" &&
+                fs.existsSync(dir) ===
+                  mutable.project.missingSourceDirectories.has(dir)
+                  ? [dir]
+                  : [],
             ),
           });
         }, cmd.sleepMs);

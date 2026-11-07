@@ -792,6 +792,64 @@ describe("hot", () => {
     }
   });
 
+  test("create missing source directory that nothing imports from", async () => {
+    const fixture = "watched-directories";
+    const dir = fixtureDir(fixture);
+    const elmJsonPath = path.join(dir, "elm.json");
+    const lib = path.join(dir, "lib");
+
+    const elmJson = JSON.parse(fs.readFileSync(elmJsonPath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    elmJson["source-directories"] = ["src", "lib"];
+    fs.writeFileSync(elmJsonPath, JSON.stringify(elmJson, null, 4));
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            // No .elm file is related to this, but it fixes the Elm error.
+            fs.mkdirSync(lib);
+            return "KeepGoing";
+          case 2:
+            assert1(div);
+            // Removing it causes a restart too. (Elm doesn’t complain this
+            // time, though, since it has cached elm.json info in elm-stuff.)
+            fs.rmdirSync(lib);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(
+      grep(
+        terminal,
+        /MISSING SOURCE DIRECTORY|⏳ Dependencies|ℹ️.*(?:Changed|Removed)/,
+      ),
+    ).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ⧙-- MISSING SOURCE DIRECTORY ----------------------------------------------------⧘
+      ⏳ Dependencies
+      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/lib⧘
+      ⏳ Dependencies
+      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/watched-directories/lib⧘
+    `);
+
+    function assert1(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>Text from Dir</div>`);
+    }
+  });
+
   // - Create and delete directories named `Something.elm`.
   // - Create and delete a file named like a package (`Html.elm`).
   test("changes to .elm files", async () => {

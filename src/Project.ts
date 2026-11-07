@@ -57,6 +57,8 @@ import { WebSocketUrl } from "./WebSocketUrl.ts";
 
 export type Project = {
   watchDirs: Array<WatchDir>;
+  // Source directories that did not exist when the project was initialized.
+  missingSourceDirectories: Set<AbsolutePath>;
   root: AbsolutePath;
   staticFilesDir: StaticFilesDir | undefined;
   elmVersion: ElmVersion;
@@ -494,6 +496,11 @@ export function initProject({
     tag: "Project",
     project: {
       watchDirs,
+      missingSourceDirectories: new Set(
+        watchDirs.flatMap(({ tag, dir }) =>
+          tag === "SourceDirectory" && !fs.existsSync(dir) ? [dir] : [],
+        ),
+      ),
       root: config.root,
       staticFilesDir,
       elmVersion,

@@ -33,6 +33,7 @@ const project: Project = {
     },
     { tag: "Shallow", dir: markAsAbsolutePath("/Users/you/project") },
   ],
+  missingSourceDirectories: new Set(),
   root: markAsAbsolutePath("/Users/you/project"),
   staticFilesDir: markAsStaticFilesDir(
     markAsAbsolutePath("/Users/you/project/public"),
