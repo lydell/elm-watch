@@ -2,6 +2,7 @@ import * as childProcess from "child_process";
 import spawn from "cross-spawn";
 import * as crypto from "crypto";
 import * as fs from "fs";
+import * as net from "net";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { expect, onTestFinished } from "vitest";
@@ -554,6 +555,19 @@ function warmElmStuffCache(
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
+async function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.on("error", reject);
+    server.listen(0, () => {
+      const { port } = server.address() as net.AddressInfo;
+      server.close(() => {
+        resolve(port);
+      });
+    });
+  });
+}
+
 function joinRenders(renders: Array<string>): string {
   return clean(renders.join(RENDER_SEPARATOR));
 }
@@ -605,8 +619,7 @@ export function runHotReload({
   const dir = fixtureDir(fixture);
   const src = path.join(dir, "src");
 
-  const elmWatchStuffJson: ElmWatchStuffJson = {
-    port: markAsPort(58888),
+  const elmWatchStuffJson: Omit<ElmWatchStuffJson, "port"> = {
     targets: {
       [name]: {
         compilationMode,
@@ -661,7 +674,12 @@ export function runHotReload({
       fs.mkdirSync(path.dirname(elmWatchStuffJsonPath), { recursive: true });
       fs.writeFileSync(
         elmWatchStuffJsonPath,
-        Codec.JSON.stringify(ElmWatchStuffJson, elmWatchStuffJson),
+        Codec.JSON.stringify(ElmWatchStuffJson, {
+          // A persisted port that is taken is an error, so use a free port to
+          // allow running tests in parallel.
+          port: markAsPort(await getFreePort()),
+          ...elmWatchStuffJson,
+        }),
       );
 
       // Here we write a file just before we start the watcher. I’ve seen this file

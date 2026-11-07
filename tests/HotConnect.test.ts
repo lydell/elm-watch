@@ -1,0 +1,1346 @@
+// @vitest-environment jsdom
+import * as fs from "fs";
+import * as path from "path";
+import { afterEach, describe, expect, test } from "vitest";
+import NodeWebSocket from "ws";
+
+import { WebSocketToServerMessage } from "../client/WebSocketMessages";
+import { NO_COLOR } from "../src/Env";
+import {
+  grep,
+  onlyErrorMessages,
+  rm,
+  stringSnapshotSerializer,
+  wait,
+} from "./Helpers";
+import {
+  cleanupAfterEachTest,
+  expandUi,
+  failInit,
+  fixtureDir,
+  run,
+  switchCompilationMode,
+  withoutConnectionAttempts,
+} from "./HotHelpers";
+
+expect.addSnapshotSerializer(stringSnapshotSerializer);
+
+describe("hot", () => {
+  afterEach(cleanupAfterEachTest);
+
+  test("successful connect (collapsed)", async () => {
+    const { terminal, renders, div } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      // Also test exposing the server on the network.
+      env: { ELM_WATCH_HOST: "0.0.0.0" },
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙web socket connections:⧘ 1
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ 🔌 13:10:05 Html
+      ================================================================================
+      ▼ ⏳ 13:10:05 Html
+      ================================================================================
+      ▼ ✅ 13:10:05 Html
+    `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
+  });
+
+  test("successful connect (expanded, not TTY, Worker)", async () => {
+    const { terminal, renders } = await run({
+      fixture: "basic",
+      args: ["Worker"],
+      scripts: ["Worker.js"],
+      expandUiImmediately: true,
+      isTTY: false,
+      init: () => {
+        window.Elm?.["Worker"]?.init();
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      📊 ⧙server:⧘ http://localhost:59123
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Worker: elm make (typecheck only)
+      ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⏳ Worker: elm make
+      ✅ Worker⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Worker⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Worker⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◯ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 Worker
+      ================================================================================
+      ▼ 🔌 13:10:05 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Connecting
+      attempt 1
+      sleep 1.01 seconds
+      [Connecting web socket…]
+      ▲ 🔌 13:10:05 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 Worker
+      ================================================================================
+      target Worker
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ↑↗
+      ·→
+      ▲ ✅ 13:10:05 Worker
+    `);
+  });
+
+  test("successful connect (non-fancy)", async () => {
+    const { terminal, div } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      env: {
+        [NO_COLOR]: "",
+      },
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
+
+      server: http://localhost:59123
+      web socket connections: 1
+
+      13:10:05 Web socket connected for: Html
+      13:10:05 Everything up to date.
+    `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
+  });
+
+  test("successful connect (non-fancy, not TTY)", async () => {
+    const { terminal, div } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      isTTY: false,
+      env: {
+        [NO_COLOR]: "",
+      },
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      server: http://localhost:59123
+      Dependencies: in progress
+      Dependencies: success
+      Html: elm make (typecheck only)
+      Html: success     1 ms Q | 765 ms T /  50 ms W
+
+      13:10:05 Compilation finished in 123 ms.
+      Html: elm make
+      Html: success     1 ms Q | 1.23 s E /  55 ms W |   9 ms I
+
+      13:10:05 Web socket connected needing compilation of: Html
+      13:10:05 Compilation finished in 123 ms.
+
+      13:10:05 Web socket connected for: Html
+      13:10:05 Everything up to date.
+    `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
+  });
+
+  test("successful connect (package)", async () => {
+    const { terminal, renders, div } = await run({
+      fixture: "package",
+      args: ["Main"],
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙server:⧘ http://localhost:59123
+      📊 ⧙web socket connections:⧘ 1
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ ✅ 13:10:05 Main
+    `);
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
+  });
+
+  test("successful connect (target name with escapes)", async () => {
+    const { div } = await run({
+      fixture: "basic",
+      args: ['"Esc\\apes"'],
+      scripts: ["Escapes.js"],
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
+  });
+
+  test("connect with elm.json error", async () => {
+    const fixture = "connect-with-elm-json-error";
+    const dir = fixtureDir(fixture);
+    fs.copyFileSync(
+      path.join(dir, "elm.template.json"),
+      path.join(dir, "elm.json"),
+    );
+
+    const { terminal } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+      📊 ⧙server:⧘ http://localhost:59123
+      📊 ⧙web socket connections:⧘ 1
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
+      ✅ ⧙13:10:05⧘ Everything up to date.
+    `);
+
+    rm(path.join(dir, "elm.json"));
+
+    const { renders } = await run({
+      fixture,
+      args: ["Main"],
+      scripts: ["Main.js"],
+      expandUiImmediately: true,
+      keepBuild: true,
+      keepElmStuffJson: true,
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(withoutConnectionAttempts(renders)).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 Main
+      ================================================================================
+      target Main
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json NOT FOUND ----------------------------------------------------------
+      Target: Main
+
+      I could not find an elm.json for these inputs:
+
+      src/Main.elm
+
+      Has it gone missing? Maybe run elm init to create one?
+      ▲ 🚨 13:10:05 Main
+    `);
+  });
+
+  test("fail to read Elm’s output (no postprocess)", async () => {
+    const { terminal, onlyExpandedRenders } = await run({
+      fixture: "basic",
+      args: ["Removed"],
+      scripts: ["Removed.js"],
+      init: failInit,
+      onIdle: () => {
+        expandUi();
+        return "Stop";
+      },
+      bin: "exit-0-remove-output",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      🚨 Removed
+
+      ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+      ⧙Target: Removed⧘
+
+      I managed to compile your code. Then I tried to read the output:
+
+      /Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js
+
+      Doing so I encountered this error:
+
+      ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js'
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙server:⧘ http://localhost:59123
+      📊 ⧙web socket connections:⧘ 1
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Removed⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+
+    expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+      target Removed
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Compilation error
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ Standard
+      ◯ Optimize
+      [Show errors]
+      ↑↗
+      ·→
+      ▲ 🚨 13:10:05 Removed
+    `);
+  });
+
+  test("fail to write output with hot injection (no postprocess)", async () => {
+    const { terminal, onlyExpandedRenders } = await run({
+      fixture: "basic",
+      args: ["Readonly"],
+      scripts: ["Readonly.js"],
+      init: failInit,
+      onIdle: () => {
+        expandUi();
+        return "Stop";
+      },
+      bin: "exit-0-write-readonly",
+    });
+
+    expect(terminal).toMatchInlineSnapshot(`
+      🚨 Readonly
+
+      ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
+      ⧙Target: Readonly⧘
+
+      I managed to compile your code and read the generated file:
+
+      /Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/3.js
+
+      I injected code for hot reloading, and then tried to write that to the output path:
+
+      /Users/you/project/tests/fixtures/hot/basic/build/Readonly.js
+
+      But I encountered this error:
+
+      EACCES: permission denied, open '/Users/you/project/tests/fixtures/hot/basic/build/Readonly.js'
+
+      🚨 ⧙1⧘ error found
+
+      📊 ⧙server:⧘ http://localhost:59123
+      📊 ⧙web socket connections:⧘ 1
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Readonly⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+
+    expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+      target Readonly
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Compilation error
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      ◉ Standard
+      ◯ Optimize
+      [Show errors]
+      ↑↗
+      ·→
+      ▲ 🚨 13:10:05 Readonly
+    `);
+  });
+
+  describe("Parse WebSocket connect request url errors", () => {
+    const originalWebSocket = WebSocket;
+    let _lastWebSocket: WebSocket | undefined = undefined;
+
+    afterEach(() => {
+      window.WebSocket = originalWebSocket;
+      _lastWebSocket = undefined;
+    });
+
+    function modifyUrl(f: (url: URL) => void): void {
+      class TestWebSocket extends WebSocket {
+        constructor(url: URL | string) {
+          if (typeof url === "string") {
+            throw new Error(
+              "TestWebSocket expects the url to be a URL object, not a string!",
+            );
+          }
+
+          f(url);
+
+          super(url);
+
+          // eslint-disable-next-line @typescript-eslint/no-this-alias
+          _lastWebSocket = this;
+        }
+      }
+
+      window.WebSocket = TestWebSocket;
+    }
+
+    function disconnect(): void {
+      if (_lastWebSocket === undefined) {
+        throw new Error("No WebSocket to disconnect!");
+      }
+      _lastWebSocket.close();
+    }
+
+    function send(message: WebSocketToServerMessage): void {
+      if (_lastWebSocket === undefined) {
+        throw new Error("No WebSocket to send message to!");
+      }
+      _lastWebSocket.send(JSON.stringify(message));
+    }
+
+    test("bad url", async () => {
+      let i = 0;
+      modifyUrl((url) => {
+        i++;
+        if (i === 1) {
+          url.pathname = "nope";
+        }
+      });
+
+      const { terminal } = await run({
+        fixture: "basic",
+        args: ["BadUrl"],
+        scripts: ["BadUrl.js"],
+        isTTY: false,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(
+        `ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "http://localhost" rejected due to: wrong URL prefix – "/elm-watch?" != "/nope?elmWa"⧘`,
+      );
+    });
+
+    test("params decode error and disconnect", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("elmCompiledTimestamp", "2021-12-11");
+      });
+
+      const { onlyExpandedRenders } = await run({
+        fixture: "basic",
+        args: ["ParamsDecodeError"],
+        scripts: ["ParamsDecodeError.js"],
+        init: failInit,
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              disconnect();
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        I ran into trouble parsing the web socket connection URL parameters:
+
+        At root["elmCompiledTimestamp"]:
+        Expected a number
+        Got: "2021-12-11"
+
+        The URL parameters look like this:
+
+        elmWatchVersion=%25VERSION%25&webSocketToken=37476437-1911-402a-9c87-fd94405770d2&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+
+        The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
+
+        Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        ▲ ❌ 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Sleeping
+        attempt 1
+        sleep 1.01 seconds
+        [Reconnect web socket now]
+        ▲ 🔌 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ↑↗
+        ·→
+        ▲ ⏳ 13:10:05 ParamsDecodeError
+        ================================================================================
+        target ParamsDecodeError
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        I ran into trouble parsing the web socket connection URL parameters:
+
+        At root["elmCompiledTimestamp"]:
+        Expected a number
+        Got: "2021-12-11"
+
+        The URL parameters look like this:
+
+        elmWatchVersion=%25VERSION%25&webSocketToken=37476437-1911-402a-9c87-fd94405770d2&targetName=ParamsDecodeError&elmCompiledTimestamp=2021-12-11
+
+        The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
+
+        Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        ▲ ❌ 13:10:05 ParamsDecodeError
+      `);
+    });
+
+    test("wrong version and send message anyway", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("elmWatchVersion", "0.0.0");
+      });
+
+      const { onlyExpandedRenders } = await run({
+        fixture: "basic",
+        args: ["WrongVersion"],
+        scripts: ["WrongVersion.js"],
+        init: failInit,
+        onIdle: async () => {
+          send({
+            tag: "ChangedCompilationMode",
+            compilationMode: "optimize",
+          });
+          send({
+            tag: "ChangedBrowserUiPosition",
+            browserUiPosition: "TopLeft",
+          });
+          send({
+            tag: "ChangedOpenErrorOverlay",
+            openErrorOverlay: true,
+          });
+          // Wait for the above messages to be processed before stopping (needed
+          // for code coverage).
+          await wait(100);
+          return "Stop" as const;
+        },
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        target WrongVersion
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it was compiled with:
+
+        elm-watch 0.0.0
+
+        But the server is:
+
+        elm-watch %VERSION%
+
+        Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+        ▲ ❌ 13:10:05 WrongVersion
+      `);
+    });
+
+    test("omitting the version is ok (useful for third party clients)", async () => {
+      modifyUrl((url) => {
+        url.searchParams.delete("elmWatchVersion");
+      });
+
+      const { onlyExpandedRenders, terminal } = await run({
+        fixture: "basic",
+        args: ["Html"],
+        scripts: ["Html.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(``);
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙server:⧘ http://localhost:59123
+        📊 ⧙web socket connections:⧘ 1
+
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
+        ✅ ⧙13:10:05⧘ Everything up to date.
+      `);
+    });
+
+    test("wrong token", async () => {
+      let i = 0;
+      modifyUrl((url) => {
+        i++;
+        if (i === 1) {
+          url.searchParams.set("webSocketToken", "wrong");
+        }
+      });
+
+      const { terminal } = await run({
+        fixture: "basic",
+        args: ["WrongToken"],
+        scripts: ["WrongToken.js"],
+        isTTY: false,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(
+        `ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "http://localhost" rejected due to: invalid security token⧘`,
+      );
+    });
+
+    test("host or origin not allowed", async () => {
+      let webSocketUrl: string | undefined = undefined;
+      modifyUrl((url) => {
+        webSocketUrl = url.href;
+      });
+
+      const { terminal } = await run({
+        fixture: "basic",
+        args: ["HostOrOriginNotAllowed"],
+        scripts: ["HostOrOriginNotAllowed.js"],
+        isTTY: false,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async () => {
+          if (webSocketUrl === undefined) {
+            throw new Error("Expected webSocketUrl to be set.");
+          }
+          for (const headers of [
+            { Host: "evil.com:1234" },
+            { Host: "evil.com/" },
+            { Origin: "https://evil.com" },
+            { Origin: "not a url" },
+          ]) {
+            await connectRejectedNodeWebSocket(webSocketUrl, headers);
+          }
+          return "Stop" as const;
+        },
+      });
+
+      expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(`
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: Host header not allowed – add "evil.com" to "allowedHosts" in elm-watch.json or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: invalid Host header: "evil.com/"⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "https://evil.com" rejected due to: origin not allowed – add "evil.com" to "allowedHosts" in elm-watch.json or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "not a url" rejected due to: invalid origin: "not a url"⧘
+      `);
+    });
+
+    test("target not found", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("targetName", "nope");
+      });
+
+      const { terminal, onlyExpandedRenders } = await run({
+        fixture: "target-not-found",
+        args: ["Enabled"],
+        scripts: ["Enabled1.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
+        ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+        ⧙Target: EnabledNotFound⧘
+
+        You asked me to compile these inputs:
+
+        src/EnabledNotFound.elm ⧙(/Users/you/project/tests/fixtures/hot/target-not-found/src/EnabledNotFound.elm)⧘
+
+        ⧙But they don't exist!⧘
+
+        Is something misspelled? Or do you need to create them?
+      `);
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        target Enabled1
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        nope
+
+        But I can't find that target in elm-watch.json!
+
+        These targets are available in elm-watch.json:
+
+        EnabledNotFound
+        Enabled1
+        Enabled2
+
+        These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
+
+        Disabled1
+        Disabled2
+
+        Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        If so, try reloading the page.
+        ▲ ❌ 13:10:05 Enabled1
+      `);
+    });
+
+    test("target not found (no disabled targets)", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("targetName", "nope");
+      });
+
+      const { onlyExpandedRenders } = await run({
+        fixture: "single",
+        args: ["Main"],
+        scripts: ["Main.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        nope
+
+        But I can't find that target in elm-watch.json!
+
+        These targets are available in elm-watch.json:
+
+        Main
+
+        Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        If so, try reloading the page.
+        ▲ ❌ 13:10:05 Main
+      `);
+    });
+
+    test("change target name", async () => {
+      const fixture = "change-target-name";
+      const dir = fixtureDir(fixture);
+      const elmWatchJsonPath = path.join(dir, "elm-watch.json");
+      const elmWatchJsonTemplatePath = path.join(
+        dir,
+        "elm-watch.template.json",
+      );
+      const elmWatchJsonString = fs.readFileSync(
+        elmWatchJsonTemplatePath,
+        "utf8",
+      );
+      fs.writeFileSync(elmWatchJsonPath, elmWatchJsonString);
+
+      const { renders } = await run({
+        fixture,
+        scripts: ["Main.js"],
+        isTTY: false,
+        init: (node) => {
+          try {
+            window.Elm?.["Main"]?.init({ node });
+          } catch {
+            // Ignore elm-watch proxy “error” on reload.
+          }
+        },
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              fs.writeFileSync(
+                elmWatchJsonPath,
+                elmWatchJsonString.replace("Main", "Renamed"),
+              );
+              return "KeepGoing";
+            case 2:
+              expandUi();
+              window.__ELM_WATCH.RELOAD_PAGE(undefined);
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ ✅ 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Main
+        ================================================================================
+        ▼ ⏳ 13:10:05 Main
+        ================================================================================
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        Main
+
+        But I can't find that target in elm-watch.json!
+
+        These targets are available in elm-watch.json:
+
+        Renamed
+
+        Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        If so, try reloading the page.
+        ▲ ❌ 13:10:05 Main
+        ================================================================================
+        ▼ 🔌 13:10:05 Renamed
+        ================================================================================
+        ▼ ⏳ 13:10:05 Renamed
+        ================================================================================
+        ▼ ⏳ 13:10:05 Renamed
+        ================================================================================
+        ▼ 🔌 13:10:05 Renamed
+        ================================================================================
+        ▼ 🔌 13:10:05 Renamed
+        ================================================================================
+        ▼ ⏳ 13:10:05 Renamed
+        ================================================================================
+        ▼ ✅ 13:10:05 Renamed
+      `);
+    });
+
+    test("target disabled", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("targetName", "Html");
+      });
+
+      const { onlyExpandedRenders } = await run({
+        fixture: "basic",
+        args: ["TargetDisabled"],
+        scripts: ["TargetDisabled.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        target TargetDisabled
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        Html
+
+        That target does exist in elm-watch.json, but isn't enabled.
+
+        These targets are enabled via CLI arguments:
+
+        TargetDisabled
+
+        These targets exist in elm-watch.json but aren't enabled:
+
+        Html
+        Worker
+        Removed
+        Readonly
+        InjectError
+        BadUrl
+        ParamsDecodeError
+        WrongVersion
+        WrongToken
+        HostOrOriginNotAllowed
+        SendBadJson
+        Reconnect
+        HttpCaching
+        "Esc\\apes"
+
+        If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
+        ▲ ❌ 13:10:05 TargetDisabled
+      `);
+    });
+
+    test("send bad json", async () => {
+      let first = true;
+
+      class TestWebSocket extends WebSocket {
+        override send(message: string): void {
+          if (first) {
+            super.send(JSON.stringify({ tag: "Nope" }));
+            first = false;
+          } else {
+            super.send(message);
+          }
+        }
+      }
+
+      window.WebSocket = TestWebSocket;
+
+      const { onlyExpandedRenders } = await run({
+        fixture: "basic",
+        args: ["SendBadJson"],
+        scripts: ["SendBadJson.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              switchCompilationMode("optimize");
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        target SendBadJson
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ↑↗
+        ·→
+        ▲ ✅ 13:10:05 SendBadJson
+        ================================================================================
+        target SendBadJson
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◯ (disabled) Standard
+        ◉ (disabled) Optimize 🚀
+        ↑↗
+        ·→
+        ▲ 🚀 ⏳ 13:10:05 SendBadJson
+        ================================================================================
+        target SendBadJson
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
+
+        At root["tag"]:
+        Expected one of these tags:
+         "ChangedCompilationMode",
+         "ChangedBrowserUiPosition",
+         "ChangedOpenErrorOverlay",
+         "FocusedTab",
+         "PressedOpenEditor"
+        Got: "Nope"
+
+        The web socket code I generate is supposed to always send correct messages, so something is up here.
+        ▲ 🚀 ❌ 13:10:05 SendBadJson
+      `);
+    });
+
+    test("reconnect a few times", async () => {
+      let i = 0;
+      modifyUrl((url) => {
+        i++;
+        if (i <= 2) {
+          url.port = "65252"; // Hopefully unused port.
+        }
+      });
+
+      const { renders } = await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        expandUiImmediately: true,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Sleeping
+        attempt 2
+        sleep 1.04 seconds
+        [Reconnect web socket now]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 2
+        sleep 1.04 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Sleeping
+        attempt 3
+        sleep 1.09 seconds
+        [Reconnect web socket now]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 3
+        sleep 1.09 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◯ (disabled) Standard
+        ◯ (disabled) Optimize
+        ↑↗
+        ·→
+        ▲ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ↑↗
+        ·→
+        ▲ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Connecting
+        attempt 1
+        sleep 1.01 seconds
+        [Connecting web socket…]
+        ▲ 🔌 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Waiting for compilation
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ (disabled) Standard
+        ◯ (disabled) Optimize
+        ↑↗
+        ·→
+        ▲ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        target Reconnect
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Successfully compiled
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        ◉ Standard
+        ◯ Optimize
+        ↑↗
+        ·→
+        ▲ ✅ 13:10:05 Reconnect
+      `);
+    });
+
+    test("outdated timestamp", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("elmCompiledTimestamp", "0");
+      });
+
+      const { terminal, renders } = await run({
+        fixture: "basic",
+        args: ["Html"],
+        scripts: ["Html.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: () => "Stop",
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        📊 ⧙server:⧘ http://localhost:59123
+        📊 ⧙web socket connections:⧘ 1
+
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      `);
+
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ 🔌 13:10:05 Html
+        ================================================================================
+        ▼ 🔌 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ⏳ 13:10:05 Html
+        ================================================================================
+        ▼ ✅ 13:10:05 Html
+      `);
+    });
+  });
+});
+
+async function connectRejectedNodeWebSocket(
+  url: string,
+  headers: Record<string, string>,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const webSocket = new NodeWebSocket(url, { headers });
+    webSocket.on("open", () => {
+      webSocket.close();
+      reject(new Error(`Expected the connection to be rejected: ${url}`));
+    });
+    webSocket.on("unexpected-response", () => {
+      resolve();
+    });
+    webSocket.on("error", reject);
+  });
+}
