@@ -1,5 +1,6 @@
 import { EMOJI, emojiWidthFix } from "./Compile";
 import {
+  ELM_WATCH_ALLOWED_HOSTS,
   ELM_WATCH_EXIT_ON_STDIN_END,
   ELM_WATCH_HOST,
   ELM_WATCH_OPEN_EDITOR,
@@ -78,6 +79,9 @@ ${bold("Environment variables:")}
 
     ${bold(ELM_WATCH_WEBSOCKET_URL)}
         Override "webSocketUrl" in ${elmWatchJson} dynamically
+
+    ${bold(ELM_WATCH_ALLOWED_HOSTS)}
+        Comma-separated hosts to allow in addition to "allowedHosts"
 
 ${bold("Documentation:")}
     https://lydell.github.io/elm-watch/

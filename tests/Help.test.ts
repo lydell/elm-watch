@@ -112,6 +112,9 @@ describe("help", () => {
           ⧙ELM_WATCH_WEBSOCKET_URL⧘
               Override "webSocketUrl" in ⧙elm-watch.json⧘ dynamically
 
+          ⧙ELM_WATCH_ALLOWED_HOSTS⧘
+              Comma-separated hosts to allow in addition to "allowedHosts"
+
       ⧙Documentation:⧘
           https://lydell.github.io/elm-watch/
 
@@ -181,6 +184,9 @@ describe("help", () => {
 
           ELM_WATCH_WEBSOCKET_URL
               Override "webSocketUrl" in elm-watch.json dynamically
+
+          ELM_WATCH_ALLOWED_HOSTS
+              Comma-separated hosts to allow in addition to "allowedHosts"
 
       Documentation:
           https://lydell.github.io/elm-watch/

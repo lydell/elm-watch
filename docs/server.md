@@ -25,7 +25,7 @@ The simple static file server tries to be useful by default through strong conve
 The file server is completely optional. It only serves files. So if you serve your files some other way, that’s totally fine. As long as the generated Elm JS can connect via WebSocket to elm-watch, then Elm hot reloading will work fine.
 
 {: .info }  
-ℹ️ By default, the HTTP server is exposed on the local network (so you can test on your phone on the same Wi-Fi for example). If you are on a public Wi-Fi, you can restrict the server to just your computer by setting an environment variable: `ELM_WATCH_HOST=127.0.0.1`. Otherwise, you could expose the source code of your project if you use `"serve": "."`.
+ℹ️ By default, the HTTP server is only available on your computer, and only accepts requests for certain hosts. See [Security](#security) for how to expose it on the local network (to test on your phone, for example) and how to use it with custom domains and tunnels like ngrok.
 
 ## What does the simple static file server do?
 
@@ -192,6 +192,50 @@ Why doesn’t elm-watch do that by default? elm-watch only reloads when it can b
 - Images _sound_ like they can be hot reloaded if they change, but it’s very difficult to reload images set by CSS `background-image`, so elm-watch does not reload any images. In practice images don’t change that much during development anyway.
 - JS is full of state and can’t be hot reloaded in general. It’s possible to instead reload the page. However, due to `import` and other JS loading techniques it’s difficult to know which JS files should reload which pages. Therefore elm-watch does not reload the page by default, but you can do it yourself as mentioned above, given the constraints of your given project.
 - HTML could also be refreshed by reloading the page, but I figured it would be easier to remember how hot reloading works if elm-watch never makes full page reloads (except for a few cases for Elm code that makes a lot of sense).
+
+## Security
+
+### Network exposure
+
+By default, elm-watch’s HTTP server only listens on `127.0.0.1`, which means that it is only available on your computer.
+
+If you want to test on your phone on the same Wi-Fi, for example, you can expose the server on the local network by setting an environment variable: `ELM_WATCH_HOST=0.0.0.0`. Be careful with that on public Wi-Fi: Anyone on the same network could then access the server, and read the source code of your project if you use `"serve": "."`.
+
+### Allowed hosts
+
+elm-watch’s HTTP server only accepts requests for certain hosts. This protects against two kinds of attacks from web sites you visit:
+
+- [DNS rebinding]: A malicious web site can make its own domain point to `127.0.0.1`, and then read files from elm-watch’s server as if they were its own. elm-watch rejects such requests by checking the `Host` header.
+- Connecting to elm-watch’s WebSocket: Another web site can load your compiled Elm JavaScript via a `<script>` tag (which isn’t prevented by CORS), and use it to connect to elm-watch’s WebSocket. elm-watch rejects such WebSocket connections by checking the `Origin` header. The port is ignored, so if your page is served by another server on `localhost`, it can still connect to elm-watch.
+
+These hosts are always allowed:
+
+- `localhost` and `*.localhost`
+- `*.local` (for example `my-macbook.local`, for testing on your phone)
+- IP addresses (for example `127.0.0.1` or `192.168.1.10`)
+- The host of the [webSocketUrl](../elm-watch.json/) setting, if you use it.
+
+To allow more hosts, add them to `"allowedHosts"` in [elm-watch.json](../elm-watch.json/):
+
+```json
+"allowedHosts": ["dev.example.com"]
+```
+
+Or set the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated). It is combined with `"allowedHosts"`. This is useful for hosts that are different for different people, or change between runs, such as tunnels:
+
+```
+ELM_WATCH_ALLOWED_HOSTS=my-name.ngrok.dev elm-watch hot
+```
+
+Only exact host names are supported – no wildcards like `.example.com` or `*.example.com`. That is on purpose: A wildcard on a shared domain (like ngrok’s or other tunnel services’) would let anyone with a subdomain there connect to your elm-watch WebSocket. List each host exactly instead.
+
+If a request is rejected, elm-watch tells you which host to add: Rejected HTTP requests get an error page, and rejected WebSocket connections are logged in the terminal.
+
+Note: `*.local` names are resolved on the local network, so someone on the same network could make a `.local` name point to your computer. That is only a concern if you visit a `.local` web site that they control.
+
+### Symlinks
+
+The simple static file server follows symlinks, even if they point outside of the static files directory. If you put a symlink in there, you probably want it to be served.
 
 ## Custom server
 
@@ -371,5 +415,6 @@ You can’t really log anything in your custom server code – you’ll compete 
 
 It is _not_ recommended to run other compilers as part of the elm-watch server, such as esbuild or Sass, since they also need to print error messages. Run them as separate watchers. [run-pty] is one way of easily starting multiple watchers with one command.
 
+[dns rebinding]: https://en.wikipedia.org/wiki/DNS_rebinding
 [http-proxy]: https://github.com/http-party/node-http-proxy
 [run-pty]: https://github.com/lydell/run-pty

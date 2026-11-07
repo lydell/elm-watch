@@ -37,7 +37,7 @@ Using a self-signed certificate isn’t ideal, and cannot be used by everyone. A
 
 Like in elm-watch 1.1, if you use `https://` then you might see how elm-watch’s WebSocket gets stuck in the 🔌 connecting state. That’s because it tries to connect with `wss://` over HTTPS, but elm-watch only runs an HTTP server. In the [browser UI](../browser-ui/), instead of showing a link to a page where you can accept a self-signed certificate, `elm-watch@beta` now just links to this page instead, where you can read up on how to get HTTPS going.
 
-If you use your own HTTPS server, you can set the `"webSocketUrl"` option in [elm-watch.json](../elm-watch.json/) or the `ELM_WATCH_WEBSOCKET_URL` environment variable to make elm-watch connect to your HTTPS server instead of directly to elm-watch’s HTTP server. In your HTTPS server you need to proxy the WebSocket to elm-watch. Alternatively, you can set up a separate HTTPS proxy server just for elm-watch’s WebSocket if you prefer.
+If you use your own HTTPS server, you can set the `"webSocketUrl"` option in [elm-watch.json](../elm-watch.json/) or the `ELM_WATCH_WEBSOCKET_URL` environment variable to make elm-watch connect to your HTTPS server instead of directly to elm-watch’s HTTP server. In your HTTPS server you need to proxy the WebSocket to elm-watch. Alternatively, you can set up a separate HTTPS proxy server just for elm-watch’s WebSocket if you prefer. The host of `"webSocketUrl"` is automatically [allowed](../server/#allowed-hosts). If your page is served on another host, you need to add it to [allowedHosts](../server/#allowed-hosts).
 
 You can also run elm-watch in an alternate way with a [custom server](../server/#custom-server) to set up HTTPS:
 

@@ -60,6 +60,7 @@ Example:
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | The port for elm-watch’s HTTP and WebSocket server, used for hot reloading and as a simple file server. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
 | ⚠️ webSocketUrl | `string` | `` `ws://${currentHostname}:${port}/elm-watch` `` (sort of) | **Only available in `elm-watch@beta`.** This lets you customize how the elm-watch client connects its WebSocket for advanced use cases. You can also use the `ELM_WATCH_WEBSOCKET_URL` environment variable for dynamically setting it (the environment variable takes precedence). The value must be a valid URL starting with `ws:` or `wss:`. |
 | ⚠️ serve | `string` | unset | **Only available in `elm-watch@beta`.** A directory of static files to [serve](../server/). |
+| ⚠️ allowedHosts | `Array<string>` | `[]` | **Only available in `elm-watch@beta`.** Extra host names that elm-watch’s server accepts requests for, in addition to localhost, `*.localhost`, `*.local`, IP addresses and the host of `webSocketUrl`. Exact host names only, like `"dev.example.com"`. You can also use the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated), which is combined with this setting. See [Allowed hosts](../server/#allowed-hosts). |
 
 ## targets
 
