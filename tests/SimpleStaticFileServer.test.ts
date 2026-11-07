@@ -14,7 +14,11 @@ import {
   serveStatic,
 } from "../src/SimpleStaticFileServer";
 import { markAsAbsolutePath, markAsStaticFilesDir } from "../src/Types";
-import { httpGet, stringSnapshotSerializer } from "./Helpers";
+import {
+  httpGet,
+  stringSnapshotSerializer,
+  testExceptWindows,
+} from "./Helpers";
 import { FIXTURES_DIR, run } from "./HotHelpers";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -126,6 +130,46 @@ describe("SimpleStaticFileServer", () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
       }
     }
+
+    // Symlinks are followed on purpose, even if they point outside of the
+    // static files directory: If you put a symlink in there, you probably
+    // want it to be served.
+    // Creating symlinks requires extra permissions on Windows.
+    testExceptWindows("symlinks are followed", async () => {
+      await withServer(
+        (dir) => {
+          fs.writeFileSync(path.join(dir, "file.txt"), "inside");
+          fs.mkdirSync(path.join(dir, "..", "outside"));
+          fs.writeFileSync(
+            path.join(dir, "..", "outside", "file.txt"),
+            "outside",
+          );
+          fs.symlinkSync("file.txt", path.join(dir, "inside.txt"));
+          fs.symlinkSync("../outside/file.txt", path.join(dir, "outside.txt"));
+          fs.symlinkSync("../outside", path.join(dir, "outside-dir"));
+        },
+        async (get) => {
+          expect(await get("/inside.txt")).toMatchInlineSnapshot(`
+            200
+            content-type: text/plain; charset=utf-8
+            content-length: 6
+            inside
+          `);
+          expect(await get("/outside.txt")).toMatchInlineSnapshot(`
+            200
+            content-type: text/plain; charset=utf-8
+            content-length: 7
+            outside
+          `);
+          expect(await get("/outside-dir/file.txt")).toMatchInlineSnapshot(`
+            200
+            content-type: text/plain; charset=utf-8
+            content-length: 7
+            outside
+          `);
+        },
+      );
+    });
 
     test("range requests", async () => {
       await withServer(

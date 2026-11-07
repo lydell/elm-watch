@@ -741,6 +741,8 @@ function toFsPath(
 
   // Protect against reading files outside the static files dir.
   // For example: curl http://localhost:8000/%2e%2e/secret.txt
+  // Symlinks are followed on purpose, though: If you put a symlink in the
+  // static files dir, you probably want it to be served.
   return fsPathString === staticFilesDir
     ? {
         tag: "FsPath",
