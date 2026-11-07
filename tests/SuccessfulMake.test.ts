@@ -8,6 +8,7 @@ import {
   assertExitCode,
   clean,
   CursorWriteStream,
+  grep,
   logDebug,
   MemoryWriteStream,
   prependPATH,
@@ -199,27 +200,28 @@ describe("successful make", () => {
     const fixture = "multiple-elm-watch-node";
     const lock = path.join(FIXTURES_DIR, fixture, "lock");
     fs.writeFileSync(lock, "");
-    expect(await run(fixture, ["make"], { isTTY: false, bin: "test-bin" }))
-      .toMatchInlineSnapshot(`
-      ⏳ Dependencies
+    const output = await run(fixture, ["make"], {
+      isTTY: false,
+      bin: "test-bin",
+    });
+
+    // The order of the lines in the middle depends on timing, so only
+    // snapshot the lines that are deterministic.
+    expect(grep(output, /queued|✅/)).toMatchInlineSnapshot(`
       ✅ Dependencies
-      ⏳ main: elm make
       ⚪️ second: queued
       ⚪️ third: queued
-      🟢 main: elm make done
-      ⏳ second: elm make
-      ⏳ main: postprocess
-      🟢 second: elm make done
-      ⏳ third: elm make
-      🟢 third: elm make done
-      ⏳ second: postprocess
       ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      ⏳ third: postprocess
       ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-
       ✅ Compilation finished in ⧙123 ms⧘⧙ (using 2 elm-watch-node workers).⧘
     `);
+
+    // There are only 2 workers, so postprocess for the third target has to
+    // wait until the first one is done.
+    expect(output.indexOf("⏳ third: postprocess")).toBeGreaterThan(
+      output.indexOf("✅ main"),
+    );
   });
 
   test("no postprocess", async () => {

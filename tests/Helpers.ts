@@ -518,7 +518,8 @@ export function clean(string: string): string {
   // backslashes end up escaped with another backslash. Normalize some error
   // messages between Windows and others, and between Node.js versions.
   // Match a web socket disconnect followed by a connect, and replace them just
-  // with the connect. Sometimes in tests, we don’t get both messages.
+  // with the connect. Sometimes in tests, we don’t get both messages. Also do
+  // that when the disconnect and connect end up in separate batches.
   return string
     .split(path.dirname(import.meta.dirname))
     .join(project)
@@ -566,6 +567,10 @@ export function clean(string: string): string {
     )
     .replace(
       /\n.*web socket connections:.? 0.+\n\n.+Web socket disconnected for:.+\n.+Everything up to date.+\n/g,
+      "",
+    )
+    .replace(
+      /\n.+Web socket disconnected for: (.+)\n.+Everything up to date.+\n(?=\n.+Web socket connected (?:for|needing compilation of): \1)/g,
       "",
     )
     .replace(
