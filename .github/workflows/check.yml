@@ -30,7 +30,5 @@ jobs:
 
       - if: steps.cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
-        env:
-          NO_ELM_TOOLING_INSTALL: 1
 
       - run: npm run pretest
