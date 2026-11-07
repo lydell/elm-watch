@@ -2184,8 +2184,17 @@ async function closeAll(
   /* v8 ignore stop */
 
   mutable.webSocketServer.unsetDispatch();
+  const watcherClosed = mutable.watcher.close();
+  // Closing the watcher removes all listeners, but scans that are already in
+  // progress can still emit "error" (such as ELOOP for symlink loops). Emitting
+  // "error" without any listeners throws, causing an unhandled rejection.
+  /* v8 ignore start */
+  mutable.watcher.on("error", () => {
+    // Ignore.
+  });
+  /* v8 ignore stop */
   await Promise.all([
-    mutable.watcher.close(),
+    watcherClosed,
     killWebSocketServer ? mutable.webSocketServer.close() : undefined,
     killPostprocessWorkerPool
       ? mutable.postprocessWorkerPool.terminate()
