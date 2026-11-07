@@ -10,5 +10,8 @@
     ".": "./index.js"
   },
   "bin": "./bin.js",
+  "engines": {
+    "node": ">=22"
+  },
   "keywords": ["elm", "watch", "watcher"]
 }
