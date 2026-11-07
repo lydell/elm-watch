@@ -3,6 +3,7 @@ import * as http from "http";
 import * as path from "path";
 
 import { ALLOWED_HOSTS_DOCS_LINK, RejectedHost } from "./AllowedHosts";
+import type { ConfigSource } from "./Config";
 import { ELM_WATCH_ALLOWED_HOSTS } from "./Env";
 import { escapeHtml, toError } from "./Helpers";
 import { AbsolutePath, markAsAbsolutePath, StaticFilesDir } from "./Types";
@@ -74,6 +75,15 @@ function html(
       })
       .join(""),
   );
+}
+
+function configuredIn(configSource: ConfigSource): string {
+  switch (configSource.tag) {
+    case "ElmWatchJson":
+      return "in elm-watch.json";
+    case "Options":
+      return "in the elm-watch options";
+  }
 }
 
 function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
@@ -240,6 +250,7 @@ function notFoundHtml(
 }
 
 function staticDirNotFoundHtml(
+  configSource: ConfigSource,
   staticFilesDir: StaticFilesDir,
   statsTag: "File" | "NotFound" | "Other",
 ): Html {
@@ -249,8 +260,8 @@ function staticDirNotFoundHtml(
     html`
       <h1>Static files directory not found</h1>
       <p>
-        You have configured a static files directory in elm-watch.json which
-        resolves to:
+        You have configured a static files directory
+        ${configuredIn(configSource)} which resolves to:
       </p>
       <pre>${staticFilesDir}</pre>
       <p>${staticFilesDirDescription(statsTag)}</p>
@@ -272,6 +283,7 @@ function staticFilesDirDescription(
 }
 
 function forbiddenHtml(
+  configSource: ConfigSource,
   staticFilesDir: StaticFilesDir,
   forbiddenPath: AbsolutePath,
 ): Html {
@@ -281,8 +293,8 @@ function forbiddenHtml(
     html`
       <h1>Forbidden</h1>
       <p>
-        You have configured a static files directory in elm-watch.json which
-        resolves to:
+        You have configured a static files directory
+        ${configuredIn(configSource)} which resolves to:
       </p>
       <pre>${staticFilesDir}</pre>
       <p>
@@ -368,7 +380,10 @@ ${indexFsPath.theIndexFsPath}
   }
 }
 
-export function hostNotAllowedHtml(rejectedHost: RejectedHost): Html {
+export function hostNotAllowedHtml(
+  configSource: ConfigSource,
+  rejectedHost: RejectedHost,
+): Html {
   switch (rejectedHost.tag) {
     case "NotAllowed":
       return baseHtml(
@@ -387,9 +402,12 @@ export function hostNotAllowedHtml(rejectedHost: RejectedHost): Html {
           <pre>${rejectedHost.hostname}</pre>
           <p>
             localhost, *.localhost, *.local and IP addresses are always allowed.
-            To allow this host too, add it to <strong>elm-watch.json</strong>:
+            To allow this host too, add it to
+            ${configSourceStrong(configSource)}:
           </p>
-          <pre><code>"allowedHosts": ["${rejectedHost.hostname}"]</code></pre>
+          <pre><code>${configSource.tag === "ElmWatchJson"
+            ? html`"allowedHosts": ["${rejectedHost.hostname}"]`
+            : html`allowedHosts: ["${rejectedHost.hostname}"],`}</code></pre>
           <p>Or set an environment variable (useful if the host changes):</p>
           <pre><code>${ELM_WATCH_ALLOWED_HOSTS}=${rejectedHost.hostname}</code></pre>
           <p>
@@ -414,7 +432,7 @@ export function hostNotAllowedHtml(rejectedHost: RejectedHost): Html {
   }
 }
 
-export function staticFileNotEnabledHtml(): Html {
+export function staticFileNotEnabledHtml(configSource: ConfigSource): Html {
   return baseHtml(
     "ℹ️",
     "Enable static file server?",
@@ -424,10 +442,21 @@ export function staticFileNotEnabledHtml(): Html {
         If you want, you can enable a simple static file server for your
         project.
       </p>
-      <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
-      <pre><code>"serve": "./folder/to/serve/"</code></pre>
+      <p>Add the following to ${configSourceStrong(configSource)}:</p>
+      <pre><code>${configSource.tag === "ElmWatchJson"
+        ? html`"serve": "./folder/to/serve/"`
+        : html`staticFilesDir: "./folder/to/serve/",`}</code></pre>
     `,
   );
+}
+
+function configSourceStrong(configSource: ConfigSource): Html {
+  switch (configSource.tag) {
+    case "ElmWatchJson":
+      return html`your <strong>elm-watch.json</strong> file`;
+    case "Options":
+      return html`your <strong>elmWatch()</strong> options`;
+  }
 }
 
 export function errorHtml(errorMessage: string): Html {
@@ -502,6 +531,7 @@ function writeHead(
 
 // Note: This function may throw file system errors.
 export function serveStatic(
+  configSource: ConfigSource,
   staticFilesDir: StaticFilesDir,
 ): http.RequestListener {
   return (request, response) => {
@@ -515,7 +545,7 @@ export function serveStatic(
           respondHtml(
             response,
             403,
-            forbiddenHtml(staticFilesDir, fsPath.forbiddenPath),
+            forbiddenHtml(configSource, staticFilesDir, fsPath.forbiddenPath),
           );
           return;
         }
@@ -580,6 +610,7 @@ export function serveStatic(
                   response,
                   404,
                   staticDirNotFoundHtml(
+                    configSource,
                     staticFilesDir,
                     staticFilesDirStats.tag,
                   ),

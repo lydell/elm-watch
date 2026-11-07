@@ -9,10 +9,12 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { describe, expect, test } from "vitest";
 
+import type { ConfigSource } from "../src/Config";
 import { markAsHost } from "../src/Host";
 import { errorHtml, respondHtml } from "../src/SimpleStaticFileServer";
 import {
   markAsAbsolutePath,
+  markAsElmWatchJsonPath,
   markAsStaticFilesDir,
   markAsWebSocketToken,
 } from "../src/Types";
@@ -53,7 +55,15 @@ function makeGet(port: number, tmpDir: string): Get {
 async function withServer(
   setup: (dir: string) => void,
   f: (get: Get, port: number) => Promise<void>,
-  { staticFilesDir = "public" }: { staticFilesDir?: string } = {},
+  {
+    staticFilesDir = "public",
+    configSource = {
+      tag: "ElmWatchJson",
+      elmWatchJsonPath: markAsElmWatchJsonPath(
+        markAsAbsolutePath("/project/elm-watch.json"),
+      ),
+    },
+  }: { staticFilesDir?: string | null; configSource?: ConfigSource } = {},
 ): Promise<void> {
   const tmpDir = fs.realpathSync(
     fs.mkdtempSync(path.join(os.tmpdir(), "elm-watch-serve-")),
@@ -67,11 +77,14 @@ async function withServer(
         http.createServer(onRequest).on("upgrade", onUpgrade),
       { tag: "NoPort" },
       markAsHost("127.0.0.1"),
-      markAsStaticFilesDir(
-        markAsAbsolutePath(path.join(tmpDir, staticFilesDir)),
-      ),
+      staticFilesDir === null
+        ? undefined
+        : markAsStaticFilesDir(
+            markAsAbsolutePath(path.join(tmpDir, staticFilesDir)),
+          ),
       markAsWebSocketToken("token"),
       [],
+      configSource,
     );
     try {
       await server.listening;
@@ -165,30 +178,30 @@ describe("SimpleStaticFileServer", () => {
 
     expect(mainHtml.replace(/<head>[^]*<\/head>/, "<head>…</head>"))
       .toMatchInlineSnapshot(`
-      200
-      content-type: text/html; charset=utf-8
-      content-length: 2142
-      <!DOCTYPE html>
-          <html lang="en">
-            <head>…</head>
-            <body>
-              <main>
-            <h1>Enable elm-watch static file server?</h1>
-            <p>
-              If you want, you can enable a simple static file server for your
-              project.
-            </p>
-            <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
-            <pre><code>"serve": "./folder/to/serve/"</code></pre>
-          </main>
-              <p style="margin-top: 2em">
-                <small
-                  >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small
-                >
+        200
+        content-type: text/html; charset=utf-8
+        content-length: 2142
+        <!DOCTYPE html>
+            <html lang="en">
+              <head>…</head>
+              <body>
+                <main>
+              <h1>Enable elm-watch static file server?</h1>
+              <p>
+                If you want, you can enable a simple static file server for your
+                project.
               </p>
-            </body>
-          </html>
-    `);
+              <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
+              <pre><code>"serve": "./folder/to/serve/"</code></pre>
+            </main>
+                <p style="margin-top: 2em">
+                  <small
+                    >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/server/">elm-watch server</a>.</small
+                  >
+                </p>
+              </body>
+            </html>
+      `);
   });
 
   describe("serveStatic", () => {
@@ -620,8 +633,8 @@ describe("SimpleStaticFileServer", () => {
 
                   <h1>Forbidden</h1>
                   <p>
-                    You have configured a static files directory in elm-watch.json which
-                    resolves to:
+                    You have configured a static files directory
+                    in elm-watch.json which resolves to:
                   </p>
                   <pre>/tmp/public</pre>
                   <p>
@@ -636,8 +649,8 @@ describe("SimpleStaticFileServer", () => {
 
                   <h1>Forbidden</h1>
                   <p>
-                    You have configured a static files directory in elm-watch.json which
-                    resolves to:
+                    You have configured a static files directory
+                    in elm-watch.json which resolves to:
                   </p>
                   <pre>/tmp/public</pre>
                   <p>
@@ -648,21 +661,21 @@ describe("SimpleStaticFileServer", () => {
           `);
           expect(await get("/%2e%2e/public2/secret.txt"))
             .toMatchInlineSnapshot(`
-            403
-            content-type: text/html; charset=utf-8
+              403
+              content-type: text/html; charset=utf-8
 
-                  <h1>Forbidden</h1>
-                  <p>
-                    You have configured a static files directory in elm-watch.json which
-                    resolves to:
-                  </p>
-                  <pre>/tmp/public</pre>
-                  <p>
-                    However, the URL you requested points to a file outside of that
-                    directory:
-                  </p>
-                  <pre>/tmp/public2/secret.txt</pre>
-          `);
+                    <h1>Forbidden</h1>
+                    <p>
+                      You have configured a static files directory
+                      in elm-watch.json which resolves to:
+                    </p>
+                    <pre>/tmp/public</pre>
+                    <p>
+                      However, the URL you requested points to a file outside of that
+                      directory:
+                    </p>
+                    <pre>/tmp/public2/secret.txt</pre>
+            `);
         },
       );
     });
@@ -680,8 +693,8 @@ describe("SimpleStaticFileServer", () => {
 
                     <h1>Static files directory not found</h1>
                     <p>
-                      You have configured a static files directory in elm-watch.json which
-                      resolves to:
+                      You have configured a static files directory
+                      in elm-watch.json which resolves to:
                     </p>
                     <pre>/tmp/missing</pre>
                     <p>However, that directory does not exist.</p>
@@ -703,8 +716,8 @@ describe("SimpleStaticFileServer", () => {
 
                     <h1>Static files directory not found</h1>
                     <p>
-                      You have configured a static files directory in elm-watch.json which
-                      resolves to:
+                      You have configured a static files directory
+                      in elm-watch.json which resolves to:
                     </p>
                     <pre>/tmp/public/file.txt</pre>
                     <p>However, that is a file, not a directory!</p>
@@ -726,8 +739,8 @@ describe("SimpleStaticFileServer", () => {
 
                     <h1>Static files directory not found</h1>
                     <p>
-                      You have configured a static files directory in elm-watch.json which
-                      resolves to:
+                      You have configured a static files directory
+                      in elm-watch.json which resolves to:
                     </p>
                     <pre>/tmp/public/fifo</pre>
                     <p>However, that is neither a file nor a directory.</p>
@@ -782,6 +795,54 @@ describe("SimpleStaticFileServer", () => {
         async (get, port) => {
           expect(await get("/", { headers: { Host: "evil.com" } }))
             .toMatchInlineSnapshot(`
+              403
+              content-type: text/html; charset=utf-8
+
+                        <h1>Host not allowed</h1>
+                        <p>
+                          To protect against
+                          <a href="https://en.wikipedia.org/wiki/DNS_rebinding"
+                            >DNS rebinding</a
+                          >
+                          attacks, elm-watch only accepts requests for certain hosts. This
+                          request was for:
+                        </p>
+                        <pre>evil.com</pre>
+                        <p>
+                          localhost, *.localhost, *.local and IP addresses are always allowed.
+                          To allow this host too, add it to
+                          your <strong>elm-watch.json</strong> file:
+                        </p>
+                        <pre><code>"allowedHosts": ["evil.com"]</code></pre>
+                        <p>Or set an environment variable (useful if the host changes):</p>
+                        <pre><code>ELM_WATCH_ALLOWED_HOSTS=evil.com</code></pre>
+                        <p>
+                          👉
+                          <a href="https://lydell.github.io/elm-watch/server/#allowed-hosts"
+                            >Learn more about allowed hosts</a
+                          >
+                        </p>
+            `);
+          expect(await http10RequestWithoutHost(port)).toMatchInlineSnapshot(`
+            HTTP/1.1 403 Forbidden
+
+                      <h1>Invalid Host header</h1>
+                      <p>The request had an invalid or missing Host header:</p>
+                      <pre>(missing)</pre>
+          `);
+        },
+      );
+    });
+
+    test("wording for the elm-watch options", async () => {
+      const configSource: ConfigSource = { tag: "Options" };
+      await withServer(
+        () => {
+          // Nothing.
+        },
+        async (get) => {
+          expect(await get("/", { headers: { Host: "evil.com" } }))
+            .toMatchInlineSnapshot(`
             403
             content-type: text/html; charset=utf-8
 
@@ -797,9 +858,10 @@ describe("SimpleStaticFileServer", () => {
                       <pre>evil.com</pre>
                       <p>
                         localhost, *.localhost, *.local and IP addresses are always allowed.
-                        To allow this host too, add it to <strong>elm-watch.json</strong>:
+                        To allow this host too, add it to
+                        your <strong>elmWatch()</strong> options:
                       </p>
-                      <pre><code>"allowedHosts": ["evil.com"]</code></pre>
+                      <pre><code>allowedHosts: ["evil.com"],</code></pre>
                       <p>Or set an environment variable (useful if the host changes):</p>
                       <pre><code>ELM_WATCH_ALLOWED_HOSTS=evil.com</code></pre>
                       <p>
@@ -809,14 +871,40 @@ describe("SimpleStaticFileServer", () => {
                         >
                       </p>
           `);
-          expect(await http10RequestWithoutHost(port)).toMatchInlineSnapshot(`
-            HTTP/1.1 403 Forbidden
+          expect(await get("/")).toMatchInlineSnapshot(`
+            404
+            content-type: text/html; charset=utf-8
 
-                      <h1>Invalid Host header</h1>
-                      <p>The request had an invalid or missing Host header:</p>
-                      <pre>(missing)</pre>
+                  <h1>Static files directory not found</h1>
+                  <p>
+                    You have configured a static files directory
+                    in the elm-watch options which resolves to:
+                  </p>
+                  <pre>/tmp/missing</pre>
+                  <p>However, that directory does not exist.</p>
           `);
         },
+        { staticFilesDir: "missing", configSource },
+      );
+      await withServer(
+        () => {
+          // Nothing.
+        },
+        async (get) => {
+          expect(await get("/")).toMatchInlineSnapshot(`
+            200
+            content-type: text/html; charset=utf-8
+
+                  <h1>Enable elm-watch static file server?</h1>
+                  <p>
+                    If you want, you can enable a simple static file server for your
+                    project.
+                  </p>
+                  <p>Add the following to your <strong>elmWatch()</strong> options:</p>
+                  <pre><code>staticFilesDir: "./folder/to/serve/",</code></pre>
+          `);
+        },
+        { staticFilesDir: null, configSource },
       );
     });
 

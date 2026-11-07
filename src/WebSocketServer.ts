@@ -12,6 +12,7 @@ import {
   checkOriginHeader,
   RejectedHost,
 } from "./AllowedHosts";
+import type { ConfigSource } from "./Config";
 import { toError } from "./Helpers";
 import { Host } from "./Host";
 import { markAsPort, Port, PortChoice } from "./Port";
@@ -109,6 +110,7 @@ export class WebSocketServer {
     staticFilesDirectory: StaticFilesDir | undefined,
     webSocketToken: WebSocketToken,
     allowedHosts: ReadonlyArray<AllowedHost>,
+    configSource: ConfigSource,
   ) {
     this.polyHttpServer = createServer({
       isAllowedHost: (request) =>
@@ -119,17 +121,17 @@ export class WebSocketServer {
           SimpleStaticFileServer.respondHtml(
             response,
             403,
-            SimpleStaticFileServer.hostNotAllowedHtml(hostCheck),
+            SimpleStaticFileServer.hostNotAllowedHtml(configSource, hostCheck),
           );
           return;
         }
 
         if (staticFilesDirectory !== undefined) {
           try {
-            SimpleStaticFileServer.serveStatic(staticFilesDirectory)(
-              request,
-              response,
-            );
+            SimpleStaticFileServer.serveStatic(
+              configSource,
+              staticFilesDirectory,
+            )(request, response);
           } catch (unknownError) {
             SimpleStaticFileServer.respondHtml(
               response,
@@ -141,7 +143,7 @@ export class WebSocketServer {
           SimpleStaticFileServer.respondHtml(
             response,
             200,
-            SimpleStaticFileServer.staticFileNotEnabledHtml(),
+            SimpleStaticFileServer.staticFileNotEnabledHtml(configSource),
           );
         }
       },

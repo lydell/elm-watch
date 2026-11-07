@@ -801,9 +801,9 @@ describe("hot", () => {
       });
 
       expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(`
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: Host header not allowed – add "evil.com" to "allowedHosts" in elm-watch.json or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: Host header not allowed – add "evil.com" to "allowedHosts" or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: invalid Host header: "evil.com/"⧘
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "https://evil.com" rejected due to: origin not allowed – add "evil.com" to "allowedHosts" in elm-watch.json or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "https://evil.com" rejected due to: origin not allowed – add "evil.com" to "allowedHosts" or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "not a url" rejected due to: invalid origin: "not a url"⧘
       `);
     });
@@ -895,6 +895,43 @@ describe("hot", () => {
         Main
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+        If so, try reloading the page.
+        ▲ ❌ 13:10:05 Main
+      `);
+    });
+
+    test("target not found (elm-watch options)", async () => {
+      modifyUrl((url) => {
+        url.searchParams.set("targetName", "nope");
+      });
+
+      const { onlyExpandedRenders } = await run({
+        fixture: "single",
+        args: ["Main"],
+        scripts: ["Main.js"],
+        useElmWatchFunction: true,
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:59123/elm-watch
+        updated 2022-02-05 13:10:05
+        status Unexpected error
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it is for this target:
+
+        nope
+
+        But I can't find that target in the elm-watch options!
+
+        These targets are available in the elm-watch options:
+
+        Main
+
+        Maybe this target used to exist in the elm-watch options, but you removed or changed it?
         If so, try reloading the page.
         ▲ ❌ 13:10:05 Main
       `);

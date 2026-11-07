@@ -103,6 +103,16 @@ function configSourceName(configSource: ConfigSource): Piece {
   }
 }
 
+// For messages displayed in the browser, which don’t support bold text.
+function configSourcePlainName(configSource: ConfigSource): string {
+  switch (configSource.tag) {
+    case "ElmWatchJson":
+      return "elm-watch.json";
+    case "Options":
+      return "the elm-watch options";
+  }
+}
+
 function configSourceLocation(configSource: ConfigSource): FancyErrorLocation {
   switch (configSource.tag) {
     case "ElmWatchJson":
@@ -1277,14 +1287,16 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 }
 
 export function webSocketTargetNotFound(
+  configSource: ConfigSource,
   targetName: TargetName,
   enabledOutputs: Array<OutputPath>,
   disabledOutputs: Array<OutputPath>,
 ): string {
+  const config = configSourcePlainName(configSource);
   const extra = isNonEmptyArray(disabledOutputs)
     ? `
 
-These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
+These targets are also available in ${config}, but are not enabled (because of the CLI arguments passed):
 
 ${mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName).join("\n")}
   `.trimEnd()
@@ -1295,17 +1307,19 @@ The compiled JavaScript code running in the browser says it is for this target:
 
 ${targetName}
 
-But I can't find that target in elm-watch.json!
+But I can't find that target in ${config}!
 
-These targets are available in elm-watch.json:
+These targets are available in ${config}:
 
 ${enabledOutputs.map((outputPath) => outputPath.targetName).join("\n")}${extra}
 
-Maybe this target used to exist in elm-watch.json, but you removed or changed it?
+Maybe this target used to exist in ${config}, but you removed or changed it?
 If so, try reloading the page.
   `.trim();
 }
 
+// Targets can only be disabled via CLI arguments, which means that the config
+// came from elm-watch.json.
 export function webSocketTargetDisabled(
   targetName: TargetName,
   enabledOutputs: Array<OutputPath>,

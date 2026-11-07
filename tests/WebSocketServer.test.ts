@@ -36,6 +36,7 @@ async function withServer(
       }
       return result.value;
     }),
+    { tag: "Options" },
   );
   const rejections: Array<unknown> = [];
   server.setDispatch((msg: WebSocketServerMsg) => {
@@ -132,6 +133,7 @@ describe("WebSocketServer", () => {
       undefined,
       markAsWebSocketToken(TOKEN),
       [],
+      { tag: "Options" },
     );
     server.setDispatch(() => {
       // Do nothing.
@@ -245,6 +247,7 @@ describe("WebSocketServer", () => {
         undefined,
         markAsWebSocketToken(TOKEN),
         [],
+        { tag: "Options" },
       );
     }
 

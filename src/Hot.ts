@@ -15,6 +15,7 @@ import {
 } from "../client/WebSocketMessages";
 import { ALLOWED_HOSTS_DOCS_LINK, RejectedHost } from "./AllowedHosts";
 import * as Compile from "./Compile";
+import type { ConfigSource } from "./Config";
 import { ElmWatchStuffJson, Target } from "./ElmWatchStuffJson";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
@@ -560,6 +561,7 @@ const initMutable =
         project.staticFilesDir,
         webSocketToken,
         project.allowedHosts,
+        project.configSource,
       ),
       webSocketConnections = [],
     } = webSocketState ?? {};
@@ -1143,6 +1145,7 @@ function update(
                   status: {
                     tag: "ClientError",
                     message: webSocketConnectRequestUrlErrorToString(
+                      project.configSource,
                       project.webSocketUrl,
                       result,
                     ),
@@ -2403,6 +2406,7 @@ function webSocketConnectRequestUrlResultToOutputPath(
 }
 
 function webSocketConnectRequestUrlErrorToString(
+  configSource: ConfigSource,
   webSocketUrl: WebSocketUrl | undefined,
   error: ParseWebSocketConnectRequestUrlError,
 ): string {
@@ -2422,6 +2426,7 @@ function webSocketConnectRequestUrlErrorToString(
 
     case "TargetNotFound":
       return Errors.webSocketTargetNotFound(
+        configSource,
         error.targetName,
         error.enabledOutputs,
         error.disabledOutputs,
@@ -3085,7 +3090,7 @@ function printWebSocketConnectionRejectedReason(
 function printRejectedHost(what: string, rejectedHost: RejectedHost): string {
   switch (rejectedHost.tag) {
     case "NotAllowed":
-      return `${what} not allowed – add ${quote(rejectedHost.hostname)} to "allowedHosts" in elm-watch.json or to ${ELM_WATCH_ALLOWED_HOSTS} (see ${ALLOWED_HOSTS_DOCS_LINK})`;
+      return `${what} not allowed – add ${quote(rejectedHost.hostname)} to "allowedHosts" or to ${ELM_WATCH_ALLOWED_HOSTS} (see ${ALLOWED_HOSTS_DOCS_LINK})`;
     case "Invalid":
       return `invalid ${what}: ${rejectedHost.value === undefined ? "(missing)" : quote(rejectedHost.value)}`;
   }
