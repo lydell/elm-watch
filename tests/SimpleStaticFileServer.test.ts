@@ -127,6 +127,94 @@ describe("SimpleStaticFileServer", () => {
       }
     }
 
+    test("range requests", async () => {
+      await withServer(
+        (dir) => {
+          fs.writeFileSync(path.join(dir, "file.txt"), "0123456789");
+          fs.writeFileSync(path.join(dir, "empty.txt"), "");
+          fs.writeFileSync(path.join(dir, "index.html"), "<p>index</p>");
+        },
+        async (get) => {
+          const range = (value: string): http.RequestOptions => ({
+            headers: { Range: value },
+          });
+          expect(await get("/file.txt", range("bytes=2-4")))
+            .toMatchInlineSnapshot(`
+            206
+            content-type: text/plain; charset=utf-8
+            content-range: bytes 2-4/10
+            content-length: 3
+            234
+          `);
+          expect(await get("/file.txt", range("bytes=5-2")))
+            .toMatchInlineSnapshot(`
+            200
+            content-type: text/plain; charset=utf-8
+            content-length: 10
+            0123456789
+          `);
+          expect(await get("/file.txt", range(`bytes=3-${"9".repeat(400)}`)))
+            .toMatchInlineSnapshot(`
+            206
+            content-type: text/plain; charset=utf-8
+            content-range: bytes 3-9/10
+            content-length: 7
+            3456789
+          `);
+          expect(await get("/file.txt", range("bytes=10-20")))
+            .toMatchInlineSnapshot(`
+            416
+            content-range: bytes */10
+            content-type: text/html; charset=utf-8
+            <h1>Range Not Satisfiable</h1>
+                    <pre>Range Not Satisfiable
+
+            Requested range: bytes=10-20
+            File size: 10 bytes</pre>
+          `);
+          expect(await get("/empty.txt", range("bytes=0-0")))
+            .toMatchInlineSnapshot(`
+            416
+            content-range: bytes */0
+            content-type: text/html; charset=utf-8
+            <h1>Range Not Satisfiable</h1>
+                    <pre>Range Not Satisfiable
+
+            Requested range: bytes=0-0
+            File size: 0 bytes</pre>
+          `);
+          expect(await get("/not-found", range("bytes=0-2")))
+            .toMatchInlineSnapshot(`
+            200
+            elm-watch-404: /tmp/public/not-found
+            elm-watch-index-html: /tmp/public/index.html
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/server/#indexhtml
+            content-type: text/html; charset=utf-8
+            <!-- elm-watch debug information:
+
+            hacky_hint If_you_see_this_in_a_JS_syntax_error_then_your_JS_file_was_not_found___Click_the_file_name_to_the_right_for_more_information /*
+
+            This response could have been served as a 404 (Not Found),
+            but was served as 200 (OK) instead, because an index.html file was found.
+            This is for supporting Browser.application programs.
+
+            If you expected a file to served rather than this HTML,
+            make sure the URL is correct or that this file exists:
+            /tmp/public/not-found
+
+            This is the closest index.html file, which was served instead:
+            /tmp/public/index.html
+
+            Learn more:
+            https://lydell.github.io/elm-watch/server/#indexhtml
+
+            -->
+            <p>index</p>
+          `);
+        },
+      );
+    });
+
     test("unsupported method", async () => {
       await withServer(
         () => {

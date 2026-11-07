@@ -596,7 +596,25 @@ function serveFile(
     default: {
       const rangeHeader = request.headers.range;
       const range =
-        rangeHeader === undefined ? undefined : parseRangeHeader(rangeHeader);
+        // Ignore the Range header when adding extra content, since ranges
+        // apply to the file only and would be off.
+        rangeHeader === undefined || extraContent !== undefined
+          ? undefined
+          : parseRangeHeader(rangeHeader, fsSize);
+      if (range?.tag === "Unsatisfiable") {
+        response.setHeader("Content-Range", `bytes */${fsSize}`);
+        respondHtml(
+          response,
+          416,
+          errorHtml(
+            `Range Not Satisfiable
+
+Requested range: ${rangeHeader ?? "(none)"}
+File size: ${fsSize} bytes`,
+          ),
+        );
+        return;
+      }
       const readStream = fs.createReadStream(toAbsolutePath(fsPath), range);
       readStream.on("error", (error) => {
         respondHtml(
@@ -661,15 +679,32 @@ function statSync(
 // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
 const RANGE_REGEX = /^bytes=(\d+)-(\d+)$/;
 
+// Returning `undefined` means ignoring the Range header and serving the whole
+// file, which is allowed for unsupported or invalid Range headers.
+// See: https://www.rfc-editor.org/rfc/rfc9110#section-14.2
 function parseRangeHeader(
   rangeHeader: string,
-): { start: number; end: number } | undefined {
+  fsSize: number,
+):
+  | { tag: "Range"; start: number; end: number }
+  | { tag: "Unsatisfiable" }
+  | undefined {
   const match = RANGE_REGEX.exec(rangeHeader);
   if (match === null) {
     return undefined;
   }
-  const [, start = "0", end = "Infinity"] = match;
-  return { start: Number(start), end: Number(end) };
+  const [, startString = "0", endString = "Infinity"] = match;
+  // Very long digit strings become `Infinity` or imprecise numbers, which is
+  // fine: They are compared and clamped below.
+  const start = Number(startString);
+  const end = Number(endString);
+  if (start > end) {
+    return undefined;
+  }
+  if (start >= fsSize) {
+    return { tag: "Unsatisfiable" };
+  }
+  return { tag: "Range", start, end: Math.min(end, fsSize - 1) };
 }
 
 type FsPath = {
