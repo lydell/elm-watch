@@ -85,16 +85,25 @@ export function watch(
       // listener as well.
       const options = { recursive: watchDir.tag !== "Shallow", ignore };
       fsWatcher = fs.watch(root, options, (_eventType, filename) => {
-        if (filename === null) {
+        if (!fs.existsSync(root)) {
+          // The root itself was removed. Everything inside it is gone too, so
+          // reporting the root is enough.
+          waitForRoot(watchDir);
+          report(root);
+        } else if (filename === null) {
           // The OS did not tell us what changed (for example, because of
           // an event queue overflow). Report the whole root.
           report(root);
         } else if (!ignore(filename)) {
-          report(markAsAbsolutePath(path.join(root, filename)));
-        }
-        if (!fs.existsSync(root)) {
-          waitForRoot(watchDir);
-          report(root);
+          const absolutePath = markAsAbsolutePath(path.join(root, filename));
+          // For events about the root itself, macOS gives the name of the root
+          // as `filename`, which results in a bogus path. If it doesn’t exist,
+          // report the root instead (which covers everything inside it anyway).
+          report(
+            filename === path.basename(root) && !fs.existsSync(absolutePath)
+              ? root
+              : absolutePath,
+          );
         }
       });
     } catch (unknownError) {

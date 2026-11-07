@@ -148,6 +148,7 @@ type Mutable = {
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
+  watcherReadyTimeoutId: NodeJS.Timeout | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
   unsubscribeFromSigterm: () => void;
@@ -398,9 +399,9 @@ export type HotTestHooks = {
   // pending events to handle or print). Lets tests wait for things to happen
   // instead of sleeping.
   onUpdate?: (msg: Msg, isIdle: boolean) => void;
-  // Called with `false` when a file watcher is created, and with `true` once
-  // it has scanned all files. Changes made before that might be missed (such as
-  // the removal of a file the watcher hasn’t seen yet).
+  // Called with `false` when file watchers are created, and with `true` once
+  // they should be up and running (see `WATCHER_READY_DELAY_MS`). Changes made
+  // before that might be missed.
   onWatcherReadyChange?: (isReady: boolean) => void;
   // Replaces listening for SIGTERM on `process`. Returns an unsubscribe function.
   subscribeToSigterm?: (listener: () => void) => () => void;
@@ -550,7 +551,6 @@ const initMutable =
           .catch(rejectPromise);
       },
     );
-    hotTestHooks.onWatcherReadyChange?.(true);
 
     const {
       webSocketServer = new WebSocketServer(
@@ -572,6 +572,9 @@ const initMutable =
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
+      watcherReadyTimeoutId: setTimeout(() => {
+        hotTestHooks.onWatcherReadyChange?.(true);
+      }, WATCHER_READY_DELAY_MS),
       elmWatchStuffJsonWriteError: undefined,
       killInstallDependencies: undefined,
       unsubscribeFromSigterm: () => {
@@ -2122,6 +2125,7 @@ async function closeAll(
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
   }
+  clearTimeout(mutable.watcherReadyTimeoutId);
 
   mutable.webSocketServer.unsetDispatch();
   mutable.watcher.close();
@@ -2833,6 +2837,14 @@ function getNextActionSleepMs(model: Model): number {
     ...(model.pendingWatcherEvents.length > 0 ? [WATCHER_EVENT_SLEEP_MS] : []),
   );
 }
+
+// On macOS, all `fs.watch` watchers share a single FSEvents stream, which libuv
+// recreates on a separate thread every time a watcher is added or removed.
+// Events happening before the new stream is up are lost. That usually takes
+// less than a millisecond, but can take longer under heavy load. There is no
+// way to know when the stream is up, so the test hook (which tests use to know
+// when it is safe to make file changes) waits a little.
+const WATCHER_READY_DELAY_MS = 100;
 
 // Sleep for a little bit to avoid unnecessary recompilation when using “save
 // all” in an editor, or when running `git switch some-branch` or `git restore

@@ -211,11 +211,17 @@ describe("watch", () => {
     fs.mkdirSync(d("src"));
     await start([sourceDirectory("src")]);
 
-    fs.rmSync(d("src"), { recursive: true });
-    await expect.poll(eventLines, POLL).toContain("src");
+    const countSrcEvents = (): number =>
+      eventLines().filter((line) => line === "src").length;
 
+    fs.rmSync(d("src"), { recursive: true });
+    await expect.poll(countSrcEvents, POLL).toBeGreaterThan(0);
+    // No bogus paths for the root itself (like `src/src`).
+    expect(new Set(eventLines())).toStrictEqual(new Set(["src"]));
+
+    const countBefore = countSrcEvents();
     fs.mkdirSync(d("src"));
-    await expect.poll(eventLines, POLL).toContain("src");
+    await expect.poll(countSrcEvents, POLL).toBeGreaterThan(countBefore);
     await waitForWatcherStart();
 
     fs.writeFileSync(d("src", "Main.elm"), "");
