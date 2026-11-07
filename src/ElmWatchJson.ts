@@ -91,7 +91,6 @@ export const TargetName = Codec.flatMap(Codec.string, {
           },
         },
   // Encoding is never used.
-  /* v8 ignore next -- @preserve */
   encoder: (value) => value,
 });
 
@@ -156,7 +155,6 @@ Learn more: https://lydell.github.io/elm-watch/postprocess/`,
     },
   }),
   // Encoding is never used.
-  /* v8 ignore next -- @preserve */
   encoder: (value) => value,
 };
 
@@ -323,7 +321,6 @@ export function exampleJson(
 }
 
 function toUnixPath(filePath: string): string {
-  /* v8 ignore next -- @preserve */
   return IS_WINDOWS ? filePath.split(path.sep).join(path.posix.sep) : filePath;
 }
 

@@ -111,19 +111,15 @@ export function make({
 
   const handleSpawnResult = (spawnResult: SpawnResult): RunElmMakeResult => {
     switch (spawnResult.tag) {
-      /* v8 ignore start */
       case "CommandNotFoundError":
         return { tag: "ElmNotFoundError", command };
-      /* v8 ignore stop */
 
-      /* v8 ignore start */
       case "OtherSpawnError":
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
-      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -161,13 +157,11 @@ export function make({
   return {
     promise: promise.then(handleSpawnResult),
     kill: ({ force }) => {
-      /* v8 ignore start */
       if (force) {
         kill();
       } else {
         delayKill(promise, startTime, getNow, env, kill);
       }
-      /* v8 ignore stop */
     },
   };
 }
@@ -386,14 +380,12 @@ export function install({
       case "CommandNotFoundError":
         return { tag: "ElmNotFoundError", command };
 
-      /* v8 ignore start */
       case "OtherSpawnError":
         return {
           tag: "OtherSpawnError",
           error: spawnResult.error,
           command: spawnResult.command,
         };
-      /* v8 ignore stop */
 
       case "Killed":
         return { tag: "Killed" };
@@ -470,13 +462,11 @@ export function install({
   return {
     promise: promise.then(handleSpawnResult),
     kill: ({ force }) => {
-      /* v8 ignore start */
       if (force) {
         kill();
       } else {
         delayKill(promise, startTime, getNow, env, kill);
       }
-      /* v8 ignore stop */
     },
   };
 }
@@ -502,25 +492,21 @@ export async function version({
   switch (spawnResult.tag) {
     // This function ignores all errors, because it is not used for anything critical.
     // Errors will surface later anyway, when we invoke the Elm compiler to compile stuff.
-    /* v8 ignore start */
     case "CommandNotFoundError":
     case "OtherSpawnError":
     case "Killed":
       return markAsElmVersion("unknown");
-    /* v8 ignore stop */
 
     case "Exit": {
       const { exitReason } = spawnResult;
       const stdout = spawnResult.stdout.toString("utf8");
       const stderr = spawnResult.stderr.toString("utf8");
 
-      /* v8 ignore start */
       return exitReason.tag === "ExitCode" &&
         exitReason.exitCode === 0 &&
         stderr === ""
         ? markAsElmVersion(stdout.trim())
         : markAsElmVersion("unknown");
-      /* v8 ignore stop */
     }
   }
 }

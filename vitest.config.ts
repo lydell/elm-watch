@@ -1,23 +1,5 @@
 import { defineConfig } from "vitest/config";
 
-// These are not goals, just a floor to notice when coverage drops. They are
-// set to what the tests reached when upgrading to Vitest 5, which measures
-// coverage more accurately than earlier versions (the code used to be at 100 %).
-const requireCoverage = {
-  branches: 94,
-  functions: 98,
-  lines: 98,
-  statements: 98,
-};
-
-// Some things like symlinks can’t be tested on Windows.
-const windowsCoverage = {
-  branches: 90,
-  functions: 95,
-  lines: 95,
-  statements: 95,
-};
-
 export default defineConfig({
   test: {
     // Increase the default timeout for each test from 5 seconds to 10 seconds.
@@ -29,6 +11,9 @@ export default defineConfig({
       },
     },
     include: ["tests/*.test.ts"],
+    // There are no coverage thresholds. Requiring 100 % coverage led to
+    // complex, brittle tests and lots of ignore comments. Run `npm run coverage`
+    // and look at the report to find untested code paths worth testing.
     coverage: {
       include: ["src/**/*.ts"],
       exclude: [
@@ -38,9 +23,6 @@ export default defineConfig({
         // The CLI entrypoint. The tests call `elmWatchCli` directly instead.
         "src/bin.ts",
       ],
-      thresholds: {
-        ...(process.platform === "win32" ? windowsCoverage : requireCoverage),
-      },
     },
     setupFiles: ["tests/setupTests.ts"],
   },

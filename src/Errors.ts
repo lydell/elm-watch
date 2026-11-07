@@ -268,11 +268,9 @@ export function toHtml(
     DEFAULT_COLUMNS,
     renderPiece,
   );
-  /* v8 ignore start */
   return location === undefined
     ? { title, htmlContent: content }
     : { title, location, htmlContent: content };
-  /* v8 ignore stop */
 }
 
 function renderPieceForTerminal(piece: Piece): string {
@@ -283,7 +281,7 @@ function renderPieceForTerminal(piece: Piece): string {
       return dimTerminal(piece.text);
     case "ElmStyle":
       return (
-        (piece.bold ? /* v8 ignore next -- @preserve */ "\x1B[1m" : "") +
+        (piece.bold ? "\x1B[1m" : "") +
         (piece.underline ? "\x1B[4m" : "") +
         (piece.color === undefined
           ? ""
@@ -304,7 +302,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
       return `<span style="opacity: 0.6">${escapeHtml(piece.text)}</span>`;
     case "ElmStyle":
       return (
-        (piece.bold ? /* v8 ignore next -- @preserve */ "<b>" : "") +
+        (piece.bold ? "<b>" : "") +
         (piece.underline ? "<u>" : "") +
         (piece.color === undefined
           ? ""
@@ -312,7 +310,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
         escapeHtml(piece.text) +
         (piece.color === undefined ? "" : "</span>") +
         (piece.underline ? "</u>" : "") +
-        (piece.bold ? /* v8 ignore next -- @preserve */ "</b>" : "")
+        (piece.bold ? "</b>" : "")
       );
     case "Text":
       return escapeHtml(piece.text);
@@ -1381,14 +1379,12 @@ export function openEditorCommandFailed({
   stdout: string;
   stderr: string;
 }): string {
-  /* v8 ignore start */
   const errorReason =
     error.killed === true
       ? `The command took too long to run, and was killed after ${timeout} ms.`
       : error.code !== undefined
         ? `The command exited with code ${error.code}.`
         : "The command failed for an unknown reason.";
-  /* v8 ignore stop */
   return `
 I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):
 

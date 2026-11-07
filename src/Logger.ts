@@ -79,11 +79,9 @@ export function makeLogger({
     noColor ? removeColor(string) : string;
 
   let queryTerminalStatus: QueryTerminalStatus = { tag: "NotQueried" };
-  /* v8 ignore start */
   const defaultOnExit = (): void => {
     // Do nothing.
   };
-  /* v8 ignore stop */
 
   let onExit = defaultOnExit;
   const exitOnCtrlC = (data: Buffer): void => {
@@ -113,19 +111,13 @@ export function makeLogger({
   const config: LoggerConfig = {
     debug: __ELM_WATCH_DEBUG in env,
     noColor,
-    fancy:
-      /* v8 ignore next -- @preserve */
-      (!IS_WINDOWS || WT_SESSION in env) && !noColor,
-    isTTY:
-      __ELM_WATCH_NOT_TTY in env
-        ? /* v8 ignore next -- @preserve */ false
-        : stdout.isTTY,
+    fancy: (!IS_WINDOWS || WT_SESSION in env) && !noColor,
+    isTTY: __ELM_WATCH_NOT_TTY in env ? false : stdout.isTTY,
     mockedTimings: __ELM_WATCH_MOCKED_TIMINGS in env,
     get columns() {
       // `.columns` is `undefined` if not a TTY.
       // This is a getter because it can change over time, if the user resizes
       // the terminal.
-      /* v8 ignore next -- @preserve */
       return stdout.columns ?? DEFAULT_COLUMNS;
     },
   };
@@ -147,7 +139,6 @@ export function makeLogger({
         `${Errors.toTerminalString(template, config.columns, noColor)}\n`,
       );
     },
-    /* v8 ignore start */
     debug(...args) {
       if (config.debug) {
         logDebug(
@@ -165,7 +156,6 @@ export function makeLogger({
         );
       }
     },
-    /* v8 ignore stop */
     clearScreen(): void {
       if (config.isTTY) {
         stdout.write(CLEAR);

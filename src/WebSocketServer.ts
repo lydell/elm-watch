@@ -151,9 +151,7 @@ export class WebSocketServer {
       onUpgrade: (request, socket, head) => {
         // `request.url` is always a string here, but the types says it can be undefined:
         // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
-        const urlString =
-          /* v8 ignore next -- @preserve */
-          request.url ?? "/";
+        const urlString = request.url ?? "/";
 
         const { origin } = request.headers;
 
@@ -225,9 +223,8 @@ export class WebSocketServer {
               webSocket as WebSocket & {
                 [util.inspect.custom]: util.CustomInspectFunction;
               }
-            )[util.inspect.custom] =
-              /* v8 ignore next -- @preserve */
-              (_depth, options) => options.stylize("WebSocket", "special");
+            )[util.inspect.custom] = (_depth, options) =>
+              options.stylize("WebSocket", "special");
 
             this.dispatch({
               tag: "WebSocketConnected",
@@ -247,14 +244,12 @@ export class WebSocketServer {
               this.dispatch({ tag: "WebSocketClosed", webSocket });
             });
 
-            /* v8 ignore start */
             webSocket.on("error", (error) => {
               this.dispatch({
                 tag: "WebSocketServerError",
                 error: { tag: "OtherError", error },
               });
             });
-            /* v8 ignore stop */
           },
         );
       },
@@ -272,8 +267,7 @@ export class WebSocketServer {
             ? { tag: "PortConflict", portChoice, error }
             : error.code === "ENOTFOUND"
               ? { tag: "HostNotFound", host, error }
-              : /* v8 ignore next -- @preserve */
-                { tag: "OtherError", error },
+              : { tag: "OtherError", error },
       });
     });
 
@@ -312,7 +306,6 @@ export class WebSocketServer {
           }
         })
         .catch((error: unknown) => {
-          /* v8 ignore next -- @preserve */
           this.polyHttpServer.emit("error", toError(error));
         });
     } else {
@@ -394,8 +387,7 @@ async function probePort(port: number): Promise<ProbeResult> {
         // IPv6 might not be available.
         (ipv6Result.error.code === "EADDRNOTAVAIL" ||
           ipv6Result.error.code === "EAFNOSUPPORT")
-        ? /* v8 ignore next -- @preserve */
-          result
+        ? result
         : ipv6Result;
     }
   }

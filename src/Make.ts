@@ -139,11 +139,7 @@ function compileFinishedMessage({
     isTTY: loggerConfig.isTTY,
     emojiName: hasErrors ? "Error" : "Success",
     string: `Compilation finished in ${bold(
-      printDurationMs(
-        loggerConfig.mockedTimings
-          ? 123
-          : /* v8 ignore next -- @preserve */ duration,
-      ).trim(),
+      printDurationMs(loggerConfig.mockedTimings ? 123 : duration).trim(),
     )}.`,
   });
 }

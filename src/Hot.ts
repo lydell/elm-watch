@@ -406,14 +406,12 @@ export type HotTestHooks = {
   subscribeToSigterm?: (listener: () => void) => () => void;
 };
 
-/* v8 ignore start */
 function subscribeToProcessSigterm(listener: () => void): () => void {
   process.on("SIGTERM", listener);
   return () => {
     process.off("SIGTERM", listener);
   };
 }
-/* v8 ignore stop */
 
 // This uses something inspired by The Elm Architecture, since it’s all about
 // keeping state (model) and reacting to events (messages).
@@ -616,7 +614,6 @@ const initMutable =
       .catch(rejectPromise);
 
     const kill = async (): Promise<void> => {
-      /* v8 ignore start */
       try {
         if (mutable.killInstallDependencies !== undefined) {
           mutable.killInstallDependencies({ force: true });
@@ -631,7 +628,6 @@ const initMutable =
         const error = toError(unknownError);
         rejectPromise(toError(error));
       }
-      /* v8 ignore stop */
 
       hotTestHooks.kill = undefined;
     };
@@ -782,7 +778,6 @@ function update(
       ];
 
     case "ExitRequested":
-      /* v8 ignore start */
       if (model.hotState.tag !== "Idle") {
         return [
           model,
@@ -796,10 +791,8 @@ function update(
           ],
         ];
       }
-      /* v8 ignore stop */
 
       switch (model.nextAction.tag) {
-        /* v8 ignore start */
         case "Restart":
         case "Compile":
           return [
@@ -813,7 +806,6 @@ function update(
               },
             ],
           ];
-        /* v8 ignore stop */
 
         case "NoAction":
           return runNextAction(msg.date, project, model);
@@ -870,7 +862,6 @@ function update(
       });
 
       switch (model.hotState.tag) {
-        /* v8 ignore start */
         case "Dependencies":
         case "Idle":
           return [
@@ -884,7 +875,6 @@ function update(
               },
             ],
           ];
-        /* v8 ignore stop */
 
         case "Compiling": {
           const duration = msg.date.getTime() - model.hotState.start.getTime();
@@ -938,11 +928,9 @@ function update(
         }
 
         case "Restarting":
-          /* v8 ignore start */
           return outputActions.numExecuting === 0
             ? [model, [{ tag: "Restart", restartReasons: model.latestEvents }]]
             : [model, []];
-        /* v8 ignore stop */
       }
     }
 
@@ -953,7 +941,6 @@ function update(
             case "Error":
               return [
                 { ...model, hotState: { tag: "Idle" } },
-                /* v8 ignore next -- @preserve */
                 [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
               ];
 
@@ -989,7 +976,6 @@ function update(
             [{ tag: "Restart", restartReasons: model.latestEvents }],
           ];
 
-        /* v8 ignore start */
         case "Idle":
         case "Compiling":
           return [
@@ -1003,7 +989,6 @@ function update(
               },
             ],
           ];
-        /* v8 ignore stop */
       }
 
     case "WebSocketClosed":
@@ -1453,10 +1438,8 @@ function runNextAction(
           return [{ ...model, hotState: { tag: "Restarting" } }, []];
         }
 
-        /* v8 ignore start */
         case "Restarting":
           return [model, []];
-        /* v8 ignore stop */
       }
 
     case "Compile":
@@ -1489,11 +1472,9 @@ function runNextAction(
             ],
           ];
 
-        /* v8 ignore start */
         case "Dependencies":
         case "Restarting":
           return [model, []];
-        /* v8 ignore stop */
       }
 
     case "NoAction":
@@ -1822,10 +1803,8 @@ const runCmd =
                 event.file.tag === "AbsolutePath" &&
                 path.basename(event.file.absolutePath) === "elm-watch.json"
               );
-            /* v8 ignore start */
             default:
               return false;
-            /* v8 ignore stop */
           }
         });
         closeAll(logger, mutable, {
@@ -1874,11 +1853,9 @@ const runCmd =
         }, cmd.sleepMs);
         return;
 
-      /* v8 ignore start */
       case "Throw":
         rejectPromise(cmd.error);
         return;
-      /* v8 ignore stop */
 
       case "WebSocketSend":
         webSocketSend(cmd.webSocket, cmd.message);
@@ -1984,11 +1961,9 @@ function onWebSocketServerMsg(
         tag: "WebSocketClosed",
         date: now,
         outputPath:
-          /* v8 ignore start */
           removedConnection === undefined
             ? { tag: "OutputPathError" }
             : removedConnection.outputPath,
-        /* v8 ignore stop */
       });
       return;
     }
@@ -1998,7 +1973,6 @@ function onWebSocketServerMsg(
         ({ webSocket }) => webSocket === msg.webSocket,
       );
 
-      /* v8 ignore start */
       if (webSocketConnection === undefined) {
         rejectPromise(
           new Error(
@@ -2009,7 +1983,6 @@ function onWebSocketServerMsg(
         );
         return;
       }
-      /* v8 ignore stop */
 
       const flatOutputs = getFlatOutputs(mutable.project);
       const output = flatOutputs.find(({ outputPath }) =>
@@ -2061,11 +2034,9 @@ function onWebSocketServerMsg(
           return;
         }
 
-        /* v8 ignore start */
         case "OtherError":
           rejectPromise(msg.error.error);
           return;
-        /* v8 ignore stop */
       }
   }
 }
@@ -2076,10 +2047,8 @@ function portChoiceError(
   error: Error,
 ): Errors.ErrorTemplate {
   switch (portChoice.tag) {
-    /* v8 ignore start */
     case "NoPort":
       return Errors.portConflictForNoPort(error);
-    /* v8 ignore stop */
 
     case "PersistedPort":
       return Errors.portConflictForPersistedPort(
@@ -2150,11 +2119,9 @@ async function closeAll(
   logger.reset();
   mutable.unsubscribeFromSigterm();
 
-  /* v8 ignore start */
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
   }
-  /* v8 ignore stop */
 
   mutable.webSocketServer.unsetDispatch();
   mutable.watcher.close();
@@ -2169,7 +2136,6 @@ function makePrioritizedOutputs(
   const map = new Map<TargetName, number>();
   for (const { outputPath, priority } of webSocketConnections) {
     if (outputPath.tag !== "OutputPathError") {
-      /* v8 ignore next -- @preserve */
       const previous = map.get(outputPath.targetName) ?? 0;
       map.set(outputPath.targetName, Math.max(priority, previous));
     }
@@ -2236,15 +2202,11 @@ function isElmFileRelatedToElmJsonsErrors(
           )
         );
 
-      // The only way I’ve found to trigger this is by a symlink loop. (With
-      // chokidar, that made the watcher error out, so this was never hit. With
-      // `fs.watch` it can be hit, but there is no test for it yet.)
-      /* v8 ignore start */
+      // The only way I’ve found to trigger this is by a symlink loop.
       case "InputsFailedToResolve":
         return error.inputsFailedToResolve.some(({ inputPath }) =>
           matches(inputPath.theUncheckedInputPath),
         );
-      /* v8 ignore stop */
 
       case "InputsNotFound":
         return error.inputsNotFound.some((inputPath) =>
@@ -2338,9 +2300,7 @@ const WebSocketConnectedParams = Codec.fields(
               },
             };
       },
-      encoder:
-        /* v8 ignore next -- @preserve */
-        (value) => value.toString(),
+      encoder: (value) => value.toString(),
     }),
   },
   { allowExtraFields: false },
@@ -2525,7 +2485,6 @@ type ParseWebSocketToServerMessageResult =
 function parseWebSocketToServerMessage(
   data: WebSocket.Data,
 ): ParseWebSocketToServerMessageResult {
-  /* v8 ignore start */
   const stringData =
     typeof data === "string"
       ? data
@@ -2534,7 +2493,6 @@ function parseWebSocketToServerMessage(
         : data instanceof ArrayBuffer
           ? new TextDecoder("utf8").decode(data)
           : data.toString("utf8");
-  /* v8 ignore stop */
 
   const parsed = Codec.JSON.parse(WebSocketToServerMessage, stringData);
   switch (parsed.tag) {
@@ -2570,11 +2528,9 @@ function onWebSocketConnected(
   };
 
   switch (model.hotState.tag) {
-    /* v8 ignore start */
     case "Restarting":
     case "Dependencies":
       return [model, event, []];
-    /* v8 ignore stop */
 
     case "Idle":
     case "Compiling":
@@ -2610,17 +2566,14 @@ function onWebSocketConnected(
         case "ElmMakeTypecheckOnly":
           return recompileNeeded();
 
-        /* v8 ignore next -- @preserve */
         case "ElmMake":
         case "Postprocess":
         case "Interrupted":
         case "QueuedForElmMake":
         case "QueuedForPostprocess":
           switch (model.hotState.tag) {
-            /* v8 ignore start */
             case "Idle":
               return recompileNeeded();
-            /* v8 ignore stop */
 
             case "Compiling":
               return [model, event, []];
@@ -2660,11 +2613,9 @@ function onChangedCompilationModeOrBrowserUiPosition(
   outputState: OutputState,
 ): [Model, Array<Cmd>] {
   switch (model.hotState.tag) {
-    /* v8 ignore start */
     case "Restarting":
     case "Dependencies":
       return [model, []];
-    /* v8 ignore stop */
 
     case "Idle":
     case "Compiling":
@@ -2678,10 +2629,8 @@ function onWebSocketRecompileNeeded(
   outputState: OutputState,
 ): [Model, Array<Cmd>] {
   switch (model.nextAction.tag) {
-    /* v8 ignore start */
     case "Restart":
       return [model, []];
-    /* v8 ignore stop */
 
     case "Compile":
     case "NoAction":
@@ -2703,7 +2652,6 @@ function onWebSocketRecompileNeeded(
 
 function compileNextAction(nextAction: NextAction): NextAction {
   switch (nextAction.tag) {
-    /* v8 ignore next -- @preserve */
     case "Restart":
     case "Compile":
       return nextAction;
@@ -2815,7 +2763,6 @@ function onWebSocketToServerMessage(
                 outputState: output.outputState,
                 openErrorOverlay: message.openErrorOverlay,
               },
-              /* v8 ignore start */
               isNonEmptyArray(errors)
                 ? {
                     tag: "WebSocketSendCompileErrorToOutput",
@@ -2826,7 +2773,6 @@ function onWebSocketToServerMessage(
                     errors,
                   }
                 : { tag: "NoCmd" },
-              /* v8 ignore stop */
             ],
           ];
         }
@@ -3128,11 +3074,7 @@ function compileFinishedMessage(
   duration: number,
 ): string {
   return `Compilation finished in ${bold(
-    printDurationMs(
-      loggerConfig.mockedTimings
-        ? 123
-        : /* v8 ignore next -- @preserve */ duration,
-    ).trim(),
+    printDurationMs(loggerConfig.mockedTimings ? 123 : duration).trim(),
   )}.`;
 }
 

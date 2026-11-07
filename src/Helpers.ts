@@ -121,10 +121,8 @@ export function escapeHtml(string: string): string {
         return "&quot;";
       case "'":
         return "&apos;";
-      /* v8 ignore start */
       default:
         return match;
-      /* v8 ignore stop */
     }
   });
 }
@@ -137,13 +135,11 @@ export function silentlyReadIntEnvValue(
 }
 
 export const toError: (arg: unknown) => NodeJS.ErrnoException = (arg) =>
-  /* v8 ignore start */
   arg instanceof Error
     ? arg
     : new Error(
         `Caught error not instanceof Error: ${unknownErrorToString(arg)}`,
       );
-/* v8 ignore stop */
 
 export function unknownErrorToString(error: unknown): string {
   return typeof (error as { stack?: string } | undefined)?.stack === "string"

@@ -196,7 +196,6 @@ export function installDependencies(
             ),
           );
 
-        /* v8 ignore start */
         case "OtherSpawnError":
           return onError(
             Errors.otherSpawnError(
@@ -205,7 +204,6 @@ export function installDependencies(
               result.command,
             ),
           );
-        /* v8 ignore stop */
 
         case "ElmInstallError":
           return onError(
@@ -367,9 +365,7 @@ export function getOutputActions({
             tag: "NeedsPostprocess",
             output,
             postprocess: outputState.status.postprocess,
-            priority:
-              /* v8 ignore next -- @preserve */
-              priority ?? 0,
+            priority: priority ?? 0,
             code: outputState.status.code,
             elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
             recordFields: outputState.status.recordFields,
@@ -603,7 +599,6 @@ export async function handleOutputAction({
 
     case "NeedsElmMakeTypecheckOnly":
       switch (runMode.tag) {
-        /* v8 ignore start */
         case "make":
           throw new Error(
             `Got NeedsElmMakeTypecheckOnly in \`make\` mode!\n${Codec.JSON.stringify(
@@ -612,7 +607,6 @@ export async function handleOutputAction({
               2,
             )}`,
           );
-        /* v8 ignore stop */
 
         case "hot":
           await typecheck({
@@ -1022,11 +1016,9 @@ function needsToWriteProxyFile(
     handle = fs.openSync(outputPath, "r");
   } catch (unknownError) {
     const error = toError(unknownError);
-    /* v8 ignore start */
     return error.code === "ENOENT"
       ? { tag: "Needed" }
       : { tag: "ReadError", error };
-    /* v8 ignore stop */
   }
   const buffer = Buffer.alloc(versionedIdentifier.byteLength);
   try {
@@ -1745,11 +1737,9 @@ function statusLine(
     start: string,
   ): string => {
     const strings = extra.flatMap((item) => item ?? []);
-    /* v8 ignore start */
     if (!isNonEmptyArray(strings)) {
       return helper(emojiName, start);
     }
-    /* v8 ignore stop */
 
     // Emojis take two terminal columns, plus a space that we add after.
     const startLength =
@@ -1815,7 +1805,6 @@ function statusLine(
     case "QueuedForPostprocess":
       return helper("QueuedForPostprocess", `${targetName}: elm make done`);
 
-    /* v8 ignore next -- @preserve */
     case "ElmNotFoundError":
     case "OtherSpawnError":
     case "UnexpectedElmMakeOutput":
@@ -1931,7 +1920,6 @@ function maybePrintDurations(
 
   return mapNonEmptyArray(newDurations, (duration) =>
     printDuration(
-      /* v8 ignore next -- @preserve */
       loggerConfig.mockedTimings ? mockDuration(duration) : duration,
       loggerConfig.fancy,
     ),
@@ -2068,7 +2056,6 @@ export function renderOutputErrors(
     case "NotWrittenToDisk":
       return [];
 
-    /* v8 ignore start */
     case "ElmMake":
     case "ElmMakeTypecheckOnly":
     case "Postprocess":
@@ -2077,7 +2064,6 @@ export function renderOutputErrors(
       return includeStuckInProgressState
         ? [Errors.stuckInProgressState(outputPath, status.tag)]
         : [];
-    /* v8 ignore stop */
 
     // If there are `elm make` errors we skip postprocessing (fail fast).
     case "QueuedForPostprocess":
@@ -2086,15 +2072,11 @@ export function renderOutputErrors(
     case "Success":
       return [];
 
-    /* v8 ignore start */
     case "ElmNotFoundError":
       return [Errors.elmNotFoundError(outputPath, status.command)];
-    /* v8 ignore stop */
 
-    /* v8 ignore start */
     case "OtherSpawnError":
       return [Errors.otherSpawnError(outputPath, status.error, status.command)];
-    /* v8 ignore stop */
 
     case "UnexpectedElmMakeOutput":
       return [
@@ -2106,8 +2088,6 @@ export function renderOutputErrors(
           status.command,
         ),
       ];
-
-    // This is covered on macOS and Windows, but not Linux.
 
     case "PostprocessFunctionError":
       return [Errors.postprocessFunctionError(outputPath, status.error)];

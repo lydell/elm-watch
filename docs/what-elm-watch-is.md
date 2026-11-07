@@ -17,7 +17,7 @@ And do you remember trying out Elm with `elm reactor`? Did it feel easy to get s
 - **Elm centric.** elm-watch puts Elm at the heart. Let’s take advantage of Elm’s unique capabilities, like `elm make --output /dev/null` for super fast type checking of apps you’re not currently focusing on!
 - **Elm ready.** Includes an optional [server](../server/) that lets you get going with a `Browser.application`.
 - [**Reasonably hackable.**](../postprocess/) Ever wanted to adjust Elm’s compiled JS? That’s just a `String -> String` function away for both development and production builds. Want to [extend the server](../server/#what-you-can-do-yourself)? It’s open for modification if you know some plain Node.js.
-- **Well tested.** elm-watch has 100 % test coverage, save for a few ignore coverage comments. elm-watch is serious about stability.
+- **Well tested.** elm-watch has an extensive test suite, covering both the CLI and hot reloading in a simulated browser. elm-watch is serious about stability.
 - **Super scalable.** elm-watch can handle many Elm apps without getting slow. Only the apps you work on get compiled – in most recently used order. The rest are only type checked, which is faster.
 
 👉 See also [Comparison to other tools](../comparison-to-other-tools/).

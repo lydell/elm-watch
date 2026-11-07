@@ -20,7 +20,6 @@ async function bundleClient(): Promise<string> {
 
   const [chunk, ...rest] = result.output;
 
-  /* v8 ignore start */
   if (rest.length > 0) {
     throw new Error(
       `ClientCode: Expected a single chunk, but got: ${result.output.map((item) => item.fileName).join(", ")}`,
@@ -35,7 +34,6 @@ async function bundleClient(): Promise<string> {
       `ClientCode: Expected ${CLIENT_CONFIG_IDENTIFIER} to occur exactly once in the bundled client code, but found it ${count} times.`,
     );
   }
-  /* v8 ignore stop */
 
   return chunk.code;
 }

@@ -107,10 +107,7 @@ export default async function elmWatchCli(
 
 // Note: The options must be in sync with index.d.ts, which is used by the npm package.
 export async function elmWatch(options: unknown): Promise<number> {
-  // Not covered by tests: Passing a non-object would print to the real stdout.
-  /* v8 ignore start */
   const isObject = typeof options === "object" && options !== null;
-  /* v8 ignore stop */
 
   const {
     env = process.env,
@@ -118,14 +115,10 @@ export async function elmWatch(options: unknown): Promise<number> {
     stdout = process.stdout,
     stderr = process.stderr,
     createServer = defaultCreateServer,
-    /* v8 ignore next -- @preserve */
     logDebug = (message) => stderr.write(`${message}\n`),
     hotTestHooks = { kill: undefined },
     ...publicOptions
-  } = (isObject ? options : /* v8 ignore next -- @preserve */ {}) as Omit<
-    Options,
-    "cwd"
-  >;
+  } = (isObject ? options : {}) as Omit<Options, "cwd">;
 
   const getNow: GetNow = () => new Date();
   const logger = makeLogger({
@@ -140,7 +133,7 @@ export async function elmWatch(options: unknown): Promise<number> {
   const decoded = decodeOptions(
     isObject
       ? { env, stdin, stdout, stderr, createServer, ...publicOptions }
-      : /* v8 ignore next -- @preserve */ options,
+      : options,
   );
 
   switch (decoded.tag) {

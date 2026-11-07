@@ -53,52 +53,40 @@ export function spawn(command: Command): {
 } {
   let killed = false;
 
-  /* v8 ignore start */
   let kill = (): void => {
     killed = true;
   };
-  /* v8 ignore stop */
 
   const promise = new Promise<SpawnResult>((resolve) => {
     const child = spawnChild(command);
 
-    /* v8 ignore start */
     if (child === undefined) {
       resolve({ tag: "CommandNotFoundError", command });
       return;
     }
-    /* v8 ignore stop */
 
     const stdout: Array<Buffer> = [];
     const stderr: Array<Buffer> = [];
 
     child.on("error", (error: Error & { code?: string }) => {
       resolve(
-        /* v8 ignore start */
         error.code === "ENOENT"
           ? { tag: "CommandNotFoundError", command }
           : { tag: "OtherSpawnError", error, command },
-        /* v8 ignore stop */
       );
     });
 
-    /* v8 ignore start */
     child.stdin.on("error", (error: Error) => {
       resolve({ tag: "OtherSpawnError", error, command });
     });
-    /* v8 ignore stop */
 
-    /* v8 ignore start */
     child.stdout.on("error", (error: Error) => {
       resolve({ tag: "OtherSpawnError", error, command });
     });
-    /* v8 ignore stop */
 
-    /* v8 ignore start */
     child.stderr.on("error", (error: Error) => {
       resolve({ tag: "OtherSpawnError", error, command });
     });
-    /* v8 ignore stop */
 
     child.stdout.on("data", (chunk: Buffer) => {
       stdout.push(chunk);
@@ -136,14 +124,12 @@ export function spawn(command: Command): {
     running.delete(promise);
   });
 
-  /* v8 ignore start */
   return {
     promise,
     kill: () => {
       kill();
     },
   };
-  /* v8 ignore stop */
 }
 
 // Returns `undefined` if the command could not be found on Windows. On other
@@ -151,7 +137,6 @@ export function spawn(command: Command): {
 function spawnChild(
   command: Command,
 ): childProcess.ChildProcessWithoutNullStreams | undefined {
-  /* v8 ignore start */
   if (!IS_WINDOWS) {
     return childProcess.spawn(command.command, command.args, command.options);
   }
@@ -178,12 +163,10 @@ function spawnChild(
         ...command.options,
         shell: true,
       });
-  /* v8 ignore stop */
 }
 
 // Like `which`, but for Windows only. We only ever spawn `elm`, so this only
 // supports bare command names without extension.
-/* v8 ignore start */
 function findOnWindowsPath(
   command: string,
   cwd: AbsolutePath,
@@ -224,9 +207,7 @@ function findOnWindowsPath(
 
   return undefined;
 }
-/* v8 ignore stop */
 
-/* v8 ignore start */
 function windowsEscape(arg: string): string {
   // The args we pass to `elm` are flags and file paths. File paths cannot
   // contain double quotes and newlines on Windows. That makes it much easier to
@@ -240,7 +221,6 @@ function windowsEscape(arg: string): string {
   // contains all the text you wrote within the double quotes unchanged.
   return `"${arg.replace(/%/g, '"%"')}"`;
 }
-/* v8 ignore stop */
 
 export type ExitReason =
   | {
@@ -259,11 +239,9 @@ function exitReason(
   exitCode: number | null,
   signal: NodeJS.Signals | null,
 ): ExitReason {
-  /* v8 ignore start */
   return exitCode !== null
     ? { tag: "ExitCode", exitCode }
     : signal !== null
       ? { tag: "Signal", signal }
       : { tag: "Unknown" };
-  /* v8 ignore stop */
 }
