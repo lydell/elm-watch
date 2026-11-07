@@ -112,6 +112,7 @@ export function fixtureDir(fixture: string): string {
 
 let watcher: fs.FSWatcher | undefined = undefined;
 const hotKillManager: HotKillManager = { kill: undefined };
+let describeUnfinishedRun: (() => string) | undefined = undefined;
 
 export async function cleanupAfterEachTest(): Promise<void> {
   const { currentTestName } = expect.getState();
@@ -138,6 +139,9 @@ export async function cleanupAfterEachTest(): Promise<void> {
     console.error(
       "cleanupAfterEachTest: elm-watch never finished – killing. Test:",
       currentTestName,
+      // Print what has happened so far, so that there’s something to go on
+      // when a test times out.
+      `\n${describeUnfinishedRun?.() ?? ""}`,
     );
     await hotKillManager.kill();
   }
@@ -250,6 +254,16 @@ export async function run({
   const browserConsole: Array<string> = [];
   const renders: Array<string> = [];
   let loads = 0;
+  let idle = 0;
+
+  describeUnfinishedRun = () =>
+    [
+      `Idle states reached: ${idle}`,
+      `Terminal:\n${clean(stdout.getOutput())}`,
+      `stderr:\n${clean(stderr.content)}`,
+      `Browser console:\n${browserConsole.join("\n\n")}`,
+      `Last render:\n${clean(renders.at(-1) ?? "(none)")}`,
+    ].join(`\n${"-".repeat(80)}\n`);
 
   await new Promise((resolve, reject) => {
     const loadBuiltFiles = (): void => {
@@ -367,7 +381,6 @@ export async function run({
       },
     }).debug;
 
-    let idle = 0;
     window.__ELM_WATCH.ON_REACHED_IDLE_STATE = (reason) => {
       idle++;
       // So that another idle state can’t change the previous’ number while it’s waiting.
@@ -435,6 +448,8 @@ export async function run({
       .then(resolve)
       .catch(reject);
   });
+
+  describeUnfinishedRun = undefined;
 
   const stdoutString = clean(stdout.getOutput());
 
