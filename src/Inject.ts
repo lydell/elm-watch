@@ -1,6 +1,7 @@
 import * as Codec from "tiny-decoders";
 
 import * as ClientCode from "./ClientCode.ts";
+import { CLIENT_CONFIG_IDENTIFIER, type ClientConfig } from "./ClientConfig.ts";
 import type {
   BrowserUiPosition,
   CompilationMode,
@@ -895,15 +896,14 @@ export function clientCode(
   webSocketToken: WebSocketToken,
   debug: boolean,
 ): string {
-  const replacements: Record<string, string> = {
-    TARGET_NAME: outputPath.targetName,
-    INITIAL_ELM_COMPILED_TIMESTAMP: elmCompiledTimestamp.toString(),
-    ORIGINAL_COMPILATION_MODE: compilationMode,
-    ORIGINAL_BROWSER_UI_POSITION: browserUiPosition,
-    WEBSOCKET_CONNECTION:
-      webSocketConnectionToPrimitive(webSocketConnection).toString(),
-    WEBSOCKET_TOKEN: webSocketToken,
-    DEBUG: debug.toString(),
+  const config: ClientConfig = {
+    targetName: outputPath.targetName,
+    initialElmCompiledTimestamp: elmCompiledTimestamp,
+    originalCompilationMode: compilationMode,
+    originalBrowserUiPosition: browserUiPosition,
+    webSocketConnection: webSocketConnectionToPrimitive(webSocketConnection),
+    webSocketToken,
+    debug,
   };
   return (
     versionedIdentifier(
@@ -911,11 +911,9 @@ export function clientCode(
       webSocketConnection,
       webSocketToken,
     ) +
-    ClientCode.client.replace(
-      new RegExp(`"%(${Object.keys(replacements).join("|")})%"`, "g"),
-      (_, name: string) =>
-        /* v8 ignore next -- @preserve */
-        Codec.JSON.stringify(Codec.string, replacements[name] ?? name),
+    // Using a function, so that `$` in the replacement isn’t special.
+    ClientCode.client.replace(CLIENT_CONFIG_IDENTIFIER, () =>
+      Codec.JSON.stringify(Codec.unknown, config),
     )
   );
 }

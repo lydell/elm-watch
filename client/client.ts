@@ -1,5 +1,6 @@
 import * as Codec from "tiny-decoders";
 
+import type { ClientConfig } from "../src/ClientConfig.ts";
 import { formatDate, formatTime } from "../src/Helpers.ts";
 import type { NonEmptyArray } from "../src/NonEmptyArray.ts";
 import { runTeaProgram } from "../src/TeaProgram.ts";
@@ -268,27 +269,29 @@ for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
   }
 }
 
+// Replaced when injecting this code. See ClientConfig.ts.
+declare const __ELM_WATCH_CLIENT_CONFIG__: ClientConfig;
+
+// Replaced at build time.
 const VERSION = "%VERSION%";
-const WEBSOCKET_TOKEN = "%WEBSOCKET_TOKEN%";
-const TARGET_NAME = "%TARGET_NAME%";
-const INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-  "%INITIAL_ELM_COMPILED_TIMESTAMP%",
-);
-// Note: The JS code running is compiled in `ORIGINAL_COMPILATION_MODE`. But
-// that does not necessarily match the selected compilation mode for the target.
-// If you have a `Debug.log` and switch to optimize mode it won’t be possible to
-// compile, because `Debug.log` isn’t allowed in optimize mode. Therefore we
-// have the selected compilation mode in the `Model` and the running mode here.
-const ORIGINAL_COMPILATION_MODE =
-  "%ORIGINAL_COMPILATION_MODE%" as CompilationModeWithProxy;
-// This is the saved browser UI position as of when this file was compiled. We
-// also store the latest saved position in the model, which is updated as soon
-// as things change.
-const ORIGINAL_BROWSER_UI_POSITION =
-  "%ORIGINAL_BROWSER_UI_POSITION%" as BrowserUiPosition;
-const WEBSOCKET_CONNECTION = "%WEBSOCKET_CONNECTION%";
+const {
+  webSocketToken: WEBSOCKET_TOKEN,
+  targetName: TARGET_NAME,
+  initialElmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
+  // Note: The JS code running is compiled in `ORIGINAL_COMPILATION_MODE`. But
+  // that does not necessarily match the selected compilation mode for the target.
+  // If you have a `Debug.log` and switch to optimize mode it won’t be possible to
+  // compile, because `Debug.log` isn’t allowed in optimize mode. Therefore we
+  // have the selected compilation mode in the `Model` and the running mode here.
+  originalCompilationMode: ORIGINAL_COMPILATION_MODE,
+  // This is the saved browser UI position as of when this file was compiled. We
+  // also store the latest saved position in the model, which is updated as soon
+  // as things change.
+  originalBrowserUiPosition: ORIGINAL_BROWSER_UI_POSITION,
+  webSocketConnection: WEBSOCKET_CONNECTION,
+  debug: DEBUG,
+} = __ELM_WATCH_CLIENT_CONFIG__;
 const CONTAINER_ID = "elm-watch";
-const DEBUG = String("%DEBUG%") === "true";
 
 // Public events:
 const ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT =
@@ -1258,7 +1261,7 @@ function initWebSocket(
           window.location.protocol === "https:" ? "wss" : "ws",
         ];
   const url = new URL(
-    /^\d+$/.test(WEBSOCKET_CONNECTION)
+    typeof WEBSOCKET_CONNECTION === "number"
       ? `${protocol}://${hostname}:${WEBSOCKET_CONNECTION}/elm-watch`
       : WEBSOCKET_CONNECTION,
   );

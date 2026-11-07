@@ -5,12 +5,12 @@ import * as fs from "fs";
 import { build } from "rolldown";
 
 import {
-  checkPlaceholders,
+  checkClientConfigIdentifier,
   clientBuildOptions,
   getOnlyChunk,
   PROXY_SRC_PATH,
 } from "../scripts/Build.ts";
 
 export const client = getOnlyChunk((await build(clientBuildOptions)).output);
-checkPlaceholders(client);
+checkClientConfigIdentifier(client);
 export const proxy = fs.readFileSync(PROXY_SRC_PATH, "utf8");

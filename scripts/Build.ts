@@ -8,6 +8,8 @@ import {
 } from "rolldown";
 import * as Codec from "tiny-decoders";
 
+import { CLIENT_CONFIG_IDENTIFIER } from "../src/ClientConfig.ts";
+
 const DIR = path.dirname(import.meta.dirname);
 const BUILD = path.join(DIR, "build");
 const CLIENT_DIR = path.join(DIR, "client");
@@ -97,7 +99,7 @@ export const proxy = fs.readFileSync(path.join(import.meta.dirname, "proxy.js"),
 
   const clientResult = await build(clientBuildOptions);
   const clientCode = getOnlyChunk(clientResult.output);
-  checkPlaceholders(clientCode);
+  checkClientConfigIdentifier(clientCode);
   fs.writeFileSync(
     path.join(BUILD, "client.js"),
     clientCode.replace(/%VERSION%/g, PACKAGE_REAL.version),
@@ -142,15 +144,13 @@ export function getOnlyChunk(output: RolldownOutput["output"]): string {
   return chunk.code;
 }
 
-// Make sure that all placeholders in the source survived bundling.
-export function checkPlaceholders(code: string): void {
-  const source = fs.readFileSync(path.join(CLIENT_DIR, "client.ts"), "utf8");
-  const missing = Array.from(new Set(source.match(/"%[A-Z_]+%"/g))).filter(
-    (placeholder) => !code.includes(placeholder),
-  );
-  if (missing.length > 0) {
+// Make sure that the client config identifier survived bundling, exactly once
+// (so that the config object isn’t duplicated).
+export function checkClientConfigIdentifier(code: string): void {
+  const count = code.split(CLIENT_CONFIG_IDENTIFIER).length - 1;
+  if (count !== 1) {
     throw new Error(
-      `Placeholders missing from the built client code: ${missing.join(", ")}`,
+      `Expected ${CLIENT_CONFIG_IDENTIFIER} to occur exactly once in the built client code, but found it ${count} times.`,
     );
   }
 }
@@ -173,13 +173,7 @@ export const clientCodeExternalPlugin: Plugin = {
 export const clientBuildOptions: BuildOptions & { write: false } = {
   input: path.join(CLIENT_DIR, "client.ts"),
   platform: "browser",
-  // Tree shaking and minification fold constants, which would break
-  // placeholders like `Number("%INITIAL_ELM_COMPILED_TIMESTAMP%")` (into `NaN`)
-  // and `"%TARGET_NAME%"` (by inlining it into other strings). Those
-  // placeholders are replaced when injecting the client code into Elm’s output.
-  // See also `checkPlaceholders`.
-  treeshake: false,
-  output: { format: "iife", strict: true, minify: false },
+  output: { format: "iife", strict: true },
   write: false,
 };
 
