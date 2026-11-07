@@ -1,4 +1,3 @@
-import spawn from "cross-spawn";
 import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
@@ -35,6 +34,7 @@ import {
   TEST_ENV,
   wait,
 } from "./Helpers";
+import { spawnSync } from "./Spawn.js";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
@@ -226,12 +226,11 @@ describe("errors", () => {
       const elmStuff = path.join(dir, "elm-stuff");
       const iDat = path.join(elmStuff, "0.19.1", "i.dat");
       await rimraf(elmStuff);
-      const result = spawn.sync(
+      const result = spawnSync(
         "elm",
         ["make", "--output=/dev/null", "src/Main.elm"],
         {
           cwd: dir,
-          encoding: "utf8",
         },
       );
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

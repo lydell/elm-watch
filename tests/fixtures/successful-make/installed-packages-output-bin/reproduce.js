@@ -1,4 +1,4 @@
-import crossSpawn from "cross-spawn";
+import { spawnSync } from "#spawn";
 import fs from "fs";
 import path from "path";
 
@@ -10,8 +10,7 @@ const input = path.join(mainDir, "src", "Main.elm");
 fs.rmSync(elmHome, { recursive: true, force: true });
 fs.rmSync(elmStuff, { recursive: true, force: true });
 
-const result = crossSpawn.sync("elm", ["make", input, "--output=/dev/null"], {
-  encoding: "utf8",
+const result = spawnSync("elm", ["make", input, "--output=/dev/null"], {
   env: {
     ...process.env,
     ELM_HOME: elmHome,

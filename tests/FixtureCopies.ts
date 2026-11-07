@@ -1,5 +1,4 @@
 import * as childProcess from "child_process";
-import spawn from "cross-spawn";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as os from "os";
@@ -7,6 +6,7 @@ import * as path from "path";
 import { expect, onTestFinished } from "vitest";
 
 import { rimraf, TEST_ENV } from "./Helpers";
+import { spawnSync } from "./Spawn.js";
 
 const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures");
 const FIXTURE_COPIES_DIR = path.join(import.meta.dirname, "fixtures-copies");
@@ -169,7 +169,7 @@ function warmElmStuffCache(
     "module ElmWatchWarmup exposing (x)\n\n\nx =\n    1\n",
   );
 
-  const result = spawn.sync("elm", ["make", input, "--output=/dev/null"], {
+  const result = spawnSync("elm", ["make", input, "--output=/dev/null"], {
     cwd: dir,
     env: { ...process.env, ...TEST_ENV },
   });

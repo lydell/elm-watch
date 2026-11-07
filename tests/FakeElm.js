@@ -7,7 +7,7 @@
 // it is interested in – the rest are passed through to the real `elm`. That way
 // a new kind of call (like when elm-watch started running `elm --version` on
 // every start) doesn’t make the fakes hang or fail in confusing ways.
-import spawn from "cross-spawn";
+import { spawn } from "#spawn";
 import path from "path";
 
 export const args = process.argv.slice(2);

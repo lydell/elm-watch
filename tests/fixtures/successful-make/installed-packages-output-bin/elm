@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import spawn from "cross-spawn";
+import { spawn } from "#spawn";
 import path from "path";
 
 if (process.argv.some((arg) => arg.includes("ElmWatchNonExistentFile"))) {

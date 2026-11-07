@@ -1,7 +1,8 @@
 /* eslint-disable no-console */
-import { spawn } from "cross-spawn";
 import * as fs from "fs";
 import * as path from "path";
+
+import { spawn } from "../tests/Spawn.js";
 
 const INSTALL_PACKAGES_DIR = path.join(
   import.meta.dirname,
