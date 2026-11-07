@@ -30,6 +30,7 @@ const project: Project = {
     url: new URL("ws://localhost:1234"),
     source: "elm-watch.json",
   },
+  allowedHosts: [],
   elmVersion: markAsElmVersion("0.19.1"),
   elmWatchJsonPath: markAsElmWatchJsonPath(
     markAsAbsolutePath("/Users/you/project/elm-watch.json"),
@@ -271,6 +272,7 @@ describe("Project", () => {
           "url": "ws://localhost:1234/",
           "source": "elm-watch.json"
         },
+        "allowedHosts": [],
         "elmWatchJson": "/Users/you/project/elm-watch.json",
         "elmWatchStuffJson": "/Users/you/project/elm-stuff/elm-watch/stuff.json",
         "maxParallel": 12,

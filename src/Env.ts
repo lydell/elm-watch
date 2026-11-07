@@ -24,6 +24,12 @@ export const ELM_WATCH_HOST = "ELM_WATCH_HOST";
 // Type: URL starting with ws: or wss:.
 export const ELM_WATCH_WEBSOCKET_URL = "ELM_WATCH_WEBSOCKET_URL";
 
+// Hosts to allow in addition to "allowedHosts" in elm-watch.json, for cases
+// where you need to set them dynamically. For example, if every developer has
+// their own tunnel domain.
+// Type: Comma-separated hostnames.
+export const ELM_WATCH_ALLOWED_HOSTS = "ELM_WATCH_ALLOWED_HOSTS";
+
 // If the `ELM_WATCH_OPEN_EDITOR` takes this long, it is killed.
 // Type: Number.
 export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS =

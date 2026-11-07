@@ -1,6 +1,11 @@
 import * as os from "os";
 import * as path from "path";
 
+import {
+  AllowedHost,
+  allowedHostFromUrl,
+  getAllowedHostsFromEnv,
+} from "./AllowedHosts";
 import * as ElmJson from "./ElmJson";
 import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
@@ -53,6 +58,7 @@ export type Project = {
   maxParallel: number;
   postprocess: Postprocess;
   webSocketUrl: WebSocketUrl | undefined;
+  allowedHosts: Array<AllowedHost>;
 };
 
 // The code base leans towards pure functions, but this data structure is going
@@ -459,6 +465,18 @@ export function initProject({
 
   const webSocketUrl = getWebSocketUrlFromEnv(env) ?? config.webSocketUrl;
 
+  // If you connect the WebSocket via some custom host, that host should be
+  // allowed. It’s typically also the host of the page.
+  const allowedHosts = Array.from(
+    new Set([
+      ...(config.allowedHosts ?? []),
+      ...getAllowedHostsFromEnv(env),
+      ...(webSocketUrl === undefined
+        ? []
+        : [allowedHostFromUrl(webSocketUrl.url)]),
+    ]),
+  );
+
   return {
     tag: "Project",
     project: {
@@ -473,6 +491,7 @@ export function initProject({
       maxParallel,
       postprocess,
       webSocketUrl,
+      allowedHosts,
     },
   };
 }
@@ -739,6 +758,7 @@ export function projectToDebug(project: Project): unknown {
     watchRoots: Array.from(project.watchRoots),
     staticFilesDir: project.staticFilesDir,
     webSocketUrl: project.webSocketUrl,
+    allowedHosts: project.allowedHosts,
     elmWatchJson: project.elmWatchJsonPath,
     elmWatchStuffJson: project.elmWatchStuffJsonPath,
     maxParallel: project.maxParallel,

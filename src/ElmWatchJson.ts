@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
+import { AllowedHost } from "./AllowedHosts";
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
@@ -123,6 +124,7 @@ const Config = Codec.fields(
       optional: true,
     }),
     serve: Codec.field(Codec.string, { optional: true }),
+    allowedHosts: Codec.field(Codec.array(AllowedHost), { optional: true }),
   },
   { allowExtraFields: false },
 );
