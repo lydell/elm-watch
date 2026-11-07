@@ -2,7 +2,6 @@ import * as childProcess from "child_process";
 import spawn from "cross-spawn";
 import * as crypto from "crypto";
 import * as fs from "fs";
-import * as net from "net";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { expect, onTestFinished } from "vitest";
@@ -570,17 +569,17 @@ function warmElmStuffCache(
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-async function getFreePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.on("error", reject);
-    server.listen(0, () => {
-      const { port } = server.address() as net.AddressInfo;
-      server.close(() => {
-        resolve(port);
-      });
-    });
-  });
+// A persisted port that is taken is an error, so each test needs its own port.
+// Asking the operating system for a free port is not enough: Another test file
+// running in parallel can get the same port (from listening on port 0, or for
+// an outgoing connection) before elm-watch starts listening on it. Instead,
+// each Vitest worker gets its own range of ports, below the ephemeral port
+// ranges of macOS, Linux and Windows. Tests within a worker run in sequence.
+let portCounter = 0;
+function getUniquePort(): number {
+  const poolId = Number(process.env["VITEST_POOL_ID"] ?? "0");
+  portCounter++;
+  return 20000 + poolId * 500 + (portCounter % 500);
 }
 
 function joinRenders(renders: Array<string>): string {
@@ -690,9 +689,7 @@ export function runHotReload({
       fs.writeFileSync(
         elmWatchStuffJsonPath,
         Codec.JSON.stringify(ElmWatchStuffJson, {
-          // A persisted port that is taken is an error, so use a free port to
-          // allow running tests in parallel.
-          port: markAsPort(await getFreePort()),
+          port: markAsPort(getUniquePort()),
           ...elmWatchStuffJson,
         }),
       );
