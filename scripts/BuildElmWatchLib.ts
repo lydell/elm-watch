@@ -1,9 +1,15 @@
-import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
+import { build } from "rolldown";
 import * as Codec from "tiny-decoders";
 
-import { type FileToCopy, readPackage } from "./Build.ts";
+import {
+  clientCodeExternalPlugin,
+  type FileToCopy,
+  getOnlyChunk,
+  isPackage,
+  readPackage,
+} from "./Build.ts";
 
 const DIR = path.dirname(import.meta.dirname);
 const BUILD = path.join(DIR, "build-elm-watch-lib");
@@ -77,46 +83,20 @@ ${PACKAGE_REAL.description}
     `.trim(),
   );
 
-  const result = await esbuild.build({
-    bundle: true,
-    legalComments: "inline",
-    entryPoints: [path.join(DIR, "src", "elm-watch-lib.ts")],
-    packages: "external",
-    format: "esm",
-    outdir: BUILD,
+  const result = await build({
+    input: path.join(DIR, "src", "elm-watch-lib.ts"),
     platform: "node",
+    external: isPackage,
+    plugins: [clientCodeExternalPlugin],
+    output: { format: "esm" },
     write: false,
-    plugins: [
-      {
-        // I didn’t manage to do this with the `external` option, so using a plugin instead.
-        name: "Ignore ClientCode.ts",
-        setup(build) {
-          build.onResolve(
-            {
-              filter: /^\.\/ClientCode\.ts$/,
-            },
-            () => ({ path: "./ClientCode", external: true }),
-          );
-        },
-      },
-    ],
   });
 
-  for (const output of result.outputFiles) {
-    switch (path.basename(output.path)) {
-      case "elm-watch-lib.js": {
-        const code = output.text.replace(
-          `import * as ClientCode from "./ClientCode";\n`,
-          "",
-        );
-        fs.writeFileSync(path.join(BUILD, "index.js"), code);
-        break;
-      }
-
-      default:
-        throw new Error(`Unexpected output: ${output.path}`);
-    }
+  const code = getOnlyChunk(result.output);
+  if (code.includes("ClientCode")) {
+    throw new Error("Expected ClientCode to be tree shaken away.");
   }
+  fs.writeFileSync(path.join(BUILD, "index.js"), code);
 }
 
 run().catch((error: Error) => {

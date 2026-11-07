@@ -5,7 +5,7 @@
   "license": "MIT",
   "description": "`elm make` in watch mode. Fast and reliable.",
   "repository": "lydell/elm-watch",
-  "type": "commonjs",
+  "type": "module",
   "exports": {
     ".": "./index.js"
   },

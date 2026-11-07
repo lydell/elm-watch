@@ -1,6 +1,11 @@
-import * as esbuild from "esbuild";
 import * as fs from "fs";
 import * as path from "path";
+import {
+  build,
+  type BuildOptions,
+  type Plugin,
+  type RolldownOutput,
+} from "rolldown";
 import * as Codec from "tiny-decoders";
 
 const DIR = path.dirname(import.meta.dirname);
@@ -83,90 +88,98 @@ async function run(): Promise<void> {
   fs.writeFileSync(
     path.join(BUILD, "ClientCode.js"),
     `
-const fs = require("fs");
-const path = require("path");
-exports.client = fs.readFileSync(path.join(__dirname, "client.js"), "utf8");
-exports.proxy = fs.readFileSync(path.join(__dirname, "proxy.js"), "utf8");
+import * as fs from "fs";
+import * as path from "path";
+export const client = fs.readFileSync(path.join(import.meta.dirname, "client.js"), "utf8");
+export const proxy = fs.readFileSync(path.join(import.meta.dirname, "proxy.js"), "utf8");
     `.trim(),
   );
 
-  const clientResult = await esbuild.build(clientEsbuildOptions);
+  const clientResult = await build(clientBuildOptions);
+  const clientCode = getOnlyChunk(clientResult.output);
+  checkPlaceholders(clientCode);
+  fs.writeFileSync(
+    path.join(BUILD, "client.js"),
+    clientCode.replace(/%VERSION%/g, PACKAGE_REAL.version),
+  );
 
-  for (const output of clientResult.outputFiles) {
-    switch (path.basename(output.path)) {
-      case "client.js":
-        fs.writeFileSync(
-          output.path,
-          output.text.replace(/%VERSION%/g, PACKAGE_REAL.version),
-        );
-        break;
-
-      default:
-        throw new Error(`Unexpected output: ${output.path}`);
-    }
-  }
-
-  const result = await esbuild.build({
-    bundle: true,
-    legalComments: "inline",
-    entryPoints: [path.join(DIR, "src", "index.ts")],
-    packages: "external",
-    outdir: BUILD,
+  const result = await build({
+    input: path.join(DIR, "src", "index.ts"),
     platform: "node",
+    external: isPackage,
+    plugins: [clientCodeExternalPlugin],
+    output: { format: "esm" },
     write: false,
-    // The build is CommonJS, which does not support `import.meta`.
-    define: { "import.meta.main": "IMPORT_META_MAIN" },
-    plugins: [
-      {
-        // I didn’t manage to do this with the `external` option, so using a plugin instead.
-        name: "Ignore ClientCode.ts",
-        setup(build) {
-          build.onResolve(
-            {
-              filter: /^\.\/ClientCode\.ts$/,
-            },
-            () => ({ path: "./ClientCode", external: true }),
-          );
-        },
-      },
-    ],
   });
 
-  const toModuleRegex = /__toESM\((require\("[^"]+"\))(?:, 1)?\)/g;
+  // `elmWatchCli` is only exported for the tests.
+  const exportsLine = "export { elmWatchCli as default, elmWatch };";
+  const code = getOnlyChunk(result.output);
+  if (!code.includes(exportsLine)) {
+    throw new Error(`Expected index.js to contain: ${exportsLine}`);
+  }
+  fs.writeFileSync(
+    path.join(BUILD, "index.js"),
+    `#!/usr/bin/env node\n${code
+      .replace(exportsLine, "export { elmWatch };")
+      .replace(/%VERSION%/g, PACKAGE_REAL.version)
+      .trim()}\n`,
+    { mode: "755" },
+  );
+}
 
-  for (const output of result.outputFiles) {
-    switch (path.basename(output.path)) {
-      case "index.js": {
-        const replaced = output.text
-          .replace(
-            /^[^]+\nmodule.exports = .+\s*/g,
-            "exports.elmWatch = elmWatch;\n",
-          )
-          .replace(toModuleRegex, "$1")
-          .replace(/\bIMPORT_META_MAIN\b/g, "require.main === module")
-          .replace(/%VERSION%/g, PACKAGE_REAL.version)
-          .trim();
-        const code = `#!/usr/bin/env node\n"use strict";\n${replaced}`;
-        fs.writeFileSync(output.path, code, { mode: "755" });
-        break;
-      }
+export function getOnlyChunk(output: RolldownOutput["output"]): string {
+  const [chunk, ...rest] = output;
+  if (rest.length > 0) {
+    throw new Error(
+      `Expected a single chunk, but got: ${output.map((item) => item.fileName).join(", ")}`,
+    );
+  }
+  return chunk.code;
+}
 
-      default:
-        throw new Error(`Unexpected output: ${output.path}`);
-    }
+// Make sure that all placeholders in the source survived bundling.
+export function checkPlaceholders(code: string): void {
+  const source = fs.readFileSync(path.join(CLIENT_DIR, "client.ts"), "utf8");
+  const missing = Array.from(new Set(source.match(/"%[A-Z_]+%"/g))).filter(
+    (placeholder) => !code.includes(placeholder),
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `Placeholders missing from the built client code: ${missing.join(", ")}`,
+    );
   }
 }
 
-export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
-  bundle: true,
-  entryPoints: [path.join(CLIENT_DIR, "client.ts")],
-  outdir: BUILD,
+export function isPackage(id: string): boolean {
+  return !id.startsWith(".") && !path.isAbsolute(id);
+}
+
+// In production, src/ClientCode.ts is replaced with a file that reads the
+// pre-built client code from disk.
+export const clientCodeExternalPlugin: Plugin = {
+  name: "ClientCode.ts external",
+  resolveId(source) {
+    return source === "./ClientCode.ts"
+      ? { id: "./ClientCode.js", external: true, moduleSideEffects: false }
+      : null;
+  },
+};
+
+export const clientBuildOptions: BuildOptions & { write: false } = {
+  input: path.join(CLIENT_DIR, "client.ts"),
   platform: "browser",
+  // Tree shaking and minification fold constants, which would break
+  // placeholders like `Number("%INITIAL_ELM_COMPILED_TIMESTAMP%")` (into `NaN`)
+  // and `"%TARGET_NAME%"` (by inlining it into other strings). Those
+  // placeholders are replaced when injecting the client code into Elm’s output.
+  // See also `checkPlaceholders`.
+  treeshake: false,
+  output: { format: "iife", strict: true, minify: false },
   write: false,
 };
 
-// oxlint-disable-next-line typescript/no-non-null-assertion
-if (process.argv[1]!.endsWith("Build.ts")) {
+if (import.meta.main) {
   run().catch((error: Error) => {
     process.stderr.write(`${error.message}\n`);
     process.exit(1);
