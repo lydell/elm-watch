@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+import fs from "fs";
+import path from "path";
+import { fakeElm, realElm, waitUntil } from "#fake-elm";
+
+const lockFile = path.join(import.meta.dirname, "..", "..", "lock");
+
+// When `lock` says “Slow”, say “Started” and wait for “Continue” before
+// compiling for real. Then say “Done”.
+fakeElm({
+  make: async () => {
+    if (fs.readFileSync(lockFile, "utf8") !== "Slow") {
+      return realElm();
+    }
+    fs.writeFileSync(lockFile, "Started");
+    await waitUntil(() => fs.readFileSync(lockFile, "utf8") === "Continue");
+    const exitCode = await realElm();
+    fs.writeFileSync(lockFile, "Done");
+    return exitCode;
+  },
+});

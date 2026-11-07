@@ -317,8 +317,7 @@ export async function runConfig({
                 case "ExitOnIdle":
                   return {
                     tag: "Exit",
-                    exitCode:
-                      result.reason === "CtrlCPressedOrStdinEnd" ? 0 : 1,
+                    exitCode: result.reason === "Other" ? 1 : 0,
                   };
 
                 case "Restart":

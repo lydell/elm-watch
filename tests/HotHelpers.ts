@@ -42,6 +42,7 @@ let watcher: fs.FSWatcher | undefined = undefined;
 let elmWatchIsIdle = false;
 let watcherIsReady = false;
 const msgListeners = new Set<(msg: Msg) => void>();
+const sigtermListeners = new Set<() => void>();
 const hotTestHooks: HotTestHooks = {
   kill: undefined,
   onUpdate: (msg, isIdle) => {
@@ -53,7 +54,20 @@ const hotTestHooks: HotTestHooks = {
   onWatcherReadyChange: (isReady) => {
     watcherIsReady = isReady;
   },
+  subscribeToSigterm: (listener) => {
+    sigtermListeners.add(listener);
+    return () => {
+      sigtermListeners.delete(listener);
+    };
+  },
 };
+
+// Simulates `node --watch` restarting elm-watch.
+export function sendSigterm(): void {
+  for (const listener of sigtermListeners) {
+    listener();
+  }
+}
 
 // Resolves once elm-watch has handled a message matching `predicate`. Call this
 // _before_ doing the thing that causes the message, and await the returned

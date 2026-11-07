@@ -35,6 +35,16 @@ export type Command = {
   };
 };
 
+// Promises for all commands that are currently running.
+const running = new Set<Promise<unknown>>();
+
+// Resolves once all currently running commands have exited.
+export async function waitForRunningCommands(): Promise<void> {
+  while (running.size > 0) {
+    await Promise.allSettled(running);
+  }
+}
+
 export function spawn(command: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
@@ -126,10 +136,19 @@ export function spawn(command: Command): {
     });
 
   /* v8 ignore start */
+  const resultPromise = IS_WINDOWS
+    ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
+    : promise(childProcess.spawn);
+  /* v8 ignore stop */
+
+  running.add(resultPromise);
+  void resultPromise.finally(() => {
+    running.delete(resultPromise);
+  });
+
+  /* v8 ignore start */
   return {
-    promise: IS_WINDOWS
-      ? import("cross-spawn").then((crossSpawn) => promise(crossSpawn.spawn))
-      : promise(childProcess.spawn),
+    promise: resultPromise,
     kill: () => {
       kill();
     },

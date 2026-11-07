@@ -52,6 +52,7 @@ import {
   Project,
   projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project";
+import { waitForRunningCommands } from "./Spawn";
 import { runTeaProgram } from "./TeaProgram";
 import * as Theme from "./Theme";
 import {
@@ -147,6 +148,7 @@ type Mutable = {
   watcherTimeoutId: NodeJS.Timeout | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
+  unsubscribeFromSigterm: () => void;
 };
 
 type WebSocketConnection = {
@@ -356,7 +358,7 @@ type HotRunResult =
     }
   | {
       tag: "ExitOnIdle";
-      reason: "CtrlCPressedOrStdinEnd" | "Other";
+      reason: "CtrlCPressedOrStdinEnd" | "Other" | "Sigterm";
     }
   | {
       tag: "Restart";
@@ -385,7 +387,18 @@ export type HotTestHooks = {
   // it has scanned all files. Changes made before that might be missed (such as
   // the removal of a file the watcher hasn’t seen yet).
   onWatcherReadyChange?: (isReady: boolean) => void;
+  // Replaces listening for SIGTERM on `process`. Returns an unsubscribe function.
+  subscribeToSigterm?: (listener: () => void) => () => void;
 };
+
+/* v8 ignore start */
+function subscribeToProcessSigterm(listener: () => void): () => void {
+  process.on("SIGTERM", listener);
+  return () => {
+    process.off("SIGTERM", listener);
+  };
+}
+/* v8 ignore stop */
 
 // This uses something inspired by The Elm Architecture, since it’s all about
 // keeping state (model) and reacting to events (messages).
@@ -560,6 +573,9 @@ const initMutable =
       watcherTimeoutId: undefined,
       elmWatchStuffJsonWriteError: undefined,
       killInstallDependencies: undefined,
+      unsubscribeFromSigterm: () => {
+        // Replaced below.
+      },
     };
 
     webSocketServer.setDispatch((msg) => {
@@ -630,6 +646,29 @@ const initMutable =
             tag: "ExitOnIdle",
             reason: "CtrlCPressedOrStdinEnd",
           });
+        })
+        .catch(rejectPromise);
+    });
+
+    // `node --watch` sends SIGTERM when restarting. Unlike ctrl+c, we let `elm`
+    // finish (up to a timeout) before exiting, so that the next elm-watch
+    // doesn’t run `elm` at the same time as the old one (which can corrupt
+    // elm-stuff/).
+    mutable.unsubscribeFromSigterm = (
+      hotTestHooks.subscribeToSigterm ?? subscribeToProcessSigterm
+    )(() => {
+      if (mutable.killInstallDependencies !== undefined) {
+        mutable.killInstallDependencies({ force: false });
+      }
+      for (const { outputState } of getFlatOutputs(project)) {
+        if ("kill" in outputState.status) {
+          outputState.status.kill({ force: false });
+        }
+      }
+      closeAll(logger, mutable)
+        .then(waitForRunningCommands)
+        .then(() => {
+          resolvePromise({ tag: "ExitOnIdle", reason: "Sigterm" });
         })
         .catch(rejectPromise);
     });
@@ -2046,6 +2085,7 @@ async function closeAll(
   { killWebSocketServer = true } = {},
 ): Promise<void> {
   logger.reset();
+  mutable.unsubscribeFromSigterm();
 
   /* v8 ignore start */
   if (mutable.watcherTimeoutId !== undefined) {
