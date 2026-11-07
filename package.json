@@ -7,7 +7,6 @@
     "#spawn": "./tests/Spawn.js"
   },
   "scripts": {
-    "postinstall": "elm-tooling install",
     "install-test-elm-dependencies": "tsx scripts/InstallTestDependencies.ts",
     "pretest": "run-pty --auto-exit % prettier --check . % eslint . --report-unused-disable-directives % tsc % tsx scripts/EnsureTestDependencies.ts % npm run build",
     "test": "vitest run --coverage",
@@ -18,7 +17,8 @@
     "@types/ws": "8.5.14",
     "@vitest/coverage-v8": "5.0.5",
     "@vitest/eslint-plugin": "1.1.27",
-    "elm-tooling": "1.15.1",
+    "elm": "0.19.1-6",
+    "elm-format": "0.8.8",
     "esbuild": "0.28.2",
     "eslint": "9.32.0",
     "eslint-plugin-simple-import-sort": "12.1.1",

@@ -16,12 +16,13 @@ This is a minimal example of how to use elm-watch.
 10. Run `npx elm-watch make --optimize` or `npm run build` to build for production. (Since this is a minimal example, there’s no minification, just Elm’s `--optimize` mode.)
 11. Double-click `index.html` to open it straight in a browser to try out the production build.
 
-The example uses [elm-tooling] to install Elm and elm-format, but you can of course install them in any way you want.
+The example uses the [elm] and [elm-format] npm packages to install Elm and elm-format, but you can of course install them in any way you want.
 
 See [example-minimal.yml] for an example GitHub Actions workflow.
 
 See also the [elm-watch example with esbuild][example].
 
-[elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli
+[elm]: https://www.npmjs.com/package/elm
+[elm-format]: https://www.npmjs.com/package/elm-format
 [example-minimal.yml]: https://github.com/lydell/elm-watch/blob/main/.github/workflows/example-minimal.yml
 [example]: https://github.com/lydell/elm-watch/tree/main/example#readme

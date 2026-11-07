@@ -7,7 +7,7 @@ This is an example that uses:
 - elm-watch’s [JavaScript API](https://lydell.github.io/elm-watch/javascript-api/) ([elm-watch.mjs](./elm-watch.mjs)), with [SWC] for extra minification ([postprocess.js](./postprocess.js))
 - A custom little Node.js dev server for routing and proxying, with no dependencies ([dev-server.js](./dev-server.js))
 - [run-pty] to run the above with just one command
-- [elm-tooling] to install Elm and elm-format
+- The [elm] and [elm-format] npm packages to install Elm and elm-format
 
 See [example.yml] for an example GitHub Actions workflow.
 
@@ -35,7 +35,8 @@ This example has many Elm apps (many targets in `elm-watch.mjs`):
 - Some simpler demo/test apps in `src/` just need an HTML file served to work. Visit http://localhost:9000 – which is just esbuild’s static file server – to get links to them. These are useful when developing elm-watch itself but pretty boring as a demo.
 - There are also some real world apps in `public/submodules/`. They use `Browser.application`, so they need a proper server to work fully – that’s where `dev-server.js` comes into play. Visit http://localhost:8000 to get links to them. These are much more fun demo material.
 
-[elm-tooling]: https://elm-tooling.github.io/elm-tooling-cli
+[elm]: https://www.npmjs.com/package/elm
+[elm-format]: https://www.npmjs.com/package/elm-format
 [esbuild]: https://esbuild.github.io/
 [example-minimal]: https://github.com/lydell/elm-watch/tree/main/example-minimal#readme
 [example.yml]: https://github.com/lydell/elm-watch/blob/main/.github/workflows/example.yml
