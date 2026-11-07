@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
 import * as fs from "fs";
+import * as http from "http";
+import type { AddressInfo } from "net";
+import * as os from "os";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { describe, expect, test } from "vitest";
 
+import { toError } from "../src/Helpers";
+import {
+  errorHtml,
+  respondHtml,
+  serveStatic,
+} from "../src/SimpleStaticFileServer";
+import { markAsAbsolutePath, markAsStaticFilesDir } from "../src/Types";
 import { httpGet, stringSnapshotSerializer } from "./Helpers";
 import { FIXTURES_DIR, run } from "./HotHelpers";
 
@@ -66,5 +76,74 @@ describe("SimpleStaticFileServer", () => {
             </body>
           </html>
     `);
+  });
+
+  describe("serveStatic", () => {
+    async function withServer(
+      setup: (dir: string) => void,
+      f: (
+        get: (
+          urlPath: string,
+          options?: http.RequestOptions,
+        ) => Promise<string>,
+      ) => Promise<void>,
+    ): Promise<void> {
+      const tmpDir = fs.realpathSync(
+        fs.mkdtempSync(path.join(os.tmpdir(), "elm-watch-serve-")),
+      );
+      const dir = path.join(tmpDir, "public");
+      fs.mkdirSync(dir);
+      setup(dir);
+      const server = http.createServer((request, response) => {
+        try {
+          serveStatic(markAsStaticFilesDir(markAsAbsolutePath(dir)))(
+            request,
+            response,
+          );
+        } catch (error) {
+          respondHtml(response, 500, errorHtml(toError(error).message));
+        }
+      });
+      await new Promise<void>((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+      const { port } = server.address() as AddressInfo;
+      try {
+        await f(async (urlPath, options) =>
+          (await httpGet(`http://127.0.0.1:${port}${urlPath}`, options))
+            // Only keep status, headers and the <main> content.
+            .replace(/<!DOCTYPE[^]*<main>([^]*)<\/main>[^]*/, "$1")
+            .split(tmpDir)
+            .join("/tmp")
+            .replace(/content-length: \d{3,}\n/, ""),
+        );
+      } finally {
+        await new Promise((resolve) => {
+          server.close(resolve);
+          // Don’t wait for keep-alive connections to time out.
+          server.closeAllConnections();
+        });
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    }
+
+    test("unsupported method", async () => {
+      await withServer(
+        () => {
+          // Nothing.
+        },
+        async (get) => {
+          expect(await get("/", { method: "POST" })).toMatchInlineSnapshot(`
+            405
+            allow: GET, HEAD
+            content-type: text/html; charset=utf-8
+            <h1>Unsupported method</h1>
+                    <pre>Unsupported method
+
+            Only GET and HEAD requests are supported. Got: POST</pre>
+          `);
+        },
+      );
+    });
   });
 });

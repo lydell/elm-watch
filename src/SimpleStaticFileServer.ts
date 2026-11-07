@@ -541,8 +541,10 @@ export function serveStatic(
       }
 
       default:
-        writeHead(response, 405, { Allow: "GET, HEAD" });
-        response.end(
+        response.setHeader("Allow", "GET, HEAD");
+        respondHtml(
+          response,
+          405,
           errorHtml(
             `Unsupported method
 
