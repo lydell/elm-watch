@@ -1,6 +1,13 @@
+import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import { OutputState, type Project, projectToDebug } from "../src/Project.ts";
+import * as ElmWatchJson from "../src/ElmWatchJson.ts";
+import {
+  initProject,
+  OutputState,
+  type Project,
+  projectToDebug,
+} from "../src/Project.ts";
 import {
   type GetNow,
   markAsAbsolutePath,
@@ -8,10 +15,12 @@ import {
   markAsElmJsonPath,
   markAsElmVersion,
   markAsElmWatchJsonPath,
+  markAsElmWatchStuffDir,
   markAsElmWatchStuffJsonPath,
   markAsStaticFilesDir,
   markAsTargetName,
 } from "../src/Types.ts";
+import { removeCoveredWatchDirs } from "../src/Watcher.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 
 const getNow: GetNow = () => new Date();
@@ -332,5 +341,95 @@ describe("Project", () => {
           ]
         }
       `);
+  });
+
+  describe("watchDirs", () => {
+    const repoRoot = path.dirname(import.meta.dirname);
+
+    // Only reads from the fixtures, so no copies are needed.
+    function printWatchDirs(fixture: string): string {
+      const cwd = markAsCwd(
+        markAsAbsolutePath(path.join(import.meta.dirname, "fixtures", fixture)),
+      );
+      const parseResult = ElmWatchJson.findReadAndParse(cwd);
+      if (parseResult.tag !== "Parsed") {
+        throw new Error(`Failed to parse elm-watch.json: ${parseResult.tag}`);
+      }
+      const result = initProject({
+        env: {},
+        getNow,
+        compilationMode: "standard",
+        elmVersion: markAsElmVersion("0.19.1"),
+        config: parseResult.value,
+        enabledTargetsSubstrings: [""],
+        elmWatchStuffDir: markAsElmWatchStuffDir(
+          markAsAbsolutePath("/elm-stuff/elm-watch"),
+        ),
+        elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
+          markAsAbsolutePath("/elm-stuff/elm-watch/stuff.json"),
+        ),
+        elmWatchStuffJson: undefined,
+      });
+      if (result.tag !== "Project") {
+        throw new Error(`Failed to init project: ${result.tag}`);
+      }
+      // Show what is actually watched, after removing duplicates.
+      const lines = removeCoveredWatchDirs(result.project.watchDirs).map(
+        ({ tag, dir }) => {
+          const relative = path
+            .relative(repoRoot, dir)
+            .split(path.sep)
+            .join("/");
+          return `${tag}: ${
+            relative === ""
+              ? "."
+              : relative.startsWith("..")
+                ? "<outside repo>"
+                : relative
+          }`;
+        },
+      );
+      // Directories outside the repo vary between machines.
+      return lines
+        .filter((line, index) => line !== lines[index - 1])
+        .join("\n");
+    }
+
+    test("source directories above elm-watch.json", () => {
+      expect(
+        printWatchDirs(
+          "hot/source-directories-above-elm-watch-json/app/example",
+        ),
+      ).toMatchInlineSnapshot(`
+        Shallow: tests/fixtures/hot/source-directories-above-elm-watch-json/app
+        Shallow: tests/fixtures/hot/source-directories-above-elm-watch-json/app/elm-stuff
+        SourceDirectory: tests/fixtures/hot/source-directories-above-elm-watch-json/app/src
+        SourceDirectory: tests/fixtures/hot/source-directories-above-elm-watch-json/app/example
+        SourceDirectory: tests/fixtures/hot/source-directories-above-elm-watch-json/src
+      `);
+    });
+
+    test("elm.json above elm-watch.json", () => {
+      expect(printWatchDirs("hot/elm-json-above-elm-watch-json/example"))
+        .toMatchInlineSnapshot(`
+        Shallow: tests/fixtures/hot/elm-json-above-elm-watch-json
+        Shallow: tests/fixtures/hot/elm-json-above-elm-watch-json/elm-stuff
+        SourceDirectory: tests/fixtures/hot/elm-json-above-elm-watch-json/src
+        Shallow: tests/fixtures/hot/elm-json-above-elm-watch-json/example
+      `);
+    });
+
+    test("elm.json not found", () => {
+      expect(printWatchDirs("errors/elm-json-not-found"))
+        .toMatchInlineSnapshot(`
+        Shallow: tests/fixtures/errors/elm-json-not-found
+        Shallow: tests/fixtures/errors
+        Shallow: tests/fixtures
+        Shallow: tests
+        Shallow: .
+        Shallow: <outside repo>
+        Shallow: tests/fixtures/errors/elm-json-not-found/pages
+      `);
+    });
   });
 });
