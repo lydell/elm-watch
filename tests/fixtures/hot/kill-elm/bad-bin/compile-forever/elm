@@ -1,53 +1,35 @@
 #!/usr/bin/env node
-import spawn from "cross-spawn";
-import path from "path";
 import fs from "fs";
+import path from "path";
+import { call, fakeElm, hang, realElm } from "#fake-elm";
 
 const elmJsonPath = path.join(import.meta.dirname, "..", "..", "elm.json");
 const inputPath = path.join(import.meta.dirname, "..", "..", "src", "Main.elm");
 const lockPath = path.join(import.meta.dirname, "..", "..", "lock");
-const lockFile = fs.readFileSync(lockPath, "utf8");
-
-const isInstall = process.argv.some((arg) =>
-  arg.includes("ElmWatchNonExistentFile"),
-);
-
-// elm-watch runs `elm --version` on every (re)start. Never hang on that.
-const isVersion = process.argv.includes("--version");
 
 function touch(filePath) {
   const now = new Date();
   fs.utimesSync(filePath, now, now);
 }
 
-if (isVersion) {
-  passThrough();
-} else if (lockFile === "LockAll") {
-  // Hang on install. Switch to hanging on compile or typecheck only.
-  fs.writeFileSync(lockPath, "LockExceptInstall");
-  touch(elmJsonPath);
-  process.stdin.resume();
-} else if (lockFile === "LockExceptInstall" && !isInstall) {
-  // Hang on compile or typecheck only. Switch to succeeding.
-  fs.writeFileSync(lockPath, "NoLock");
-  touch(inputPath);
-  process.stdin.resume();
-} else {
-  passThrough();
+function elmWork() {
+  const lockFile = fs.readFileSync(lockPath, "utf8");
+  if (lockFile === "LockAll") {
+    // Hang on install. Switch to hanging on compile or typecheck only.
+    fs.writeFileSync(lockPath, "LockExceptInstall");
+    touch(elmJsonPath);
+    return hang();
+  } else if (lockFile === "LockExceptInstall" && call !== "install") {
+    // Hang on compile or typecheck only. Switch to succeeding.
+    fs.writeFileSync(lockPath, "NoLock");
+    touch(inputPath);
+    return hang();
+  } else {
+    return realElm();
+  }
 }
 
-function passThrough() {
-  const child = spawn("elm", process.argv.slice(2), {
-    env: {
-      ...process.env,
-      PATH: process.env.PATH.split(path.delimiter)
-        .filter((part) => !part.includes("bad-bin"))
-        .join(path.delimiter),
-    },
-    stdio: "inherit",
-  });
-
-  child.on("exit", (exitCode) => {
-    process.exit(exitCode);
-  });
-}
+fakeElm({
+  install: elmWork,
+  make: elmWork,
+});

@@ -2,6 +2,9 @@
   "private": true,
   "name": "build",
   "type": "module",
+  "imports": {
+    "#fake-elm": "./tests/FakeElm.js"
+  },
   "scripts": {
     "postinstall": "elm-tooling install",
     "install-test-elm-dependencies": "tsx scripts/InstallTestDependencies.ts",

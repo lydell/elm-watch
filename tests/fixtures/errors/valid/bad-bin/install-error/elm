@@ -1,7 +1,10 @@
 #!/usr/bin/env node
-process.stdout.write("Dependencies ready!\n");
-process.stderr.write(
-  `
+import { fakeElm } from "#fake-elm";
+
+function fake() {
+  process.stdout.write("Dependencies ready!\n");
+  process.stderr.write(
+    `
 -- PROBLEM LOADING PACKAGE LIST ------------------------------------------------
 
 I need the list of published packages to verify your dependencies, so I tried to
@@ -18,5 +21,11 @@ I am trying to fetch work in your browser? Maybe the site is down? Does your
 internet connection have a firewall that blocks certain domains? It is usually
 something like that!
 `.trimStart(),
-);
-process.exit(1);
+  );
+  return 1;
+}
+
+fakeElm({
+  install: fake,
+  make: fake,
+});

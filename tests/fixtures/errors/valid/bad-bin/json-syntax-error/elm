@@ -1,6 +1,9 @@
 #!/usr/bin/env node
-import installed from "../elm-install.js";
-if (installed) {
-  process.stderr.write("{");
-  process.exit(1);
-}
+import { fakeElm } from "#fake-elm";
+
+fakeElm({
+  make: () => {
+    process.stderr.write("{");
+    return 1;
+  },
+});

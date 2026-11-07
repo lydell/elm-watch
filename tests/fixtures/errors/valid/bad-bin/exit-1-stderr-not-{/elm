@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-import installed from "../elm-install.js";
-if (installed) {
-  process.stderr.write(`This flag was given a bad value:
+import { fakeElm } from "#fake-elm";
+
+fakeElm({
+  make: () => {
+    process.stderr.write(`This flag was given a bad value:
 
     --output=.js
 
@@ -11,5 +13,6 @@ I need a valid <output-file> value. For example:
     --output=index.html
     --output=/dev/null
 `);
-  process.exit(1);
-}
+    return 1;
+  },
+});

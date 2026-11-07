@@ -1,40 +1,24 @@
 #!/usr/bin/env node
-import spawn from "cross-spawn";
 import fs from "fs";
 import path from "path";
+import { args, fakeElm, realElm, waitUntil } from "#fake-elm";
 
-const argv = process.argv.slice(2);
 const lock = path.join(import.meta.dirname, "..", "lock");
-const isMain = argv.some((arg) => arg.includes("Main"));
 
 function canExit() {
   return fs.readFileSync(lock, "utf8") === "typecheck-only-ok-to-exit";
 }
 
-if (isMain && !canExit()) {
-  fs.writeFileSync(lock, "typecheck-only-started");
-}
-
-const child = spawn("elm", argv, {
-  env: {
-    ...process.env,
-    PATH: process.env.PATH.split(path.delimiter)
-      .filter((part) => !part.includes("bad-bin"))
-      .join(path.delimiter),
+fakeElm({
+  make: async () => {
+    if (!args.some((arg) => arg.includes("Main"))) {
+      return realElm();
+    }
+    if (!canExit()) {
+      fs.writeFileSync(lock, "typecheck-only-started");
+    }
+    const exitCode = await realElm();
+    await waitUntil(canExit);
+    return exitCode;
   },
-  stdio: "inherit",
-});
-
-child.on("exit", (exitCode) => {
-  if (isMain) {
-    (function rec() {
-      if (canExit()) {
-        process.exit(exitCode);
-      } else {
-        setTimeout(rec, 100);
-      }
-    })();
-  } else {
-    process.exit(exitCode);
-  }
 });

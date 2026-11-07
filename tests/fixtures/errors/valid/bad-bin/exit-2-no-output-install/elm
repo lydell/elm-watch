@@ -1,2 +1,7 @@
 #!/usr/bin/env node
-process.exit(2);
+import { fakeElm } from "#fake-elm";
+
+fakeElm({
+  install: () => 2,
+  make: () => 2,
+});

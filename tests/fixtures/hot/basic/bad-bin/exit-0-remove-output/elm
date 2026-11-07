@@ -1,28 +1,21 @@
 #!/usr/bin/env node
-import spawn from "cross-spawn";
 import fs from "fs";
 import path from "path";
+import { fakeElm, isTypecheckOnly, realElm } from "#fake-elm";
 
-const child = spawn("elm", process.argv.slice(2), {
-  env: {
-    ...process.env,
-    PATH: process.env.PATH.split(path.delimiter)
-      .filter((part) => !part.includes("bad-bin"))
-      .join(path.delimiter),
+fakeElm({
+  make: async () => {
+    const exitCode = await realElm();
+    if (!isTypecheckOnly) {
+      const dir = path.join(
+        import.meta.dirname,
+        "..",
+        "..",
+        "elm-stuff",
+        "elm-watch",
+      );
+      fs.rmSync(dir, { recursive: true });
+    }
+    return exitCode;
   },
-  stdio: "inherit",
-});
-
-child.on("exit", (exitCode) => {
-  if (!process.argv.some((arg) => arg.includes("/dev/null"))) {
-    const dir = path.join(
-      import.meta.dirname,
-      "..",
-      "..",
-      "elm-stuff",
-      "elm-watch",
-    );
-    fs.rmSync(dir, { recursive: true });
-  }
-  process.exit(exitCode);
 });

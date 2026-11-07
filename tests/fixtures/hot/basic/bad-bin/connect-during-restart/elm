@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import spawn from "cross-spawn";
 import fs from "fs";
 import path from "path";
 import WebSocket from "ws";
+import { fakeElm, realElm } from "#fake-elm";
 
 // elm-watch runs `elm --version` on every (re)start. During a restart (for
 // example when elm.json changes), the WebSocket server keeps running, but
@@ -12,7 +12,7 @@ import WebSocket from "ws";
 // done then.
 async function connectIfRestarting() {
   const stuffJsonPath = path.join("elm-stuff", "elm-watch", "stuff.json");
-  if (!process.argv.includes("--version") || !fs.existsSync(stuffJsonPath)) {
+  if (!fs.existsSync(stuffJsonPath)) {
     return;
   }
 
@@ -35,18 +35,9 @@ async function connectIfRestarting() {
   });
 }
 
-await connectIfRestarting();
-
-const child = spawn("elm", process.argv.slice(2), {
-  env: {
-    ...process.env,
-    PATH: process.env.PATH.split(path.delimiter)
-      .filter((part) => !part.includes("bad-bin"))
-      .join(path.delimiter),
+fakeElm({
+  version: async () => {
+    await connectIfRestarting();
+    return realElm();
   },
-  stdio: "inherit",
-});
-
-child.on("exit", (exitCode) => {
-  process.exit(exitCode);
 });

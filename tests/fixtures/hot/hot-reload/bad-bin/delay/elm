@@ -1,35 +1,22 @@
 #!/usr/bin/env node
-import spawn from "cross-spawn";
-import path from "path";
 import fs from "fs";
+import path from "path";
+import { fakeElm, realElm, waitUntil } from "#fake-elm";
 
 const lockFile = path.join(import.meta.dirname, "..", "..", "lock");
 
-const child = spawn("elm", process.argv.slice(2), {
-  env: {
-    ...process.env,
-    PATH: process.env.PATH.split(path.delimiter)
-      .filter((part) => !part.includes("bad-bin"))
-      .join(path.delimiter),
-  },
-  stdio: "inherit",
-});
-
-// elm-watch runs `elm --version` on every (re)start. Only delay the actual
-// Elm work (installing and compiling), not that.
-const isVersion = process.argv.includes("--version");
-
-child.on("exit", (exitCode) => {
-  if (!isVersion && fs.readFileSync(lockFile, "utf8") === "Delay") {
+// When `lock` says “Delay”, acknowledge it and wait for it to say “Normal”
+// before exiting.
+async function delayed() {
+  const exitCode = await realElm();
+  if (fs.readFileSync(lockFile, "utf8") === "Delay") {
     fs.writeFileSync(lockFile, "DelayAck");
-    (function rec() {
-      if (fs.readFileSync(lockFile, "utf8") === "Normal") {
-        process.exit(exitCode);
-      } else {
-        setTimeout(rec, 10);
-      }
-    })();
-  } else {
-    process.exit(exitCode);
+    await waitUntil(() => fs.readFileSync(lockFile, "utf8") === "Normal");
   }
+  return exitCode;
+}
+
+fakeElm({
+  install: delayed,
+  make: delayed,
 });

@@ -1,4 +1,13 @@
 #!/usr/bin/env node
-process.stdout.write("Dependencies ready!\n");
-process.stderr.write("I ran into an unexpected problem!");
-process.exit(1);
+import { fakeElm } from "#fake-elm";
+
+function fake() {
+  process.stdout.write("Dependencies ready!\n");
+  process.stderr.write("I ran into an unexpected problem!");
+  return 1;
+}
+
+fakeElm({
+  install: fake,
+  make: fake,
+});
