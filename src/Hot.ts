@@ -1,5 +1,4 @@
 import * as childProcess from "child_process";
-import * as chokidar from "chokidar";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -64,13 +63,13 @@ import {
   type ElmJsonPath,
   type ElmVersion,
   type ElmWatchJsonPath,
-  equalsInputPath,
+  type InputPath,
   type GetNow,
-  markAsAbsolutePath,
   type OutputPath,
   TargetName,
   type WebSocketToken,
 } from "./Types.ts";
+import * as Watcher from "./Watcher.ts";
 import {
   type WebSocketConnectionRejectedReason,
   WebSocketServer,
@@ -78,7 +77,9 @@ import {
 } from "./WebSocketServer.ts";
 import type { WebSocketUrl } from "./WebSocketUrl.ts";
 
-type WatcherEventName = "added" | "changed" | "removed";
+// We can’t tell whether something was added or changed, since `fs.watch`
+// does not reliably say. That also doesn’t matter much.
+type WatcherEventName = "changed" | "removed";
 
 type WatcherEvent<File = TaggedAbsolutePath | StaticFilesDirPath> = {
   tag: "WatcherEvent";
@@ -141,7 +142,7 @@ export type LatestEvent =
   | (WatcherEvent & { affectsAnyTarget: boolean });
 
 type Mutable = {
-  watcher: chokidar.FSWatcher;
+  watcher: Watcher.Watcher;
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
   project: Project;
@@ -470,30 +471,28 @@ export async function watchElmWatchJsonOnce(
   onReady: () => void,
 ): Promise<WatcherEvent> {
   return new Promise((resolve, reject) => {
-    const watcher = chokidar.watch(elmWatchJsonPath, {
-      ignoreInitial: true,
-      disableGlobbing: true,
+    // Watch the directory rather than the file itself, since editors might
+    // replace the file (giving it a new inode) when saving.
+    const basename = path.basename(elmWatchJsonPath);
+    const watcher = fs.watch(path.dirname(elmWatchJsonPath), (_, filename) => {
+      if (filename === null || filename === basename) {
+        watcher.close();
+        resolve({
+          tag: "WatcherEvent",
+          date: getNow(),
+          eventName: fs.existsSync(elmWatchJsonPath) ? "changed" : "removed",
+          file: {
+            tag: "AbsolutePath",
+            absolutePath: elmWatchJsonPath,
+          },
+        });
+      }
     });
-
-    watcher.on("ready", onReady);
-
-    watcherOnAll(watcher, reject, (eventName, absolutePathString) => {
-      const event: WatcherEvent = {
-        tag: "WatcherEvent",
-        date: getNow(),
-        eventName,
-        file: {
-          tag: "AbsolutePath",
-          absolutePath: markAsAbsolutePath(absolutePathString),
-        },
-      };
-      watcher
-        .close()
-        .then(() => {
-          resolve(event);
-        })
-        .catch(reject);
+    watcher.on("error", (error) => {
+      watcher.close();
+      reject(error);
     });
+    onReady();
   });
 }
 
@@ -514,25 +513,17 @@ const initMutable =
     resolvePromise: (result: HotRunResult) => void,
     rejectPromise: (error: Error) => void,
   ): Mutable => {
-    const watcher = chokidar.watch(Array.from(project.watchRoots), {
-      ignoreInitial: true,
-      // Note: Forward slashes must be used here even on Windows. (Using
-      // backslashes on Windows never matches.) The trailing slash is important:
-      // It makes it possible to get notifications of a removed elm-stuff
-      // folder, while ignoring everything that happens _inside_ that folder.
-      // For `.stack-work/`, see https://docs.haskellstack.org/en/stable/topics/stack_work/ and
-      // https://github.com/lydell/elm-watch/issues/106.
-      ignored: /\/(elm-stuff|node_modules|\.stack-work)\//,
-      disableGlobbing: true,
-    });
-
     hotTestHooks.onWatcherReadyChange?.(false);
-    watcher.on("ready", () => {
-      hotTestHooks.onWatcherReadyChange?.(true);
-    });
-
-    watcherOnAll(
-      watcher,
+    const watcher = Watcher.watch(
+      Array.from(project.watchRoots),
+      ({ absolutePath, exists }) => {
+        dispatch({
+          tag: "GotWatcherEvent",
+          date: getNow(),
+          eventName: exists ? "changed" : "removed",
+          absolutePath,
+        });
+      },
       (error) => {
         closeAll(logger, mutable)
           .then(() => {
@@ -543,15 +534,8 @@ const initMutable =
           })
           .catch(rejectPromise);
       },
-      (eventName: WatcherEventName, absolutePath: AbsolutePath): void => {
-        dispatch({
-          tag: "GotWatcherEvent",
-          date: getNow(),
-          eventName,
-          absolutePath,
-        });
-      },
     );
+    hotTestHooks.onWatcherReadyChange?.(true);
 
     const {
       webSocketServer = new WebSocketServer(
@@ -727,39 +711,6 @@ function writeElmWatchStuffJson(
     const error = toError(unknownError);
     mutable.elmWatchStuffJsonWriteError = error;
   }
-}
-
-function watcherOnAll(
-  watcher: chokidar.FSWatcher,
-  onError: (error: Error) => void,
-  onSuccess: (eventName: WatcherEventName, absolutePath: AbsolutePath) => void,
-): void {
-  // We generally only care about files – not directories – but adding and
-  // removing directories can cause/fix errors, if they are named
-  // `elm-watch.json`, `elm.json` or `*.elm`.
-  watcher.on("all", (chokidarEventName, absolutePathString) => {
-    const absolutePath = markAsAbsolutePath(absolutePathString);
-    switch (chokidarEventName) {
-      case "add":
-      case "addDir":
-        onSuccess("added", absolutePath);
-        return;
-
-      case "unlink":
-      case "unlinkDir":
-        onSuccess("removed", absolutePath);
-        return;
-
-      case "change":
-        onSuccess("changed", absolutePath);
-        return;
-    }
-  });
-
-  // The only way I’ve managed to make this emit an error, is when I made an
-  // infinite symlink loop (ELOOP). That basically makes the watcher unusable:
-  // it will always choke on that cycle and emit an error here.
-  watcher.on("error", onError);
 }
 
 const init = (
@@ -1230,50 +1181,38 @@ function onWatcherEvent(
       if (project.configSource.tag !== "ElmWatchJson") {
         return undefined;
       }
-      switch (eventName) {
-        case "added":
-          return makeRestartNextAction(
-            makeWatcherEvent(eventName, absolutePath, now),
-            project,
-          );
-
-        case "changed":
-        case "removed":
-          if (absolutePath === project.configSource.elmWatchJsonPath) {
-            return makeRestartNextAction(
-              makeWatcherEvent(eventName, absolutePath, now),
-              project,
-            );
-          }
-          return undefined;
+      // We don’t know if an elm-watch.json other than the current one was
+      // added or changed. Adding one could change which one is used, so
+      // restart to be safe.
+      if (
+        absolutePath === project.configSource.elmWatchJsonPath ||
+        eventName === "changed"
+      ) {
+        return makeRestartNextAction(
+          makeWatcherEvent(eventName, absolutePath, now),
+          project,
+        );
       }
+      return undefined;
 
     case "elm.json":
-      switch (eventName) {
-        case "added":
-          return makeRestartNextAction(
-            makeWatcherEvent(eventName, absolutePath, now),
-            project,
-          );
-
-        case "changed":
-        case "removed":
-          if (
-            Array.from(project.elmJsons).some(
-              ([elmJsonPath]) => absolutePath === elmJsonPath,
-            ) ||
-            isElmJsonFileRelatedToElmJsonsErrors(
-              absolutePath,
-              project.elmJsonsErrors,
-            )
-          ) {
-            return makeRestartNextAction(
-              makeWatcherEvent(eventName, absolutePath, now),
-              project,
-            );
-          }
-          return undefined;
+      if (
+        Array.from(project.elmJsons).some(
+          ([elmJsonPath]) => absolutePath === elmJsonPath,
+        ) ||
+        isElmJsonFileRelatedToElmJsonsErrors(
+          absolutePath,
+          project.elmJsonsErrors,
+        ) ||
+        (eventName === "changed" &&
+          isElmJsonPotentiallyUsed(absolutePath, project))
+      ) {
+        return makeRestartNextAction(
+          makeWatcherEvent(eventName, absolutePath, now),
+          project,
+        );
       }
+      return undefined;
 
     // Some compiler error messages suggest removing elm-stuff to fix the error.
     // Restart when that happens. Note: This could be a totally unrelated
@@ -1317,26 +1256,67 @@ function onWatcherEvent(
         }
       }
 
-      // Ignore other types of files.
-      return undefined;
+      // A directory might have been moved, added or removed. We only get an
+      // event for the directory itself, not for every file inside it.
+      return onDirectoryWatcherEvent(
+        project,
+        makeWatcherEvent(eventName, absolutePath, now),
+        nextAction,
+      );
   }
+}
+
+function onDirectoryWatcherEvent(
+  project: Project,
+  event: WatcherEvent<TaggedAbsolutePath>,
+  nextAction: NextAction,
+): [NextAction, LatestEvent, Array<Cmd>] | undefined {
+  const prefix = event.file.absolutePath + path.sep;
+  const isInside = (absolutePath: AbsolutePath): boolean =>
+    absolutePath.startsWith(prefix);
+
+  if (
+    (project.configSource.tag === "ElmWatchJson" &&
+      isInside(project.configSource.elmWatchJsonPath)) ||
+    Array.from(project.elmJsons.keys()).some(isInside) ||
+    isElmFileRelatedToElmJsonsErrors(isInside, project.elmJsonsErrors)
+  ) {
+    return makeRestartNextAction(event, project);
+  }
+
+  const result = onElmFilesWatcherEvent(project, event, isInside, nextAction);
+  // Ignore other types of files.
+  return result[1].tag === "WatcherEvent" && !result[1].affectsAnyTarget
+    ? undefined
+    : result;
 }
 
 function onElmFileWatcherEvent(
   project: Project,
   event: WatcherEvent<TaggedAbsolutePath>,
   nextAction: NextAction,
-): [NextAction, LatestEvent, Array<Cmd>] | undefined {
-  const elmFile = event.file;
+): [NextAction, LatestEvent, Array<Cmd>] {
+  const elmFile = event.file.absolutePath;
+  const isElmFile = (absolutePath: AbsolutePath): boolean =>
+    absolutePath === elmFile;
 
-  if (
-    isElmFileRelatedToElmJsonsErrors(
-      elmFile.absolutePath,
-      project.elmJsonsErrors,
-    )
-  ) {
+  if (isElmFileRelatedToElmJsonsErrors(isElmFile, project.elmJsonsErrors)) {
     return makeRestartNextAction(event, project);
   }
+
+  return onElmFilesWatcherEvent(project, event, isElmFile, nextAction);
+}
+
+// `matches` is either an exact match for an .elm file, or checks if a path is
+// inside a directory.
+function onElmFilesWatcherEvent(
+  project: Project,
+  event: WatcherEvent<TaggedAbsolutePath>,
+  matches: (absolutePath: AbsolutePath) => boolean,
+  nextAction: NextAction,
+): [NextAction, LatestEvent, Array<Cmd>] {
+  const matchesInputPath = (inputPath: InputPath): boolean =>
+    matches(inputPath.theInputPath) || matches(inputPath.realpath);
 
   const dirtyOutputs: Array<{
     outputPath: OutputPath;
@@ -1345,15 +1325,17 @@ function onElmFileWatcherEvent(
 
   for (const [elmJsonPath, outputs] of project.elmJsons) {
     for (const [outputPath, outputState] of outputs) {
-      if (event.eventName === "removed") {
-        for (const inputPath of outputState.inputs) {
-          if (equalsInputPath(elmFile.absolutePath, inputPath)) {
-            return makeRestartNextAction(event, project);
-          }
-        }
+      if (
+        event.eventName === "removed" &&
+        outputState.inputs.some(matchesInputPath)
+      ) {
+        return makeRestartNextAction(event, project);
       }
       Compile.ensureAllRelatedElmFilePaths(elmJsonPath, outputState);
-      if (outputState.allRelatedElmFilePaths.has(elmFile.absolutePath)) {
+      if (
+        outputState.allRelatedElmFilePaths.has(event.file.absolutePath) ||
+        Array.from(outputState.allRelatedElmFilePaths).some(matches)
+      ) {
         dirtyOutputs.push({ outputPath, outputState });
       }
     }
@@ -2093,19 +2075,10 @@ async function closeAll(
   /* v8 ignore stop */
 
   mutable.webSocketServer.unsetDispatch();
-  const watcherClosed = mutable.watcher.close();
-  // Closing the watcher removes all listeners, but scans that are already in
-  // progress can still emit "error" (such as ELOOP for symlink loops). Emitting
-  // "error" without any listeners throws, causing an unhandled rejection.
-  /* v8 ignore start */
-  mutable.watcher.on("error", () => {
-    // Ignore.
-  });
-  /* v8 ignore stop */
-  await Promise.all([
-    watcherClosed,
-    killWebSocketServer ? mutable.webSocketServer.close() : undefined,
-  ]);
+  mutable.watcher.close();
+  if (killWebSocketServer) {
+    await mutable.webSocketServer.close();
+  }
 }
 
 function makePrioritizedOutputs(
@@ -2153,17 +2126,20 @@ function makeRestartNextAction(
   ];
 }
 
+// `matches` is either an exact match for an .elm file, or checks if a path is
+// inside a directory.
 function isElmFileRelatedToElmJsonsErrors(
-  elmFile: AbsolutePath,
+  matches: (absolutePath: AbsolutePath) => boolean,
   elmJsonsErrors: Project["elmJsonsErrors"],
 ): boolean {
+  const matchesInputPath = (inputPath: InputPath): boolean =>
+    matches(inputPath.theInputPath) || matches(inputPath.realpath);
   return elmJsonsErrors.some(({ error }) => {
     switch (error.tag) {
       case "DuplicateInputs":
         return error.duplicates.some(
           ({ inputs, resolved }) =>
-            resolved === elmFile ||
-            inputs.some((inputPath) => equalsInputPath(elmFile, inputPath)),
+            matches(resolved) || inputs.some(matchesInputPath),
         );
 
       // Note: Restarting because an .elm file changed here won’t change the
@@ -2172,37 +2148,54 @@ function isElmFileRelatedToElmJsonsErrors(
       // anything.
       case "ElmJsonNotFound":
         return (
-          error.elmJsonNotFound.some((inputPath) =>
-            equalsInputPath(elmFile, inputPath),
-          ) ||
+          error.elmJsonNotFound.some(matchesInputPath) ||
           error.foundElmJsonPaths.some(({ inputPath }) =>
-            equalsInputPath(elmFile, inputPath),
+            matchesInputPath(inputPath),
           )
         );
 
-      // The only way I’ve found to trigger this is by a symlink loop.
-      // However, that causes the watcher to error out and we have to exit so
-      // this is never hit.
+      // The only way I’ve found to trigger this is by a symlink loop. (With
+      // chokidar, that made the watcher error out, so this was never hit. With
+      // `fs.watch` it can be hit, but there is no test for it yet.)
       /* v8 ignore start */
       case "InputsFailedToResolve":
-        return error.inputsFailedToResolve.some(
-          ({ inputPath }) => inputPath.theUncheckedInputPath === elmFile,
+        return error.inputsFailedToResolve.some(({ inputPath }) =>
+          matches(inputPath.theUncheckedInputPath),
         );
       /* v8 ignore stop */
 
       case "InputsNotFound":
-        return error.inputsNotFound.some(
-          (inputPath) => inputPath.theUncheckedInputPath === elmFile,
+        return error.inputsNotFound.some((inputPath) =>
+          matches(inputPath.theUncheckedInputPath),
         );
 
       // Changes to the .elm files don’t make the elm.json:s more unique, but
       // see  "ElmJsonNotFound" above for why we restart anyway.
       case "NonUniqueElmJsonPaths":
         return error.nonUniqueElmJsonPaths.some(({ inputPath }) =>
-          equalsInputPath(elmFile, inputPath),
+          matchesInputPath(inputPath),
         );
     }
   });
+}
+
+function isElmJsonPotentiallyUsed(
+  elmJsonPath: AbsolutePath,
+  project: Project,
+): boolean {
+  // An elm.json closer to some input than the elm.json currently used would be
+  // used instead after a restart.
+  const dir = path.dirname(elmJsonPath) + path.sep;
+  return Array.from(project.elmJsons).some(
+    ([currentElmJsonPath, outputs]) =>
+      dir.startsWith(path.dirname(currentElmJsonPath) + path.sep) &&
+      dir !== path.dirname(currentElmJsonPath) + path.sep &&
+      Array.from(outputs).some(([, outputState]) =>
+        outputState.inputs.some((inputPath) =>
+          inputPath.theInputPath.startsWith(dir),
+        ),
+      ),
+  );
 }
 
 function isElmJsonFileRelatedToElmJsonsErrors(

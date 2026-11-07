@@ -791,7 +791,7 @@ describe("hot", () => {
       {
         tag: "WatcherEvent",
         date: new Date("2022-03-06T00:01:24Z"),
-        eventName: "added",
+        eventName: "changed",
         file: {
           tag: "AbsolutePath",
           absolutePath: markAsAbsolutePath("/Three.elm"),
@@ -839,7 +839,7 @@ describe("hot", () => {
         ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
         ℹ️ ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
         ℹ️ ⧙00:01:23⧘ ⧙Removed /Two.elm⧘
-        ℹ️ ⧙00:01:24⧘ ⧙Added /Three.elm⧘
+        ℹ️ ⧙00:01:24⧘ ⧙Changed /Three.elm⧘
       `);
     });
 
@@ -848,7 +848,7 @@ describe("hot", () => {
         ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
         ℹ️ ⧙00:00:11⧘ ⧙Web socket connected needing compilation of: One⧘
         ℹ️ ⧙00:01:23⧘ ⧙Removed /Two.elm⧘
-        ℹ️ ⧙00:01:24⧘ ⧙Added /Three.elm⧘
+        ℹ️ ⧙00:01:24⧘ ⧙Changed /Three.elm⧘
         ℹ️ ⧙00:02:00⧘ ⧙Web socket disconnected for: (no matching target)⧘
       `);
     });

@@ -646,32 +646,19 @@ describe("errors", () => {
       });
 
       test("hot", async () => {
-        expect(await runAbsolute(dir, ["hot"])).toMatchInlineSnapshot(`
-          ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
-          ⧙Target: main⧘
+        expect(await runAbsolute(dir, ["hot"], { exitHotOnError: true }))
+          .toMatchInlineSnapshot(`
+            ⧙-- INPUTS FAILED TO RESOLVE ----------------------------------------------------⧘
+            ⧙Target: main⧘
 
-          I start by checking if the inputs you give me exist,
-          but doing so resulted in errors!
+            I start by checking if the inputs you give me exist,
+            but doing so resulted in errors!
 
-          Main.elm:
-          ELOOP: too many symbolic links encountered, stat '/tmp/fake/elm-watch-symlink-loop/Main.elm'
+            Main.elm:
+            ELOOP: too many symbolic links encountered, stat '/tmp/fake/elm-watch-symlink-loop/Main.elm'
 
-          ⧙That's all I know, unfortunately!⧘
-
-          …
-
-          ⧙-- WATCHER ERROR ---------------------------------------------------------------⧘
-
-          The file watcher encountered an error, which means that it cannot continue.
-          elm-watch is powered by its file watcher, so I have to exit at this point.
-
-          See if this is something you can solve by maybe removing some problematic files
-          or something!
-
-          This is the error message I got:
-
-          ELOOP: too many symbolic links encountered, stat '/tmp/fake/elm-watch-symlink-loop/Main.elm'
-        `);
+            ⧙That's all I know, unfortunately!⧘
+          `);
       });
     });
 

@@ -29,7 +29,6 @@
     "vitest": "5.0.5"
   },
   "dependencies": {
-    "chokidar": "^3.5.3",
     "tiny-decoders": "^23.0.0",
     "ws": "^8.18.0"
   }
