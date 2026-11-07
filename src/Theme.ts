@@ -110,7 +110,7 @@ function parseTheme(stdin: string): Theme {
   const theme = { ...DEFAULT_THEME, palette: { ...DEFAULT_THEME.palette } };
 
   for (const match of stdin.matchAll(THEME_ESCAPES_REGEX)) {
-    /* v8 ignore next */
+    /* v8 ignore next -- @preserve */
     const [, isPaletteString, indexString, r = "0", g = "0", b = "0"] = match;
     const isPalette = isPaletteString !== undefined;
     const index = Number(indexString);

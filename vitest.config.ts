@@ -1,18 +1,21 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
+// These are not goals, just a floor to notice when coverage drops. They are
+// set to what the tests reached when upgrading to Vitest 5, which measures
+// coverage more accurately than earlier versions (the code used to be at 100 %).
 const requireCoverage = {
-  branches: 100,
-  functions: 100,
-  lines: 100,
-  statements: 100,
+  branches: 94,
+  functions: 98,
+  lines: 98,
+  statements: 98,
 };
 
 // Some things like symlinks can’t be tested on Windows.
 const windowsCoverage = {
-  branches: 97,
-  functions: 97,
-  lines: 97,
-  statements: 97,
+  branches: 90,
+  functions: 95,
+  lines: 95,
+  statements: 95,
 };
 
 export default defineConfig({

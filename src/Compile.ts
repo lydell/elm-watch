@@ -373,7 +373,7 @@ export function getOutputActions({
             output,
             postprocessArray: outputState.status.postprocessArray,
             priority:
-              /* v8 ignore next */
+              /* v8 ignore next -- @preserve */
               priority ?? 0,
             code: outputState.status.code,
             elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
@@ -1842,7 +1842,7 @@ function statusLine(
     case "QueuedForPostprocess":
       return helper("QueuedForPostprocess", `${targetName}: elm make done`);
 
-    /* v8 ignore next */
+    /* v8 ignore next -- @preserve */
     case "ElmNotFoundError":
     case "CommandNotFoundError":
     case "OtherSpawnError":
@@ -1964,7 +1964,7 @@ function maybePrintDurations(
 
   return mapNonEmptyArray(newDurations, (duration) =>
     printDuration(
-      /* v8 ignore next */
+      /* v8 ignore next -- @preserve */
       loggerConfig.mockedTimings ? mockDuration(duration) : duration,
       loggerConfig.fancy,
     ),

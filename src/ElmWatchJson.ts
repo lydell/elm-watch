@@ -215,7 +215,7 @@ export function example(
 }
 
 function toUnixPath(filePath: string): string {
-  /* v8 ignore next */
+  /* v8 ignore next -- @preserve */
   return IS_WINDOWS ? filePath.split(path.sep).join(path.posix.sep) : filePath;
 }
 

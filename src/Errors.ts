@@ -263,7 +263,7 @@ function renderPieceForTerminal(piece: Piece): string {
       return dimTerminal(piece.text);
     case "ElmStyle":
       return (
-        (piece.bold ? /* v8 ignore next */ "\x1B[1m" : "") +
+        (piece.bold ? /* v8 ignore next -- @preserve */ "\x1B[1m" : "") +
         (piece.underline ? "\x1B[4m" : "") +
         (piece.color === undefined
           ? ""
@@ -284,7 +284,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
       return `<span style="opacity: 0.6">${escapeHtml(piece.text)}</span>`;
     case "ElmStyle":
       return (
-        (piece.bold ? /* v8 ignore next */ "<b>" : "") +
+        (piece.bold ? /* v8 ignore next -- @preserve */ "<b>" : "") +
         (piece.underline ? "<u>" : "") +
         (piece.color === undefined
           ? ""
@@ -292,7 +292,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
         escapeHtml(piece.text) +
         (piece.color === undefined ? "" : "</span>") +
         (piece.underline ? "</u>" : "") +
-        (piece.bold ? /* v8 ignore next */ "</b>" : "")
+        (piece.bold ? /* v8 ignore next -- @preserve */ "</b>" : "")
       );
     case "Text":
       return escapeHtml(piece.text);

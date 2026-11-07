@@ -147,7 +147,7 @@ export class WebSocketServer {
         // `request.url` is always a string here, but the types says it can be undefined:
         // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/15808
         const urlString =
-          /* v8 ignore next */
+          /* v8 ignore next -- @preserve */
           request.url ?? "/";
 
         const { origin } = request.headers;
@@ -221,7 +221,7 @@ export class WebSocketServer {
                 [util.inspect.custom]: util.CustomInspectFunction;
               }
             )[util.inspect.custom] =
-              /* v8 ignore next */
+              /* v8 ignore next -- @preserve */
               (_depth, options) => options.stylize("WebSocket", "special");
 
             this.dispatch({
@@ -267,7 +267,7 @@ export class WebSocketServer {
             ? { tag: "PortConflict", portChoice, error }
             : error.code === "ENOTFOUND"
               ? { tag: "HostNotFound", host, error }
-              : /* v8 ignore next */
+              : /* v8 ignore next -- @preserve */
                 { tag: "OtherError", error },
       });
     });
@@ -307,7 +307,7 @@ export class WebSocketServer {
           }
         })
         .catch((error: unknown) => {
-          /* v8 ignore next */
+          /* v8 ignore next -- @preserve */
           this.polyHttpServer.emit("error", toError(error));
         });
     } else {
@@ -389,7 +389,7 @@ async function probePort(port: number): Promise<ProbeResult> {
         // IPv6 might not be available.
         (ipv6Result.error.code === "EADDRNOTAVAIL" ||
           ipv6Result.error.code === "EAFNOSUPPORT")
-        ? /* v8 ignore next */
+        ? /* v8 ignore next -- @preserve */
           result
         : ipv6Result;
     }

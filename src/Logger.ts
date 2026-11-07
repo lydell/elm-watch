@@ -114,16 +114,18 @@ export function makeLogger({
     debug: __ELM_WATCH_DEBUG in env,
     noColor,
     fancy:
-      /* v8 ignore next */
+      /* v8 ignore next -- @preserve */
       (!IS_WINDOWS || WT_SESSION in env) && !noColor,
     isTTY:
-      __ELM_WATCH_NOT_TTY in env ? /* v8 ignore next */ false : stdout.isTTY,
+      __ELM_WATCH_NOT_TTY in env
+        ? /* v8 ignore next -- @preserve */ false
+        : stdout.isTTY,
     mockedTimings: __ELM_WATCH_MOCKED_TIMINGS in env,
     get columns() {
       // `.columns` is `undefined` if not a TTY.
       // This is a getter because it can change over time, if the user resizes
       // the terminal.
-      /* v8 ignore next */
+      /* v8 ignore next -- @preserve */
       return stdout.columns ?? DEFAULT_COLUMNS;
     },
   };

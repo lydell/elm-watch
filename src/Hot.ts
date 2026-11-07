@@ -858,7 +858,7 @@ function update(
               },
             ],
           ];
-        /* v8 ignore end */
+        /* v8 ignore stop */
 
         case "NoAction":
           return runNextAction(msg.date, project, model);
@@ -987,7 +987,7 @@ function update(
             case "Error":
               return [
                 { ...model, hotState: { tag: "Idle" } },
-                /* v8 ignore next */
+                /* v8 ignore next -- @preserve */
                 [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
               ];
 
@@ -2211,7 +2211,7 @@ function makePrioritizedOutputs(
   const map = new Map<TargetName, number>();
   for (const { outputPath, priority } of webSocketConnections) {
     if (outputPath.tag !== "OutputPathError") {
-      /* v8 ignore next */
+      /* v8 ignore next -- @preserve */
       const previous = map.get(outputPath.targetName) ?? 0;
       map.set(outputPath.targetName, Math.max(priority, previous));
     }
@@ -2361,7 +2361,7 @@ const WebSocketConnectedParams = Codec.fields(
             };
       },
       encoder:
-        /* v8 ignore next */
+        /* v8 ignore next -- @preserve */
         (value) => value.toString(),
     }),
   },
@@ -2631,7 +2631,7 @@ function onWebSocketConnected(
         case "ElmMakeTypecheckOnly":
           return recompileNeeded();
 
-        /* v8 ignore next */
+        /* v8 ignore next -- @preserve */
         case "ElmMake":
         case "Postprocess":
         case "Interrupted":
@@ -2725,7 +2725,7 @@ function onWebSocketRecompileNeeded(
 
 function compileNextAction(nextAction: NextAction): NextAction {
   switch (nextAction.tag) {
-    /* v8 ignore next */
+    /* v8 ignore next -- @preserve */
     case "Restart":
     case "Compile":
       return nextAction;
@@ -3146,7 +3146,7 @@ function printEventMessage(event: LatestEvent): string {
 
     case "WorkersLimitedAfterWebSocketClosed":
       return `Terminated ${event.numTerminatedWorkers} superfluous ${
-        /* v8 ignore next */
+        /* v8 ignore next -- @preserve */
         event.numTerminatedWorkers === 1 ? "worker" : "workers"
       }`;
   }
@@ -3158,7 +3158,9 @@ function compileFinishedMessage(
 ): string {
   return `Compilation finished in ${bold(
     printDurationMs(
-      loggerConfig.mockedTimings ? 123 : /* v8 ignore next */ duration,
+      loggerConfig.mockedTimings
+        ? 123
+        : /* v8 ignore next -- @preserve */ duration,
     ).trim(),
   )}.`;
 }

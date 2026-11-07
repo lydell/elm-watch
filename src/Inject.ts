@@ -756,7 +756,7 @@ export function inject(
       // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
       .replace(
         /^var _elmWatchTargetName = "";$/m,
-        /* v8 ignore next */
+        /* v8 ignore next -- @preserve */
         `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
       )
   );
@@ -801,16 +801,16 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
   ] = match1 ?? [];
   /* v8 ignore stop */
 
-  /* v8 ignore next */
+  /* v8 ignore next -- @preserve */
   const [, setup = "setup_missing"] = match2 ?? [];
 
-  /* v8 ignore next */
+  /* v8 ignore next -- @preserve */
   const [, body = "body_missing"] = match3 ?? [];
 
-  /* v8 ignore next */
+  /* v8 ignore next -- @preserve */
   const [, title = "title_missing"] = match4 ?? [];
 
-  /* v8 ignore next */
+  /* v8 ignore next -- @preserve */
   const [
     ,
     protocol = "protocol_missing",
@@ -821,7 +821,7 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
   const extra = Object.fromEntries(
     Array.from(
       code.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
-      /* v8 ignore next */
+      /* v8 ignore next -- @preserve */
       ([, from = "from_missing", to = "to_missing"]) => [from, to],
     ),
   );
@@ -914,7 +914,7 @@ export function clientCode(
     ClientCode.client.replace(
       new RegExp(`"%(${Object.keys(replacements).join("|")})%"`, "g"),
       (_, name: string) =>
-        /* v8 ignore next */
+        /* v8 ignore next -- @preserve */
         Codec.JSON.stringify(Codec.string, replacements[name] ?? name),
     )
   );
@@ -957,7 +957,7 @@ export function getRecordFields(
 
     // If the set of accessed record field names changes in optimize mode, we cannot hot reload.
     case "optimize": {
-      /* v8 ignore next */
+      /* v8 ignore next -- @preserve */
       const matches = code.match(RECORD_FIELD_REGEX) ?? [];
       return new Set(matches.filter((string) => string.startsWith(".")));
     }

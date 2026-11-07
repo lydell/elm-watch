@@ -506,7 +506,7 @@ export async function version({
     case "StdinWriteError":
     case "Killed":
       return markAsElmVersion("unknown");
-    /* v8 ignore end */
+    /* v8 ignore stop */
 
     case "Exit": {
       const { exitReason } = spawnResult;
@@ -519,7 +519,7 @@ export async function version({
         stderr === ""
         ? markAsElmVersion(stdout.trim())
         : markAsElmVersion("unknown");
-      /* v8 ignore end */
+      /* v8 ignore stop */
     }
   }
 }

@@ -150,8 +150,9 @@ async function createReadStreamStrategy(
       highWaterMark: 2048,
     });
     stream.on("error", reject);
-    stream.on("data", (chunk: Buffer) => {
-      for (const char of chunk) {
+    stream.on("data", (chunk) => {
+      // `chunk` is a Buffer, since no encoding is set.
+      for (const char of chunk as Buffer) {
         Parser.readChar(char, readState);
         if (Parser.isNonImport(readState)) {
           stream.close();

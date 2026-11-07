@@ -472,7 +472,7 @@ export function respondHtml(
           ? htmlString
           : // Previously set content was shorter – try to extract the main info.
             // All HTML we produce has a <main> element, so the fallback is never used.
-            /* v8 ignore next */
+            /* v8 ignore next -- @preserve */
             (/<main>([^]*)<\/main>/.exec(htmlString)?.[1] ?? htmlString);
       const newContentLength = Buffer.byteLength(newHtmlString);
       response.end(
