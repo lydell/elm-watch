@@ -15,8 +15,12 @@ const child = spawn("elm", process.argv.slice(2), {
   stdio: "inherit",
 });
 
+// elm-watch runs `elm --version` on every (re)start. Only delay the actual
+// Elm work (installing and compiling), not that.
+const isVersion = process.argv.includes("--version");
+
 child.on("exit", (exitCode) => {
-  if (fs.readFileSync(lockFile, "utf8") === "Delay") {
+  if (!isVersion && fs.readFileSync(lockFile, "utf8") === "Delay") {
     fs.writeFileSync(lockFile, "DelayAck");
     (function rec() {
       if (fs.readFileSync(lockFile, "utf8") === "Normal") {

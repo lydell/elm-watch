@@ -376,8 +376,20 @@ export async function run({
   };
 }
 
+const RENDER_SEPARATOR = `\n${"=".repeat(80)}\n`;
+
 function joinRenders(renders: Array<string>): string {
-  return clean(renders.join(`\n${"=".repeat(80)}\n`));
+  return clean(renders.join(RENDER_SEPARATOR));
+}
+
+// Whether the browser UI needs one or several attempts to connect to the web
+// socket depends on timing. Remove the (expanded) connection attempts to make
+// snapshots stable.
+export function withoutConnectionAttempts(renders: string): string {
+  return renders
+    .split(RENDER_SEPARATOR)
+    .filter((render) => !/^status (?:Connecting|Sleeping)$/m.test(render))
+    .join(RENDER_SEPARATOR);
 }
 
 export function runHotReload({

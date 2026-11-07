@@ -49,6 +49,7 @@ import {
   run,
   showErrors,
   switchCompilationMode,
+  withoutConnectionAttempts,
 } from "./HotHelpers";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -378,18 +379,8 @@ describe("hot", () => {
       onIdle: () => "Stop",
     });
 
-    expect(renders).toMatchInlineSnapshot(`
+    expect(withoutConnectionAttempts(renders)).toMatchInlineSnapshot(`
       ▼ 🔌 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Main
       ================================================================================
       target Main
       elm-watch %VERSION%
@@ -769,7 +760,8 @@ describe("hot", () => {
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-        📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
+        📊 ⧙server:⧘ http://localhost:59123
+        📊 ⧙web socket connections:⧘ 1
 
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
         ✅ ⧙13:10:05⧘ Everything up to date.
@@ -1074,6 +1066,7 @@ describe("hot", () => {
         ParamsDecodeError
         WrongVersion
         WrongToken
+        HostOrOriginNotAllowed
         SendBadJson
         Reconnect
         HttpCaching
@@ -1753,28 +1746,21 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
+      📊 ⧙server:⧘ http://localhost:59123
       ⏳ Html: elm make (typecheck only)
       ✅ Html⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-
-      📊 ⧙web socket connections:⧘ 0 ⧙(ws://0.0.0.0:59123)⧘
 
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
       ⏳ Html: elm make
       ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
-
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
       ✅ ⧙13:10:05⧘ Everything up to date.
       ⏳ Html: elm make
       ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙web socket connections:⧘ 1 ⧙(ws://0.0.0.0:59123)⧘
 
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/basic/elm.json⧘
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
