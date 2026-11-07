@@ -2,13 +2,14 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import { AllowedHost } from "./AllowedHosts";
+import type { Config } from "./Config";
 import { IS_WINDOWS } from "./IsWindows";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray";
-import { findClosest, readJsonFile } from "./PathHelpers";
+import { absoluteDirname, findClosest, readJsonFile } from "./PathHelpers";
 import { Port } from "./Port";
 import {
   type CliArg,
@@ -114,8 +115,8 @@ const TargetRecordHelper = {
   encoder: (value: Record<string, Target>) => value,
 };
 
-export type Config = Codec.Infer<typeof Config>;
-const Config = Codec.fields(
+export type ElmWatchJson = Codec.Infer<typeof ElmWatchJson>;
+const ElmWatchJson = Codec.fields(
   {
     targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
     postprocess: Codec.field(NonEmptyArray(Codec.string), { optional: true }),
@@ -160,7 +161,7 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
   const elmWatchJsonPath: ElmWatchJsonPath =
     markAsElmWatchJsonPath(elmWatchJsonPathRaw);
 
-  const parsed = readJsonFile(elmWatchJsonPathRaw, Config);
+  const parsed = readJsonFile(elmWatchJsonPathRaw, ElmWatchJson);
 
   switch (parsed.tag) {
     case "DecoderError":
@@ -179,9 +180,25 @@ export function findReadAndParse(cwd: Cwd): ParseResult {
       return {
         tag: "Parsed",
         elmWatchJsonPath,
-        config: parsed.value,
+        config: toConfig(elmWatchJsonPath, parsed.value),
       };
   }
+}
+
+function toConfig(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  json: ElmWatchJson,
+): Config {
+  return {
+    root: absoluteDirname(elmWatchJsonPath),
+    elmWatchJsonPath,
+    targets: json.targets,
+    postprocess: json.postprocess,
+    port: json.port,
+    webSocketUrl: json.webSocketUrl,
+    serve: json.serve,
+    allowedHosts: json.allowedHosts ?? [],
+  };
 }
 
 export function example(
@@ -191,7 +208,7 @@ export function example(
 ): string {
   const { elmFiles, output = "build/main.js" } = elmMakeParsed;
 
-  const json: Config = {
+  const json: ElmWatchJson = {
     targets: {
       "My target name": {
         inputs: isNonEmptyArray(elmFiles)
@@ -211,7 +228,7 @@ export function example(
     },
   };
 
-  return Codec.JSON.stringify(Config, json, 4);
+  return Codec.JSON.stringify(ElmWatchJson, json, 4);
 }
 
 function toUnixPath(filePath: string): string {

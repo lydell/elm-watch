@@ -2,6 +2,7 @@ import * as crypto from "crypto";
 
 import * as CliArgs from "./CliArgs";
 import * as Compile from "./Compile";
+import type { Config } from "./Config";
 import * as ElmWatchJson from "./ElmWatchJson";
 import * as ElmWatchStuffJson from "./ElmWatchStuffJson";
 import { Env } from "./Env";
@@ -10,13 +11,14 @@ import * as Hot from "./Hot";
 import type { Logger } from "./Logger";
 import * as Make from "./Make";
 import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray";
-import { absoluteDirname, absolutePathFromString } from "./PathHelpers";
+import { absolutePathFromString } from "./PathHelpers";
 import { PostprocessWorkerPool } from "./Postprocess";
 import { ELM_WATCH_NODE } from "./PostprocessShared";
 import { initProject, projectToDebug } from "./Project";
 import * as SpawnElm from "./SpawnElm";
 import {
   CliArg,
+  CompilationMode,
   CreateServer,
   Cwd,
   ElmWatchJsonPath,
@@ -120,197 +122,223 @@ export async function run(
           logger.errorTemplate(Errors.debugOptimizeClash());
           return { tag: "Exit", exitCode: 1 };
 
-        case "Success": {
-          const { config } = parseResult;
+        case "Success":
+          return runConfig({
+            env,
+            logger,
+            getNow,
+            createServer,
+            runMode,
+            compilationMode: parseArgsResult.compilationMode,
+            targetsSubstrings: parseArgsResult.targetsSubstrings,
+            config: parseResult.config,
+            restartReasons,
+            postprocessWorkerPool,
+            webSocketState,
+            webSocketTokenFromPreviousRun,
+            hotTestHooks,
+          });
+      }
+    }
+  }
+}
 
-          // The decoder validates that there’s at least one output.
-          const knownTargets = Object.keys(
-            config.targets,
-          ) as NonEmptyArray<string>;
+export async function runConfig({
+  env,
+  logger,
+  getNow,
+  createServer,
+  runMode,
+  compilationMode,
+  targetsSubstrings,
+  config,
+  restartReasons,
+  postprocessWorkerPool,
+  webSocketState,
+  webSocketTokenFromPreviousRun,
+  hotTestHooks,
+}: {
+  env: Env;
+  logger: Logger;
+  getNow: GetNow;
+  createServer: CreateServer;
+  runMode: RunMode;
+  compilationMode: CompilationMode;
+  targetsSubstrings: Array<string>;
+  config: Config;
+  restartReasons: Array<Hot.LatestEvent>;
+  postprocessWorkerPool: PostprocessWorkerPool;
+  webSocketState: Hot.WebSocketState | undefined;
+  webSocketTokenFromPreviousRun: WebSocketToken | undefined;
+  hotTestHooks: Hot.HotTestHooks;
+}): Promise<RunResult> {
+  // The decoder validates that there’s at least one output.
+  const knownTargets = Object.keys(config.targets) as NonEmptyArray<string>;
 
-          const unknownTargetsSubstrings =
-            parseArgsResult.targetsSubstrings.filter(
-              (substring) =>
-                !knownTargets.some((targetName) =>
-                  targetName.includes(substring),
-                ),
-            );
+  const unknownTargetsSubstrings = targetsSubstrings.filter(
+    (substring) =>
+      !knownTargets.some((targetName) => targetName.includes(substring)),
+  );
 
-          if (isNonEmptyArray(unknownTargetsSubstrings)) {
-            logger.errorTemplate(
-              Errors.unknownTargetsSubstrings(
-                parseResult.elmWatchJsonPath,
-                knownTargets,
-                unknownTargetsSubstrings,
-              ),
-            );
-            return { tag: "Exit", exitCode: 1 };
-          }
+  if (isNonEmptyArray(unknownTargetsSubstrings)) {
+    logger.errorTemplate(
+      Errors.unknownTargetsSubstrings(
+        config.elmWatchJsonPath,
+        knownTargets,
+        unknownTargetsSubstrings,
+      ),
+    );
+    return { tag: "Exit", exitCode: 1 };
+  }
 
-          const elmWatchStuffDir: ElmWatchStuffDir = markAsElmWatchStuffDir(
-            absolutePathFromString(
-              absoluteDirname(parseResult.elmWatchJsonPath),
-              "elm-stuff",
-              "elm-watch",
+  const elmWatchStuffDir: ElmWatchStuffDir = markAsElmWatchStuffDir(
+    absolutePathFromString(config.root, "elm-stuff", "elm-watch"),
+  );
+
+  const elmWatchStuffJsonPath: ElmWatchStuffJsonPath =
+    markAsElmWatchStuffJsonPath(
+      absolutePathFromString(elmWatchStuffDir, "stuff.json"),
+    );
+
+  const elmWatchStuffJsonParseResult =
+    runMode === "hot"
+      ? ElmWatchStuffJson.readAndParse(elmWatchStuffJsonPath)
+      : undefined;
+
+  switch (elmWatchStuffJsonParseResult?.tag) {
+    case "ElmWatchStuffJsonReadError":
+      logger.errorTemplate(
+        Errors.readElmWatchStuffJson(
+          elmWatchStuffJsonPath,
+          elmWatchStuffJsonParseResult.errors,
+        ),
+      );
+      return { tag: "Exit", exitCode: 1 };
+
+    case "ElmWatchStuffJsonDecodeError":
+      logger.errorTemplate(
+        Errors.decodeElmWatchStuffJson(
+          elmWatchStuffJsonPath,
+          elmWatchStuffJsonParseResult.error,
+        ),
+      );
+      return { tag: "Exit", exitCode: 1 };
+
+    case undefined:
+    case "Parsed":
+    case "NoElmWatchStuffJson": {
+      const elmWatchStuffJson =
+        elmWatchStuffJsonParseResult?.tag === "Parsed"
+          ? elmWatchStuffJsonParseResult.elmWatchStuffJson
+          : undefined;
+
+      const elmVersion = await SpawnElm.version({
+        cwd: config.root,
+        env,
+      });
+
+      const initProjectResult = initProject({
+        env,
+        getNow,
+        compilationMode,
+        elmVersion,
+        config,
+        enabledTargetsSubstrings: isNonEmptyArray(targetsSubstrings)
+          ? targetsSubstrings
+          : knownTargets,
+        elmWatchStuffDir,
+        elmWatchStuffJsonPath,
+        elmWatchStuffJson,
+      });
+
+      switch (initProjectResult.tag) {
+        case "DuplicateOutputs":
+          logger.errorTemplate(
+            Errors.duplicateOutputs(
+              config.elmWatchJsonPath,
+              initProjectResult.duplicates,
             ),
           );
+          return handleElmWatchJsonError(
+            logger,
+            getNow,
+            runMode,
+            config.elmWatchJsonPath,
+            postprocessWorkerPool,
+            webSocketTokenFromPreviousRun,
+          );
 
-          const elmWatchStuffJsonPath: ElmWatchStuffJsonPath =
-            markAsElmWatchStuffJsonPath(
-              absolutePathFromString(elmWatchStuffDir, "stuff.json"),
-            );
+        case "Project": {
+          const { project } = initProjectResult;
 
-          const elmWatchStuffJsonParseResult =
-            runMode === "hot"
-              ? ElmWatchStuffJson.readAndParse(elmWatchStuffJsonPath)
-              : undefined;
+          logger.debug("Project", projectToDebug(project));
 
-          switch (elmWatchStuffJsonParseResult?.tag) {
-            case "ElmWatchStuffJsonReadError":
-              logger.errorTemplate(
-                Errors.readElmWatchStuffJson(
-                  elmWatchStuffJsonPath,
-                  elmWatchStuffJsonParseResult.errors,
-                ),
-              );
-              return { tag: "Exit", exitCode: 1 };
+          switch (project.postprocess.tag) {
+            case "NoPostprocess":
+              break;
+            case "Postprocess":
+              if (project.postprocess.postprocessArray[0] === ELM_WATCH_NODE) {
+                // Warm up one worker, since we’re going to need it.
+                postprocessWorkerPool.getOrCreateAvailableWorker();
+              }
+              break;
+          }
 
-            case "ElmWatchStuffJsonDecodeError":
-              logger.errorTemplate(
-                Errors.decodeElmWatchStuffJson(
-                  elmWatchStuffJsonPath,
-                  elmWatchStuffJsonParseResult.error,
-                ),
-              );
-              return { tag: "Exit", exitCode: 1 };
-
-            case undefined:
-            case "Parsed":
-            case "NoElmWatchStuffJson": {
-              const elmWatchStuffJson =
-                elmWatchStuffJsonParseResult?.tag === "Parsed"
-                  ? elmWatchStuffJsonParseResult.elmWatchStuffJson
-                  : undefined;
-
-              const elmVersion = await SpawnElm.version({
-                elmWatchJsonPath: parseResult.elmWatchJsonPath,
+          switch (runMode) {
+            case "make": {
+              const result = await Make.run(
                 env,
-              });
-
-              const initProjectResult = initProject({
-                env,
+                logger,
                 getNow,
-                compilationMode: parseArgsResult.compilationMode,
-                elmVersion,
-                elmWatchJsonPath: parseResult.elmWatchJsonPath,
-                config: parseResult.config,
-                enabledTargetsSubstrings: isNonEmptyArray(
-                  parseArgsResult.targetsSubstrings,
-                )
-                  ? parseArgsResult.targetsSubstrings
-                  : knownTargets,
-                elmWatchStuffDir,
-                elmWatchStuffJsonPath,
-                elmWatchStuffJson,
-              });
+                project,
+                postprocessWorkerPool,
+              );
+              switch (result.tag) {
+                case "Error":
+                  return { tag: "Exit", exitCode: 1 };
 
-              switch (initProjectResult.tag) {
-                case "DuplicateOutputs":
-                  logger.errorTemplate(
-                    Errors.duplicateOutputs(
-                      parseResult.elmWatchJsonPath,
-                      initProjectResult.duplicates,
-                    ),
-                  );
-                  return handleElmWatchJsonError(
-                    logger,
-                    getNow,
-                    runMode,
-                    parseResult.elmWatchJsonPath,
-                    postprocessWorkerPool,
-                    webSocketTokenFromPreviousRun,
-                  );
+                case "Success":
+                  return { tag: "Exit", exitCode: 0 };
+              }
+            }
 
-                case "Project": {
-                  const { project } = initProjectResult;
-
-                  logger.debug("Project", projectToDebug(project));
-
-                  switch (project.postprocess.tag) {
-                    case "NoPostprocess":
-                      break;
-                    case "Postprocess":
-                      if (
-                        project.postprocess.postprocessArray[0] ===
-                        ELM_WATCH_NODE
-                      ) {
-                        // Warm up one worker, since we’re going to need it.
-                        postprocessWorkerPool.getOrCreateAvailableWorker();
+            case "hot": {
+              const result = await Hot.run(
+                env,
+                logger,
+                getNow,
+                createServer,
+                restartReasons,
+                postprocessWorkerPool,
+                webSocketState,
+                elmWatchStuffJson?.webSocketToken ??
+                  webSocketTokenFromPreviousRun ??
+                  markAsWebSocketToken(crypto.randomUUID()),
+                project,
+                config.port !== undefined
+                  ? { tag: "PortFromConfig", port: config.port }
+                  : elmWatchStuffJson !== undefined
+                    ? {
+                        tag: "PersistedPort",
+                        port: elmWatchStuffJson.port,
                       }
-                      break;
-                  }
+                    : { tag: "NoPort" },
+                hotTestHooks,
+              );
+              switch (result.tag) {
+                case "ExitOnHandledFatalError":
+                  logger.errorTemplate(result.errorTemplate);
+                  return { tag: "Exit", exitCode: 1 };
 
-                  switch (runMode) {
-                    case "make": {
-                      const result = await Make.run(
-                        env,
-                        logger,
-                        getNow,
-                        project,
-                        postprocessWorkerPool,
-                      );
-                      switch (result.tag) {
-                        case "Error":
-                          return { tag: "Exit", exitCode: 1 };
+                case "ExitOnIdle":
+                  return {
+                    tag: "Exit",
+                    exitCode:
+                      result.reason === "CtrlCPressedOrStdinEnd" ? 0 : 1,
+                  };
 
-                        case "Success":
-                          return { tag: "Exit", exitCode: 0 };
-                      }
-                    }
-
-                    case "hot": {
-                      const result = await Hot.run(
-                        env,
-                        logger,
-                        getNow,
-                        createServer,
-                        restartReasons,
-                        postprocessWorkerPool,
-                        webSocketState,
-                        elmWatchStuffJson?.webSocketToken ??
-                          webSocketTokenFromPreviousRun ??
-                          markAsWebSocketToken(crypto.randomUUID()),
-                        project,
-                        config.port !== undefined
-                          ? { tag: "PortFromConfig", port: config.port }
-                          : elmWatchStuffJson !== undefined
-                            ? {
-                                tag: "PersistedPort",
-                                port: elmWatchStuffJson.port,
-                              }
-                            : { tag: "NoPort" },
-                        hotTestHooks,
-                      );
-                      switch (result.tag) {
-                        case "ExitOnHandledFatalError":
-                          logger.errorTemplate(result.errorTemplate);
-                          return { tag: "Exit", exitCode: 1 };
-
-                        case "ExitOnIdle":
-                          return {
-                            tag: "Exit",
-                            exitCode:
-                              result.reason === "CtrlCPressedOrStdinEnd"
-                                ? 0
-                                : 1,
-                          };
-
-                        case "Restart":
-                          return result;
-                      }
-                    }
-                  }
-                }
+                case "Restart":
+                  return result;
               }
             }
           }

@@ -1797,7 +1797,7 @@ const runCmd =
             },
           });
         } else {
-          const cwd = absoluteDirname(mutable.project.elmWatchJsonPath);
+          const cwd = mutable.project.root;
           const timeout = silentlyReadIntEnvValue(
             env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
             5000,

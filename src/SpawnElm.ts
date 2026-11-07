@@ -13,7 +13,6 @@ import {
   CompilationMode,
   ElmJsonPath,
   ElmVersion,
-  ElmWatchJsonPath,
   GetNow,
   InputPath,
   markAsElmVersion,
@@ -480,17 +479,17 @@ export function install({
 }
 
 export async function version({
-  elmWatchJsonPath,
+  cwd,
   env,
 }: {
-  elmWatchJsonPath: ElmWatchJsonPath;
+  cwd: AbsolutePath;
   env: Env;
 }): Promise<ElmVersion> {
   const command: Command = {
     command: "elm",
     args: ["--version"],
     options: {
-      cwd: absoluteDirname(elmWatchJsonPath),
+      cwd,
       env,
     },
   };

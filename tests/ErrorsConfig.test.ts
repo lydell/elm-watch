@@ -604,7 +604,7 @@ describe("errors", () => {
       const symlink1 = path.join(dir, "Main.elm");
       const symlink2 = path.join(dir, "Other.elm");
       const elmWatchJsonFile = path.join(dir, "elm-watch.json");
-      const elmWatchJson: ElmWatchJson.Config = {
+      const elmWatchJson: ElmWatchJson.ElmWatchJson = {
         targets: {
           main: {
             inputs: ["Main.elm"],

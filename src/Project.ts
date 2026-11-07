@@ -6,8 +6,8 @@ import {
   allowedHostFromUrl,
   getAllowedHostsFromEnv,
 } from "./AllowedHosts";
+import type { Config } from "./Config";
 import * as ElmJson from "./ElmJson";
-import * as ElmWatchJson from "./ElmWatchJson";
 import { ElmWatchStuffJson } from "./ElmWatchStuffJson";
 import { __ELM_WATCH_MAX_PARALLEL, ELM_WATCH_WEBSOCKET_URL, Env } from "./Env";
 import { getSetSingleton, silentlyReadIntEnvValue, toError } from "./Helpers";
@@ -48,6 +48,7 @@ export type Project = {
   // and all source directories, without duplicates and where each
   // directory does not contain any other.
   watchRoots: Set<AbsolutePath>;
+  root: AbsolutePath;
   staticFilesDir: StaticFilesDir | undefined;
   elmVersion: ElmVersion;
   elmWatchJsonPath: ElmWatchJsonPath;
@@ -321,7 +322,6 @@ export function initProject({
   getNow,
   compilationMode,
   elmVersion,
-  elmWatchJsonPath,
   config,
   enabledTargetsSubstrings,
   elmWatchStuffDir,
@@ -332,8 +332,7 @@ export function initProject({
   getNow: GetNow;
   compilationMode: CompilationMode;
   elmVersion: ElmVersion;
-  elmWatchJsonPath: ElmWatchJsonPath;
-  config: ElmWatchJson.Config;
+  config: Config;
   enabledTargetsSubstrings: NonEmptyArray<string>;
   elmWatchStuffDir: ElmWatchStuffDir;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
@@ -352,10 +351,7 @@ export function initProject({
   ).entries()) {
     const outputPath: OutputPath = {
       tag: "OutputPath",
-      theOutputPath: absolutePathFromString(
-        absoluteDirname(elmWatchJsonPath),
-        target.output,
-      ),
+      theOutputPath: absolutePathFromString(config.root, target.output),
       temporaryOutputPath: absolutePathFromString(
         elmWatchStuffDir,
         `${index}.js`,
@@ -381,7 +377,7 @@ export function initProject({
       )
     ) {
       const resolveElmJsonResult = resolveElmJson(
-        elmWatchJsonPath,
+        config.root,
         target.inputs,
       );
 
@@ -442,14 +438,11 @@ export function initProject({
     config.serve === undefined
       ? undefined
       : markAsStaticFilesDir(
-          absolutePathFromString(
-            absoluteDirname(elmWatchJsonPath),
-            config.serve,
-          ),
+          absolutePathFromString(config.root, config.serve),
         );
 
   const watchRoots = getWatchRoots(
-    elmWatchJsonPath,
+    config.root,
     Array.from(elmJsons.keys()),
   );
 
@@ -469,7 +462,7 @@ export function initProject({
   // allowed. It’s typically also the host of the page.
   const allowedHosts = Array.from(
     new Set([
-      ...(config.allowedHosts ?? []),
+      ...config.allowedHosts,
       ...getAllowedHostsFromEnv(env),
       ...(webSocketUrl === undefined
         ? []
@@ -481,9 +474,10 @@ export function initProject({
     tag: "Project",
     project: {
       watchRoots,
+      root: config.root,
       staticFilesDir,
       elmVersion,
-      elmWatchJsonPath,
+      elmWatchJsonPath: config.elmWatchJsonPath,
       elmWatchStuffJsonPath,
       disabledOutputs,
       elmJsonsErrors,
@@ -497,12 +491,12 @@ export function initProject({
 }
 
 function getWatchRoots(
-  elmWatchJsonPath: ElmWatchJsonPath,
+  root: AbsolutePath,
   elmJsons: Array<ElmJsonPath>,
 ): Set<AbsolutePath> {
   return new Set<AbsolutePath>(
     filterSubDirs(path.sep, [
-      absoluteDirname(elmWatchJsonPath),
+      root,
       ...elmJsons.flatMap((elmJsonPath): Array<AbsolutePath> => {
         // This is a bit weird, but we can actually ignore errors here. Some facts:
         // - We want to run Elm even if the elm.json is invalid, because Elm has
@@ -567,7 +561,7 @@ type ResolveElmJsonResult =
     };
 
 function resolveElmJson(
-  elmWatchJsonPath: ElmWatchJsonPath,
+  root: AbsolutePath,
   inputStrings: NonEmptyArray<string>,
 ): ResolveElmJsonResult {
   const inputs: Array<InputPath> = [];
@@ -581,10 +575,7 @@ function resolveElmJson(
   for (const inputString of inputStrings) {
     const uncheckedInputPath: UncheckedInputPath = {
       tag: "UncheckedInputPath",
-      theUncheckedInputPath: absolutePathFromString(
-        absoluteDirname(elmWatchJsonPath),
-        inputString,
-      ),
+      theUncheckedInputPath: absolutePathFromString(root, inputString),
       originalString: inputString,
     };
 
@@ -740,10 +731,7 @@ export function getPostprocessElmWatchNodeScriptPath(
       const [commandName, scriptPathString] =
         project.postprocess.postprocessArray;
       if (commandName === ELM_WATCH_NODE && scriptPathString !== undefined) {
-        return absolutePathFromString(
-          absoluteDirname(project.elmWatchJsonPath),
-          scriptPathString,
-        );
+        return absolutePathFromString(project.root, scriptPathString);
       }
       return undefined;
     }

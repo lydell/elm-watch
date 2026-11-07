@@ -22,6 +22,7 @@ const getNow: GetNow = () => new Date();
 
 const project: Project = {
   watchRoots: new Set([markAsAbsolutePath("/Users/you/project")]),
+  root: markAsAbsolutePath("/Users/you/project"),
   staticFilesDir: markAsStaticFilesDir(
     markAsAbsolutePath("/Users/you/project/public"),
   ),
