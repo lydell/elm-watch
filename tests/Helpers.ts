@@ -539,6 +539,10 @@ export function clean(string: string): string {
       /(\S*server:\S*) http:\/\/localhost:\d+(\S*, network:\S*) http:\/\/.+/g,
       "$1 http://localhost:59123$2 http://192.168.0.1:59123",
     )
+    .replace(
+      /(\S*server:\S*) http:\/\/localhost:\d+$/gm,
+      "$1 http://localhost:59123",
+    )
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘")
     .replace(

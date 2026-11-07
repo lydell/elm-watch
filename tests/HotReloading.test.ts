@@ -1670,7 +1670,7 @@ describe("hot reloading", () => {
       ✅ OutputsWithoutAction⧙                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ OutputsWithoutActionOther1
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: OutputsWithoutAction⧘
@@ -1862,7 +1862,7 @@ describe("hot reloading", () => {
     ]);
 
     expect(terminal).toMatchInlineSnapshot(`
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       ⏳ InterruptElm: elm make (typecheck only)
       ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 

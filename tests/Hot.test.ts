@@ -61,6 +61,8 @@ describe("hot", () => {
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
+      // Also test exposing the server on the network.
+      env: { ELM_WATCH_HOST: "0.0.0.0" },
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
@@ -110,7 +112,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Worker: elm make (typecheck only)
@@ -233,7 +235,7 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
 
-      server: http://localhost:59123, network: http://192.168.0.1:59123
+      server: http://localhost:59123
       web socket connections: 1
 
       13:10:05 Web socket connected for: Html
@@ -259,7 +261,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      server: http://localhost:59123, network: http://192.168.0.1:59123
+      server: http://localhost:59123
       Dependencies: in progress
       Dependencies: success
       Html: elm make (typecheck only)
@@ -293,7 +295,7 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
@@ -354,7 +356,7 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
@@ -448,7 +450,7 @@ describe("hot", () => {
 
       🚨 ⧙1⧘ error found
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Removed⧘
@@ -505,7 +507,7 @@ describe("hot", () => {
 
       🚨 ⧙1⧘ error found
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Readonly⧘
@@ -1332,7 +1334,7 @@ describe("hot", () => {
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-        📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+        📊 ⧙server:⧘ http://localhost:59123
         📊 ⧙web socket connections:⧘ 1
 
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
@@ -2169,7 +2171,7 @@ describe("hot", () => {
     const adjustedTerminal = terminal.replace(/\w+\.elm/g, "File.elm");
 
     expect(adjustedTerminal).toMatchInlineSnapshot(`
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Html: elm make (typecheck only)
@@ -2416,7 +2418,7 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
@@ -2773,7 +2775,7 @@ describe("hot", () => {
 
       1 error found
 
-      server: http://localhost:59123, network: http://192.168.0.1:59123
+      server: http://localhost:59123
       web socket connections: 1
 
       13:10:05 Web socket connected needing compilation of: Main
@@ -3712,7 +3714,7 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
@@ -3758,7 +3760,7 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
@@ -3887,7 +3889,7 @@ describe("hot", () => {
       ✅ Dependencies
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/elm-json-above-elm-watch-json/elm.json⧘
@@ -3919,7 +3921,7 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
+      📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
 
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/source-directories-above-elm-watch-json/src/Answer.elm⧘

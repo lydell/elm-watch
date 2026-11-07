@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 import * as https from "https";
 import type { AddressInfo } from "net";
+import * as net from "net";
 import type { Duplex } from "stream";
 import * as util from "util";
 import WebSocket, { WebSocketServer as WsServer } from "ws";
@@ -98,6 +99,8 @@ export class WebSocketServer {
   private msgQueue: Array<WebSocketServerMsg> = [];
 
   listening: Promise<void>;
+
+  private closed = false;
 
   constructor(
     createServer: CreateServer,
@@ -285,11 +288,31 @@ export class WebSocketServer {
       });
     });
 
-    this.polyHttpServer.listen(
-      // If `port` is 0, the operating system will assign an arbitrary unused port.
-      portChoice.tag === "NoPort" ? 0 : portChoice.port,
-      host,
-    );
+    // If `port` is 0, the operating system will assign an arbitrary unused port.
+    const port = portChoice.tag === "NoPort" ? 0 : portChoice.port;
+
+    if (host === LOOPBACK_IPV4) {
+      probePort(port)
+        .then((result) => {
+          if (this.closed) {
+            return;
+          }
+          switch (result.tag) {
+            case "Free":
+              this.polyHttpServer.listen(result.port, host);
+              return;
+            case "Error":
+              this.polyHttpServer.emit("error", result.error);
+              return;
+          }
+        })
+        .catch((error: unknown) => {
+          /* v8 ignore next */
+          this.polyHttpServer.emit("error", toError(error));
+        });
+    } else {
+      this.polyHttpServer.listen(port, host);
+    }
   }
 
   dispatchToQueue = (msg: WebSocketServerMsg): void => {
@@ -320,6 +343,7 @@ export class WebSocketServer {
   }
 
   async close(): Promise<void> {
+    this.closed = true;
     this.unsetDispatch();
     // This terminates all connections.
     this.webSocketServer.close();
@@ -339,6 +363,52 @@ export class WebSocketServer {
       webSocket.close();
     }
   }
+}
+
+const LOOPBACK_IPV4 = "127.0.0.1";
+
+type ProbeResult =
+  | { tag: "Free"; port: number }
+  | { tag: "Error"; error: NodeJS.ErrnoException };
+
+// On macOS (and possibly Windows), listening on 127.0.0.1 succeeds even if
+// another program already listens on the same port on 0.0.0.0 or `::` (which is
+// the default for Node.js servers), or on ::1. Then we wouldn’t get a port
+// conflict error, and `localhost` could go to the other program. To detect such
+// conflicts, briefly listen on 0.0.0.0 and ::1 first. (Listening on 0.0.0.0
+// fails if another program listens on 0.0.0.0 or `::`.) The actual listening
+// on 127.0.0.1 then catches conflicts with programs listening on 127.0.0.1.
+async function probePort(port: number): Promise<ProbeResult> {
+  const result = await probe(port, "0.0.0.0");
+  switch (result.tag) {
+    case "Error":
+      return result;
+    case "Free": {
+      const ipv6Result = await probe(result.port, "::1");
+      return ipv6Result.tag === "Error" &&
+        // IPv6 might not be available.
+        (ipv6Result.error.code === "EADDRNOTAVAIL" ||
+          ipv6Result.error.code === "EAFNOSUPPORT")
+        ? /* v8 ignore next */
+          result
+        : ipv6Result;
+    }
+  }
+}
+
+async function probe(port: number, host: string): Promise<ProbeResult> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", (error: NodeJS.ErrnoException) => {
+      resolve({ tag: "Error", error });
+    });
+    server.listen(port, host, () => {
+      const address = server.address() as AddressInfo;
+      server.close(() => {
+        resolve({ tag: "Free", port: address.port });
+      });
+    });
+  });
 }
 
 function rejectUpgrade(

@@ -106,8 +106,8 @@ describe("help", () => {
               Exit elm-watch when stdin ends
 
           ⧙ELM_WATCH_HOST⧘
-              Defaults to 0.0.0.0 (expose on local network)
-              Set it to 127.0.0.1 to restrict to your computer
+              Defaults to 127.0.0.1 (only your computer)
+              Set it to 0.0.0.0 to expose on the local network
 
           ⧙ELM_WATCH_WEBSOCKET_URL⧘
               Override "webSocketUrl" in ⧙elm-watch.json⧘ dynamically
@@ -176,8 +176,8 @@ describe("help", () => {
               Exit elm-watch when stdin ends
 
           ELM_WATCH_HOST
-              Defaults to 0.0.0.0 (expose on local network)
-              Set it to 127.0.0.1 to restrict to your computer
+              Defaults to 127.0.0.1 (only your computer)
+              Set it to 0.0.0.0 to expose on the local network
 
           ELM_WATCH_WEBSOCKET_URL
               Override "webSocketUrl" in elm-watch.json dynamically

@@ -3034,7 +3034,9 @@ function printServerLinks(
   const { port } = webSocketServer;
 
   if (host !== "0.0.0.0") {
-    return `${dim("server:")} ${protocol}://${host}:${port}`;
+    // `localhost` is easier to read, and the same thing in practice.
+    const hostname = host === "127.0.0.1" ? "localhost" : host;
+    return `${dim("server:")} ${protocol}://${hostname}:${port}`;
   }
 
   const networkIps = Object.values(os.networkInterfaces())

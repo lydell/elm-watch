@@ -1,9 +1,11 @@
 import * as http from "http";
+import type { AddressInfo } from "net";
 import { describe, expect, test } from "vitest";
 import WebSocket from "ws";
 
 import { AllowedHost } from "../src/AllowedHosts";
 import { markAsHost } from "../src/Host";
+import { markAsPort } from "../src/Port";
 import { markAsWebSocketToken } from "../src/Types";
 import { WebSocketServer, WebSocketServerMsg } from "../src/WebSocketServer";
 import { stringSnapshotSerializer } from "./Helpers";
@@ -184,6 +186,83 @@ describe("WebSocketServer", () => {
           },
         ]
       `);
+    });
+  });
+
+  describe("port conflicts", () => {
+    async function listenOther(host: string | undefined): Promise<http.Server> {
+      const server = http.createServer();
+      await new Promise<void>((resolve) => {
+        server.listen(0, host, resolve);
+      });
+      return server;
+    }
+
+    async function closeServer(server: http.Server): Promise<void> {
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+    }
+
+    function createServer(port: number): WebSocketServer {
+      return new WebSocketServer(
+        ({ onRequest, onUpgrade }) =>
+          http.createServer(onRequest).on("upgrade", onUpgrade),
+        { tag: "PortFromConfig", port: markAsPort(port) },
+        markAsHost("127.0.0.1"),
+        undefined,
+        markAsWebSocketToken(TOKEN),
+        [],
+      );
+    }
+
+    // On macOS, listening on 127.0.0.1 succeeds even if another program
+    // listens on the same port on `::`, 0.0.0.0 or ::1. We still want to
+    // report a port conflict in those cases.
+    for (const otherHost of [undefined, "::", "0.0.0.0", "127.0.0.1", "::1"]) {
+      test(`other program listening on ${otherHost ?? "(default)"}`, async () => {
+        const other = await listenOther(otherHost);
+        const { port } = other.address() as AddressInfo;
+        const server = createServer(port);
+        const result = await new Promise<string>((resolve, reject) => {
+          server.setDispatch((msg) => {
+            resolve(
+              msg.tag === "WebSocketServerError" ? msg.error.tag : msg.tag,
+            );
+          });
+          server.listening
+            .then(() => {
+              resolve("Listening");
+            })
+            .catch(reject);
+        });
+        await server.close();
+        await closeServer(other);
+        expect(result).toBe("PortConflict");
+      });
+    }
+
+    test("closing while checking the port", async () => {
+      const temporary = await listenOther("127.0.0.1");
+      const { port } = temporary.address() as AddressInfo;
+      await closeServer(temporary);
+
+      const server = createServer(port);
+      await server.close();
+      // Give the port check time to finish.
+      await new Promise((resolve) => {
+        setTimeout(resolve, 100);
+      });
+
+      // The port should not have been taken after closing.
+      const again = http.createServer();
+      await expect(
+        new Promise<void>((resolve, reject) => {
+          again.once("error", reject);
+          again.listen(port, "127.0.0.1", resolve);
+        }),
+      ).resolves.toBeUndefined();
+      await closeServer(again);
     });
   });
 });

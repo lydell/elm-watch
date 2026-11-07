@@ -9,5 +9,5 @@ export function markAsHost(string: string): Host {
 }
 
 export function getHost(env: Env): Host {
-  return markAsHost(env[ELM_WATCH_HOST] ?? "0.0.0.0");
+  return markAsHost(env[ELM_WATCH_HOST] ?? "127.0.0.1");
 }

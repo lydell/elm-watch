@@ -1340,13 +1340,13 @@ ${text(ELM_WATCH_HOST)}=${text(host)}
 
 But that host was not found!
 
-It’s common to set it to the following to restrict elm-watch’s HTTP server to
-your computer:
+It’s common to set it to the following to expose elm-watch’s HTTP server on the
+local network:
 
-${text(ELM_WATCH_HOST)}=127.0.0.1
+${text(ELM_WATCH_HOST)}=0.0.0.0
 
-If unset, the default host is 0.0.0.0, which exposes the HTTP server on the
-local network.
+If unset, the default host is 127.0.0.1, which restricts the HTTP server to
+your computer.
 
 Try setting the environment variable to something else, or remove it altogether.
 
