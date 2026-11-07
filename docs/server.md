@@ -199,7 +199,7 @@ Why doesn’t elm-watch do that by default? elm-watch only reloads when it can b
 
 By default, elm-watch’s HTTP server only listens on `127.0.0.1`, which means that it is only available on your computer.
 
-If you want to test on your phone on the same Wi-Fi, for example, you can expose the server on the local network by setting an environment variable: `ELM_WATCH_HOST=0.0.0.0`. Be careful with that on public Wi-Fi: Anyone on the same network could then access the server, and read the source code of your project if you use `"serve": "."`.
+If you want to test on your phone on the same Wi-Fi, for example, you can expose the server on the local network by setting an environment variable: `ELM_WATCH_HOST=0.0.0.0`. Be careful with that on public Wi-Fi: Anyone on the same network could then access the server, and read the source code of your project if you use `"serve": "."`. They could also connect to elm-watch’s WebSocket, for example to trigger your [ELM_WATCH_OPEN_EDITOR](../browser-ui/#clickable-error-locations) command.
 
 ### Allowed hosts
 
