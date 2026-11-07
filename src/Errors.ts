@@ -37,7 +37,6 @@ import {
   type CliArg,
   type Cwd,
   type ElmJsonPath,
-  type ElmVersion,
   type ElmWatchJsonPath,
   type ElmWatchStuffJsonPath,
   type InputPath,
@@ -871,16 +870,12 @@ export function elmMakeProblem(
   filePath: AbsolutePath,
   problem: ElmMakeError.Problem,
   extraError: string | undefined,
-  elmVersion: ElmVersion,
 ): ErrorTemplate {
-  // Elm 0.19.2 has a bug where the error locations are off-by-one:
-  // https://github.com/elm/compiler/issues/2358
-  const offset = elmVersion === "0.19.2" ? 1 : 0;
   return fancyError(problem.title, {
     tag: "FileWithLineAndColumn",
     file: filePath,
-    line: problem.region.start.line + offset,
-    column: problem.region.start.column + offset,
+    line: problem.region.start.line,
+    column: problem.region.start.column,
   })`
 ${text(extraError ?? "")}
 

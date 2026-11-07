@@ -43,7 +43,6 @@ import {
   type AbsolutePath,
   type CompilationMode,
   type ElmJsonPath,
-  type ElmVersion,
   type GetNow,
   type InputPath,
   markAsTargetName,
@@ -2001,13 +2000,7 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
     ...project.elmJsonsErrors.map(renderElmJsonError),
     ...Array.from(project.elmJsons).flatMap(([elmJsonPath, outputs]) =>
       Array.from(outputs).flatMap(([outputPath, { status }]) =>
-        renderOutputErrors(
-          project.elmVersion,
-          elmJsonPath,
-          outputPath,
-          status,
-          true,
-        ),
+        renderOutputErrors(elmJsonPath, outputPath, status, true),
       ),
     ),
   ];
@@ -2046,7 +2039,6 @@ export function renderElmJsonError({
 }
 
 export function renderOutputErrors(
-  elmVersion: ElmVersion,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   status: OutputStatus,
@@ -2135,12 +2127,7 @@ export function renderOutputErrors(
         case "compile-errors":
           return status.error.errors.flatMap((error) =>
             error.problems.map((problem) =>
-              Errors.elmMakeProblem(
-                error.path,
-                problem,
-                status.extraError,
-                elmVersion,
-              ),
+              Errors.elmMakeProblem(error.path, problem, status.extraError),
             ),
           );
       }

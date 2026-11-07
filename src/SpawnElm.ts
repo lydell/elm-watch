@@ -13,15 +13,13 @@ import {
   spawn,
   type SpawnResult,
 } from "./Spawn.ts";
-import {
-  type AbsolutePath,
-  type CompilationMode,
-  type ElmJsonPath,
-  type ElmVersion,
-  type GetNow,
-  type InputPath,
-  markAsElmVersion,
-  type OutputPath,
+import type {
+  AbsolutePath,
+  CompilationMode,
+  ElmJsonPath,
+  GetNow,
+  InputPath,
+  OutputPath,
 } from "./Types.ts";
 
 export type RunElmMakeResult =
@@ -469,44 +467,4 @@ export function install({
       }
     },
   };
-}
-
-export async function version({
-  cwd,
-  env,
-}: {
-  cwd: AbsolutePath;
-  env: Env;
-}): Promise<ElmVersion> {
-  const command: Command = {
-    command: "elm",
-    args: ["--version"],
-    options: {
-      cwd,
-      env,
-    },
-  };
-
-  const spawnResult = await spawn(command).promise;
-
-  switch (spawnResult.tag) {
-    // This function ignores all errors, because it is not used for anything critical.
-    // Errors will surface later anyway, when we invoke the Elm compiler to compile stuff.
-    case "CommandNotFoundError":
-    case "OtherSpawnError":
-    case "Killed":
-      return markAsElmVersion("unknown");
-
-    case "Exit": {
-      const { exitReason } = spawnResult;
-      const stdout = spawnResult.stdout.toString("utf8");
-      const stderr = spawnResult.stderr.toString("utf8");
-
-      return exitReason.tag === "ExitCode" &&
-        exitReason.exitCode === 0 &&
-        stderr === ""
-        ? markAsElmVersion(stdout.trim())
-        : markAsElmVersion("unknown");
-    }
-  }
 }

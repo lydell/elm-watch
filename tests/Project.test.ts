@@ -13,7 +13,6 @@ import {
   markAsAbsolutePath,
   markAsCwd,
   markAsElmJsonPath,
-  markAsElmVersion,
   markAsElmWatchJsonPath,
   markAsElmWatchStuffDir,
   markAsElmWatchStuffJsonPath,
@@ -44,7 +43,6 @@ const project: Project = {
     source: "elm-watch.json",
   },
   allowedHosts: [],
-  elmVersion: markAsElmVersion("0.19.1"),
   configSource: {
     tag: "ElmWatchJson",
     elmWatchJsonPath: markAsElmWatchJsonPath(
@@ -360,7 +358,6 @@ describe("Project", () => {
         env: {},
         getNow,
         compilationMode: "standard",
-        elmVersion: markAsElmVersion("0.19.1"),
         config: parseResult.value,
         enabledTargetsSubstrings: [""],
         elmWatchStuffDir: markAsElmWatchStuffDir(

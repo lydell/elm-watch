@@ -13,7 +13,6 @@ import * as Make from "./Make.ts";
 import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray.ts";
 import { absolutePathFromString } from "./PathHelpers.ts";
 import { initProject, projectToDebug } from "./Project.ts";
-import * as SpawnElm from "./SpawnElm.ts";
 import {
   type CliArg,
   type CompilationMode,
@@ -229,16 +228,10 @@ export async function runConfig({
           ? elmWatchStuffJsonParseResult.elmWatchStuffJson
           : undefined;
 
-      const elmVersion = await SpawnElm.version({
-        cwd: config.root,
-        env,
-      });
-
       const initProjectResult = initProject({
         env,
         getNow,
         compilationMode,
-        elmVersion,
         config,
         enabledTargetsSubstrings: isNonEmptyArray(targetsSubstrings)
           ? targetsSubstrings

@@ -39,7 +39,6 @@ import {
   type BrowserUiPosition,
   type CompilationMode,
   type ElmJsonPath,
-  type ElmVersion,
   type ElmWatchStuffDir,
   type ElmWatchStuffJsonPath,
   type GetNow,
@@ -61,7 +60,6 @@ export type Project = {
   missingSourceDirectories: Set<AbsolutePath>;
   root: AbsolutePath;
   staticFilesDir: StaticFilesDir | undefined;
-  elmVersion: ElmVersion;
   configSource: ConfigSource;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: Array<OutputPath>;
@@ -338,7 +336,6 @@ export function initProject({
   env,
   getNow,
   compilationMode,
-  elmVersion,
   config,
   enabledTargetsSubstrings,
   elmWatchStuffDir,
@@ -348,7 +345,6 @@ export function initProject({
   env: Env;
   getNow: GetNow;
   compilationMode: CompilationMode;
-  elmVersion: ElmVersion;
   config: Config;
   enabledTargetsSubstrings: NonEmptyArray<string>;
   elmWatchStuffDir: ElmWatchStuffDir;
@@ -503,7 +499,6 @@ export function initProject({
       ),
       root: config.root,
       staticFilesDir,
-      elmVersion,
       configSource: config.source,
       elmWatchStuffJsonPath,
       disabledOutputs,
