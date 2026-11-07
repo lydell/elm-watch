@@ -304,23 +304,5 @@ describe("library", () => {
         ]
       `);
     });
-
-    test("compilationMode in hot mode", async () => {
-      const { stdout } = await run(1, (root) => ({
-        root,
-        runMode: "hot",
-        compilationMode: "debug",
-        targets: [target],
-      }));
-      expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
-
-        I got invalid options passed to ⧙elmWatch()⧘:
-
-        At root["compilationMode"]:
-        compilationMode can only be set when runMode is "make". In "hot" mode, you choose compilation mode in the browser UI.
-        Got: "debug"
-      `);
-    });
   });
 });

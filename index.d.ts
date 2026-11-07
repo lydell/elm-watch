@@ -55,16 +55,15 @@ export type Target = {
   postprocess?: Postprocess;
 };
 
-export type Options = (
-  | {
-      runMode: "hot";
-    }
-  | {
-      runMode: "make";
-      // Default: "standard".
-      compilationMode?: CompilationMode;
-    }
-) & {
+export type Options = {
+  runMode: RunMode;
+
+  // In "make" mode: The compilation mode for all targets.
+  // In "hot" mode: The compilation mode for targets you haven’t switched to
+  // another compilation mode in the browser UI.
+  // Default: "standard".
+  compilationMode?: CompilationMode;
+
   // Absolute path. Relative paths in the options are resolved from here, and
   // elm-watch keeps its state in `elm-stuff/elm-watch/` inside it.
   // Usually: `import.meta.dirname`.

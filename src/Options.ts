@@ -92,44 +92,24 @@ const Targets = Codec.flatMap(NonEmptyArray(Target), {
   encoder: (value) => value,
 });
 
-const Options = Codec.flatMap(
-  Codec.fields(
-    {
-      runMode: Codec.primitiveUnion(["hot", "make"]),
-      compilationMode: Codec.field(CompilationMode, { optional: true }),
-      root: Root,
-      targets: Targets,
-      port: Codec.field(Port, { optional: true }),
-      staticFilesDir: Codec.field(Codec.string, { optional: true }),
-      webSocketUrl: Codec.field(WebSocketUrl("Options"), { optional: true }),
-      allowedHosts: Codec.field(Codec.array(AllowedHost), { optional: true }),
-      // These are validated by TypeScript only.
-      createServer: Codec.field(functionCodec<object>(), { optional: true }),
-      env: Codec.field(Codec.unknown, { optional: true }),
-      stdin: Codec.field(Codec.unknown, { optional: true }),
-      stdout: Codec.field(Codec.unknown, { optional: true }),
-      stderr: Codec.field(Codec.unknown, { optional: true }),
-    },
-    { allowExtraFields: false },
-  ),
+const Options = Codec.fields(
   {
-    decoder: (options) =>
-      options.runMode === "hot" && options.compilationMode !== undefined
-        ? {
-            tag: "DecoderError",
-            error: {
-              tag: "custom",
-              message:
-                'compilationMode can only be set when runMode is "make". In "hot" mode, you choose compilation mode in the browser UI.',
-              got: options.compilationMode,
-              path: ["compilationMode"],
-            },
-          }
-        : { tag: "Valid", value: options },
-    // Encoding is never used.
-    /* v8 ignore next -- @preserve */
-    encoder: (value) => value,
+    runMode: Codec.primitiveUnion(["hot", "make"]),
+    compilationMode: Codec.field(CompilationMode, { optional: true }),
+    root: Root,
+    targets: Targets,
+    port: Codec.field(Port, { optional: true }),
+    staticFilesDir: Codec.field(Codec.string, { optional: true }),
+    webSocketUrl: Codec.field(WebSocketUrl("Options"), { optional: true }),
+    allowedHosts: Codec.field(Codec.array(AllowedHost), { optional: true }),
+    // These are validated by TypeScript only.
+    createServer: Codec.field(functionCodec<object>(), { optional: true }),
+    env: Codec.field(Codec.unknown, { optional: true }),
+    stdin: Codec.field(Codec.unknown, { optional: true }),
+    stdout: Codec.field(Codec.unknown, { optional: true }),
+    stderr: Codec.field(Codec.unknown, { optional: true }),
   },
+  { allowExtraFields: false },
 );
 
 export type DecodeOptionsResult =
