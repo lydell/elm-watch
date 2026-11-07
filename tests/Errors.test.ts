@@ -23,6 +23,7 @@ import {
   markAsElmJsonPath,
   markAsTargetName,
 } from "../src/Types";
+import { copyFixture } from "./FixtureCopies";
 import {
   assertExitCode,
   badElmBinEnv,
@@ -44,7 +45,9 @@ import {
   wait,
 } from "./Helpers";
 
-const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "errors");
+function fixtureDir(fixture: string): string {
+  return copyFixture("errors", fixture);
+}
 
 async function run(
   fixture: string,
@@ -57,7 +60,7 @@ async function run(
     useElmErrorWorkaround?: boolean;
   },
 ): Promise<string> {
-  return runAbsolute(path.join(FIXTURES_DIR, fixture), args, options);
+  return runAbsolute(fixtureDir(fixture), args, options);
 }
 
 async function runAbsolute(
@@ -128,7 +131,7 @@ async function runWithBadElmBin(
     originalStdout?: boolean;
   } = {},
 ): Promise<string> {
-  const dir = path.join(FIXTURES_DIR, "valid");
+  const dir = fixtureDir("valid");
   const BUILD = path.join(dir, "build");
   await rimraf(BUILD);
   return runAbsolute(
@@ -145,7 +148,7 @@ async function runWithBadElmBin(
 async function runWithBadElmBinAndWrittenError(
   fixture: string,
 ): Promise<{ output: string; writtenError: string }> {
-  const dir = path.join(FIXTURES_DIR, "valid");
+  const dir = fixtureDir("valid");
 
   const readErrorPaths = (): Array<string> =>
     fs
@@ -875,6 +878,8 @@ describe("errors", () => {
     });
 
     testExceptWindows("duplicate inputs with symlinks", async () => {
+      // elm-watch.json refers to ../duplicate-inputs/.
+      fixtureDir("duplicate-inputs");
       expect(await run("duplicate-inputs-with-symlinks", ["make"]))
         .toMatchInlineSnapshot(`
         ⧙-- DUPLICATE INPUTS ------------------------------------------------------------⧘
@@ -1714,7 +1719,7 @@ describe("errors", () => {
 
     test("not enough bytes error", async () => {
       const fixture = "not-enough-bytes";
-      const dir = path.join(FIXTURES_DIR, fixture);
+      const dir = fixtureDir(fixture);
       const elmStuff = path.join(dir, "elm-stuff");
       const iDat = path.join(elmStuff, "0.19.1", "i.dat");
       await rimraf(elmStuff);
@@ -1823,7 +1828,7 @@ describe("errors", () => {
 
     test("interrupt typecheck with compilation error", async () => {
       const fixture = "interrupt-typecheck";
-      const dir = path.join(FIXTURES_DIR, fixture);
+      const dir = fixtureDir(fixture);
       const src = path.join(dir, "src");
       const lock = path.join(dir, "lock");
       const mainFile = path.join(src, "Main.elm");
@@ -1931,7 +1936,7 @@ describe("errors", () => {
 
     test("fail to write output after postprocess", async () => {
       const fixture = "readonly-output";
-      const dir = path.join(FIXTURES_DIR, fixture);
+      const dir = fixtureDir(fixture);
       const readonlyFile = path.join(dir, "readonly.js");
       rm(readonlyFile);
       fs.writeFileSync(readonlyFile, "", { mode: "0444" }); // readonly
@@ -1955,7 +1960,7 @@ describe("errors", () => {
 
     test("fail to write dummy output", async () => {
       const fixture = "readonly-output";
-      const dir = path.join(FIXTURES_DIR, fixture);
+      const dir = fixtureDir(fixture);
       const readonlyFile = path.join(dir, "readonly.js");
       rm(readonlyFile);
       fs.writeFileSync(readonlyFile, "", { mode: "0444" }); // readonly
@@ -2305,7 +2310,7 @@ describe("errors", () => {
 
     testExceptLinux("forgot to read stdin", async () => {
       const fixture = "postprocess/variants/no-stdin-read";
-      const dir = path.join(FIXTURES_DIR, fixture);
+      const dir = fixtureDir(fixture);
       const elmWatchJson = fs.readFileSync(
         path.join(dir, "elm-watch.template.json"),
         "utf8",
@@ -2674,7 +2679,7 @@ describe("errors", () => {
     });
 
     test("write error", async () => {
-      const dir = path.join(FIXTURES_DIR, "elm-watch-stuff-json-write-error");
+      const dir = fixtureDir("elm-watch-stuff-json-write-error");
       const elmWatchStuffJson: ElmWatchStuffJson = {
         port: markAsPort(59999),
         targets: {},
@@ -2845,10 +2850,11 @@ describe("errors", () => {
   });
 
   describe("CI", () => {
-    const appPath = path.join(FIXTURES_DIR, "ci", "build", "app.js");
+    const getAppPath = (): string =>
+      path.join(fixtureDir("ci"), "build", "app.js");
 
     test("CI scenario", async () => {
-      rm(appPath);
+      rm(getAppPath());
 
       // Note: Postprocess is skipped when there are `elm make` errors.
       expect(await run("ci", ["make"], { isTTY: false, originalStdout: true }))
@@ -2894,7 +2900,7 @@ describe("errors", () => {
       `);
 
       // Not written since postprocess was skipped – full compilation is atomic.
-      expect(fs.existsSync(appPath)).toBe(false);
+      expect(fs.existsSync(getAppPath())).toBe(false);
 
       // Postprocess error.
       expect(
@@ -2930,7 +2936,7 @@ describe("errors", () => {
     });
 
     test("CI scenario – no color", async () => {
-      rm(appPath);
+      rm(getAppPath());
 
       // Note: Postprocess is skipped when there are `elm make` errors.
       expect(
@@ -2985,7 +2991,7 @@ describe("errors", () => {
       `);
 
       // Not written since postprocess was skipped – full compilation is atomic.
-      expect(fs.existsSync(appPath)).toBe(false);
+      expect(fs.existsSync(getAppPath())).toBe(false);
 
       // Postprocess error.
       expect(

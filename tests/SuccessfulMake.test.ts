@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 
 import elmWatchCli from "../src";
 import { Env, NO_COLOR } from "../src/Env";
+import { copyFixture } from "./FixtureCopies";
 import {
   assertExitCode,
   clean,
@@ -18,14 +19,16 @@ import {
   TEST_ENV,
 } from "./Helpers";
 
-const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures");
+function fixtureDir(fixture: string): string {
+  return copyFixture(".", fixture);
+}
 
 async function run(
   fixture: string,
   args: Array<string>,
   { isTTY = true, bin, env }: { isTTY?: boolean; bin?: string; env?: Env } = {},
 ): Promise<string> {
-  const dir = path.join(FIXTURES_DIR, fixture);
+  const dir = fixtureDir(fixture);
   const build = path.join(dir, "build");
 
   await rimraf(build);
@@ -198,7 +201,7 @@ describe("successful make", () => {
 
   test("multiple elm-watch-node, with queued postprocess", async () => {
     const fixture = "multiple-elm-watch-node";
-    const lock = path.join(FIXTURES_DIR, fixture, "lock");
+    const lock = path.join(fixtureDir(fixture), "lock");
     fs.writeFileSync(lock, "");
     const output = await run(fixture, ["make"], {
       isTTY: false,
