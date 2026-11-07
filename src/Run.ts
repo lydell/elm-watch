@@ -333,11 +333,15 @@ async function handleElmWatchJsonError(
       return { tag: "Exit", exitCode: 1 };
 
     case "hot": {
-      logger.write("");
-      Compile.printNumErrors(logger, 1);
       const elmWatchJsonEvent = await Hot.watchElmWatchJsonOnce(
         getNow,
         elmWatchJsonPath,
+        // Print this once the watcher is ready, so that if the user (or a
+        // test) reacts to it, the change is guaranteed to be picked up.
+        () => {
+          logger.write("");
+          Compile.printNumErrors(logger, 1);
+        },
       );
       logger.clearScreen();
       return {

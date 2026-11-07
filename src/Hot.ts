@@ -469,12 +469,15 @@ export async function run(
 export async function watchElmWatchJsonOnce(
   getNow: GetNow,
   elmWatchJsonPath: ElmWatchJsonPath,
+  onReady: () => void,
 ): Promise<WatcherEvent> {
   return new Promise((resolve, reject) => {
     const watcher = chokidar.watch(elmWatchJsonPath, {
       ignoreInitial: true,
       disableGlobbing: true,
     });
+
+    watcher.on("ready", onReady);
 
     watcherOnAll(watcher, reject, (eventName, absolutePathString) => {
       const event: WatcherEvent = {

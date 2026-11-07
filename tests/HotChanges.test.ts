@@ -51,6 +51,11 @@ describe("hot", () => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
       onIdle: async ({ idle, div, stdout }) => {
+        // elm-watch prints “error found” once it is ready to pick up the next
+        // change to elm-watch.json.
+        const countErrorsFound = (): number =>
+          stdout.getOutput().split("error found").length - 1;
+        const errorsFound = countErrorsFound();
         switch (idle) {
           case 1:
             assert1(div);
@@ -59,9 +64,7 @@ describe("hot", () => {
               elmWatchJsonPath,
               elmWatchJsonString.slice(0, -10),
             );
-            await waitFor(() =>
-              stdout.getOutput().includes("I had trouble with the JSON inside"),
-            );
+            await waitFor(() => countErrorsFound() > errorsFound);
             fs.writeFileSync(
               elmWatchJsonPath,
               elmWatchJsonString.replace(/"postprocess":.*/, ""),
@@ -70,9 +73,7 @@ describe("hot", () => {
           case 2:
             assert2(div);
             fs.writeFileSync(elmWatchJsonPath2, "{}");
-            await waitFor(() =>
-              stdout.getOutput().includes('a field called: "targets"'),
-            );
+            await waitFor(() => countErrorsFound() > errorsFound);
             fs.unlinkSync(elmWatchJsonPath2);
             return "KeepGoing";
           case 3:
