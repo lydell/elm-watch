@@ -269,14 +269,14 @@ describe("SimpleStaticFileServer", () => {
                       <h1>404 – Not Found</h1>
                       <p>The URL you requested does not point to any existing file.</p>
                       
-                            <p>
-                              👉
-                              <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
-                                >How index.html files work</a
-                              >
-                              (for <code>Browser.application</code> programs)
-                            </p>
-                          
+                              <p>
+                                👉
+                                <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
+                                  >How index.html files work</a
+                                >
+                                (for <code>Browser.application</code> programs)
+                              </p>
+                            
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/missing</pre>
           `);
@@ -287,13 +287,13 @@ describe("SimpleStaticFileServer", () => {
                       <h1>404 – Not Found</h1>
                       <p>The URL you requested does not point to any existing file.</p>
                       
-                            <p>
-                              👉
-                              <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
-                                >File not found troubleshooting</a
-                              >
-                            </p>
-                          
+                              <p>
+                                👉
+                                <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
+                                  >File not found troubleshooting</a
+                                >
+                              </p>
+                            
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/missing.js</pre>
           `);
@@ -353,14 +353,14 @@ describe("SimpleStaticFileServer", () => {
                       <h1>404 – Not Found</h1>
                       <p>The URL you requested does not point to any existing file.</p>
                       
-                            <p>
-                              👉
-                              <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
-                                >How index.html files work</a
-                              >
-                              (for <code>Browser.application</code> programs)
-                            </p>
-                          
+                              <p>
+                                👉
+                                <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
+                                  >How index.html files work</a
+                                >
+                                (for <code>Browser.application</code> programs)
+                              </p>
+                            
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/file.txt/x</pre>
           `);
@@ -372,14 +372,14 @@ describe("SimpleStaticFileServer", () => {
                       <h1>404 – Not Found</h1>
                       <p>The URL you requested does not point to any existing file.</p>
                       
-                            <p>
-                              👉
-                              <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
-                                >How index.html files work</a
-                              >
-                              (for <code>Browser.application</code> programs)
-                            </p>
-                          
+                              <p>
+                                👉
+                                <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
+                                  >How index.html files work</a
+                                >
+                                (for <code>Browser.application</code> programs)
+                              </p>
+                            
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</pre>
           `);
@@ -391,14 +391,14 @@ describe("SimpleStaticFileServer", () => {
                       <h1>404 – Not Found</h1>
                       <p>The URL you requested does not point to any existing file.</p>
                       
-                            <p>
-                              👉
-                              <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
-                                >How index.html files work</a
-                              >
-                              (for <code>Browser.application</code> programs)
-                            </p>
-                          
+                              <p>
+                                👉
+                                <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
+                                  >How index.html files work</a
+                                >
+                                (for <code>Browser.application</code> programs)
+                              </p>
+                            
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/%E0%A4%A</pre>
           `);
@@ -551,14 +551,14 @@ describe("SimpleStaticFileServer", () => {
                       <h1>404 – Not Found</h1>
                       <p>The URL you requested does not point to any existing file.</p>
                       
-                            <p>
-                              👉
-                              <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
-                                >How index.html files work</a
-                              >
-                              (for <code>Browser.application</code> programs)
-                            </p>
-                          
+                              <p>
+                                👉
+                                <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
+                                  >How index.html files work</a
+                                >
+                                (for <code>Browser.application</code> programs)
+                              </p>
+                            
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/a/b/c</pre>
           `);
