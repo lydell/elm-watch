@@ -192,16 +192,35 @@ describe("hot", () => {
       },
     });
 
-    expect(grep(terminal, /(?:One|Two)[:⧙]/)).toMatchInlineSnapshot(`
-      ⏳ One: elm make (typecheck only)
-      ⏳ Two: elm make (typecheck only)
-      ✅ One⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ✅ Two⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      ⏳ Two: elm make
-      ⚪️ One: queued
-      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-      ⏳ One: elm make
-      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+    const lines = grep(terminal, /(?:One|Two)[:⧙]/).split("\n");
+
+    // The initial compilation order depends on whether both scripts happened
+    // to connect at the same time, so only check that both were compiled.
+    // Then, the rest is about prioritization.
+    const secondRound = lines.findIndex(
+      (line, index) =>
+        index > 0 &&
+        line.includes(" I⧘") &&
+        lines.slice(0, index).some((previous) => previous.includes(" I⧘")),
+    );
+    expect(
+      lines
+        .slice(0, secondRound + 1)
+        .filter((line) => !line.includes("queued"))
+        .sort()
+        .join("\n"),
+    ).toMatchInlineSnapshot(`
+        ⏳ One: elm make
+        ⏳ One: elm make (typecheck only)
+        ⏳ Two: elm make
+        ⏳ Two: elm make (typecheck only)
+        ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+        ✅ One⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+        ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+        ✅ Two⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      `);
+
+    expect(lines.slice(secondRound + 1).join("\n")).toMatchInlineSnapshot(`
       ⏳ Two: elm make
       ⚪️ One: queued
       ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘

@@ -738,29 +738,36 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.["HtmlMain1"]?.init({ node });
       },
-      onIdle: async ({ div }) => {
+      onIdle: async ({ div, stdout }) => {
         assert(div);
-        for (const filePath of fs.readdirSync(unusedFolder)) {
+        const files = fs.readdirSync(unusedFolder);
+        for (const filePath of files) {
           await wait(1);
           touch(path.join(unusedFolder, filePath));
         }
-        await wait(100);
+        await waitFor(() => {
+          const output = stdout.getOutput();
+          return (
+            (output.match(/Changed/g) ?? []).length === files.length &&
+            /Changed.*\n.*FYI.*\s*$/.test(output)
+          );
+        });
         return "Stop" as const;
       },
     });
 
     // The order in which the files are detected by the watcher
     // is not defined when they happen so close to each other.
-    const adjustedTerminal = grep(terminal, /Changed|FYI/).replace(
-      /\w+\.elm/g,
-      "File.elm",
-    );
-
-    expect(adjustedTerminal).toMatchInlineSnapshot(`
+    expect(grep(terminal, /Changed/).replace(/\w+\.elm/g, "File.elm"))
+      .toMatchInlineSnapshot(`
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
       ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
-      ✅ ⧙13:10:05⧘ FYI: The above Elm files are not imported by any of the enabled targets. Nothing to do!
     `);
+
+    // The changes usually end up in the same batch, but not always.
+    expect(grep(terminal, /FYI/).split("\n").at(-1)).toMatch(
+      /FYI: The above Elm files? (?:are|is) not imported by any of the enabled targets\. Nothing to do!/,
+    );
 
     function assert(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
@@ -779,10 +786,10 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
-      onIdle: async ({ div }) => {
+      onIdle: async ({ div, stdout }) => {
         assert(div);
         touch(unusedFile1);
-        await wait(100);
+        await waitFor(() => stdout.getOutput().includes("FYI"));
         return "Stop" as const;
       },
     });
