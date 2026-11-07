@@ -516,7 +516,7 @@ describe("hot", () => {
 
           super(url);
 
-          // eslint-disable-next-line @typescript-eslint/no-this-alias
+          // oxlint-disable-next-line typescript/no-this-alias
           _lastWebSocket = this;
         }
       }

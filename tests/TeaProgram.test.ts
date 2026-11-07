@@ -478,7 +478,7 @@ describe("runTeaProgram", () => {
     const { promise } = runProgram({
       initCmds: [],
       onInitMutable: () => {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        // oxlint-disable-next-line typescript/only-throw-error
         throw "Thrown";
       },
     });

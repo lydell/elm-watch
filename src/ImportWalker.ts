@@ -1,4 +1,4 @@
-/* eslint-disable no-labels */
+/* oxlint-disable no-labels */
 import * as fs from "fs";
 import * as path from "path";
 

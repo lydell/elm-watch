@@ -32,7 +32,7 @@ async function reloadCssIfNeeded(
   const newCss = await response.text();
 
   if (isFirefox() && /@import\b/i.test(newCss)) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.warn(
       "elm-watch: In Firefox, @import:ed CSS files are not hot reloaded due to over eager caching by Firefox. Style sheet:",
       url.href,
@@ -132,7 +132,7 @@ function updateStyleSheetIfNeeded(
     oldStyleSheet.cssRules.length,
     newStyleSheet.cssRules.length,
   );
-  /* eslint-disable @typescript-eslint/no-non-null-assertion */
+  /* oxlint-disable typescript/no-non-null-assertion */
   let index = 0;
   for (; index < length; index++) {
     const oldRule = oldStyleSheet.cssRules[index]!;
@@ -230,7 +230,7 @@ function updateStyleSheetIfNeeded(
     oldStyleSheet.insertRule(newRule.cssText, index);
     changed = true;
   }
-  /* eslint-enable @typescript-eslint/no-non-null-assertion */
+  /* oxlint-enable typescript/no-non-null-assertion */
   return changed;
 }
 

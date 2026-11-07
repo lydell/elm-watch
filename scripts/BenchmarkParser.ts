@@ -1,5 +1,5 @@
-/* eslint-disable no-labels */
-/* eslint-disable no-console */
+/* oxlint-disable no-labels */
+/* oxlint-disable no-console */
 
 import * as fs from "fs";
 import * as fsPromises from "fs/promises";

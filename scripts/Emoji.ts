@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 
 import { STARTS_WITH_EMOJI_REGEX } from "../src/EmojiRegex";
 import { bold } from "../src/Helpers";

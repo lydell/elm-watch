@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 
 import { makeLogger } from "../src/Logger";
 import { getThemeFromTerminal } from "../src/Theme";

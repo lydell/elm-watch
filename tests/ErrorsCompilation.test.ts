@@ -233,7 +233,7 @@ describe("errors", () => {
           cwd: dir,
         },
       );
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
       if (!(result.error === undefined || result.error === null)) {
         throw result.error;
       }

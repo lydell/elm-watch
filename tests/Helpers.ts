@@ -23,17 +23,17 @@ import { ReadStream, WriteStream } from "../src/Helpers";
 import { IS_WINDOWS } from "../src/IsWindows";
 
 // Print date and time in UTC in snapshots.
-/* eslint-disable @typescript-eslint/unbound-method */
+/* oxlint-disable typescript/unbound-method */
 Date.prototype.getFullYear = Date.prototype.getUTCFullYear;
 Date.prototype.getMonth = Date.prototype.getUTCMonth;
 Date.prototype.getDate = Date.prototype.getUTCDate;
 Date.prototype.getHours = Date.prototype.getUTCHours;
 Date.prototype.getMinutes = Date.prototype.getUTCMinutes;
 Date.prototype.getSeconds = Date.prototype.getUTCSeconds;
-/* eslint-enable @typescript-eslint/unbound-method */
+/* oxlint-enable typescript/unbound-method */
 
 // This uses `console` rather than `process.stderr` so Vitest can capture it.
-// eslint-disable-next-line no-console
+// oxlint-disable-next-line no-console
 export const logDebug = console.error;
 
 // Read file with normalized line endings to make snapshotting easier
@@ -153,6 +153,7 @@ export class TerminalColorReadStream
   extends SilentReadStream
   implements ReadStream
 {
+  // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Must match the overridden method.
   override on<T>(
     eventName: string | symbol,
     listener: (...args: Array<T>) => void,

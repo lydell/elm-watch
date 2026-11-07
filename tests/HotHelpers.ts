@@ -105,7 +105,7 @@ let describeUnfinishedRun: (() => string) | undefined = undefined;
 export async function cleanupAfterEachTest(): Promise<void> {
   const { currentTestName } = expect.getState();
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  // oxlint-disable-next-line typescript/no-unnecessary-condition
   if (window.__ELM_WATCH?.KILL_MATCHING !== undefined) {
     // The idea is that we need no logging here – it’ll just result in double
     // logging since there will most likely be a running server as well.
@@ -113,7 +113,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
   }
 
   if (watcher !== undefined) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(
       "cleanupAfterEachTest: watcher never closed by itself – closing now. Test:",
       currentTestName,
@@ -123,7 +123,7 @@ export async function cleanupAfterEachTest(): Promise<void> {
   }
 
   if (hotTestHooks.kill !== undefined) {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(
       "cleanupAfterEachTest: elm-watch never finished – killing. Test:",
       currentTestName,
@@ -201,7 +201,7 @@ export async function run({
   onlyExpandedRenders: string;
   div: HTMLDivElement;
 }> {
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.warn = () => {
     // Disable Elm’s “Compiled in DEV mode” logs.
   };
@@ -730,7 +730,7 @@ export function getOverlay(): string {
           .replace("<summary", "\n<summary")
           .replace("</summary>", "</summary>\n");
       }).join(`\n${"-".repeat(80)}\n`);
-      result = `<overlay ${overlay.hidden ? "hidden" : "visible"} style="${
+      result = `<overlay ${overlay.hidden !== false ? "hidden" : "visible"} style="${
         overlay.getAttribute("style") ?? ""
       }">\n${children}\n</overlay>`;
     }

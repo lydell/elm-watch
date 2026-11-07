@@ -19,7 +19,7 @@ class ESBuildAndJSDOMCompatibleTextEncoder extends TextEncoder {
     const arr = new Uint8Array(decodedURI.length);
     const chars = decodedURI.split("");
     for (let i = 0; i < chars.length; i++) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      // oxlint-disable-next-line typescript/no-non-null-assertion
       arr[i] = decodedURI[i]!.charCodeAt(0);
     }
     return arr;

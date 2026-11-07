@@ -29,7 +29,7 @@
     "client",
     "scripts",
     "tests/*.ts",
-    "eslint.config.js",
+    "oxlint.config.ts",
     "vitest.config.ts"
   ],
   "exclude": [

@@ -1587,7 +1587,7 @@ const runCmd =
           // Retry writing it.
           writeElmWatchStuffJson(mutable, webSocketToken);
           // If still an error, print it.
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          // oxlint-disable-next-line typescript/no-unnecessary-condition
           if (mutable.elmWatchStuffJsonWriteError !== undefined) {
             logger.write("");
             logger.errorTemplate(

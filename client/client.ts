@@ -23,7 +23,7 @@ import {
 // Support environments, such as Web Workers, where `window` does not exist.
 const window = globalThis as unknown as Window;
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+// oxlint-disable-next-line typescript/no-unnecessary-condition
 const HAS_WINDOW = window.window !== undefined;
 
 // These used to be separate properties on `window`, like
@@ -56,7 +56,7 @@ type TargetData = {
 };
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+  // oxlint-disable-next-line typescript/consistent-type-definitions
   interface Window {
     Elm?: ElmExports;
     ELM_WATCH_FULL_RELOAD?: () => void;
@@ -210,7 +210,7 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
       window.location.reload();
     } else {
       if (message !== undefined) {
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.info(message);
       }
       const why =
@@ -218,7 +218,7 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
           ? "because a hot reload was not possible"
           : "see above";
       const info = `elm-watch: A full reload or restart of the program running your Elm code is needed (${why}). In a web browser page, I would have reloaded the page. You need to do this manually, or define a \`globalThis.ELM_WATCH_FULL_RELOAD\` function.`;
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.error(info);
     }
   },
@@ -246,13 +246,13 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   },
 
   LOG_DEBUG:
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.debug,
 };
 
 let { __ELM_WATCH } = window;
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+// oxlint-disable-next-line typescript/no-unnecessary-condition
 if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
   // Each property is added later below.
   __ELM_WATCH = {} as unknown as __ELM_WATCH;
@@ -262,7 +262,7 @@ if (typeof __ELM_WATCH !== "object" || __ELM_WATCH === null) {
 }
 
 for (const [key, value] of Object.entries(DEFAULT_ELM_WATCH)) {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  // oxlint-disable-next-line typescript/no-unnecessary-condition
   if (__ELM_WATCH[key as keyof __ELM_WATCH] === undefined) {
     (__ELM_WATCH as Record<string, unknown>)[key] = value;
   }
@@ -579,7 +579,7 @@ function run(): void {
   try {
     const message = window.sessionStorage.getItem(RELOAD_MESSAGE_KEY);
     if (message !== null) {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.info(message);
       window.sessionStorage.removeItem(RELOAD_MESSAGE_KEY);
     }
@@ -635,7 +635,7 @@ function run(): void {
         hasReceivedHotReload:
           newModel.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
         uiRelatedUpdate: msg.tag === "UiMsg",
-        errorOverlayVisible: elements !== undefined && !elements.overlay.hidden,
+        errorOverlayVisible: elements?.overlay.hidden === false,
       });
       const flashCmd: Array<Cmd> =
         statusFlashType === undefined || cmds.some((cmd) => cmd.tag === "Flash")
@@ -658,7 +658,6 @@ function run(): void {
               : {
                   tag: "UpdateErrorOverlay",
                   errors:
-                    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
                     newErrorOverlay === undefined ||
                     !newErrorOverlay.openErrorOverlay
                       ? new Map<string, OverlayError>()
@@ -692,7 +691,7 @@ function run(): void {
     },
     runCmd: runCmd(getNow, elements),
   }).catch((error) => {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error("elm-watch: Unexpectedly exited with error:", error);
   });
 
@@ -1249,7 +1248,7 @@ function initWebSocket(
     // Browser: `window.location` always exists.
     // Web Worker: `window` has been set to `globalThis` at the top, which has `.location`.
     // Node.js: `window.location` does not exist.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
     window.location === undefined
       ? ["localhost", "ws"]
       : [
@@ -1943,7 +1942,6 @@ const runCmd =
             // `console.info` looks nicer in the browser console for Web Workers.
             // On Node.js, we want to always print to stderr.
             isError || !isWebWorker ? "error" : "info";
-          // eslint-disable-next-line no-console
           const consoleMethod = console[consoleMethodName];
           consoleMethod(renderWithoutDomElements(model, info));
         } else {
@@ -1962,7 +1960,7 @@ const runCmd =
             // Support users removing elm-watch’s UI (`.showModal()` throws an error in that case).
             elements.container.isConnected
           ) {
-            if (elements.overlay.hidden) {
+            if (elements.overlay.hidden !== false) {
               elements.container.close();
             } else {
               elements.container.showModal();
@@ -2003,7 +2001,7 @@ const runCmd =
           // in that state in the first place, but just in case.
           // `JSON.stringify` is outside the `try` block in case it throws an
           // error – then we at least have a chance of noticing it.
-          // eslint-disable-next-line no-console
+          // oxlint-disable-next-line no-console
           console.error("elm-watch: Failed to send WebSocket message:", error);
         }
         return;
@@ -2085,25 +2083,23 @@ const runCmd =
       // already send a `FocusedTab` message then. That’s the perfect ping, and
       // `FocusedTabAcknowledged` is the pong.
       case "WebSocketTimeoutBegin":
-        if (mutable.webSocketTimeoutId === undefined) {
-          mutable.webSocketTimeoutId = setTimeout(() => {
-            mutable.webSocketTimeoutId = undefined;
-            // Sometimes, `mutable.webSocket.readyState` is `WebSocket.OPEN` and
-            // sometimes it’s `WebSocket.CLOSED` when getting here (on iOS).
-            // - OPEN: That’s not really true.
-            // - CLOSED: We missed the "close" event (iOS didn’t give it to us).
-            // Either way, `mutable.webSocket.close()` is safe to run even if
-            // the WebSocket is already closed. Finally, on OPEN, the
-            // `.close()` method seems to never trigger our "close" listener, so
-            // always dispatch ourselves. It doesn’t matter if another dispatch
-            // is made just after.
-            mutable.webSocket.close();
-            dispatch({
-              tag: "WebSocketClosed",
-              date: getNow(),
-            });
-          }, __ELM_WATCH.WEBSOCKET_TIMEOUT);
-        }
+        mutable.webSocketTimeoutId ??= setTimeout(() => {
+          mutable.webSocketTimeoutId = undefined;
+          // Sometimes, `mutable.webSocket.readyState` is `WebSocket.OPEN` and
+          // sometimes it’s `WebSocket.CLOSED` when getting here (on iOS).
+          // - OPEN: That’s not really true.
+          // - CLOSED: We missed the "close" event (iOS didn’t give it to us).
+          // Either way, `mutable.webSocket.close()` is safe to run even if
+          // the WebSocket is already closed. Finally, on OPEN, the
+          // `.close()` method seems to never trigger our "close" listener, so
+          // always dispatch ourselves. It doesn’t matter if another dispatch
+          // is made just after.
+          mutable.webSocket.close();
+          dispatch({
+            tag: "WebSocketClosed",
+            date: getNow(),
+          });
+        }, __ELM_WATCH.WEBSOCKET_TIMEOUT);
         return;
 
       case "WebSocketTimeoutClear":
@@ -2171,7 +2167,7 @@ let evalWithBackwardsCompatibility = async (code: string): Promise<void> => {
     // This can fail if the code has incorrect syntax.
     // Note that the code isn’t executed until we call the function.
     // This is good – this allows us to syntax check the code without side effects.
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    // oxlint-disable-next-line typescript/no-implied-eval
     f = new Function(code);
   } catch (scriptError) {
     // If there was a syntax error, there’s a chance it was due to `import` and `export`.
@@ -2195,7 +2191,7 @@ let evalWithBackwardsCompatibility = async (code: string): Promise<void> => {
     ];
     return;
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  // oxlint-disable-next-line typescript/no-unsafe-call
   f();
 };
 
@@ -2216,9 +2212,9 @@ let evalWithBackwardsCompatibility2 = async (code: string): Promise<void> => {
     // this will happen. And in the next major version, script mode eval-ing will
     // be removed anyway.
     try {
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      // oxlint-disable-next-line typescript/no-implied-eval
       const f = new Function(code);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      // oxlint-disable-next-line typescript/no-unsafe-call
       f();
     } catch (scriptError) {
       throw new Error(
@@ -2342,7 +2338,7 @@ function reloadPageIfNeeded(): void {
   }
   const first = reasons[0];
   const [separator, reasonString] =
-    reasons.length === 1 && first !== undefined && first[1].length === 1
+    reasons.length === 1 && first?.[1].length === 1
       ? [" ", `${first[1].join("")}\n(target: ${first[0]})`]
       : [
           ":\n\n",

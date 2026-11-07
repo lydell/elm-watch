@@ -162,7 +162,7 @@ export const clientEsbuildOptions: esbuild.BuildOptions & { write: false } = {
   write: false,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+// oxlint-disable-next-line typescript/no-non-null-assertion
 if (process.argv[1]!.endsWith("Build.ts")) {
   run().catch((error: Error) => {
     process.stderr.write(`${error.message}\n`);

@@ -400,16 +400,16 @@ describe("hot reloading", () => {
   });
 
   test("Init with cancelable Task", async () => {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     const originalConsoleError = console.error;
 
     onTestFinished(() => {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.error = originalConsoleError;
     });
 
     // The HTTP request made in the test fails, and jsdom logs that using `console.error`.
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error = () => {
       // Do nothing.
     };
@@ -462,16 +462,16 @@ describe("hot reloading", () => {
   });
 
   test("Html.Lazy", async () => {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     const originalConsoleLog = console.log;
 
     onTestFinished(() => {
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.log = originalConsoleLog;
     });
 
     const mockConsoleLog = vi.fn();
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.log = (...args) => {
       if (typeof args[0] === "string" && args[0].startsWith("ELM_LAZY_TEST")) {
         mockConsoleLog(...args);
@@ -661,7 +661,7 @@ describe("hot reloading", () => {
   });
 
   test("Unexpected/unhandled error at eval", async () => {
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+    // oxlint-disable-next-line typescript/unbound-method
     const originalPromiseReject = Promise.reject;
 
     onTestFinished(() => {

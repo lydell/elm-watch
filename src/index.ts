@@ -202,7 +202,7 @@ async function runUntilExit(
         // happens it should at least be possible to exit with a simple ctrl+c.
         // Note: `.setRawMode` is `undefined` when stdin is not a TTY, but this is
         // not reflected in the type definitions.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        // oxlint-disable-next-line typescript/no-unnecessary-condition
         if (stdin.setRawMode !== undefined && stdin.isRaw) {
           stdin.setRawMode(false);
         }
