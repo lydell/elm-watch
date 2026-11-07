@@ -215,7 +215,7 @@ type ParseResult<T> =
 export function findReadAndParse(cwd: Cwd): ParseResult<Config> {
   const result = findReadAndDecode(cwd, ElmWatchJson);
   return result.tag === "Parsed"
-    ? { ...result, value: toConfig(result.elmWatchJsonPath, result.value) }
+    ? { ...result, value: toConfig(cwd, result.elmWatchJsonPath, result.value) }
     : result;
 }
 
@@ -261,12 +261,13 @@ function findReadAndDecode<T>(cwd: Cwd, codec: Codec.Codec<T>): ParseResult<T> {
 }
 
 function toConfig(
+  cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
   json: ElmWatchJson,
 ): Config {
   return {
     root: absoluteDirname(elmWatchJsonPath),
-    source: { tag: "ElmWatchJson", elmWatchJsonPath },
+    source: { tag: "ElmWatchJson", elmWatchJsonPath, cwd },
     // The decoder validates that there’s at least one target.
     targets: Object.entries(json.targets).map(([name, target]) => ({
       name,

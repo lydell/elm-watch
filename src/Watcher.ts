@@ -2,10 +2,10 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { toError } from "./Helpers.ts";
+import { MODULE_NAME_PART } from "./Parser.ts";
 import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 
-// A small file watcher on top of `fs.watch` with `recursive: true`. Things to
-// know about `fs.watch`:
+// A small file watcher on top of `fs.watch`. Things to know about `fs.watch`:
 //
 // - The event type (`"rename"` or `"change"`) is not reliable. For example,
 //   on macOS almost everything is `"rename"`, including saving a file in vim.
@@ -13,9 +13,17 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 // - Moving a directory into or out of a watched directory results in a single
 //   event for the directory itself, not one per file inside it. So every
 //   reported path must be treated as a potential directory.
-// - Watching a path that does not exist throws. Watch roots (such as source
-//   directories in elm.json) might not exist (yet), so we watch the closest
-//   existing ancestor until they do.
+// - Watching a path that does not exist throws. Watched directories (such as
+//   source directories in elm.json) might not exist (yet), so we watch the
+//   closest existing ancestor until they do.
+// - Recursively watching a large directory can be expensive (on Linux, Node.js
+//   adds one watcher per directory). So we only watch recursively where we need
+//   to: https://github.com/lydell/elm-watch/issues/106
+
+export type WatchDir = {
+  tag: "SourceDirectory" | "StaticFilesDir" | "Shallow";
+  dir: AbsolutePath;
+};
 
 export type WatcherEvent = {
   absolutePath: AbsolutePath;
@@ -31,19 +39,33 @@ export type Watcher = {
 // missing path as removed, to see if it comes back.
 const REMOVAL_DELAY_MS = 50;
 
-// Note: The trailing separator is important: It makes it possible to get
-// notifications of a removed elm-stuff folder, while ignoring everything that
-// happens _inside_ that folder. For `.stack-work/`, see
-// https://docs.haskellstack.org/en/stable/topics/stack_work/ and
-// https://github.com/lydell/elm-watch/issues/106.
-const IGNORE = /(?:^|[/\\])(?:elm-stuff|node_modules|\.stack-work)[/\\]/;
+// The filenames passed to these are relative to the watched directory. The last
+// part of the filename can be both a file and a directory – we can’t know.
+// `fs.watch` calls these for directories before descending into them (on Linux,
+// where it matters), so if a directory is ignored, so is everything inside.
+const ignoreFunctions: Record<WatchDir["tag"], (filename: string) => boolean> =
+  {
+    // Elm module names map to paths in source directories, so only directories
+    // that are valid module name parts can contain relevant files. That rules
+    // out things like `elm-stuff`, `node_modules`, `.git` and `.stack-work`.
+    SourceDirectory: (filename) =>
+      filename
+        .split(/[/\\]/)
+        .slice(0, -1)
+        .some((part) => !MODULE_NAME_PART.test(part)),
+    // Any file could be served from the static files directory, but there is
+    // no point in watching the contents of these.
+    StaticFilesDir: (filename) =>
+      /(?:^|[/\\])(?:elm-stuff|node_modules)[/\\]/.test(filename),
+    Shallow: () => false,
+  };
 
 type RootState =
   | { tag: "Watching"; fsWatcher: fs.FSWatcher }
   | { tag: "WaitingForRoot"; fsWatcher: fs.FSWatcher | undefined };
 
 export function watch(
-  roots: Array<AbsolutePath>,
+  watchDirs: Array<WatchDir>,
   onEvent: (event: WatcherEvent) => void,
   onError: (error: Error) => void,
 ): Watcher {
@@ -84,31 +106,33 @@ export function watch(
     rootStates.delete(root);
   };
 
-  const watchRoot = (root: AbsolutePath): void => {
+  const watchRoot = (watchDir: WatchDir): void => {
+    const root = watchDir.dir;
     closeRoot(root);
+    const ignore = ignoreFunctions[watchDir.tag];
     let fsWatcher: fs.FSWatcher;
     try {
       // `ignore` was added in Node.js 24.14.0 (and is missing in our version
       // of @types/node). Older versions ignore the option, so we filter in the
       // listener as well.
-      const options = { recursive: true, ignore: IGNORE };
+      const options = { recursive: watchDir.tag !== "Shallow", ignore };
       fsWatcher = fs.watch(root, options, (_eventType, filename) => {
         if (filename === null) {
           // The OS did not tell us what changed (for example, because of
           // an event queue overflow). Report the whole root.
           report(root);
-        } else if (!IGNORE.test(filename)) {
+        } else if (!ignore(filename)) {
           report(markAsAbsolutePath(path.join(root, filename)));
         }
         if (!fs.existsSync(root)) {
-          waitForRoot(root);
+          waitForRoot(watchDir);
           report(root);
         }
       });
     } catch (unknownError) {
       const error = toError(unknownError);
       if (isMissingError(error)) {
-        waitForRoot(root);
+        waitForRoot(watchDir);
       } else {
         // Report asynchronously, since the caller might not be ready to
         // handle errors until `watch` has returned.
@@ -124,20 +148,21 @@ export function watch(
       } else {
         // For example, on Windows `EPERM` is emitted when the watched
         // directory is removed.
-        waitForRoot(root);
+        waitForRoot(watchDir);
         report(root);
       }
     });
     rootStates.set(root, { tag: "Watching", fsWatcher });
   };
 
-  const waitForRoot = (root: AbsolutePath): void => {
+  const waitForRoot = (watchDir: WatchDir): void => {
+    const root = watchDir.dir;
     closeRoot(root);
     if (closed) {
       return;
     }
     if (fs.existsSync(root)) {
-      watchRoot(root);
+      watchRoot(watchDir);
       report(root);
       return;
     }
@@ -149,16 +174,16 @@ export function watch(
           // Something happened in the closest existing ancestor. The root
           // might exist now, or at least a directory closer to it.
           if (findClosestExistingAncestor(root) !== ancestor) {
-            waitForRoot(root);
+            waitForRoot(watchDir);
           }
         });
         fsWatcher.on("error", () => {
-          waitForRoot(root);
+          waitForRoot(watchDir);
         });
       } catch (unknownError) {
         if (isMissingError(toError(unknownError))) {
           // The ancestor was removed just now. Try again.
-          waitForRoot(root);
+          waitForRoot(watchDir);
           return;
         }
         // Otherwise we can’t watch the ancestor, and won’t notice when the
@@ -169,12 +194,12 @@ export function watch(
     // The root (or a directory closer to it) might have been created while
     // setting up the watcher.
     if (findClosestExistingAncestor(root) !== ancestor) {
-      waitForRoot(root);
+      waitForRoot(watchDir);
     }
   };
 
-  for (const root of roots) {
-    watchRoot(root);
+  for (const watchDir of removeCoveredWatchDirs(watchDirs)) {
+    watchRoot(watchDir);
   }
 
   return {
@@ -190,6 +215,45 @@ export function watch(
     },
   };
 }
+
+// Watching the same thing twice would result in duplicate events.
+export function removeCoveredWatchDirs(
+  watchDirs: Array<WatchDir>,
+): Array<WatchDir> {
+  return watchDirs.filter(
+    (watchDir, index) =>
+      !watchDirs.some(
+        (other, otherIndex) =>
+          otherIndex !== index &&
+          covers(other, watchDir) &&
+          // If they cover each other, keep the first one.
+          (otherIndex < index || !covers(watchDir, other)),
+      ),
+  );
+}
+
+function covers(a: WatchDir, b: WatchDir): boolean {
+  const relative = path.relative(a.dir, b.dir);
+  const isInside =
+    relative !== ".." &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative);
+  return (
+    isInside &&
+    looseness[a.tag] >= looseness[b.tag] &&
+    (a.tag === "Shallow"
+      ? relative === ""
+      : // Use a dummy file name to check if the directory itself is ignored.
+        !ignoreFunctions[a.tag](path.join(relative, "x")))
+  );
+}
+
+// A watch dir can only cover another if it ignores less.
+const looseness: Record<WatchDir["tag"], number> = {
+  Shallow: 0,
+  SourceDirectory: 1,
+  StaticFilesDir: 2,
+};
 
 // Returns the closest existing directory that is `absolutePath` itself or one
 // of its ancestors.

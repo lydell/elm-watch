@@ -14,6 +14,7 @@ import { markAsHost } from "../src/Host.ts";
 import { errorHtml, respondHtml } from "../src/SimpleStaticFileServer.ts";
 import {
   markAsAbsolutePath,
+  markAsCwd,
   markAsElmWatchJsonPath,
   markAsStaticFilesDir,
   markAsWebSocketToken,
@@ -62,6 +63,7 @@ async function withServer(
       elmWatchJsonPath: markAsElmWatchJsonPath(
         markAsAbsolutePath("/project/elm-watch.json"),
       ),
+      cwd: markAsCwd(markAsAbsolutePath("/project")),
     },
   }: { staticFilesDir?: string | null; configSource?: ConfigSource } = {},
 ): Promise<void> {

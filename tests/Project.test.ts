@@ -1,14 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  filterSubDirs,
-  OutputState,
-  type Project,
-  projectToDebug,
-} from "../src/Project.ts";
+import { OutputState, type Project, projectToDebug } from "../src/Project.ts";
 import {
   type GetNow,
   markAsAbsolutePath,
+  markAsCwd,
   markAsElmJsonPath,
   markAsElmVersion,
   markAsElmWatchJsonPath,
@@ -21,7 +17,13 @@ import { stringSnapshotSerializer } from "./Helpers.ts";
 const getNow: GetNow = () => new Date();
 
 const project: Project = {
-  watchRoots: new Set([markAsAbsolutePath("/Users/you/project")]),
+  watchDirs: [
+    {
+      tag: "SourceDirectory",
+      dir: markAsAbsolutePath("/Users/you/project/src"),
+    },
+    { tag: "Shallow", dir: markAsAbsolutePath("/Users/you/project") },
+  ],
   root: markAsAbsolutePath("/Users/you/project"),
   staticFilesDir: markAsStaticFilesDir(
     markAsAbsolutePath("/Users/you/project/public"),
@@ -38,6 +40,7 @@ const project: Project = {
     elmWatchJsonPath: markAsElmWatchJsonPath(
       markAsAbsolutePath("/Users/you/project/elm-watch.json"),
     ),
+    cwd: markAsCwd(markAsAbsolutePath("/Users/you/project")),
   },
   elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
     markAsAbsolutePath("/Users/you/project/elm-stuff/elm-watch/stuff.json"),
@@ -224,50 +227,19 @@ const project: Project = {
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("Project", () => {
-  describe("filterSubDirs", () => {
-    const p = markAsAbsolutePath;
-
-    test("if the root is present, all others are filtered away", () => {
-      expect(
-        filterSubDirs("/", [p("/one"), p("/"), p("/one/sub"), p("/two")]),
-      ).toStrictEqual([p("/")]);
-    });
-
-    test("if the paths have nothing in common, all are kept", () => {
-      expect(
-        filterSubDirs("/", [p("/one"), p("/two"), p("/three/sub")]),
-      ).toStrictEqual([p("/one"), p("/two"), p("/three/sub")]);
-    });
-
-    test("paths contained by other paths are filtered away", () => {
-      expect(
-        filterSubDirs("/", [
-          p("/one"),
-          p("/one/sub"),
-          p("/one/sub/"),
-          p("/one/deep/sub/dir"),
-          p("/onefold"),
-          p("/two/trailing/"),
-          p("/two"),
-          p("/three/deep/sub/dir"),
-          p("/three/deep/sub/"),
-          p("/three/deep/sub/other"),
-        ]),
-      ).toStrictEqual([
-        p("/one"),
-        p("/onefold"),
-        p("/two"),
-        p("/three/deep/sub/"),
-      ]);
-    });
-  });
-
   test("projectToDebug", () => {
     expect(JSON.stringify(projectToDebug(project), null, 2))
       .toMatchInlineSnapshot(`
         {
-          "watchRoots": [
-            "/Users/you/project"
+          "watchDirs": [
+            {
+              "tag": "SourceDirectory",
+              "dir": "/Users/you/project/src"
+            },
+            {
+              "tag": "Shallow",
+              "dir": "/Users/you/project"
+            }
           ],
           "staticFilesDir": "/Users/you/project/public",
           "webSocketUrl": {

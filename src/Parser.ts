@@ -9,6 +9,7 @@ import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 // Rest: https://github.com/elm/compiler/blob/2860c2e5306cb7093ba28ac7624e8f9eb8cbc867/compiler/src/Parse/Variable.hs#L328-L335
 // https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-Char.html#v:isLetter
 const MODULE_NAME = /^\p{Lu}[_\d\p{L}]*(?:\.\p{Lu}[_\d\p{L}]*)*$/u;
+export const MODULE_NAME_PART = /^\p{Lu}[_\d\p{L}]*$/u;
 
 const CR = 0x0d;
 const HYPHEN = 0x2d;

@@ -515,7 +515,7 @@ const initMutable =
   ): Mutable => {
     hotTestHooks.onWatcherReadyChange?.(false);
     const watcher = Watcher.watch(
-      Array.from(project.watchRoots),
+      project.watchDirs,
       ({ absolutePath, exists }) => {
         dispatch({
           tag: "GotWatcherEvent",

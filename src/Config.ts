@@ -2,6 +2,7 @@ import type { AllowedHost } from "./AllowedHosts.ts";
 import type { NonEmptyArray } from "./NonEmptyArray.ts";
 import type { Port } from "./Port.ts";
 import type {
+  Cwd,
   AbsolutePath,
   CompilationMode,
   ElmWatchJsonPath,
@@ -25,6 +26,8 @@ export type ConfigSource =
   | {
       tag: "ElmWatchJson";
       elmWatchJsonPath: ElmWatchJsonPath;
+      // elm-watch.json was found by looking for it in this directory and up.
+      cwd: Cwd;
     }
   | {
       tag: "Options";

@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
@@ -51,13 +52,11 @@ import {
   type UncheckedInputPath,
   type WriteOutputErrorReasonForWriting,
 } from "./Types.ts";
+import type { WatchDir } from "./Watcher.ts";
 import { WebSocketUrl } from "./WebSocketUrl.ts";
 
 export type Project = {
-  // Path of the directories containing elm-watch.json, all elm.json,
-  // and all source directories, without duplicates and where each
-  // directory does not contain any other.
-  watchRoots: Set<AbsolutePath>;
+  watchDirs: Array<WatchDir>;
   root: AbsolutePath;
   staticFilesDir: StaticFilesDir | undefined;
   elmVersion: ElmVersion;
@@ -357,6 +356,7 @@ export function initProject({
   const disabledOutputs: Array<OutputPath> = [];
   const elmJsonsErrors: Array<ElmJsonErrorWithMetadata> = [];
   const elmJsons = new Map<ElmJsonPath, Array<[OutputPath, OutputState]>>();
+  const enabledInputPaths: Array<AbsolutePath> = [];
   const potentialOutputDuplicates = new Map<
     AbsolutePath,
     NonEmptyArray<string>
@@ -392,6 +392,11 @@ export function initProject({
       )
     ) {
       const resolveElmJsonResult = resolveElmJson(config.root, target.inputs);
+      enabledInputPaths.push(
+        ...target.inputs.map((inputString) =>
+          absolutePathFromString(config.root, inputString),
+        ),
+      );
 
       const persisted = elmWatchStuffJson?.targets[targetName];
       const {
@@ -459,7 +464,12 @@ export function initProject({
           absolutePathFromString(config.root, config.staticFilesDir),
         );
 
-  const watchRoots = getWatchRoots(config.root, Array.from(elmJsons.keys()));
+  const watchDirs = getWatchDirs({
+    configSource: config.source,
+    elmJsonPaths: Array.from(elmJsons.keys()),
+    inputPaths: enabledInputPaths,
+    staticFilesDir,
+  });
 
   const maxParallel = silentlyReadIntEnvValue(
     env[__ELM_WATCH_MAX_PARALLEL],
@@ -483,7 +493,7 @@ export function initProject({
   return {
     tag: "Project",
     project: {
-      watchRoots,
+      watchDirs,
       root: config.root,
       staticFilesDir,
       elmVersion,
@@ -499,49 +509,85 @@ export function initProject({
   };
 }
 
-function getWatchRoots(
-  root: AbsolutePath,
-  elmJsons: Array<ElmJsonPath>,
-): Set<AbsolutePath> {
-  return new Set<AbsolutePath>(
-    filterSubDirs(path.sep, [
-      root,
-      ...elmJsons.flatMap((elmJsonPath): Array<AbsolutePath> => {
-        // This is a bit weird, but we can actually ignore errors here. Some facts:
-        // - We want to run Elm even if the elm.json is invalid, because Elm has
-        //   really nice error messages.
-        // - We run `ElmJson.readSourceDirectories` again later and do report the errors then.
-        //   (But in practice you won’t see them because we show Elm’s errors instead.)
-        // - Regardless of whether we report the errors here we can’t know the
-        //   real watch root until it becomes valid. The best guess is to just
-        //   use the elm-watch.json and elm.json paths then.
-        const result = ElmJson.readSourceDirectories(elmJsonPath);
-        switch (result.tag) {
-          case "Parsed":
-            return [absoluteDirname(elmJsonPath), ...result.sourceDirectories];
+// Only source directories (and the static files directory) are watched
+// recursively. Other directories are only watched shallowly, to avoid watching
+// lots of irrelevant files: https://github.com/lydell/elm-watch/issues/106
+function getWatchDirs({
+  configSource,
+  elmJsonPaths,
+  inputPaths,
+  staticFilesDir,
+}: {
+  configSource: ConfigSource;
+  elmJsonPaths: Array<ElmJsonPath>;
+  inputPaths: Array<AbsolutePath>;
+  staticFilesDir: StaticFilesDir | undefined;
+}): Array<WatchDir> {
+  const shallow = (dir: AbsolutePath): WatchDir => ({ tag: "Shallow", dir });
+  return [
+    ...elmJsonPaths.flatMap((elmJsonPath): Array<WatchDir> => {
+      // The directory with elm.json also contains elm-stuff, which we want to
+      // know if it is removed.
+      const elmJsonDir = shallow(absoluteDirname(elmJsonPath));
+      // This is a bit weird, but we can actually ignore errors here. Some facts:
+      // - We want to run Elm even if the elm.json is invalid, because Elm has
+      //   really nice error messages.
+      // - We run `ElmJson.readSourceDirectories` again later and do report the errors then.
+      //   (But in practice you won’t see them because we show Elm’s errors instead.)
+      // - Regardless of whether we report the errors here we can’t know the
+      //   source directories until elm.json becomes valid. Once it is, we
+      //   restart and watch them.
+      const result = ElmJson.readSourceDirectories(elmJsonPath);
+      switch (result.tag) {
+        case "Parsed":
+          return [
+            elmJsonDir,
+            ...result.sourceDirectories.map((dir): WatchDir => ({
+              tag: "SourceDirectory",
+              dir,
+            })),
+          ];
 
-          case "ElmJsonReadError":
-          case "ElmJsonDecodeError":
-            return [absoluteDirname(elmJsonPath)];
-        }
-      }),
-    ]),
-  );
+        case "ElmJsonReadError":
+        case "ElmJsonDecodeError":
+          return [elmJsonDir];
+      }
+    }),
+    // Inputs might not be in a source directory, or might not exist (yet).
+    // Also, an elm.json might be added closer to an input, or be missing.
+    ...inputPaths.flatMap((inputPath) =>
+      ancestorsUntilContaining("elm.json", absoluteDirname(inputPath)).map(
+        shallow,
+      ),
+    ),
+    // An elm-watch.json might be added closer to cwd.
+    ...(configSource.tag === "ElmWatchJson"
+      ? ancestorsUntilContaining("elm-watch.json", configSource.cwd).map(
+          shallow,
+        )
+      : []),
+    ...(staticFilesDir === undefined
+      ? []
+      : [{ tag: "StaticFilesDir", dir: staticFilesDir } satisfies WatchDir]),
+  ];
 }
 
-export function filterSubDirs(
-  pathSep: string,
-  paths: Array<AbsolutePath>,
+// Returns `dir` and its ancestors, up to and including the first one that
+// contains `name`. If none does, all the way up to the root.
+function ancestorsUntilContaining(
+  name: string,
+  dir: AbsolutePath,
 ): Array<AbsolutePath> {
-  return paths.filter((root, index) =>
-    paths.every(
-      (root2, index2) =>
-        // Don’t compare to self.
-        index === index2 ||
-        // If any other root contains this one, discard this one.
-        !root.startsWith(root2.endsWith(pathSep) ? root2 : root2 + pathSep),
-    ),
-  );
+  const result: Array<AbsolutePath> = [];
+  let current = dir;
+  for (;;) {
+    result.push(current);
+    const parent = absoluteDirname(current);
+    if (fs.existsSync(path.join(current, name)) || parent === current) {
+      return result;
+    }
+    current = parent;
+  }
 }
 
 function getWebSocketUrlFromEnv(env: Env): WebSocketUrl | undefined {
@@ -734,7 +780,7 @@ export function projectHasFilePathThatCanBeOpenedInEditor(
 
 export function projectToDebug(project: Project): unknown {
   return {
-    watchRoots: Array.from(project.watchRoots),
+    watchDirs: project.watchDirs,
     staticFilesDir: project.staticFilesDir,
     webSocketUrl: project.webSocketUrl,
     allowedHosts: project.allowedHosts,
