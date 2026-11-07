@@ -564,6 +564,47 @@ describe("hot", () => {
     `);
   });
 
+  test("delete elm-stuff/0.19.1", async () => {
+    const fixture = "delete-elm-stuff";
+    const dir = fixtureDir(fixture);
+    const compilerDir = path.join(dir, "elm-stuff", "0.19.1");
+    const iDat = path.join(compilerDir, "i.dat");
+    const main = path.join(dir, "src", "Main.elm");
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1:
+            fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
+            touch(main);
+            return "KeepGoing";
+          case 2:
+            // Pro users know to remove only the compiler’s directory, to
+            // preserve files from other tools in elm-stuff/.
+            await rimraf(compilerDir);
+            return "KeepGoing";
+          default:
+            return "Stop";
+        }
+      },
+    });
+
+    expect(grep(onlyErrorMessages(terminal), /CORRUPT CACHE/)).toMatch(
+      /CORRUPT CACHE/,
+    );
+
+    expect(terminal.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(`
+      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/elm-stuff/0.19.1⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
   // - Create and delete directories named `Something.elm`.
   // - Create and delete a file named like a package (`Html.elm`).
   test("changes to .elm files", async () => {

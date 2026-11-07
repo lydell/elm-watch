@@ -1274,6 +1274,7 @@ function onWatcherEvent(
     // Restart when that happens. Note: This could be a totally unrelated
     // elm-stuff directory, but I don’t think it’s worth the trouble trying to
     // check if it affects the project, and possibly logging if it isn’t.
+    // See also `isElmStuffCompilerDir` below.
     case "elm-stuff":
       switch (eventName) {
         case "removed":
@@ -1287,6 +1288,13 @@ function onWatcherEvent(
       }
 
     default:
+      if (eventName === "removed" && isElmStuffCompilerDir(absolutePath)) {
+        return makeRestartNextAction(
+          makeWatcherEvent(eventName, absolutePath, now),
+          project,
+        );
+      }
+
       if (project.staticFilesDir !== undefined) {
         const prefix = project.staticFilesDir + path.sep;
         if (
@@ -1320,6 +1328,16 @@ function onWatcherEvent(
         nextAction,
       );
   }
+}
+
+// Removing just the compiler’s directory, like elm-stuff/0.19.1/, is enough to
+// get rid of a corrupt cache. That preserves files from other tools in
+// elm-stuff/, like elm-watch, elm-review and elm-test.
+function isElmStuffCompilerDir(absolutePath: AbsolutePath): boolean {
+  return (
+    path.basename(path.dirname(absolutePath)) === "elm-stuff" &&
+    /^\d+\.\d+\.\d+$/.test(path.basename(absolutePath))
+  );
 }
 
 function onDirectoryWatcherEvent(

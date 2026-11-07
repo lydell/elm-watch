@@ -527,8 +527,12 @@ function getWatchDirs({
   return [
     ...elmJsonPaths.flatMap((elmJsonPath): Array<WatchDir> => {
       // The directory with elm.json also contains elm-stuff, which we want to
-      // know if it is removed.
-      const elmJsonDir = shallow(absoluteDirname(elmJsonPath));
+      // know if it is removed. Same thing for elm-stuff/0.19.1 (see Hot.ts).
+      const elmJsonDir = absoluteDirname(elmJsonPath);
+      const elmJsonDirs = [
+        shallow(elmJsonDir),
+        shallow(absolutePathFromString(elmJsonDir, "elm-stuff")),
+      ];
       // This is a bit weird, but we can actually ignore errors here. Some facts:
       // - We want to run Elm even if the elm.json is invalid, because Elm has
       //   really nice error messages.
@@ -541,7 +545,7 @@ function getWatchDirs({
       switch (result.tag) {
         case "Parsed":
           return [
-            elmJsonDir,
+            ...elmJsonDirs,
             ...result.sourceDirectories.map((dir): WatchDir => ({
               tag: "SourceDirectory",
               dir,
@@ -550,7 +554,7 @@ function getWatchDirs({
 
         case "ElmJsonReadError":
         case "ElmJsonDecodeError":
-          return [elmJsonDir];
+          return elmJsonDirs;
       }
     }),
     // Inputs might not be in a source directory, or might not exist (yet).
