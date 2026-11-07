@@ -56,8 +56,9 @@ describe("help", () => {
       ⧙elm-watch init⧘
           Create a minimal ⧙elm-watch.json⧘ in the current directory.
 
-      ⧙elm-watch eject⧘
-          Create elm-watch.mjs from ⧙elm-watch.json⧘, for using the JavaScript API.
+      ⧙elm-watch eject [--typescript]⧘
+          Create elm-watch.mjs (or elm-watch.mts) from ⧙elm-watch.json⧘,
+          for using the JavaScript API.
           https://lydell.github.io/elm-watch/javascript-api/
 
       ⧙elm-watch make [--debug|--optimize] [target names...]⧘
@@ -144,8 +145,9 @@ describe("help", () => {
         elm-watch init
             Create a minimal elm-watch.json in the current directory.
 
-        elm-watch eject
-            Create elm-watch.mjs from elm-watch.json, for using the JavaScript API.
+        elm-watch eject [--typescript]
+            Create elm-watch.mjs (or elm-watch.mts) from elm-watch.json,
+            for using the JavaScript API.
             https://lydell.github.io/elm-watch/javascript-api/
 
         elm-watch make [--debug|--optimize] [target names...]

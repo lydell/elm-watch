@@ -35,8 +35,9 @@ ${Object.values(EMOJI)
 ${bold("elm-watch init")}
     Create a minimal ${elmWatchJson} in the current directory.
 
-${bold("elm-watch eject")}
-    Create elm-watch.mjs from ${elmWatchJson}, for using the JavaScript API.
+${bold("elm-watch eject [--typescript]")}
+    Create elm-watch.mjs (or elm-watch.mts) from ${elmWatchJson},
+    for using the JavaScript API.
     https://lydell.github.io/elm-watch/javascript-api/
 
 ${bold("elm-watch make [--debug|--optimize] [target names...]")}

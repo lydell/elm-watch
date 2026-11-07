@@ -65,6 +65,8 @@ When using the JavaScript API, elm-watch does not read `elm-watch.json` at all.
 
 Run `elm-watch eject` to create an `elm-watch.mjs` file from your `elm-watch.json`. It works just like the `elm-watch` command, including target name filtering and `--debug`/`--optimize`, and also migrates `"postprocess"` from elm-watch 1. Then change it however you like!
 
+Run `elm-watch eject --typescript` to create `elm-watch.mts` instead. Node.js can run TypeScript files directly (by default since Node.js 22.18), by stripping the types. It does not type check, though – use your editor or `tsc` for that. (`elm-watch.mjs` is type checked too, if you have type checking enabled for JavaScript files in your editor, thanks to the `// @ts-check` comment at the top.)
+
 ## node --watch
 
 When using `elm-watch.json`, elm-watch restarts itself when you change it. When using the JavaScript API, let Node.js do that instead: [node --watch] restarts your script when it changes, or any file it imports changes (such as a separate file with your postprocess function).
