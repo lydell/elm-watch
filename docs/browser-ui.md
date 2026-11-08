@@ -107,28 +107,34 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { elmWatch } from "elm-watch";
 
-const execAsync = promisify(exec);
-const openEditorCommand = process.env.ELM_WATCH_OPEN_EDITOR;
-
 process.exitCode = await elmWatch({
   // ...
-  openEditor:
-    openEditorCommand === undefined
-      ? undefined
-      : async ({ file, line, column }) => {
-          await execAsync(openEditorCommand, {
-            cwd: import.meta.dirname,
-            env: {
-              ...process.env,
-              file,
-              line: line.toString(),
-              column: column.toString(),
-            },
-            timeout: 5000,
-          });
-        },
+  openEditor: openEditorFromEnv(),
 });
+
+/** @returns {import("elm-watch").OpenEditor | undefined} */
+function openEditorFromEnv() {
+  const command = process.env.ELM_WATCH_OPEN_EDITOR;
+  if (command === undefined) {
+    return undefined;
+  }
+  const execAsync = promisify(exec);
+  return async ({ file, line, column }) => {
+    await execAsync(command, {
+      cwd: import.meta.dirname,
+      env: {
+        ...process.env,
+        file,
+        line: line.toString(),
+        column: column.toString(),
+      },
+      timeout: 5000,
+    });
+  };
+}
 ```
+
+`elm-watch init --javascript` and `elm-watch init --typescript` generate that code for you.
 
 [child_process.exec]: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
 [direnv]: https://direnv.net/

@@ -102,7 +102,8 @@ describe("init --javascript and --typescript", () => {
       //     node --watch elm-watch.mjs hot [target names...]
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
-      import { parseArgs } from "node:util";
+      import { exec } from "node:child_process";
+      import { parseArgs, promisify } from "node:util";
       import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
@@ -151,7 +152,33 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        openEditor: openEditorFromEnv(),
       });
+
+      // Opens error locations that you click in the browser UI in your editor.
+      // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+      // environment variable, like with the elm-watch command:
+      // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      /** @returns {import("elm-watch").OpenEditor | undefined} */
+      function openEditorFromEnv() {
+        const command = process.env.ELM_WATCH_OPEN_EDITOR;
+        if (command === undefined) {
+          return undefined;
+        }
+        const execAsync = promisify(exec);
+        return async ({ file, line, column }) => {
+          await execAsync(command, {
+            cwd: import.meta.dirname,
+            env: {
+              ...process.env,
+              file,
+              line: line.toString(),
+              column: column.toString(),
+            },
+            timeout: 5000,
+          });
+        };
+      }
     `);
   });
 
@@ -168,7 +195,8 @@ describe("init --javascript and --typescript", () => {
       //     node --watch elm-watch.mjs hot [target names...]
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
-      import { parseArgs } from "node:util";
+      import { exec } from "node:child_process";
+      import { parseArgs, promisify } from "node:util";
       import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
@@ -226,7 +254,33 @@ describe("init --javascript and --typescript", () => {
         staticFilesDir: "public/",
         webSocketUrl: "wss://dev.example.com/elm-watch",
         allowedHosts: ["other.example.com"],
+        openEditor: openEditorFromEnv(),
       });
+
+      // Opens error locations that you click in the browser UI in your editor.
+      // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+      // environment variable, like with the elm-watch command:
+      // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      /** @returns {import("elm-watch").OpenEditor | undefined} */
+      function openEditorFromEnv() {
+        const command = process.env.ELM_WATCH_OPEN_EDITOR;
+        if (command === undefined) {
+          return undefined;
+        }
+        const execAsync = promisify(exec);
+        return async ({ file, line, column }) => {
+          await execAsync(command, {
+            cwd: import.meta.dirname,
+            env: {
+              ...process.env,
+              file,
+              line: line.toString(),
+              column: column.toString(),
+            },
+            timeout: 5000,
+          });
+        };
+      }
     `);
   });
 
@@ -260,8 +314,9 @@ describe("init --javascript and --typescript", () => {
       //     node --watch elm-watch.mjs hot [target names...]
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
+      import { exec } from "node:child_process";
       import * as path from "node:path";
-      import { parseArgs } from "node:util";
+      import { parseArgs, promisify } from "node:util";
       import { elmWatch } from "elm-watch";
       import elmWatchNodePostprocess from "./scripts/postprocess.js";
 
@@ -312,6 +367,7 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        openEditor: openEditorFromEnv(),
       });
 
       // Calls your postprocess function from elm-watch 1 (\`elm-watch-node\`), which
@@ -336,6 +392,31 @@ describe("init --javascript and --typescript", () => {
             ],
           });
       }
+
+      // Opens error locations that you click in the browser UI in your editor.
+      // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+      // environment variable, like with the elm-watch command:
+      // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      /** @returns {import("elm-watch").OpenEditor | undefined} */
+      function openEditorFromEnv() {
+        const command = process.env.ELM_WATCH_OPEN_EDITOR;
+        if (command === undefined) {
+          return undefined;
+        }
+        const execAsync = promisify(exec);
+        return async ({ file, line, column }) => {
+          await execAsync(command, {
+            cwd: import.meta.dirname,
+            env: {
+              ...process.env,
+              file,
+              line: line.toString(),
+              column: column.toString(),
+            },
+            timeout: 5000,
+          });
+        };
+      }
     `);
   });
 
@@ -352,8 +433,8 @@ describe("init --javascript and --typescript", () => {
       //     node --watch elm-watch.mjs hot [target names...]
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
-      import { spawn } from "node:child_process";
-      import { parseArgs } from "node:util";
+      import { exec, spawn } from "node:child_process";
+      import { parseArgs, promisify } from "node:util";
       import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
@@ -403,6 +484,7 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        openEditor: openEditorFromEnv(),
       });
 
       // Runs your postprocess command from elm-watch.json, like elm-watch 1 did:
@@ -446,6 +528,31 @@ describe("init --javascript and --typescript", () => {
             child.stdin.end(code);
           });
       }
+
+      // Opens error locations that you click in the browser UI in your editor.
+      // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+      // environment variable, like with the elm-watch command:
+      // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      /** @returns {import("elm-watch").OpenEditor | undefined} */
+      function openEditorFromEnv() {
+        const command = process.env.ELM_WATCH_OPEN_EDITOR;
+        if (command === undefined) {
+          return undefined;
+        }
+        const execAsync = promisify(exec);
+        return async ({ file, line, column }) => {
+          await execAsync(command, {
+            cwd: import.meta.dirname,
+            env: {
+              ...process.env,
+              file,
+              line: line.toString(),
+              column: column.toString(),
+            },
+            timeout: 5000,
+          });
+        };
+      }
     `);
   });
 
@@ -473,7 +580,8 @@ describe("init --javascript and --typescript", () => {
       //     node --watch elm-watch.mjs hot [target names...]
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
-      import { parseArgs } from "node:util";
+      import { exec } from "node:child_process";
+      import { parseArgs, promisify } from "node:util";
       import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
@@ -522,7 +630,33 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        openEditor: openEditorFromEnv(),
       });
+
+      // Opens error locations that you click in the browser UI in your editor.
+      // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+      // environment variable, like with the elm-watch command:
+      // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      /** @returns {import("elm-watch").OpenEditor | undefined} */
+      function openEditorFromEnv() {
+        const command = process.env.ELM_WATCH_OPEN_EDITOR;
+        if (command === undefined) {
+          return undefined;
+        }
+        const execAsync = promisify(exec);
+        return async ({ file, line, column }) => {
+          await execAsync(command, {
+            cwd: import.meta.dirname,
+            env: {
+              ...process.env,
+              file,
+              line: line.toString(),
+              column: column.toString(),
+            },
+            timeout: 5000,
+          });
+        };
+      }
     `);
   });
 
@@ -665,8 +799,9 @@ describe("init --javascript and --typescript", () => {
         //     node --watch elm-watch.mts hot [target names...]
         //     node elm-watch.mts make [--debug|--optimize] [target names...]
 
-        import { parseArgs } from "node:util";
-        import { elmWatch, type Target } from "elm-watch";
+        import { exec } from "node:child_process";
+        import { parseArgs, promisify } from "node:util";
+        import { elmWatch, type OpenEditor, type Target } from "elm-watch";
 
         const { positionals, values } = parseArgs({
           allowPositionals: true,
@@ -713,7 +848,32 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
+          openEditor: openEditorFromEnv(),
         });
+
+        // Opens error locations that you click in the browser UI in your editor.
+        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+        // environment variable, like with the elm-watch command:
+        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+        function openEditorFromEnv(): OpenEditor | undefined {
+          const command = process.env.ELM_WATCH_OPEN_EDITOR;
+          if (command === undefined) {
+            return undefined;
+          }
+          const execAsync = promisify(exec);
+          return async ({ file, line, column }) => {
+            await execAsync(command, {
+              cwd: import.meta.dirname,
+              env: {
+                ...process.env,
+                file,
+                line: line.toString(),
+                column: column.toString(),
+              },
+              timeout: 5000,
+            });
+          };
+        }
       `);
     });
 
@@ -731,9 +891,10 @@ describe("init --javascript and --typescript", () => {
         //     node --watch elm-watch.mts hot [target names...]
         //     node elm-watch.mts make [--debug|--optimize] [target names...]
 
+        import { exec } from "node:child_process";
         import * as path from "node:path";
-        import { parseArgs } from "node:util";
-        import { elmWatch, type Postprocess, type Target } from "elm-watch";
+        import { parseArgs, promisify } from "node:util";
+        import { elmWatch, type OpenEditor, type Postprocess, type Target } from "elm-watch";
         // TypeScript might complain about this JavaScript import. Consider converting
         // it to TypeScript, using the new signature (see postprocessFor below).
         import elmWatchNodePostprocess from "./scripts/postprocess.js";
@@ -784,6 +945,7 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
+          openEditor: openEditorFromEnv(),
         });
 
         // Calls your postprocess function from elm-watch 1 (\`elm-watch-node\`), which
@@ -804,6 +966,30 @@ describe("init --javascript and --typescript", () => {
               ],
             });
         }
+
+        // Opens error locations that you click in the browser UI in your editor.
+        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+        // environment variable, like with the elm-watch command:
+        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+        function openEditorFromEnv(): OpenEditor | undefined {
+          const command = process.env.ELM_WATCH_OPEN_EDITOR;
+          if (command === undefined) {
+            return undefined;
+          }
+          const execAsync = promisify(exec);
+          return async ({ file, line, column }) => {
+            await execAsync(command, {
+              cwd: import.meta.dirname,
+              env: {
+                ...process.env,
+                file,
+                line: line.toString(),
+                column: column.toString(),
+              },
+              timeout: 5000,
+            });
+          };
+        }
       `);
     });
 
@@ -821,9 +1007,9 @@ describe("init --javascript and --typescript", () => {
         //     node --watch elm-watch.mts hot [target names...]
         //     node elm-watch.mts make [--debug|--optimize] [target names...]
 
-        import { spawn } from "node:child_process";
-        import { parseArgs } from "node:util";
-        import { elmWatch, type Postprocess, type Target } from "elm-watch";
+        import { exec, spawn } from "node:child_process";
+        import { parseArgs, promisify } from "node:util";
+        import { elmWatch, type OpenEditor, type Postprocess, type Target } from "elm-watch";
 
         const { positionals, values } = parseArgs({
           allowPositionals: true,
@@ -871,6 +1057,7 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
+          openEditor: openEditorFromEnv(),
         });
 
         // Runs your postprocess command from elm-watch.json, like elm-watch 1 did:
@@ -907,6 +1094,30 @@ describe("init --javascript and --typescript", () => {
               });
               child.stdin.end(code);
             });
+        }
+
+        // Opens error locations that you click in the browser UI in your editor.
+        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+        // environment variable, like with the elm-watch command:
+        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+        function openEditorFromEnv(): OpenEditor | undefined {
+          const command = process.env.ELM_WATCH_OPEN_EDITOR;
+          if (command === undefined) {
+            return undefined;
+          }
+          const execAsync = promisify(exec);
+          return async ({ file, line, column }) => {
+            await execAsync(command, {
+              cwd: import.meta.dirname,
+              env: {
+                ...process.env,
+                file,
+                line: line.toString(),
+                column: column.toString(),
+              },
+              timeout: 5000,
+            });
+          };
         }
       `);
     });

@@ -1,5 +1,6 @@
 // @ts-check
-import { parseArgs } from "node:util";
+import { exec } from "node:child_process";
+import { parseArgs, promisify } from "node:util";
 import { elmWatch } from "elm-watch";
 import { postprocessFor } from "./postprocess.js";
 
@@ -112,4 +113,30 @@ process.exitCode = await elmWatch({
       ? "debug"
       : "standard",
   targets: enabledTargets,
+  openEditor: openEditorFromEnv(),
 });
+
+// Opens error locations that you click in the browser UI in your editor.
+// Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
+// environment variable, like with the elm-watch command:
+// https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+/** @returns {import("elm-watch").OpenEditor | undefined} */
+function openEditorFromEnv() {
+  const command = process.env.ELM_WATCH_OPEN_EDITOR;
+  if (command === undefined) {
+    return undefined;
+  }
+  const execAsync = promisify(exec);
+  return async ({ file, line, column }) => {
+    await execAsync(command, {
+      cwd: import.meta.dirname,
+      env: {
+        ...process.env,
+        file,
+        line: line.toString(),
+        column: column.toString(),
+      },
+      timeout: 5000,
+    });
+  };
+}
