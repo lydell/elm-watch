@@ -1893,9 +1893,13 @@ function viewPanel({
       HTMLUListElement,
       { className: CLASS.targets },
       ...snapshots.map((snapshot) =>
-        viewTarget(snapshot, (msg) => {
-          dispatch(snapshot.info.targetName, msg);
-        }),
+        viewTarget(
+          snapshot,
+          isWaitingForOtherTargets(snapshot, snapshots),
+          (msg) => {
+            dispatch(snapshot.info.targetName, msg);
+          },
+        ),
       ),
     ),
     h(
@@ -1908,8 +1912,23 @@ function viewPanel({
   ];
 }
 
+// The page is only reloaded once no target is `Busy` or `Connecting` (see
+// `reloadPageIfNeeded` in client.ts). If no other target is, the reload has
+// already been requested, but hasn't happened (yet).
+function isWaitingForOtherTargets(
+  snapshot: TargetSnapshot,
+  snapshots: Array<TargetSnapshot>,
+): boolean {
+  return snapshots.some(
+    (other) =>
+      other !== snapshot &&
+      (other.status.tag === "Busy" || other.status.tag === "Connecting"),
+  );
+}
+
 function viewTarget(
   snapshot: TargetSnapshot,
+  waitingForOtherTargets: boolean,
   dispatch: (msg: UiMsg) => void,
 ): HTMLElement {
   const { status, info } = snapshot;
@@ -1918,7 +1937,7 @@ function viewTarget(
   const details = [
     ...(chooser.fieldset === undefined ? [] : [chooser.fieldset]),
     ...chooser.details,
-    ...viewStatusDetails(snapshot, dispatch),
+    ...viewStatusDetails(snapshot, waitingForOtherTargets, dispatch),
   ];
 
   return h(
@@ -1956,6 +1975,7 @@ function viewTarget(
 
 function viewStatusDetails(
   snapshot: TargetSnapshot,
+  waitingForOtherTargets: boolean,
   dispatch: (msg: UiMsg) => void,
 ): Array<HTMLElement> {
   const { status, info } = snapshot;
@@ -2032,7 +2052,15 @@ function viewStatusDetails(
             "Do you have accidental HTTP caching enabled maybe?",
             "Try hard refreshing the page and see if that helps, and consider disabling HTTP caching during development.",
           ].map((text) => h(HTMLParagraphElement, {}, text))
-        : [h(HTMLParagraphElement, {}, "Waiting for other targets…")];
+        : [
+            h(
+              HTMLParagraphElement,
+              {},
+              waitingForOtherTargets
+                ? "Waiting for other targets…"
+                : "Waiting for page reload…",
+            ),
+          ];
   }
 }
 
