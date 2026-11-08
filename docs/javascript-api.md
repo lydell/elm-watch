@@ -137,8 +137,8 @@ Type definition: `import type { Options } from "elm-watch"`.
 | targets | `Array<Target>` | _Required_ | What to compile. At least one target is required. See below. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time. | Like `"port"` in [elm-watch.json](../elm-watch.json/). |
 | staticFilesDir | `string` | unset | A directory of static files to [serve](../server/), relative to `root`. Like `"serve"` in elm-watch.json. |
-| webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. |
-| allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). |
+| webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable is ignored – use `process.env` yourself if needed. |
+| allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable is ignored – use `process.env` yourself if needed. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |
 | env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `ELM_WATCH_OPEN_EDITOR`. |
 | stdin, stdout, stderr | streams | `process.stdin` etc. | Where elm-watch reads keyboard input and writes output. |

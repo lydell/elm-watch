@@ -19,7 +19,6 @@ import { ElmWatchStuffJson, type Target } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
-  ELM_WATCH_ALLOWED_HOSTS,
   ELM_WATCH_OPEN_EDITOR,
   type Env,
 } from "./Env.ts";
@@ -3421,7 +3420,7 @@ function printWebSocketConnectionRejectedReason(
 function printRejectedHost(what: string, rejectedHost: RejectedHost): string {
   switch (rejectedHost.tag) {
     case "NotAllowed":
-      return `${what} not allowed – add ${quote(rejectedHost.hostname)} to "allowedHosts" or to ${ELM_WATCH_ALLOWED_HOSTS} (see ${ALLOWED_HOSTS_DOCS_LINK})`;
+      return `${what} not allowed – add ${quote(rejectedHost.hostname)} to allowedHosts (see ${ALLOWED_HOSTS_DOCS_LINK})`;
     case "Invalid":
       return `invalid ${what}: ${rejectedHost.value === undefined ? "(missing)" : quote(rejectedHost.value)}`;
   }

@@ -816,8 +816,12 @@ describe("SimpleStaticFileServer", () => {
                           your <strong>elm-watch.json</strong> file:
                         </p>
                         <pre><code>"allowedHosts": ["evil.com"]</code></pre>
-                        <p>Or set an environment variable (useful if the host changes):</p>
-                        <pre><code>ELM_WATCH_ALLOWED_HOSTS=evil.com</code></pre>
+                        
+                                <p>
+                                  Or set an environment variable (useful if the host changes):
+                                </p>
+                                <pre><code>ELM_WATCH_ALLOWED_HOSTS=evil.com</code></pre>
+                              
                         <p>
                           👉
                           <a href="https://lydell.github.io/elm-watch/server/#allowed-hosts"
@@ -845,34 +849,33 @@ describe("SimpleStaticFileServer", () => {
         async (get) => {
           expect(await get("/", { headers: { Host: "evil.com" } }))
             .toMatchInlineSnapshot(`
-            403
-            content-type: text/html; charset=utf-8
+              403
+              content-type: text/html; charset=utf-8
 
-                      <h1>Host not allowed</h1>
-                      <p>
-                        To protect against
-                        <a href="https://en.wikipedia.org/wiki/DNS_rebinding"
-                          >DNS rebinding</a
-                        >
-                        attacks, elm-watch only accepts requests for certain hosts. This
-                        request was for:
-                      </p>
-                      <pre>evil.com</pre>
-                      <p>
-                        localhost, *.localhost, *.local and IP addresses are always allowed.
-                        To allow this host too, add it to
-                        your <strong>elmWatch()</strong> options:
-                      </p>
-                      <pre><code>allowedHosts: ["evil.com"],</code></pre>
-                      <p>Or set an environment variable (useful if the host changes):</p>
-                      <pre><code>ELM_WATCH_ALLOWED_HOSTS=evil.com</code></pre>
-                      <p>
-                        👉
-                        <a href="https://lydell.github.io/elm-watch/server/#allowed-hosts"
-                          >Learn more about allowed hosts</a
-                        >
-                      </p>
-          `);
+                        <h1>Host not allowed</h1>
+                        <p>
+                          To protect against
+                          <a href="https://en.wikipedia.org/wiki/DNS_rebinding"
+                            >DNS rebinding</a
+                          >
+                          attacks, elm-watch only accepts requests for certain hosts. This
+                          request was for:
+                        </p>
+                        <pre>evil.com</pre>
+                        <p>
+                          localhost, *.localhost, *.local and IP addresses are always allowed.
+                          To allow this host too, add it to
+                          your <strong>elmWatch()</strong> options:
+                        </p>
+                        <pre><code>allowedHosts: ["evil.com"],</code></pre>
+                        
+                        <p>
+                          👉
+                          <a href="https://lydell.github.io/elm-watch/server/#allowed-hosts"
+                            >Learn more about allowed hosts</a
+                          >
+                        </p>
+            `);
           expect(await get("/")).toMatchInlineSnapshot(`
             404
             content-type: text/html; charset=utf-8

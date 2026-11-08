@@ -474,14 +474,20 @@ export function initProject({
     os.cpus().length,
   );
 
-  const webSocketUrl = getWebSocketUrlFromEnv(env) ?? config.webSocketUrl;
+  // The environment variables are for elm-watch.json. With the JavaScript API,
+  // you can read environment variables yourself.
+  const isElmWatchJson = config.source.tag === "ElmWatchJson";
+
+  const webSocketUrl =
+    (isElmWatchJson ? getWebSocketUrlFromEnv(env) : undefined) ??
+    config.webSocketUrl;
 
   // If you connect the WebSocket via some custom host, that host should be
   // allowed. It’s typically also the host of the page.
   const allowedHosts = Array.from(
     new Set([
       ...config.allowedHosts,
-      ...getAllowedHostsFromEnv(env),
+      ...(isElmWatchJson ? getAllowedHostsFromEnv(env) : []),
       ...(webSocketUrl === undefined
         ? []
         : [allowedHostFromUrl(webSocketUrl.url)]),

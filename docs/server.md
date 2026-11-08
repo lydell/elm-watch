@@ -240,6 +240,12 @@ Or set the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated). It 
 ELM_WATCH_ALLOWED_HOSTS=my-name.ngrok.dev elm-watch hot
 ```
 
+With the [JavaScript API](../javascript-api/), environment variables like `ELM_WATCH_ALLOWED_HOSTS` are ignored. Read them yourself instead:
+
+```js
+allowedHosts: ["dev.example.com", ...(process.env.MY_HOSTS?.split(",") ?? [])],
+```
+
 Only exact host names are supported – no wildcards like `.example.com` or `*.example.com`. That is on purpose: A wildcard on a shared domain (like ngrok’s or other tunnel services’) would let anyone with a subdomain there connect to your elm-watch WebSocket. List each host exactly instead.
 
 If a request is rejected, elm-watch tells you which host to add: Rejected HTTP requests get an error page, and rejected WebSocket connections are logged in the terminal.

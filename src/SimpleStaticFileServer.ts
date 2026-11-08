@@ -420,8 +420,16 @@ export function hostNotAllowedHtml(
               ? html`"allowedHosts": ["${rejectedHost.hostname}"]`
               : html`allowedHosts: ["${rejectedHost.hostname}"],`
           }</code></pre>
-          <p>Or set an environment variable (useful if the host changes):</p>
-          <pre><code>${ELM_WATCH_ALLOWED_HOSTS}=${rejectedHost.hostname}</code></pre>
+          ${
+            configSource.tag === "ElmWatchJson"
+              ? html`
+                  <p>
+                    Or set an environment variable (useful if the host changes):
+                  </p>
+                  <pre><code>${ELM_WATCH_ALLOWED_HOSTS}=${rejectedHost.hostname}</code></pre>
+                `
+              : ""
+          }
           <p>
             👉
             <a href="${ALLOWED_HOSTS_DOCS_LINK}"

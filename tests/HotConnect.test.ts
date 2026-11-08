@@ -802,9 +802,9 @@ describe("hot", () => {
       });
 
       expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(`
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: Host header not allowed – add "evil.com" to "allowedHosts" or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: Host header not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: invalid Host header: "evil.com/"⧘
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "https://evil.com" rejected due to: origin not allowed – add "evil.com" to "allowedHosts" or to ELM_WATCH_ALLOWED_HOSTS (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "https://evil.com" rejected due to: origin not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
         ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "not a url" rejected due to: invalid origin: "not a url"⧘
       `);
     });
