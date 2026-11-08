@@ -33,7 +33,7 @@ import {
   waitOneFrame,
 } from "./Helpers.ts";
 
-const CONTAINER_ID = "elm-watch";
+const CONTAINER_ID = "elm-watch-ui-1";
 export function fixtureDir(fixture: string): string {
   return copyFixture("hot", fixture);
 }
