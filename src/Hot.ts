@@ -45,10 +45,15 @@ import {
 import { absoluteDirname } from "./PathHelpers.ts";
 import type { PortChoice } from "./Port.ts";
 import {
-  type TargetErrorWithMetadata,
+  type ApplicationTargetErrorWithMetadata,
+  getAllTargetStates,
+  getApplicationTargetsErrors,
   getFlatOutputs,
+  getPackageSourceDirectory,
+  getPackageStates,
   type OutputError,
   type OutputState,
+  type PackageState,
   type Project,
   projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project.ts";
@@ -66,6 +71,7 @@ import {
   type InputPath,
   type GetNow,
   type OutputPath,
+  type TargetLocation,
   TargetName,
   type WebSocketToken,
 } from "./Types.ts";
@@ -336,6 +342,7 @@ type Cmd =
         outputPath: OutputPath;
         outputState: OutputState;
       }>;
+      packages: Array<PackageState>;
       killInstallDependencies: boolean;
     }
   | {
@@ -479,7 +486,7 @@ export async function run(
       signal,
       hotTestHooks,
     ),
-    init: init(getNow(), restartReasons, project.targetsErrors),
+    init: init(getNow(), restartReasons, getApplicationTargetsErrors(project)),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(
         logger.config,
@@ -664,9 +671,9 @@ const initMutable =
         if (mutable.killInstallDependencies !== undefined) {
           mutable.killInstallDependencies({ force: true });
         }
-        for (const { outputState } of getFlatOutputs(project)) {
-          if ("kill" in outputState.status) {
-            outputState.status.kill({ force: true });
+        for (const targetState of getAllTargetStates(project)) {
+          if ("kill" in targetState.status) {
+            targetState.status.kill({ force: true });
           }
         }
         await closeAll(logger, mutable);
@@ -703,9 +710,9 @@ const initMutable =
       if (mutable.killInstallDependencies !== undefined) {
         mutable.killInstallDependencies({ force: false });
       }
-      for (const { outputState } of getFlatOutputs(project)) {
-        if ("kill" in outputState.status) {
-          outputState.status.kill({ force: false });
+      for (const targetState of getAllTargetStates(project)) {
+        if ("kill" in targetState.status) {
+          targetState.status.kill({ force: false });
         }
       }
       closeAll(logger, mutable)
@@ -737,7 +744,7 @@ function writeElmWatchStuffJson(
   webSocketToken: WebSocketToken,
 ): void {
   const targets: Record<string, Required<Target>> = Object.fromEntries([
-    ...mutable.project.targetsErrors.map(
+    ...getApplicationTargetsErrors(mutable.project).map(
       (error) =>
         [
           error.outputPath.targetName,
@@ -786,7 +793,7 @@ function writeElmWatchStuffJson(
 const init = (
   now: Date,
   restartReasons: Array<LatestEvent>,
-  targetsErrors: Array<TargetErrorWithMetadata>,
+  targetsErrors: Array<ApplicationTargetErrorWithMetadata>,
 ): [Model, Array<Cmd>] => [
   {
     nextAction: { tag: "NoAction" },
@@ -1475,6 +1482,7 @@ function onElmFilesWatcherEvent(
     outputPath: OutputPath;
     outputState: OutputState;
   }> = [];
+  const dirtyPackages: Array<PackageState> = [];
 
   for (const [elmJsonPath, outputs] of project.elmJsons) {
     for (const [outputPath, outputState] of outputs) {
@@ -1494,7 +1502,18 @@ function onElmFilesWatcherEvent(
     }
   }
 
-  return isNonEmptyArray(dirtyOutputs)
+  // Packages typecheck everything in their source directory (src/).
+  for (const [elmJsonPath, [, packageState]] of project.packages) {
+    const sourceDirectory = getPackageSourceDirectory(elmJsonPath);
+    if (
+      event.file.absolutePath.startsWith(sourceDirectory + path.sep) ||
+      matches(sourceDirectory)
+    ) {
+      dirtyPackages.push(packageState);
+    }
+  }
+
+  return isNonEmptyArray(dirtyOutputs) || isNonEmptyArray(dirtyPackages)
     ? [
         compileNextAction(nextAction),
         { ...event, affectsAnyTarget: true },
@@ -1502,6 +1521,7 @@ function onElmFilesWatcherEvent(
           {
             tag: "MarkAsDirty",
             outputs: dirtyOutputs,
+            packages: dirtyPackages,
             killInstallDependencies: false,
           },
         ],
@@ -1801,6 +1821,12 @@ const runCmd =
             },
             mutable.webSocketConnections,
           );
+        }
+        for (const packageState of cmd.packages) {
+          packageState.dirty = true;
+          if ("kill" in packageState.status) {
+            packageState.status.kill({ force: false });
+          }
         }
         return;
 
@@ -2347,6 +2373,7 @@ function makeRestartNextAction(
         // Interrupt all compilation.
         tag: "MarkAsDirty",
         outputs: getFlatOutputs(project),
+        packages: getPackageStates(project),
         killInstallDependencies: true,
       },
     ],
@@ -2393,6 +2420,7 @@ function isElmFileRelatedToTargetsErrors(
 function getAllElmJsonPaths(project: Project): Array<ElmJsonPath> {
   return [
     ...project.elmJsons.keys(),
+    ...project.packages.keys(),
     ...project.targetsErrors.map(({ elmJsonPath }) => elmJsonPath),
   ];
 }
@@ -2443,7 +2471,7 @@ type ParseWebSocketConnectRequestUrlResult =
   | ParseWebSocketConnectRequestUrlError
   | {
       tag: "ElmJsonError";
-      error: TargetErrorWithMetadata;
+      error: ApplicationTargetErrorWithMetadata;
     }
   | {
       tag: "Success";
@@ -2462,14 +2490,14 @@ type ParseWebSocketConnectRequestUrlError =
   | {
       tag: "TargetDisabled";
       targetName: TargetName;
-      enabledOutputs: Array<OutputPath>;
-      disabledOutputs: Array<OutputPath>;
+      enabledOutputs: Array<TargetLocation>;
+      disabledOutputs: Array<TargetLocation>;
     }
   | {
       tag: "TargetNotFound";
       targetName: TargetName;
-      enabledOutputs: Array<OutputPath>;
-      disabledOutputs: Array<OutputPath>;
+      enabledOutputs: Array<TargetLocation>;
+      disabledOutputs: Array<TargetLocation>;
     }
   | {
       tag: "WrongVersion";
@@ -2507,7 +2535,7 @@ function parseWebSocketConnectRequestUrl(
   const flatOutputs = getFlatOutputs(project);
 
   const { targetName } = webSocketConnectedParams;
-  const matchElmJsonError = project.targetsErrors.find(
+  const matchElmJsonError = getApplicationTargetsErrors(project).find(
     ({ outputPath }) => outputPath.targetName === targetName,
   );
   const matchOutput = flatOutputs.find(
@@ -2531,6 +2559,10 @@ function parseWebSocketConnectRequestUrl(
     const enabledOutputs = [
       ...project.targetsErrors.map(({ outputPath }) => outputPath),
       ...flatOutputs.map(({ outputPath }) => outputPath),
+      ...Array.from(
+        project.packages.values(),
+        ([packageTarget]) => packageTarget,
+      ),
     ];
     const disabledOutputs = Array.from(project.disabledOutputs);
     const disabledMatch = disabledOutputs.find(
@@ -2867,6 +2899,7 @@ function onWebSocketRecompileNeeded(
           {
             tag: "MarkAsDirty",
             outputs: [{ outputPath, outputState }],
+            packages: [],
             killInstallDependencies: false,
           },
         ],
@@ -3314,7 +3347,7 @@ function compileFinishedMessage(
 
 function printEventsMessage(
   events: Array<LatestEvent>,
-  disabledOutputs: Array<OutputPath>,
+  disabledOutputs: Array<TargetLocation>,
 ): string {
   const what1 = events.length === 1 ? "file is" : "files are";
   const what2 =

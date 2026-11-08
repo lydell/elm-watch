@@ -266,6 +266,27 @@ export async function runConfig({
               return { tag: "Exit", exitCode: 1 };
           }
 
+        case "NonUniquePackageElmJsons":
+          logger.errorTemplate(
+            Errors.nonUniquePackageElmJsons(
+              config.source,
+              initProjectResult.nonUniquePackageElmJsons,
+            ),
+          );
+          switch (config.source.tag) {
+            case "ElmWatchJson":
+              return handleElmWatchJsonError(
+                logger,
+                getNow,
+                runMode,
+                config.source.elmWatchJsonPath,
+                webSocketTokenFromPreviousRun,
+              );
+            case "Options":
+              // The options can only change by restarting the whole program.
+              return { tag: "Exit", exitCode: 1 };
+          }
+
         case "Project": {
           const { project } = initProjectResult;
 

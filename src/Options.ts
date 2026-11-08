@@ -83,6 +83,11 @@ const Target = Codec.taggedUnion(
       output: Output,
       postprocess: optionalField(functionCodec<PostprocessFunction>()),
     },
+    {
+      type: Codec.tag("package"),
+      name: TargetName,
+      elmJson: ElmJsonPathString,
+    },
   ],
   { allowExtraFields: false },
 );
@@ -182,14 +187,25 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
         config: {
           root,
           source: { tag: "Options" },
-          targets: value.targets.map((target) => ({
-            type: target.type,
-            name: target.name,
-            elmJson: target.elmJson,
-            inputs: target.inputs,
-            output: target.output,
-            postprocess: target.postprocess,
-          })) as NonEmptyArray<Config["targets"][number]>,
+          targets: value.targets.map((target): Config["targets"][number] => {
+            switch (target.type) {
+              case "application":
+                return {
+                  type: target.type,
+                  name: target.name,
+                  elmJson: target.elmJson,
+                  inputs: target.inputs,
+                  output: target.output,
+                  postprocess: target.postprocess,
+                };
+              case "package":
+                return {
+                  type: target.type,
+                  name: target.name,
+                  elmJson: target.elmJson,
+                };
+            }
+          }) as NonEmptyArray<Config["targets"][number]>,
           port: value.port,
           host: value.host,
           webSocketUrl: value.webSocketUrl,

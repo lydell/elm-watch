@@ -120,6 +120,10 @@ const Target = Codec.taggedUnion(
       inputs: Inputs,
       output: Output,
     },
+    {
+      type: Codec.tag("package"),
+      elmJson: ElmJsonPathString,
+    },
   ],
   { allowExtraFields: false },
 );
@@ -318,14 +322,21 @@ function toConfig(
     source: { tag: "ElmWatchJson", elmWatchJsonPath, cwd },
     // The decoder validates that there’s at least one target.
     targets: Object.entries(json.targets).map(
-      ([name, target]): ConfigTarget => ({
-        type: target.type,
-        name,
-        elmJson: target.elmJson,
-        inputs: target.inputs,
-        output: target.output,
-        postprocess: undefined,
-      }),
+      ([name, target]): ConfigTarget => {
+        switch (target.type) {
+          case "application":
+            return {
+              type: target.type,
+              name,
+              elmJson: target.elmJson,
+              inputs: target.inputs,
+              output: target.output,
+              postprocess: undefined,
+            };
+          case "package":
+            return { type: target.type, name, elmJson: target.elmJson };
+        }
+      },
     ) as NonEmptyArray<ConfigTarget>,
     port: json.port,
     host: undefined,

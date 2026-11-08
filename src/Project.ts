@@ -44,7 +44,9 @@ import {
   markAsStaticFilesDir,
   markAsTargetName,
   type OutputPath,
+  type PackageTarget,
   type StaticFilesDir,
+  type TargetName,
   type UncheckedInputPath,
   type WriteOutputErrorReasonForWriting,
 } from "./Types.ts";
@@ -59,9 +61,12 @@ export type Project = {
   staticFilesDir: StaticFilesDir | undefined;
   configSource: ConfigSource;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
-  disabledOutputs: Array<OutputPath>;
+  disabledOutputs: Array<OutputPath | PackageTarget>;
   targetsErrors: Array<TargetErrorWithMetadata>;
+  // Applications.
   elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
+  // There can only be one package target per elm.json.
+  packages: Map<ElmJsonPath, [PackageTarget, PackageState]>;
   maxParallel: number;
   host: Host;
   webSocketUrl: WebSocketUrl | undefined;
@@ -75,21 +80,91 @@ export type OpenEditor =
   | { tag: "Command"; command: string }
   | { tag: "Function"; openEditor: OpenEditorFunction };
 
-// The code base leans towards pure functions, but this data structure is going
-// to be mutated a lot.
-export class OutputState {
-  // Inputs never change.
-  readonly inputs: NonEmptyArray<InputPath>;
-
-  readonly postprocess: Postprocess;
-
+// The code base leans towards pure functions, but these data structures are
+// going to be mutated a lot.
+export class TargetState<Status extends OutputStatus = OutputStatus> {
   // This one has a method for mutating, for measuring how long time is spent in
   // different statuses.
-  private _status: OutputStatus = { tag: "NotWrittenToDisk" };
+  private _status: Status;
 
   private _durations: Array<Duration> = [];
 
   private _lastStartTimestamp = 0;
+
+  dirty = true;
+
+  private getNow: GetNow;
+
+  constructor(initialStatus: Status, getNow: GetNow) {
+    this._status = initialStatus;
+    this.getNow = getNow;
+  }
+
+  flushDurations(): Array<Duration> {
+    // Clear the durations when getting them. This means that once we have have
+    // printed them, we won’t print them again. This way we only show durations
+    // for the targets that were affected by the latest compilation cycle.
+    const durations = this._durations.slice();
+    this._durations.length = 0;
+    return durations;
+  }
+
+  get status(): Status {
+    return this._status;
+  }
+
+  setStatus(status: Status): void {
+    const lastStartTimestamp = this._lastStartTimestamp;
+    this._lastStartTimestamp = this.getNow().getTime();
+
+    // `Status` is a subset of `OutputStatus`.
+    const previousStatus: OutputStatus = this._status;
+
+    switch (previousStatus.tag) {
+      case "ElmMake":
+        this._durations.push({
+          tag: "ElmMake",
+          elmDurationMs: previousStatus.elmDurationMs,
+          walkerDurationMs: previousStatus.walkerDurationMs,
+        });
+        if (previousStatus.injectDurationMs !== -1) {
+          this._durations.push({
+            tag: "Inject",
+            durationMs: previousStatus.injectDurationMs,
+          });
+        }
+        break;
+
+      case "ElmMakeTypecheckOnly":
+        this._durations.push({
+          tag: "ElmMakeTypecheckOnly",
+          elmDurationMs: previousStatus.elmDurationMs,
+          walkerDurationMs: previousStatus.walkerDurationMs,
+        });
+        break;
+
+      case "Postprocess":
+      case "QueuedForElmMake":
+      case "QueuedForPostprocess":
+        this._durations.push({
+          tag: previousStatus.tag,
+          durationMs: this._lastStartTimestamp - lastStartTimestamp,
+        });
+        break;
+
+      default:
+        this._durations.length = 0;
+    }
+
+    this._status = status;
+  }
+}
+
+export class OutputState extends TargetState {
+  // Inputs never change.
+  readonly inputs: NonEmptyArray<InputPath>;
+
+  readonly postprocess: Postprocess;
 
   // The remaining properties are mutated from outside the class.
 
@@ -105,10 +180,6 @@ export class OutputState {
   // makes that more clear.
   recordFields: Set<string> | undefined = undefined;
 
-  dirty = true;
-
-  private getNow: GetNow;
-
   constructor(
     inputs: NonEmptyArray<InputPath>,
     postprocess: Postprocess,
@@ -117,70 +188,31 @@ export class OutputState {
     openErrorOverlay: boolean,
     getNow: GetNow,
   ) {
-    this.getNow = getNow;
+    super({ tag: "NotWrittenToDisk" }, getNow);
     this.inputs = inputs;
     this.postprocess = postprocess;
     this.compilationMode = compilationMode;
     this.browserUiPosition = browserUiPosition;
     this.openErrorOverlay = openErrorOverlay;
   }
-
-  flushDurations(): Array<Duration> {
-    // Clear the durations when getting them. This means that once we have have
-    // printed them, we won’t print them again. This way we only show durations
-    // for the targets that were affected by the latest compilation cycle.
-    const durations = this._durations.slice();
-    this._durations.length = 0;
-    return durations;
-  }
-
-  get status(): OutputStatus {
-    return this._status;
-  }
-
-  setStatus(status: OutputStatus): void {
-    const lastStartTimestamp = this._lastStartTimestamp;
-    this._lastStartTimestamp = this.getNow().getTime();
-
-    switch (this._status.tag) {
-      case "ElmMake":
-        this._durations.push({
-          tag: "ElmMake",
-          elmDurationMs: this._status.elmDurationMs,
-          walkerDurationMs: this._status.walkerDurationMs,
-        });
-        if (this._status.injectDurationMs !== -1) {
-          this._durations.push({
-            tag: "Inject",
-            durationMs: this._status.injectDurationMs,
-          });
-        }
-        break;
-
-      case "ElmMakeTypecheckOnly":
-        this._durations.push({
-          tag: "ElmMakeTypecheckOnly",
-          elmDurationMs: this._status.elmDurationMs,
-          walkerDurationMs: this._status.walkerDurationMs,
-        });
-        break;
-
-      case "Postprocess":
-      case "QueuedForElmMake":
-      case "QueuedForPostprocess":
-        this._durations.push({
-          tag: this._status.tag,
-          durationMs: this._lastStartTimestamp - lastStartTimestamp,
-        });
-        break;
-
-      default:
-        this._durations.length = 0;
-    }
-
-    this._status = status;
-  }
 }
+
+// Packages are only typechecked, so they have fewer statuses. A successful
+// typecheck is "NotWrittenToDisk", like for applications.
+export type PackageStatus =
+  | Extract<
+      OutputStatus,
+      {
+        tag:
+          | "ElmMakeTypecheckOnly"
+          | "Interrupted"
+          | "NotWrittenToDisk"
+          | "QueuedForElmMake";
+      }
+    >
+  | RunElmMakeError;
+
+export type PackageState = TargetState<PackageStatus>;
 
 export type OutputStatus =
   | OutputError
@@ -282,7 +314,7 @@ type TargetError =
     };
 
 export type TargetErrorWithMetadata = {
-  outputPath: OutputPath;
+  outputPath: OutputPath | PackageTarget;
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   browserUiPosition: BrowserUiPosition;
@@ -327,6 +359,16 @@ type InitProjectResult =
       }>;
     }
   | {
+      tag: "NonUniquePackageElmJsons";
+      nonUniquePackageElmJsons: NonEmptyArray<{
+        elmJsonPath: ElmJsonPath;
+        usages: NonEmptyArray<{
+          type: ElmJson.ElmJsonType;
+          targetName: TargetName;
+        }>;
+      }>;
+    }
+  | {
       tag: "Project";
       project: Project;
     };
@@ -350,103 +392,166 @@ export function initProject({
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
-  const disabledOutputs: Array<OutputPath> = [];
+  const disabledOutputs: Array<OutputPath | PackageTarget> = [];
   const targetsErrors: Array<TargetErrorWithMetadata> = [];
   const elmJsons = new Map<ElmJsonPath, Array<[OutputPath, OutputState]>>();
+  const packages = new Map<ElmJsonPath, [PackageTarget, PackageState]>();
   const enabledInputPaths: Array<AbsolutePath> = [];
   const potentialOutputDuplicates = new Map<
     AbsolutePath,
     NonEmptyArray<string>
   >();
+  const elmJsonUsages = new Map<
+    ElmJsonPath,
+    NonEmptyArray<{ type: ElmJson.ElmJsonType; targetName: TargetName }>
+  >();
 
   for (const [index, target] of config.targets.entries()) {
-    const targetName = target.name;
-    const outputPath: OutputPath = {
-      tag: "OutputPath",
-      theOutputPath: absolutePathFromString(config.root, target.output),
-      temporaryOutputPath: absolutePathFromString(
-        elmWatchStuffDir,
-        `${index}.js`,
-      ),
-      originalString: target.output,
-      targetName: markAsTargetName(targetName),
-    };
-
-    const previousOutput = potentialOutputDuplicates.get(
-      outputPath.theOutputPath,
+    const targetName = markAsTargetName(target.name);
+    const elmJsonPath = markAsElmJsonPath(
+      absolutePathFromString(config.root, target.elmJson),
     );
-    if (previousOutput === undefined) {
-      potentialOutputDuplicates.set(outputPath.theOutputPath, [
-        outputPath.originalString,
-      ]);
+    const isEnabled = enabledTargetsSubstrings.some((substring) =>
+      target.name.includes(substring),
+    );
+
+    const usage = { type: target.type, targetName };
+    const previousUsages = elmJsonUsages.get(elmJsonPath);
+    if (previousUsages === undefined) {
+      elmJsonUsages.set(elmJsonPath, [usage]);
     } else {
-      previousOutput.push(outputPath.originalString);
+      previousUsages.push(usage);
     }
 
-    if (
-      enabledTargetsSubstrings.some((substring) =>
-        targetName.includes(substring),
-      )
-    ) {
-      const elmJsonPath = markAsElmJsonPath(
-        absolutePathFromString(config.root, target.elmJson),
-      );
-      const resolveResult = resolveTarget(
-        config.root,
-        elmJsonPath,
-        target.type,
-        target.inputs,
-      );
-      enabledInputPaths.push(
-        ...target.inputs.map((inputString) =>
-          absolutePathFromString(config.root, inputString),
-        ),
-      );
+    switch (target.type) {
+      case "application": {
+        const outputPath: OutputPath = {
+          tag: "OutputPath",
+          theOutputPath: absolutePathFromString(config.root, target.output),
+          temporaryOutputPath: absolutePathFromString(
+            elmWatchStuffDir,
+            `${index}.js`,
+          ),
+          originalString: target.output,
+          targetName,
+        };
 
-      const persisted = elmWatchStuffJson?.targets[targetName];
-      const {
-        compilationMode: thisCompilationMode = compilationMode,
-        browserUiPosition = "BottomLeft",
-        openErrorOverlay = false,
-      } = persisted ?? {};
-
-      switch (resolveResult.tag) {
-        case "Success": {
-          const previous = elmJsons.get(elmJsonPath) ?? [];
-          previous.push([
-            outputPath,
-            new OutputState(
-              resolveResult.inputs,
-              target.postprocess === undefined
-                ? { tag: "NoPostprocess" }
-                : {
-                    tag: "Postprocess",
-                    postprocessFunction: target.postprocess,
-                  },
-              thisCompilationMode,
-              browserUiPosition,
-              openErrorOverlay,
-              getNow,
-            ),
+        const previousOutput = potentialOutputDuplicates.get(
+          outputPath.theOutputPath,
+        );
+        if (previousOutput === undefined) {
+          potentialOutputDuplicates.set(outputPath.theOutputPath, [
+            outputPath.originalString,
           ]);
-          elmJsons.set(elmJsonPath, previous);
+        } else {
+          previousOutput.push(outputPath.originalString);
+        }
+
+        if (!isEnabled) {
+          disabledOutputs.push(outputPath);
           break;
         }
 
-        default:
-          targetsErrors.push({
-            outputPath,
-            elmJsonPath,
-            compilationMode: thisCompilationMode,
-            browserUiPosition,
-            openErrorOverlay,
-            error: resolveResult,
-          });
-          break;
+        const resolveResult = resolveTarget(
+          config.root,
+          elmJsonPath,
+          target.inputs,
+        );
+        enabledInputPaths.push(
+          ...target.inputs.map((inputString) =>
+            absolutePathFromString(config.root, inputString),
+          ),
+        );
+
+        const persisted = elmWatchStuffJson?.targets[targetName];
+        const {
+          compilationMode: thisCompilationMode = compilationMode,
+          browserUiPosition = "BottomLeft",
+          openErrorOverlay = false,
+        } = persisted ?? {};
+
+        switch (resolveResult.tag) {
+          case "Success": {
+            const previous = elmJsons.get(elmJsonPath) ?? [];
+            previous.push([
+              outputPath,
+              new OutputState(
+                resolveResult.inputs,
+                target.postprocess === undefined
+                  ? { tag: "NoPostprocess" }
+                  : {
+                      tag: "Postprocess",
+                      postprocessFunction: target.postprocess,
+                    },
+                thisCompilationMode,
+                browserUiPosition,
+                openErrorOverlay,
+                getNow,
+              ),
+            ]);
+            elmJsons.set(elmJsonPath, previous);
+            break;
+          }
+
+          default:
+            targetsErrors.push({
+              outputPath,
+              elmJsonPath,
+              compilationMode: thisCompilationMode,
+              browserUiPosition,
+              openErrorOverlay,
+              error: resolveResult,
+            });
+            break;
+        }
+        break;
       }
-    } else {
-      disabledOutputs.push(outputPath);
+
+      case "package": {
+        const packageTarget: PackageTarget = {
+          tag: "PackageTarget",
+          targetName,
+        };
+
+        if (!isEnabled) {
+          disabledOutputs.push(packageTarget);
+          break;
+        }
+
+        const error = checkElmJsonType(elmJsonPath, "package");
+        if (error === undefined) {
+          packages.set(elmJsonPath, [
+            packageTarget,
+            new TargetState<PackageStatus>({ tag: "NotWrittenToDisk" }, getNow),
+          ]);
+        } else {
+          targetsErrors.push({
+            outputPath: packageTarget,
+            elmJsonPath,
+            // These are only used for applications (in the browser UI).
+            compilationMode,
+            browserUiPosition: "BottomLeft",
+            openErrorOverlay: false,
+            error,
+          });
+        }
+        break;
+      }
     }
+  }
+
+  const nonUniquePackageElmJsons = Array.from(elmJsonUsages).flatMap(
+    ([elmJsonPath, usages]) =>
+      usages.length >= 2 && usages.some(({ type }) => type === "package")
+        ? [{ elmJsonPath, usages }]
+        : [],
+  );
+
+  if (isNonEmptyArray(nonUniquePackageElmJsons)) {
+    return {
+      tag: "NonUniquePackageElmJsons",
+      nonUniquePackageElmJsons,
+    };
   }
 
   const duplicateOutputs = Array.from(potentialOutputDuplicates)
@@ -472,7 +577,7 @@ export function initProject({
 
   const watchDirs = getWatchDirs({
     configSource: config.source,
-    elmJsonPaths: Array.from(elmJsons.keys()),
+    elmJsonPaths: [...elmJsons.keys(), ...packages.keys()],
     erroredElmJsonPaths: targetsErrors.map(({ elmJsonPath }) => elmJsonPath),
     inputPaths: enabledInputPaths,
     staticFilesDir,
@@ -534,6 +639,7 @@ export function initProject({
       disabledOutputs,
       targetsErrors,
       elmJsons,
+      packages,
       maxParallel,
       host,
       webSocketUrl,
@@ -657,7 +763,6 @@ type ResolveTargetResult =
 function resolveTarget(
   root: AbsolutePath,
   elmJsonPath: ElmJsonPath,
-  type: ElmJson.ElmJsonType,
   inputStrings: NonEmptyArray<string>,
 ): ResolveTargetResult {
   const inputs: Array<InputPath> = [];
@@ -733,22 +838,9 @@ function resolveTarget(
     };
   }
 
-  const elmJsonTypeResult = ElmJson.readElmJsonType(elmJsonPath);
-  switch (elmJsonTypeResult.tag) {
-    case "NotFound":
-      return { tag: "ElmJsonNotFound" };
-    case "Found":
-      if (elmJsonTypeResult.type !== type) {
-        return {
-          tag: "ElmJsonTypeMismatch",
-          expected: type,
-          actual: elmJsonTypeResult.type,
-        };
-      }
-      break;
-    case "Unknown":
-      // Let Elm report the problem with elm.json.
-      break;
+  const elmJsonError = checkElmJsonType(elmJsonPath, "application");
+  if (elmJsonError !== undefined) {
+    return elmJsonError;
   }
 
   return {
@@ -756,6 +848,60 @@ function resolveTarget(
     // At this point we know for sure that `inputs` must be non-empty.
     inputs: inputs as NonEmptyArray<InputPath>,
   };
+}
+
+function checkElmJsonType(
+  elmJsonPath: ElmJsonPath,
+  type: ElmJson.ElmJsonType,
+): TargetError | undefined {
+  const result = ElmJson.readElmJsonType(elmJsonPath);
+  switch (result.tag) {
+    case "NotFound":
+      return { tag: "ElmJsonNotFound" };
+    case "Found":
+      return result.type === type
+        ? undefined
+        : { tag: "ElmJsonTypeMismatch", expected: type, actual: result.type };
+    case "Unknown":
+      // Let Elm report the problem with elm.json.
+      return undefined;
+  }
+}
+
+export type ApplicationTargetErrorWithMetadata = TargetErrorWithMetadata & {
+  outputPath: OutputPath;
+};
+
+// Only application targets can be connected to from the browser.
+export function getApplicationTargetsErrors(
+  project: Project,
+): Array<ApplicationTargetErrorWithMetadata> {
+  return project.targetsErrors.flatMap((targetError) =>
+    targetError.outputPath.tag === "OutputPath"
+      ? [{ ...targetError, outputPath: targetError.outputPath }]
+      : [],
+  );
+}
+
+export function getPackageStates(project: Project): Array<PackageState> {
+  return Array.from(
+    project.packages.values(),
+    ([, packageState]) => packageState,
+  );
+}
+
+export function getAllTargetStates(project: Project): Array<TargetState> {
+  return [
+    ...getFlatOutputs(project).map(({ outputState }) => outputState),
+    ...getPackageStates(project),
+  ];
+}
+
+// Packages always use src/ – see `ElmJson.readSourceDirectories`.
+export function getPackageSourceDirectory(
+  elmJsonPath: ElmJsonPath,
+): AbsolutePath {
+  return absolutePathFromString(absoluteDirname(elmJsonPath), "src");
 }
 
 export function getFlatOutputs(project: Project): Array<{
@@ -812,6 +958,13 @@ export function projectToDebug(project: Project): unknown {
           inputs: outputState.inputs.map(inputPathToDebug),
         })),
     ),
+    enabledPackageTargets: Array.from(
+      project.packages,
+      ([elmJsonPath, [packageTarget]]) => ({
+        ...outputPathToDebug(packageTarget),
+        elmJson: elmJsonPath,
+      }),
+    ),
     disabledTargets: Array.from(project.disabledOutputs, outputPathToDebug),
     erroredTargets: project.targetsErrors.map(
       ({ outputPath, compilationMode, error }) => ({
@@ -823,7 +976,12 @@ export function projectToDebug(project: Project): unknown {
   };
 }
 
-function outputPathToDebug(outputPath: OutputPath): Record<string, unknown> {
+function outputPathToDebug(
+  outputPath: OutputPath | PackageTarget,
+): Record<string, unknown> {
+  if (outputPath.tag === "PackageTarget") {
+    return { targetName: outputPath.targetName };
+  }
   return {
     targetName: outputPath.targetName,
     output: outputPath.theOutputPath,

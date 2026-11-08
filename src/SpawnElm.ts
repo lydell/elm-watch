@@ -5,7 +5,6 @@ import { ElmMakeError } from "./ElmMakeError.ts";
 import { __ELM_WATCH_ELM_TIMEOUT_MS, type Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import { silentlyReadIntEnvValue } from "./Helpers.ts";
-import type { NonEmptyArray } from "./NonEmptyArray.ts";
 import { absoluteDirname } from "./PathHelpers.ts";
 import {
   type Command,
@@ -78,7 +77,8 @@ export function make({
 }: {
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
-  inputs: NonEmptyArray<Pick<InputPath, "tag" | "theInputPath">>;
+  // Empty for packages: `elm make` without inputs typechecks the package.
+  inputs: Array<Pick<InputPath, "tag" | "theInputPath">>;
   outputPath: LocalOutputPath;
   env: Env;
   getNow: GetNow;

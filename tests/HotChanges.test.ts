@@ -159,22 +159,11 @@ describe("hot", () => {
     const elmJsonString = fs
       .readFileSync(elmJsonTemplatePath, "utf8")
       .replace(/\r\n/g, "\n");
-    const packageElmJsonString = JSON.stringify({
-      type: "package",
-      name: "author/project",
-      summary: "summary",
-      license: "MIT",
-      version: "1.0.0",
-      "exposed-modules": [],
-      "elm-version": "0.19.0 <= v < 0.20.0",
-      dependencies: { "elm/core": "1.0.0 <= v < 2.0.0" },
-      "test-dependencies": {},
-    });
     fs.writeFileSync(elmJsonPath, elmJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
     rm(elmJsonPathSub);
 
-    const { terminal, onlyExpandedRenders } = await run({
+    const { terminal } = await run({
       fixture,
       args: ["HtmlMain"],
       scripts: ["HtmlMain.js"],
@@ -194,20 +183,6 @@ describe("hot", () => {
             fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
             return "KeepGoing";
           case 2:
-            fs.writeFileSync(elmJsonPath, elmJsonString);
-            return "KeepGoing";
-          case 3:
-            fs.writeFileSync(elmJsonPath, packageElmJsonString);
-            return "KeepGoing";
-          case 4:
-            expandUi();
-            fs.writeFileSync(elmJsonPath, elmJsonString);
-            return "KeepGoing";
-          case 5:
-            fs.unlinkSync(elmJsonPath);
-            return "KeepGoing";
-          case 6:
-            collapseUi();
             fs.writeFileSync(elmJsonPath, elmJsonString);
             return "KeepGoing";
           default:
@@ -244,9 +219,63 @@ describe("hot", () => {
 
       Notice that (1) the field names are in double quotes and (2) there is no
       trailing comma after the last entry. Both are strict requirements in JSON!
+    `);
 
-      …
+    function assert(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+    }
+  });
 
+  test("elm.json changes type, or goes missing", async () => {
+    const fixture = "changes-to-elm-json";
+    const dir = fixtureDir(fixture);
+    const elmJsonPath = path.join(dir, "elm.json");
+    const elmJsonTemplatePath = path.join(dir, "elm.template.json");
+    const elmJsonString = fs
+      .readFileSync(elmJsonTemplatePath, "utf8")
+      .replace(/\r\n/g, "\n");
+    const packageElmJsonString = JSON.stringify({
+      type: "package",
+      name: "author/project",
+      summary: "summary",
+      license: "MIT",
+      version: "1.0.0",
+      "exposed-modules": [],
+      "elm-version": "0.19.0 <= v < 0.20.0",
+      dependencies: { "elm/core": "1.0.0 <= v < 2.0.0" },
+      "test-dependencies": {},
+    });
+    fs.writeFileSync(elmJsonPath, elmJsonString);
+
+    const { terminal, onlyExpandedRenders } = await run({
+      fixture,
+      args: ["HtmlMain"],
+      scripts: ["HtmlMain.js"],
+      isTTY: false,
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            expandUi();
+            fs.writeFileSync(elmJsonPath, packageElmJsonString);
+            return "KeepGoing";
+          case 2:
+            fs.unlinkSync(elmJsonPath);
+            return "KeepGoing";
+          case 3:
+            collapseUi();
+            fs.writeFileSync(elmJsonPath, elmJsonString);
+            return "KeepGoing";
+          default:
+            expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
+            return "Stop";
+        }
+      },
+    });
+
+    expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
       ⧙-- elm.json TYPE MISMATCH ------------------------------------------------------⧘
       ⧙Target: HtmlMain⧘
 
@@ -255,6 +284,11 @@ describe("hot", () => {
       /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
       Either change the "type" of the target, or use another ⧙elm.json⧘.
+
+      Note: Application targets compile Elm files with \`main\` to JavaScript. To
+      typecheck a package, use "type": "package" (without inputs and output) instead.
+      To try out a package in the browser, make an application with its own elm.json
+      (for example in examples/), with the package's src/ in "source-directories".
 
       …
 
@@ -269,36 +303,6 @@ describe("hot", () => {
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status elm.json or inputs error
-      -- elm.json TYPE MISMATCH ------------------------------------------------------
-      Target: HtmlMain
-
-      This target has "type": "application", but its elm.json has "type": "package":
-
-      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
-
-      Either change the "type" of the target, or use another elm.json.
-      ▲ 🚨 13:10:05 HtmlMain
-      ================================================================================
-      target HtmlMain
-      elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status elm.json or inputs error
-      -- elm.json TYPE MISMATCH ------------------------------------------------------
-      Target: HtmlMain
-
-      This target has "type": "application", but its elm.json has "type": "package":
-
-      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
-
-      Either change the "type" of the target, or use another elm.json.
-      ▲ 🚨 13:10:05 HtmlMain
-      ================================================================================
       target HtmlMain
       elm-watch %VERSION%
       web socket ws://localhost:59123/elm-watch
@@ -330,6 +334,26 @@ describe("hot", () => {
       web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status elm.json or inputs error
+      -- elm.json TYPE MISMATCH ------------------------------------------------------
+      Target: HtmlMain
+
+      This target has "type": "application", but its elm.json has "type": "package":
+
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
+
+      Either change the "type" of the target, or use another elm.json.
+
+      Note: Application targets compile Elm files with \`main\` to JavaScript. To
+      typecheck a package, use "type": "package" (without inputs and output) instead.
+      To try out a package in the browser, make an application with its own elm.json
+      (for example in examples/), with the package's src/ in "source-directories".
+      ▲ 🚨 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
       -- elm.json NOT FOUND ----------------------------------------------------------
       Target: HtmlMain
 
@@ -340,10 +364,6 @@ describe("hot", () => {
       Is "elmJson" misspelled? Or do you need to run elm init to create it?
       ▲ 🚨 13:10:05 HtmlMain
     `);
-
-    function assert(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
-    }
   });
 
   test("changes to elm.json – typecheck only", async () => {

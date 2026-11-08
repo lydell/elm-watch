@@ -32,13 +32,16 @@ import {
 } from "./NonEmptyArray.ts";
 import { absoluteDirname } from "./PathHelpers.ts";
 import { type PostprocessToRun, runPostprocess } from "./Postprocess.ts";
-import type {
-  Duration,
-  TargetErrorWithMetadata,
-  OutputError,
+import {
+  type Duration,
+  type OutputError,
   OutputState,
-  OutputStatus,
-  Project,
+  type OutputStatus,
+  type PackageState,
+  type PackageStatus,
+  type Project,
+  type TargetErrorWithMetadata,
+  type TargetState,
 } from "./Project.ts";
 import * as SpawnElm from "./SpawnElm.ts";
 import {
@@ -49,7 +52,9 @@ import {
   type InputPath,
   markAsTargetName,
   type OutputPath,
+  type PackageTarget,
   type RunMode,
+  type TargetLocation,
   type TargetName,
   type WebSocketToken,
 } from "./Types.ts";
@@ -97,9 +102,12 @@ export function installDependencies(
     });
 
   const continuation = async (): Promise<InstallDependenciesResult> => {
-    const elmJsonsArray = Array.from(project.elmJsons);
+    const elmJsonsArray = [
+      ...project.elmJsons.keys(),
+      ...project.packages.keys(),
+    ];
 
-    for (const [index, [elmJsonPath]] of elmJsonsArray.entries()) {
+    for (const [index, elmJsonPath] of elmJsonsArray.entries()) {
       // Don’t print `(x/y)` the first time, because chances are all packages are
       // downloaded via the first elm.json and that looks nicer.
       const message = `Dependencies${
@@ -248,6 +256,13 @@ type IndexedOutput = {
   outputState: OutputState;
 };
 
+type IndexedPackage = {
+  index: number;
+  elmJsonPath: ElmJsonPath;
+  outputPath: PackageTarget;
+  outputState: PackageState;
+};
+
 type IndexedOutputWithSource = {
   output: IndexedOutput;
   source: "Dirty" | "Queued";
@@ -256,6 +271,7 @@ type IndexedOutputWithSource = {
 type OutputAction =
   | NeedsElmMakeOutputAction
   | NeedsElmMakeTypecheckOnlyOutputAction
+  | NeedsElmMakePackageOutputAction
   | NeedsPostprocessOutputAction
   | QueueForElmMakeOutputAction;
 
@@ -271,6 +287,13 @@ type NeedsElmMakeTypecheckOnlyOutputAction = {
   outputs: NonEmptyArray<IndexedOutputWithSource>;
 };
 
+type NeedsElmMakePackageOutputAction = {
+  tag: "NeedsElmMakePackage";
+  elmJsonPath: ElmJsonPath;
+  package: IndexedPackage;
+  source: "Dirty" | "Queued";
+};
+
 type NeedsPostprocessOutputAction = {
   tag: "NeedsPostprocess";
   output: IndexedOutput;
@@ -283,7 +306,7 @@ type NeedsPostprocessOutputAction = {
 
 type QueueForElmMakeOutputAction = {
   tag: "QueueForElmMake";
-  output: IndexedOutput;
+  output: IndexedOutput | IndexedPackage;
 };
 
 export type OutputActions = {
@@ -292,7 +315,7 @@ export type OutputActions = {
   numInterrupted: number;
   numErrors: number;
   actions: Array<OutputAction>;
-  outputsWithoutAction: Array<IndexedOutput>;
+  outputsWithoutAction: Array<IndexedOutput | IndexedPackage>;
 };
 
 export function getOutputActions({
@@ -313,8 +336,9 @@ export function getOutputActions({
   const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
   const elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction> =
     [];
+  const elmMakePackageActions: Array<NeedsElmMakePackageOutputAction> = [];
   const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
-  const outputsWithoutAction: Array<IndexedOutput> = [];
+  const outputsWithoutAction: Array<IndexedOutput | IndexedPackage> = [];
   const busyElmJsons = new Set<ElmJsonPath>();
 
   for (const [elmJsonPath, outputs] of project.elmJsons) {
@@ -419,16 +443,79 @@ export function getOutputActions({
     }
   }
 
+  for (const [elmJsonPath, [packageTarget, packageState]] of project.packages) {
+    const output: IndexedPackage = {
+      index,
+      elmJsonPath,
+      outputPath: packageTarget,
+      outputState: packageState,
+    };
+    index++;
+
+    const needsElm = (source: "Dirty" | "Queued"): void => {
+      elmMakePackageActions.push({
+        tag: "NeedsElmMakePackage",
+        elmJsonPath,
+        package: output,
+        source,
+      });
+    };
+
+    switch (packageState.status.tag) {
+      case "ElmMakeTypecheckOnly":
+        numExecuting++;
+        outputsWithoutAction.push(output);
+        busyElmJsons.add(elmJsonPath);
+        break;
+
+      case "QueuedForElmMake":
+        needsElm("Queued");
+        break;
+
+      case "Interrupted":
+        numInterrupted++;
+        if (includeInterrupted) {
+          needsElm("Dirty");
+        } else {
+          outputsWithoutAction.push(output);
+        }
+        break;
+
+      case "NotWrittenToDisk":
+        if (packageState.dirty) {
+          needsElm("Dirty");
+        } else {
+          outputsWithoutAction.push(output);
+        }
+        break;
+
+      default: {
+        // Make sure only error statuses are left.
+        const _: OutputError = packageState.status;
+        void _;
+        numErrors++;
+        if (packageState.dirty) {
+          needsElm("Dirty");
+        } else {
+          outputsWithoutAction.push(output);
+        }
+        break;
+      }
+    }
+  }
+
   const prioritizedActions = prioritizeActions(
     runMode,
     elmMakeActions,
     elmMakeTypecheckOnlyActions,
+    elmMakePackageActions,
     postprocessActions,
   );
 
   const actions: Array<
     | NeedsElmMakeOutputAction
     | NeedsElmMakeTypecheckOnlyOutputAction
+    | NeedsElmMakePackageOutputAction
     | NeedsPostprocessOutputAction
   > = [];
 
@@ -486,6 +573,29 @@ export function getOutputActions({
         }
         break;
 
+      case "NeedsElmMakePackage":
+        if (
+          actions.length < threadsLeft &&
+          !busyElmJsons.has(action.elmJsonPath)
+        ) {
+          busyElmJsons.add(action.elmJsonPath);
+          actions.push(action);
+        } else {
+          switch (action.source) {
+            case "Dirty":
+              queueActions.push({
+                tag: "QueueForElmMake",
+                output: action.package,
+              });
+              break;
+
+            case "Queued":
+              outputsWithoutAction.push(action.package);
+              break;
+          }
+        }
+        break;
+
       case "NeedsPostprocess":
         if (actions.length < threadsLeft) {
           actions.push(action);
@@ -510,10 +620,12 @@ function prioritizeActions(
   runMode: RunMode,
   elmMakeActions: Array<NeedsElmMakeOutputAction>,
   elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction>,
+  elmMakePackageActions: Array<NeedsElmMakePackageOutputAction>,
   postprocessActions: Array<NeedsPostprocessOutputAction>,
 ): Array<
   | NeedsElmMakeOutputAction
   | NeedsElmMakeTypecheckOnlyOutputAction
+  | NeedsElmMakePackageOutputAction
   | NeedsPostprocessOutputAction
 > {
   switch (runMode) {
@@ -524,16 +636,18 @@ function prioritizeActions(
       return [
         ...elmMakeActions,
         ...elmMakeTypecheckOnlyActions,
+        ...elmMakePackageActions,
         ...postprocessActions,
       ];
 
     // In `hot` mode, try to finish each output as fast as possible, rather than
-    // make all of them “evenly slow”.
+    // make all of them “evenly slow”. No browser waits for packages.
     case "hot":
       return [
         ...sortByPriority(postprocessActions),
         ...sortByPriority(elmMakeActions),
         ...elmMakeTypecheckOnlyActions,
+        ...elmMakePackageActions,
       ];
   }
 }
@@ -627,6 +741,17 @@ export async function handleOutputAction({
           });
           return { tag: "Nothing" };
       }
+
+    case "NeedsElmMakePackage":
+      await typecheckPackage({
+        env,
+        logger,
+        getNow,
+        runMode: runMode.tag,
+        total,
+        ...action.package,
+      });
+      return { tag: "Nothing" };
 
     case "NeedsPostprocess":
       return postprocessHelper({
@@ -1180,6 +1305,78 @@ async function postprocessHelper({
   }
 }
 
+async function typecheckPackage({
+  env,
+  logger,
+  getNow,
+  runMode,
+  elmJsonPath,
+  outputPath,
+  outputState,
+  index,
+  total,
+}: {
+  env: Env;
+  logger: Logger;
+  getNow: GetNow;
+  runMode: RunMode;
+  elmJsonPath: ElmJsonPath;
+  outputPath: PackageTarget;
+  outputState: PackageState;
+  index: number;
+  total: number;
+}): Promise<void> {
+  const startTimestamp = getNow().getTime();
+
+  const updateStatusLineHelper = (): void => {
+    updateStatusLine({
+      logger,
+      runMode,
+      outputPath,
+      outputState,
+      index,
+      total,
+    });
+  };
+
+  // Watcher events that happen while waiting for `elm make` can flip `dirty`
+  // back to `true`.
+  outputState.dirty = false as boolean;
+
+  const { promise, kill } = SpawnElm.make({
+    elmJsonPath,
+    compilationMode: "standard",
+    inputs: [],
+    outputPath: { tag: "NullOutputPath" },
+    env,
+    getNow,
+  });
+
+  const outputStatus: Extract<PackageStatus, { tag: "ElmMakeTypecheckOnly" }> =
+    {
+      tag: "ElmMakeTypecheckOnly",
+      elmDurationMs: -1,
+      // There is no import walker for packages.
+      walkerDurationMs: -1,
+      kill,
+    };
+
+  outputState.setStatus(outputStatus);
+  updateStatusLineHelper();
+
+  const elmMakeResult = await promise;
+  outputStatus.elmDurationMs = getNow().getTime() - startTimestamp;
+
+  if (outputState.dirty || elmMakeResult.tag === "Killed") {
+    outputState.setStatus({ tag: "Interrupted" });
+  } else if (elmMakeResult.tag === "Success") {
+    outputState.setStatus({ tag: "NotWrittenToDisk" });
+  } else {
+    outputState.setStatus(elmMakeResult);
+  }
+  updateStatusLineHelper();
+}
+
 async function typecheck({
   env,
   logger,
@@ -1539,8 +1736,8 @@ function updateStatusLine({
 }: {
   logger: Logger;
   runMode: RunMode;
-  outputPath: OutputPath;
-  outputState: OutputState;
+  outputPath: TargetLocation;
+  outputState: TargetState;
   index: number;
   total: number;
 }): void {
@@ -1723,8 +1920,8 @@ export function printNumErrors(logger: Logger, numErrors: number): void {
 function statusLine(
   loggerConfig: LoggerConfig,
   runMode: RunMode,
-  outputPath: OutputPath,
-  outputState: OutputState,
+  outputPath: TargetLocation,
+  outputState: TargetState,
 ): string {
   const { status } = outputState;
 
@@ -1783,7 +1980,11 @@ function statusLine(
         [
           maybePrintFileSize({
             runMode,
-            compilationMode: outputState.compilationMode,
+            // Only applications can have the "Success" status.
+            compilationMode:
+              outputState instanceof OutputState
+                ? outputState.compilationMode
+                : "standard",
             elmFileSize: status.elmFileSize,
             postprocessFileSize: status.postprocessFileSize,
             fancy: loggerConfig.fancy,
@@ -2005,7 +2206,7 @@ function mockDuration(duration: Duration): Duration {
       return {
         tag: "ElmMakeTypecheckOnly",
         elmDurationMs: 765,
-        walkerDurationMs: 50,
+        walkerDurationMs: duration.walkerDurationMs === -1 ? -1 : 50,
       };
 
     case "Inject":
@@ -2035,6 +2236,10 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
       Array.from(outputs).flatMap(([outputPath, { status }]) =>
         renderOutputErrors(elmJsonPath, outputPath, status, true),
       ),
+    ),
+    ...Array.from(project.packages).flatMap(
+      ([elmJsonPath, [packageTarget, { status }]]) =>
+        renderOutputErrors(elmJsonPath, packageTarget, status, true),
     ),
   ];
 }
@@ -2072,7 +2277,7 @@ export function renderTargetError({
 
 export function renderOutputErrors(
   elmJsonPath: ElmJsonPath,
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   status: OutputStatus,
   includeStuckInProgressState = false,
 ): Array<Errors.ErrorTemplate> {
@@ -2187,17 +2392,22 @@ export function renderOutputErrors(
         Errors.readOutputError(outputPath, status.error, status.triedPath),
       ];
 
+    // Only applications have outputs to write.
     case "WriteOutputError":
-      return [
-        Errors.writeOutputError(
-          outputPath,
-          status.error,
-          status.reasonForWriting,
-        ),
-      ];
+      return outputPath.tag === "OutputPath"
+        ? [
+            Errors.writeOutputError(
+              outputPath,
+              status.error,
+              status.reasonForWriting,
+            ),
+          ]
+        : [];
 
     case "WriteProxyOutputError":
-      return [Errors.writeProxyOutputError(outputPath, status.error)];
+      return outputPath.tag === "OutputPath"
+        ? [Errors.writeProxyOutputError(outputPath, status.error)]
+        : [];
   }
 }
 

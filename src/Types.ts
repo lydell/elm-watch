@@ -121,6 +121,15 @@ export type OutputPath = {
   targetName: TargetName;
 };
 
+// A target with "type": "package". It has no output – it is only typechecked.
+export type PackageTarget = {
+  tag: "PackageTarget";
+  targetName: TargetName;
+};
+
+// Errors and status lines only need the target name.
+export type TargetLocation = OutputPath | PackageTarget;
+
 // "targets": {
 //   "My Target Name": {}
 //    ^^^^^^^^^^^^^^

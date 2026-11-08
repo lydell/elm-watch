@@ -36,15 +36,23 @@ export type ConfigSource =
       tag: "Options";
     };
 
-export type Target = {
-  type: "application";
-  name: string;
-  // Relative to `root`.
-  elmJson: string;
-  inputs: NonEmptyArray<string>;
-  output: string;
-  postprocess: PostprocessFunction | undefined;
-};
+export type Target =
+  | {
+      type: "application";
+      name: string;
+      // Relative to `root`.
+      elmJson: string;
+      inputs: NonEmptyArray<string>;
+      output: string;
+      postprocess: PostprocessFunction | undefined;
+    }
+  | {
+      // Packages are only typechecked.
+      type: "package";
+      name: string;
+      // Relative to `root`.
+      elmJson: string;
+    };
 
 // The return value is ignored, except that a returned promise is awaited.
 export type OpenEditorFunction = (location: {

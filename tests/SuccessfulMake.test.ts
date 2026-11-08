@@ -173,6 +173,37 @@ describe("successful make", () => {
       `);
   });
 
+  test("package target, and an example application using the package", async () => {
+    expect(await run("package", ["make"])).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ Dependencies (2/2)
+      ✅ Example⧙                                                     1 ms Q | 1.23 s E⧘
+      ✅ Package⧙                                                     1 ms Q | 765 ms T⧘
+
+      ✅ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
+  test("package target via elmWatch()", async () => {
+    expect(
+      await run("package", [], {
+        elmWatchOptions: (dir) =>
+          Promise.resolve({
+            root: dir,
+            runMode: "make",
+            targets: [
+              { type: "package", name: "Package", elmJson: "elm.json" },
+            ],
+          }),
+      }),
+    ).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ Package⧙                                                     1 ms Q | 765 ms T⧘
+
+      ✅ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
   test("status lines scrolled out of view are not updated", async () => {
     // The cursor is on the row below the status lines, so only the admin line
     // is visible. Moving the cursor up to the app line would stop at the top of

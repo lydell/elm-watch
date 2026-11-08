@@ -236,18 +236,19 @@ describe("errors", () => {
     test("unknown target type", async () => {
       expect(await run("elm-watch-json-decode-error/unknown-type", ["make"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-type/elm-watch.json
+          ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-type/elm-watch.json
 
-        I read inputs, outputs and options from ⧙elm-watch.json⧘.
+          I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-        ⧙I had trouble with the JSON inside:⧘
+          ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["main"]["type"]:
-        Expected one of these tags:
-          "application"
-        Got: "app"
-      `);
+          At root["targets"]["main"]["type"]:
+          Expected one of these tags:
+            "application",
+            "package"
+          Got: "app"
+        `);
     });
 
     test("elmJson must point to elm.json", async () => {
@@ -828,18 +829,80 @@ describe("errors", () => {
       `);
     });
 
-    test("application target with package elm.json", async () => {
-      expect(await run("elm-json-type-mismatch-application", ["make"]))
+    test("package target with application elm.json", async () => {
+      expect(await run("elm-json-type-mismatch-package", ["make"]))
         .toMatchInlineSnapshot(`
         ⧙-- elm.json TYPE MISMATCH ------------------------------------------------------⧘
         ⧙Target: main⧘
 
-        This target has ⧙"type": "application"⧘, but its ⧙elm.json⧘ has ⧙"type": "package"⧘:
+        This target has ⧙"type": "package"⧘, but its ⧙elm.json⧘ has ⧙"type": "application"⧘:
 
-        /Users/you/project/tests/fixtures/errors/elm-json-type-mismatch-application/elm.json
+        /Users/you/project/tests/fixtures/errors/elm-json-type-mismatch-package/elm.json
 
         Either change the "type" of the target, or use another ⧙elm.json⧘.
+
+        Note: Package targets typecheck an Elm package, like running \`elm make\` without
+        arguments. To compile Elm files with \`main\` to JavaScript, use
+        "type": "application" (with inputs and output) instead.
       `);
+    });
+
+    test("package elm.json used by several targets", async () => {
+      expect(await run("non-unique-package-elm-json", ["make"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- PACKAGE elm.json USED BY SEVERAL TARGETS ------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/non-unique-package-elm-json/elm-watch.json
+
+        A package target typechecks everything in its package, so it must be the only
+        target using its ⧙elm.json⧘. But these are used by several targets:
+
+        /Users/you/project/tests/fixtures/errors/non-unique-package-elm-json/elm.json
+        -> Package (package)
+        -> Package again (package)
+        -> Demo (application)
+
+        Make sure that every package target has an ⧙elm.json⧘ of its own!
+      `);
+    });
+
+    test("package target with type error", async () => {
+      expect(await run("package-type-error", ["make"])).toMatchInlineSnapshot(`
+        ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/package-type-error/src/Package/Internal.elm:6:5
+
+        Something is off with the body of the \`greeting\` definition:
+
+        6|     1
+               ⧙^⧘
+        The body is a number of type:
+
+            ⧙number⧘
+
+        But the type annotation on \`greeting\` says it should be:
+
+            ⧙String⧘
+
+        ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
+      `);
+    });
+
+    test("application target with package elm.json", async () => {
+      expect(await run("elm-json-type-mismatch-application", ["make"]))
+        .toMatchInlineSnapshot(`
+          ⧙-- elm.json TYPE MISMATCH ------------------------------------------------------⧘
+          ⧙Target: main⧘
+
+          This target has ⧙"type": "application"⧘, but its ⧙elm.json⧘ has ⧙"type": "package"⧘:
+
+          /Users/you/project/tests/fixtures/errors/elm-json-type-mismatch-application/elm.json
+
+          Either change the "type" of the target, or use another ⧙elm.json⧘.
+
+          Note: Application targets compile Elm files with \`main\` to JavaScript. To
+          typecheck a package, use "type": "package" (without inputs and output) instead.
+          To try out a package in the browser, make an application with its own elm.json
+          (for example in examples/), with the package's src/ in "source-directories".
+        `);
     });
 
     test("is a folder", async () => {

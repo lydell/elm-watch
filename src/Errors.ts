@@ -44,6 +44,7 @@ import {
   markAsElmWatchJsonPath,
   type OutputPath,
   type RunMode,
+  type TargetLocation,
   type TargetName,
   type UncheckedInputPath,
   type WriteOutputErrorReasonForWriting,
@@ -138,7 +139,7 @@ type FancyErrorLocation =
       tag: "ElmWatchStuffJsonPath";
       theElmWatchStuffJsonPath: ElmWatchStuffJsonPath;
     }
-  | OutputPath
+  | TargetLocation
   | {
       tag: "FileWithLineAndColumn";
       file: AbsolutePath;
@@ -149,7 +150,7 @@ type FancyErrorLocation =
 
 type ElmJsonPathOrOutputPath = Extract<
   FancyErrorLocation,
-  { tag: "ElmJsonPath" | "OutputPath" }
+  { tag: "ElmJsonPath" | "OutputPath" | "PackageTarget" }
 >;
 
 type Piece =
@@ -329,6 +330,7 @@ function fancyToPlainErrorLocation(
     case "ElmWatchStuffJsonPath":
       return { tag: "FileOnly", file: location.theElmWatchStuffJsonPath };
     case "OutputPath":
+    case "PackageTarget":
       return { tag: "Target", targetName: location.targetName };
     case "FileWithLineAndColumn":
       return location;
@@ -493,7 +495,7 @@ Or do you need to add some more targets?
 }
 
 export function elmJsonNotFound(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   elmJsonPath: ElmJsonPath,
 ): ErrorTemplate {
   return fancyError("elm.json NOT FOUND", outputPath)`
@@ -506,7 +508,7 @@ Is "elmJson" misspelled? Or do you need to run ${bold("elm init")} to create it?
 }
 
 export function elmJsonTypeMismatch(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   elmJsonPath: ElmJsonPath,
   expected: ElmJsonType,
   actual: ElmJsonType,
@@ -517,11 +519,31 @@ This target has ${bold(`"type": "${expected}"`)}, but its ${elmJson} has ${bold(
 ${text(elmJsonPath)}
 
 Either change the "type" of the target, or use another ${elmJson}.
+
+${text(elmJsonTypeMismatchNote(expected))}
 `;
 }
 
+function elmJsonTypeMismatchNote(expected: ElmJsonType): string {
+  switch (expected) {
+    case "application":
+      return `
+Note: Application targets compile Elm files with \`main\` to JavaScript. To
+typecheck a package, use "type": "package" (without inputs and output) instead.
+To try out a package in the browser, make an application with its own elm.json
+(for example in examples/), with the package's src/ in "source-directories".
+      `.trim();
+    case "package":
+      return `
+Note: Package targets typecheck an Elm package, like running \`elm make\` without
+arguments. To compile Elm files with \`main\` to JavaScript, use
+"type": "application" (with inputs and output) instead.
+      `.trim();
+  }
+}
+
 export function inputsNotFound(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   inputs: NonEmptyArray<UncheckedInputPath>,
 ): ErrorTemplate {
   return fancyError("INPUTS NOT FOUND", outputPath)`
@@ -545,7 +567,7 @@ Is something misspelled? Or do you need to create them?
 }
 
 export function inputsFailedToResolve(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   inputs: NonEmptyArray<{ inputPath: UncheckedInputPath; error: Error }>,
 ): ErrorTemplate {
   return fancyError("INPUTS FAILED TO RESOLVE", outputPath)`
@@ -565,7 +587,7 @@ ${bold("That's all I know, unfortunately!")}
 }
 
 export function duplicateInputs(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   duplicates: NonEmptyArray<{
     inputs: NonEmptyArray<InputPath>;
     resolved: AbsolutePath;
@@ -627,6 +649,37 @@ Make sure every output is listed just once!
 `;
 }
 
+export function nonUniquePackageElmJsons(
+  configSource: ConfigSource,
+  elmJsons: NonEmptyArray<{
+    elmJsonPath: ElmJsonPath;
+    usages: NonEmptyArray<{ type: ElmJsonType; targetName: TargetName }>;
+  }>,
+): ErrorTemplate {
+  return fancyError(
+    "PACKAGE elm.json USED BY SEVERAL TARGETS",
+    configSourceLocation(configSource),
+  )`
+A package target typechecks everything in its package, so it must be the only
+target using its ${elmJson}. But these are used by several targets:
+
+${joinTemplate(
+  mapNonEmptyArray(elmJsons, ({ elmJsonPath, usages }) =>
+    join(
+      [
+        elmJsonPath,
+        ...usages.map(({ type, targetName }) => `-> ${targetName} (${type})`),
+      ],
+      "\n",
+    ),
+  ),
+  "\n\n",
+)}
+
+Make sure that every package target has an ${elmJson} of its own!
+`;
+}
+
 export function elmNotFoundError(
   location: ElmJsonPathOrOutputPath,
   command: Command,
@@ -661,7 +714,7 @@ ${printCommand(command)}
 }
 
 export function unexpectedElmMakeOutput(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   exitReason: ExitReason,
   stdout: string,
   stderr: string,
@@ -709,7 +762,7 @@ ${printStdio(stdout, stderr)}
 }
 
 export function postprocessFunctionError(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   error: string,
 ): ErrorTemplate {
   return fancyError("POSTPROCESS ERROR", outputPath)`
@@ -722,7 +775,7 @@ ${text(error)}
 }
 
 export function postprocessFunctionBadReturnValue(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   returnValue: string,
 ): ErrorTemplate {
   return fancyError("INVALID POSTPROCESS RESULT", outputPath)`
@@ -765,7 +818,7 @@ Then it crashed with this error:`;
 }
 
 export function elmMakeCrashError(
-  outputPath: OutputPath | { tag: "NoLocation" },
+  outputPath: TargetLocation | { tag: "NoLocation" },
   beforeError: ElmMakeCrashBeforeError,
   error: string,
   command: Command,
@@ -782,7 +835,7 @@ ${text(error)}
 }
 
 export function elmMakeJsonParseError(
-  outputPath: OutputPath | { tag: "NoLocation" },
+  outputPath: TargetLocation | { tag: "NoLocation" },
   error: Codec.DecoderError,
   errorFilePath: ErrorFilePath,
   command: Command,
@@ -802,7 +855,7 @@ ${printErrorFilePath(errorFilePath)}
 }
 
 export function elmMakeGeneralError(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   elmJsonPath: ElmJsonPath,
   error: ElmMakeError.GeneralError,
   extraError: string | undefined,
@@ -818,7 +871,7 @@ ${joinTemplate(error.message.map(renderMessageChunk), "")}
 }
 
 function generalErrorPath(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   elmJsonPath: ElmJsonPath,
   errorPath: ElmMakeError.GeneralError["path"],
 ): ElmJsonPathOrOutputPath {
@@ -861,7 +914,7 @@ function renderMessageChunk(chunk: ElmMakeError.MessageChunk): Piece {
 }
 
 export function stuckInProgressState(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   state: string,
 ): ErrorTemplate {
   return fancyError("STUCK IN PROGRESS", outputPath)`
@@ -979,7 +1032,7 @@ The file contains nothing essential, but something weird is going on.
 }
 
 export function importWalkerFileSystemError(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   error: Error,
 ): ErrorTemplate {
   return fancyError("TROUBLE READING ELM FILES", outputPath)`
@@ -994,7 +1047,7 @@ and postprocess was not run.)
 }
 
 export function needsToWriteProxyFileReadError(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   error: Error,
   triedPath: AbsolutePath,
 ): ErrorTemplate {
@@ -1011,7 +1064,7 @@ ${text(error.message)}
 }
 
 export function readOutputError(
-  outputPath: OutputPath,
+  outputPath: TargetLocation,
   error: Error,
   triedPath: AbsolutePath,
 ): ErrorTemplate {
@@ -1274,8 +1327,8 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 export function webSocketTargetNotFound(
   configSource: ConfigSource,
   targetName: TargetName,
-  enabledOutputs: Array<OutputPath>,
-  disabledOutputs: Array<OutputPath>,
+  enabledOutputs: Array<TargetLocation>,
+  disabledOutputs: Array<TargetLocation>,
 ): string {
   const config = configSourcePlainName(configSource);
   const extra = isNonEmptyArray(disabledOutputs)
@@ -1307,8 +1360,8 @@ If so, try reloading the page.
 // came from elm-watch.json.
 export function webSocketTargetDisabled(
   targetName: TargetName,
-  enabledOutputs: Array<OutputPath>,
-  disabledOutputs: Array<OutputPath>,
+  enabledOutputs: Array<TargetLocation>,
+  disabledOutputs: Array<TargetLocation>,
 ): string {
   return `
 The compiled JavaScript code running in the browser says it is for this target:

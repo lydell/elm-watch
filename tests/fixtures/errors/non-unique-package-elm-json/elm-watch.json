@@ -1,0 +1,22 @@
+{
+  "targets": {
+    "Package": {
+      "type": "package",
+      "elmJson": "elm.json"
+    },
+    "Package again": {
+      "type": "package",
+      "elmJson": "./elm.json"
+    },
+    "Demo": {
+      "type": "application",
+      "elmJson": "elm.json",
+      "inputs": ["src/Demo.elm"],
+      "output": "build/demo.js"
+    },
+    "Other": {
+      "type": "package",
+      "elmJson": "other/elm.json"
+    }
+  }
+}

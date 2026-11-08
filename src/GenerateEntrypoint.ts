@@ -35,8 +35,10 @@ export function generateEntrypoint(
   ].join(", ");
 
   const targets = Object.entries(json.targets)
-    .map(([name, target]) =>
-      `
+    .map(([name, target]) => {
+      switch (target.type) {
+        case "application":
+          return `
   {
     type: ${js(target.type)},
     name: ${js(name)},
@@ -47,8 +49,16 @@ export function generateEntrypoint(
         ? ""
         : `\n    postprocess: postprocessFor(${js(name)}),`
     }
-  },`.slice(1),
-    )
+  },`.slice(1);
+        case "package":
+          return `
+  {
+    type: ${js(target.type)},
+    name: ${js(name)},
+    elmJson: ${js(target.elmJson)},
+  },`.slice(1);
+      }
+    })
     .join("\n");
 
   const extraOptions = [

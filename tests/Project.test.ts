@@ -236,6 +236,7 @@ const project: Project = {
       ],
     ],
   ]),
+  packages: new Map(),
 };
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -320,6 +321,7 @@ describe("Project", () => {
               ]
             }
           ],
+          "enabledPackageTargets": [],
           "disabledTargets": [
             {
               "targetName": "Html",

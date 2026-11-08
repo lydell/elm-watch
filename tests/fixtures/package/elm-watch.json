@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "Package": {
+      "type": "package",
+      "elmJson": "elm.json"
+    },
+    "Example": {
+      "type": "application",
+      "elmJson": "example/elm.json",
+      "inputs": ["example/src/Main.elm"],
+      "output": "build/example.js"
+    }
+  }
+}

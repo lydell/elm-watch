@@ -293,6 +293,45 @@ describe("library", () => {
       `);
     });
 
+    test("package target with application fields", async () => {
+      const { stdout } = await run(1, (root) => ({
+        root,
+        runMode: "make",
+        targets: [{ ...target, type: "package" }],
+      }));
+      expect(stdout).toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+
+        I got invalid options passed to ⧙elmWatch()⧘:
+
+        At root["targets"][0]:
+        Expected only these fields:
+          "type",
+          "name",
+          "elmJson"
+        Found extra fields:
+          "inputs",
+          "output"
+      `);
+    });
+
+    test("elmJson must point to elm.json", async () => {
+      const { stdout } = await run(1, (root) => ({
+        root,
+        runMode: "make",
+        targets: [{ ...target, elmJson: "." }],
+      }));
+      expect(stdout).toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+
+        I got invalid options passed to ⧙elmWatch()⧘:
+
+        At root["targets"][0]["elmJson"]:
+        Expected a path to a file called elm.json
+        Got: "."
+      `);
+    });
+
     test("unknown option", async () => {
       const { stdout } = await run(1, (root) => ({
         root,

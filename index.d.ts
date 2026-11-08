@@ -53,17 +53,31 @@ export type OpenEditor = (location: {
   column: number;
 }) => void | Promise<void>;
 
-export type Target = {
+export type Target = ApplicationTarget | PackageTarget;
+
+// Compiles Elm files with `main` to JavaScript.
+export type ApplicationTarget = {
   type: "application";
   // Displayed in the terminal UI. Must be unique.
   name: string;
-  // The elm.json to compile with, relative to `root`. Usually: "elm.json".
+  // An elm.json with "type": "application", relative to `root`.
+  // Usually: "elm.json".
   elmJson: string;
   // `.elm` files, relative to `root`.
   inputs: NonEmptyArray<string>;
   // A `.js` file, relative to `root`.
   output: string;
   postprocess?: Postprocess | undefined;
+};
+
+// Typechecks a package (like running `elm make` without arguments does).
+export type PackageTarget = {
+  type: "package";
+  // Displayed in the terminal UI. Must be unique.
+  name: string;
+  // An elm.json with "type": "package", relative to `root`.
+  // Usually: "elm.json".
+  elmJson: string;
 };
 
 export type Options = {
