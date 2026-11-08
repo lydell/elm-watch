@@ -92,7 +92,10 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 
 		for (var key in newData._Platform_effectManagers) {
 			var manager = newData._Platform_effectManagers[key];
-			if (!(key in _Platform_effectManagers)) {
+			// Check \`managers\` (this app instance) rather than \`_Platform_effectManagers\`
+			// (shared by all app instances), since the first app instance to be hot
+			// reloaded adds new effect managers to the latter.
+			if (!(key in managers)) {
 				_Platform_effectManagers[key] = manager;
 				managers[key] = _Platform_instantiateManager(manager, sendToApp);
 				if (manager.a) {

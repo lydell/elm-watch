@@ -154,6 +154,80 @@ describe("hot reloading", () => {
     },
   );
 
+  test.each(["standard", "debug"] as const)(
+    "Add subscription with multiple app instances: %s",
+    async (compilationMode) => {
+      // Adding a subscription can mean adding a new effect manager (here:
+      // Browser.Events). It needs to be set up for every app instance, not just
+      // the first one to be hot reloaded.
+      const { replace, go } = runHotReload({
+        name: "AddSubscription",
+        programType: "Element",
+        compilationMode,
+        init: (node) => {
+          const nodeA = document.createElement("div");
+          const nodeB = document.createElement("div");
+          node.append(nodeA, nodeB);
+          window.Elm?.["AddSubscription"]?.init({ node: nodeA });
+          return window.Elm?.["AddSubscription"]?.init({ node: nodeB });
+        },
+      });
+
+      const { browserConsole } = await go(async ({ idle, body }) => {
+        switch (idle) {
+          case 1:
+            await assertInit(body);
+            replace((content) =>
+              content.replace(/-- /g, "").replace("Sub.none", ""),
+            );
+            return "KeepGoing";
+          default:
+            await assertHotReload(body);
+            return "Stop";
+        }
+      });
+
+      expect(browserConsole).toStrictEqual("");
+
+      function getMains(body: HTMLBodyElement): Array<string> {
+        return Array.from(
+          body.querySelectorAll("main"),
+          (main) => main.outerHTML,
+        );
+      }
+
+      async function assertInit(body: HTMLBodyElement): Promise<void> {
+        expect(getMains(body)).toStrictEqual([
+          `<main>0</main>`,
+          `<main>0</main>`,
+        ]);
+
+        body.querySelector("main")?.click();
+        await waitOneFrame();
+        expect(getMains(body)).toStrictEqual([
+          `<main>-1</main>`,
+          `<main>0</main>`,
+        ]);
+      }
+
+      async function assertHotReload(body: HTMLBodyElement): Promise<void> {
+        expect(getMains(body)).toStrictEqual([
+          `<main>-1</main>`,
+          `<main>0</main>`,
+        ]);
+
+        // Clicking the first app’s `<main>` decrements it by 1, and the document
+        // click subscription increments both apps by 10.
+        body.querySelector("main")?.click();
+        await waitOneFrame();
+        expect(getMains(body)).toStrictEqual([
+          `<main>8</main>`,
+          `<main>10</main>`,
+        ]);
+      }
+    },
+  );
+
   test("Program types that do and don’t support the debugger in the same output", async () => {
     const container = document.createElement("div");
     onTestFinished(() => {
