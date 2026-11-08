@@ -162,6 +162,12 @@ const DEFAULT_UI_POSITION: UiPosition = { side: "left", y: 1 };
 // dragging it.
 const DRAG_THRESHOLD = 5;
 
+// The emoji glides to its new position after being moved, overshooting a
+// little at the end. The max overshoot matches `--gap` (the distance to the
+// edges of the window).
+const MOVE_ANIMATION_DURATION = 250;
+const MOVE_ANIMATION_MAX_OVERSHOOT = 4;
+
 // Shift + up/down moves the emoji this much.
 const KEYBOARD_STEP = 0.25;
 
@@ -412,10 +418,63 @@ export function createUi(): Ui {
     root.classList.toggle(CLASS.rootBottomEdge, position.y === 1);
   };
 
-  const setUiPosition = (newPosition: UiPosition): void => {
+  // `from` is where the emoji was before the move, for the animation.
+  const setUiPosition = (newPosition: UiPosition, from: DOMRect): void => {
     position = newPosition;
     applyUiPosition();
     saveUiPosition(newPosition);
+    animateToggleButtonFrom(from);
+  };
+
+  let moveAnimation: Animation | undefined = undefined;
+
+  // FLIP animation: The emoji is already at its new position. Move it back to
+  // where it was with a transform, and animate that transform away. (Changing
+  // between `left` and `right` cannot be transitioned with CSS.) The panel is
+  // hidden until the emoji has arrived, so it does not show up at the new
+  // position too early.
+  const animateToggleButtonFrom = (from: DOMRect): void => {
+    moveAnimation?.cancel();
+    moveAnimation = undefined;
+    const to = toggleButton.getBoundingClientRect();
+    const dx = from.left - to.left;
+    const dy = from.top - to.top;
+    if (
+      (dx === 0 && dy === 0) ||
+      typeof toggleButton.animate !== "function" ||
+      prefersReducedMotion()
+    ) {
+      root.classList.remove(CLASS.rootMoving);
+      return;
+    }
+    root.classList.add(CLASS.rootMoving);
+    // Overshoot a little past the target. The overshoot is capped, so that
+    // long moves don't end up outside the window.
+    const distance = Math.hypot(dx, dy);
+    const overshoot =
+      Math.min(MOVE_ANIMATION_MAX_OVERSHOOT, distance * 0.05) / distance;
+    const animation = toggleButton.animate(
+      [
+        {
+          transform: `translate(${dx}px, ${dy}px)`,
+          easing: "cubic-bezier(0.2, 0.8, 0.4, 1)",
+        },
+        {
+          transform: `translate(${-dx * overshoot}px, ${-dy * overshoot}px)`,
+          offset: 0.75,
+          easing: "ease-in-out",
+        },
+        { transform: "none" },
+      ],
+      { duration: MOVE_ANIMATION_DURATION },
+    );
+    animation.onfinish = () => {
+      if (moveAnimation === animation) {
+        moveAnimation = undefined;
+        root.classList.remove(CLASS.rootMoving);
+      }
+    };
+    moveAnimation = animation;
   };
 
   applyUiPosition();
@@ -487,6 +546,11 @@ export function createUi(): Ui {
           offsetX: drag.offsetX,
           offsetY: drag.offsetY,
         };
+        // Grab the emoji where it is, even if it is still on its way
+        // somewhere.
+        moveAnimation?.cancel();
+        moveAnimation = undefined;
+        root.classList.remove(CLASS.rootMoving);
         root.classList.add(CLASS.rootDragging);
         break;
 
@@ -517,11 +581,19 @@ export function createUi(): Ui {
     // A click event follows `pointerup`. It should not toggle the panel.
     drag = save ? { tag: "JustDropped" } : { tag: "Idle" };
     if (save) {
-      setUiPosition({
-        side:
-          rect.left + rect.width / 2 < window.innerWidth / 2 ? "left" : "right",
-        y: topToY(rect.top),
-      });
+      setUiPosition(
+        {
+          side:
+            rect.left + rect.width / 2 < window.innerWidth / 2
+              ? "left"
+              : "right",
+          y: topToY(rect.top),
+        },
+        rect,
+      );
+    } else {
+      // Go back to where it was.
+      animateToggleButtonFrom(rect);
     }
   };
 
@@ -581,7 +653,7 @@ export function createUi(): Ui {
       // Also stops the arrow keys from changing the compilation mode radio
       // buttons.
       event.preventDefault();
-      setUiPosition(newPosition);
+      setUiPosition(newPosition, toggleButton.getBoundingClientRect());
     }
   };
 
@@ -762,6 +834,13 @@ function saveUiPosition(position: UiPosition): void {
   } catch {
     // localStorage might not be available.
   }
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
 function clamp01(number: number): number {
@@ -957,6 +1036,7 @@ const CLASS = {
   rootBottomEdge: "rootBottomEdge",
   rootBottomHalf: "rootBottomHalf",
   rootDragging: "rootDragging",
+  rootMoving: "rootMoving",
   rootRight: "rootRight",
   rootTopEdge: "rootTopEdge",
   row: "row",
@@ -1312,6 +1392,7 @@ the corner of its hit area. The panel may cover parts of it.
   border: 1px solid var(--border);
   border-radius: 10px;
   outline: none;
+  transition: opacity 0.12s;
 }
 
 .${CLASS.rootRight} .${CLASS.panel} {
@@ -1327,6 +1408,15 @@ the corner of its hit area. The panel may cover parts of it.
 
 .${CLASS.rootDragging} .${CLASS.panel} {
   display: none;
+}
+
+/*
+Not \`display: none\` or \`visibility: hidden\`: When moving with the keyboard,
+focus might be inside the panel and must not be lost.
+*/
+.${CLASS.rootMoving} .${CLASS.panel} {
+  opacity: 0;
+  transition: none;
 }
 
 .${CLASS.header} {
