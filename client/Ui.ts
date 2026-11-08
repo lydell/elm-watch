@@ -1751,8 +1751,8 @@ function viewPanel({
       HTMLParagraphElement,
       { className: CLASS.footer },
       isTouch
-        ? "Drag the emoji to move it."
-        : "Drag the emoji to move it, or press Shift + arrow keys.",
+        ? "Drag emoji to move"
+        : "Drag emoji or press shift+arrows to move",
     ),
   ];
 }

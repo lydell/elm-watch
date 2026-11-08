@@ -313,7 +313,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -325,7 +325,7 @@ describe("hot", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ 🚨
       --------------------------------------------------------------------------------
@@ -345,7 +345,7 @@ describe("hot", () => {
       typecheck a package, use "type": "package" (without inputs and output) instead.
       To try out a package in the browser, make an application with its own elm.json
       (for example in examples/), with the package's src/ in "source-directories".
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ 🚨
       --------------------------------------------------------------------------------
@@ -360,7 +360,7 @@ describe("hot", () => {
       /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
       Is "elmJson" misspelled? Or do you need to run elm init to create it?
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 

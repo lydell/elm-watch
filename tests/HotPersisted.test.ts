@@ -316,7 +316,7 @@ describe("hot", () => {
         The Elm debugger isn't available at this point.
         ℹ️ Clicking error locations only works if you set it up.
         Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -341,7 +341,7 @@ describe("hot", () => {
         The Elm debugger isn't available at this point.
         ℹ️ Clicking error locations only works if you set it up.
         Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -379,7 +379,7 @@ describe("hot", () => {
         It threw an error:
 
         "Editor not found"
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -423,7 +423,7 @@ describe("hot", () => {
         Got: -1
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -451,7 +451,7 @@ describe("hot", () => {
         Got: 5.8
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -483,7 +483,7 @@ describe("hot", () => {
         ; echo hacked #
 
         However, no target imports that file. For security reasons, I never executed any command with that file.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -537,7 +537,7 @@ describe("hot", () => {
         The command exited with code 127.
 
         nope: command not found
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -577,7 +577,7 @@ describe("hot", () => {
         The command took too long to run, and was killed after 10 ms.
 
         (no output)
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -616,7 +616,7 @@ describe("hot", () => {
         The command exited with code 1.
 
         (no output)
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -735,7 +735,7 @@ describe("hot", () => {
       ◯ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 });

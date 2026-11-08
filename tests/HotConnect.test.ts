@@ -128,7 +128,7 @@ describe("hot", () => {
       elm-watch %VERSION%
       [Close elm-watch]
       🔌 Worker Connecting · 13:10:05
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ describe("hot", () => {
       ◯ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger isn't available at this point.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ describe("hot", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger isn't available at this point.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▼ 🔌
       ================================================================================
@@ -161,14 +161,14 @@ describe("hot", () => {
       elm-watch %VERSION%
       [Close elm-watch]
       🔌 Worker Connecting · 13:10:05
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ 🔌
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
       [Close elm-watch]
       🔌 Worker Connecting · 13:10:05
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ describe("hot", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger isn't supported by \`Platform.worker\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ✅
       --------------------------------------------------------------------------------
@@ -192,7 +192,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Platform.worker\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 
@@ -329,7 +329,7 @@ describe("hot", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ 🚨
       --------------------------------------------------------------------------------
@@ -344,7 +344,7 @@ describe("hot", () => {
       /Users/you/project/tests/fixtures/hot/connect-with-elm-json-error/elm.json
 
       Is "elmJson" misspelled? Or do you need to run elm init to create it?
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 
@@ -396,7 +396,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't available at this point.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 
@@ -452,7 +452,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't available at this point.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 
@@ -566,7 +566,7 @@ describe("hot", () => {
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
 
         Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
         --------------------------------------------------------------------------------
@@ -575,14 +575,14 @@ describe("hot", () => {
         🔌 ParamsDecodeError Sleeping · 13:10:05
         Attempt 1 failed. Trying again in 1.01 seconds.
         [Reconnect now]
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
         [Close elm-watch]
         🔌 ParamsDecodeError Connecting · 13:10:05
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
         --------------------------------------------------------------------------------
@@ -594,7 +594,7 @@ describe("hot", () => {
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         The Elm debugger isn't available at this point.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ❌
         --------------------------------------------------------------------------------
@@ -615,7 +615,7 @@ describe("hot", () => {
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
 
         Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -663,7 +663,7 @@ describe("hot", () => {
         elm-watch %VERSION%
 
         Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -810,7 +810,7 @@ describe("hot", () => {
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         If so, try reloading the page.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -846,7 +846,7 @@ describe("hot", () => {
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         If so, try reloading the page.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -883,7 +883,7 @@ describe("hot", () => {
 
         Maybe this target used to exist in the elm-watch options, but you removed or changed it?
         If so, try reloading the page.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -971,7 +971,7 @@ describe("hot", () => {
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         If so, try reloading the page.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▼ 🔌
         ================================================================================
@@ -1037,7 +1037,7 @@ describe("hot", () => {
         "Esc\\apes"
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -1086,7 +1086,7 @@ describe("hot", () => {
         ◉ Standard
         ◯ Optimize
         The Elm debugger isn't supported by \`Html\` programs.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳🚀
         --------------------------------------------------------------------------------
@@ -1098,7 +1098,7 @@ describe("hot", () => {
         ◯ (disabled) Standard
         ◉ (disabled) Optimize
         The Elm debugger isn't supported by \`Html\` programs.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ❌🚀
         --------------------------------------------------------------------------------
@@ -1116,7 +1116,7 @@ describe("hot", () => {
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 
@@ -1148,7 +1148,7 @@ describe("hot", () => {
         elm-watch %VERSION%
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
         --------------------------------------------------------------------------------
@@ -1157,7 +1157,7 @@ describe("hot", () => {
         🔌 Reconnect Sleeping · 13:10:05
         Attempt 2 failed. Trying again in 1.04 seconds.
         [Reconnect now]
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
         --------------------------------------------------------------------------------
@@ -1165,7 +1165,7 @@ describe("hot", () => {
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Attempt 2.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
         --------------------------------------------------------------------------------
@@ -1174,7 +1174,7 @@ describe("hot", () => {
         🔌 Reconnect Sleeping · 13:10:05
         Attempt 3 failed. Trying again in 1.09 seconds.
         [Reconnect now]
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
         --------------------------------------------------------------------------------
@@ -1182,7 +1182,7 @@ describe("hot", () => {
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Attempt 3.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
         --------------------------------------------------------------------------------
@@ -1194,7 +1194,7 @@ describe("hot", () => {
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
         The Elm debugger isn't available at this point.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
         --------------------------------------------------------------------------------
@@ -1206,7 +1206,7 @@ describe("hot", () => {
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
         The Elm debugger isn't available at this point.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▼ 🔌
         ================================================================================
@@ -1215,14 +1215,14 @@ describe("hot", () => {
         elm-watch %VERSION%
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
         --------------------------------------------------------------------------------
@@ -1234,7 +1234,7 @@ describe("hot", () => {
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
         The Elm debugger isn't supported by \`Html\` programs.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ✅
         --------------------------------------------------------------------------------
@@ -1246,7 +1246,7 @@ describe("hot", () => {
         ◉ Standard
         ◯ Optimize
         The Elm debugger isn't supported by \`Html\` programs.
-        Drag the emoji to move it, or press Shift + arrow keys.
+        Drag emoji or press shift+arrows to move
       `);
     });
 

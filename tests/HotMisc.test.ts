@@ -53,7 +53,7 @@ describe("hot", () => {
       elm-watch %VERSION%
       [Close elm-watch]
       🔌 Main Connecting · 13:10:05
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ describe("hot", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ✅
       --------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ✅
       --------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 
@@ -358,7 +358,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Main</div>`);
@@ -549,7 +549,7 @@ describe("hot", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳🚀
       --------------------------------------------------------------------------------
@@ -561,7 +561,7 @@ describe("hot", () => {
       ◯ (disabled) Standard
       ◉ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳🚀
       --------------------------------------------------------------------------------
@@ -573,7 +573,7 @@ describe("hot", () => {
       ◯ (disabled) Standard
       ◉ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ❌🚀
       --------------------------------------------------------------------------------
@@ -586,7 +586,7 @@ describe("hot", () => {
       I currently need to reload the page again, but fear a reload loop if I try.
       Do you have accidental HTTP caching enabled maybe?
       Try hard refreshing the page and see if that helps, and consider disabling HTTP caching during development.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 

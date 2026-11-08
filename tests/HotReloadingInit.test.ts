@@ -712,7 +712,7 @@ describe("hot reloading", () => {
       [Close elm-watch]
       ⛔️ HtmlMain Eval error · 13:10:05
       Check the console in the browser developer tools to see errors!
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
 
     expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`

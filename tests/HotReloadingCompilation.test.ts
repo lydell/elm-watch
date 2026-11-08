@@ -240,7 +240,7 @@ describe("hot reloading", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳🚀
       --------------------------------------------------------------------------------
@@ -252,7 +252,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Standard
       ◉ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳🚀
       --------------------------------------------------------------------------------
@@ -264,7 +264,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Standard
       ◉ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ 🚨🚀
       --------------------------------------------------------------------------------
@@ -278,7 +278,7 @@ describe("hot reloading", () => {
       ◉ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
       Note: The code currently running is in standard mode.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -291,7 +291,7 @@ describe("hot reloading", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -304,7 +304,7 @@ describe("hot reloading", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
       --------------------------------------------------------------------------------
@@ -317,7 +317,7 @@ describe("hot reloading", () => {
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ✅
       --------------------------------------------------------------------------------
@@ -329,7 +329,7 @@ describe("hot reloading", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
-      Drag the emoji to move it, or press Shift + arrow keys.
+      Drag emoji or press shift+arrows to move
     `);
   });
 
