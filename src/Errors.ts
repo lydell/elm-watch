@@ -1424,6 +1424,21 @@ ${printStdio(stdout, stderr)(DEFAULT_COLUMNS, (piece) => piece.text)}
   `.trim();
 }
 
+export function openEditorFunctionFailed(
+  location: { file: string; line: number; column: number },
+  error: string,
+): string {
+  return `
+I called your openEditor function with:
+
+${Codec.JSON.stringify(Codec.unknown, location, 2)}
+
+It threw an error:
+
+${error}
+  `.trim();
+}
+
 export function printPATH(env: Env, isWindows: boolean): Template {
   if (isWindows) {
     return printPATHWindows(env);

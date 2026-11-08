@@ -45,6 +45,14 @@ export type Postprocess = (
   },
 ) => string | Promise<string>;
 
+// Opens a file in your editor. `file` is an absolute path. `line` and `column`
+// start at 1. If it throws (or rejects), the error is shown in the browser.
+export type OpenEditor = (location: {
+  file: string;
+  line: number;
+  column: number;
+}) => void | Promise<void>;
+
 export type Target = {
   // Displayed in the terminal UI. Must be unique.
   name: string;
@@ -95,6 +103,9 @@ export type Options = {
   allowedHosts?: Array<string> | undefined;
 
   createServer?: CreateServer | undefined;
+
+  // Called when you click an error location in the browser UI.
+  openEditor?: OpenEditor | undefined;
 
   // Defaults to the corresponding `process` things.
   env?: Record<string, string | undefined> | undefined;

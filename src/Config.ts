@@ -22,6 +22,7 @@ export type Config = {
   webSocketUrl: WebSocketUrl | undefined;
   staticFilesDir: string | undefined;
   allowedHosts: Array<AllowedHost>;
+  openEditor: OpenEditorFunction | undefined;
 };
 
 export type ConfigSource =
@@ -41,6 +42,13 @@ export type Target = {
   output: string;
   postprocess: PostprocessFunction | undefined;
 };
+
+// The return value is ignored, except that a returned promise is awaited.
+export type OpenEditorFunction = (location: {
+  file: string;
+  line: number;
+  column: number;
+}) => unknown;
 
 // The return value is validated when the function is called.
 export type PostprocessFunction = (

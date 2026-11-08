@@ -96,6 +96,40 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
   - `line`: 1-based line number of the error location. `1` if the error location has no line number.
   - `column`: 1-based column number of the error location. `1` if the error location has no column number.
 
+### With the JavaScript API
+
+If you use the [JavaScript API](../javascript-api/), the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. Instead, you pass an `openEditor` function, which is called with `{ file, line, column }` (same as the environment variables above, but `line` and `column` are numbers). If it throws (or returns a promise that rejects), the error is shown in the browser.
+
+Since people use different editors, it’s a good idea to let each developer choose their own command. Here’s how to keep supporting the `ELM_WATCH_OPEN_EDITOR` environment variable, so that it works just like with the elm-watch CLI:
+
+```js
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+import { elmWatch } from "elm-watch";
+
+const execAsync = promisify(exec);
+const openEditorCommand = process.env.ELM_WATCH_OPEN_EDITOR;
+
+process.exitCode = await elmWatch({
+  // ...
+  openEditor:
+    openEditorCommand === undefined
+      ? undefined
+      : async ({ file, line, column }) => {
+          await execAsync(openEditorCommand, {
+            cwd: import.meta.dirname,
+            env: {
+              ...process.env,
+              file,
+              line: line.toString(),
+              column: column.toString(),
+            },
+            timeout: 5000,
+          });
+        },
+});
+```
+
 [child_process.exec]: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
 [direnv]: https://direnv.net/
 [emacs]: https://www.gnu.org/software/emacs/

@@ -15,6 +15,7 @@ import { IS_WINDOWS } from "../src/IsWindows.ts";
 import { markAsAbsolutePath } from "../src/Types.ts";
 import {
   clean,
+  grep,
   onlyErrorMessages,
   rm,
   stringSnapshotSerializer,
@@ -346,9 +347,11 @@ describe("hot", () => {
 
     const runFailClickErrorLocation = async ({
       env,
+      useElmWatchFunction = false,
       modifyPressedOpenEditor = (message) => message,
     }: {
       env: Env;
+      useElmWatchFunction?: boolean | Record<string, unknown>;
       modifyPressedOpenEditor?: (
         message: Extract<
           WebSocketToServerMessage,
@@ -387,6 +390,7 @@ describe("hot", () => {
         scripts: ["Main.js"],
         keepElmStuffJson: true,
         env,
+        useElmWatchFunction,
         init: (node) => {
           window.Elm?.["Main"]?.init({ node });
         },
@@ -423,6 +427,88 @@ describe("hot", () => {
         ·→
         ▲ 🚨 13:10:05 Main
       `);
+    });
+
+    test("env var is ignored with elm-watch options", async () => {
+      const renders = await runFailClickErrorLocation({
+        env: {
+          [ELM_WATCH_OPEN_EDITOR]: "true",
+        },
+        useElmWatchFunction: true,
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988/elm-watch
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+
+        ℹ️ Clicking error locations only works if you set it up.
+        Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("openEditor function throws", async () => {
+      const renders = await runFailClickErrorLocation({
+        env: {},
+        useElmWatchFunction: {
+          openEditor: () => {
+            // oxlint-disable-next-line typescript/only-throw-error
+            throw "Editor not found";
+          },
+        },
+      });
+      expect(renders).toMatchInlineSnapshot(`
+        target Main
+        elm-watch %VERSION%
+        web socket ws://localhost:9988/elm-watch
+        updated 2022-02-05 13:10:05
+        status Compilation error
+        Compilation mode
+        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        ◉ Standard
+        ◯ Optimize
+        [Hide errors]
+        Opening the location in your editor failed!
+        I called your openEditor function with:
+
+        {
+         "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
+         "line": 10,
+         "column": 31
+        }
+
+        It threw an error:
+
+        "Editor not found"
+        ↑↗
+        ·→
+        ▲ 🚨 13:10:05 Main
+      `);
+    });
+
+    test("openEditor function rejects", async () => {
+      const renders = await runFailClickErrorLocation({
+        env: {},
+        useElmWatchFunction: {
+          openEditor: async () => {
+            await Promise.resolve();
+            // oxlint-disable-next-line typescript/only-throw-error
+            throw "Async editor not found";
+          },
+        },
+      });
+      expect(grep(renders, /Async editor not found/)).toMatchInlineSnapshot(
+        `"Async editor not found"`,
+      );
     });
 
     test("invalid line number", async () => {
@@ -692,6 +778,44 @@ describe("hot", () => {
         `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31`,
       );
     });
+  });
+
+  test("openEditor function", async () => {
+    const fixture = "persisted-open-error-overlay";
+    const calls: Array<unknown> = [];
+
+    const { renders } = await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      useElmWatchFunction: {
+        openEditor: (location: unknown) => {
+          calls.push(location);
+        },
+      },
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: async () => {
+        clickFirstErrorLocation();
+        while (calls.length === 0) {
+          await wait(10);
+        }
+        return "Stop" as const;
+      },
+    });
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌 13:10:05 Main
+      ================================================================================
+      ▼ ⏳ 13:10:05 Main
+      ================================================================================
+      ▼ 🚨 13:10:05 Main
+    `);
+    expect(clean(JSON.stringify(calls))).toMatchInlineSnapshot(
+      `[{"file":"/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm","line":10,"column":31}]`,
+    );
   });
 
   test("persisted debug mode for Html", async () => {

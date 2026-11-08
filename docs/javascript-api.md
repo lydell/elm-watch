@@ -141,7 +141,8 @@ Type definition: `import type { Options } from "elm-watch"`.
 | webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable is ignored – use `process.env` yourself if needed. |
 | allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable is ignored – use `process.env` yourself if needed. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |
-| env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `ELM_WATCH_OPEN_EDITOR`. |
+| openEditor | `function` | unset | Called with `{ file, line, column }` when you click an error location in the browser UI. See [Clickable error locations](../browser-ui/#with-the-javascript-api). The `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. |
+| env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. |
 | stdin, stdout, stderr | streams | `process.stdin` etc. | Where elm-watch reads keyboard input and writes output. |
 
 Each target looks like this:

@@ -7,11 +7,12 @@ import {
   allowedHostFromUrl,
   getAllowedHostsFromEnv,
 } from "./AllowedHosts.ts";
-import type { Config, ConfigSource } from "./Config.ts";
+import type { Config, ConfigSource, OpenEditorFunction } from "./Config.ts";
 import * as ElmJson from "./ElmJson.ts";
 import type { ElmWatchStuffJson } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_MAX_PARALLEL,
+  ELM_WATCH_OPEN_EDITOR,
   ELM_WATCH_WEBSOCKET_URL,
   type Env,
 } from "./Env.ts";
@@ -70,7 +71,14 @@ export type Project = {
   host: Host;
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
+  openEditor: OpenEditor;
 };
+
+export type OpenEditor =
+  | { tag: "NotSet" }
+  // From the ELM_WATCH_OPEN_EDITOR environment variable (elm-watch.json only).
+  | { tag: "Command"; command: string }
+  | { tag: "Function"; openEditor: OpenEditorFunction };
 
 // The code base leans towards pure functions, but this data structure is going
 // to be mutated a lot.
@@ -485,6 +493,16 @@ export function initProject({
     (isElmWatchJson ? getHostFromEnv(env) : undefined) ??
     DEFAULT_HOST;
 
+  const openEditorCommand = isElmWatchJson
+    ? env[ELM_WATCH_OPEN_EDITOR]
+    : undefined;
+  const openEditor: OpenEditor =
+    config.openEditor !== undefined
+      ? { tag: "Function", openEditor: config.openEditor }
+      : openEditorCommand !== undefined
+        ? { tag: "Command", command: openEditorCommand }
+        : { tag: "NotSet" };
+
   const webSocketUrl =
     (isElmWatchJson ? getWebSocketUrlFromEnv(env) : undefined) ??
     config.webSocketUrl;
@@ -521,6 +539,7 @@ export function initProject({
       host,
       webSocketUrl,
       allowedHosts,
+      openEditor,
     },
   };
 }

@@ -14,12 +14,11 @@ import {
 } from "../client/WebSocketMessages.ts";
 import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
 import * as Compile from "./Compile.ts";
-import type { ConfigSource } from "./Config.ts";
+import type { ConfigSource, OpenEditorFunction } from "./Config.ts";
 import { ElmWatchStuffJson, type Target } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
-  ELM_WATCH_OPEN_EDITOR,
   type Env,
 } from "./Env.ts";
 import * as Errors from "./Errors.ts";
@@ -33,6 +32,7 @@ import {
   quote,
   silentlyReadIntEnvValue,
   toError,
+  unknownErrorToString,
 } from "./Helpers.ts";
 import type { Host } from "./Host.ts";
 import * as Inject from "./Inject.ts";
@@ -1810,8 +1810,8 @@ const runCmd =
         return;
 
       case "OpenEditor": {
-        const command = env[ELM_WATCH_OPEN_EDITOR];
-        if (command === undefined) {
+        const { openEditor } = mutable.project;
+        if (openEditor.tag === "NotSet") {
           webSocketSend(cmd.webSocket, {
             tag: "OpenEditorFailed",
             error: { tag: "EnvNotSet" },
@@ -1827,44 +1827,14 @@ const runCmd =
             },
           });
         } else {
-          const cwd = mutable.project.root;
-          const timeout = silentlyReadIntEnvValue(
-            env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
-            5000,
-          );
-          const extraEnv = {
-            file: cmd.file,
-            line: cmd.line.toString(),
-            column: cmd.column.toString(),
-          };
-          childProcess.exec(
-            command,
-            {
-              cwd,
-              env: { ...env, ...extraEnv },
-              encoding: "utf8",
-              timeout,
-            },
-            (error, stdout, stderr) => {
-              if (error !== null) {
-                webSocketSend(cmd.webSocket, {
-                  tag: "OpenEditorFailed",
-                  error: {
-                    tag: "CommandFailed",
-                    message: Errors.openEditorCommandFailed({
-                      error,
-                      command,
-                      cwd,
-                      timeout,
-                      env: extraEnv,
-                      stdout,
-                      stderr,
-                    }),
-                  },
-                });
-              }
-            },
-          );
+          switch (openEditor.tag) {
+            case "Command":
+              openEditorWithCommand(env, mutable, cmd, openEditor.command);
+              return;
+            case "Function":
+              openEditorWithFunction(cmd, openEditor.openEditor);
+              return;
+          }
         }
         return;
       }
@@ -3402,6 +3372,73 @@ function printEventsMessage(
   )
     ? `FYI: The above Elm ${what1} not imported by ${what2}. Nothing to do!`
     : "Everything up to date.";
+}
+
+function openEditorWithCommand(
+  env: Env,
+  mutable: Mutable,
+  cmd: Extract<Cmd, { tag: "OpenEditor" }>,
+  command: string,
+): void {
+  const cwd = mutable.project.root;
+  const timeout = silentlyReadIntEnvValue(
+    env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
+    5000,
+  );
+  const extraEnv = {
+    file: cmd.file,
+    line: cmd.line.toString(),
+    column: cmd.column.toString(),
+  };
+  childProcess.exec(
+    command,
+    {
+      cwd,
+      env: { ...env, ...extraEnv },
+      encoding: "utf8",
+      timeout,
+    },
+    (error, stdout, stderr) => {
+      if (error !== null) {
+        webSocketSend(cmd.webSocket, {
+          tag: "OpenEditorFailed",
+          error: {
+            tag: "CommandFailed",
+            message: Errors.openEditorCommandFailed({
+              error,
+              command,
+              cwd,
+              timeout,
+              env: extraEnv,
+              stdout,
+              stderr,
+            }),
+          },
+        });
+      }
+    },
+  );
+}
+
+function openEditorWithFunction(
+  cmd: Extract<Cmd, { tag: "OpenEditor" }>,
+  openEditor: OpenEditorFunction,
+): void {
+  const location = { file: cmd.file, line: cmd.line, column: cmd.column };
+  new Promise((resolve) => {
+    resolve(openEditor(location));
+  }).catch((error: unknown) => {
+    webSocketSend(cmd.webSocket, {
+      tag: "OpenEditorFailed",
+      error: {
+        tag: "CommandFailed",
+        message: Errors.openEditorFunctionFailed(
+          location,
+          unknownErrorToString(error),
+        ),
+      },
+    });
+  });
 }
 
 function printWebSocketConnectionRejectedReason(

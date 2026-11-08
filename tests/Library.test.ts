@@ -271,6 +271,7 @@ describe("library", () => {
           "staticFilesDir",
           "webSocketUrl",
           "allowedHosts",
+          "openEditor",
           "createServer",
           "env",
           "stdin",

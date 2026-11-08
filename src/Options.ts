@@ -3,7 +3,11 @@ import * as Codec from "tiny-decoders";
 
 import type * as Public from "../index.d.ts";
 import { AllowedHost } from "./AllowedHosts.ts";
-import type { Config, PostprocessFunction } from "./Config.ts";
+import type {
+  Config,
+  OpenEditorFunction,
+  PostprocessFunction,
+} from "./Config.ts";
 import { Inputs, Output, TargetName } from "./ElmWatchJson.ts";
 import { Host } from "./Host.ts";
 import { NonEmptyArray } from "./NonEmptyArray.ts";
@@ -107,6 +111,7 @@ const Options = Codec.fields(
     staticFilesDir: optionalField(Codec.string),
     webSocketUrl: optionalField(WebSocketUrl("Options")),
     allowedHosts: optionalField(Codec.array(AllowedHost)),
+    openEditor: optionalField(functionCodec<OpenEditorFunction>()),
     // These are validated by TypeScript only.
     createServer: optionalField(functionCodec<object>()),
     env: optionalField(Codec.unknown),
@@ -177,6 +182,7 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
           webSocketUrl: value.webSocketUrl,
           staticFilesDir: value.staticFilesDir,
           allowedHosts: value.allowedHosts ?? [],
+          openEditor: value.openEditor,
         },
       };
     }

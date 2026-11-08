@@ -56,6 +56,7 @@ const project: Project = {
   ),
   maxParallel: 12,
   host: DEFAULT_HOST,
+  openEditor: { tag: "NotSet" },
   disabledOutputs: [
     {
       originalString: "public/build/HtmlMain.js",
