@@ -1,12 +1,16 @@
 {
     "targets": {
         "HtmlMain1": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain1.elm"
             ],
             "output": "build/HtmlMain1.js"
         },
         "HtmlMain2": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain2.elm"
             ],

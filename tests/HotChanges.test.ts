@@ -125,6 +125,8 @@ describe("hot", () => {
       {
           "targets": {
               "My target name": {
+                  "type": "application",
+                  "elmJson": "elm.json",
                   "inputs": [
                       "src/Main.elm"
                   ],
@@ -154,11 +156,20 @@ describe("hot", () => {
     const elmJsonPathSub = path.join(dir, "src", "Sub", "elm.json");
     const elmJsonTemplatePath = path.join(dir, "elm.template.json");
     const roguePath = path.join(dir, "rogue", "elm.json");
-    const inputPath = path.join(dir, "src", "HtmlMain.elm");
-    const otherInputPath = path.join(dir, "src", "Sub", "OtherMain.elm");
     const elmJsonString = fs
       .readFileSync(elmJsonTemplatePath, "utf8")
       .replace(/\r\n/g, "\n");
+    const packageElmJsonString = JSON.stringify({
+      type: "package",
+      name: "author/project",
+      summary: "summary",
+      license: "MIT",
+      version: "1.0.0",
+      "exposed-modules": [],
+      "elm-version": "0.19.0 <= v < 0.20.0",
+      dependencies: { "elm/core": "1.0.0 <= v < 2.0.0" },
+      "test-dependencies": {},
+    });
     fs.writeFileSync(elmJsonPath, elmJsonString);
     fs.writeFileSync(roguePath, "ROGUE");
     rm(elmJsonPathSub);
@@ -172,37 +183,35 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
-      onIdle: ({ idle, div }) => {
+      onIdle: async ({ idle, div }) => {
         switch (idle) {
           case 1:
             assert(div);
-            fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
+            // Other elm.json files don’t matter, even if closer to an input.
             touch(roguePath);
+            fs.writeFileSync(elmJsonPathSub, elmJsonString);
+            await wait(100);
+            fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
             return "KeepGoing";
           case 2:
             fs.writeFileSync(elmJsonPath, elmJsonString);
             return "KeepGoing";
           case 3:
-            fs.writeFileSync(elmJsonPathSub, elmJsonString);
+            fs.writeFileSync(elmJsonPath, packageElmJsonString);
             return "KeepGoing";
           case 4:
-            touch(otherInputPath);
+            expandUi();
+            fs.writeFileSync(elmJsonPath, elmJsonString);
             return "KeepGoing";
           case 5:
             fs.unlinkSync(elmJsonPath);
             return "KeepGoing";
           case 6:
-            expandUi();
-            touch(inputPath);
-            return "KeepGoing";
-          case 7:
-            touch(otherInputPath);
             collapseUi();
-            return "KeepGoing";
-          case 8:
-            fs.unlinkSync(elmJsonPathSub);
+            fs.writeFileSync(elmJsonPath, elmJsonString);
             return "KeepGoing";
           default:
+            assert(div);
             return "Stop";
         }
       },
@@ -238,105 +247,25 @@ describe("hot", () => {
 
       …
 
-      ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
+      ⧙-- elm.json TYPE MISMATCH ------------------------------------------------------⧘
       ⧙Target: HtmlMain⧘
 
-      I went looking for an ⧙elm.json⧘ for your inputs, but I found more than one!
+      This target has ⧙"type": "application"⧘, but its ⧙elm.json⧘ has ⧙"type": "package"⧘:
 
-      src/HtmlMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
-      src/Sub/OtherMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
-
-      It doesn't make sense to compile Elm files from different projects into one output.
-
-      Either split this target, or move the inputs to the same project with the same
-      ⧙elm.json⧘.
-
-      …
-
-      ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
-      ⧙Target: HtmlMain⧘
-
-      I went looking for an ⧙elm.json⧘ for your inputs, but I found more than one!
-
-      src/HtmlMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
-
-      src/Sub/OtherMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
-
-      It doesn't make sense to compile Elm files from different projects into one output.
-
-      Either split this target, or move the inputs to the same project with the same
-      ⧙elm.json⧘.
+      Either change the "type" of the target, or use another ⧙elm.json⧘.
 
       …
 
       ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
       ⧙Target: HtmlMain⧘
 
-      I could not find an ⧙elm.json⧘ for these inputs:
+      I could not find the ⧙elm.json⧘ for this target:
 
-      src/HtmlMain.elm
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
-      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
-
-      Note that I did find an ⧙elm.json⧘ for some inputs:
-
-      src/Sub/OtherMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
-
-      Make sure that one single ⧙elm.json⧘ covers all the inputs together!
-
-      …
-
-      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
-      ⧙Target: HtmlMain⧘
-
-      I could not find an ⧙elm.json⧘ for these inputs:
-
-      src/HtmlMain.elm
-
-      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
-
-      Note that I did find an ⧙elm.json⧘ for some inputs:
-
-      src/Sub/OtherMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
-
-      Make sure that one single ⧙elm.json⧘ covers all the inputs together!
-
-      …
-
-      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
-      ⧙Target: HtmlMain⧘
-
-      I could not find an ⧙elm.json⧘ for these inputs:
-
-      src/HtmlMain.elm
-
-      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
-
-      Note that I did find an ⧙elm.json⧘ for some inputs:
-
-      src/Sub/OtherMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
-
-      Make sure that one single ⧙elm.json⧘ covers all the inputs together!
-
-      …
-
-      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
-      ⧙Target: HtmlMain⧘
-
-      I could not find an ⧙elm.json⧘ for these inputs:
-
-      src/HtmlMain.elm
-      src/Sub/OtherMain.elm
-
-      Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+      Is "elmJson" misspelled? Or do you need to run ⧙elm init⧘ to create it?
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
@@ -345,22 +274,56 @@ describe("hot", () => {
       web socket ws://localhost:59123/elm-watch
       updated 2022-02-05 13:10:05
       status elm.json or inputs error
-      -- elm.json NOT FOUND ----------------------------------------------------------
+      -- elm.json TYPE MISMATCH ------------------------------------------------------
       Target: HtmlMain
 
-      I could not find an elm.json for these inputs:
+      This target has "type": "application", but its elm.json has "type": "package":
 
-      src/HtmlMain.elm
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
-      Has it gone missing? Maybe run elm init to create one?
-
-      Note that I did find an elm.json for some inputs:
-
-      src/Sub/OtherMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
-
-      Make sure that one single elm.json covers all the inputs together!
+      Either change the "type" of the target, or use another elm.json.
       ▲ 🚨 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status elm.json or inputs error
+      -- elm.json TYPE MISMATCH ------------------------------------------------------
+      Target: HtmlMain
+
+      This target has "type": "application", but its elm.json has "type": "package":
+
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
+
+      Either change the "type" of the target, or use another elm.json.
+      ▲ 🚨 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Successfully compiled
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◉ Standard
+      ◯ Optimize
+      ↑↗
+      ·→
+      ▲ ✅ 13:10:05 HtmlMain
+      ================================================================================
+      target HtmlMain
+      elm-watch %VERSION%
+      web socket ws://localhost:59123/elm-watch
+      updated 2022-02-05 13:10:05
+      status Waiting for compilation
+      Compilation mode
+      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      ◉ (disabled) Standard
+      ◯ (disabled) Optimize
+      ↑↗
+      ·→
+      ▲ ⏳ 13:10:05 HtmlMain
       ================================================================================
       target HtmlMain
       elm-watch %VERSION%
@@ -370,18 +333,11 @@ describe("hot", () => {
       -- elm.json NOT FOUND ----------------------------------------------------------
       Target: HtmlMain
 
-      I could not find an elm.json for these inputs:
+      I could not find the elm.json for this target:
 
-      src/HtmlMain.elm
+      /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
-      Has it gone missing? Maybe run elm init to create one?
-
-      Note that I did find an elm.json for some inputs:
-
-      src/Sub/OtherMain.elm
-      -> /Users/you/project/tests/fixtures/hot/changes-to-elm-json/src/Sub/elm.json
-
-      Make sure that one single elm.json covers all the inputs together!
+      Is "elmJson" misspelled? Or do you need to run elm init to create it?
       ▲ 🚨 13:10:05 HtmlMain
     `);
 

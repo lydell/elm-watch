@@ -28,10 +28,18 @@ if (runMode !== "hot" && runMode !== "make") {
  * @param {string} name
  * @param {[string, ...Array<string>]} inputs
  * @param {string} output
+ * @param {string} [elmJson]
  * @returns {import("elm-watch").Target}
  */
-function target(name, inputs, output) {
-  return { name, inputs, output, postprocess: postprocessFor(name) };
+function target(name, inputs, output, elmJson = "elm.json") {
+  return {
+    type: "application",
+    name,
+    elmJson,
+    inputs,
+    output,
+    postprocess: postprocessFor(name),
+  };
 }
 
 const targets = [
@@ -64,31 +72,37 @@ const targets = [
     "🇫🇷 Azimutt",
     ["public/submodules/azimutt/.elm-spa/defaults/Main.elm"],
     "public/submodules/azimutt/public/dist/elm.js",
+    "public/submodules/azimutt/elm.json",
   ),
   target(
     "🇨🇦 Concourse",
     ["public/submodules/concourse/web/elm/src/Main.elm"],
     "public/submodules/concourse/web/public/elm.min.js",
+    "public/submodules/concourse/web/elm/elm.json",
   ),
   target(
     "🧖🏼 Elm SPA Example",
     ["public/submodules/elm-spa-example/src/Main.elm"],
     "public/submodules/elm-spa-example/elm-output.js",
+    "public/submodules/elm-spa-example/elm.json",
   ),
   target(
     "🇩🇪 Kite",
     ["public/submodules/kite/src/Main.elm"],
     "public/submodules/kite/dist/elm.js",
+    "public/submodules/kite/elm.json",
   ),
   target(
     "🇬🇧 Seeds Game",
     ["public/submodules/seeds-game/src/elm/Main.elm"],
     "public/submodules/seeds-game/dist/Main.js",
+    "public/submodules/seeds-game/elm.json",
   ),
   target(
     "✂️ Unison Share",
     ["public/submodules/codebase-ui/src/UnisonShare.elm"],
     "public/submodules/codebase-ui/dist/UnisonShare.js",
+    "public/submodules/codebase-ui/elm.json",
   ),
 ];
 

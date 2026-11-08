@@ -1,10 +1,14 @@
 {
   "targets": {
     "app": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/App.elm"],
       "output": "build/app.js"
     },
     "admin": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/Admin.elm"],
       "output": "build/admin.js"
     }

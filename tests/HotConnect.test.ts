@@ -272,46 +272,6 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
   });
 
-  test("successful connect (package)", async () => {
-    const { terminal, renders, div } = await run({
-      fixture: "package",
-      args: ["Main"],
-      scripts: ["Main.js"],
-      init: (node) => {
-        window.Elm?.["Main"]?.init({ node });
-      },
-      onIdle: () => "Stop",
-    });
-
-    expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
-    `);
-
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Main
-      ================================================================================
-      ▼ ⏳ 13:10:05 Main
-      ================================================================================
-      ▼ ⏳ 13:10:05 Main
-      ================================================================================
-      ▼ 🔌 13:10:05 Main
-      ================================================================================
-      ▼ 🔌 13:10:05 Main
-      ================================================================================
-      ▼ ⏳ 13:10:05 Main
-      ================================================================================
-      ▼ ✅ 13:10:05 Main
-    `);
-
-    expect(div.outerHTML).toMatchInlineSnapshot(`<div>main</div>`);
-  });
-
   test("successful connect (target name with escapes)", async () => {
     const { div } = await run({
       fixture: "basic",
@@ -393,11 +353,11 @@ describe("hot", () => {
       -- elm.json NOT FOUND ----------------------------------------------------------
       Target: Main
 
-      I could not find an elm.json for these inputs:
+      I could not find the elm.json for this target:
 
-      src/Main.elm
+      /Users/you/project/tests/fixtures/hot/connect-with-elm-json-error/elm.json
 
-      Has it gone missing? Maybe run elm init to create one?
+      Is "elmJson" misspelled? Or do you need to run elm init to create it?
       ▲ 🚨 13:10:05 Main
     `);
   });

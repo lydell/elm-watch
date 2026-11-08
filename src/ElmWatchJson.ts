@@ -94,14 +94,61 @@ export const TargetName = Codec.flatMap(Codec.string, {
   encoder: (value) => value,
 });
 
+export const ElmJsonPathString = Codec.flatMap(Codec.string, {
+  decoder: (string) =>
+    path.basename(string) === "elm.json"
+      ? { tag: "Valid", value: string }
+      : {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: "Expected a path to a file called elm.json",
+            got: string,
+            path: [],
+          },
+        },
+  encoder: (value) => value,
+});
+
 type Target = Codec.Infer<typeof Target>;
-const Target = Codec.fields(
-  {
-    inputs: Inputs,
-    output: Output,
-  },
+const Target = Codec.taggedUnion(
+  "type",
+  [
+    {
+      type: Codec.tag("application"),
+      elmJson: ElmJsonPathString,
+      inputs: Inputs,
+      output: Output,
+    },
+  ],
   { allowExtraFields: false },
 );
+
+// elm-watch 1 found the elm.json for each target automatically, and only
+// supported applications. Give a helpful error for people upgrading.
+const TargetWithMigrationHint: Codec.Codec<Target> = {
+  decoder: (value) =>
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !("type" in value) &&
+    !("elmJson" in value)
+      ? {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: `Targets now need "type" and "elmJson" fields, for example:
+"type": "application",
+"elmJson": "elm.json",
+Run \`elm-watch init\` to add them automatically.`,
+            got: value,
+            path: [],
+          },
+        }
+      : Target.decoder(value),
+  // Encoding is never used.
+  encoder: (value) => value,
+};
 
 const TargetRecordHelper = {
   decoder: (
@@ -159,7 +206,10 @@ Learn more: https://lydell.github.io/elm-watch/postprocess/`,
 };
 
 const elmWatchJsonFields = {
-  targets: Codec.flatMap(Codec.record(Target), TargetRecordHelper),
+  targets: Codec.flatMap(
+    Codec.record(TargetWithMigrationHint),
+    TargetRecordHelper,
+  ),
   port: Codec.field(Port, { optional: true }),
   webSocketUrl: Codec.field(WebSocketUrl("elm-watch.json"), {
     optional: true,
@@ -267,12 +317,16 @@ function toConfig(
     root: absoluteDirname(elmWatchJsonPath),
     source: { tag: "ElmWatchJson", elmWatchJsonPath, cwd },
     // The decoder validates that there’s at least one target.
-    targets: Object.entries(json.targets).map(([name, target]) => ({
-      name,
-      inputs: target.inputs,
-      output: target.output,
-      postprocess: undefined,
-    })) as NonEmptyArray<ConfigTarget>,
+    targets: Object.entries(json.targets).map(
+      ([name, target]): ConfigTarget => ({
+        type: target.type,
+        name,
+        elmJson: target.elmJson,
+        inputs: target.inputs,
+        output: target.output,
+        postprocess: undefined,
+      }),
+    ) as NonEmptyArray<ConfigTarget>,
     port: json.port,
     host: undefined,
     webSocketUrl: json.webSocketUrl,
@@ -304,6 +358,8 @@ export function exampleJson(
   return {
     targets: {
       "My target name": {
+        type: "application",
+        elmJson: "elm.json",
         inputs: isNonEmptyArray(elmFiles)
           ? mapNonEmptyArray(elmFiles, (file) =>
               // Use slashes in all paths since they work everywhere (including

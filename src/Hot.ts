@@ -45,7 +45,7 @@ import {
 import { absoluteDirname } from "./PathHelpers.ts";
 import type { PortChoice } from "./Port.ts";
 import {
-  type ElmJsonErrorWithMetadata,
+  type TargetErrorWithMetadata,
   getFlatOutputs,
   type OutputError,
   type OutputState,
@@ -479,7 +479,7 @@ export async function run(
       signal,
       hotTestHooks,
     ),
-    init: init(getNow(), restartReasons, project.elmJsonsErrors),
+    init: init(getNow(), restartReasons, project.targetsErrors),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(
         logger.config,
@@ -737,7 +737,7 @@ function writeElmWatchStuffJson(
   webSocketToken: WebSocketToken,
 ): void {
   const targets: Record<string, Required<Target>> = Object.fromEntries([
-    ...mutable.project.elmJsonsErrors.map(
+    ...mutable.project.targetsErrors.map(
       (error) =>
         [
           error.outputPath.targetName,
@@ -786,7 +786,7 @@ function writeElmWatchStuffJson(
 const init = (
   now: Date,
   restartReasons: Array<LatestEvent>,
-  elmJsonsErrors: Array<ElmJsonErrorWithMetadata>,
+  targetsErrors: Array<TargetErrorWithMetadata>,
 ): [Model, Array<Cmd>] => [
   {
     nextAction: { tag: "NoAction" },
@@ -800,14 +800,14 @@ const init = (
   [
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
-    ...elmJsonsErrors.map((elmJsonError): Cmd => ({
+    ...targetsErrors.map((targetError): Cmd => ({
       tag: "WebSocketSendToOutput",
-      outputPath: elmJsonError.outputPath,
+      outputPath: targetError.outputPath,
       message: {
         tag: "StatusChanged",
         status: {
           tag: "ElmJsonError",
-          error: Errors.toPlainString(Compile.renderElmJsonError(elmJsonError)),
+          error: Errors.toPlainString(Compile.renderTargetError(targetError)),
         },
       },
     })),
@@ -1116,11 +1116,11 @@ function update(
         }
 
         case "ElmJsonError": {
-          const elmJsonError = result.error;
+          const targetError = result.error;
           const event: WebSocketRelatedEvent = {
             tag: "WebSocketConnectedNeedingNoAction",
             date: msg.date,
-            outputPath: elmJsonError.outputPath,
+            outputPath: targetError.outputPath,
           };
 
           return [
@@ -1131,13 +1131,13 @@ function update(
             [
               {
                 tag: "WebSocketSendToOutput",
-                outputPath: elmJsonError.outputPath,
+                outputPath: targetError.outputPath,
                 message: {
                   tag: "StatusChanged",
                   status: {
                     tag: "ElmJsonError",
                     error: Errors.toPlainString(
-                      Compile.renderElmJsonError(elmJsonError),
+                      Compile.renderTargetError(targetError),
                     ),
                   },
                 },
@@ -1341,17 +1341,7 @@ function onWatcherEvent(
       return undefined;
 
     case "elm.json":
-      if (
-        Array.from(project.elmJsons).some(
-          ([elmJsonPath]) => absolutePath === elmJsonPath,
-        ) ||
-        isElmJsonFileRelatedToElmJsonsErrors(
-          absolutePath,
-          project.elmJsonsErrors,
-        ) ||
-        (eventName === "changed" &&
-          isElmJsonPotentiallyUsed(absolutePath, project))
-      ) {
+      if (getAllElmJsonPaths(project).some((p) => absolutePath === p)) {
         return makeRestartNextAction(
           makeWatcherEvent(eventName, absolutePath, now),
           project,
@@ -1441,8 +1431,8 @@ function onDirectoryWatcherEvent(
   if (
     (project.configSource.tag === "ElmWatchJson" &&
       isInside(project.configSource.elmWatchJsonPath)) ||
-    Array.from(project.elmJsons.keys()).some(isInside) ||
-    isElmFileRelatedToElmJsonsErrors(isInside, project.elmJsonsErrors)
+    getAllElmJsonPaths(project).some(isInside) ||
+    isElmFileRelatedToTargetsErrors(isInside, project.targetsErrors)
   ) {
     return makeRestartNextAction(event, project);
   }
@@ -1463,7 +1453,7 @@ function onElmFileWatcherEvent(
   const isElmFile = (absolutePath: AbsolutePath): boolean =>
     absolutePath === elmFile;
 
-  if (isElmFileRelatedToElmJsonsErrors(isElmFile, project.elmJsonsErrors)) {
+  if (isElmFileRelatedToTargetsErrors(isElmFile, project.targetsErrors)) {
     return makeRestartNextAction(event, project);
   }
 
@@ -1655,10 +1645,7 @@ const runCmd =
         switch (cmd.mode) {
           case "AfterInstallDependencies":
             logger.withSynchronizedOutput(() => {
-              Compile.printStatusLinesForElmJsonsErrors(
-                logger,
-                mutable.project,
-              );
+              Compile.printStatusLinesForTargetsErrors(logger, mutable.project);
               Compile.printSpaceForOutputs(logger, "hot", outputActions);
             });
             break;
@@ -1667,10 +1654,7 @@ const runCmd =
             logger.withSynchronizedOutput(() => {
               logger.clearScreen();
               mutable.lastInfoMessage = undefined;
-              Compile.printStatusLinesForElmJsonsErrors(
-                logger,
-                mutable.project,
-              );
+              Compile.printStatusLinesForTargetsErrors(logger, mutable.project);
               Compile.printSpaceForOutputs(logger, "hot", outputActions);
             });
             break;
@@ -2371,13 +2355,13 @@ function makeRestartNextAction(
 
 // `matches` is either an exact match for an .elm file, or checks if a path is
 // inside a directory.
-function isElmFileRelatedToElmJsonsErrors(
+function isElmFileRelatedToTargetsErrors(
   matches: (absolutePath: AbsolutePath) => boolean,
-  elmJsonsErrors: Project["elmJsonsErrors"],
+  targetsErrors: Project["targetsErrors"],
 ): boolean {
   const matchesInputPath = (inputPath: InputPath): boolean =>
     matches(inputPath.theInputPath) || matches(inputPath.realpath);
-  return elmJsonsErrors.some(({ error }) => {
+  return targetsErrors.some(({ error }) => {
     switch (error.tag) {
       case "DuplicateInputs":
         return error.duplicates.some(
@@ -2385,17 +2369,10 @@ function isElmFileRelatedToElmJsonsErrors(
             matches(resolved) || inputs.some(matchesInputPath),
         );
 
-      // Note: Restarting because an .elm file changed here won’t change the
-      // fact that elm.json is missing. But it might feel clearer if the watcher
-      // still reacts to the inputs rather than saying that they don’t affect
-      // anything.
+      // elm.json is watched separately.
       case "ElmJsonNotFound":
-        return (
-          error.elmJsonNotFound.some(matchesInputPath) ||
-          error.foundElmJsonPaths.some(({ inputPath }) =>
-            matchesInputPath(inputPath),
-          )
-        );
+      case "ElmJsonTypeMismatch":
+        return false;
 
       // The only way I’ve found to trigger this is by a symlink loop.
       case "InputsFailedToResolve":
@@ -2407,56 +2384,17 @@ function isElmFileRelatedToElmJsonsErrors(
         return error.inputsNotFound.some((inputPath) =>
           matches(inputPath.theUncheckedInputPath),
         );
-
-      // Changes to the .elm files don’t make the elm.json:s more unique, but
-      // see  "ElmJsonNotFound" above for why we restart anyway.
-      case "NonUniqueElmJsonPaths":
-        return error.nonUniqueElmJsonPaths.some(({ inputPath }) =>
-          matchesInputPath(inputPath),
-        );
     }
   });
 }
 
-function isElmJsonPotentiallyUsed(
-  elmJsonPath: AbsolutePath,
-  project: Project,
-): boolean {
-  // An elm.json closer to some input than the elm.json currently used would be
-  // used instead after a restart.
-  const dir = path.dirname(elmJsonPath) + path.sep;
-  return Array.from(project.elmJsons).some(
-    ([currentElmJsonPath, outputs]) =>
-      dir.startsWith(path.dirname(currentElmJsonPath) + path.sep) &&
-      dir !== path.dirname(currentElmJsonPath) + path.sep &&
-      Array.from(outputs).some(([, outputState]) =>
-        outputState.inputs.some((inputPath) =>
-          inputPath.theInputPath.startsWith(dir),
-        ),
-      ),
-  );
-}
-
-function isElmJsonFileRelatedToElmJsonsErrors(
-  absoluteElmJsonFilePath: string,
-  elmJsonsErrors: Project["elmJsonsErrors"],
-): boolean {
-  return elmJsonsErrors.some(({ error }) => {
-    switch (error.tag) {
-      case "DuplicateInputs":
-      case "InputsFailedToResolve":
-      case "InputsNotFound":
-        return false;
-      case "ElmJsonNotFound":
-        return error.foundElmJsonPaths.some(
-          ({ elmJsonPath }) => elmJsonPath === absoluteElmJsonFilePath,
-        );
-      case "NonUniqueElmJsonPaths":
-        return error.nonUniqueElmJsonPaths.some(
-          ({ elmJsonPath }) => elmJsonPath === absoluteElmJsonFilePath,
-        );
-    }
-  });
+// Including the elm.json files of targets with errors: The elm.json might be
+// missing, or have the wrong "type".
+function getAllElmJsonPaths(project: Project): Array<ElmJsonPath> {
+  return [
+    ...project.elmJsons.keys(),
+    ...project.targetsErrors.map(({ elmJsonPath }) => elmJsonPath),
+  ];
 }
 
 function webSocketConnectionIsForOutputPath(
@@ -2505,7 +2443,7 @@ type ParseWebSocketConnectRequestUrlResult =
   | ParseWebSocketConnectRequestUrlError
   | {
       tag: "ElmJsonError";
-      error: ElmJsonErrorWithMetadata;
+      error: TargetErrorWithMetadata;
     }
   | {
       tag: "Success";
@@ -2569,7 +2507,7 @@ function parseWebSocketConnectRequestUrl(
   const flatOutputs = getFlatOutputs(project);
 
   const { targetName } = webSocketConnectedParams;
-  const matchElmJsonError = project.elmJsonsErrors.find(
+  const matchElmJsonError = project.targetsErrors.find(
     ({ outputPath }) => outputPath.targetName === targetName,
   );
   const matchOutput = flatOutputs.find(
@@ -2591,7 +2529,7 @@ function parseWebSocketConnectRequestUrl(
     };
   } else {
     const enabledOutputs = [
-      ...project.elmJsonsErrors.map(({ outputPath }) => outputPath),
+      ...project.targetsErrors.map(({ outputPath }) => outputPath),
       ...flatOutputs.map(({ outputPath }) => outputPath),
     ];
     const disabledOutputs = Array.from(project.disabledOutputs);

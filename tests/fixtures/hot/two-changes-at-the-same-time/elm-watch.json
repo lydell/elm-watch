@@ -1,12 +1,16 @@
 {
     "targets": {
         "Html": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/Html.js"
         },
         "Worker": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Worker.elm"
             ],

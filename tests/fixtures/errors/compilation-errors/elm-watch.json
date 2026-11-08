@@ -1,30 +1,44 @@
 {
   "targets": {
     "Dir": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/Dir.elm"],
       "output": "Dir.js"
     },
     "SyntaxError": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/SyntaxError.elm"],
       "output": "SyntaxError.js"
     },
     "Tabs": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/Tabs.elm"],
       "output": "Tabs.js"
     },
     "ModuleNameMismatch": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/ModuleNameMismatch.elm"],
       "output": "ModuleNameMismatch.js"
     },
     "TypeError": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/TypeError.elm"],
       "output": "TypeError.js"
     },
     "MissingMain": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/MissingMain.elm"],
       "output": "MissingMain.js"
     },
     "DebugLog": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/DebugLog.elm"],
       "output": "DebugLog.js"
     }

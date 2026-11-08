@@ -210,23 +210,82 @@ describe("errors", () => {
       `);
     });
 
-    test("unknown field", async () => {
-      expect(await run("elm-watch-json-decode-error/unknown-field", ["make"]))
-        .toMatchInlineSnapshot(`
+    test("old target format", async () => {
+      expect(
+        await run("elm-watch-json-decode-error/old-target-format", ["make"]),
+      ).toMatchInlineSnapshot(`
         ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-field/elm-watch.json
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/old-target-format/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
         ⧙I had trouble with the JSON inside:⧘
 
         At root["targets"]["main"]:
-        Expected only these fields:
-          "inputs",
-          "output"
-        Found extra fields:
-          "mode"
+        Targets now need "type" and "elmJson" fields, for example:
+        "type": "application",
+        "elmJson": "elm.json",
+        Run \`elm-watch init\` to add them automatically.
+        Got: {
+          "inputs": Array(1),
+          "output": "main.js"
+        }
       `);
+    });
+
+    test("unknown target type", async () => {
+      expect(await run("elm-watch-json-decode-error/unknown-type", ["make"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-type/elm-watch.json
+
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+        ⧙I had trouble with the JSON inside:⧘
+
+        At root["targets"]["main"]["type"]:
+        Expected one of these tags:
+          "application"
+        Got: "app"
+      `);
+    });
+
+    test("elmJson must point to elm.json", async () => {
+      expect(
+        await run("elm-watch-json-decode-error/bad-elm-json-path", ["make"]),
+      ).toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-elm-json-path/elm-watch.json
+
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+        ⧙I had trouble with the JSON inside:⧘
+
+        At root["targets"]["main"]["elmJson"]:
+        Expected a path to a file called elm.json
+        Got: "src"
+      `);
+    });
+
+    test("unknown field", async () => {
+      expect(await run("elm-watch-json-decode-error/unknown-field", ["make"]))
+        .toMatchInlineSnapshot(`
+          ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-field/elm-watch.json
+
+          I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+          ⧙I had trouble with the JSON inside:⧘
+
+          At root["targets"]["main"]:
+          Expected only these fields:
+            "type",
+            "elmJson",
+            "inputs",
+            "output"
+          Found extra fields:
+            "mode"
+        `);
     });
 
     test("empty list of inputs", async () => {
@@ -317,25 +376,27 @@ describe("errors", () => {
   test("elm-watch.json not found", async () => {
     expect(await runAbsolute(path.parse(import.meta.dirname).root, ["make"]))
       .toMatchInlineSnapshot(`
-      ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
+        ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
 
-      I read inputs, outputs and options from ⧙elm-watch.json⧘.
+        I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
-      ⧙But I couldn't find one!⧘
+        ⧙But I couldn't find one!⧘
 
-      You need to create one with JSON like this:
+        You need to create one with JSON like this:
 
-      {
-          "targets": {
-              "My target name": {
-                  "inputs": [
-                      "src/Main.elm"
-                  ],
-                  "output": "build/main.js"
-              }
-          }
-      }
-    `);
+        {
+            "targets": {
+                "My target name": {
+                    "type": "application",
+                    "elmJson": "elm.json",
+                    "inputs": [
+                        "src/Main.elm"
+                    ],
+                    "output": "build/main.js"
+                }
+            }
+        }
+      `);
   });
 
   test("elm-watch.json not found and suggest JSON from args", async () => {
@@ -358,6 +419,8 @@ describe("errors", () => {
       {
           "targets": {
               "My target name": {
+                  "type": "application",
+                  "elmJson": "elm.json",
                   "inputs": [
                       "src/Game.elm"
                   ],
@@ -400,6 +463,8 @@ describe("errors", () => {
         {
             "targets": {
                 "My target name": {
+                    "type": "application",
+                    "elmJson": "elm.json",
                     "inputs": [
                         "src/App.elm",
                         "src/Admin.elm"
@@ -457,6 +522,8 @@ describe("errors", () => {
         {
             "targets": {
                 "My target name": {
+                    "type": "application",
+                    "elmJson": "elm.json",
                     "inputs": [
                         "src/src/App.elm",
                         "lib/Admin.elm"
@@ -607,6 +674,8 @@ describe("errors", () => {
       const elmWatchJson: ElmWatchJson.ElmWatchJson = {
         targets: {
           main: {
+            type: "application",
+            elmJson: "elm.json",
             inputs: ["Main.elm"],
             output: "main.js",
           },
@@ -726,18 +795,17 @@ describe("errors", () => {
         ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
         ⧙Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo⧘
 
-        I could not find an ⧙elm.json⧘ for these inputs:
+        I could not find the ⧙elm.json⧘ for this target:
 
-        Main.elm
-        pages/About.elm
+        /Users/you/project/tests/fixtures/errors/elm-json-not-found/elm.json
 
-        Has it gone missing? Maybe run ⧙elm init⧘ to create one?
+        Is "elmJson" misspelled? Or do you need to run ⧙elm init⧘ to create it?
       `);
     });
 
-    test("elm.json not found for all inputs, with long input name (non-fancy)", async () => {
+    test("elm.json not found (non-fancy)", async () => {
       expect(
-        await run("elm-json-not-found-for-all", ["make"], {
+        await run("elm-json-not-found", ["make"], {
           env: {
             ...process.env,
             ...TEST_ENV,
@@ -748,18 +816,11 @@ describe("errors", () => {
         -- elm.json NOT FOUND ----------------------------------------------------------
         Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 
-        I could not find an elm.json for these inputs:
+        I could not find the elm.json for this target:
 
-        Main.elm
+        /Users/you/project/tests/fixtures/errors/elm-json-not-found/elm.json
 
-        Has it gone missing? Maybe run elm init to create one?
-
-        Note that I did find an elm.json for some inputs:
-
-        pages/About.elm
-        -> /Users/you/project/tests/fixtures/errors/elm-json-not-found-for-all/pages/elm.json
-
-        Make sure that one single elm.json covers all the inputs together!
+        Is "elmJson" misspelled? Or do you need to run elm init to create it?
 
         1 error found
 
@@ -767,23 +828,17 @@ describe("errors", () => {
       `);
     });
 
-    test("non unique elm.json", async () => {
-      expect(await run("non-unique-elm-json", ["make"])).toMatchInlineSnapshot(`
-        ⧙-- NO UNIQUE elm.json ----------------------------------------------------------⧘
+    test("application target with package elm.json", async () => {
+      expect(await run("elm-json-type-mismatch-application", ["make"]))
+        .toMatchInlineSnapshot(`
+        ⧙-- elm.json TYPE MISMATCH ------------------------------------------------------⧘
         ⧙Target: main⧘
 
-        I went looking for an ⧙elm.json⧘ for your inputs, but I found more than one!
+        This target has ⧙"type": "application"⧘, but its ⧙elm.json⧘ has ⧙"type": "package"⧘:
 
-        Main.elm
-        -> /Users/you/project/tests/fixtures/errors/non-unique-elm-json/elm.json
+        /Users/you/project/tests/fixtures/errors/elm-json-type-mismatch-application/elm.json
 
-        pages/About.elm
-        -> /Users/you/project/tests/fixtures/errors/non-unique-elm-json/pages/elm.json
-
-        It doesn't make sense to compile Elm files from different projects into one output.
-
-        Either split this target, or move the inputs to the same project with the same
-        ⧙elm.json⧘.
+        Either change the "type" of the target, or use another ⧙elm.json⧘.
       `);
     });
 

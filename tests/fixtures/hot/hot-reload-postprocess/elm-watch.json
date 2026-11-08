@@ -1,18 +1,24 @@
 {
     "targets": {
         "ChangedRecordFields": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/ChangedRecordFields.elm"
             ],
             "output": "build/ChangedRecordFields.js"
         },
         "SlowPostprocess": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/SlowPostprocess.elm"
             ],
             "output": "build/SlowPostprocess.js"
         },
         "ESM": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/ESM.elm"
             ],

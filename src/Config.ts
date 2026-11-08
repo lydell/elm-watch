@@ -37,7 +37,10 @@ export type ConfigSource =
     };
 
 export type Target = {
+  type: "application";
   name: string;
+  // Relative to `root`.
+  elmJson: string;
   inputs: NonEmptyArray<string>;
   output: string;
   postprocess: PostprocessFunction | undefined;

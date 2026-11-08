@@ -16,11 +16,7 @@ import {
   ELM_WATCH_WEBSOCKET_URL,
   type Env,
 } from "./Env.ts";
-import {
-  getSetSingleton,
-  silentlyReadIntEnvValue,
-  toError,
-} from "./Helpers.ts";
+import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
 import { DEFAULT_HOST, getHostFromEnv, type Host } from "./Host.ts";
 import type { WalkImportsError } from "./ImportWalker.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
@@ -28,7 +24,6 @@ import {
   absoluteDirname,
   absolutePathFromString,
   absoluteRealpath,
-  findClosest,
 } from "./PathHelpers.ts";
 import type {
   Postprocess,
@@ -65,7 +60,7 @@ export type Project = {
   configSource: ConfigSource;
   elmWatchStuffJsonPath: ElmWatchStuffJsonPath;
   disabledOutputs: Array<OutputPath>;
-  elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
+  targetsErrors: Array<TargetErrorWithMetadata>;
   elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   maxParallel: number;
   host: Host;
@@ -258,7 +253,7 @@ type OutputFsError =
       error: Error;
     };
 
-type ElmJsonError =
+type TargetError =
   | {
       tag: "DuplicateInputs";
       duplicates: NonEmptyArray<{
@@ -268,11 +263,11 @@ type ElmJsonError =
     }
   | {
       tag: "ElmJsonNotFound";
-      elmJsonNotFound: NonEmptyArray<InputPath>;
-      foundElmJsonPaths: Array<{
-        inputPath: InputPath;
-        elmJsonPath: ElmJsonPath;
-      }>;
+    }
+  | {
+      tag: "ElmJsonTypeMismatch";
+      expected: ElmJson.ElmJsonType;
+      actual: ElmJson.ElmJsonType;
     }
   | {
       tag: "InputsFailedToResolve";
@@ -284,21 +279,15 @@ type ElmJsonError =
   | {
       tag: "InputsNotFound";
       inputsNotFound: NonEmptyArray<UncheckedInputPath>;
-    }
-  | {
-      tag: "NonUniqueElmJsonPaths";
-      nonUniqueElmJsonPaths: NonEmptyArray<{
-        inputPath: InputPath;
-        elmJsonPath: ElmJsonPath;
-      }>;
     };
 
-export type ElmJsonErrorWithMetadata = {
+export type TargetErrorWithMetadata = {
   outputPath: OutputPath;
+  elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   browserUiPosition: BrowserUiPosition;
   openErrorOverlay: boolean;
-  error: ElmJsonError;
+  error: TargetError;
 };
 
 export type Duration =
@@ -362,7 +351,7 @@ export function initProject({
   elmWatchStuffJson: ElmWatchStuffJson | undefined;
 }): InitProjectResult {
   const disabledOutputs: Array<OutputPath> = [];
-  const elmJsonsErrors: Array<ElmJsonErrorWithMetadata> = [];
+  const targetsErrors: Array<TargetErrorWithMetadata> = [];
   const elmJsons = new Map<ElmJsonPath, Array<[OutputPath, OutputState]>>();
   const enabledInputPaths: Array<AbsolutePath> = [];
   const potentialOutputDuplicates = new Map<
@@ -399,7 +388,15 @@ export function initProject({
         targetName.includes(substring),
       )
     ) {
-      const resolveElmJsonResult = resolveElmJson(config.root, target.inputs);
+      const elmJsonPath = markAsElmJsonPath(
+        absolutePathFromString(config.root, target.elmJson),
+      );
+      const resolveResult = resolveTarget(
+        config.root,
+        elmJsonPath,
+        target.type,
+        target.inputs,
+      );
       enabledInputPaths.push(
         ...target.inputs.map((inputString) =>
           absolutePathFromString(config.root, inputString),
@@ -413,13 +410,13 @@ export function initProject({
         openErrorOverlay = false,
       } = persisted ?? {};
 
-      switch (resolveElmJsonResult.tag) {
+      switch (resolveResult.tag) {
         case "Success": {
-          const previous = elmJsons.get(resolveElmJsonResult.elmJsonPath) ?? [];
+          const previous = elmJsons.get(elmJsonPath) ?? [];
           previous.push([
             outputPath,
             new OutputState(
-              resolveElmJsonResult.inputs,
+              resolveResult.inputs,
               target.postprocess === undefined
                 ? { tag: "NoPostprocess" }
                 : {
@@ -432,17 +429,18 @@ export function initProject({
               getNow,
             ),
           ]);
-          elmJsons.set(resolveElmJsonResult.elmJsonPath, previous);
+          elmJsons.set(elmJsonPath, previous);
           break;
         }
 
         default:
-          elmJsonsErrors.push({
+          targetsErrors.push({
             outputPath,
+            elmJsonPath,
             compilationMode: thisCompilationMode,
             browserUiPosition,
             openErrorOverlay,
-            error: resolveElmJsonResult,
+            error: resolveResult,
           });
           break;
       }
@@ -475,6 +473,7 @@ export function initProject({
   const watchDirs = getWatchDirs({
     configSource: config.source,
     elmJsonPaths: Array.from(elmJsons.keys()),
+    erroredElmJsonPaths: targetsErrors.map(({ elmJsonPath }) => elmJsonPath),
     inputPaths: enabledInputPaths,
     staticFilesDir,
   });
@@ -533,7 +532,7 @@ export function initProject({
       configSource: config.source,
       elmWatchStuffJsonPath,
       disabledOutputs,
-      elmJsonsErrors,
+      targetsErrors,
       elmJsons,
       maxParallel,
       host,
@@ -550,11 +549,13 @@ export function initProject({
 function getWatchDirs({
   configSource,
   elmJsonPaths,
+  erroredElmJsonPaths,
   inputPaths,
   staticFilesDir,
 }: {
   configSource: ConfigSource;
   elmJsonPaths: Array<ElmJsonPath>;
+  erroredElmJsonPaths: Array<ElmJsonPath>;
   inputPaths: Array<AbsolutePath>;
   staticFilesDir: StaticFilesDir | undefined;
 }): Array<WatchDir> {
@@ -592,13 +593,13 @@ function getWatchDirs({
           return elmJsonDirs;
       }
     }),
-    // Inputs might not be in a source directory, or might not exist (yet).
-    // Also, an elm.json might be added closer to an input, or be missing.
-    ...inputPaths.flatMap((inputPath) =>
-      ancestorsUntilContaining("elm.json", absoluteDirname(inputPath)).map(
-        shallow,
-      ),
+    // The elm.json of a target with errors might be missing, or have the
+    // wrong "type". Restart when it changes.
+    ...erroredElmJsonPaths.map((elmJsonPath) =>
+      shallow(absoluteDirname(elmJsonPath)),
     ),
+    // Inputs might not be in a source directory, or might not exist (yet).
+    ...inputPaths.map((inputPath) => shallow(absoluteDirname(inputPath))),
     // An elm-watch.json might be added closer to cwd.
     ...(configSource.tag === "ElmWatchJson"
       ? ancestorsUntilContaining("elm-watch.json", configSource.cwd).map(
@@ -646,18 +647,19 @@ function getWebSocketUrlFromEnv(env: Env): WebSocketUrl | undefined {
   }
 }
 
-type ResolveElmJsonResult =
-  | ElmJsonError
+type ResolveTargetResult =
+  | TargetError
   | {
       tag: "Success";
-      elmJsonPath: ElmJsonPath;
       inputs: NonEmptyArray<InputPath>;
     };
 
-function resolveElmJson(
+function resolveTarget(
   root: AbsolutePath,
+  elmJsonPath: ElmJsonPath,
+  type: ElmJson.ElmJsonType,
   inputStrings: NonEmptyArray<string>,
-): ResolveElmJsonResult {
+): ResolveTargetResult {
   const inputs: Array<InputPath> = [];
   const inputsNotFound: Array<UncheckedInputPath> = [];
   const inputsFailedToResolve: Array<{
@@ -731,55 +733,26 @@ function resolveElmJson(
     };
   }
 
-  const elmJsonNotFound: Array<InputPath> = [];
-  const elmJsonPaths: Array<{
-    inputPath: InputPath;
-    elmJsonPath: ElmJsonPath;
-  }> = [];
-
-  for (const inputPath of inputs) {
-    const elmJsonPathRaw = findClosest(
-      "elm.json",
-      absoluteDirname(inputPath.theInputPath),
-    );
-    if (elmJsonPathRaw === undefined) {
-      elmJsonNotFound.push(inputPath);
-    } else {
-      elmJsonPaths.push({
-        inputPath,
-        elmJsonPath: markAsElmJsonPath(elmJsonPathRaw),
-      });
-    }
-  }
-
-  if (isNonEmptyArray(elmJsonNotFound)) {
-    return {
-      tag: "ElmJsonNotFound",
-      elmJsonNotFound,
-      foundElmJsonPaths: elmJsonPaths,
-    };
-  }
-
-  const elmJsonPathsSet = new Set(
-    elmJsonPaths.map(({ elmJsonPath }) => elmJsonPath),
-  );
-
-  const uniqueElmJsonPath = getSetSingleton(elmJsonPathsSet);
-
-  if (uniqueElmJsonPath === undefined) {
-    return {
-      tag: "NonUniqueElmJsonPaths",
-      // At this point we know for sure that `elmJsonPaths` must be non-empty.
-      nonUniqueElmJsonPaths: elmJsonPaths as NonEmptyArray<{
-        inputPath: InputPath;
-        elmJsonPath: ElmJsonPath;
-      }>,
-    };
+  const elmJsonTypeResult = ElmJson.readElmJsonType(elmJsonPath);
+  switch (elmJsonTypeResult.tag) {
+    case "NotFound":
+      return { tag: "ElmJsonNotFound" };
+    case "Found":
+      if (elmJsonTypeResult.type !== type) {
+        return {
+          tag: "ElmJsonTypeMismatch",
+          expected: type,
+          actual: elmJsonTypeResult.type,
+        };
+      }
+      break;
+    case "Unknown":
+      // Let Elm report the problem with elm.json.
+      break;
   }
 
   return {
     tag: "Success",
-    elmJsonPath: uniqueElmJsonPath,
     // At this point we know for sure that `inputs` must be non-empty.
     inputs: inputs as NonEmptyArray<InputPath>,
   };
@@ -840,7 +813,7 @@ export function projectToDebug(project: Project): unknown {
         })),
     ),
     disabledTargets: Array.from(project.disabledOutputs, outputPathToDebug),
-    erroredTargets: project.elmJsonsErrors.map(
+    erroredTargets: project.targetsErrors.map(
       ({ outputPath, compilationMode, error }) => ({
         error: error.tag,
         ...outputPathToDebug(outputPath),

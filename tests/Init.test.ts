@@ -156,6 +156,8 @@ describe("init", () => {
       {
           "targets": {
               "My target name": {
+                  "type": "application",
+                  "elmJson": "elm.json",
                   "inputs": [
                       "src/Main.elm"
                   ],

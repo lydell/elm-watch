@@ -1,42 +1,56 @@
 {
     "targets": {
         "No emoji": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
             "output": "build/main1.js"
         },
         "No emoji but really long target name that needs to be cut off to fit in the terminal": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
             "output": "build/main2.js"
         },
         "😎 Cool emoji": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
             "output": "build/main3.js"
         },
         "🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in the terminal": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
             "output": "build/main4.js"
         },
         "👋🏻 Skin tone": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
             "output": "build/main5.js"
         },
         "↪ Non-emoji symbol": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
             "output": "build/main6.js"
         },
         "↪️ Emoji version of symbol": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],

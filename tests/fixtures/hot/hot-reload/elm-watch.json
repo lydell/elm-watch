@@ -1,156 +1,208 @@
 {
     "targets": {
         "HtmlMain": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/HtmlMain.js"
         },
         "DomAndMsgChange": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/DomAndMsgChange.elm"
             ],
             "output": "build/DomAndMsgChange.js"
         },
         "PortChange": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/PortChange.elm"
             ],
             "output": "build/PortChange.js"
         },
         "AddSubscription": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/AddSubscription.elm"
             ],
             "output": "build/AddSubscription.js"
         },
         "Application": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Application.elm"
             ],
             "output": "build/Application.js"
         },
         "RemoveInput": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/RemoveInput.elm"
             ],
             "output": "build/RemoveInput.js"
         },
         "FlagsChange": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/FlagsChange.elm"
             ],
             "output": "build/FlagsChange.js"
         },
         "AddMsg": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/AddMsg.elm"
             ],
             "output": "build/AddMsg.js"
         },
         "InitTweakValue": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/InitTweakValue.elm"
             ],
             "output": "build/InitTweakValue.js"
         },
         "InitNewField": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/InitNewField.elm"
             ],
             "output": "build/InitNewField.js"
         },
         "InitChangeCmd": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/InitChangeCmd.elm"
             ],
             "output": "build/InitChangeCmd.js"
         },
         "AddPortUsedInUpdate": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/AddPortUsedInUpdate.elm"
             ],
             "output": "build/AddPortUsedInUpdate.js"
         },
         "AddPortUsedInSubscriptions": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/AddPortUsedInSubscriptions.elm"
             ],
             "output": "build/AddPortUsedInSubscriptions.js"
         },
         "ChangeProgramType": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/ChangeProgramType.elm"
             ],
             "output": "build/ChangeProgramType.js"
         },
         "ViewFailsAfterHotReload": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/ViewFailsAfterHotReload.elm"
             ],
             "output": "build/ViewFailsAfterHotReload.js"
         },
         "InitFocus": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/InitFocus.elm"
             ],
             "output": "build/InitFocus.js"
         },
         "InitHttp": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/InitHttp.elm"
             ],
             "output": "build/InitHttp.js"
         },
         "Lazy": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Lazy.elm"
             ],
             "output": "build/Lazy.js"
         },
         "Map": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Map.elm"
             ],
             "output": "build/Map.js"
         },
         "OutputsWithoutAction": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/OutputsWithoutAction.elm"
             ],
             "output": "build/OutputsWithoutAction.js"
         },
         "OutputsWithoutActionOther1": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/OutputsWithoutActionOther1.elm"
             ],
             "output": "build/OutputsWithoutActionOther1.js"
         },
         "MultipleTargets": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/MultipleTargets.elm"
             ],
             "output": "build/MultipleTargets.js"
         },
         "MultipleTargetsOther1": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/MultipleTargetsOther1.elm"
             ],
             "output": "build/MultipleTargetsOther1.js"
         },
         "InterruptElm": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/InterruptElm.elm"
             ],
             "output": "build/InterruptElm.js"
         },
         "DebugLog": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/DebugLog.elm"
             ],
             "output": "build/DebugLog.js"
         },
         "AllProgramTypes": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/AllProgramTypes/WorkerProgram.elm",
                 "src/AllProgramTypes/HtmlProgram.elm",
@@ -161,12 +213,16 @@
             "output": "build/AllProgramTypes.js"
         },
         "InitCmds": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/InitCmds.elm"
             ],
             "output": "build/InitCmds.js"
         },
         "SortWithBug": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/SortWithBug.elm"
             ],

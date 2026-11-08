@@ -34,7 +34,7 @@ import { absoluteDirname } from "./PathHelpers.ts";
 import { type PostprocessToRun, runPostprocess } from "./Postprocess.ts";
 import type {
   Duration,
-  ElmJsonErrorWithMetadata,
+  TargetErrorWithMetadata,
   OutputError,
   OutputState,
   OutputStatus,
@@ -1663,11 +1663,11 @@ function targetNameEmojiTweak(
   };
 }
 
-export function printStatusLinesForElmJsonsErrors(
+export function printStatusLinesForTargetsErrors(
   logger: Logger,
   project: Project,
 ): void {
-  for (const { outputPath } of project.elmJsonsErrors) {
+  for (const { outputPath } of project.targetsErrors) {
     const { targetName, delta } = targetNameEmojiTweak(
       logger.config,
       outputPath.targetName,
@@ -2030,7 +2030,7 @@ function mockDuration(duration: Duration): Duration {
 
 export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   return [
-    ...project.elmJsonsErrors.map(renderElmJsonError),
+    ...project.targetsErrors.map(renderTargetError),
     ...Array.from(project.elmJsons).flatMap(([elmJsonPath, outputs]) =>
       Array.from(outputs).flatMap(([outputPath, { status }]) =>
         renderOutputErrors(elmJsonPath, outputPath, status, true),
@@ -2039,22 +2039,21 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   ];
 }
 
-export function renderElmJsonError({
+export function renderTargetError({
   outputPath,
+  elmJsonPath,
   error,
-}: ElmJsonErrorWithMetadata): Errors.ErrorTemplate {
+}: TargetErrorWithMetadata): Errors.ErrorTemplate {
   switch (error.tag) {
     case "ElmJsonNotFound":
-      return Errors.elmJsonNotFound(
-        outputPath,
-        error.elmJsonNotFound,
-        error.foundElmJsonPaths,
-      );
+      return Errors.elmJsonNotFound(outputPath, elmJsonPath);
 
-    case "NonUniqueElmJsonPaths":
-      return Errors.nonUniqueElmJsonPaths(
+    case "ElmJsonTypeMismatch":
+      return Errors.elmJsonTypeMismatch(
         outputPath,
-        error.nonUniqueElmJsonPaths,
+        elmJsonPath,
+        error.expected,
+        error.actual,
       );
 
     case "InputsNotFound":

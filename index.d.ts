@@ -54,8 +54,11 @@ export type OpenEditor = (location: {
 }) => void | Promise<void>;
 
 export type Target = {
+  type: "application";
   // Displayed in the terminal UI. Must be unique.
   name: string;
+  // The elm.json to compile with, relative to `root`. Usually: "elm.json".
+  elmJson: string;
   // `.elm` files, relative to `root`.
   inputs: NonEmptyArray<string>;
   // A `.js` file, relative to `root`.

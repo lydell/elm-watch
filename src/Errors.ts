@@ -5,6 +5,7 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import type { ConfigSource } from "./Config.ts";
+import type { ElmJsonType } from "./ElmJson.ts";
 import type * as ElmMakeError from "./ElmMakeError.ts";
 import * as ElmWatchJson from "./ElmWatchJson.ts";
 import {
@@ -493,66 +494,29 @@ Or do you need to add some more targets?
 
 export function elmJsonNotFound(
   outputPath: OutputPath,
-  inputs: NonEmptyArray<InputPath>,
-  foundElmJsonPaths: Array<{
-    inputPath: InputPath;
-    elmJsonPath: ElmJsonPath;
-  }>,
+  elmJsonPath: ElmJsonPath,
 ): ErrorTemplate {
-  const extra = isNonEmptyArray(foundElmJsonPaths)
-    ? template`
-Note that I did find an ${elmJson} for some inputs:
-
-${join(
-  mapNonEmptyArray(
-    foundElmJsonPaths,
-    ({ inputPath, elmJsonPath }) =>
-      `${inputPath.originalString}\n-> ${elmJsonPath}`,
-  ),
-  "\n\n",
-)}
-
-Make sure that one single ${elmJson} covers all the inputs together!
-      `
-    : text("");
-
   return fancyError("elm.json NOT FOUND", outputPath)`
-I could not find an ${elmJson} for these inputs:
+I could not find the ${elmJson} for this target:
 
-${join(
-  mapNonEmptyArray(inputs, (inputPath) => inputPath.originalString),
-  "\n",
-)}
+${text(elmJsonPath)}
 
-Has it gone missing? Maybe run ${bold("elm init")} to create one?
-
-${extra}
+Is "elmJson" misspelled? Or do you need to run ${bold("elm init")} to create it?
 `;
 }
 
-export function nonUniqueElmJsonPaths(
+export function elmJsonTypeMismatch(
   outputPath: OutputPath,
-  theNonUniqueElmJsonPaths: NonEmptyArray<{
-    inputPath: InputPath;
-    elmJsonPath: ElmJsonPath;
-  }>,
+  elmJsonPath: ElmJsonPath,
+  expected: ElmJsonType,
+  actual: ElmJsonType,
 ): ErrorTemplate {
-  return fancyError("NO UNIQUE elm.json", outputPath)`
-I went looking for an ${elmJson} for your inputs, but I found more than one!
+  return fancyError("elm.json TYPE MISMATCH", outputPath)`
+This target has ${bold(`"type": "${expected}"`)}, but its ${elmJson} has ${bold(`"type": "${actual}"`)}:
 
-${join(
-  mapNonEmptyArray(
-    theNonUniqueElmJsonPaths,
-    ({ inputPath, elmJsonPath }) =>
-      `${inputPath.originalString}\n-> ${elmJsonPath}`,
-  ),
-  "\n\n",
-)}
+${text(elmJsonPath)}
 
-It doesn't make sense to compile Elm files from different projects into one output.
-
-Either split this target, or move the inputs to the same project with the same
-${elmJson}.
+Either change the "type" of the target, or use another ${elmJson}.
 `;
 }
 

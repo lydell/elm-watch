@@ -81,7 +81,7 @@ const project: Project = {
       ),
     },
   ],
-  elmJsonsErrors: [
+  targetsErrors: [
     {
       outputPath: {
         tag: "OutputPath",
@@ -94,6 +94,9 @@ const project: Project = {
         originalString: "public/build/SandboxMain.js",
         targetName: markAsTargetName("Sandbox"),
       },
+      elmJsonPath: markAsElmJsonPath(
+        markAsAbsolutePath("/Users/you/project/elm.json"),
+      ),
       compilationMode: "standard",
       browserUiPosition: "BottomLeft",
       openErrorOverlay: false,
@@ -423,14 +426,9 @@ describe("Project", () => {
     test("elm.json not found", () => {
       expect(printWatchDirs("errors/elm-json-not-found"))
         .toMatchInlineSnapshot(`
-        Shallow: tests/fixtures/errors/elm-json-not-found
-        Shallow: tests/fixtures/errors
-        Shallow: tests/fixtures
-        Shallow: tests
-        Shallow: .
-        Shallow: <outside repo>
-        Shallow: tests/fixtures/errors/elm-json-not-found/pages
-      `);
+          Shallow: tests/fixtures/errors/elm-json-not-found
+          Shallow: tests/fixtures/errors/elm-json-not-found/pages
+        `);
     });
   });
 });

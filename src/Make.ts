@@ -47,10 +47,10 @@ export async function run(
   //    command), and they might be slow.)
   if (
     isNonEmptyArray(initialOutputActions.actions) &&
-    !isNonEmptyArray(project.elmJsonsErrors)
+    !isNonEmptyArray(project.targetsErrors)
   ) {
     logger.withSynchronizedOutput(() => {
-      Compile.printStatusLinesForElmJsonsErrors(logger, project);
+      Compile.printStatusLinesForTargetsErrors(logger, project);
       Compile.printSpaceForOutputs(logger, "make", initialOutputActions);
     });
 
@@ -80,7 +80,7 @@ export async function run(
     });
   } else {
     logger.withSynchronizedOutput(() => {
-      Compile.printStatusLinesForElmJsonsErrors(logger, project);
+      Compile.printStatusLinesForTargetsErrors(logger, project);
     });
   }
 

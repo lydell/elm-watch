@@ -124,7 +124,9 @@ describe("init --javascript and --typescript", () => {
       /** @type {Array<import("elm-watch").Target>} */
       const targets = [
         {
+          type: "application",
           name: "Main",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
         },
@@ -219,12 +221,16 @@ describe("init --javascript and --typescript", () => {
       /** @type {Array<import("elm-watch").Target>} */
       const targets = [
         {
+          type: "application",
           name: "App \\"quoted\\"",
+          elmJson: "elm.json",
           inputs: ["src/App.elm", "src/Other.elm"],
           output: "public/build/app.js",
         },
         {
+          type: "application",
           name: "😎 Admin",
+          elmJson: "elm.json",
           inputs: ["src/Admin.elm"],
           output: "public/build/admin.js",
         },
@@ -342,7 +348,9 @@ describe("init --javascript and --typescript", () => {
       /** @type {Array<import("elm-watch").Target>} */
       const targets = [
         {
+          type: "application",
           name: "Main",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
           postprocess: postprocessFor("Main"),
@@ -461,7 +469,9 @@ describe("init --javascript and --typescript", () => {
       /** @type {Array<import("elm-watch").Target>} */
       const targets = [
         {
+          type: "application",
           name: "Main",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
           postprocess: postprocessFor("Main"),
@@ -610,7 +620,9 @@ describe("init --javascript and --typescript", () => {
       /** @type {Array<import("elm-watch").Target>} */
       const targets = [
         {
+          type: "application",
           name: "My target name",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
         },
@@ -830,7 +842,9 @@ describe("init --javascript and --typescript", () => {
 
         const targets: Array<Target> = [
           {
+            type: "application",
             name: "Main",
+            elmJson: "elm.json",
             inputs: ["src/Main.elm"],
             output: "build/main.js",
           },
@@ -928,7 +942,9 @@ describe("init --javascript and --typescript", () => {
 
         const targets: Array<Target> = [
           {
+            type: "application",
             name: "Main",
+            elmJson: "elm.json",
             inputs: ["src/Main.elm"],
             output: "build/main.js",
             postprocess: postprocessFor("Main"),
@@ -1042,7 +1058,9 @@ describe("init --javascript and --typescript", () => {
 
         const targets: Array<Target> = [
           {
+            type: "application",
             name: "Main",
+            elmJson: "elm.json",
             inputs: ["src/Main.elm"],
             output: "build/main.js",
             postprocess: postprocessFor("Main"),

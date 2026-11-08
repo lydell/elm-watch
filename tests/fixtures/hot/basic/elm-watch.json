@@ -1,90 +1,120 @@
 {
     "targets": {
         "Html": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/Html.js"
         },
         "Worker": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Worker.elm"
             ],
             "output": "build/Worker.js"
         },
         "Removed": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/Removed.js"
         },
         "Readonly": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/Readonly.js"
         },
         "InjectError": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Worker.elm"
             ],
             "output": "build/InjectError.js"
         },
         "BadUrl": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/BadUrl.js"
         },
         "ParamsDecodeError": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/ParamsDecodeError.js"
         },
         "WrongVersion": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/WrongVersion.js"
         },
         "WrongToken": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/WrongToken.js"
         },
         "HostOrOriginNotAllowed": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/HostOrOriginNotAllowed.js"
         },
         "TargetDisabled": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/TargetDisabled.js"
         },
         "SendBadJson": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/SendBadJson.js"
         },
         "Reconnect": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/Reconnect.js"
         },
         "HttpCaching": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],
             "output": "build/HttpCaching.js"
         },
         "\"Esc\\apes\"": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],

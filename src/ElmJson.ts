@@ -23,6 +23,36 @@ export const ElmJson = Codec.taggedUnion("type", [
   },
 ]);
 
+export type ElmJsonType = ElmJson["type"];
+
+// Only looks at "type", so that we can tell it even if other fields are invalid.
+const ElmJsonTypeOnly = Codec.fields(
+  { type: Codec.primitiveUnion(["application", "package"]) },
+  { allowExtraFields: true },
+);
+
+export type ReadElmJsonTypeResult =
+  | { tag: "NotFound" }
+  // Unreadable or invalid. We let Elm report that, since it has nice errors.
+  | { tag: "Unknown" }
+  | { tag: "Found"; type: ElmJsonType };
+
+export function readElmJsonType(
+  elmJsonPath: ElmJsonPath,
+): ReadElmJsonTypeResult {
+  const parsed = readJsonFile(elmJsonPath, ElmJsonTypeOnly);
+  switch (parsed.tag) {
+    case "ReadError":
+      return parsed.error.code === "ENOENT" || parsed.error.code === "ENOTDIR"
+        ? { tag: "NotFound" }
+        : { tag: "Unknown" };
+    case "DecoderError":
+      return { tag: "Unknown" };
+    case "Valid":
+      return { tag: "Found", type: parsed.value.type };
+  }
+}
+
 type ElmJsonParseResult =
   | ElmJsonParseError
   | {

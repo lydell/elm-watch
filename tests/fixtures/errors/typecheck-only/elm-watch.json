@@ -1,18 +1,24 @@
 {
     "targets": {
         "Main1": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main1.elm"
             ],
             "output": "build/Main1.js"
         },
         "Main2": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main2.elm"
             ],
             "output": "build/Main2.js"
         },
         "Main3": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main3.elm"
             ],

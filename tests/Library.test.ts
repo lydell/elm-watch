@@ -60,7 +60,9 @@ describe("library", () => {
       compilationMode: "optimize",
       targets: [
         {
+          type: "application",
           name: "Sync",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/sync.js",
           postprocess: (code: string, info: unknown) => {
@@ -69,14 +71,18 @@ describe("library", () => {
           },
         },
         {
+          type: "application",
           name: "Async",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/async.js",
           postprocess: (code: string) =>
             Promise.resolve(`// async\n${code.length}`),
         },
         {
+          type: "application",
           name: "None",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/none.js",
         },
@@ -108,7 +114,9 @@ describe("library", () => {
       compilationMode: undefined,
       targets: [
         {
+          type: "application",
           name: "main",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
           postprocess: undefined,
@@ -136,7 +144,9 @@ describe("library", () => {
       runMode: "hot",
       targets: [
         {
+          type: "application",
           name: "main",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
         },
@@ -153,7 +163,9 @@ describe("library", () => {
       runMode: "make",
       targets: [
         {
+          type: "application",
           name: "main",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
           postprocess: () => {
@@ -189,7 +201,9 @@ describe("library", () => {
       runMode: "make",
       targets: [
         {
+          type: "application",
           name: "main",
+          elmJson: "elm.json",
           inputs: ["src/Main.elm"],
           output: "build/main.js",
           postprocess: () => Promise.resolve({ code: "" }),
@@ -223,8 +237,20 @@ describe("library", () => {
       root,
       runMode: "make",
       targets: [
-        { name: "a", inputs: ["src/Main.elm"], output: "build/main.js" },
-        { name: "b", inputs: ["src/Main.elm"], output: "./build/main.js" },
+        {
+          type: "application",
+          name: "a",
+          elmJson: "elm.json",
+          inputs: ["src/Main.elm"],
+          output: "build/main.js",
+        },
+        {
+          type: "application",
+          name: "b",
+          elmJson: "elm.json",
+          inputs: ["src/Main.elm"],
+          output: "./build/main.js",
+        },
       ],
     }));
 
@@ -243,7 +269,9 @@ describe("library", () => {
 
   describe("invalid options", () => {
     const target = {
+      type: "application",
       name: "main",
+      elmJson: "elm.json",
       inputs: ["src/Main.elm"],
       output: "build/main.js",
     };

@@ -1,12 +1,16 @@
 {
     "targets": {
         "Target1": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
             "output": "build/Main.js"
         },
         "Target2": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm",
                 "src/Main2.elm"
@@ -14,6 +18,8 @@
             "output": "build/Main2.js"
         },
         "Target3": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Symlink.elm"
             ],

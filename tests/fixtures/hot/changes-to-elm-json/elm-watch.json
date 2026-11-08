@@ -1,6 +1,8 @@
 {
     "targets": {
         "HtmlMain": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm",
                 "src/Sub/OtherMain.elm"
@@ -8,6 +10,8 @@
             "output": "build/HtmlMain.js"
         },
         "Other": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],

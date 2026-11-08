@@ -1,0 +1,10 @@
+{
+  "targets": {
+    "main": {
+      "type": "app",
+      "elmJson": "elm.json",
+      "inputs": ["src/Main.elm"],
+      "output": "main.js"
+    }
+  }
+}

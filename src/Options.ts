@@ -8,7 +8,12 @@ import type {
   OpenEditorFunction,
   PostprocessFunction,
 } from "./Config.ts";
-import { Inputs, Output, TargetName } from "./ElmWatchJson.ts";
+import {
+  ElmJsonPathString,
+  Inputs,
+  Output,
+  TargetName,
+} from "./ElmWatchJson.ts";
 import { Host } from "./Host.ts";
 import { NonEmptyArray } from "./NonEmptyArray.ts";
 import { Port } from "./Port.ts";
@@ -67,13 +72,18 @@ const Root = Codec.flatMap(Codec.string, {
   encoder: (value): string => value,
 });
 
-const Target = Codec.fields(
-  {
-    name: TargetName,
-    inputs: Inputs,
-    output: Output,
-    postprocess: optionalField(functionCodec<PostprocessFunction>()),
-  },
+const Target = Codec.taggedUnion(
+  "type",
+  [
+    {
+      type: Codec.tag("application"),
+      name: TargetName,
+      elmJson: ElmJsonPathString,
+      inputs: Inputs,
+      output: Output,
+      postprocess: optionalField(functionCodec<PostprocessFunction>()),
+    },
+  ],
   { allowExtraFields: false },
 );
 
@@ -173,7 +183,9 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
           root,
           source: { tag: "Options" },
           targets: value.targets.map((target) => ({
+            type: target.type,
             name: target.name,
+            elmJson: target.elmJson,
             inputs: target.inputs,
             output: target.output,
             postprocess: target.postprocess,

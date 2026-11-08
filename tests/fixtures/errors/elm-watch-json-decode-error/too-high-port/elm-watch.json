@@ -2,6 +2,8 @@
   "port": 65536,
   "targets": {
     "main": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/Main.elm"],
       "output": "main.js"
     }

@@ -1,7 +1,7 @@
 {
   "targets": {
     "main": {
-      "inputs": ["Main.elm", "pages/About.elm"],
+      "inputs": ["src/Main.elm"],
       "output": "main.js"
     }
   }

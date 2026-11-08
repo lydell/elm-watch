@@ -38,7 +38,9 @@ export function generateEntrypoint(
     .map(([name, target]) =>
       `
   {
+    type: ${js(target.type)},
     name: ${js(name)},
+    elmJson: ${js(target.elmJson)},
     inputs: ${jsArray(target.inputs)},
     output: ${js(target.output)},${
       postprocess === undefined

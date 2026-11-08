@@ -1,6 +1,8 @@
 {
     "targets": {
         "HtmlMain": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/HtmlMain.elm"
             ],

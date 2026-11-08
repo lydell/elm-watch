@@ -1,22 +1,32 @@
 {
   "targets": {
     "main.js": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["Main.elm"],
       "output": "main.js"
     },
     "./main": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["Main.elm"],
       "output": "./main.js"
     },
     "../duplicate-outputs/main": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["Main.elm"],
       "output": "../duplicate-outputs/main.js"
     },
     "build/app.js": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["Main.elm"],
       "output": "build/app.js"
     },
     "build//app.js": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["Main.elm"],
       "output": "build//app.js"
     }

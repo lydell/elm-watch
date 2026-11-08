@@ -1,6 +1,8 @@
 {
   "targets": {
     "main": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": [],
       "output": "main.js"
     }

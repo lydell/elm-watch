@@ -73,7 +73,11 @@ async function start(
     root: dir,
     runMode: "hot",
     staticFilesDir: "public",
-    targets,
+    targets: targets.map((target) => ({
+      type: "application",
+      elmJson: "elm.json",
+      ...target,
+    })),
     createServer: (({ onRequest, onUpgrade }) => {
       server = http.createServer(onRequest).on("upgrade", onUpgrade);
       return server;

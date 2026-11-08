@@ -1,12 +1,16 @@
 {
     "targets": {
         "One": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/One.elm"
             ],
             "output": "build/One.js"
         },
         "Two": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Two.elm"
             ],

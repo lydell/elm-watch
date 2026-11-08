@@ -5,10 +5,14 @@
   "allowedHosts": ["other.example.com"],
   "targets": {
     "App \"quoted\"": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/App.elm", "src/Other.elm"],
       "output": "public/build/app.js"
     },
     "😎 Admin": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/Admin.elm"],
       "output": "public/build/admin.js"
     }
