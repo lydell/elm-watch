@@ -188,7 +188,7 @@ function getAllCssImports(
  * other cases it might replace more rules than strictly needed but it doesn't
  * matter.
  */
-function updateStyleSheetIfNeeded(
+export function updateStyleSheetIfNeeded(
   originalStyles: WeakMap<CSSStyleRule, string>,
   oldStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">,
   newStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">,
