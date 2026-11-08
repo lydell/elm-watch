@@ -183,8 +183,12 @@ export function installDependencies(
               logger.write(result.elmInstallOutput);
             });
           } else if (didWriteLoadingMessage) {
-            clearLoadingMessage();
-            logger.write(printStatusLineHelper("Success", message, "success"));
+            logger.withSynchronizedOutput(() => {
+              clearLoadingMessage();
+              logger.write(
+                printStatusLineHelper("Success", message, "success"),
+              );
+            });
           }
           break;
         }
