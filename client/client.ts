@@ -832,7 +832,64 @@ function getOrCreateContainer(): HTMLDialogElement {
   container.append(containerInner);
   document.documentElement.append(container);
 
+  // When the page opens a popover, modal dialog etc., they end up on top of
+  // elm-watch. Move elm-watch back to the top when that happens. `toggle` does
+  // not bubble, so listen in the capture phase. Dialogs fire `toggle` in newer
+  // browsers only, so also listen for `close` (to remove the inactive state).
+  // Cap the number of moves per frame, in case some other script on the page
+  // also tries to stay on top this way, which would cause an infinite loop.
+  let movesThisFrame = 0;
+  const onTopLayerChange = (event: Event): void => {
+    if (event.target === containerInner || movesThisFrame >= 10) {
+      return;
+    }
+    if (movesThisFrame === 0) {
+      requestAnimationFrame(() => {
+        movesThisFrame = 0;
+      });
+    }
+    movesThisFrame++;
+    moveToTopLayer(container, containerInner);
+  };
+  document.addEventListener("toggle", onTopLayerChange, true);
+  document.addEventListener("close", onTopLayerChange, true);
+
   return container;
+}
+
+function moveToTopLayer(
+  container: HTMLDialogElement,
+  containerInner: HTMLElement,
+): void {
+  // Put the inner container in the top level. This is needed to stay on top of
+  // popovers. See: https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
+  // The latest shown popover gets drawn on top, so we need to enter and exit
+  // popover frequently for elm-watch to force it to be on the very top.
+  // `.showPopover()` shipped in Firefox 125, released 2024-04-16.
+  // At the time of writing (2024-10-27) that was a bit too recent to be
+  // required, so we use only call the methods if they exist. The element falls
+  // back to having the highest z-index.
+  if (
+    typeof containerInner.hidePopover === "function" &&
+    typeof containerInner.showPopover === "function" &&
+    // Support users removing elm-watch’s UI (`.showPopover()` throws an error in that case).
+    containerInner.isConnected
+  ) {
+    containerInner.hidePopover();
+    containerInner.showPopover();
+  }
+
+  // A modal dialog on the page makes everything outside it inert, including
+  // elm-watch – even though we are drawn on top. Show that elm-watch cannot be
+  // interacted with in that case (unless our own dialog is the modal one).
+  let isInert = false;
+  try {
+    isInert =
+      document.querySelector(":modal") !== null && !container.matches(":modal");
+  } catch {
+    // `:modal` is not supported.
+  }
+  containerInner.style.opacity = isInert ? "0.5" : "";
 }
 
 type Elements = {
@@ -2023,23 +2080,7 @@ const runCmd =
             }
           }
 
-          // Put the inner container in the top level. This is needed to stay on top of
-          // popovers. See: https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
-          // The latest shown popover gets drawn on top, so we need to enter and exit
-          // popover frequently for elm-watch to force it to be on the very top.
-          // `.showPopover()` shipped in Firefox 125, released 2024-04-16.
-          // At the time of writing (2024-10-27) that was a bit too recent to be
-          // required, so we use only call the methods if they exist. The element falls
-          // back to having the highest z-index.
-          if (
-            typeof elements.containerInner.hidePopover === "function" &&
-            typeof elements.containerInner.showPopover === "function" &&
-            // Support users removing elm-watch’s UI (`.showPopover()` throws an error in that case).
-            elements.containerInner.isConnected
-          ) {
-            elements.containerInner.hidePopover();
-            elements.containerInner.showPopover();
-          }
+          moveToTopLayer(elements.container, elements.containerInner);
         }
         return;
       }
