@@ -1242,6 +1242,8 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   --gap: 4px;
   position: absolute;
   inset: 0;
+  /* The root covers the whole window. Only its children are clickable. */
+  pointer-events: none;
   color: CanvasText;
   font: 13px/1.4 system-ui, sans-serif;
 }
