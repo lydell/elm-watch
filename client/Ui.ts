@@ -253,6 +253,22 @@ export function createUi(): Ui {
 
   const root = h(HTMLDivElement, { className: CLASS.root }, toggleButton);
 
+  // The panel is an auto popover, which gives us light dismiss (clicking
+  // outside closes it, and the click still reaches the page) and closing with
+  // Escape. It is not modal: The page stays usable while it is open. With the
+  // emoji button as the invoker, clicking the emoji toggles the panel rather
+  // than light dismissing it, and focus returns to the emoji when closing.
+  // Browsers without popover support (and JSDOM) get the panel added to and
+  // removed from the DOM instead.
+  const supportsPopover = typeof panel.showPopover === "function";
+  // Set while the browser is in the middle of showing or hiding the panel.
+  let isSyncingFromPopover = false;
+  if (supportsPopover) {
+    panel.popover = "auto";
+    toggleButton.popoverTargetElement = panel;
+    root.append(panel);
+  }
+
   const shadowRoot = containerInner.attachShadow({ mode: "open" });
   shadowRoot.append(
     h(HTMLStyleElement, {}, CSS),
@@ -309,14 +325,39 @@ export function createUi(): Ui {
 
     if (panelOpen && snapshots.length > 0) {
       renderPanel(snapshots);
-      if (!panel.isConnected) {
-        root.append(panel);
+      if (!supportsPopover) {
+        if (!panel.isConnected) {
+          root.append(panel);
+        }
+      } else if (!isSyncingFromPopover && !panel.matches(":popover-open")) {
+        panel.showPopover();
       }
     } else {
-      panel.remove();
+      if (!supportsPopover) {
+        panel.remove();
+      } else if (!isSyncingFromPopover && panel.matches(":popover-open")) {
+        panel.hidePopover();
+      }
       panel.replaceChildren();
     }
   };
+
+  // The browser opens and closes the popover by itself: When clicking the
+  // emoji (the invoker), on light dismiss and on Escape. `beforetoggle` fires
+  // before the panel is shown, so it can be rendered first.
+  panel.addEventListener("beforetoggle", (event) => {
+    const open = event.newState === "open";
+    if (open === panelOpen) {
+      return;
+    }
+    panelOpen = open;
+    isSyncingFromPopover = true;
+    try {
+      render();
+    } finally {
+      isSyncingFromPopover = false;
+    }
+  });
 
   const renderPanel = (snapshots: Array<TargetSnapshot>): void => {
     // The panel is re-created on every render. Restore focus afterwards, so
@@ -479,13 +520,19 @@ export function createUi(): Ui {
 
   applyUiPosition();
 
-  toggleButton.onclick = () => {
+  toggleButton.onclick = (event) => {
     if (drag.tag === "JustDropped") {
       drag = { tag: "Idle" };
+      // Don’t let the browser toggle the popover either.
+      event.preventDefault();
       return;
     }
-    panelOpen = !panelOpen;
-    render();
+    // With popover support, the browser toggles the panel (see
+    // `beforetoggle`).
+    if (!supportsPopover) {
+      panelOpen = !panelOpen;
+      render();
+    }
   };
 
   // Dragging works like the floating button in Expo’s developer menu: The
@@ -1384,11 +1431,21 @@ the corner of its hit area. The panel may cover parts of it.
   }
 }
 
+/*
+\`position: fixed\` rather than \`absolute\`, since the panel is in the top layer
+(as a popover), where \`absolute\` would be relative to the document rather
+than the window. \`inset\`, \`margin\`, \`padding\` and \`color\` override the
+default popover styles.
+*/
 .${CLASS.panel} {
   pointer-events: auto;
-  position: absolute;
+  position: fixed;
+  inset: auto;
   top: calc(var(--top) + ${TOGGLE_SIZE} + var(--gap));
   left: var(--edge-left);
+  margin: 0;
+  padding: 0;
+  color: inherit;
   box-sizing: border-box;
   width: max-content;
   max-width: min(30rem, 100% - var(--edge-left) - var(--edge-right));
