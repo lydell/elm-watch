@@ -101,6 +101,35 @@ describe("library", () => {
     expect(read("none.js")).toMatch(/^\(function\(scope\)/);
   });
 
+  test("optional options can be set to undefined", async () => {
+    const { stdout } = await run(0, (root) => ({
+      root,
+      runMode: "make",
+      compilationMode: undefined,
+      targets: [
+        {
+          name: "main",
+          inputs: ["src/Main.elm"],
+          output: "build/main.js",
+          postprocess: undefined,
+        },
+      ],
+      port: undefined,
+      host: undefined,
+      staticFilesDir: undefined,
+      webSocketUrl: undefined,
+      allowedHosts: undefined,
+      createServer: undefined,
+    }));
+
+    expect(stdout).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
+
+      ✅ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
   test("postprocess function throws", async () => {
     const { stdout } = await run(1, (root) => ({
       root,
@@ -303,6 +332,7 @@ describe("library", () => {
           "elm-watch-node",
           "a.js"
         ]
+        Or expected: undefined
       `);
     });
   });

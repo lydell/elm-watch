@@ -52,7 +52,7 @@ export type Target = {
   inputs: NonEmptyArray<string>;
   // A `.js` file, relative to `root`.
   output: string;
-  postprocess?: Postprocess;
+  postprocess?: Postprocess | undefined;
 };
 
 export type Options = {
@@ -62,7 +62,7 @@ export type Options = {
   // In "hot" mode: The compilation mode for targets you haven’t switched to
   // another compilation mode in the browser UI.
   // Default: "standard".
-  compilationMode?: CompilationMode;
+  compilationMode?: CompilationMode | undefined;
 
   // Absolute path. Relative paths in the options are resolved from here, and
   // elm-watch keeps its state in `elm-stuff/elm-watch/` inside it.
@@ -75,32 +75,32 @@ export type Options = {
 
   // Port for the HTTP and WebSocket server.
   // Default: An arbitrary available port, re-using the one from last time if possible.
-  port?: number;
+  port?: number | undefined;
 
   // The host for the HTTP and WebSocket server to listen on, as in Node.js’
   // `server.listen(port, host)`. Use "0.0.0.0" to expose the server on the
   // local network (to test on your phone, for example).
   // Default: "127.0.0.1" (only your computer).
-  host?: string;
+  host?: string | undefined;
 
   // A directory of static files to serve, relative to `root`. CSS files in it
   // are hot reloaded.
-  staticFilesDir?: string;
+  staticFilesDir?: string | undefined;
 
   // A URL starting with `ws:` or `wss:`, for customizing how the browser
   // connects to elm-watch.
-  webSocketUrl?: string;
+  webSocketUrl?: string | undefined;
 
   // Extra host names that the server accepts requests for.
-  allowedHosts?: Array<string>;
+  allowedHosts?: Array<string> | undefined;
 
-  createServer?: CreateServer;
+  createServer?: CreateServer | undefined;
 
   // Defaults to the corresponding `process` things.
-  env?: Record<string, string | undefined>;
-  stdin?: ReadStream;
-  stdout?: WriteStream;
-  stderr?: WriteStream;
+  env?: Record<string, string | undefined> | undefined;
+  stdin?: ReadStream | undefined;
+  stdout?: WriteStream | undefined;
+  stderr?: WriteStream | undefined;
 };
 
 // Resolves to an exit code.

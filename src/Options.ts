@@ -38,6 +38,13 @@ function functionCodec<T extends object>(): Codec.Codec<T> {
   });
 }
 
+// Optional options can also be set to `undefined`, which is convenient when
+// reading environment variables, for example: `host: process.env.HOST`.
+// oxlint-disable-next-line typescript/explicit-function-return-type
+function optionalField<Decoded, Encoded>(codec: Codec.Codec<Decoded, Encoded>) {
+  return Codec.field(Codec.undefinedOr(codec), { optional: true });
+}
+
 const Root = Codec.flatMap(Codec.string, {
   decoder: (string) =>
     path.isAbsolute(string)
@@ -61,9 +68,7 @@ const Target = Codec.fields(
     name: TargetName,
     inputs: Inputs,
     output: Output,
-    postprocess: Codec.field(functionCodec<PostprocessFunction>(), {
-      optional: true,
-    }),
+    postprocess: optionalField(functionCodec<PostprocessFunction>()),
   },
   { allowExtraFields: false },
 );
@@ -94,20 +99,20 @@ const Targets = Codec.flatMap(NonEmptyArray(Target), {
 const Options = Codec.fields(
   {
     runMode: Codec.primitiveUnion(["hot", "make"]),
-    compilationMode: Codec.field(CompilationMode, { optional: true }),
+    compilationMode: optionalField(CompilationMode),
     root: Root,
     targets: Targets,
-    port: Codec.field(Port, { optional: true }),
-    host: Codec.field(Host, { optional: true }),
-    staticFilesDir: Codec.field(Codec.string, { optional: true }),
-    webSocketUrl: Codec.field(WebSocketUrl("Options"), { optional: true }),
-    allowedHosts: Codec.field(Codec.array(AllowedHost), { optional: true }),
+    port: optionalField(Port),
+    host: optionalField(Host),
+    staticFilesDir: optionalField(Codec.string),
+    webSocketUrl: optionalField(WebSocketUrl("Options")),
+    allowedHosts: optionalField(Codec.array(AllowedHost)),
     // These are validated by TypeScript only.
-    createServer: Codec.field(functionCodec<object>(), { optional: true }),
-    env: Codec.field(Codec.unknown, { optional: true }),
-    stdin: Codec.field(Codec.unknown, { optional: true }),
-    stdout: Codec.field(Codec.unknown, { optional: true }),
-    stderr: Codec.field(Codec.unknown, { optional: true }),
+    createServer: optionalField(functionCodec<object>()),
+    env: optionalField(Codec.unknown),
+    stdin: optionalField(Codec.unknown),
+    stdout: optionalField(Codec.unknown),
+    stderr: optionalField(Codec.unknown),
   },
   { allowExtraFields: false },
 );
