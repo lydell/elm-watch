@@ -20,6 +20,7 @@ import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   type Env,
+  WATCH_REPORT_DEPENDENCIES,
 } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import type { ErrorTemplate } from "./Errors.ts";
@@ -503,6 +504,20 @@ export async function run(
   });
 
   hotTestHooks.kill = undefined;
+
+  if (
+    result.tag === "ExitOnIdle" &&
+    result.reason === "CtrlCPressed" &&
+    env[WATCH_REPORT_DEPENDENCIES] === "1"
+  ) {
+    // Let `node --watch` know about the ctrl+c. See `WATCH_REPORT_DEPENDENCIES`.
+    // It forwards SIGINT to us, but by now we are about to exit anyway.
+    try {
+      process.kill(process.ppid, "SIGINT");
+    } catch {
+      // Not much to do. You’ll have to press ctrl+c again.
+    }
+  }
 
   return result;
 }

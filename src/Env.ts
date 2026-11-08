@@ -26,6 +26,16 @@ export const ELM_WATCH_WEBSOCKET_URL = "ELM_WATCH_WEBSOCKET_URL";
 // Type: Comma-separated hostnames.
 export const ELM_WATCH_ALLOWED_HOSTS = "ELM_WATCH_ALLOWED_HOSTS";
 
+// Set by `node --watch` for the process it runs (undocumented). We put stdin in
+// raw mode, so ctrl+c does not send SIGINT, which means that `node --watch`
+// never learns about it and keeps waiting for file changes after we exit. When
+// this is set, we send SIGINT to `node --watch` after exiting on ctrl+c, so
+// that a single ctrl+c exits both. (On Windows, this kills `node --watch`
+// abruptly instead, which is fine since it has nothing to clean up.)
+// If Node.js stops setting this, you just need to press ctrl+c twice.
+// Type: Check if "1".
+export const WATCH_REPORT_DEPENDENCIES = "WATCH_REPORT_DEPENDENCIES";
+
 // If the `ELM_WATCH_OPEN_EDITOR` takes this long, it is killed.
 // Type: Number.
 export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS =
