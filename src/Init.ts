@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as Codec from "tiny-decoders";
 
 import * as ElmWatchJson from "./ElmWatchJson.ts";
 import * as Errors from "./Errors.ts";
@@ -9,6 +10,7 @@ import {
 } from "./GenerateEntrypoint.ts";
 import { bold, toError } from "./Helpers.ts";
 import type { Logger } from "./Logger.ts";
+import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
@@ -68,10 +70,10 @@ function initElmWatchJson(cwd: Cwd, logger: Logger): number {
   const existingElmWatchJson = findClosest("elm-watch.json", cwd);
 
   if (existingElmWatchJson !== undefined) {
-    logger.writeToStderrMakesALotOfSenseHere(
-      `${elmWatchJson} already exists:\n\n${existingElmWatchJson}`,
+    return upgradeElmWatchJson(
+      logger,
+      markAsElmWatchJsonPath(existingElmWatchJson),
     );
-    return 1;
   }
 
   const existingEntrypoint = findExistingEntrypoint(cwd);
@@ -106,6 +108,82 @@ function initElmWatchJson(cwd: Cwd, logger: Logger): number {
     `
 Created a minimal ${elmWatchJson} in the current directory to get you started.
 Go check it out!
+
+Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+  `.trim(),
+  );
+  return 0;
+}
+
+// Upgrades an elm-watch.json from elm-watch 1 (see `ElmWatchJson.upgradeTargets`).
+function upgradeElmWatchJson(
+  logger: Logger,
+  elmWatchJsonPath: ElmWatchJsonPath,
+): number {
+  let content: string;
+  try {
+    content = fs.readFileSync(elmWatchJsonPath, "utf8");
+  } catch (unknownError) {
+    const error = toError(unknownError);
+    logger.errorTemplate(Errors.readElmWatchJson(elmWatchJsonPath, error));
+    return 1;
+  }
+
+  const parsed = Codec.JSON.parse(Codec.unknown, content);
+  if (parsed.tag === "DecoderError") {
+    logger.errorTemplate(
+      Errors.decodeElmWatchJson(elmWatchJsonPath, parsed.error),
+    );
+    return 1;
+  }
+
+  const { json, upgradedTargets } = ElmWatchJson.upgradeTargets(
+    elmWatchJsonPath,
+    parsed.value,
+  );
+
+  if (!isNonEmptyArray(upgradedTargets)) {
+    logger.writeToStderrMakesALotOfSenseHere(
+      `${elmWatchJson} already exists (and has nothing to upgrade):\n\n${elmWatchJsonPath}`,
+    );
+    return 1;
+  }
+
+  // Keep the indentation and trailing newline of the file.
+  const indent = /^([ \t]+)"/m.exec(content)?.[1] ?? "    ";
+  const newline = content.endsWith("\n") ? "\n" : "";
+
+  try {
+    fs.writeFileSync(
+      elmWatchJsonPath,
+      `${Codec.JSON.stringify(Codec.unknown, json, indent)}${newline}`,
+    );
+  } catch (unknownError) {
+    const error = toError(unknownError);
+    logger.writeToStderrMakesALotOfSenseHere(
+      `Failed to write ${elmWatchJson}:\n\n${error.message}`,
+    );
+    return 1;
+  }
+
+  const notFoundNote = upgradedTargets.some(({ foundElmJson }) => !foundElmJson)
+    ? `\n\n${bold("(not found)")} means that I couldn’t find an elm.json for the target.\nPlease update "elmJson" yourself!`
+    : "";
+
+  logger.write(
+    `
+Upgraded ${elmWatchJson}:
+
+${elmWatchJsonPath}
+
+Targets now need "type" and "elmJson". I added them to these targets:
+
+${upgradedTargets
+  .map(
+    ({ name, elmJson, foundElmJson }) =>
+      `${name}: ${elmJson}${foundElmJson ? "" : ` ${bold("(not found)")}`}`,
+  )
+  .join("\n")}${notFoundNote}
 
 Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
   `.trim(),

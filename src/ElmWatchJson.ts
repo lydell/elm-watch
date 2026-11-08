@@ -3,18 +3,25 @@ import * as Codec from "tiny-decoders";
 
 import { AllowedHost } from "./AllowedHosts.ts";
 import type { Config, Target as ConfigTarget } from "./Config.ts";
+import { readElmJsonType } from "./ElmJson.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray.ts";
-import { absoluteDirname, findClosest, readJsonFile } from "./PathHelpers.ts";
+import {
+  absoluteDirname,
+  absolutePathFromString,
+  findClosest,
+  readJsonFile,
+} from "./PathHelpers.ts";
 import { Port } from "./Port.ts";
 import {
   type CliArg,
   type Cwd,
   type ElmWatchJsonPath,
+  markAsElmJsonPath,
   markAsElmWatchJsonPath,
 } from "./Types.ts";
 import { WebSocketUrl } from "./WebSocketUrl.ts";
@@ -271,13 +278,26 @@ export function findReadAndParse(cwd: Cwd): ParseResult<Config> {
     : result;
 }
 
+// Used by `elm-watch init --javascript`, which also upgrades targets from
+// elm-watch 1 (see `upgradeTargets`).
 export function findReadAndParseWithLegacyPostprocess(
   cwd: Cwd,
 ): ParseResult<ElmWatchJsonWithLegacyPostprocess> {
-  return findReadAndDecode(cwd, ElmWatchJsonWithLegacyPostprocess);
+  return findReadAndDecode(
+    cwd,
+    ElmWatchJsonWithLegacyPostprocess,
+    (elmWatchJsonPath, json) => upgradeTargets(elmWatchJsonPath, json).json,
+  );
 }
 
-function findReadAndDecode<T>(cwd: Cwd, codec: Codec.Codec<T>): ParseResult<T> {
+function findReadAndDecode<T>(
+  cwd: Cwd,
+  codec: Codec.Codec<T>,
+  transform: (elmWatchJsonPath: ElmWatchJsonPath, json: unknown) => unknown = (
+    _,
+    json,
+  ) => json,
+): ParseResult<T> {
   const elmWatchJsonPathRaw = findClosest("elm-watch.json", cwd);
   if (elmWatchJsonPathRaw === undefined) {
     return {
@@ -288,7 +308,11 @@ function findReadAndDecode<T>(cwd: Cwd, codec: Codec.Codec<T>): ParseResult<T> {
   const elmWatchJsonPath: ElmWatchJsonPath =
     markAsElmWatchJsonPath(elmWatchJsonPathRaw);
 
-  const parsed = readJsonFile(elmWatchJsonPathRaw, codec);
+  const read = readJsonFile(elmWatchJsonPath, Codec.unknown);
+  const parsed =
+    read.tag === "Valid"
+      ? codec.decoder(transform(elmWatchJsonPath, read.value))
+      : read;
 
   switch (parsed.tag) {
     case "DecoderError":
@@ -310,6 +334,70 @@ function findReadAndDecode<T>(cwd: Cwd, codec: Codec.Codec<T>): ParseResult<T> {
         value: parsed.value,
       };
   }
+}
+
+export type UpgradedTarget = {
+  name: string;
+  elmJson: string;
+  // If no elm.json was found, "elmJson" is set to "elm.json".
+  foundElmJson: boolean;
+};
+
+// elm-watch 1 found the elm.json for each target automatically, and only
+// supported applications. Add "type" and "elmJson" to targets that have
+// neither, using the elm.json closest to the first input. If the elm.json is
+// a package, the target still becomes an application: elm-watch then reports
+// the mismatch.
+export function upgradeTargets(
+  elmWatchJsonPath: ElmWatchJsonPath,
+  json: unknown,
+): { json: unknown; upgradedTargets: Array<UpgradedTarget> } {
+  if (!isRecord(json) || !isRecord(json["targets"])) {
+    return { json, upgradedTargets: [] };
+  }
+
+  const upgradedTargets: Array<UpgradedTarget> = [];
+
+  const targets = Object.fromEntries(
+    Object.entries(json["targets"]).map(([name, target]) => {
+      if (!isRecord(target) || "type" in target || "elmJson" in target) {
+        return [name, target];
+      }
+
+      const { inputs } = target;
+      const firstInput =
+        Array.isArray(inputs) && typeof inputs[0] === "string"
+          ? inputs[0]
+          : undefined;
+      const elmWatchJsonDir = absoluteDirname(elmWatchJsonPath);
+      const elmJsonPath = findClosest(
+        "elm.json",
+        firstInput === undefined
+          ? elmWatchJsonDir
+          : absoluteDirname(
+              absolutePathFromString(elmWatchJsonDir, firstInput),
+            ),
+      );
+      const elmJson =
+        elmJsonPath === undefined
+          ? "elm.json"
+          : toUnixPath(path.relative(elmWatchJsonDir, elmJsonPath));
+
+      upgradedTargets.push({
+        name,
+        elmJson,
+        foundElmJson: elmJsonPath !== undefined,
+      });
+
+      return [name, { type: "application", elmJson, ...target }];
+    }),
+  );
+
+  return { json: { ...json, targets }, upgradedTargets };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function toConfig(
@@ -366,15 +454,38 @@ export function exampleJson(
 ): Pick<ElmWatchJson, "targets"> {
   const { elmFiles, output = "build/main.js" } = elmMakeParsed;
 
+  const [firstElmFile] = elmFiles;
+  const elmJsonPath = findClosest(
+    "elm.json",
+    firstElmFile === undefined
+      ? cwd
+      : absoluteDirname(absolutePathFromString(cwd, firstElmFile)),
+  );
+  const elmJson =
+    elmJsonPath === undefined
+      ? "elm.json"
+      : // Use slashes in all paths since they work everywhere (including
+        // Windows), while backslashes only work on Windows.
+        toUnixPath(path.relative(path.dirname(elmWatchJsonPath), elmJsonPath));
+
+  if (elmJsonPath !== undefined && !isNonEmptyArray(elmFiles)) {
+    const elmJsonType = readElmJsonType(markAsElmJsonPath(elmJsonPath));
+    if (elmJsonType.tag === "Found" && elmJsonType.type === "package") {
+      return {
+        targets: {
+          "My package": { type: "package", elmJson },
+        },
+      };
+    }
+  }
+
   return {
     targets: {
       "My target name": {
         type: "application",
-        elmJson: "elm.json",
+        elmJson,
         inputs: isNonEmptyArray(elmFiles)
           ? mapNonEmptyArray(elmFiles, (file) =>
-              // Use slashes in all paths since they work everywhere (including
-              // Windows), while backslashes only work on Windows.
               toUnixPath(
                 path.relative(
                   path.dirname(elmWatchJsonPath),

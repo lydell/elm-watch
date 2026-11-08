@@ -15,6 +15,10 @@
       "elmJson": "elm.json",
       "inputs": ["src/Admin.elm"],
       "output": "public/build/admin.js"
+    },
+    "Package": {
+      "type": "package",
+      "elmJson": "package/elm.json"
     }
   }
 }

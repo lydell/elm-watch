@@ -1,0 +1,23 @@
+{
+  "targets": {
+    "App": {
+      "inputs": ["app/src/Main.elm"],
+      "output": "build/app.js"
+    },
+    "Admin": {
+      "inputs": ["admin/Main.elm", "app/src/Main.elm"],
+      "output": "build/admin.js"
+    },
+    "Package demo": {
+      "inputs": ["src/Demo.elm"],
+      "output": "build/demo.js"
+    },
+    "Already upgraded": {
+      "type": "application",
+      "elmJson": "app/elm.json",
+      "inputs": ["app/src/Other.elm"],
+      "output": "build/other.js"
+    }
+  },
+  "port": 9123
+}

@@ -126,7 +126,7 @@ describe("hot", () => {
           "targets": {
               "My target name": {
                   "type": "application",
-                  "elmJson": "elm.json",
+                  "elmJson": "../elm.json",
                   "inputs": [
                       "src/Main.elm"
                   ],
