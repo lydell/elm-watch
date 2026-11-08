@@ -1,15 +1,17 @@
+import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import { AllowedHost } from "./AllowedHosts.ts";
 import type { Config, Target as ConfigTarget } from "./Config.ts";
-import { readElmJsonType } from "./ElmJson.ts";
+import { readElmJsonType, readSourceDirectories } from "./ElmJson.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
   NonEmptyArray,
 } from "./NonEmptyArray.ts";
+import { MODULE_NAME_PART } from "./Parser.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
@@ -18,6 +20,7 @@ import {
 } from "./PathHelpers.ts";
 import { Port } from "./Port.ts";
 import {
+  type AbsolutePath,
   type CliArg,
   type Cwd,
   type ElmJsonPath,
@@ -466,6 +469,121 @@ export function example(
     exampleJson(cwd, elmWatchJsonPath, elmMakeParsed),
     4,
   );
+}
+
+// More `main` files than this are probably not all entrypoints (scratch files,
+// generated code), so we use the example then instead.
+const MAX_DISCOVERED_MAINS = 10;
+
+// For `elm-watch init` (when there is no elm-watch.json): Like `exampleJson`,
+// but with a target for each Elm file with `main` in the source directories of
+// the closest (application) elm.json, if any.
+export function initJson(
+  cwd: Cwd,
+  elmWatchJsonPath: ElmWatchJsonPath,
+): { json: Pick<ElmWatchJson, "targets">; discoveredInputs: Array<string> } {
+  const fallback = {
+    json: exampleJson(cwd, elmWatchJsonPath, {
+      elmFiles: [],
+      output: undefined,
+    }),
+    discoveredInputs: [],
+  };
+
+  const elmJsonPathRaw = findClosest("elm.json", cwd);
+  if (elmJsonPathRaw === undefined) {
+    return fallback;
+  }
+  const elmJsonPath = markAsElmJsonPath(elmJsonPathRaw);
+
+  // Packages get a package target (see `exampleJson`).
+  if (isPackageElmJson(elmJsonPath)) {
+    return fallback;
+  }
+
+  const sourceDirectoriesResult = readSourceDirectories(elmJsonPath);
+  if (sourceDirectoriesResult.tag !== "Parsed") {
+    return fallback;
+  }
+
+  // Source directories can overlap, and two source directories can contain the
+  // same module name. Elm complains about the latter, so just pick the first.
+  const mains = new Map<string, AbsolutePath>();
+  for (const sourceDirectory of sourceDirectoriesResult.sourceDirectories) {
+    for (const file of findElmFilesWithMain(sourceDirectory)) {
+      const moduleName = path
+        .relative(sourceDirectory, file)
+        .slice(0, -".elm".length)
+        .split(path.sep)
+        .join(".");
+      if (!mains.has(moduleName)) {
+        mains.set(moduleName, file);
+      }
+    }
+  }
+
+  if (mains.size === 0 || mains.size > MAX_DISCOVERED_MAINS) {
+    return fallback;
+  }
+
+  const elmWatchJsonDir = path.dirname(elmWatchJsonPath);
+  const relative = (file: string): string =>
+    toUnixPath(path.relative(elmWatchJsonDir, file));
+
+  const targets = Object.fromEntries(
+    Array.from(mains, ([moduleName, file]) => [
+      moduleName,
+      {
+        type: "application" as const,
+        elmJson: relative(elmJsonPath),
+        inputs: [relative(file)] as NonEmptyArray<string>,
+        output: `build/${moduleName}.js`,
+      },
+    ]),
+  );
+
+  return {
+    json: { targets },
+    discoveredInputs: Array.from(mains.values(), relative),
+  };
+}
+
+// Only looks at files and directories that are valid module names, which rules
+// out things like `elm-stuff` and `node_modules`. Top-level definitions in Elm
+// must start at the beginning of the line, so `^main\b` is precise enough (it
+// matches both `main =` and `main :`).
+function findElmFilesWithMain(dir: AbsolutePath): Array<AbsolutePath> {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  return entries
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    .flatMap((entry) => {
+      const entryPath = absolutePathFromString(dir, entry.name);
+      if (entry.isDirectory()) {
+        return MODULE_NAME_PART.test(entry.name)
+          ? findElmFilesWithMain(entryPath)
+          : [];
+      }
+      if (
+        entry.isFile() &&
+        entry.name.endsWith(".elm") &&
+        MODULE_NAME_PART.test(entry.name.slice(0, -".elm".length))
+      ) {
+        try {
+          return /^main\b/m.test(fs.readFileSync(entryPath, "utf8"))
+            ? [entryPath]
+            : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    });
 }
 
 export function exampleJson(

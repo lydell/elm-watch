@@ -61,6 +61,8 @@ npx elm-watch init
 }
 ```
 
+`elm-watch init` looks for Elm files with `main` in the `"source-directories"` of your `elm.json`, and creates a target for each of them (if there aren’t too many). Otherwise, it creates an example like the above. Either way, adjust the targets to your project – especially where the outputs should go.
+
 {: .info }  
 ℹ️ Making an Elm package? Then `elm-watch init` creates a [package target](../elm-watch.json/#package-targets) instead, which typechecks your package.
 

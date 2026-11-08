@@ -219,6 +219,104 @@ describe("init", () => {
     `);
   });
 
+  test("success, discovered Elm files with main", async () => {
+    const { stdout, json } = await initSuccessHelper("discover");
+    expect(stdout).toMatchInlineSnapshot(`
+      Created ⧙elm-watch.json⧘ in the current directory to get you started, with a
+      target for each of these Elm files with \`main\`:
+
+      src/Main.elm
+      src/Pages/Admin.elm
+      lib/Worker.elm
+
+      Go check it out, and adjust the outputs to where you want them!
+
+      Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+    `);
+    expect(json).toMatchInlineSnapshot(`
+      {
+          "targets": {
+              "Main": {
+                  "type": "application",
+                  "elmJson": "elm.json",
+                  "inputs": [
+                      "src/Main.elm"
+                  ],
+                  "output": "build/Main.js"
+              },
+              "Pages.Admin": {
+                  "type": "application",
+                  "elmJson": "elm.json",
+                  "inputs": [
+                      "src/Pages/Admin.elm"
+                  ],
+                  "output": "build/Pages.Admin.js"
+              },
+              "Worker": {
+                  "type": "application",
+                  "elmJson": "elm.json",
+                  "inputs": [
+                      "lib/Worker.elm"
+                  ],
+                  "output": "build/Worker.js"
+              }
+          }
+      }
+    `);
+  });
+
+  test("success, too many Elm files with main", async () => {
+    // Outside the repo, to control the files and the elm.json.
+    const dir = path.join(os.tmpdir(), "elm-watch-init-many-mains");
+    await rimraf(dir);
+    fs.mkdirSync(path.join(dir, "src"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "elm.json"),
+      readFile(path.join(FIXTURES_DIR, "discover", "elm.json")),
+    );
+    for (let i = 1; i <= 11; i++) {
+      fs.writeFileSync(
+        path.join(dir, "src", `Main${i}.elm`),
+        `module Main${i} exposing (main)\n\nmain =\n    Platform.worker\n`,
+      );
+    }
+
+    const stdout = new MemoryWriteStream();
+    const stderr = new MemoryWriteStream();
+    const exitCode = await elmWatchCli(["init"], {
+      cwd: dir,
+      env: {},
+      stdin: new SilentReadStream(),
+      stdout,
+      stderr,
+      logDebug,
+    });
+    const json = readFile(path.join(dir, "elm-watch.json"));
+    await rimraf(dir);
+
+    assertExitCode(0, exitCode, stdout.content, stderr.content, dir);
+    expect(clean(stdout.content)).toMatchInlineSnapshot(`
+      Created a minimal ⧙elm-watch.json⧘ in the current directory to get you started.
+      Go check it out!
+
+      Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+    `);
+    expect(json).toMatchInlineSnapshot(`
+      {
+          "targets": {
+              "My target name": {
+                  "type": "application",
+                  "elmJson": "elm.json",
+                  "inputs": [
+                      "src/Main.elm"
+                  ],
+                  "output": "build/main.js"
+              }
+          }
+      }
+    `);
+  });
+
   test("success, package", async () => {
     const { stdout, json } = await initSuccessHelper("package");
     expect(stdout).toMatchInlineSnapshot(`

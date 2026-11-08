@@ -89,13 +89,16 @@ function initElmWatchJson(cwd: Cwd, logger: Logger): number {
     absolutePathFromString(cwd, "elm-watch.json"),
   );
 
-  const example = ElmWatchJson.example(cwd, elmWatchJsonPath, {
-    elmFiles: [],
-    output: undefined,
-  });
+  const { json, discoveredInputs } = ElmWatchJson.initJson(
+    cwd,
+    elmWatchJsonPath,
+  );
 
   try {
-    fs.writeFileSync(elmWatchJsonPath, example);
+    fs.writeFileSync(
+      elmWatchJsonPath,
+      `${Codec.JSON.stringify(Codec.unknown, json, 4)}\n`,
+    );
   } catch (unknownError) {
     const error = toError(unknownError);
     logger.writeToStderrMakesALotOfSenseHere(
@@ -106,13 +109,31 @@ function initElmWatchJson(cwd: Cwd, logger: Logger): number {
 
   logger.write(
     `
-Created a minimal ${elmWatchJson} in the current directory to get you started.
-Go check it out!
+${createdMessage(elmWatchJson, discoveredInputs)}
 
 Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
   `.trim(),
   );
   return 0;
+}
+
+function createdMessage(
+  fileName: string,
+  discoveredInputs: Array<string>,
+): string {
+  return isNonEmptyArray(discoveredInputs)
+    ? `
+Created ${fileName} in the current directory to get you started, with a
+target for each of these Elm files with \`main\`:
+
+${discoveredInputs.join("\n")}
+
+Go check it out, and adjust the outputs to where you want them!
+      `.trim()
+    : `
+Created a minimal ${fileName} in the current directory to get you started.
+Go check it out!
+      `.trim();
 }
 
 // Upgrades an elm-watch.json from elm-watch 1 (see `ElmWatchJson.upgradeTargets`).
@@ -231,16 +252,16 @@ function initEntrypoint(
   let dir: AbsolutePath;
   let json: ElmWatchJson.ElmWatchJsonWithLegacyPostprocess;
   let upgradedTargets: Array<ElmWatchJson.UpgradedTarget>;
+  let discoveredInputs: Array<string> = [];
   let migratedElmWatchJsonPath: ElmWatchJsonPath | undefined;
 
   switch (parseResult.tag) {
     case "ElmWatchJsonNotFound":
       dir = cwd;
-      json = ElmWatchJson.exampleJson(
+      ({ json, discoveredInputs } = ElmWatchJson.initJson(
         cwd,
         markAsElmWatchJsonPath(absolutePathFromString(cwd, "elm-watch.json")),
-        { elmFiles: [], output: undefined },
-      );
+      ));
       upgradedTargets = [];
       migratedElmWatchJsonPath = undefined;
       break;
@@ -302,8 +323,7 @@ Run it like so:
   if (migratedElmWatchJsonPath === undefined) {
     logger.write(
       `
-Created a minimal ${bold(entrypointName)} in the current directory to get you started.
-Go check it out!
+${createdMessage(bold(entrypointName), discoveredInputs)}
 
 ${runIt}
 
