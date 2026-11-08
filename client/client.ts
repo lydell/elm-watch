@@ -142,6 +142,15 @@ type ReloadReason =
       name: string;
     }
   | {
+      tag: "PortDirectionChanged";
+      name: string;
+      newDirection: "incoming" | "outgoing";
+    }
+  | {
+      tag: "PortTypeChanged";
+      name: string;
+    }
+  | {
       tag: "ProgramTypeChanged";
       previousProgramType: ProgramType;
       newProgramType: ProgramType;
@@ -3505,6 +3514,10 @@ function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
       return `the message type in \`${reason.moduleName}\` changed in debug mode ("debug metadata" changed).`;
     case "NewPortAdded":
       return `a new port '${reason.name}' was added. The idea is to give JavaScript code a chance to set it up!`;
+    case "PortDirectionChanged":
+      return `the port '${reason.name}' changed from ${reason.newDirection === "incoming" ? "outgoing to incoming" : "incoming to outgoing"}. The idea is to give JavaScript code a chance to set it up!`;
+    case "PortTypeChanged":
+      return `the type of the port '${reason.name}' changed. The idea is to give JavaScript code a chance to set it up!`;
     case "ProgramTypeChanged":
       return `\`${reason.moduleName}.main\` changed from \`${reason.previousProgramType}\` to \`${reason.newProgramType}\`.`;
   }

@@ -228,6 +228,136 @@ describe("hot reloading", () => {
     },
   );
 
+  test("Port changes direction: incoming to outgoing", async () => {
+    const { replace, go } = runHotReload({
+      name: "PortChange",
+      programType: "Element",
+      compilationMode: "standard",
+    });
+
+    const { browserConsole } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          replace((content) =>
+            content
+              .replace(
+                "port fromJs : (Int -> msg) -> Sub msg",
+                "port fromJs : Int -> Cmd msg",
+              )
+              .replace("fromJs OriginalFromJs", "Sub.none")
+              .replace("( model, Cmd.none )", "( model, fromJs 1 )"),
+          );
+          return "KeepGoing";
+        default:
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because the port 'fromJs' changed from incoming to outgoing. The idea is to give JavaScript code a chance to set it up!
+      (target: PortChange)
+    `);
+  });
+
+  test("Port changes direction: outgoing to incoming", async () => {
+    const { replace, go } = runHotReload({
+      name: "PortChange",
+      programType: "Element",
+      compilationMode: "standard",
+      // The default `init` subscribes to `toJs`, which is incoming after the change.
+      init: (node) => window.Elm?.["PortChange"]?.init({ node }),
+    });
+
+    const { browserConsole } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          replace((content) =>
+            content
+              .replace(
+                "port toJs : String -> Cmd msg",
+                "port toJs : (String -> msg) -> Sub msg",
+              )
+              .replace(/toJs \(/g, "always Cmd.none (")
+              .replace(
+                "fromJs OriginalFromJs",
+                "Sub.batch [ fromJs OriginalFromJs, toJs (always NoOp) ]",
+              ),
+          );
+          return "KeepGoing";
+        default:
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because the port 'toJs' changed from outgoing to incoming. The idea is to give JavaScript code a chance to set it up!
+      (target: PortChange)
+    `);
+  });
+
+  test("Outgoing port changes type", async () => {
+    const { replace, go } = runHotReload({
+      name: "PortChange",
+      programType: "Element",
+      compilationMode: "standard",
+    });
+
+    const { browserConsole } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          replace((content) =>
+            content
+              .replace(
+                "port toJs : String -> Cmd msg",
+                "port toJs : ( Int, String ) -> Cmd msg",
+              )
+              .replace(/toJs \(/g, "toJs <| Tuple.pair 0 <| ("),
+          );
+          return "KeepGoing";
+        default:
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because the type of the port 'toJs' changed. The idea is to give JavaScript code a chance to set it up!
+      (target: PortChange)
+    `);
+  });
+
+  test("Incoming port changes type", async () => {
+    const { replace, go } = runHotReload({
+      name: "PortChange",
+      programType: "Element",
+      compilationMode: "standard",
+    });
+
+    const { browserConsole } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          replace((content) =>
+            content
+              .replace(
+                "port fromJs : (Int -> msg) -> Sub msg",
+                "port fromJs : (String -> msg) -> Sub msg",
+              )
+              .replace(
+                "fromJs OriginalFromJs",
+                "fromJs (String.length >> OriginalFromJs)",
+              ),
+          );
+          return "KeepGoing";
+        default:
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because the type of the port 'fromJs' changed. The idea is to give JavaScript code a chance to set it up!
+      (target: PortChange)
+    `);
+  });
+
   test("Program types that do and don’t support the debugger in the same output", async () => {
     const container = document.createElement("div");
     onTestFinished(() => {

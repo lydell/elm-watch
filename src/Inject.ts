@@ -102,6 +102,24 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 					reloadReasons.push({ tag: "NewPortAdded", name: key });
 					manager.a(key, sendToApp)
 				}
+			} else if (manager.a) {
+				// Ports are the only effect managers that can change. We keep using the
+				// existing port, so a changed port needs a reload. Outgoing ports have
+				// \`.e\` (cmdMap), and incoming ports have \`.f\` (subMap).
+				var existing = _Platform_effectManagers[key];
+				if (!existing.e !== !manager.e) {
+					reloadReasons.push({ tag: "PortDirectionChanged", name: key, newDirection: manager.e ? "outgoing" : "incoming" });
+				} else if (_elmWatchConverterSource(existing.u) !== _elmWatchConverterSource(manager.u)) {
+					reloadReasons.push({ tag: "PortTypeChanged", name: key });
+				}
+			}
+		}
+
+		// Continuing with a changed port can crash (for example when the new code
+		// subscribes to what used to be an outgoing port), which would hide the reason.
+		for (var i = 0; i < reloadReasons.length; i++) {
+			if (reloadReasons[i].tag !== "NewPortAdded") {
+				return reloadReasons;
 			}
 		}
 
@@ -155,6 +173,20 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 			__elmWatchProgramType: { value: programType },
 		}
 	);
+}
+
+// This whole function was added by elm-watch.
+// The converter (\`.u\`) of a port is a decoder (incoming) or an encoder (outgoing).
+// Decoders are data, but contain functions: For example, the \`Int\` and \`String\`
+// decoders only differ by their function. Encoders are functions. Functions from
+// different hot reloads are never the same, so compare their source code instead.
+// This catches most type changes, but not all: For example, \`Json.Encode.list\`
+// returns the same function source code regardless of the item type.
+function _elmWatchConverterSource(converter)
+{
+	return JSON.stringify(converter, function(key, value) {
+		return typeof value === "function" ? value.toString() : value;
+	});
 }
 
 // This whole function was added by elm-watch.
