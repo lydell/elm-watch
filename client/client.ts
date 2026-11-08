@@ -997,32 +997,14 @@ const initMutable =
     dispatch: (msg: Msg) => void,
     resolvePromise: (result: undefined) => void,
   ): Mutable => {
-    let removeListeners: Array<() => void> = [];
-
-    const mutable: Mutable = {
-      shouldSkipInitCmds: true,
-      removeListeners: () => {
-        for (const removeListener of removeListeners) {
-          removeListener();
-        }
-      },
-      webSocket: initWebSocket(
-        getNow,
-        INITIAL_ELM_COMPILED_TIMESTAMP,
-        dispatch,
-      ),
-      webSocketTimeoutId: undefined,
-    };
-
-    // These events might happen before the WebSocket is ready.
-    // Firefox throws this error via `FocusedTab`:
-    // DOMException: An attempt was made to use an object that is not, or is no longer, usable
-    // So wait until the WebSocket is ready before starting those listeners.
-    if (elements !== undefined) {
-      mutable.webSocket.addEventListener(
-        "open",
-        () => {
-          removeListeners = [
+    // These listeners are started right away, even though the web socket isn’t
+    // connected yet. `update` makes sure not to send any messages until
+    // connected (Firefox throws “An attempt was made to use an object that is
+    // not, or is no longer, usable” when sending on a connecting web socket).
+    const removeListeners: Array<() => void> =
+      elements === undefined
+        ? []
+        : [
             addEventListener(window, "focus", (event) => {
               // Used in tests to trigger focus for just one target.
               if (
@@ -1068,10 +1050,22 @@ const initMutable =
               },
             ),
           ];
-        },
-        { once: true },
-      );
-    }
+
+    const mutable: Mutable = {
+      shouldSkipInitCmds: true,
+      removeListeners: () => {
+        for (const removeListener of removeListeners) {
+          removeListener();
+        }
+      },
+      webSocket: initWebSocket(
+        getNow,
+        INITIAL_ELM_COMPILED_TIMESTAMP,
+        dispatch,
+        (webSocket) => webSocket === mutable.webSocket,
+      ),
+      webSocketTimeoutId: undefined,
+    };
 
     __ELM_WATCH.RELOAD_STATUSES.set(TARGET_NAME, {
       tag: "MightWantToReload",
@@ -1202,10 +1196,7 @@ const initMutable =
             mutable.webSocket.close();
           }
           mutable.removeListeners();
-          if (mutable.webSocketTimeoutId !== undefined) {
-            clearTimeout(mutable.webSocketTimeoutId);
-            mutable.webSocketTimeoutId = undefined;
-          }
+          clearWebSocketTimeout(mutable);
           elements?.targetRoot.remove();
           resolvePromise(undefined);
           if (!needsToCloseWebSocket) {
@@ -1242,10 +1233,18 @@ function addEventListener(
   };
 }
 
+function clearWebSocketTimeout(mutable: Mutable): void {
+  if (mutable.webSocketTimeoutId !== undefined) {
+    clearTimeout(mutable.webSocketTimeoutId);
+    mutable.webSocketTimeoutId = undefined;
+  }
+}
+
 function initWebSocket(
   getNow: GetNow,
   elmCompiledTimestamp: number,
   dispatch: (msg: Msg) => void,
+  isCurrent: (webSocket: WebSocket) => boolean,
 ): WebSocket {
   const [hostname, protocol] =
     // Browser: `window.location` always exists.
@@ -1272,12 +1271,21 @@ function initWebSocket(
 
   const webSocket = new WebSocket(url);
 
+  // After reconnecting, events from previous web sockets must be ignored. For
+  // example, the "close" event of a broken connection can arrive long after we
+  // have given up on it and connected again.
+  const dispatchIfCurrent = (msg: Msg): void => {
+    if (isCurrent(webSocket)) {
+      dispatch(msg);
+    }
+  };
+
   webSocket.addEventListener("open", () => {
-    dispatch({ tag: "WebSocketConnected", date: getNow() });
+    dispatchIfCurrent({ tag: "WebSocketConnected", date: getNow() });
   });
 
   webSocket.addEventListener("close", () => {
-    dispatch({
+    dispatchIfCurrent({
       tag: "WebSocketClosed",
       date: getNow(),
     });
@@ -1286,14 +1294,14 @@ function initWebSocket(
   // In Node.js, if you start the Node.js program (with the elm-watch client) before you start `elm-watch` hot,
   // the "error" event is emitted. Treating it like "closed" allows us to try reconnecting.
   webSocket.addEventListener("error", () => {
-    dispatch({
+    dispatchIfCurrent({
       tag: "WebSocketClosed",
       date: getNow(),
     });
   });
 
   webSocket.addEventListener("message", (event) => {
-    dispatch({
+    dispatchIfCurrent({
       tag: "WebSocketMessageReceived",
       date: getNow(),
       data: event.data,
@@ -1384,19 +1392,26 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
           ...(statusToStatusType(model.status.tag) === "Error"
             ? [{ tag: "Flash", flashType: "error" } as const]
             : []),
-          // Send these commands regardless of current status: We want to prioritize the target
-          // due to the focus no matter what, and after waking up on iOS we need to check the
-          // WebSocket connection no matter what as well. For example, it’s possible to lock
-          // the phone while Busy, and then we miss the “done” message, which makes us still
-          // have the Busy status when unlocking the phone.
-          {
-            tag: "SendMessage",
-            message: { tag: "FocusedTab" },
-            sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-          },
-          {
-            tag: "WebSocketTimeoutBegin",
-          },
+          // Send these commands regardless of current status, as long as we have a connection:
+          // We want to prioritize the target due to the focus no matter what, and after waking
+          // up on iOS we need to check the WebSocket connection no matter what as well. For
+          // example, it’s possible to lock the phone while Busy, and then we miss the “done”
+          // message, which makes us still have the Busy status when unlocking the phone.
+          // While connecting, sending throws an error, and we would then never get a reply,
+          // closing the new connection on timeout. While sleeping, we’ll reconnect anyway.
+          ...(model.status.tag === "Connecting" ||
+          model.status.tag === "SleepingBeforeReconnect"
+            ? []
+            : [
+                {
+                  tag: "SendMessage",
+                  message: { tag: "FocusedTab" },
+                  sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+                } as const,
+                {
+                  tag: "WebSocketTimeoutBegin",
+                } as const,
+              ]),
         ],
       ];
 
@@ -1920,10 +1935,15 @@ const runCmd =
         return;
 
       case "Reconnect":
+        // The previous web socket should already be closed, but make sure it
+        // is, and that its timeout can’t close the new web socket.
+        mutable.webSocket.close();
+        clearWebSocketTimeout(mutable);
         mutable.webSocket = initWebSocket(
           getNow,
           cmd.elmCompiledTimestamp,
           dispatch,
+          (webSocket) => webSocket === mutable.webSocket,
         );
         return;
 
@@ -2106,10 +2126,7 @@ const runCmd =
         return;
 
       case "WebSocketTimeoutClear":
-        if (mutable.webSocketTimeoutId !== undefined) {
-          clearTimeout(mutable.webSocketTimeoutId);
-          mutable.webSocketTimeoutId = undefined;
-        }
+        clearWebSocketTimeout(mutable);
         return;
     }
   };

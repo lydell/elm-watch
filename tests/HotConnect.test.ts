@@ -11,6 +11,7 @@ import {
   onlyErrorMessages,
   rm,
   stringSnapshotSerializer,
+  wait,
 } from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
@@ -1366,6 +1367,227 @@ describe("hot", () => {
         ▼ ⏳ 13:10:05 Html
         ================================================================================
         ▼ ✅ 13:10:05 Html
+      `);
+    });
+  });
+
+  describe("web socket lifecycle", () => {
+    const originalWebSocket = WebSocket;
+    // oxlint-disable-next-line no-console
+    const originalConsoleError = console.error;
+    let webSockets: Array<WebSocket> = [];
+    let sentMessages: Array<string> = [];
+    let consoleErrors: Array<string> = [];
+
+    afterEach(() => {
+      window.WebSocket = originalWebSocket;
+      // oxlint-disable-next-line no-console
+      console.error = originalConsoleError;
+      webSockets = [];
+      sentMessages = [];
+      consoleErrors = [];
+    });
+
+    function setupTestWebSocket({
+      failConnectionIndex,
+    }: { failConnectionIndex?: number } = {}): void {
+      class TestWebSocket extends WebSocket {
+        constructor(url: URL | string) {
+          const actualUrl = new URL(url);
+          if (webSockets.length === failConnectionIndex) {
+            actualUrl.port = "65252"; // Hopefully unused port.
+          }
+          super(actualUrl);
+          webSockets.push(this);
+        }
+
+        override send(message: string): void {
+          sentMessages.push(message);
+          super.send(message);
+        }
+      }
+
+      window.WebSocket = TestWebSocket;
+
+      // oxlint-disable-next-line no-console
+      console.error = (...args: Array<unknown>) => {
+        // For example “elm-watch: Failed to send WebSocket message”.
+        consoleErrors.push(args.map(String).join(" "));
+      };
+    }
+
+    function getLastWebSocket(): WebSocket {
+      const webSocket = webSockets.at(-1);
+      if (webSocket === undefined) {
+        throw new Error("No WebSocket!");
+      }
+      return webSocket;
+    }
+
+    async function closeAndWait(webSocket: WebSocket): Promise<void> {
+      await new Promise((resolve) => {
+        webSocket.addEventListener("close", resolve, { once: true });
+        webSocket.close();
+      });
+    }
+
+    function focus(): void {
+      window.dispatchEvent(new CustomEvent("focus", { detail: "Reconnect" }));
+    }
+
+    test("window listeners work even if the first connection failed", async () => {
+      // The page is reloaded once after the first compilation (index 0). Fail
+      // the first connection after that reload.
+      setupTestWebSocket({ failConnectionIndex: 1 });
+
+      await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async () => {
+          const acknowledged = new Promise((resolve) => {
+            getLastWebSocket().addEventListener("message", resolve, {
+              once: true,
+            });
+          });
+          focus();
+          // Don’t wait forever if `FocusedTab` was never sent.
+          await Promise.race([acknowledged, wait(1000)]);
+          return "Stop" as const;
+        },
+      });
+
+      // Connection before page reload + failed connection + reconnection.
+      expect(webSockets).toHaveLength(3);
+      expect(sentMessages).toStrictEqual([
+        JSON.stringify({ tag: "FocusedTab" }),
+      ]);
+      expect(consoleErrors).toStrictEqual([]);
+    });
+
+    test("events from previous web sockets are ignored", async () => {
+      setupTestWebSocket();
+      let oldWebSocket: WebSocket | undefined = undefined;
+      let numWebSocketsBefore = 0;
+
+      const { renders } = await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async ({ idle }) => {
+          switch (idle) {
+            case 1:
+              oldWebSocket = getLastWebSocket();
+              numWebSocketsBefore = webSockets.length;
+              await closeAndWait(oldWebSocket);
+              return "KeepGoing";
+            default:
+              if (oldWebSocket === undefined) {
+                throw new Error("Expected an old WebSocket!");
+              }
+              // Simulate late events from the previous, closed, web socket.
+              // They used to make the client reconnect again (leaving the
+              // current web socket open) and handle messages twice.
+              oldWebSocket.dispatchEvent(
+                new MessageEvent("message", { data: "not json" }),
+              );
+              oldWebSocket.dispatchEvent(new Event("error"));
+              oldWebSocket.dispatchEvent(new Event("close"));
+              await wait(100);
+              return "Stop";
+          }
+        },
+      });
+
+      expect(webSockets).toHaveLength(numWebSocketsBefore + 1);
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ ✅ 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ ✅ 13:10:05 Reconnect
+      `);
+    });
+
+    test("focus while connecting does not close the new connection", async () => {
+      setupTestWebSocket();
+      let numWebSocketsBefore = 0;
+
+      const { renders } = await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async ({ idle }) => {
+          switch (idle) {
+            case 1:
+              window.__ELM_WATCH.WEBSOCKET_TIMEOUT = 100;
+              numWebSocketsBefore = webSockets.length;
+              // Like on iOS: The web socket closes while the phone is locked.
+              await closeAndWait(getLastWebSocket());
+              // When unlocking, "visibilitychange" triggers an immediate
+              // reconnect, quickly followed by "focus".
+              window.dispatchEvent(new Event("visibilitychange"));
+              focus();
+              return "KeepGoing";
+            default:
+              // Wait longer than the timeout, to make sure that the new web
+              // socket isn’t closed due to a missing `FocusedTabAcknowledged`.
+              await wait(300);
+              return "Stop";
+          }
+        },
+      });
+
+      expect(webSockets).toHaveLength(numWebSocketsBefore + 1);
+      expect(sentMessages).toStrictEqual([]);
+      expect(consoleErrors).toStrictEqual([]);
+      expect(renders).toMatchInlineSnapshot(`
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ ✅ 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ 🔌 13:10:05 Reconnect
+        ================================================================================
+        ▼ ⏳ 13:10:05 Reconnect
+        ================================================================================
+        ▼ ✅ 13:10:05 Reconnect
       `);
     });
   });
