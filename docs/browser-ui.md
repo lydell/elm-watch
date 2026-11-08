@@ -26,13 +26,13 @@ Here are all the icons you might see (they’re also explained when you expand t
 ⛔️ = Eval error  
 ❌ = Unexpected error
 
-Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** Go to the terminal to see the errors, or expand the UI and click the “Show errors” button if you’d like to see them directly in the browser, in an overlay. The overlay is visible until you close it again, or until you fix all errors. elm-watch remembers your choice to show errors in the browser per target, and opens the overlay again when there are new errors if you had previously opted to show it.
+Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** elm-watch then shows the errors directly in the browser, in an overlay (in addition to the terminal).
 
-I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. This is why elm-watch lets you choose if you want the overlay or not, and remembers your choice. Let me know if you think a future version of elm-watch should or should not show it by default, though!
+I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. In elm-watch, you can close the overlay (with the close button, or by pressing Escape), and it then stays closed until the next time you save and get errors. Press Escape again to bring it back, or expand the UI and click the “Show errors” button.
 
 (A cool little detail: The error overlay picks up the colors from your terminal, if possible.)
 
-To make that 🚨 more noticeable, there’s a similar animation as for ✅ – a growing and fading _red_ circle – which also is repeated every time you focus the tab (switch to it from another tab or window, or move focus from the dev tools to the page). (It’s only repeated when the error overlay isn’t showing, though.)
+When the status changes to 🚨, there’s a similar animation as for ✅ – a growing and fading _red_ circle.
 
 ## Clickable error locations
 

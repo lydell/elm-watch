@@ -99,7 +99,6 @@ const project: Project = {
       ),
       compilationMode: "standard",
       browserUiPosition: "BottomLeft",
-      openErrorOverlay: false,
       error: {
         tag: "InputsNotFound",
         inputsNotFound: [
@@ -146,7 +145,6 @@ const project: Project = {
             { tag: "NoPostprocess" },
             "optimize",
             "BottomLeft",
-            false,
             getNow,
           ),
         ],
@@ -188,7 +186,6 @@ const project: Project = {
             { tag: "NoPostprocess" },
             "standard",
             "BottomLeft",
-            false,
             getNow,
           ),
         ],
@@ -229,7 +226,6 @@ const project: Project = {
             { tag: "NoPostprocess" },
             "optimize",
             "BottomLeft",
-            false,
             getNow,
           ),
         ],

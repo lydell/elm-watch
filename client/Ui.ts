@@ -19,8 +19,9 @@ export type UiMsg =
       sendKey: SendKey;
     }
   | {
-      tag: "ChangedOpenErrorOverlay";
-      openErrorOverlay: boolean;
+      // The UI shows or hides the error overlay itself. This message lets the
+      // target react to it too.
+      tag: "PressedErrorOverlayToggle";
     }
   | {
       tag: "PressedChevron";
@@ -48,13 +49,14 @@ export type Status =
   | {
       tag: "Busy";
       date: Date;
-      errorOverlay: ErrorOverlay | undefined;
+      // The errors from the previous status, if any.
+      errors: Map<string, OverlayError> | undefined;
     }
   | {
       tag: "CompileError";
       date: Date;
       sendKey: SendKey;
-      errorOverlay: ErrorOverlay;
+      errors: Map<string, OverlayError>;
       openEditorError: OpenEditorError | undefined;
     }
   | {
@@ -92,11 +94,6 @@ export type Status =
       reasons: Array<string>;
     };
 
-export type ErrorOverlay = {
-  errors: Map<string, OverlayError>;
-  openErrorOverlay: boolean;
-};
-
 export type SendKey = typeof SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
 
 export const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
@@ -124,16 +121,19 @@ export type Ui = {
     initialBrowserUiPosition: BrowserUiPosition,
   ) => UiTarget;
   getBrowserUiPosition: () => BrowserUiPosition;
-  isErrorOverlayVisible: () => boolean;
 };
 
 export type UiTarget = {
   subscribe: (callbacks: UiTargetCallbacks) => () => void;
   render: (snapshot: TargetSnapshot, manageFocus: boolean) => void;
   flash: (flashType: FlashType) => void;
+  // The error overlay shows the errors of all targets. It is opened when a
+  // target gets new errors (`open: true`), and stays closed after the user
+  // closes it, until the next time.
   setErrors: (
     errors: Map<string, OverlayError>,
     sendKey: SendKey | undefined,
+    options: { open: boolean },
   ) => void;
   setBrowserUiPosition: (browserUiPosition: BrowserUiPosition) => void;
   unregister: () => void;
@@ -160,6 +160,7 @@ type TargetEntry = {
   targetName: string;
   targetRoot: HTMLElement;
   callbacks: UiTargetCallbacks | undefined;
+  snapshot: TargetSnapshot | undefined;
 };
 
 export function createUi(): Ui {
@@ -188,13 +189,8 @@ export function createUi(): Ui {
   // This enables popover mode, allowing `.showPopover()` to be called later:
   containerInner.popover = "manual";
 
-  const closeAllErrorOverlays = (): void => {
-    for (const entry of entries) {
-      entry.callbacks?.onUiMsg({
-        tag: "ChangedOpenErrorOverlay",
-        openErrorOverlay: false,
-      });
-    }
+  const closeErrorOverlay = (): void => {
+    setErrorOverlayOpen(false);
   };
 
   const overlay = h(HTMLDivElement, {
@@ -209,7 +205,7 @@ export function createUi(): Ui {
       "aria-label": "Close error overlay",
       "data-test-id": "OverlayCloseButton",
     },
-    onclick: closeAllErrorOverlays,
+    onclick: closeErrorOverlay,
   });
 
   const root = h(HTMLDivElement, { className: CLASS.root });
@@ -226,6 +222,80 @@ export function createUi(): Ui {
 
   const entries: Array<TargetEntry> = [];
   let browserUiPosition: BrowserUiPosition | undefined = undefined;
+  let errorOverlayOpen = false;
+
+  const renderTarget = (entry: TargetEntry, manageFocus: boolean): void => {
+    const { targetRoot, snapshot } = entry;
+    if (snapshot === undefined) {
+      return;
+    }
+
+    targetRoot.replaceChildren(
+      view(
+        (msg) => {
+          if (msg.tag === "PressedErrorOverlayToggle") {
+            setErrorOverlayOpen(!errorOverlayOpen);
+          }
+          entry.callbacks?.onUiMsg(msg);
+        },
+        snapshot,
+        errorOverlayOpen,
+      ),
+    );
+
+    const firstFocusableElement =
+      targetRoot.querySelector(`button, [tabindex]`);
+    if (manageFocus && firstFocusableElement instanceof HTMLElement) {
+      firstFocusableElement.focus();
+    }
+  };
+
+  const isErrorOverlayVisible = (): boolean =>
+    errorOverlayOpen && overlay.hasChildNodes();
+
+  const updateErrorOverlayVisibility = (): void => {
+    const hidden = !isErrorOverlayVisible();
+    overlay.hidden = hidden;
+    overlayCloseButton.hidden = hidden;
+
+    // Avoid drawing the close button on top of a scrollbar.
+    overlayCloseButton.style.right = `${
+      overlay.offsetWidth - overlay.clientWidth
+    }px`;
+
+    // elm-watch’s overlay needs to be a modal `<dialog>` for two reasons:
+    // - It makes sure you cannot interact with elements behind it.
+    // - We need it to win against other modal `<dialog>`s on the page – they make
+    //   all other content on the page, including our overlay, inert.
+    // Support for `<dialog>` shipped in Firefox and Safari in 2022-03-14.
+    // These methods are not supported in JSDOM, so we only call them if they exist.
+    if (
+      typeof container.close === "function" &&
+      typeof container.showModal === "function" &&
+      // Support users removing elm-watch’s UI (`.showModal()` throws an error in that case).
+      container.isConnected
+    ) {
+      if (hidden) {
+        container.close();
+      } else if (!container.open) {
+        container.showModal();
+      }
+    }
+
+    moveToTopLayer(container, containerInner);
+  };
+
+  const setErrorOverlayOpen = (open: boolean): void => {
+    if (open === errorOverlayOpen) {
+      return;
+    }
+    errorOverlayOpen = open;
+    updateErrorOverlayVisibility();
+    // The “Show errors” / “Hide errors” buttons need updating.
+    for (const entry of entries) {
+      renderTarget(entry, false);
+    }
+  };
 
   const applyBrowserUiPosition = (
     newBrowserUiPosition: BrowserUiPosition,
@@ -244,11 +314,36 @@ export function createUi(): Ui {
     root.classList.toggle(CLASS.rootBottomHalf, isInBottomHalf);
   };
 
-  const onKeydown = (event: KeyboardEvent): void => {
-    if (overlay.hasChildNodes() && event.key === "Escape") {
+  // While the error overlay is open, the page is inert, so we can take
+  // Escape for ourselves.
+  const onKeydownCapture = (event: KeyboardEvent): void => {
+    if (event.key === "Escape" && isErrorOverlayVisible()) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      closeAllErrorOverlays();
+      closeErrorOverlay();
+    }
+  };
+
+  // Pressing Escape again re-opens the error overlay. The page might use
+  // Escape too, though, so this listens in the bubble phase, and stays away
+  // if the page handled the event, or if it looks like Escape is likely to be
+  // meant for the page.
+  const onKeydownBubble = (event: KeyboardEvent): void => {
+    if (
+      event.key === "Escape" &&
+      !event.defaultPrevented &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      !errorOverlayOpen &&
+      overlay.hasChildNodes() &&
+      !isEscapeLikelyForThePage(containerInner)
+    ) {
+      // Otherwise the browser closes the dialog right away again, as the
+      // default action of pressing Escape.
+      event.preventDefault();
+      setErrorOverlayOpen(true);
     }
   };
 
@@ -273,7 +368,8 @@ export function createUi(): Ui {
   };
 
   const addListeners = (): void => {
-    window.addEventListener("keydown", onKeydown, true);
+    window.addEventListener("keydown", onKeydownCapture, true);
+    window.addEventListener("keydown", onKeydownBubble);
     document.addEventListener("toggle", onTopLayerChange, true);
     document.addEventListener("close", onTopLayerChange, true);
   };
@@ -281,7 +377,8 @@ export function createUi(): Ui {
   // Called when the last target unregisters. The DOM elements are left as-is,
   // so they can be inspected after `__ELM_WATCH.KILL_MATCHING` (used in tests).
   const removeListeners = (): void => {
-    window.removeEventListener("keydown", onKeydown, true);
+    window.removeEventListener("keydown", onKeydownCapture, true);
+    window.removeEventListener("keydown", onKeydownBubble);
     document.removeEventListener("toggle", onTopLayerChange, true);
     document.removeEventListener("close", onTopLayerChange, true);
   };
@@ -292,6 +389,7 @@ export function createUi(): Ui {
         targetName,
         targetRoot: createTargetRoot(targetName),
         callbacks: undefined,
+        snapshot: undefined,
       };
       if (entries.length === 0) {
         addListeners();
@@ -315,39 +413,8 @@ export function createUi(): Ui {
         },
 
         render: (snapshot, manageFocus) => {
-          const { targetRoot } = entry;
-
-          targetRoot.replaceChildren(
-            view((msg) => {
-              entry.callbacks?.onUiMsg(msg);
-            }, snapshot),
-          );
-
-          const firstFocusableElement =
-            targetRoot.querySelector(`button, [tabindex]`);
-          if (manageFocus && firstFocusableElement instanceof HTMLElement) {
-            firstFocusableElement.focus();
-          }
-
-          // elm-watch’s overlay needs to be a modal `<dialog>` for two reasons:
-          // - It makes sure you cannot interact with elements behind it.
-          // - We need it to win against other modal `<dialog>`s on the page – they make
-          //   all other content on the page, including our overlay, inert.
-          // Support for `<dialog>` shipped in Firefox and Safari in 2022-03-14.
-          // These methods are not supported in JSDOM, so we only call them if they exist.
-          if (
-            typeof container.close === "function" &&
-            typeof container.showModal === "function" &&
-            // Support users removing elm-watch’s UI (`.showModal()` throws an error in that case).
-            container.isConnected
-          ) {
-            if (overlay.hidden !== false) {
-              container.close();
-            } else {
-              container.showModal();
-            }
-          }
-
+          entry.snapshot = snapshot;
+          renderTarget(entry, manageFocus);
           moveToTopLayer(container, containerInner);
         },
 
@@ -359,7 +426,7 @@ export function createUi(): Ui {
           }
         },
 
-        setErrors: (errors, sendKey) => {
+        setErrors: (errors, sendKey, { open }) => {
           updateErrorOverlay(
             entry.targetName,
             (msg) => {
@@ -370,6 +437,11 @@ export function createUi(): Ui {
             overlay,
             overlayCloseButton,
           );
+          if (open && !errorOverlayOpen) {
+            setErrorOverlayOpen(true);
+          } else {
+            updateErrorOverlayVisibility();
+          }
         },
 
         setBrowserUiPosition: (newBrowserUiPosition) => {
@@ -404,9 +476,28 @@ export function createUi(): Ui {
       }
       return browserUiPosition;
     },
-
-    isErrorOverlayVisible: () => overlay.hidden === false,
   };
+}
+
+function isEscapeLikelyForThePage(containerInner: HTMLElement): boolean {
+  const { activeElement } = document;
+  if (
+    activeElement instanceof HTMLElement &&
+    (activeElement.isContentEditable ||
+      activeElement.matches("input, textarea, select"))
+  ) {
+    return true;
+  }
+  try {
+    // Escape closes modal dialogs and popovers (by default). At this point,
+    // they have not been closed yet.
+    return Array.from(document.querySelectorAll(":modal, :popover-open")).some(
+      (element) => element !== containerInner,
+    );
+  } catch {
+    // `:modal` or `:popover-open` is not supported.
+    return false;
+  }
 }
 
 function moveToTopLayer(
@@ -944,10 +1035,11 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 function view(
   dispatch: (msg: UiMsg) => void,
   snapshot: TargetSnapshot,
+  errorOverlayOpen: boolean,
 ): HTMLElement {
   const statusData: StatusData = {
     ...statusIconAndText(snapshot),
-    ...viewStatus(dispatch, snapshot),
+    ...viewStatus(dispatch, snapshot, errorOverlayOpen),
   };
 
   return h(
@@ -1232,6 +1324,7 @@ export function statusIconAndText(
 function viewStatus(
   dispatch: (msg: UiMsg) => void,
   snapshot: TargetSnapshot,
+  errorOverlayOpen: boolean,
 ): Pick<StatusData, "content" | "dl"> {
   const { status, compilationMode, info } = snapshot;
   switch (status.tag) {
@@ -1247,9 +1340,9 @@ function viewStatus(
             warnAboutCompilationModeMismatch: false,
             info,
           }),
-          ...(status.errorOverlay === undefined
+          ...(status.errors === undefined
             ? []
-            : [viewErrorOverlayToggleButton(dispatch, status.errorOverlay)]),
+            : [viewErrorOverlayToggleButton(dispatch, errorOverlayOpen)]),
         ],
       };
 
@@ -1264,7 +1357,7 @@ function viewStatus(
             warnAboutCompilationModeMismatch: true,
             info,
           }),
-          viewErrorOverlayToggleButton(dispatch, status.errorOverlay),
+          viewErrorOverlayToggleButton(dispatch, errorOverlayOpen),
           ...(status.openEditorError === undefined
             ? []
             : viewOpenEditorError(status.openEditorError)),
@@ -1371,24 +1464,21 @@ function viewStatus(
 
 function viewErrorOverlayToggleButton(
   dispatch: (msg: UiMsg) => void,
-  errorOverlay: ErrorOverlay,
+  errorOverlayOpen: boolean,
 ): HTMLElement {
   return h(
     HTMLButtonElement,
     {
       attrs: {
-        "data-test-id": errorOverlay.openErrorOverlay
+        "data-test-id": errorOverlayOpen
           ? "HideErrorOverlayButton"
           : "ShowErrorOverlayButton",
       },
       onclick: () => {
-        dispatch({
-          tag: "ChangedOpenErrorOverlay",
-          openErrorOverlay: !errorOverlay.openErrorOverlay,
-        });
+        dispatch({ tag: "PressedErrorOverlayToggle" });
       },
     },
-    errorOverlay.openErrorOverlay ? "Hide errors" : "Show errors",
+    errorOverlayOpen ? "Hide errors" : "Show errors",
   );
 }
 
@@ -1657,15 +1747,6 @@ function updateErrorOverlay(
       previousElement = maybeExisting.element;
     }
   }
-
-  const hidden = !overlay.hasChildNodes();
-  overlay.hidden = hidden;
-  overlayCloseButton.hidden = hidden;
-
-  // Avoid drawing the close button on top of a scrollbar.
-  overlayCloseButton.style.right = `${
-    overlay.offsetWidth - overlay.clientWidth
-  }px`;
 }
 
 function viewOverlayError(

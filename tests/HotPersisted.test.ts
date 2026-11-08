@@ -29,7 +29,6 @@ import {
   fixtureDir,
   getOverlay,
   run,
-  showErrors,
   switchCompilationMode,
 } from "./HotHelpers.ts";
 
@@ -287,10 +286,6 @@ describe("hot", () => {
         switch (idle) {
           case 1:
             switchCompilationMode("optimize");
-            return "KeepGoing";
-          case 2:
-            expandUi();
-            showErrors();
             return "KeepGoing";
           default:
             return "Stop";

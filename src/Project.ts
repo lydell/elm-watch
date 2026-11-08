@@ -172,8 +172,6 @@ export class OutputState extends TargetState {
 
   browserUiPosition: BrowserUiPosition;
 
-  openErrorOverlay = false;
-
   allRelatedElmFilePaths = new Set<AbsolutePath>();
 
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
@@ -185,7 +183,6 @@ export class OutputState extends TargetState {
     postprocess: Postprocess,
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
-    openErrorOverlay: boolean,
     getNow: GetNow,
   ) {
     super({ tag: "NotWrittenToDisk" }, getNow);
@@ -193,7 +190,6 @@ export class OutputState extends TargetState {
     this.postprocess = postprocess;
     this.compilationMode = compilationMode;
     this.browserUiPosition = browserUiPosition;
-    this.openErrorOverlay = openErrorOverlay;
   }
 }
 
@@ -319,7 +315,6 @@ export type TargetErrorWithMetadata = {
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   browserUiPosition: BrowserUiPosition;
-  openErrorOverlay: boolean;
   error: TargetError;
 };
 
@@ -468,7 +463,6 @@ export function initProject({
         const {
           compilationMode: thisCompilationMode = compilationMode,
           browserUiPosition = "BottomLeft",
-          openErrorOverlay = false,
         } = persisted ?? {};
 
         switch (resolveResult.tag) {
@@ -486,7 +480,6 @@ export function initProject({
                     },
                 thisCompilationMode,
                 browserUiPosition,
-                openErrorOverlay,
                 getNow,
               ),
             ]);
@@ -500,7 +493,6 @@ export function initProject({
               elmJsonPath,
               compilationMode: thisCompilationMode,
               browserUiPosition,
-              openErrorOverlay,
               error: resolveResult,
             });
             break;
@@ -532,7 +524,6 @@ export function initProject({
             // These are only used for applications (in the browser UI).
             compilationMode,
             browserUiPosition: "BottomLeft",
-            openErrorOverlay: false,
             error,
           });
         }

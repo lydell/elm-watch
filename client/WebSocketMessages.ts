@@ -79,7 +79,6 @@ const StatusChange = Codec.taggedUnion("tag", [
     tag: Codec.tag("CompileError"),
     compilationMode: CompilationMode,
     browserUiPosition: BrowserUiPosition,
-    openErrorOverlay: Codec.boolean,
     errors: Codec.array(CompileError),
     foregroundColor: Codec.string,
     backgroundColor: Codec.string,
@@ -150,10 +149,6 @@ export const WebSocketToServerMessage = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("ChangedBrowserUiPosition"),
     browserUiPosition: BrowserUiPosition,
-  },
-  {
-    tag: Codec.tag("ChangedOpenErrorOverlay"),
-    openErrorOverlay: Codec.boolean,
   },
   {
     tag: Codec.tag("FocusedTab"),

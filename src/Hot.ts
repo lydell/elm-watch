@@ -310,11 +310,6 @@ type Cmd =
       compilationMode: CompilationMode;
     }
   | {
-      tag: "ChangeOpenErrorOverlay";
-      outputState: OutputState;
-      openErrorOverlay: boolean;
-    }
-  | {
       tag: "ClearScreen";
     }
   | {
@@ -397,7 +392,6 @@ type Cmd =
       outputPath: OutputPath;
       compilationMode: CompilationMode;
       browserUiPosition: BrowserUiPosition;
-      openErrorOverlay: boolean;
       errors: Array<Errors.ErrorTemplate>;
     }
   | {
@@ -751,7 +745,6 @@ function writeElmWatchStuffJson(
           {
             compilationMode: error.compilationMode,
             browserUiPosition: error.browserUiPosition,
-            openErrorOverlay: error.openErrorOverlay,
           },
         ] as const,
     ),
@@ -762,7 +755,6 @@ function writeElmWatchStuffJson(
           {
             compilationMode: outputState.compilationMode,
             browserUiPosition: outputState.browserUiPosition,
-            openErrorOverlay: outputState.openErrorOverlay,
           },
         ] as const,
     ),
@@ -1644,11 +1636,6 @@ const runCmd =
         writeElmWatchStuffJson(mutable, webSocketToken);
         return;
 
-      case "ChangeOpenErrorOverlay":
-        cmd.outputState.openErrorOverlay = cmd.openErrorOverlay;
-        writeElmWatchStuffJson(mutable, webSocketToken);
-        return;
-
       case "ClearScreen":
         logger.clearScreen();
         mutable.lastInfoMessage = undefined;
@@ -2015,7 +2002,6 @@ const runCmd =
                 tag: "CompileError",
                 compilationMode: cmd.compilationMode,
                 browserUiPosition: cmd.browserUiPosition,
-                openErrorOverlay: cmd.openErrorOverlay,
                 errors: cmd.errors.map((errorTemplate) =>
                   Errors.toHtml(errorTemplate, theme, logger.config.noColor),
                 ),
@@ -2245,7 +2231,6 @@ function handleOutputActionResultToCmd(
         compilationMode: handleOutputActionResult.outputState.compilationMode,
         browserUiPosition:
           handleOutputActionResult.outputState.browserUiPosition,
-        openErrorOverlay: handleOutputActionResult.outputState.openErrorOverlay,
         errors: Compile.renderOutputErrors(
           handleOutputActionResult.elmJsonPath,
           handleOutputActionResult.outputPath,
@@ -2756,7 +2741,6 @@ function onWebSocketConnected(
                 outputPath,
                 compilationMode: outputState.compilationMode,
                 browserUiPosition: outputState.browserUiPosition,
-                openErrorOverlay: outputState.openErrorOverlay,
                 errors: Compile.renderOutputErrors(
                   elmJsonPath,
                   outputPath,
@@ -2994,40 +2978,6 @@ function onWebSocketToServerMessage(
                 browserUiPosition: message.browserUiPosition,
               },
               ...cmds,
-            ],
-          ];
-        }
-      }
-
-    case "ChangedOpenErrorOverlay":
-      switch (output.tag) {
-        case "OutputPathError":
-          return [model, []];
-
-        case "Output": {
-          const errors = Compile.renderOutputErrors(
-            output.elmJsonPath,
-            output.outputPath,
-            output.outputState.status,
-          );
-          return [
-            model,
-            [
-              {
-                tag: "ChangeOpenErrorOverlay",
-                outputState: output.outputState,
-                openErrorOverlay: message.openErrorOverlay,
-              },
-              isNonEmptyArray(errors)
-                ? {
-                    tag: "WebSocketSendCompileErrorToOutput",
-                    outputPath: output.outputPath,
-                    compilationMode: output.outputState.compilationMode,
-                    browserUiPosition: output.outputState.browserUiPosition,
-                    openErrorOverlay: message.openErrorOverlay,
-                    errors,
-                  }
-                : { tag: "NoCmd" },
             ],
           ];
         }

@@ -21,7 +21,9 @@ import {
   fixtureDir,
   getOverlay,
   hideErrors,
+  isOverlayVisible,
   nextWatcherEventHandled,
+  pressEscape,
   runHotReload,
   showErrors,
   switchCompilationMode,
@@ -276,7 +278,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◯ Standard
       ◉ Optimize 🚀 Note: The code currently running is in standard mode.
-      [Show errors]
+      [Hide errors]
       ↑↗
       ·→
       ▲ 🚀 🚨 13:10:05 DebugLog
@@ -290,7 +292,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      [Show errors]
+      [Hide errors]
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 DebugLog
@@ -304,7 +306,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      [Show errors]
+      [Hide errors]
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 DebugLog
@@ -318,7 +320,7 @@ describe("hot reloading", () => {
       ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      [Show errors]
+      [Hide errors]
       ↑↗
       ·→
       ▲ ⏳ 13:10:05 DebugLog
@@ -587,6 +589,7 @@ describe("hot reloading", () => {
       });
 
       const overlays: Array<string> = [];
+      const visibility: Array<boolean> = [];
 
       await go(({ idle }) => {
         switch (idle) {
@@ -598,63 +601,41 @@ describe("hot reloading", () => {
             );
             return "KeepGoing";
           case 3:
+            // The overlay opens by itself.
             overlays.push(getOverlay());
-            expandUi("App");
-            showErrors("App");
-            overlays.push(getOverlay());
-            return "KeepGoing";
-          case 4:
+            closeOverlay();
+            visibility.push(isOverlayVisible());
             replaceHelper("AppOtherHelpers.elm", (content) =>
               content.replace("=", ":="),
             );
             return "KeepGoing";
-          case 5:
-            expandUi("AppOther");
-            showErrors("AppOther");
+          case 4:
+            // New errors from another target open the overlay again.
             overlays.push(getOverlay());
-            return "KeepGoing";
-          case 6:
             replaceHelper("Shared.elm", (content) =>
               content.replace("text", "textTypo"),
             );
             return "KeepGoing";
-          case 7:
+          case 5:
             return "KeepGoing"; // First script finished.
-          case 8:
+          case 6:
+            overlays.push(getOverlay());
+            // The overlay is shared by all targets.
             expandUi("App");
             hideErrors("App");
-            overlays.push(getOverlay());
-            return "KeepGoing";
-          case 9:
+            visibility.push(isOverlayVisible());
             expandUi("AppOther");
-            hideErrors("AppOther");
-            overlays.push(getOverlay());
-            return "KeepGoing";
-          case 10:
-            expandUi("App");
-            expandUi("AppOther");
-            showErrors("App");
             showErrors("AppOther");
-            return "KeepGoing";
-          case 11:
-            return "KeepGoing"; // First script finished.
-          case 12:
-            overlays.push(getOverlay());
-            closeOverlay();
-            overlays.push(getOverlay());
-            return "KeepGoing";
-          case 13:
-            return "KeepGoing"; // First script finished.
+            visibility.push(isOverlayVisible());
+            return "Stop";
           default:
             return "Stop";
         }
       });
 
-      expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay hidden style="">
+      expect(visibility).toStrictEqual([false, false, true]);
 
-        </overlay>
-        ================================================================================
+      expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
         <overlay visible style="background-color: rgb(32, 30, 30);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
         <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
@@ -706,28 +687,15 @@ describe("hot reloading", () => {
                  <span style="color: rgb(241, 76, 76)">^</span>
         I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
         --------------------------------------------------------------------------------
-        <details open="" id="1" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <details open="" id="1" data-target-names="AppOther
+        App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
         <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></details>
-        </overlay>
-        ================================================================================
-        <overlay hidden style="background-color: rgb(32, 30, 30);">
-
-        </overlay>
-        ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
-        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
-
-        3| text := "AppOther"
-                 <span style="color: rgb(241, 76, 76)">^</span>
-        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
         --------------------------------------------------------------------------------
-        <details open="" id="1" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <details open="" id="2" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
         <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
         <pre>The following string uses single quotes:
 
@@ -741,23 +709,11 @@ describe("hot reloading", () => {
         quotes for individual characters like 'a' and 'ø'. This distinction helps with
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></details>
-        --------------------------------------------------------------------------------
-        <details open="" id="2" data-target-names="App
-        AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
-        <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
-        definition.
-
-        Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></details>
-        </overlay>
-        ================================================================================
-        <overlay hidden style="background-color: rgb(32, 30, 30);">
-
         </overlay>
       `);
     });
 
-    test("automatically hide and show the overlay", async () => {
+    test("the overlay opens automatically, and can be closed and re-opened", async () => {
       const { replace, go } = runHotReload({
         fixture,
         name: "App",
@@ -766,6 +722,7 @@ describe("hot reloading", () => {
       });
 
       const overlays: Array<string> = [];
+      const visibility: Array<boolean> = [];
 
       await go(({ idle }) => {
         switch (idle) {
@@ -775,17 +732,25 @@ describe("hot reloading", () => {
 
           case 2:
             overlays.push(getOverlay());
-            expandUi();
-            showErrors();
-            overlays.push(getOverlay());
-            return "KeepGoing";
-
-          case 3:
+            visibility.push(isOverlayVisible());
+            pressEscape();
+            visibility.push(isOverlayVisible());
+            pressEscape();
+            visibility.push(isOverlayVisible());
+            closeOverlay();
+            visibility.push(isOverlayVisible());
             replace((content) => content.replace("+", "++"));
             return "KeepGoing";
 
-          case 4:
+          case 3:
             overlays.push(getOverlay());
+            // Another compilation with errors opens the overlay again, even
+            // though it was closed.
+            replace((content) => content.replace("++", "+"));
+            return "KeepGoing";
+
+          case 4:
+            visibility.push(isOverlayVisible());
             replace((content) => content.replace("module", ""));
             return "KeepGoing";
 
@@ -795,11 +760,9 @@ describe("hot reloading", () => {
         }
       });
 
-      expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay hidden style="">
+      expect(visibility).toStrictEqual([true, false, true, false, true]);
 
-        </overlay>
-        ================================================================================
+      expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
         <overlay visible style="background-color: rgb(32, 30, 30);">
         <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
         <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
@@ -857,10 +820,8 @@ describe("hot reloading", () => {
             return "KeepGoing";
 
           case 2:
-            expandUi();
-            showErrors();
             overlay = getOverlay();
-            return "KeepGoing";
+            return "Stop";
 
           default:
             return "Stop";

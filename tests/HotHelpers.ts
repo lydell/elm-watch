@@ -728,6 +728,21 @@ export function closeOverlay(): void {
   });
 }
 
+export function pressEscape(): void {
+  window.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", cancelable: true }),
+  );
+}
+
+export function isOverlayVisible(): boolean {
+  let visible = false;
+  withShadowRoot((shadowRoot) => {
+    const overlay = shadowRoot.querySelector(`[data-test-id="Overlay"]`);
+    visible = overlay instanceof HTMLElement && overlay.hidden === false;
+  });
+  return visible;
+}
+
 export function getOverlay(): string {
   let result = "(Overlay not found)";
   withShadowRoot((shadowRoot) => {

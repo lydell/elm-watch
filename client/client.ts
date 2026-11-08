@@ -13,7 +13,6 @@ import type {
 import { reloadAllCssIfNeeded, runSerially, type SerialState } from "./css.ts";
 import {
   createUi,
-  type ErrorOverlay,
   type FlashType,
   type Info,
   type OverlayError,
@@ -464,6 +463,7 @@ type Cmd =
       tag: "UpdateErrorOverlay";
       errors: Map<string, OverlayError>;
       sendKey: SendKey | undefined;
+      open: boolean;
     }
   | {
       tag: "UpdateGlobalStatus";
@@ -555,8 +555,8 @@ function run(): void {
             uiExpanded: reloadTrouble ? true : updatedModel.uiExpanded,
           }
         : model;
-      const oldErrorOverlay = getErrorOverlay(model.status);
-      const newErrorOverlay = getErrorOverlay(newModel.status);
+      const oldErrors = getErrors(model.status);
+      const newErrors = getErrors(newModel.status);
       const statusType = statusToStatusType(newModel.status.tag);
       const statusTypeChanged =
         statusType !== statusToStatusType(model.status.tag);
@@ -565,8 +565,6 @@ function run(): void {
         statusTypeChanged,
         hasReceivedHotReload:
           newModel.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
-        uiRelatedUpdate: msg.tag === "UiMsg",
-        errorOverlayVisible: ui?.isErrorOverlayVisible() === true,
       });
       const flashCmd: Array<Cmd> =
         statusFlashType === undefined || cmds.some((cmd) => cmd.tag === "Flash")
@@ -581,19 +579,17 @@ function run(): void {
               elmCompiledTimestamp: newModel.elmCompiledTimestamp,
             },
             // This needs to be done before Render, since it depends on whether
-            // the error overlay is visible or not.
-            newModel.status.tag === model.status.tag &&
-            oldErrorOverlay?.openErrorOverlay ===
-              newErrorOverlay?.openErrorOverlay
+            // the error overlay is visible or not. The errors are kept as-is
+            // between statuses (such as `Busy`) until there is a new result.
+            oldErrors === newErrors
               ? { tag: "NoCmd" }
               : {
                   tag: "UpdateErrorOverlay",
-                  errors:
-                    newErrorOverlay === undefined ||
-                    !newErrorOverlay.openErrorOverlay
-                      ? new Map<string, OverlayError>()
-                      : newErrorOverlay.errors,
+                  errors: newErrors ?? new Map<string, OverlayError>(),
                   sendKey: statusToSpecialCaseSendKey(newModel.status),
+                  // New errors open the error overlay, even if the user
+                  // closed it before.
+                  open: newErrors !== undefined,
                 },
             ...(ui !== undefined || newModel.status.tag !== model.status.tag
               ? [
@@ -631,8 +627,8 @@ function run(): void {
   // renderMockStatuses(ui);
 }
 
-function getErrorOverlay(status: Status): ErrorOverlay | undefined {
-  return "errorOverlay" in status ? status.errorOverlay : undefined;
+function getErrors(status: Status): Map<string, OverlayError> | undefined {
+  return "errors" in status ? status.errors : undefined;
 }
 
 function statusToReloadStatus(model: Model): ReloadStatus {
@@ -1107,10 +1103,6 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
       return [
         model,
         [
-          // Replay the error animation.
-          ...(statusToStatusType(model.status.tag) === "Error"
-            ? [{ tag: "Flash", flashType: "error" } as const]
-            : []),
           // Send these commands regardless of current status, as long as we have a connection:
           // We want to prioritize the target due to the focus no matter what, and after waking
           // up on iOS we need to check the WebSocket connection no matter what as well. For
@@ -1175,7 +1167,7 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
       return [
         {
           ...model,
-          status: { tag: "Busy", date: msg.date, errorOverlay: undefined },
+          status: { tag: "Busy", date: msg.date, errors: undefined },
         },
         [],
       ];
@@ -1232,7 +1224,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
           status: {
             tag: "Busy",
             date,
-            errorOverlay: getErrorOverlay(model.status),
+            errors: getErrors(model.status),
           },
           compilationMode: msg.compilationMode,
         },
@@ -1248,37 +1240,10 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
         ],
       ];
 
-    case "ChangedOpenErrorOverlay":
-      return "errorOverlay" in model.status &&
-        model.status.errorOverlay !== undefined
-        ? [
-            {
-              ...model,
-              status: {
-                ...model.status,
-                errorOverlay: {
-                  ...model.status.errorOverlay,
-                  openErrorOverlay: msg.openErrorOverlay,
-                },
-              },
-              uiExpanded: false,
-            },
-            [
-              {
-                tag: "SendMessage",
-                message: {
-                  tag: "ChangedOpenErrorOverlay",
-                  openErrorOverlay: msg.openErrorOverlay,
-                },
-                sendKey:
-                  // It works well clicking an error location to open it in an editor while busy.
-                  model.status.tag === "Busy"
-                    ? SEND_KEY_DO_NOT_USE_ALL_THE_TIME
-                    : model.status.sendKey,
-              },
-            ],
-          ]
-        : [model, []];
+    case "PressedErrorOverlayToggle":
+      // The UI has shown or hidden the error overlay. Collapse, so that the
+      // expanded UI does not cover the errors.
+      return [{ ...model, uiExpanded: false }, []];
 
     case "PressedChevron":
       return [{ ...model, uiExpanded: !model.uiExpanded }, []];
@@ -1451,7 +1416,7 @@ function statusChanged(
           status: {
             tag: "Busy",
             date,
-            errorOverlay: getErrorOverlay(model.status),
+            errors: getErrors(model.status),
           },
           compilationMode: status.compilationMode,
           browserUiPosition: status.browserUiPosition,
@@ -1482,22 +1447,19 @@ function statusChanged(
             tag: "CompileError",
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-            errorOverlay: {
-              errors: new Map(
-                status.errors.map((error) => {
-                  const overlayError: OverlayError = {
-                    title: error.title,
-                    location: error.location,
-                    htmlContent: error.htmlContent,
-                    foregroundColor: status.foregroundColor,
-                    backgroundColor: status.backgroundColor,
-                  };
-                  const id = Codec.JSON.stringify(Codec.unknown, overlayError);
-                  return [id, overlayError];
-                }),
-              ),
-              openErrorOverlay: status.openErrorOverlay,
-            },
+            errors: new Map(
+              status.errors.map((error) => {
+                const overlayError: OverlayError = {
+                  title: error.title,
+                  location: error.location,
+                  htmlContent: error.htmlContent,
+                  foregroundColor: status.foregroundColor,
+                  backgroundColor: status.backgroundColor,
+                };
+                const id = Codec.JSON.stringify(Codec.unknown, overlayError);
+                return [id, overlayError];
+              }),
+            ),
             openEditorError: undefined,
           },
           compilationMode: status.compilationMode,
@@ -1733,7 +1695,9 @@ const runCmd =
         return;
 
       case "UpdateErrorOverlay":
-        mutable.uiTarget?.setErrors(cmd.errors, cmd.sendKey);
+        mutable.uiTarget?.setErrors(cmd.errors, cmd.sendKey, {
+          open: cmd.open,
+        });
         return;
 
       case "UpdateGlobalStatus":
@@ -2069,26 +2033,16 @@ function getStatusFlashType({
   statusType,
   statusTypeChanged,
   hasReceivedHotReload,
-  uiRelatedUpdate,
-  errorOverlayVisible,
 }: {
   statusType: StatusType;
   statusTypeChanged: boolean;
   hasReceivedHotReload: boolean;
-  uiRelatedUpdate: boolean;
-  errorOverlayVisible: boolean;
 }): FlashType | undefined {
   switch (statusType) {
     case "Success":
       return statusTypeChanged && hasReceivedHotReload ? "success" : undefined;
     case "Error":
-      return errorOverlayVisible
-        ? statusTypeChanged && hasReceivedHotReload
-          ? "error"
-          : undefined
-        : uiRelatedUpdate
-          ? undefined
-          : "error";
+      return statusTypeChanged ? "error" : undefined;
     case "Waiting":
       return undefined;
   }
@@ -2176,7 +2130,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
     Busy: {
       tag: "Busy",
       date,
-      errorOverlay: undefined,
+      errors: undefined,
     },
     Idle: {
       tag: "Idle",
@@ -2212,10 +2166,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      errorOverlay: {
-        errors: new Map(),
-        openErrorOverlay: false,
-      },
+      errors: new Map(),
       openEditorError: undefined,
       info: {
         ...info,
@@ -2267,10 +2218,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      errorOverlay: {
-        errors: new Map(),
-        openErrorOverlay: false,
-      },
+      errors: new Map(),
       openEditorError: { tag: "EnvNotSet" },
     },
     ElmJsonError: {

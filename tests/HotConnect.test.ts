@@ -408,7 +408,7 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ Standard
       ◯ Optimize
-      [Show errors]
+      [Hide errors]
       ↑↗
       ·→
       ▲ 🚨 13:10:05 Removed
@@ -465,7 +465,7 @@ describe("hot", () => {
       ◯ (disabled) Debug The Elm debugger isn't available at this point.
       ◉ Standard
       ◯ Optimize
-      [Show errors]
+      [Hide errors]
       ↑↗
       ·→
       ▲ 🚨 13:10:05 Readonly
@@ -663,10 +663,7 @@ describe("hot", () => {
             tag: "ChangedBrowserUiPosition",
             browserUiPosition: "TopLeft",
           });
-          send({
-            tag: "ChangedOpenErrorOverlay",
-            openErrorOverlay: true,
-          });
+          send({ tag: "FocusedTab" });
           // Wait for the above messages to be processed before stopping (needed
           // for code coverage).
           await allReceived;
@@ -1142,7 +1139,6 @@ describe("hot", () => {
         Expected one of these tags:
          "ChangedCompilationMode",
          "ChangedBrowserUiPosition",
-         "ChangedOpenErrorOverlay",
          "FocusedTab",
          "PressedOpenEditor"
         Got: "Nope"
