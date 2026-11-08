@@ -502,41 +502,44 @@ describe("hot reloading", () => {
     }
   });
 
-  test("List.sortWith bug", async () => {
-    const { replace, go } = runHotReload({
-      name: "SortWithBug",
-      programType: "Sandbox",
-      compilationMode: "standard",
-      isTTY: false,
-    });
+  test.each(["standard", "optimize"] as const)(
+    "List.sortWith bug: %s",
+    async (compilationMode) => {
+      const { replace, go } = runHotReload({
+        name: "SortWithBug",
+        programType: "Sandbox",
+        compilationMode,
+        isTTY: false,
+      });
 
-    await go(({ idle, div }) => {
-      switch (idle) {
-        case 1:
-          assertInit(div);
-          replace((content) =>
-            content.replace("hot reload", "simple text change"),
-          );
-          return "KeepGoing";
-        default:
-          assertHotReload(div);
-          return "Stop";
+      await go(({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            assertInit(div);
+            replace((content) =>
+              content.replace("hot reload", "simple text change"),
+            );
+            return "KeepGoing";
+          default:
+            assertHotReload(div);
+            return "Stop";
+        }
+      });
+
+      function assertInit(div: HTMLDivElement): void {
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><div title="hot reload">ab</div></div>`,
+        );
       }
-    });
 
-    function assertInit(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><div title="hot reload">ab</div></div>`,
-      );
-    }
-
-    function assertHotReload(div: HTMLDivElement): void {
-      // The text in the `div` is supposed to say “ab” (not “ba”) even after the hot reload.
-      expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div><div title="simple text change">ab</div></div>`,
-      );
-    }
-  });
+      function assertHotReload(div: HTMLDivElement): void {
+        // The text in the `div` is supposed to say “ab” (not “ba”) even after the hot reload.
+        expect(div.outerHTML).toMatchInlineSnapshot(
+          `<div><div title="simple text change">ab</div></div>`,
+        );
+      }
+    },
+  );
 
   describe("error overlay", () => {
     const fixture = "error-overlay";

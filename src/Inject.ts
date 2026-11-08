@@ -725,6 +725,8 @@ function _Scheduler_step(proc)
   // work with those after a hot reload. The “new” `List.compare` has references to new
   // `LT`, `GT` and `EQ` objects, while the model has references to old such objects,
   // which are equivalent but not the same object instances.
+  // In `optimize` mode, `LT`, `EQ` and `GT` are plain numbers instead (which don’t have `.$`),
+  // and the original code works fine for them, even after hot reloading.
   _List_sortWith: `
 // This function was slightly modified by elm-watch.
 var _List_sortWith = F2(function(f, xs)
@@ -732,7 +734,9 @@ var _List_sortWith = F2(function(f, xs)
 	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
 		var ord = A2(f, a, b);
 		// return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1; // commented out by elm-watch
-		return ord.$ === $elm$core$Basics$EQ.$ ? 0 : ord.$ === $elm$core$Basics$LT.$ ? -1 : 1; // added by elm-watch
+		return typeof ord === "number" // added by elm-watch
+			? (ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1) // added by elm-watch
+			: (ord.$ === $elm$core$Basics$EQ.$ ? 0 : ord.$ === $elm$core$Basics$LT.$ ? -1 : 1); // added by elm-watch
 	}));
 });
   `.trim(),
