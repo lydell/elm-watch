@@ -176,11 +176,19 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 
 // This whole function was added by elm-watch.
 // The converter (\`.u\`) of a port is a decoder (incoming) or an encoder (outgoing).
-// Decoders are data, but contain functions: For example, the \`Int\` and \`String\`
-// decoders only differ by their function. Encoders are functions. Functions from
-// different hot reloads are never the same, so compare their source code instead.
-// This catches most type changes, but not all: For example, \`Json.Encode.list\`
-// returns the same function source code regardless of the item type.
+// Functions from different hot reloads are never the same, so we compare source code:
+// - Decoders are data, but contain functions: For example, the \`Int\` and \`String\`
+//   decoders only differ by their function. Records are decoded with \`andThen\`,
+//   whose callback source code mentions the decoders of the remaining fields.
+// - Encoders are functions. The compiler inlines encoders for records, tuples and
+//   \`Maybe\`, so their source code says everything. But:
+//   - \`Int\`, \`Float\`, \`String\` and \`Bool\` all use the same function. That’s fine,
+//     since the old encoder then does exactly the same thing as the new one.
+//   - A top-level \`List\` or \`Array\` is encoded by a partial application of
+//     \`Json.Encode.list\` or \`Json.Encode.array\`, which has the same source code
+//     regardless of the item type. So changing the item type is not detected
+//     (but a list inside a record is, since the record’s encoder is inlined).
+// The direction of a port is checked separately, and is always detected.
 function _elmWatchConverterSource(converter)
 {
 	return JSON.stringify(converter, function(key, value) {
