@@ -1544,6 +1544,12 @@ function updateStatusLine({
   index: number;
   total: number;
 }): void {
+  // If the status line has scrolled out of view, we can’t reach it: Moving the
+  // cursor up stops at the top of the screen, so we would overwrite some other
+  // line instead. The cursor is always at the bottom of the screen in that case.
+  if (total - index >= logger.config.rows) {
+    return;
+  }
   logger.withSynchronizedOutput(() => {
     logger.moveCursor(0, -total + index);
     logger.clearLine(0);

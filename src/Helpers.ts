@@ -12,6 +12,7 @@ export type ReadStream = Readable & {
 export type WriteStream = Writable & {
   isTTY: boolean;
   columns?: number;
+  rows?: number;
 };
 
 export function split(string: string, splitter: string): NonEmptyArray<string> {

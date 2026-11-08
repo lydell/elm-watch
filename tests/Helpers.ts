@@ -348,6 +348,10 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
 
   columns = 80;
 
+  // Unlimited by default. Note that the cursor can still move anywhere, unlike
+  // in a real terminal.
+  rows = Infinity;
+
   private lines: Array<string> = [];
 
   private cursor = { x: 0, y: 0 };

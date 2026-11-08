@@ -57,6 +57,7 @@ export type LoggerConfig = {
   isTTY: boolean;
   mockedTimings: boolean;
   columns: number;
+  rows: number;
 };
 
 export function makeLogger({
@@ -119,6 +120,11 @@ export function makeLogger({
       // This is a getter because it can change over time, if the user resizes
       // the terminal.
       return stdout.columns ?? DEFAULT_COLUMNS;
+    },
+    get rows() {
+      // `.rows` is `undefined` if not a TTY. Then there’s no screen height to
+      // worry about.
+      return stdout.rows ?? Infinity;
     },
   };
 

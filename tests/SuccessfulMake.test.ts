@@ -29,11 +29,13 @@ async function run(
   args: Array<string>,
   {
     isTTY = true,
+    rows = Infinity,
     bin,
     env,
     elmWatchOptions,
   }: {
     isTTY?: boolean;
+    rows?: number;
     bin?: string;
     env?: Env;
     // Use `elmWatch()` with these options instead of the CLI with `args`.
@@ -50,6 +52,7 @@ async function run(
 
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
+  stdout.rows = rows;
 
   const sharedOptions = {
     env: {
@@ -164,6 +167,21 @@ describe("successful make", () => {
         ✅ Dependencies
         ✅ Dependencies (2/2)
         ✅ app⧙                                                         1 ms Q | 1.23 s E⧘
+        ✅ admin⧙                                                       1 ms Q | 1.23 s E⧘
+
+        ✅ Compilation finished in ⧙123 ms⧘.
+      `);
+  });
+
+  test("status lines scrolled out of view are not updated", async () => {
+    // The cursor is on the row below the status lines, so only the admin line
+    // is visible. Moving the cursor up to the app line would stop at the top of
+    // the screen and overwrite the admin line instead.
+    expect(await run("multiple-elm-json/config", ["make"], { rows: 2 }))
+      .toMatchInlineSnapshot(`
+        ✅ Dependencies
+        ✅ Dependencies (2/2)
+
         ✅ admin⧙                                                       1 ms Q | 1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.

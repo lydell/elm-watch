@@ -753,6 +753,7 @@ describe("hot", () => {
           isTTY: true,
           mockedTimings: false,
           columns: 80,
+          rows: 24,
           ...loggerConfig,
         },
         events,
