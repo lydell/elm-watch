@@ -155,6 +155,51 @@ describe("hot reloading", () => {
   );
 
   test.each(["standard", "debug"] as const)(
+    "Add subscription, then hot reload again: %s",
+    async (compilationMode) => {
+      // The Browser.Events effect manager is added by the first hot reload, so it
+      // runs code from that hot reload. After the second hot reload, it must
+      // still use the same scheduler queue as the rest of the code. Otherwise the
+      // effect manager can be stepped while it’s already being stepped, which
+      // breaks it.
+      const { replace, go } = runHotReload({
+        name: "AddSubscription",
+        programType: "Element",
+        compilationMode,
+      });
+
+      const { browserConsole } = await go(async ({ idle, main }) => {
+        switch (idle) {
+          case 1:
+            expect(main.outerHTML).toStrictEqual(`<main>0</main>`);
+            replace((content) =>
+              content.replace(/-- /g, "").replace("Sub.none", ""),
+            );
+            return "KeepGoing";
+          case 2:
+            main.click();
+            await waitOneFrame();
+            expect(main.outerHTML).toStrictEqual(`<main>9</main>`);
+            replace((content) =>
+              content.replace(
+                "( model + delta, Cmd.none )",
+                "( delta + model, Cmd.none )",
+              ),
+            );
+            return "KeepGoing";
+          default:
+            main.click();
+            await waitOneFrame();
+            expect(main.outerHTML).toStrictEqual(`<main>18</main>`);
+            return "Stop";
+        }
+      });
+
+      expect(browserConsole).toStrictEqual("");
+    },
+  );
+
+  test.each(["standard", "debug"] as const)(
     "Add subscription with multiple app instances: %s",
     async (compilationMode) => {
       // Adding a subscription can mean adding a new effect manager (here:

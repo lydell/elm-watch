@@ -42,8 +42,16 @@ type __ELM_WATCH = {
   TARGET_DATA: Map</* targetName */ string, TargetData>;
   SOME_TARGET_IS_PROXY: boolean;
   IS_REGISTERING: boolean;
-  REGISTER: (targetName: string, elmExports: ElmExports) => void;
-  HOT_RELOAD: (targetName: string, elmExports: ElmExports) => void;
+  REGISTER: (
+    targetName: string,
+    elmExports: ElmExports,
+    schedulerEnqueue: unknown,
+  ) => void;
+  HOT_RELOAD: (
+    targetName: string,
+    elmExports: ElmExports,
+    setSchedulerEnqueue: (schedulerEnqueue: unknown) => void,
+  ) => void;
   SHOULD_SKIP_INIT_CMDS: (targetName: string) => boolean;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
@@ -55,6 +63,8 @@ type __ELM_WATCH = {
 type TargetData = {
   originalFlattenedElmExports: Map</* moduleName */ string, ElmModule>;
   initializedElmApps: Map</* moduleName */ string, Array<ElmApp>>;
+  // `_Scheduler_enqueue` from the original script. See `_Platform_export` in `Inject.ts`.
+  originalSchedulerEnqueue: unknown;
 };
 
 declare global {
@@ -1103,8 +1113,8 @@ const initMutable =
     };
 
     const originalRegister = __ELM_WATCH.REGISTER;
-    __ELM_WATCH.REGISTER = (targetName, elmExports) => {
-      originalRegister(targetName, elmExports);
+    __ELM_WATCH.REGISTER = (targetName, elmExports, schedulerEnqueue) => {
+      originalRegister(targetName, elmExports, schedulerEnqueue);
       if (targetName !== TARGET_NAME) {
         return;
       }
@@ -1122,18 +1132,27 @@ const initMutable =
       __ELM_WATCH.TARGET_DATA.set(TARGET_NAME, {
         originalFlattenedElmExports: new Map(flattenedElmExports),
         initializedElmApps,
+        originalSchedulerEnqueue: schedulerEnqueue,
       });
     };
 
     const originalHotReload = __ELM_WATCH.HOT_RELOAD;
-    __ELM_WATCH.HOT_RELOAD = (targetName, elmExports) => {
-      originalHotReload(targetName, elmExports);
+    __ELM_WATCH.HOT_RELOAD = (targetName, elmExports, setSchedulerEnqueue) => {
+      originalHotReload(targetName, elmExports, setSchedulerEnqueue);
       if (targetName !== TARGET_NAME) {
         return;
       }
       const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
       if (targetData === undefined) {
         return;
+      }
+      // Make the new code use the original code’s scheduler, so there’s only ever
+      // one queue. This is done for every hot reload, whether or not any apps are
+      // running. Only the original script is kept in memory for this (not every
+      // hot reloaded script). The original script might not have a scheduler
+      // (`Html` programs only).
+      if (typeof targetData.originalSchedulerEnqueue === "function") {
+        setSchedulerEnqueue(targetData.originalSchedulerEnqueue);
       }
       const reloadReasons: Array<ReloadReasonWithModuleName> = [];
       for (const [moduleName, module] of flattenElmExports(elmExports)) {

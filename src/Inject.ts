@@ -46,7 +46,7 @@ var _elmWatchTargetName = "";
 function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, args, init, impl, stepperBuilder)
 {
 	if (args === "__elmWatchReturnData") {
-		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType, _Platform_effectManagers: _Platform_effectManagers, _Scheduler_enqueue: _Scheduler_enqueue };
+		return { impl: impl, debugMetadata: debugMetadata, flagDecoder : flagDecoder, programType: programType, _Platform_effectManagers: _Platform_effectManagers };
 	}
 
 	var flags = _Json_wrap(args ? args['flags'] : undefined);
@@ -86,7 +86,6 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 
 	function __elmWatchHotReload(newData) {
 		_Platform_enqueueEffects(managers, _Platform_batch(_List_Nil), _Platform_batch(_List_Nil));
-		_Scheduler_enqueue = newData._Scheduler_enqueue;
 
 		var reloadReasons = [];
 
@@ -288,7 +287,7 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 	var programType = "Html";
 
 	if (args === "__elmWatchReturnData") {
-		return { virtualNode: virtualNode, programType: programType, _Platform_effectManagers: _Platform_effectManagers, _Scheduler_enqueue: _Scheduler_enqueue };
+		return { virtualNode: virtualNode, programType: programType, _Platform_effectManagers: _Platform_effectManagers };
 	}
 
 	/**_UNUSED/ // always UNUSED with elm-watch
@@ -327,15 +326,21 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 
   // ### _Platform_export
   // Allow registering the exports, and skipping the usual merging of `window.Elm` (for hot reloading).
+  // Also give elm-watch access to the scheduler: Every evaluated script (the original, and each hot
+  // reload) has its own `_Scheduler_enqueue` with its own queue. Old code keeps running after a hot
+  // reload (for example, an effect manager first added in a hot reload keeps using that script’s
+  // code), so we point every hot reloaded script at the original script’s queue. With more than one
+  // queue, a process can be stepped while it’s already being stepped. For example, a `Time.every`
+  // effect manager added in the first hot reload stopped working after the second hot reload.
   _Platform_export: `
 function _Platform_export(exports)
 {
 	// added by elm-watch
 	if (globalThis.__ELM_WATCH) {
 		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
-			globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports);
+			globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports, _Scheduler_enqueue);
 		} else {
-			globalThis.__ELM_WATCH.HOT_RELOAD(_elmWatchTargetName, exports);
+			globalThis.__ELM_WATCH.HOT_RELOAD(_elmWatchTargetName, exports, function(enqueue) { _Scheduler_enqueue = enqueue; });
 			return;
 		}
 	}
