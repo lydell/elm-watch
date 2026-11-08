@@ -241,8 +241,11 @@ export function makeLogger({
     withSynchronizedOutput: (callback) => {
       if (config.isTTY) {
         stdout.write(BEGIN_SYNC_UPDATE);
-        callback();
-        stdout.write(END_SYNC_UPDATE);
+        try {
+          callback();
+        } finally {
+          stdout.write(END_SYNC_UPDATE);
+        }
       } else {
         callback();
       }
