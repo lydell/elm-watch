@@ -395,8 +395,8 @@ describe("hot", () => {
       "root rootBottomHalf rootRight",
       "root rootRight",
       "root rootRight",
-      "root rootRight",
-      "root rootRight",
+      "root rootRight rootTopEdge",
+      "root rootRight rootTopEdge",
       "root rootRight",
       "root",
     ]);

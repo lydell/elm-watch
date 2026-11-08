@@ -408,6 +408,8 @@ export function createUi(): Ui {
     root.style.setProperty("--y", position.y.toString());
     root.classList.toggle(CLASS.rootRight, position.side === "right");
     root.classList.toggle(CLASS.rootBottomHalf, position.y > 0.5);
+    root.classList.toggle(CLASS.rootTopEdge, position.y === 0);
+    root.classList.toggle(CLASS.rootBottomEdge, position.y === 1);
   };
 
   const setUiPosition = (newPosition: UiPosition): void => {
@@ -952,9 +954,11 @@ const CLASS = {
   overlayHint: "overlayHint",
   panel: "panel",
   root: "root",
+  rootBottomEdge: "rootBottomEdge",
   rootBottomHalf: "rootBottomHalf",
   rootDragging: "rootDragging",
   rootRight: "rootRight",
+  rootTopEdge: "rootTopEdge",
   row: "row",
   rowIcon: "rowIcon",
   rowText: "rowText",
@@ -976,8 +980,10 @@ export type FlashType = "error" | "success";
 const CHEVRON_UP = "▲";
 const CHEVRON_DOWN = "▼";
 
-// The size of the emoji button. 44px is the recommended minimum touch target.
-const TOGGLE_SIZE = "44px";
+// The size of the emoji button. For touch, the hit area is enlarged to the
+// recommended minimum touch target size (see `TOUCH_SIZE`).
+const TOGGLE_SIZE = "28px";
+const TOUCH_SIZE = "44px";
 
 const CSS = `
 input,
@@ -1144,10 +1150,10 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   --subtle: color-mix(in srgb, CanvasText 6%, Canvas);
   --hover: color-mix(in srgb, CanvasText 11%, Canvas);
   --focus: light-dark(#0b57d0, #a8c7fa);
-  --edge-top: max(env(safe-area-inset-top), 4px);
-  --edge-bottom: max(env(safe-area-inset-bottom), 4px);
-  --edge-left: max(env(safe-area-inset-left), 4px);
-  --edge-right: max(env(safe-area-inset-right), 4px);
+  --edge-top: max(env(safe-area-inset-top), 12px);
+  --edge-bottom: max(env(safe-area-inset-bottom), 12px);
+  --edge-left: max(env(safe-area-inset-left), 12px);
+  --edge-right: max(env(safe-area-inset-right), 12px);
   --top: calc(var(--edge-top) + var(--y) * (100% - var(--edge-top) - var(--edge-bottom) - ${TOGGLE_SIZE}));
   --gap: 4px;
   position: absolute;
@@ -1183,8 +1189,36 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   -webkit-tap-highlight-color: transparent;
 }
 
-.${CLASS.root} .${CLASS.toggleButton}:focus-visible {
-  outline-offset: -4px;
+/*
+For touch, enlarge the hit area of the emoji button. It grows away from the
+corner (or side) of the window the emoji is in, so that the emoji ends up in
+the corner of its hit area. The panel may cover parts of it.
+*/
+@media (pointer: coarse) {
+  .${CLASS.toggleButton}::before {
+    content: "";
+    position: absolute;
+    --grow: calc(${TOUCH_SIZE} - ${TOGGLE_SIZE});
+    top: calc(var(--grow) / -2);
+    bottom: calc(var(--grow) / -2);
+    left: 0;
+    right: calc(var(--grow) * -1);
+  }
+
+  .${CLASS.rootRight} .${CLASS.toggleButton}::before {
+    left: calc(var(--grow) * -1);
+    right: 0;
+  }
+
+  .${CLASS.rootTopEdge} .${CLASS.toggleButton}::before {
+    top: 0;
+    bottom: calc(var(--grow) * -1);
+  }
+
+  .${CLASS.rootBottomEdge} .${CLASS.toggleButton}::before {
+    top: calc(var(--grow) * -1);
+    bottom: 0;
+  }
 }
 
 .${CLASS.rootRight} .${CLASS.toggleButton} {
@@ -1202,8 +1236,8 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 
 .${CLASS.badge} {
   position: absolute;
-  right: 3px;
-  bottom: 3px;
+  right: -4px;
+  bottom: -4px;
   font-size: 11px;
 }
 
