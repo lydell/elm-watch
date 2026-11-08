@@ -20,7 +20,12 @@ async function reloadCssIfNeeded(
   }
 
   const url = makeUrl(styleSheet.href);
-  if (url === undefined || url.host !== window.location.host) {
+  if (
+    url === undefined ||
+    url.host !== window.location.host ||
+    // Don’t try to reload our own temporary style sheets (see `parseCssWithImports`).
+    url.searchParams.has(RELOAD_PARAM)
+  ) {
     return false;
   }
 
@@ -43,12 +48,14 @@ async function reloadCssIfNeeded(
   await Promise.allSettled(
     importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" })),
   );
-  const newStyleSheet = await parseCssWithImports(url, newCss);
+  const newStyleSheet = await parseCssWithImports(url);
 
   return newStyleSheet === undefined
     ? false
     : updateStyleSheetIfNeeded(originalStyles, styleSheet, newStyleSheet);
 }
+
+const RELOAD_PARAM = "elm-watch-css-reload";
 
 // Note: It might seem possible to parse using:
 // `const styleSheet = new CSSStyleSheet(); styleSheet.replaceSync(css);`
@@ -56,35 +63,33 @@ async function reloadCssIfNeeded(
 // https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588362382
 // Also, at the time of writing, Safari did not support constructing
 // `CSSStyleSheet`.
+// Instead, we load the style sheet in a temporary `<link>`. That way relative
+// `@import`:s are resolved relative to the style sheet, without affecting the
+// rest of the document. (A `<style>` with the CSS text would need a `<base>`
+// element, which changes how _all_ relative URL:s in the document are resolved
+// while it is present.) The query parameter makes sure that we get a fresh
+// copy of the style sheet rather than one the browser has cached in memory.
 async function parseCssWithImports(
   styleSheetUrl: URL,
-  css: string,
 ): Promise<CSSStyleSheet | undefined> {
   return new Promise((resolve) => {
-    const style = document.createElement("style");
-    style.media = "print";
-    style.textContent = css;
+    const url = new URL(styleSheetUrl);
+    url.searchParams.set(RELOAD_PARAM, Date.now().toString());
 
-    // Set the base URL for relative URL:s to the URL of the style sheet.
-    // Otherwise `@import`:s will be relative to the URL of the page instead.
-    const base = document.createElement("base");
-    base.href = styleSheetUrl.href;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.media = "print";
+    link.href = url.href;
 
     // The "load" event fires when all the CSS has been parsed, including
-    // `@import`s. Chrome and Safari make `style.sheet` available immediately,
-    // with `.styleSheet` on `@import` rules set to `null` until it loads,
-    // while Firefox does not make `style.sheet` available until the "load"
-    // event. Chrome always fires the "load" event, even if an `@import` fails,
-    // while Safari fires the "error" event instead.
-    style.onerror = style.onload = () => {
-      resolve(style.sheet ?? undefined);
-      base.remove();
-      style.remove();
+    // `@import`s. Some browsers fire the "error" event instead if an `@import`
+    // fails, so we use whatever we got in that case too.
+    link.onerror = link.onload = () => {
+      resolve(link.sheet ?? undefined);
+      link.remove();
     };
 
-    // We use `prepend` instead of `append` here because the first `<base>` element
-    // in the document seems to win.
-    document.head.prepend(base, style);
+    document.head.append(link);
   });
 }
 
