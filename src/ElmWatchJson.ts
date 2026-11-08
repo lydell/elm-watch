@@ -20,6 +20,7 @@ import { Port } from "./Port.ts";
 import {
   type CliArg,
   type Cwd,
+  type ElmJsonPath,
   type ElmWatchJsonPath,
   markAsElmJsonPath,
   markAsElmWatchJsonPath,
@@ -348,8 +349,9 @@ function findReadAndDecode<T>(
 export type UpgradedTarget = {
   name: string;
   elmJson: string;
-  // If no elm.json was found, "elmJson" is set to "elm.json".
-  foundElmJson: boolean;
+  // If no elm.json was found, "elmJson" is set to "elm.json". If the elm.json
+  // is a package, the target won't work (it becomes an application target).
+  elmJsonStatus: "Found" | "NotFound" | "Package";
 };
 
 // elm-watch 1 found the elm.json for each target automatically, and only
@@ -395,7 +397,12 @@ export function upgradeTargets(
       upgradedTargets.push({
         name,
         elmJson,
-        foundElmJson: elmJsonPath !== undefined,
+        elmJsonStatus:
+          elmJsonPath === undefined
+            ? "NotFound"
+            : isPackageElmJson(markAsElmJsonPath(elmJsonPath))
+              ? "Package"
+              : "Found",
       });
 
       return [name, { type: "application", elmJson, ...target }];
@@ -403,6 +410,11 @@ export function upgradeTargets(
   );
 
   return { json: { ...json, targets }, upgradedTargets };
+}
+
+function isPackageElmJson(elmJsonPath: ElmJsonPath): boolean {
+  const result = readElmJsonType(elmJsonPath);
+  return result.tag === "Found" && result.type === "package";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -477,15 +489,16 @@ export function exampleJson(
         // Windows), while backslashes only work on Windows.
         toUnixPath(path.relative(path.dirname(elmWatchJsonPath), elmJsonPath));
 
-  if (elmJsonPath !== undefined && !isNonEmptyArray(elmFiles)) {
-    const elmJsonType = readElmJsonType(markAsElmJsonPath(elmJsonPath));
-    if (elmJsonType.tag === "Found" && elmJsonType.type === "package") {
-      return {
-        targets: {
-          "My package": { type: "package", elmJson },
-        },
-      };
-    }
+  if (
+    elmJsonPath !== undefined &&
+    !isNonEmptyArray(elmFiles) &&
+    isPackageElmJson(markAsElmJsonPath(elmJsonPath))
+  ) {
+    return {
+      targets: {
+        "My package": { type: "package", elmJson },
+      },
+    };
   }
 
   return {

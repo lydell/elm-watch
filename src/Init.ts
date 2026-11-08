@@ -183,19 +183,38 @@ Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
 function upgradedTargetsReport(
   upgradedTargets: Array<ElmWatchJson.UpgradedTarget>,
 ): string {
-  const notFoundNote = upgradedTargets.some(({ foundElmJson }) => !foundElmJson)
+  const hasStatus = (
+    status: ElmWatchJson.UpgradedTarget["elmJsonStatus"],
+  ): boolean =>
+    upgradedTargets.some(({ elmJsonStatus }) => elmJsonStatus === status);
+
+  const notFoundNote = hasStatus("NotFound")
     ? `\n\n${bold("(not found)")} means that I couldn’t find an elm.json for the target.\nPlease update "elmJson" yourself!`
+    : "";
+
+  const packageNote = hasStatus("Package")
+    ? `\n\n${bold("(package)")} means that the elm.json has "type": "package". Targets with inputs
+and output need an elm.json with "type": "application" now. To typecheck the
+package, change the target to "type": "package" (and remove "inputs" and
+"output"). To compile an example using the package, give the example its own
+elm.json: https://lydell.github.io/elm-watch/elm-watch.json/#package-targets`
     : "";
 
   return `
 Targets now need "type" and "elmJson". I added them to these targets:
 
 ${upgradedTargets
-  .map(
-    ({ name, elmJson, foundElmJson }) =>
-      `${name}: ${elmJson}${foundElmJson ? "" : ` ${bold("(not found)")}`}`,
-  )
-  .join("\n")}${notFoundNote}
+  .map(({ name, elmJson, elmJsonStatus }) => {
+    switch (elmJsonStatus) {
+      case "Found":
+        return `${name}: ${elmJson}`;
+      case "NotFound":
+        return `${name}: ${elmJson} ${bold("(not found)")}`;
+      case "Package":
+        return `${name}: ${elmJson} ${bold("(package)")}`;
+    }
+  })
+  .join("\n")}${notFoundNote}${packageNote}
   `.trim();
 }
 

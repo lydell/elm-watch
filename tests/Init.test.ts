@@ -254,7 +254,13 @@ describe("init", () => {
 
         App: app/elm.json
         Admin: admin/elm.json
-        Package demo: elm.json
+        Package demo: elm.json ⧙(package)⧘
+
+        ⧙(package)⧘ means that the elm.json has "type": "package". Targets with inputs
+        and output need an elm.json with "type": "application" now. To typecheck the
+        package, change the target to "type": "package" (and remove "inputs" and
+        "output"). To compile an example using the package, give the example its own
+        elm.json: https://lydell.github.io/elm-watch/elm-watch.json/#package-targets
 
         Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
       `);
