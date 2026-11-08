@@ -11,7 +11,7 @@ import {
   type CompilationModeWithProxy,
   type GetNow,
 } from "../src/Types.ts";
-import { reloadAllCssIfNeeded } from "./css.ts";
+import { reloadAllCssIfNeeded, runSerially, type SerialState } from "./css.ts";
 import {
   decodeWebSocketToClientMessage,
   type ErrorLocation,
@@ -36,6 +36,7 @@ type __ELM_WATCH = {
   CHANGED_CSS: Date;
   CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
+  CSS_RELOAD: SerialState<boolean>;
   RELOAD_STATUSES: Map</* targetName */ string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
   TARGET_DATA: Map</* targetName */ string, TargetData>;
@@ -192,6 +193,8 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   CHANGED_FILE_URL_PATHS: { timestamp: new Date(0), changed: new Set() },
 
   ORIGINAL_STYLES: new WeakMap(),
+
+  CSS_RELOAD: { running: undefined, queued: undefined },
 
   RELOAD_STATUSES: new Map(),
 
@@ -1921,7 +1924,9 @@ const runCmd =
           HAS_WINDOW
         ) {
           __ELM_WATCH.CHANGED_CSS = now;
-          reloadAllCssIfNeeded(__ELM_WATCH.ORIGINAL_STYLES)
+          runSerially(__ELM_WATCH.CSS_RELOAD, () =>
+            reloadAllCssIfNeeded(__ELM_WATCH.ORIGINAL_STYLES),
+          )
             .then((didChange) => {
               dispatch({ tag: "ReloadAllCssDone", didChange });
             })

@@ -1,3 +1,42 @@
+export type SerialState<T> = {
+  running: Promise<T> | undefined;
+  queued: Promise<T> | undefined;
+};
+
+/**
+ * Runs `f`, but never twice at the same time. If `f` is already running, it is
+ * run again once the current run is done. That’s important for reloading CSS:
+ * If a CSS file changes twice in quick succession, the first reload might have
+ * fetched the file before the second change, and if the two reloads ran at the
+ * same time, the first one might finish last, leaving the page with the old
+ * CSS. Calls made while a run is already queued share that queued run, since
+ * it hasn’t started yet and will pick up all changes.
+ */
+export async function runSerially<T>(
+  state: SerialState<T>,
+  f: () => Promise<T>,
+): Promise<T> {
+  if (state.queued !== undefined) {
+    return state.queued;
+  }
+
+  if (state.running === undefined) {
+    const running = f().finally(() => {
+      state.running = undefined;
+    });
+    state.running = running;
+    return running;
+  }
+
+  const runQueued = async (): Promise<T> => {
+    state.queued = undefined;
+    return runSerially(state, f);
+  };
+  const queued = state.running.then(runQueued, runQueued);
+  state.queued = queued;
+  return queued;
+}
+
 export async function reloadAllCssIfNeeded(
   originalStyles: WeakMap<CSSStyleRule, string>,
 ): Promise<boolean> {
