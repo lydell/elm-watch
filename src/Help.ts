@@ -1,7 +1,6 @@
 import { EMOJI, emojiWidthFix } from "./Compile.ts";
 import {
   ELM_WATCH_ALLOWED_HOSTS,
-  ELM_WATCH_EXIT_ON_STDIN_END,
   ELM_WATCH_HOST,
   ELM_WATCH_OPEN_EDITOR,
   ELM_WATCH_WEBSOCKET_URL,
@@ -73,9 +72,6 @@ ${bold("Environment variables:")}
     ${bold(ELM_WATCH_OPEN_EDITOR)}
         Open your editor when clicking error locations in the browser
         https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-
-    ${bold(ELM_WATCH_EXIT_ON_STDIN_END)}
-        Exit elm-watch when stdin ends
 
     ${bold(ELM_WATCH_HOST)}
         Defaults to 127.0.0.1 (only your computer)

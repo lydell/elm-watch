@@ -130,6 +130,23 @@ describe("library", () => {
     `);
   });
 
+  test("already aborted signal", async () => {
+    const { stdout } = await run(0, (root) => ({
+      root,
+      runMode: "hot",
+      targets: [
+        {
+          name: "main",
+          inputs: ["src/Main.elm"],
+          output: "build/main.js",
+        },
+      ],
+      signal: AbortSignal.abort(),
+    }));
+
+    expect(stdout).toBe("");
+  });
+
   test("postprocess function throws", async () => {
     const { stdout } = await run(1, (root) => ({
       root,
@@ -273,6 +290,7 @@ describe("library", () => {
           "allowedHosts",
           "openEditor",
           "createServer",
+          "signal",
           "env",
           "stdin",
           "stdout",

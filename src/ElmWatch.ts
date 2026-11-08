@@ -28,6 +28,7 @@ type Options = {
   stdout?: WriteStream;
   stderr?: WriteStream;
   createServer?: CreateServer;
+  signal?: AbortSignal;
 
   // Not exposed in the type annotations in the npm package:
   logDebug?: (message: string) => void;
@@ -82,7 +83,7 @@ export default async function elmWatchCli(
     case "make":
     case "hot": {
       const runMode = args[0];
-      return runUntilExit(stdin, (previous) =>
+      return runUntilExit(stdin, undefined, (previous) =>
         run(
           cwd,
           env,
@@ -115,6 +116,7 @@ export async function elmWatch(options: unknown): Promise<number> {
     stdout = process.stdout,
     stderr = process.stderr,
     createServer = defaultCreateServer,
+    signal,
     logDebug = (message) => stderr.write(`${message}\n`),
     hotTestHooks = { kill: undefined },
     ...publicOptions
@@ -132,7 +134,7 @@ export async function elmWatch(options: unknown): Promise<number> {
 
   const decoded = decodeOptions(
     isObject
-      ? { env, stdin, stdout, stderr, createServer, ...publicOptions }
+      ? { env, stdin, stdout, stderr, createServer, signal, ...publicOptions }
       : options,
   );
 
@@ -142,7 +144,7 @@ export async function elmWatch(options: unknown): Promise<number> {
       return 1;
 
     case "Valid":
-      return runUntilExit(stdin, (previous) =>
+      return runUntilExit(stdin, signal, (previous) =>
         runConfig({
           env,
           logger,
@@ -155,6 +157,7 @@ export async function elmWatch(options: unknown): Promise<number> {
           restartReasons: previous.restartReasons,
           webSocketState: previous.webSocketState,
           webSocketTokenFromPreviousRun: previous.webSocketToken,
+          signal,
           hotTestHooks,
         }),
       );
@@ -166,6 +169,7 @@ type PreviousRun = Omit<Extract<RunResult, { tag: "Restart" }>, "tag">;
 // Restarts elm-watch (for example when elm.json changes) until it exits.
 async function runUntilExit(
   stdin: ReadStream,
+  signal: AbortSignal | undefined,
   runOnce: (previous: PreviousRun) => Promise<RunResult>,
 ): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -176,6 +180,9 @@ async function runUntilExit(
         webSocketToken: undefined,
       };
       for (;;) {
+        if (signal?.aborted === true) {
+          return 0;
+        }
         const result = await runOnce(previous);
         switch (result.tag) {
           case "Exit":

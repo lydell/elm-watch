@@ -7,7 +7,6 @@ import {
   __ELM_WATCH_NOT_TTY,
   __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
-  ELM_WATCH_EXIT_ON_STDIN_END,
   type Env,
   NO_COLOR,
   WT_SESSION,
@@ -91,10 +90,6 @@ export function makeLogger({
       onExit();
     }
   };
-  const exitOnStdinEnd = (): void => {
-    // `onExit` is mutated over time, so don’t do `stdin.on("close", onExit)`.
-    onExit();
-  };
 
   // In my testing, getting the responses take about 1 ms on macOS (both the
   // default Terminal and iTerm), and about 10 ms on Gnome Terminal. 100 ms
@@ -127,11 +122,6 @@ export function makeLogger({
       return stdout.rows ?? Infinity;
     },
   };
-
-  if (ELM_WATCH_EXIT_ON_STDIN_END in env) {
-    stdin.on("end", exitOnStdinEnd);
-    stdin.resume();
-  }
 
   return {
     write(message) {
@@ -195,7 +185,6 @@ export function makeLogger({
       queryTerminalStatus = { tag: "NotQueried" };
       stdin.pause();
       stdin.off("data", exitOnCtrlC);
-      stdin.off("end", exitOnStdinEnd);
       if (stdin.isRaw) {
         stdin.setRawMode(false);
       }

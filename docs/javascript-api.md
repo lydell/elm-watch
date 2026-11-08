@@ -142,6 +142,7 @@ Type definition: `import type { Options } from "elm-watch"`.
 | allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable is ignored – use `process.env` yourself if needed. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |
 | openEditor | `function` | unset | Called with `{ file, line, column }` when you click an error location in the browser UI. See [Clickable error locations](../browser-ui/#with-the-javascript-api). The `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. |
+| signal | `AbortSignal` | unset | Abort to make elm-watch exit (in `"hot"` mode). See [Stopping elm-watch](#stopping-elm-watch). |
 | env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. |
 | stdin, stdout, stderr | streams | `process.stdin` etc. | Where elm-watch reads keyboard input and writes output. |
 
@@ -155,6 +156,8 @@ Each target looks like this:
 | postprocess | `function` | Optional. See [Postprocess](../postprocess/). |
 
 `elmWatch()` returns a promise of an exit code: 0 for success and 1 for errors. Use it with `process.exitCode = await elmWatch(...)`.
+
+Optional options can also be set to `undefined`, which is handy for environment variables: `host: process.env.HOST`.
 
 The options are validated, and you get an error message if something is wrong – also if you write plain JavaScript instead of TypeScript. You can use `// @ts-check` and JSDoc to get type checking in plain JavaScript files:
 
@@ -193,5 +196,25 @@ process.exitCode = await elmWatch({
 });
 ```
 
+## Stopping elm-watch
+
+In `"hot"` mode, elm-watch runs until you press ctrl+c, or until it receives SIGTERM (which `node --watch` sends when restarting). To stop it from code, pass an [AbortSignal] as the `signal` option. Just like for SIGTERM, elm-watch lets running `elm` processes finish before exiting, and the promise returned by `elmWatch()` then resolves to 0.
+
+For example, this makes elm-watch exit when stdin ends, which is useful when running elm-watch from another program that might crash without cleaning up after itself (this used to be the `ELM_WATCH_EXIT_ON_STDIN_END` environment variable):
+
+```js
+const controller = new AbortController();
+process.stdin.on("end", () => {
+  controller.abort();
+});
+process.stdin.resume();
+
+process.exitCode = await elmWatch({
+  // ...
+  signal: controller.signal,
+});
+```
+
+[abortsignal]: https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal
 [node --watch]: https://nodejs.org/api/cli.html#--watch
 [util.parseArgs]: https://nodejs.org/api/util.html#utilparseargsconfig

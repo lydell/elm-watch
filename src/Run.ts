@@ -152,6 +152,7 @@ export async function run(
             restartReasons,
             webSocketState,
             webSocketTokenFromPreviousRun,
+            signal: undefined,
             hotTestHooks,
           });
         }
@@ -172,6 +173,7 @@ export async function runConfig({
   restartReasons,
   webSocketState,
   webSocketTokenFromPreviousRun,
+  signal,
   hotTestHooks,
 }: {
   env: Env;
@@ -185,6 +187,7 @@ export async function runConfig({
   restartReasons: Array<Hot.LatestEvent>;
   webSocketState: Hot.WebSocketState | undefined;
   webSocketTokenFromPreviousRun: WebSocketToken | undefined;
+  signal: AbortSignal | undefined;
   hotTestHooks: Hot.HotTestHooks;
 }): Promise<RunResult> {
   const elmWatchStuffDir: ElmWatchStuffDir = markAsElmWatchStuffDir(
@@ -300,6 +303,7 @@ export async function runConfig({
                         port: elmWatchStuffJson.port,
                       }
                     : { tag: "NoPort" },
+                signal,
                 hotTestHooks,
               );
               switch (result.tag) {

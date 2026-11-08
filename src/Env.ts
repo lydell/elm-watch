@@ -8,10 +8,6 @@ export const NO_COLOR = "NO_COLOR";
 // Type: String of shell code.
 export const ELM_WATCH_OPEN_EDITOR = "ELM_WATCH_OPEN_EDITOR";
 
-// If set, elm-watch exits if stdin ends. https://github.com/evanw/esbuild/pull/1449
-// Type: Check if defined and ignore value.
-export const ELM_WATCH_EXIT_ON_STDIN_END = "ELM_WATCH_EXIT_ON_STDIN_END";
-
 // By default, elm-watch’s HTTP server is run on `127.0.0.1`, which restricts it
 // to just your computer. By setting this variable to `0.0.0.0` you can expose
 // the server on the local network (to test on your phone, for example).

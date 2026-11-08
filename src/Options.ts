@@ -114,6 +114,7 @@ const Options = Codec.fields(
     openEditor: optionalField(functionCodec<OpenEditorFunction>()),
     // These are validated by TypeScript only.
     createServer: optionalField(functionCodec<object>()),
+    signal: optionalField(Codec.unknown),
     env: optionalField(Codec.unknown),
     stdin: optionalField(Codec.unknown),
     stdout: optionalField(Codec.unknown),

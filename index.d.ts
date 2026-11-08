@@ -107,6 +107,11 @@ export type Options = {
   // Called when you click an error location in the browser UI.
   openEditor?: OpenEditor | undefined;
 
+  // Abort to make elm-watch exit (in "hot" mode). Like for SIGTERM, running
+  // `elm` processes are allowed to finish first. The promise returned by
+  // `elmWatch()` then resolves to 0.
+  signal?: AbortSignal | undefined;
+
   // Defaults to the corresponding `process` things.
   env?: Record<string, string | undefined> | undefined;
   stdin?: ReadStream | undefined;

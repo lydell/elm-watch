@@ -162,7 +162,7 @@ type Mutable = {
   watcherReadyTimeoutId: NodeJS.Timeout | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
-  unsubscribeFromSigterm: () => void;
+  unsubscribeFromGracefulExit: () => void;
 };
 
 type WebSocketConnection = {
@@ -410,7 +410,7 @@ type HotRunResult =
     }
   | {
       tag: "ExitOnIdle";
-      reason: "CtrlCPressedOrStdinEnd" | "Other" | "Sigterm";
+      reason: "CtrlCPressed" | "Other" | "GracefulExit";
     }
   | {
       tag: "Restart";
@@ -462,6 +462,7 @@ export async function run(
   webSocketToken: WebSocketToken,
   project: Project,
   portChoice: PortChoice,
+  signal: AbortSignal | undefined,
   hotTestHooks: HotTestHooks,
 ): Promise<HotRunResult> {
   const exitOnError = __ELM_WATCH_EXIT_ON_ERROR in env;
@@ -475,6 +476,7 @@ export async function run(
       webSocketToken,
       project,
       portChoice,
+      signal,
       hotTestHooks,
     ),
     init: init(getNow(), restartReasons, project.elmJsonsErrors),
@@ -557,6 +559,7 @@ const initMutable =
     webSocketToken: WebSocketToken,
     project: Project,
     portChoice: PortChoice,
+    signal: AbortSignal | undefined,
     hotTestHooks: HotTestHooks,
   ) =>
   (
@@ -612,7 +615,7 @@ const initMutable =
       }, WATCHER_READY_DELAY_MS),
       elmWatchStuffJsonWriteError: undefined,
       killInstallDependencies: undefined,
-      unsubscribeFromSigterm: () => {
+      unsubscribeFromGracefulExit: () => {
         // Replaced below.
       },
     };
@@ -686,7 +689,7 @@ const initMutable =
         .then(() => {
           resolvePromise({
             tag: "ExitOnIdle",
-            reason: "CtrlCPressedOrStdinEnd",
+            reason: "CtrlCPressed",
           });
         })
         .catch(rejectPromise);
@@ -695,10 +698,8 @@ const initMutable =
     // `node --watch` sends SIGTERM when restarting. Unlike ctrl+c, we let `elm`
     // finish (up to a timeout) before exiting, so that the next elm-watch
     // doesn’t run `elm` at the same time as the old one (which can corrupt
-    // elm-stuff/).
-    mutable.unsubscribeFromSigterm = (
-      hotTestHooks.subscribeToSigterm ?? subscribeToProcessSigterm
-    )(() => {
+    // elm-stuff/). The `signal` option works the same way.
+    const exitGracefully = (): void => {
       if (mutable.killInstallDependencies !== undefined) {
         mutable.killInstallDependencies({ force: false });
       }
@@ -710,10 +711,23 @@ const initMutable =
       closeAll(logger, mutable)
         .then(waitForRunningCommands)
         .then(() => {
-          resolvePromise({ tag: "ExitOnIdle", reason: "Sigterm" });
+          resolvePromise({ tag: "ExitOnIdle", reason: "GracefulExit" });
         })
         .catch(rejectPromise);
-    });
+    };
+
+    const unsubscribeFromSigterm = (
+      hotTestHooks.subscribeToSigterm ?? subscribeToProcessSigterm
+    )(exitGracefully);
+    signal?.addEventListener("abort", exitGracefully);
+    mutable.unsubscribeFromGracefulExit = () => {
+      unsubscribeFromSigterm();
+      signal?.removeEventListener("abort", exitGracefully);
+    };
+    if (signal?.aborted === true) {
+      // Wait for initialization to finish.
+      queueMicrotask(exitGracefully);
+    }
 
     return mutable;
   };
@@ -2261,7 +2275,7 @@ async function closeAll(
   { killWebSocketServer = true } = {},
 ): Promise<void> {
   logger.reset();
-  mutable.unsubscribeFromSigterm();
+  mutable.unsubscribeFromGracefulExit();
 
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);

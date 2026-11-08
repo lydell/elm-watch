@@ -169,6 +169,58 @@ describe("hot", () => {
     `);
   });
 
+  test("abort signal waits for Elm to finish", async () => {
+    const fixture = "kill-elm";
+    const dir = fixtureDir(fixture);
+    const input = path.join(dir, "src", "Main.elm");
+    const lock = path.join(dir, "lock");
+    const readLock = (): string => fs.readFileSync(lock, "utf8");
+    fs.writeFileSync(lock, "");
+
+    const controller = new AbortController();
+
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["main.js"],
+      isTTY: false,
+      bin: "slow-compile",
+      useElmWatchFunction: { signal: controller.signal },
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1:
+            fs.writeFileSync(lock, "Slow");
+            touch(input);
+            await waitFor(() => readLock() === "Started");
+            controller.abort();
+            fs.writeFileSync(lock, "Continue");
+            return "KeepGoing" as const;
+
+          default:
+            throw new Error("Expected elm-watch to exit after abort.");
+        }
+      },
+    });
+
+    // If elm-watch had not waited for Elm, this would still be “Continue”.
+    expect(readLock()).toBe("Done");
+
+    expect(grep(terminal, /[⏳✅]/u)).toMatchInlineSnapshot(`
+      ⏳ Main: elm make (typecheck only)
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ✅ ⧙13:10:05⧘ Everything up to date.
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+    `);
+  });
+
   test("kill postprocess", async () => {
     const fixture = "kill-postprocess";
     const input = path.join(fixtureDir(fixture), "src", "Main.elm");

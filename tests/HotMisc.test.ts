@@ -3,7 +3,6 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, describe, expect, onTestFinished, test } from "vitest";
 
-import { ELM_WATCH_EXIT_ON_STDIN_END } from "../src/Env.ts";
 import { type LatestEvent, printTimeline } from "../src/Hot.ts";
 import type { LoggerConfig } from "../src/Logger.ts";
 import { markAsAbsolutePath, markAsTargetName } from "../src/Types.ts";
@@ -543,16 +542,20 @@ describe("hot", () => {
     `);
   });
 
-  test("exit when stdin ends", async () => {
+  test("exit when stdin ends, using signal", async () => {
     const stdin = new SilentReadStream();
+    // This is how the removed ELM_WATCH_EXIT_ON_STDIN_END works nowadays.
+    const controller = new AbortController();
+    stdin.on("end", () => {
+      controller.abort();
+    });
+    stdin.resume();
     const { terminal, renders } = await run({
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
       stdin,
-      env: {
-        [ELM_WATCH_EXIT_ON_STDIN_END]: "",
-      },
+      useElmWatchFunction: { signal: controller.signal },
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
@@ -564,6 +567,20 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Worker
+      ✅ Removed
+      ✅ Readonly
+      ✅ InjectError
+      ✅ BadUrl
+      ✅ ParamsDecodeError
+      ✅ WrongVersion
+      ✅ WrongToken
+      ✅ HostOrOriginNotAllowed
+      ✅ TargetDisabled
+      ✅ SendBadJson
+      ✅ Reconnect
+      ✅ HttpCaching
+      ✅ "Esc\\apes"
 
       📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
