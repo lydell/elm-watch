@@ -1178,8 +1178,14 @@ remove "port" from ${config} (which will use an arbitrary available port.)
   `;
 }
 
-export function hostNotFound(host: Host, error: Error): ErrorTemplate {
-  return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
+export function hostNotFound(
+  configSource: ConfigSource,
+  host: Host,
+  error: Error,
+): ErrorTemplate {
+  switch (configSource.tag) {
+    case "ElmWatchJson":
+      return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
 This environment variable is set:
 
 ${text(ELM_WATCH_HOST)}=${text(host)}
@@ -1200,6 +1206,28 @@ This is the error message I got:
 
 ${text(error.message)}
   `;
+
+    case "Options":
+      return fancyError("HOST NOT FOUND", configSourceLocation(configSource))`
+In your ${configSourceName(configSource)} you have this:
+
+host: ${json(host)}
+
+But that host was not found!
+
+It’s common to set it to the following to expose elm-watch’s HTTP server on the
+local network:
+
+host: ${json("0.0.0.0")}
+
+If unset, the default host is 127.0.0.1, which restricts the HTTP server to
+your computer.
+
+This is the error message I got:
+
+${text(error.message)}
+  `;
+  }
 }
 
 export function watcherError(error: Error): ErrorTemplate {

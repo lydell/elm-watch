@@ -72,6 +72,23 @@ describe("hot", () => {
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
   });
 
+  test("host option (elm-watch options)", async () => {
+    const { terminal } = await run({
+      fixture: "basic",
+      args: ["Html"],
+      scripts: ["Html.js"],
+      useElmWatchFunction: { host: "0.0.0.0" },
+      init: (node) => {
+        window.Elm?.["HtmlMain"]?.init({ node });
+      },
+      onIdle: () => "Stop",
+    });
+
+    expect(grep(terminal, /server:/)).toMatchInlineSnapshot(
+      `📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123`,
+    );
+  });
+
   test("successful connect (expanded, not TTY, Worker)", async () => {
     const { terminal, renders } = await run({
       fixture: "basic",

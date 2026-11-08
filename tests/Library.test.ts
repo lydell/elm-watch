@@ -238,6 +238,7 @@ describe("library", () => {
           "root",
           "targets",
           "port",
+          "host",
           "staticFilesDir",
           "webSocketUrl",
           "allowedHosts",

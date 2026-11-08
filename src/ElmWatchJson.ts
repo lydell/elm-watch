@@ -274,6 +274,7 @@ function toConfig(
       postprocess: undefined,
     })) as NonEmptyArray<ConfigTarget>,
     port: json.port,
+    host: undefined,
     webSocketUrl: json.webSocketUrl,
     staticFilesDir: json.serve,
     allowedHosts: json.allowedHosts ?? [],

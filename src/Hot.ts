@@ -34,7 +34,7 @@ import {
   silentlyReadIntEnvValue,
   toError,
 } from "./Helpers.ts";
-import { getHost, type Host } from "./Host.ts";
+import type { Host } from "./Host.ts";
 import * as Inject from "./Inject.ts";
 import type { Logger, LoggerConfig } from "./Logger.ts";
 import {
@@ -468,7 +468,6 @@ export async function run(
 
   const result = await runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
-      env,
       logger,
       getNow,
       createServer,
@@ -551,7 +550,6 @@ export async function watchElmWatchJsonOnce(
 
 const initMutable =
   (
-    env: Env,
     logger: Logger,
     getNow: GetNow,
     createServer: CreateServer,
@@ -592,7 +590,7 @@ const initMutable =
       webSocketServer = new WebSocketServer(
         createServer,
         portChoice,
-        getHost(env),
+        project.host,
         project.staticFilesDir,
         webSocketToken,
         project.allowedHosts,
@@ -651,7 +649,7 @@ const initMutable =
         if (!logger.config.isTTY && !isRestart) {
           logger.write(
             printStats(logger.config, [
-              printServerLinks(mutable.webSocketServer, getHost(env)),
+              printServerLinks(mutable.webSocketServer, mutable.project.host),
             ]),
           );
         }
@@ -1762,7 +1760,7 @@ const runCmd =
           loggerConfig: logger.config,
           date: getNow(),
           mutable,
-          host: getHost(env),
+          host: mutable.project.host,
           message: cmd.message,
           events: filterLatestEvents(cmd.events),
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
@@ -2201,7 +2199,11 @@ function onWebSocketServerMsg(
             .then(() => {
               resolvePromise({
                 tag: "ExitOnHandledFatalError",
-                errorTemplate: Errors.hostNotFound(host, msg.error.error),
+                errorTemplate: Errors.hostNotFound(
+                  mutable.project.configSource,
+                  host,
+                  msg.error.error,
+                ),
               });
             })
             .catch(rejectPromise);

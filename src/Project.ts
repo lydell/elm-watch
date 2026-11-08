@@ -20,6 +20,7 @@ import {
   silentlyReadIntEnvValue,
   toError,
 } from "./Helpers.ts";
+import { DEFAULT_HOST, getHostFromEnv, type Host } from "./Host.ts";
 import type { WalkImportsError } from "./ImportWalker.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import {
@@ -66,6 +67,7 @@ export type Project = {
   elmJsonsErrors: Array<ElmJsonErrorWithMetadata>;
   elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   maxParallel: number;
+  host: Host;
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
 };
@@ -478,6 +480,11 @@ export function initProject({
   // you can read environment variables yourself.
   const isElmWatchJson = config.source.tag === "ElmWatchJson";
 
+  const host =
+    config.host ??
+    (isElmWatchJson ? getHostFromEnv(env) : undefined) ??
+    DEFAULT_HOST;
+
   const webSocketUrl =
     (isElmWatchJson ? getWebSocketUrlFromEnv(env) : undefined) ??
     config.webSocketUrl;
@@ -511,6 +518,7 @@ export function initProject({
       elmJsonsErrors,
       elmJsons,
       maxParallel,
+      host,
       webSocketUrl,
       allowedHosts,
     },

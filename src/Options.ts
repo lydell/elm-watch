@@ -5,6 +5,7 @@ import type * as Public from "../index.d.ts";
 import { AllowedHost } from "./AllowedHosts.ts";
 import type { Config, PostprocessFunction } from "./Config.ts";
 import { Inputs, Output, TargetName } from "./ElmWatchJson.ts";
+import { Host } from "./Host.ts";
 import { NonEmptyArray } from "./NonEmptyArray.ts";
 import { Port } from "./Port.ts";
 import {
@@ -97,6 +98,7 @@ const Options = Codec.fields(
     root: Root,
     targets: Targets,
     port: Codec.field(Port, { optional: true }),
+    host: Codec.field(Host, { optional: true }),
     staticFilesDir: Codec.field(Codec.string, { optional: true }),
     webSocketUrl: Codec.field(WebSocketUrl("Options"), { optional: true }),
     allowedHosts: Codec.field(Codec.array(AllowedHost), { optional: true }),
@@ -166,6 +168,7 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
             postprocess: target.postprocess,
           })) as NonEmptyArray<Config["targets"][number]>,
           port: value.port,
+          host: value.host,
           webSocketUrl: value.webSocketUrl,
           staticFilesDir: value.staticFilesDir,
           allowedHosts: value.allowedHosts ?? [],

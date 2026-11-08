@@ -2,6 +2,7 @@ import * as path from "path";
 import { describe, expect, test } from "vitest";
 
 import * as ElmWatchJson from "../src/ElmWatchJson.ts";
+import { DEFAULT_HOST } from "../src/Host.ts";
 import {
   initProject,
   OutputState,
@@ -54,6 +55,7 @@ const project: Project = {
     markAsAbsolutePath("/Users/you/project/elm-stuff/elm-watch/stuff.json"),
   ),
   maxParallel: 12,
+  host: DEFAULT_HOST,
   disabledOutputs: [
     {
       originalString: "public/build/HtmlMain.js",

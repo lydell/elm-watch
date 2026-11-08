@@ -173,7 +173,8 @@ type SharedRunOptions = {
   stdin?: ReadStream;
   // Use `elmWatch()` with these options (and `runMode: "hot"`) instead of the
   // CLI with `args`. The fixture’s postprocess.js is used for all targets.
-  useElmWatchFunction?: boolean;
+  // Pass an object to add extra options.
+  useElmWatchFunction?: boolean | Record<string, unknown>;
 };
 
 export async function run({
@@ -237,9 +238,13 @@ export async function run({
   stdout.isTTY = isTTY;
   stderr.isTTY = isTTY;
 
-  const elmWatchOptions = useElmWatchFunction
-    ? await fixtureOptions(path.join(dir, cwd))
-    : undefined;
+  const elmWatchOptions =
+    useElmWatchFunction === false
+      ? undefined
+      : {
+          ...(await fixtureOptions(path.join(dir, cwd))),
+          ...(useElmWatchFunction === true ? {} : useElmWatchFunction),
+        };
 
   const bodyIndex = bodyCounter + 2; // head + original body
   const body = document.createElement("body");

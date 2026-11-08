@@ -628,6 +628,73 @@ describe("errors", () => {
     `);
   });
 
+  describe("host not found", () => {
+    test("from env", async () => {
+      expect(
+        await run("valid", ["hot"], {
+          env: { ...elmBinAlwaysSucceedEnv, ELM_WATCH_HOST: "nope.invalid" },
+          exitHotOnError: true,
+        }),
+      ).toMatchInlineSnapshot(`
+        ⧙-- HOST NOT FOUND --------------------------------------------------------------⧘
+
+        This environment variable is set:
+
+        ELM_WATCH_HOST=nope.invalid
+
+        But that host was not found!
+
+        It’s common to set it to the following to expose elm-watch’s HTTP server on the
+        local network:
+
+        ELM_WATCH_HOST=0.0.0.0
+
+        If unset, the default host is 127.0.0.1, which restricts the HTTP server to
+        your computer.
+
+        Try setting the environment variable to something else, or remove it altogether.
+
+        This is the error message I got:
+
+        getaddrinfo ENOTFOUND nope.invalid
+      `);
+    });
+
+    test("from options (env is ignored)", async () => {
+      expect(
+        await run("valid", [], {
+          env: { ...elmBinAlwaysSucceedEnv, ELM_WATCH_HOST: "0.0.0.0" },
+          exitHotOnError: true,
+          elmWatchOptions: {
+            ...(await fixtureOptions(fixtureDir("valid"))),
+            runMode: "hot",
+            host: "nope.invalid",
+          },
+        }),
+      ).toMatchInlineSnapshot(`
+        ⧙-- HOST NOT FOUND --------------------------------------------------------------⧘
+
+        In your ⧙elm-watch options⧘ you have this:
+
+        host: "nope.invalid"
+
+        But that host was not found!
+
+        It’s common to set it to the following to expose elm-watch’s HTTP server on the
+        local network:
+
+        host: "0.0.0.0"
+
+        If unset, the default host is 127.0.0.1, which restricts the HTTP server to
+        your computer.
+
+        This is the error message I got:
+
+        getaddrinfo ENOTFOUND nope.invalid
+      `);
+    });
+  });
+
   describe("CI", () => {
     const getAppPath = (): string =>
       path.join(fixtureDir("ci"), "build", "app.js");

@@ -1,4 +1,5 @@
 import type { AllowedHost } from "./AllowedHosts.ts";
+import type { Host } from "./Host.ts";
 import type { NonEmptyArray } from "./NonEmptyArray.ts";
 import type { Port } from "./Port.ts";
 import type {
@@ -17,6 +18,7 @@ export type Config = {
   source: ConfigSource;
   targets: NonEmptyArray<Target>;
   port: Port | undefined;
+  host: Host | undefined;
   webSocketUrl: WebSocketUrl | undefined;
   staticFilesDir: string | undefined;
   allowedHosts: Array<AllowedHost>;

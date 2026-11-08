@@ -77,6 +77,12 @@ export type Options = {
   // Default: An arbitrary available port, re-using the one from last time if possible.
   port?: number;
 
+  // The host for the HTTP and WebSocket server to listen on, as in Node.js’
+  // `server.listen(port, host)`. Use "0.0.0.0" to expose the server on the
+  // local network (to test on your phone, for example).
+  // Default: "127.0.0.1" (only your computer).
+  host?: string;
+
   // A directory of static files to serve, relative to `root`. CSS files in it
   // are hot reloaded.
   staticFilesDir?: string;
