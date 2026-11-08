@@ -982,7 +982,7 @@ const CHEVRON_DOWN = "▼";
 
 // The size of the emoji button. For touch, the hit area is enlarged to the
 // recommended minimum touch target size (see `TOUCH_SIZE`).
-const TOGGLE_SIZE = "28px";
+const TOGGLE_SIZE = "22px";
 const TOUCH_SIZE = "44px";
 
 const CSS = `
@@ -1150,10 +1150,10 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   --subtle: color-mix(in srgb, CanvasText 6%, Canvas);
   --hover: color-mix(in srgb, CanvasText 11%, Canvas);
   --focus: light-dark(#0b57d0, #a8c7fa);
-  --edge-top: max(env(safe-area-inset-top), 12px);
-  --edge-bottom: max(env(safe-area-inset-bottom), 12px);
-  --edge-left: max(env(safe-area-inset-left), 12px);
-  --edge-right: max(env(safe-area-inset-right), 12px);
+  --edge-top: max(env(safe-area-inset-top), var(--gap));
+  --edge-bottom: max(env(safe-area-inset-bottom), var(--gap));
+  --edge-left: max(env(safe-area-inset-left), var(--gap));
+  --edge-right: max(env(safe-area-inset-right), var(--gap));
   --top: calc(var(--edge-top) + var(--y) * (100% - var(--edge-top) - var(--edge-bottom) - ${TOGGLE_SIZE}));
   --gap: 4px;
   position: absolute;
