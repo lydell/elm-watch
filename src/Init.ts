@@ -166,16 +166,28 @@ function upgradeElmWatchJson(
     return 1;
   }
 
-  const notFoundNote = upgradedTargets.some(({ foundElmJson }) => !foundElmJson)
-    ? `\n\n${bold("(not found)")} means that I couldn’t find an elm.json for the target.\nPlease update "elmJson" yourself!`
-    : "";
-
   logger.write(
     `
 Upgraded ${elmWatchJson}:
 
 ${elmWatchJsonPath}
 
+${upgradedTargetsReport(upgradedTargets)}
+
+Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+  `.trim(),
+  );
+  return 0;
+}
+
+function upgradedTargetsReport(
+  upgradedTargets: Array<ElmWatchJson.UpgradedTarget>,
+): string {
+  const notFoundNote = upgradedTargets.some(({ foundElmJson }) => !foundElmJson)
+    ? `\n\n${bold("(not found)")} means that I couldn’t find an elm.json for the target.\nPlease update "elmJson" yourself!`
+    : "";
+
+  return `
 Targets now need "type" and "elmJson". I added them to these targets:
 
 ${upgradedTargets
@@ -184,11 +196,7 @@ ${upgradedTargets
       `${name}: ${elmJson}${foundElmJson ? "" : ` ${bold("(not found)")}`}`,
   )
   .join("\n")}${notFoundNote}
-
-Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
-  `.trim(),
-  );
-  return 0;
+  `.trim();
 }
 
 // Creates elm-watch.mjs (or elm-watch.mts) for using the JavaScript API: From
@@ -203,6 +211,7 @@ function initEntrypoint(
 
   let dir: AbsolutePath;
   let json: ElmWatchJson.ElmWatchJsonWithLegacyPostprocess;
+  let upgradedTargets: Array<ElmWatchJson.UpgradedTarget>;
   let migratedElmWatchJsonPath: ElmWatchJsonPath | undefined;
 
   switch (parseResult.tag) {
@@ -213,6 +222,7 @@ function initEntrypoint(
         markAsElmWatchJsonPath(absolutePathFromString(cwd, "elm-watch.json")),
         { elmFiles: [], output: undefined },
       );
+      upgradedTargets = [];
       migratedElmWatchJsonPath = undefined;
       break;
 
@@ -236,7 +246,7 @@ function initEntrypoint(
 
     case "Parsed":
       dir = absoluteDirname(parseResult.elmWatchJsonPath);
-      json = parseResult.value;
+      ({ json, upgradedTargets } = parseResult.value);
       migratedElmWatchJsonPath = parseResult.elmWatchJsonPath;
       break;
   }
@@ -299,13 +309,17 @@ Documentation: ${JAVASCRIPT_API_DOCS_LINK}
       ? ""
       : `\nYour "postprocess" is now the ${bold("postprocessFor")} function at the bottom of the file.\n`;
 
+  const upgradeNote = isNonEmptyArray(upgradedTargets)
+    ? `\n${upgradedTargetsReport(upgradedTargets)}\n`
+    : "";
+
   logger.write(
     `
 Created ${bold(entrypointName)} from ${elmWatchJson}, and removed ${elmWatchJson}
 (everything from it is in ${entrypointName} now):
 
 ${entrypointPath}
-${postprocessNote}
+${postprocessNote}${upgradeNote}
 ${runIt}
 
 Remember to update your package.json scripts and CI too.

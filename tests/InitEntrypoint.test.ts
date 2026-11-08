@@ -309,6 +309,10 @@ describe("init --javascript and --typescript", () => {
 
       Your "postprocess" is now the ⧙postprocessFor⧘ function at the bottom of the file.
 
+      Targets now need "type" and "elmJson". I added them to these targets:
+
+      Main: elm.json
+
       Run it like so:
 
           node --watch elm-watch.mjs hot

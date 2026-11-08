@@ -280,14 +280,23 @@ export function findReadAndParse(cwd: Cwd): ParseResult<Config> {
 
 // Used by `elm-watch init --javascript`, which also upgrades targets from
 // elm-watch 1 (see `upgradeTargets`).
-export function findReadAndParseWithLegacyPostprocess(
-  cwd: Cwd,
-): ParseResult<ElmWatchJsonWithLegacyPostprocess> {
-  return findReadAndDecode(
+export function findReadAndParseWithLegacyPostprocess(cwd: Cwd): ParseResult<{
+  json: ElmWatchJsonWithLegacyPostprocess;
+  upgradedTargets: Array<UpgradedTarget>;
+}> {
+  let upgradedTargets: Array<UpgradedTarget> = [];
+  const result = findReadAndDecode(
     cwd,
     ElmWatchJsonWithLegacyPostprocess,
-    (elmWatchJsonPath, json) => upgradeTargets(elmWatchJsonPath, json).json,
+    (elmWatchJsonPath, json) => {
+      const upgraded = upgradeTargets(elmWatchJsonPath, json);
+      ({ upgradedTargets } = upgraded);
+      return upgraded.json;
+    },
   );
+  return result.tag === "Parsed"
+    ? { ...result, value: { json: result.value, upgradedTargets } }
+    : result;
 }
 
 function findReadAndDecode<T>(
