@@ -219,15 +219,19 @@ export function createUi(): Ui {
       { className: CLASS.overlayHint, attrs: { "aria-hidden": "true" } },
       "Esc closes · press again to reopen",
     ),
-    h(HTMLButtonElement, {
-      className: CLASS.overlayCloseButton,
-      attrs: {
-        "aria-label": "Close error overlay",
-        "aria-keyshortcuts": "Escape",
-        "data-test-id": "OverlayCloseButton",
+    h(
+      HTMLButtonElement,
+      {
+        className: CLASS.overlayCloseButton,
+        attrs: {
+          "aria-label": "Close error overlay",
+          "aria-keyshortcuts": "Escape",
+          "data-test-id": "OverlayCloseButton",
+        },
+        onclick: closeErrorOverlay,
       },
-      onclick: closeErrorOverlay,
-    }),
+      closeIcon(),
+    ),
   );
 
   const toggleButton = h(HTMLButtonElement, {
@@ -1116,6 +1120,9 @@ const CHEVRON_DOWN = "▼";
 const TOGGLE_SIZE = "22px";
 const TOUCH_SIZE = "44px";
 
+// The first error in the error overlay starts just below the close button.
+const OVERLAY_CLOSE_BUTTON_SIZE = "48px";
+
 const CSS = `
 input,
 button,
@@ -1143,7 +1150,8 @@ p {
   z-index: -2;
   inset: 0;
   overflow-y: auto;
-  padding: 2ch 0;
+  /* Room for the close button above the first error. */
+  padding: calc(${OVERLAY_CLOSE_BUTTON_SIZE} - 2ch) 0 2ch;
   user-select: text;
   pointer-events: auto;
 }
@@ -1173,34 +1181,23 @@ p {
 }
 
 .${CLASS.overlayCloseButton} {
-  position: relative;
   appearance: none;
-  width: 3.5em;
-  height: 3.5em;
+  display: grid;
+  place-items: center;
+  width: ${OVERLAY_CLOSE_BUTTON_SIZE};
+  height: ${OVERLAY_CLOSE_BUTTON_SIZE};
   padding: 0;
   border: none;
   border-radius: 0;
   background: none;
+  color: inherit;
   cursor: pointer;
-  font-size: 1.25em;
-  filter: drop-shadow(0 0 0.125em var(--backgroundColor));
+  filter: drop-shadow(0 0 2px var(--backgroundColor));
 }
 
-.${CLASS.overlayCloseButton}::before,
-.${CLASS.overlayCloseButton}::after {
-  content: "";
-  display: block;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0.125em;
-  height: 1em;
-  background-color: var(--foregroundColor);
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.${CLASS.overlayCloseButton}::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
+.${CLASS.overlayCloseButton} svg {
+  width: 20px;
+  height: 20px;
 }
 
 .${CLASS.overlay},
