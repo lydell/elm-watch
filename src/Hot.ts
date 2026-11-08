@@ -3233,7 +3233,7 @@ function printMessageWithTimeAndEmoji({
     ? new Date("2022-02-05T13:10:05Z")
     : date;
   return Compile.printStatusLine({
-    maxWidth: Infinity,
+    maxWidth: loggerConfig.columns,
     fancy: loggerConfig.fancy,
     isTTY: loggerConfig.isTTY,
     emojiName,
@@ -3259,7 +3259,7 @@ function printStats(
   return stats
     .map((part) =>
       Compile.printStatusLine({
-        maxWidth: Infinity,
+        maxWidth: loggerConfig.columns,
         fancy: loggerConfig.fancy,
         isTTY: loggerConfig.isTTY,
         emojiName: "Stats",

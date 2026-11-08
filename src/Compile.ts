@@ -11,6 +11,8 @@ import {
   dim,
   printDurationMs,
   printFileSize,
+  removeColor,
+  RESET_COLOR,
   silentlyReadIntEnvValue,
   toError,
 } from "./Helpers.ts";
@@ -1833,7 +1835,6 @@ export function printStatusLine({
   emojiName,
   string,
 }: {
-  // Note: `maxWidth` only works with uncolored text.
   maxWidth: number;
   fancy: boolean;
   isTTY: boolean;
@@ -1858,13 +1859,35 @@ export function printStatusLine({
   }
 
   // Emojis take two terminal columns, plus a space that we add after.
-  const length = fancy ? string.length + 3 : string.length;
+  const visibleLength = removeColor(string).length;
+  const length = fancy ? visibleLength + 3 : visibleLength;
   return length <= maxWidth
     ? stringWithEmoji
     : fancy
       ? // Again, account for the emoji.
-        `${emojiString} ${string.slice(0, maxWidth - 4)}…`
-      : `${string.slice(0, maxWidth - 3)}...`;
+        `${emojiString} ${sliceColored(string, maxWidth - 4)}…`
+      : `${sliceColored(string, maxWidth - 3)}...`;
+}
+
+// Like `string.slice(0, length)`, but color escape codes don’t count towards
+// the length, and are never cut in half. Resets the color at the end if needed.
+function sliceColored(string: string, length: number): string {
+  let result = "";
+  let remaining = length;
+  let hasColor = false;
+  for (const part of string.split(/(\x1B\[\d+m)/)) {
+    if (part.startsWith("\x1B")) {
+      result += part;
+      hasColor = true;
+    } else {
+      result += part.slice(0, remaining);
+      remaining -= part.length;
+      if (remaining <= 0) {
+        break;
+      }
+    }
+  }
+  return hasColor ? `${result}${RESET_COLOR}` : result;
 }
 
 function maybePrintFileSize({

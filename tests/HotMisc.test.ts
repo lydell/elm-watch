@@ -679,9 +679,12 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });
       },
-      onIdle: ({ idle }) => {
+      onIdle: ({ idle, stdout }) => {
         switch (idle) {
           case 1:
+            // Make room for the long absolute path in the timeline, so it isn’t
+            // truncated before being replaced with a stable path.
+            stdout.resize(1000);
             touch(elmJsonPath);
             return "KeepGoing";
           default:
@@ -692,7 +695,7 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Dependencies
-      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙                                                      1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
@@ -712,9 +715,12 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });
       },
-      onIdle: ({ idle }) => {
+      onIdle: ({ idle, stdout }) => {
         switch (idle) {
           case 1:
+            // Make room for the long absolute path in the timeline, so it isn’t
+            // truncated before being replaced with a stable path.
+            stdout.resize(1000);
             touch(elmFile);
             return "KeepGoing";
           default:
@@ -724,7 +730,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙                                                      1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
       📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
@@ -872,6 +878,27 @@ describe("hot", () => {
           ⧙00:02:00⧘ ⧙Web socket disconnected for: (no matching target)⧘
           ⧙00:02:59⧘ ⧙Web socket connected with errors (see the browser for details)⧘
         `);
+    });
+
+    test("truncated to terminal width", () => {
+      expect(print(events.slice(0, 2), { columns: 30 })).toMatchInlineSnapshot(`
+        ℹ️ ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+        ℹ️ ⧙00:00:11⧘ ⧙Web socket connec⧘…
+      `);
+    });
+
+    test("truncated to terminal width, non-fancy", () => {
+      expect(print(events.slice(0, 2), { columns: 30, fancy: false }))
+        .toMatchInlineSnapshot(`
+        ⧙23:59:05⧘ ⧙Changed /One.elm⧘
+        ⧙00:00:11⧘ ⧙Web socket connect⧘...
+      `);
+    });
+
+    test("truncated in the middle of the time", () => {
+      expect(print(events.slice(0, 1), { columns: 8 })).toMatchInlineSnapshot(
+        `ℹ️ ⧙23:5⧘…`,
+      );
     });
   });
 });
