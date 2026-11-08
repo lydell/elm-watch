@@ -975,5 +975,28 @@ describe("errors", () => {
         and postprocess was not run.)
       `);
     });
+
+    test("too old elm/core", async () => {
+      expect(
+        await run("elm-json-too-old-elm-core", ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          exitHotOnError: true,
+        }),
+      ).toMatchInlineSnapshot(`
+        ⧙-- TOO OLD PACKAGES ------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/elm-json-too-old-elm-core/elm.json
+
+        For hot reloading, elm-watch modifies some functions in the compiled JavaScript.
+        That requires newer versions of these packages than your ⧙elm.json⧘ depends on:
+
+        elm/core 1.0.2 ⧙(need 1.0.3 or later)⧘
+
+        Update the version numbers in ⧙elm.json⧘. They are all compatible with your
+        current versions, so nothing else needs to change.
+
+        (\`elm-watch make\` works with the older versions – this is only needed for
+        \`elm-watch hot\`.)
+      `);
+    });
   });
 });

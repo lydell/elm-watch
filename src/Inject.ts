@@ -18,6 +18,8 @@ import {
 // This matches full functions, declared either with `function name(` or `var name =`.
 // NOTE: All function names in the regex must also be mentioned in the
 // `replacements` object, and vice versa!
+// NOTE: If a replacement starts relying on something only available in newer
+// package versions, update `MINIMUM_PATCHED_PACKAGE_VERSIONS` in ElmJson.ts.
 // The regex is anchored to the beginning of lines, which should make it
 // impossible to match within strings in the user’s program.
 const REPLACEMENT_REGEX =

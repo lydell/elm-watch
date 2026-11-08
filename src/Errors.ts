@@ -5,7 +5,7 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import type { ConfigSource } from "./Config.ts";
-import type { ElmJsonType } from "./ElmJson.ts";
+import type { ElmJsonType, TooOldPackage } from "./ElmJson.ts";
 import type * as ElmMakeError from "./ElmMakeError.ts";
 import * as ElmWatchJson from "./ElmWatchJson.ts";
 import {
@@ -972,6 +972,36 @@ ${printJsonError(error)}
 
 (I still managed to compile your code, but the watcher will not work properly
 and postprocess was not run.)
+`;
+}
+
+export function elmJsonTooOldPackages(
+  elmJsonPath: ElmJsonPath,
+  tooOldPackages: NonEmptyArray<TooOldPackage>,
+): ErrorTemplate {
+  return fancyError("TOO OLD PACKAGES", {
+    tag: "ElmJsonPath",
+    theElmJsonPath: elmJsonPath,
+  })`
+For hot reloading, elm-watch modifies some functions in the compiled JavaScript.
+That requires newer versions of these packages than your ${elmJson} depends on:
+
+${joinTemplate(
+  mapNonEmptyArray(
+    tooOldPackages,
+    ({ name, version, minimumVersion }) =>
+      template`${text(`${name} ${version}`)} ${dim(
+        `(need ${minimumVersion} or later)`,
+      )}`,
+  ),
+  "\n",
+)}
+
+Update the version numbers in ${elmJson}. They are all compatible with your
+current versions, so nothing else needs to change.
+
+(\`elm-watch make\` works with the older versions – this is only needed for
+\`elm-watch hot\`.)
 `;
 }
 

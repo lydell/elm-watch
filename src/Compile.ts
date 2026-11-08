@@ -2027,6 +2027,7 @@ function statusLine(
     case "ElmMakeError":
     case "ElmJsonReadError":
     case "ElmJsonDecodeError":
+    case "ElmJsonTooOldPackages":
     case "ImportWalkerFileSystemError":
     case "NeedsToWriteProxyFileReadError":
     case "ReadOutputError":
@@ -2375,6 +2376,11 @@ export function renderOutputErrors(
     case "ElmJsonDecodeError":
       return [Errors.decodeElmJson(status.elmJsonPath, status.error)];
 
+    case "ElmJsonTooOldPackages":
+      return [
+        Errors.elmJsonTooOldPackages(status.elmJsonPath, status.tooOldPackages),
+      ];
+
     case "ImportWalkerFileSystemError":
       return [Errors.importWalkerFileSystemError(outputPath, status.error)];
 
@@ -2413,9 +2419,11 @@ export function renderOutputErrors(
 
 type GetAllRelatedElmFilePathsResult =
   | ElmJson.ElmJsonParseError
+  | ElmJson.ElmJsonTooOldPackagesError
   | WalkImportsResult;
 type GetAllRelatedElmFilePathsError =
   | ElmJson.ElmJsonParseError
+  | ElmJson.ElmJsonTooOldPackagesError
   | WalkImportsError;
 
 function getAllRelatedElmFilePaths(
@@ -2426,6 +2434,15 @@ function getAllRelatedElmFilePaths(
 
   switch (result.tag) {
     case "Parsed":
+      // Only hot mode calls this function, and only hot mode needs new enough
+      // packages (for `Inject.inject`).
+      if (isNonEmptyArray(result.tooOldPackages)) {
+        return {
+          tag: "ElmJsonTooOldPackages",
+          elmJsonPath,
+          tooOldPackages: result.tooOldPackages,
+        };
+      }
       return walkImports(
         result.sourceDirectories,
         mapNonEmptyArray(inputs, (input) => input.realpath),
@@ -2449,6 +2466,7 @@ function allRelatedElmFilePathsWithFallback(
 
     case "ElmJsonReadError":
     case "ElmJsonDecodeError":
+    case "ElmJsonTooOldPackages":
       return new Set(
         mapNonEmptyArray(outputState.inputs, (inputPath) => inputPath.realpath),
       );
