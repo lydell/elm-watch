@@ -68,7 +68,10 @@ async function reloadCssIfNeeded(
     return false;
   }
 
-  const response = await fetch(url, { cache: "reload" });
+  const response = await fetch(url, {
+    cache: "reload",
+    signal: AbortSignal.timeout(LOAD_TIMEOUT),
+  });
   if (!response.ok) {
     return false;
   }
@@ -85,7 +88,12 @@ async function reloadCssIfNeeded(
 
   const importUrls = isFirefox() ? [] : getAllCssImports(url, styleSheet);
   await Promise.allSettled(
-    importUrls.map((importUrl) => fetch(importUrl, { cache: "reload" })),
+    importUrls.map((importUrl) =>
+      fetch(importUrl, {
+        cache: "reload",
+        signal: AbortSignal.timeout(LOAD_TIMEOUT),
+      }),
+    ),
   );
   const newStyleSheet = await parseCssWithImports(url);
 
@@ -95,6 +103,11 @@ async function reloadCssIfNeeded(
 }
 
 const RELOAD_PARAM = "elm-watch-css-reload";
+
+// Loading a style sheet from a local server is usually very fast, but this
+// timeout leaves plenty of room for slow networks (like testing on a phone via
+// WiFi) and long `@import` chains.
+const LOAD_TIMEOUT = 10_000;
 
 // Note: It might seem possible to parse using:
 // `const styleSheet = new CSSStyleSheet(); styleSheet.replaceSync(css);`
@@ -124,9 +137,18 @@ async function parseCssWithImports(
     // `@import`s. Some browsers fire the "error" event instead if an `@import`
     // fails, so we use whatever we got in that case too.
     link.onerror = link.onload = () => {
+      clearTimeout(timeoutId);
       resolve(link.sheet ?? undefined);
       link.remove();
     };
+
+    // In case neither "load" nor "error" fires (for example, if the server
+    // never responds). Otherwise the next CSS reload would wait forever, since
+    // reloads never run at the same time.
+    const timeoutId = setTimeout(() => {
+      resolve(undefined);
+      link.remove();
+    }, LOAD_TIMEOUT);
 
     document.head.append(link);
   });
