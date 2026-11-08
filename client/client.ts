@@ -1862,7 +1862,7 @@ const runCmd =
   ): void => {
     switch (cmd.tag) {
       case "Eval":
-        evalWithBackwardsCompatibility(cmd.code).catch((unknownError) => {
+        evalCode(cmd.code).catch((unknownError) => {
           void Promise.reject(unknownError);
           dispatch({ tag: "EvalErrored", date: getNow() });
         });
@@ -2176,17 +2176,23 @@ evalAsModuleViaBlob("")
     // `evalAsModuleViaBlob` not supported, using the slower `evalAsModuleViaDataUri`.
   });
 
-// For backwards compatibility, we need to first try eval-ing the code like
-// we did before supporting modules. While any strict mode enabled script
-// should work just fine to execute as a module (which are always in strict mode),
-// non-strict mode scripts might use features that break in a module or strict mode.
-// For example, if the user has postprocessed the code to do things like
-// `this.FOO = true` (inspired by how the Elm JS basically does `this.Elm = stuff`).
-// Top-level `this` is `undefined` in module mode, while it refers to the global
-// object in script mode (`window` in web pages). (In CommonJS, it refers to `exports`.)
-// This backwards compatibility can be removed in a major version.
-// When we do, revert this commit to make the tests pass: bbdbe86f24c8d047f2cd7d9a04c1d3de19d77822
-let evalWithBackwardsCompatibility = async (code: string): Promise<void> => {
+// We first try eval-ing the code as a script, and only fall back to eval-ing it
+// as a module if that fails with a syntax error (likely due to `import` or `export`).
+// Script mode is preferred because:
+// - It is synchronous.
+// - It does not leak memory. Every `import()` of a new URL is kept in the
+//   browser’s module map until the page is reloaded, so each hot reload in module
+//   mode keeps a copy of the code in memory. In Chromium, a 145 KB hot reload
+//   used about 0.5 MB more per reload (about 2 MB with `evalAsModuleViaDataUri`).
+// - It is backwards compatible with non-strict mode scripts, which might use
+//   features that break in a module or strict mode. For example, if the user has
+//   postprocessed the code to do things like `this.FOO = true` (inspired by how
+//   the Elm JS basically does `this.Elm = stuff`). Top-level `this` is `undefined`
+//   in module mode, while it refers to the global object in script mode (`window`
+//   in web pages). (In CommonJS, it refers to `exports`.)
+// So people who postprocess their code into ESM pay a bit in time and memory, while
+// everyone else gets the fastest option.
+async function evalScriptFirst(code: string): Promise<void> {
   let f;
   try {
     // This can fail if the code has incorrect syntax.
@@ -2206,23 +2212,20 @@ let evalWithBackwardsCompatibility = async (code: string): Promise<void> => {
       );
     }
     // If the code parsed and ran successfully, the code most likely has `import`
-    // or `export`, and will likely have that next time too. Swap over to a variation
-    // of this function where we try module mode first, and script mode second.
+    // or `export`, and will likely have that next time too. Switch over to trying
+    // module mode first, and script mode second.
     // `new Function(code)` isn’t free – spending time on that on each hot reload can
     // up to double the time.
-    [evalWithBackwardsCompatibility, evalWithBackwardsCompatibility2] = [
-      evalWithBackwardsCompatibility2,
-      evalWithBackwardsCompatibility,
-    ];
+    evalCode = evalModuleFirst;
     return;
   }
   // oxlint-disable-next-line typescript/no-unsafe-call
   f();
-};
+}
 
-// Like `evalWithBackwardsCompatibility` but tries the modes in the opposite order:
+// Like `evalScriptFirst` but tries the modes in the opposite order:
 // Module first, then script.
-let evalWithBackwardsCompatibility2 = async (code: string): Promise<void> => {
+async function evalModuleFirst(code: string): Promise<void> {
   try {
     await evalAsModule(code);
   } catch (moduleError) {
@@ -2232,10 +2235,9 @@ let evalWithBackwardsCompatibility2 = async (code: string): Promise<void> => {
     // as `this` is `undefined` in modules. Then trying script mode is going to
     // succeed, but in practice all the code ran twice. That should be fine though –
     // an unnecessary hot reload shouldn’t cause any trouble. One known effect
-    // is that the green animation does not appear. However, since we flip back the
-    // functions it’s going to work next time. And I don’t think it’s very likely
-    // this will happen. And in the next major version, script mode eval-ing will
-    // be removed anyway.
+    // is that the green animation does not appear. However, since we switch back to
+    // `evalScriptFirst` it’s going to work next time. And I don’t think it’s very likely
+    // this will happen.
     try {
       // oxlint-disable-next-line typescript/no-implied-eval
       const f = new Function(code);
@@ -2246,13 +2248,12 @@ let evalWithBackwardsCompatibility2 = async (code: string): Promise<void> => {
         `Error when evaluated as a module:\n\n${unknownErrorToString(moduleError)}\n\nError when evaluated as a script:\n\n${unknownErrorToString(scriptError)}`,
       );
     }
-    // Swap back to trying script mode before module mode, as that succeeded better.
-    [evalWithBackwardsCompatibility, evalWithBackwardsCompatibility2] = [
-      evalWithBackwardsCompatibility2,
-      evalWithBackwardsCompatibility,
-    ];
+    // Switch back to trying script mode before module mode, as that succeeded better.
+    evalCode = evalScriptFirst;
   }
-};
+}
+
+let evalCode = evalScriptFirst;
 
 type ParseWebSocketMessageDataResult =
   | {

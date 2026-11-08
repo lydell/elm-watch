@@ -78,6 +78,9 @@ function postprocess(code) {
 {: .warning }  
 ⚠️ Beware that if you put a script tag on your page that loads a JS file, which in turns `import`s the compiled Elm code, it might cause your page to load more slowly, since the compiled Elm code needs to wait for the first JS file to download and execute first.
 
+{: .warning }  
+⚠️ Hot reloading is slower and uses more memory with modules. When hot reloading, elm-watch evaluates the new code as a script if possible, and as a module only when it has to (because of `import` or `export`). Browsers never forget a module once it has been loaded, so each hot reload keeps a copy of your compiled Elm code in memory until you reload the page. For example, in Chromium a small app (145 KB) used about 0.5 MB more memory per hot reload. If you only need a module for your production build, consider postprocessing into a module only in `make` mode (`runMode === "make"`), and keep using a plain script tag during development.
+
 Note that [elm-esm] does not work with elm-watch: It replaces a bit too much of the code.
 
 [elm-esm]: https://github.com/ChristophP/elm-esm
