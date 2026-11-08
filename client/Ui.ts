@@ -503,6 +503,8 @@ export function createUi(): Ui {
     | {
         tag: "Dragging";
         pointerId: number;
+        // Where the pointer should be relative to the emoji’s position in
+        // the layout, which is not changed while dragging.
         offsetX: number;
         offsetY: number;
       }
@@ -540,19 +542,22 @@ export function createUi(): Ui {
         ) {
           return;
         }
-        drag = {
-          tag: "Dragging",
-          pointerId: drag.pointerId,
-          offsetX: drag.offsetX,
-          offsetY: drag.offsetY,
-        };
-        // Grab the emoji where it is, even if it is still on its way
-        // somewhere.
-        moveAnimation?.cancel();
-        moveAnimation = undefined;
-        root.classList.remove(CLASS.rootMoving);
-        root.classList.add(CLASS.rootDragging);
-        break;
+        {
+          // Grab the emoji where it is, even if it is still on its way
+          // somewhere (the offset was measured including the animation).
+          moveAnimation?.cancel();
+          moveAnimation = undefined;
+          root.classList.remove(CLASS.rootMoving);
+          root.classList.add(CLASS.rootDragging);
+          const layoutRect = toggleButton.getBoundingClientRect();
+          drag = {
+            tag: "Dragging",
+            pointerId: drag.pointerId,
+            offsetX: drag.offsetX + layoutRect.left,
+            offsetY: drag.offsetY + layoutRect.top,
+          };
+          break;
+        }
 
       case "Dragging":
         if (drag.pointerId !== event.pointerId) {
@@ -560,9 +565,10 @@ export function createUi(): Ui {
         }
         break;
     }
-    toggleButton.style.left = `${event.clientX - drag.offsetX}px`;
-    toggleButton.style.right = "auto";
-    toggleButton.style.top = `${event.clientY - drag.offsetY}px`;
+    // Using `transform` rather than `left` and `top`, so that the browser
+    // only needs to move an already painted layer (see `will-change`). That
+    // makes the emoji keep up better with the pointer.
+    toggleButton.style.transform = `translate(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px)`;
   };
 
   const endDrag = (event: PointerEvent, save: boolean): void => {
@@ -574,9 +580,7 @@ export function createUi(): Ui {
       return;
     }
     const rect = toggleButton.getBoundingClientRect();
-    toggleButton.style.left = "";
-    toggleButton.style.right = "";
-    toggleButton.style.top = "";
+    toggleButton.style.transform = "";
     root.classList.remove(CLASS.rootDragging);
     // A click event follows `pointerup`. It should not toggle the panel.
     drag = save ? { tag: "JustDropped" } : { tag: "Idle" };
@@ -1308,6 +1312,7 @@ the corner of its hit area. The panel may cover parts of it.
 
 .${CLASS.rootDragging} .${CLASS.toggleButton} {
   cursor: grabbing;
+  will-change: transform;
 }
 
 .${CLASS.toggleEmoji} {
