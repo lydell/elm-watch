@@ -50,6 +50,8 @@ npx elm-watch init
 {
     "targets": {
         "My target name": {
+            "type": "application",
+            "elmJson": "elm.json",
             "inputs": [
                 "src/Main.elm"
             ],
@@ -58,6 +60,9 @@ npx elm-watch init
     }
 }
 ```
+
+{: .info }  
+ℹ️ Making an Elm package? Then `elm-watch init` creates a [package target](../elm-watch.json/#package-targets) instead, which typechecks your package.
 
 {: .info }  
 ℹ️ If you know from the start that you need [postprocessing](../postprocess/) or a [custom server](../server/#custom-server), run `npx elm-watch init --javascript` (or `--typescript`) instead, and see [JavaScript API](../javascript-api/).

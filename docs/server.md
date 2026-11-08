@@ -270,7 +270,13 @@ process.exitCode = await elmWatch({
   runMode: "hot",
   staticFilesDir: "public",
   targets: [
-    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+    {
+      type: "application",
+      name: "Main",
+      elmJson: "elm.json",
+      inputs: ["src/Main.elm"],
+      output: "public/build/main.js",
+    },
   ],
   createServer: ({ onRequest, onUpgrade }) =>
     http.createServer(onRequest).on("upgrade", onUpgrade),
@@ -294,7 +300,13 @@ process.exitCode = await elmWatch({
   runMode: "hot",
   staticFilesDir: "public",
   targets: [
-    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+    {
+      type: "application",
+      name: "Main",
+      elmJson: "elm.json",
+      inputs: ["src/Main.elm"],
+      output: "public/build/main.js",
+    },
   ],
   createServer: ({ onRequest, onUpgrade, isAllowedHost }) =>
     http
@@ -357,7 +369,13 @@ process.exitCode = await elmWatch({
   runMode: "hot",
   staticFilesDir: "public",
   targets: [
-    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+    {
+      type: "application",
+      name: "Main",
+      elmJson: "elm.json",
+      inputs: ["src/Main.elm"],
+      output: "public/build/main.js",
+    },
   ],
   createServer: ({ onRequest, onUpgrade, isAllowedHost }) =>
     http
@@ -400,7 +418,13 @@ process.exitCode = await elmWatch({
   runMode: "hot",
   staticFilesDir: "public",
   targets: [
-    { name: "Main", inputs: ["src/Main.elm"], output: "public/build/main.js" },
+    {
+      type: "application",
+      name: "Main",
+      elmJson: "elm.json",
+      inputs: ["src/Main.elm"],
+      output: "public/build/main.js",
+    },
   ],
   createServer: ({ onRequest, onUpgrade }) =>
     https.createServer(CERTIFICATE, onRequest).on("upgrade", onUpgrade),

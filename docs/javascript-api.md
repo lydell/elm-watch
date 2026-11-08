@@ -32,7 +32,9 @@ process.exitCode = await elmWatch({
   runMode: "hot",
   targets: [
     {
+      type: "application",
       name: "My target name",
+      elmJson: "elm.json",
       inputs: ["src/Main.elm"],
       output: "build/main.js",
     },
@@ -52,6 +54,8 @@ That’s the same as having this `elm-watch.json` and running `elm-watch hot`:
 {
   "targets": {
     "My target name": {
+      "type": "application",
+      "elmJson": "elm.json",
       "inputs": ["src/Main.elm"],
       "output": "build/main.js"
     }
@@ -98,8 +102,20 @@ const { positionals, values } = parseArgs({
 const [runMode = "hot", ...targetNames] = positionals;
 
 const targets = [
-  { name: "App", inputs: ["src/App.elm"], output: "build/app.js" },
-  { name: "Admin", inputs: ["src/Admin.elm"], output: "build/admin.js" },
+  {
+    type: "application",
+    name: "App",
+    elmJson: "elm.json",
+    inputs: ["src/App.elm"],
+    output: "build/app.js",
+  },
+  {
+    type: "application",
+    name: "Admin",
+    elmJson: "elm.json",
+    inputs: ["src/Admin.elm"],
+    output: "build/admin.js",
+  },
 ];
 
 process.exitCode = await elmWatch({
@@ -146,14 +162,18 @@ Type definition: `import type { Options } from "elm-watch"`.
 | env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. |
 | stdin, stdout, stderr | streams | `process.stdin` etc. | Where elm-watch reads keyboard input and writes output. |
 
-Each target looks like this:
+Each target looks like this (see [targets in elm-watch.json](../elm-watch.json/#targets) for more details):
 
 | Field | Type | Description |
 | --- | --- | --- |
+| type | `"application" \| "package"` | Application targets compile Elm files with `main` to JavaScript. [Package targets](../elm-watch.json/#package-targets) typecheck a package. |
 | name | `string` | Displayed in the terminal UI. Must be unique. |
-| inputs | `NonEmptyArray<string>` | `.elm` files, relative to `root`. |
-| output | `string` | A `.js` file, relative to `root`. |
-| postprocess | `function` | Optional. See [Postprocess](../postprocess/). |
+| elmJson | `string` | The `elm.json` to compile with, relative to `root`. Its `"type"` must match the target’s `type`. Usually `"elm.json"`. |
+| inputs | `NonEmptyArray<string>` | Applications only. `.elm` files, relative to `root`. |
+| output | `string` | Applications only. A `.js` file, relative to `root`. |
+| postprocess | `function` | Applications only. Optional. See [Postprocess](../postprocess/). |
+
+Type definitions: `Target`, `ApplicationTarget` and `PackageTarget`.
 
 `elmWatch()` returns a promise of an exit code: 0 for success and 1 for errors. Use it with `process.exitCode = await elmWatch(...)`.
 
@@ -183,7 +203,9 @@ const targets = fs
   .map((file) => {
     const name = file.slice(0, -".elm".length);
     return {
+      type: "application",
       name,
+      elmJson: "elm.json",
       inputs: [`src/Pages/${file}`],
       output: `build/${name}.js`,
     };

@@ -32,7 +32,9 @@ process.exitCode = await elmWatch({
   runMode: "hot",
   targets: [
     {
+      type: "application",
       name: "Main",
+      elmJson: "elm.json",
       inputs: ["src/Main.elm"],
       output: "build/main.js",
       postprocess: (code, { compilationMode, runMode }) =>
@@ -98,13 +100,17 @@ process.exitCode = await elmWatch({
     : "standard",
   targets: [
     {
+      type: "application",
       name: "App",
+      elmJson: "elm.json",
       inputs: ["src/App.elm"],
       output: "build/app.js",
       postprocess,
     },
     {
+      type: "application",
       name: "Admin",
+      elmJson: "elm.json",
       inputs: ["src/Admin.elm"],
       output: "build/admin.js",
       postprocess,
@@ -174,7 +180,9 @@ process.exitCode = await elmWatch({
   runMode: process.argv[2] === "make" ? "make" : "hot",
   targets: [
     {
+      type: "application",
       name: "Main",
+      elmJson: "elm.json",
       inputs: ["src/Main.elm"],
       output: "build/main.js",
       postprocess: postprocessFor("Main"),

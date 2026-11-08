@@ -62,7 +62,13 @@ process.exitCode = await elmWatch({
   root: import.meta.dirname,
   runMode: "hot",
   targets: [
-    { name: "Main", inputs: ["src/Main.elm"], output: "build/main.js" },
+    {
+      type: "application",
+      name: "Main",
+      elmJson: "elm.json",
+      inputs: ["src/Main.elm"],
+      output: "build/main.js",
+    },
   ],
   createServer: ({ onRequest, onUpgrade }) =>
     https.createServer(CERTIFICATE, onRequest).on("upgrade", onUpgrade),
