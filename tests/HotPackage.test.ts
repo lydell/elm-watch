@@ -103,12 +103,10 @@ async function start(): Promise<{
 }
 
 describe("package targets in hot mode", () => {
-  test("changes to the package and its elm.json", async () => {
+  test("changes to the package", async () => {
     const { dir, change, terminal } = await start();
     const internal = path.join(dir, "src", "Package", "Internal.elm");
-    const elmJsonPath = path.join(dir, "elm.json");
     const internalString = fs.readFileSync(internal, "utf8");
-    const elmJsonString = fs.readFileSync(elmJsonPath, "utf8");
 
     // A module that is not exposed (but used by an exposed one). Both the
     // package and the example application are affected.
@@ -117,17 +115,6 @@ describe("package targets in hot mode", () => {
     });
     await change(() => {
       fs.writeFileSync(internal, internalString);
-    });
-
-    // Flipping the "type" of elm.json is an error for the package target.
-    await change(() => {
-      fs.writeFileSync(
-        elmJsonPath,
-        fs.readFileSync(path.join(dir, "example", "elm.json"), "utf8"),
-      );
-    });
-    await change(() => {
-      fs.writeFileSync(elmJsonPath, elmJsonString);
     });
 
     // The targets are compiled in parallel, so the order of the status lines
@@ -149,9 +136,33 @@ describe("package targets in hot mode", () => {
           ⧙String⧘
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
+    `);
+    expect(terminal().trimEnd().split("\n").slice(-5).sort().join("\n"))
+      .toMatchInlineSnapshot(`
+        ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/package/src/Package/Internal.elm⧘
+        ✅ Example⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+        ✅ Package⧙     1 ms Q | 765 ms T⧘
+        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      `);
+  });
 
-      …
+  test("elm.json changes type", async () => {
+    const { dir, change, terminal } = await start();
+    const elmJsonPath = path.join(dir, "elm.json");
+    const elmJsonString = fs.readFileSync(elmJsonPath, "utf8");
 
+    // Flipping the "type" of elm.json is an error for the package target.
+    await change(() => {
+      fs.writeFileSync(
+        elmJsonPath,
+        fs.readFileSync(path.join(dir, "example", "elm.json"), "utf8"),
+      );
+    });
+    await change(() => {
+      fs.writeFileSync(elmJsonPath, elmJsonString);
+    });
+
+    expect(onlyErrorMessages(terminal())).toMatchInlineSnapshot(`
       ⧙-- elm.json TYPE MISMATCH ------------------------------------------------------⧘
       ⧙Target: Package⧘
 
