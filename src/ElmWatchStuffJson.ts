@@ -3,7 +3,6 @@ import * as Codec from "tiny-decoders";
 import { readJsonFile } from "./PathHelpers.ts";
 import { Port } from "./Port.ts";
 import {
-  BrowserUiPosition,
   CompilationMode,
   type ElmWatchStuffJsonPath,
   WebSocketToken,
@@ -19,7 +18,6 @@ import {
 export type Target = Codec.Infer<typeof Target>;
 const Target = Codec.fields({
   compilationMode: Codec.field(CompilationMode, { optional: true }),
-  browserUiPosition: Codec.field(BrowserUiPosition, { optional: true }),
 });
 
 export type ElmWatchStuffJson = Codec.Infer<typeof ElmWatchStuffJson>;

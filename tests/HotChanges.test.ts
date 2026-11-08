@@ -303,37 +303,35 @@ describe("hot", () => {
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target HtmlMain
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ HtmlMain Successfully compiled · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 HtmlMain
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HtmlMain
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ⏳ HtmlMain Waiting for compilation · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 HtmlMain
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HtmlMain
+      ▲ 🚨
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status elm.json or inputs error
+      [Close elm-watch]
+      🚨 HtmlMain elm.json or inputs error · 13:10:05
       -- elm.json TYPE MISMATCH ------------------------------------------------------
       Target: HtmlMain
 
@@ -347,13 +345,13 @@ describe("hot", () => {
       typecheck a package, use "type": "package" (without inputs and output) instead.
       To try out a package in the browser, make an application with its own elm.json
       (for example in examples/), with the package's src/ in "source-directories".
-      ▲ 🚨 13:10:05 HtmlMain
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HtmlMain
+      ▲ 🚨
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status elm.json or inputs error
+      [Close elm-watch]
+      🚨 HtmlMain elm.json or inputs error · 13:10:05
       -- elm.json NOT FOUND ----------------------------------------------------------
       Target: HtmlMain
 
@@ -362,7 +360,7 @@ describe("hot", () => {
       /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
       Is "elmJson" misspelled? Or do you need to run elm init to create it?
-      ▲ 🚨 13:10:05 HtmlMain
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 
@@ -1025,25 +1023,25 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 Html
+      ▼ ✅
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 Html
+      ▼ ✅
     `);
   });
 
@@ -1069,19 +1067,19 @@ describe("hot", () => {
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 Target1
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Target1
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Target1
+        ▼ ⏳
         ================================================================================
-        ▼ 🔌 13:10:05 Target1
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Target1
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Target1
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Target1
+        ▼ ✅
       `);
     },
   );

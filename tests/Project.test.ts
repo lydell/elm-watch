@@ -98,7 +98,6 @@ const project: Project = {
         markAsAbsolutePath("/Users/you/project/elm.json"),
       ),
       compilationMode: "standard",
-      browserUiPosition: "BottomLeft",
       error: {
         tag: "InputsNotFound",
         inputsNotFound: [
@@ -144,7 +143,6 @@ const project: Project = {
             ],
             { tag: "NoPostprocess" },
             "optimize",
-            "BottomLeft",
             getNow,
           ),
         ],
@@ -185,7 +183,6 @@ const project: Project = {
             ],
             { tag: "NoPostprocess" },
             "standard",
-            "BottomLeft",
             getNow,
           ),
         ],
@@ -225,7 +222,6 @@ const project: Project = {
             ],
             { tag: "NoPostprocess" },
             "optimize",
-            "BottomLeft",
             getNow,
           ),
         ],

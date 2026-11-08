@@ -48,54 +48,48 @@ describe("hot", () => {
     });
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target Main
+      ▲ 🔌
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Main
+      [Close elm-watch]
+      🔌 Main Connecting · 13:10:05
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Main
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      [Close elm-watch]
+      ⏳ Main Waiting for compilation · 13:10:05
+      Compilation mode for Main
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 Main
+      The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Main
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      [Close elm-watch]
+      ✅ Main Successfully compiled · 13:10:05
+      Compilation mode for Main
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 Main
+      The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Main
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ Main Successfully compiled · 13:10:05
+      Compilation mode for Main
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 Main
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 
@@ -354,149 +348,62 @@ describe("hot", () => {
     });
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target Main
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ Main Successfully compiled · 13:10:05
+      Compilation mode for Main
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 Main
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Main</div>`);
   });
 
   test("Move UI", async () => {
-    const { onlyExpandedRenders } = await run({
+    window.localStorage.removeItem("elm-watch:ui-position");
+    const classNames: Array<string> = [];
+
+    await run({
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
-      onIdle: ({ idle }) => {
-        switch (idle) {
-          case 1:
-            moveUi("TopLeft");
-            return "KeepGoing";
-          case 2:
-            moveUi("TopRight");
-            return "KeepGoing";
-          case 3:
-            moveUi("BottomRight");
-            return "KeepGoing";
-          case 4:
-            moveUi("BottomLeft");
-            return "KeepGoing";
-          case 5:
-            // Note: This results in the server sending two "Busy" messages.
-            // Both local updates happen (moving the UI to the top-left corner),
-            // then both "Busy" messages arrive, temporarily flipping back to the
-            // bottom-right corner. In reality I’ve never seen this, but it explains
-            // the snapshot output.
-            moveUi("BottomRight");
-            moveUi("TopLeft");
-            return "KeepGoing";
-          default:
-            return "Stop";
-        }
+      onIdle: () => {
+        classNames.push(
+          moveUi("ArrowUp"),
+          moveUi("ArrowRight"),
+          moveUi("ArrowUp"),
+          moveUi("ArrowUp"),
+          moveUi("ArrowUp"),
+          moveUi("ArrowUp"),
+          moveUi("ArrowDown"),
+          moveUi("ArrowLeft"),
+        );
+        return "Stop";
       },
     });
 
-    const newRenders = onlyExpandedRenders
-      .split(/\n=+\n/)
-      // Focus on just the arrow buttons and status emojis.
-      .map((segment) => segment.split("\n").slice(-3).join("\n"))
-      .join(`\n${"=".repeat(80)}\n`)
-      // Remove duplicate renders in a row.
-      .replace(/(=+[^=]+)\1/g, "$1");
+    expect(classNames).toStrictEqual([
+      "root rootBottomHalf",
+      "root rootBottomHalf rootRight",
+      "root rootRight",
+      "root rootRight",
+      "root rootRight",
+      "root rootRight",
+      "root rootRight",
+      "root",
+    ]);
 
-    expect(newRenders).toMatchInlineSnapshot(`
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ←·
-      ↙↓
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ←·
-      ↙↓
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ←·
-      ↙↓
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ↖↑
-      ←·
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ↖↑
-      ←·
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ↖↑
-      ←·
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ↖↑
-      ←·
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ↖↑
-      ←·
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ⏳ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ✅ 13:10:05 Html
-      ================================================================================
-      ·→
-      ↓↘
-      ▲ ✅ 13:10:05 Html
-    `);
+    expect(window.localStorage.getItem("elm-watch:ui-position")).toBe(
+      `{"side":"left","y":0.25}`,
+    );
   });
 
   test("ctrl+c", async () => {
@@ -526,19 +433,19 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 Html
+      ▼ ✅
     `);
   });
 
@@ -590,19 +497,19 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 Html
+      ▼ ✅
     `);
   });
 
@@ -632,57 +539,54 @@ describe("hot", () => {
     );
 
     expect(cleanedRenders).toMatchInlineSnapshot(`
-      target HttpCaching
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ HttpCaching Successfully compiled · 13:10:05
+      Compilation mode for HttpCaching
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 HttpCaching
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HttpCaching
+      ▲ ⏳🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ⏳ HttpCaching Waiting for compilation · 13:10:05
+      Compilation mode for HttpCaching
+      ◯ (disabled) Debug
       ◯ (disabled) Standard
-      ◉ (disabled) Optimize 🚀
-      ↑↗
-      ·→
-      ▲ 🚀 ⏳ 13:10:05 HttpCaching
+      ◉ (disabled) Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HttpCaching
+      ▲ ⏳🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ⏳ HttpCaching Waiting for compilation · 13:10:05
+      Compilation mode for HttpCaching
+      ◯ (disabled) Debug
       ◯ (disabled) Standard
-      ◉ (disabled) Optimize 🚀
-      ↑↗
-      ·→
-      ▲ 🚀 ⏳ 13:10:05 HttpCaching
+      ◉ (disabled) Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HttpCaching
+      ▲ ❌🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Reload trouble
+      [Close elm-watch]
+      ❌ HttpCaching Reload trouble · 13:10:05
       A while ago I reloaded the page to get new compiled JavaScript.
       But it looks like after the last page reload I got the same JavaScript as before, instead of new stuff!
       The old JavaScript was compiled 10/9/2022, 11:36:01 AM, and so was the JavaScript currently running.
       I currently need to reload the page again, but fear a reload loop if I try.
       Do you have accidental HTTP caching enabled maybe?
       Try hard refreshing the page and see if that helps, and consider disabling HTTP caching during development.
-      ▲ 🚀 ❌ 13:10:05 HttpCaching
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 

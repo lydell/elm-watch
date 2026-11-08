@@ -1,11 +1,7 @@
 import * as Codec from "tiny-decoders";
 
 import { NonEmptyArray } from "../src/NonEmptyArray.ts";
-import {
-  AbsolutePath,
-  BrowserUiPosition,
-  CompilationMode,
-} from "../src/Types.ts";
+import { AbsolutePath, CompilationMode } from "../src/Types.ts";
 
 const nonNegativeIntCodec = Codec.flatMap(Codec.number, {
   decoder: (value) =>
@@ -68,17 +64,14 @@ const StatusChange = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("AlreadyUpToDate"),
     compilationMode: CompilationMode,
-    browserUiPosition: BrowserUiPosition,
   },
   {
     tag: Codec.tag("Busy"),
     compilationMode: CompilationMode,
-    browserUiPosition: BrowserUiPosition,
   },
   {
     tag: Codec.tag("CompileError"),
     compilationMode: CompilationMode,
-    browserUiPosition: BrowserUiPosition,
     errors: Codec.array(CompileError),
     foregroundColor: Codec.string,
     backgroundColor: Codec.string,
@@ -97,7 +90,6 @@ const SuccessfullyCompiledFields = {
   code: Codec.string,
   elmCompiledTimestamp: Codec.number,
   compilationMode: CompilationMode,
-  browserUiPosition: BrowserUiPosition,
 };
 
 const SuccessfullyCompiled = Codec.taggedUnion("tag", [
@@ -145,10 +137,6 @@ export const WebSocketToServerMessage = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("ChangedCompilationMode"),
     compilationMode: CompilationMode,
-  },
-  {
-    tag: Codec.tag("ChangedBrowserUiPosition"),
-    browserUiPosition: BrowserUiPosition,
   },
   {
     tag: Codec.tag("FocusedTab"),

@@ -38,14 +38,6 @@ export const CompilationMode = Codec.primitiveUnion([
 
 export type CompilationModeWithProxy = CompilationMode | "proxy";
 
-export type BrowserUiPosition = Codec.Infer<typeof BrowserUiPosition>;
-export const BrowserUiPosition = Codec.primitiveUnion([
-  "TopLeft",
-  "TopRight",
-  "BottomLeft",
-  "BottomRight",
-]);
-
 // If the user has enabled the simple static file server.
 export type StaticFilesDir = Brand<AbsolutePath, "StaticFilesDir">;
 export function markAsStaticFilesDir(

@@ -5,7 +5,6 @@ import { formatTime } from "../src/Helpers.ts";
 import type { NonEmptyArray } from "../src/NonEmptyArray.ts";
 import { runTeaProgram } from "../src/TeaProgram.ts";
 import type {
-  BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
   GetNow,
@@ -322,10 +321,6 @@ const {
   // compile, because `Debug.log` isn’t allowed in optimize mode. Therefore we
   // have the selected compilation mode in the `Model` and the running mode here.
   originalCompilationMode: ORIGINAL_COMPILATION_MODE,
-  // This is the saved browser UI position as of when this file was compiled. We
-  // also store the latest saved position in the model, which is updated as soon
-  // as things change.
-  originalBrowserUiPosition: ORIGINAL_BROWSER_UI_POSITION,
   webSocketConnection: WEBSOCKET_CONNECTION,
   debug: DEBUG,
 } = __ELM_WATCH_CLIENT_CONFIG__;
@@ -334,10 +329,6 @@ const ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT =
   "elm-watch:changed-file-url-paths";
 
 const ELM_WATCH_CHANGED_FILE_URL_BATCH_TIME = 10;
-
-// A compilation after moving the browser UI on a big app takes around 700 ms
-// for me. So more than double that should be plenty.
-const JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT = 2000;
 
 __ELM_WATCH.SOME_TARGET_IS_PROXY ||= ORIGINAL_COMPILATION_MODE === "proxy";
 __ELM_WATCH.IS_REGISTERING = true;
@@ -353,10 +344,6 @@ type Mutable = {
 type Msg =
   | {
       tag: "AppInit";
-    }
-  | {
-      tag: "BrowserUiMoved";
-      browserUiPosition: BrowserUiPosition;
     }
   | {
       tag: "EvalErrored";
@@ -408,11 +395,8 @@ type Msg =
 type Model = {
   status: Status;
   compilationMode: CompilationModeWithProxy;
-  browserUiPosition: BrowserUiPosition;
-  lastBrowserUiPositionChangeDate: Date | undefined;
   elmCompiledTimestamp: number;
   elmCompiledTimestampBeforeReload: number | undefined;
-  uiExpanded: boolean;
 };
 
 type Cmd =
@@ -432,13 +416,15 @@ type Cmd =
       tag: "NoCmd";
     }
   | {
+      tag: "OpenPanel";
+    }
+  | {
       tag: "Reconnect";
       elmCompiledTimestamp: number;
     }
   | {
       tag: "Render";
       model: Model;
-      manageFocus: boolean;
     }
   | {
       tag: "SendMessage";
@@ -446,10 +432,6 @@ type Cmd =
       // This requires the “send key”. The idea is that this forces you to check
       // `Status` before sending.
       sendKey: SendKey;
-    }
-  | {
-      tag: "SetBrowserUiPosition";
-      browserUiPosition: BrowserUiPosition;
     }
   | {
       tag: "SleepBeforeReconnect";
@@ -529,9 +511,7 @@ function run(): void {
   }
 
   const ui = HAS_WINDOW ? (__ELM_WATCH.UI_V1 ??= createUi()) : undefined;
-  const uiTarget = ui?.register(TARGET_NAME, ORIGINAL_BROWSER_UI_POSITION);
-  const browserUiPosition =
-    ui === undefined ? ORIGINAL_BROWSER_UI_POSITION : ui.getBrowserUiPosition();
+  const uiTarget = ui?.register(TARGET_NAME);
   const getNow: GetNow = () => new Date();
 
   if (HAS_WINDOW) {
@@ -540,7 +520,7 @@ function run(): void {
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({
     initMutable: initMutable(getNow, uiTarget),
-    init: init(getNow(), browserUiPosition, elmCompiledTimestampBeforeReload),
+    init: init(getNow(), elmCompiledTimestampBeforeReload),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [updatedModel, cmds] = update(msg, model);
       const modelChanged = updatedModel !== model;
@@ -549,12 +529,7 @@ function run(): void {
         updatedModel.status.tag === "WaitingForReload" &&
         updatedModel.elmCompiledTimestamp ===
           updatedModel.elmCompiledTimestampBeforeReload;
-      const newModel: Model = modelChanged
-        ? {
-            ...updatedModel,
-            uiExpanded: reloadTrouble ? true : updatedModel.uiExpanded,
-          }
-        : model;
+      const newModel = modelChanged ? updatedModel : model;
       const oldErrors = getErrors(model.status);
       const newErrors = getErrors(newModel.status);
       const statusType = statusToStatusType(newModel.status.tag);
@@ -591,22 +566,18 @@ function run(): void {
                   // closed it before.
                   open: newErrors !== undefined,
                 },
+            // Before Render, so that the panel is open in the first render
+            // of the new status.
+            reloadTrouble ? { tag: "OpenPanel" } : { tag: "NoCmd" },
             ...(ui !== undefined || newModel.status.tag !== model.status.tag
               ? [
                   {
                     tag: "Render",
                     model: newModel,
-                    manageFocus: msg.tag === "UiMsg",
                   } as const,
                 ]
               : []),
             ...flashCmd,
-            model.browserUiPosition === newModel.browserUiPosition
-              ? { tag: "NoCmd" }
-              : {
-                  tag: "SetBrowserUiPosition",
-                  browserUiPosition: newModel.browserUiPosition,
-                },
             reloadTrouble
               ? { tag: "TriggerReachedIdleState", reason: "ReloadTrouble" }
               : { tag: "NoCmd" },
@@ -680,7 +651,6 @@ function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
     case "Idle":
       return status.sendKey;
 
-    // It works well moving the browser UI while already busy.
     // It works well clicking an error location to open it in an editor while busy.
     case "Busy":
       return SEND_KEY_DO_NOT_USE_ALL_THE_TIME;
@@ -749,9 +719,6 @@ const initMutable =
             uiTarget.subscribe({
               onUiMsg: (msg) => {
                 dispatch({ tag: "UiMsg", date: getNow(), msg });
-              },
-              onBrowserUiMoved: (browserUiPosition) => {
-                dispatch({ tag: "BrowserUiMoved", browserUiPosition });
               },
             }),
           ];
@@ -1028,19 +995,15 @@ function initWebSocket(
 
 const init = (
   date: Date,
-  browserUiPosition: BrowserUiPosition,
   elmCompiledTimestampBeforeReload: number | undefined,
 ): [Model, Array<Cmd>] => {
   const model: Model = {
     status: { tag: "Connecting", date, attemptNumber: 1 },
     compilationMode: ORIGINAL_COMPILATION_MODE,
-    browserUiPosition,
-    lastBrowserUiPositionChangeDate: undefined,
     elmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
     elmCompiledTimestampBeforeReload,
-    uiExpanded: false,
   };
-  return [model, [{ tag: "Render", model, manageFocus: false }]];
+  return [model, [{ tag: "Render", model }]];
 };
 
 function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
@@ -1050,17 +1013,14 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
       // model to trump the `===` check used to avoid re-renders.
       return [{ ...model }, []];
 
-    case "BrowserUiMoved":
-      return [{ ...model, browserUiPosition: msg.browserUiPosition }, []];
-
     case "EvalErrored":
       return [
         {
           ...model,
           status: { tag: "EvalError", date: msg.date },
-          uiExpanded: true,
         },
         [
+          { tag: "OpenPanel" },
           {
             tag: "TriggerReachedIdleState",
             reason: "EvalErrored",
@@ -1187,9 +1147,8 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
                 date: msg.date,
                 message: result.message,
               },
-              uiExpanded: true,
             },
-            [],
+            [{ tag: "OpenPanel" }],
           ];
       }
     }
@@ -1198,25 +1157,6 @@ function update(msg: Msg, model: Model): [Model, Array<Cmd>] {
 
 function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
   switch (msg.tag) {
-    case "ChangedBrowserUiPosition":
-      return [
-        {
-          ...model,
-          browserUiPosition: msg.browserUiPosition,
-          lastBrowserUiPositionChangeDate: date,
-        },
-        [
-          {
-            tag: "SendMessage",
-            message: {
-              tag: "ChangedBrowserUiPosition",
-              browserUiPosition: msg.browserUiPosition,
-            },
-            sendKey: msg.sendKey,
-          },
-        ],
-      ];
-
     case "ChangedCompilationMode":
       return [
         {
@@ -1239,14 +1179,6 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
           },
         ],
       ];
-
-    case "PressedErrorOverlayToggle":
-      // The UI has shown or hidden the error overlay. Collapse, so that the
-      // expanded UI does not cover the errors.
-      return [{ ...model, uiExpanded: false }, []];
-
-    case "PressedChevron":
-      return [{ ...model, uiExpanded: !model.uiExpanded }, []];
 
     case "PressedOpenEditor":
       return [
@@ -1285,10 +1217,12 @@ function onWebSocketToClientMessage(
           ? {
               ...model,
               status: { ...model.status, openEditorError: msg.error },
-              uiExpanded: true,
             }
           : model,
         [
+          model.status.tag === "CompileError"
+            ? { tag: "OpenPanel" }
+            : { tag: "NoCmd" },
           {
             tag: "TriggerReachedIdleState",
             reason: "OpenEditorFailed",
@@ -1321,11 +1255,7 @@ function onWebSocketToClientMessage(
     case "StatusChanged":
       return statusChanged(date, msg.status, model);
 
-    case "SuccessfullyCompiled": {
-      const justChangedBrowserUiPosition =
-        model.lastBrowserUiPositionChangeDate !== undefined &&
-        date.getTime() - model.lastBrowserUiPositionChangeDate.getTime() <
-          JUST_CHANGED_BROWSER_UI_POSITION_TIMEOUT;
+    case "SuccessfullyCompiled":
       return msg.compilationMode !== ORIGINAL_COMPILATION_MODE
         ? [
             {
@@ -1349,22 +1279,9 @@ function onWebSocketToClientMessage(
               ...model,
               compilationMode: msg.compilationMode,
               elmCompiledTimestamp: msg.elmCompiledTimestamp,
-              browserUiPosition: msg.browserUiPosition,
-              lastBrowserUiPositionChangeDate: undefined,
             },
-            [
-              { tag: "Eval", code: msg.code },
-              // This isn’t strictly necessary, but has the side effect of
-              // getting rid of the success animation.
-              justChangedBrowserUiPosition
-                ? {
-                    tag: "SetBrowserUiPosition",
-                    browserUiPosition: msg.browserUiPosition,
-                  }
-                : { tag: "NoCmd" },
-            ],
+            [{ tag: "Eval", code: msg.code }],
           ];
-    }
 
     case "SuccessfullyCompiledButRecordFieldsChanged":
       return [
@@ -1399,7 +1316,6 @@ function statusChanged(
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
           },
           compilationMode: status.compilationMode,
-          browserUiPosition: status.browserUiPosition,
         },
         [
           {
@@ -1419,7 +1335,6 @@ function statusChanged(
             errors: getErrors(model.status),
           },
           compilationMode: status.compilationMode,
-          browserUiPosition: status.browserUiPosition,
         },
         [],
       ];
@@ -1429,9 +1344,9 @@ function statusChanged(
         {
           ...model,
           status: { tag: "UnexpectedError", date, message: status.message },
-          uiExpanded: true,
         },
         [
+          { tag: "OpenPanel" },
           {
             tag: "TriggerReachedIdleState",
             reason: "ClientError",
@@ -1463,7 +1378,6 @@ function statusChanged(
             openEditorError: undefined,
           },
           compilationMode: status.compilationMode,
-          browserUiPosition: status.browserUiPosition,
         },
         [
           {
@@ -1606,6 +1520,10 @@ const runCmd =
       case "NoCmd":
         return;
 
+      case "OpenPanel":
+        mutable.uiTarget?.openPanel();
+        return;
+
       case "Reconnect":
         // The previous web socket should already be closed, but make sure it
         // is, and that its timeout can’t close the new web socket.
@@ -1640,10 +1558,7 @@ const runCmd =
           const consoleMethod = console[consoleMethodName];
           consoleMethod(renderWithoutDomElements(model, info));
         } else {
-          mutable.uiTarget.render(
-            modelToSnapshot(model, info),
-            cmd.manageFocus,
-          );
+          mutable.uiTarget.render(modelToSnapshot(model, info));
           __ELM_WATCH.ON_RENDER(TARGET_NAME);
         }
         return;
@@ -1667,10 +1582,6 @@ const runCmd =
         }
         return;
       }
-
-      case "SetBrowserUiPosition":
-        mutable.uiTarget?.setBrowserUiPosition(cmd.browserUiPosition);
-        return;
 
       case "SleepBeforeReconnect":
         runInitCmds(mutable);
@@ -2020,10 +1931,8 @@ function modelToSnapshot(model: Model, info: Info): TargetSnapshot {
       ? { ...model.status, date: new Date("2022-02-05T13:10:05Z") }
       : model.status,
     compilationMode: model.compilationMode,
-    browserUiPosition: model.browserUiPosition,
     elmCompiledTimestamp: model.elmCompiledTimestamp,
     elmCompiledTimestampBeforeReload: model.elmCompiledTimestampBeforeReload,
-    uiExpanded: model.uiExpanded,
     info,
     sendKey: statusToSpecialCaseSendKey(model.status),
   };
@@ -2291,19 +2200,16 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
   };
 
   for (const [targetName, status] of Object.entries(mockStatuses)) {
-    ui.register(targetName, "BottomLeft").render(
-      {
-        status,
-        compilationMode: status.compilationMode ?? "standard",
-        browserUiPosition: "BottomLeft",
-        elmCompiledTimestamp: 0,
-        elmCompiledTimestampBeforeReload: undefined,
-        uiExpanded: true,
-        info: { ...(status.info ?? info), targetName },
-        sendKey: statusToSpecialCaseSendKey(status),
-      },
-      false,
-    );
+    const uiTarget = ui.register(targetName);
+    uiTarget.render({
+      status,
+      compilationMode: status.compilationMode ?? "standard",
+      elmCompiledTimestamp: 0,
+      elmCompiledTimestampBeforeReload: undefined,
+      info: { ...(status.info ?? info), targetName },
+      sendKey: statusToSpecialCaseSendKey(status),
+    });
+    uiTarget.openPanel();
   }
 }
 

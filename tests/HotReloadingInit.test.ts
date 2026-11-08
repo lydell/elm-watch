@@ -706,13 +706,13 @@ describe("hot reloading", () => {
     });
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target HtmlMain
+      ▲ ⛔️
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Eval error
+      [Close elm-watch]
+      ⛔️ HtmlMain Eval error · 13:10:05
       Check the console in the browser developer tools to see errors!
-      ▲ ⛔️ 13:10:05 HtmlMain
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
 
     expect(mockPromiseReject.mock.calls).toMatchInlineSnapshot(`

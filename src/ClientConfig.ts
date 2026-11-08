@@ -1,4 +1,4 @@
-import type { BrowserUiPosition, CompilationModeWithProxy } from "./Types.ts";
+import type { CompilationModeWithProxy } from "./Types.ts";
 
 // The client code is bundled once, but some values are only known when
 // injecting it into a target’s output. The client code reads them from this
@@ -12,7 +12,6 @@ export type ClientConfig = {
   targetName: string;
   initialElmCompiledTimestamp: number;
   originalCompilationMode: CompilationModeWithProxy;
-  originalBrowserUiPosition: BrowserUiPosition;
   // A port number or a full URL.
   webSocketConnection: number | string;
   webSocketToken: string;

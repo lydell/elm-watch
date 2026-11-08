@@ -53,121 +53,19 @@ describe("hot", () => {
     });
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Main
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Main
+      ▼ ⏳
       ================================================================================
-      ▼ 🐛 ⏳ 13:10:05 Main
+      ▼ ⏳
       ================================================================================
-      ▼ 🐛 🔌 13:10:05 Main
+      ▼ 🔌
       ================================================================================
-      ▼ 🐛 🔌 13:10:05 Main
+      ▼ 🔌
       ================================================================================
-      ▼ 🐛 ⏳ 13:10:05 Main
+      ▼ ⏳
       ================================================================================
-      ▼ 🐛 ✅ 13:10:05 Main
-    `);
-  });
-
-  test("persisted browser UI position", async () => {
-    const { renders } = await run({
-      fixture: "persisted-browser-ui-position",
-      args: [],
-      scripts: ["Main.js"],
-      keepElmStuffJson: true,
-      expandUiImmediately: true,
-      init: (node) => {
-        window.Elm?.["Main"]?.init({ node });
-      },
-      onIdle: () => "Stop",
-    });
-
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
-      ◯ (disabled) Standard
-      ◯ (disabled) Optimize
-      ←·
-      ↙↓
-      ▲ ⏳ 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ←·
-      ↙↓
-      ▲ ⏳ 13:10:05 Main
-      ================================================================================
-      ▼ 🔌 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      ←·
-      ↙↓
-      ▲ ⏳ 13:10:05 Main
-      ================================================================================
-      target Main
-      elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ Debug
-      ◉ Standard
-      ◯ Optimize
-      ←·
-      ↙↓
-      ▲ ✅ 13:10:05 Main
+      ▼ ✅
     `);
   });
 
@@ -405,22 +303,20 @@ describe("hot", () => {
     test("env var not set", async () => {
       const renders = await runFailClickErrorLocation({ env: {} });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ 🚨
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Hide errors]
+        [Close elm-watch]
+        🚨 Main Compilation error · 13:10:05
+        Compilation mode for Main
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        [Hide errors]
-
+        The Elm debugger isn't available at this point.
         ℹ️ Clicking error locations only works if you set it up.
         Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -432,22 +328,20 @@ describe("hot", () => {
         useElmWatchFunction: true,
       });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ 🚨
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Hide errors]
+        [Close elm-watch]
+        🚨 Main Compilation error · 13:10:05
+        Compilation mode for Main
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        [Hide errors]
-
+        The Elm debugger isn't available at this point.
         ℹ️ Clicking error locations only works if you set it up.
         Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -462,16 +356,17 @@ describe("hot", () => {
         },
       });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ 🚨
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Hide errors]
+        [Close elm-watch]
+        🚨 Main Compilation error · 13:10:05
+        Compilation mode for Main
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        [Hide errors]
+        The Elm debugger isn't available at this point.
         Opening the location in your editor failed!
         I called your openEditor function with:
 
@@ -484,9 +379,7 @@ describe("hot", () => {
         It threw an error:
 
         "Editor not found"
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -517,11 +410,11 @@ describe("hot", () => {
         }),
       });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ Main Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
@@ -530,7 +423,7 @@ describe("hot", () => {
         Got: -1
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        ▲ ❌ 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -545,11 +438,11 @@ describe("hot", () => {
         }),
       });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ Main Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
@@ -558,7 +451,7 @@ describe("hot", () => {
         Got: 5.8
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        ▲ ❌ 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -573,25 +466,24 @@ describe("hot", () => {
         }),
       });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ 🚨
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Hide errors]
+        [Close elm-watch]
+        🚨 Main Compilation error · 13:10:05
+        Compilation mode for Main
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        [Hide errors]
+        The Elm debugger isn't available at this point.
         Opening the location in your editor failed!
         I received a command to open the following file in your editor:
 
         ; echo hacked #
 
         However, no target imports that file. For security reasons, I never executed any command with that file.
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -617,16 +509,17 @@ describe("hot", () => {
         .replace("code 1.", "code 127.");
 
       expect(cleanedRenders).toMatchInlineSnapshot(`
-        target Main
+        ▲ 🚨
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Hide errors]
+        [Close elm-watch]
+        🚨 Main Compilation error · 13:10:05
+        Compilation mode for Main
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        [Hide errors]
+        The Elm debugger isn't available at this point.
         Opening the location in your editor failed!
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
@@ -644,9 +537,7 @@ describe("hot", () => {
         The command exited with code 127.
 
         nope: command not found
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -658,16 +549,17 @@ describe("hot", () => {
         },
       });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ 🚨
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Hide errors]
+        [Close elm-watch]
+        🚨 Main Compilation error · 13:10:05
+        Compilation mode for Main
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        [Hide errors]
+        The Elm debugger isn't available at this point.
         Opening the location in your editor failed!
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
@@ -685,9 +577,7 @@ describe("hot", () => {
         The command took too long to run, and was killed after 10 ms.
 
         (no output)
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -698,16 +588,17 @@ describe("hot", () => {
         },
       });
       expect(renders).toMatchInlineSnapshot(`
-        target Main
+        ▲ 🚨
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:9988/elm-watch
-        updated 2022-02-05 13:10:05
-        status Compilation error
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Hide errors]
+        [Close elm-watch]
+        🚨 Main Compilation error · 13:10:05
+        Compilation mode for Main
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        [Hide errors]
+        The Elm debugger isn't available at this point.
         Opening the location in your editor failed!
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
@@ -725,9 +616,7 @@ describe("hot", () => {
         The command exited with code 1.
 
         (no output)
-        ↑↗
-        ·→
-        ▲ 🚨 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -763,11 +652,11 @@ describe("hot", () => {
       });
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 Main
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Main
+        ▼ ⏳
         ================================================================================
-        ▼ 🚨 13:10:05 Main
+        ▼ 🚨
       `);
       expect(clean(fs.readFileSync(outputFile, "utf-8"))).toMatchInlineSnapshot(
         `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31`,
@@ -802,11 +691,11 @@ describe("hot", () => {
     });
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Main
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Main
+      ▼ ⏳
       ================================================================================
-      ▼ 🚨 13:10:05 Main
+      ▼ 🚨
     `);
     expect(clean(JSON.stringify(calls))).toMatchInlineSnapshot(
       `[{"file":"/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm","line":10,"column":31}]`,
@@ -836,18 +725,17 @@ describe("hot", () => {
     });
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target Main
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:9988/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◉ (disabled) Debug 🐛 The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ Main Successfully compiled · 13:10:05
+      Compilation mode for Main
+      ◉ (disabled) Debug
       ◯ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ 🐛 ✅ 13:10:05 Main
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 });

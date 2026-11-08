@@ -5,19 +5,17 @@ nav_order: 7
 
 # Browser UI
 
-When using `elm-watch hot`, you’ll see a little box in the bottom-left corner of the browser window, looking something like this:
+When using `elm-watch hot`, you’ll see a little emoji in the bottom-left corner of the browser window, like ✅.
 
-```
-▼ ✅ 13:10:05
-```
+It shows the current status. The ✅ means all is good and there are no compilation errors. When a hot reload has gone through successfully, there’s an animation – a green circle growing from the ✅ and fading out as it goes. No more wondering “did the hot reload stop working? Or did I edit the wrong piece of code?”
 
-It shows the current status. The ✅ means all is good and there are no compilation errors. 13:10:05 is the last time the status was updated. That’s especially useful for knowing when the last hot reload was applied. No more wondering “did the hot reload stop working? Or did I edit the wrong piece of code?” If the time has updated, so has the running code. On top of that, there’s an animation – a green circle growing from the ✅ and fading out as it goes – to let you know that a hot reload has gone through successfully.
+If there are several targets (scripts) on the page, there’s still just one emoji, showing the worst status of them all. A small 🚀 next to it means that some target is in `--optimize` mode.
 
-Clicking the box expands it, letting you switch between the “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
+Clicking the emoji opens a panel with one row per target. Each row shows the status, the time it was last updated (handy for knowing when the last hot reload was applied), and lets you switch between the “standard” compilation mode, `--debug` and `--optimize`. elm-watch remembers your choice (per target) across restarts. So if you prefer to have the Elm debugger on at all times, it’s easy to do!
 
-If the UI is in the way, you can move it to another corner using the arrow buttons. elm-watch remembers that choice per target across restarts as well.
+If the emoji is in the way, drag it somewhere else. It snaps to the closest side of the window. You can also move it with Shift + arrow keys while it (or the panel) has focus. The position is remembered in the browser (using `localStorage`), for all pages on the same origin.
 
-Here are all the icons you might see (they’re also explained when you expand the box):
+Here are all the icons you might see (they’re also explained in the panel):
 
 ✅ = Successfully compiled  
 🔌 = Connecting  
@@ -28,7 +26,7 @@ Here are all the icons you might see (they’re also explained when you expand t
 
 Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** elm-watch then shows the errors directly in the browser, in an overlay (in addition to the terminal).
 
-I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. In elm-watch, you can close the overlay (with the close button, or by pressing Escape), and it then stays closed until the next time you save and get errors. Press Escape again to bring it back, or expand the UI and click the “Show errors” button.
+I often want to play around with my app while making changes. I might refactor something and wonder exactly how the app used to behave in a certain situation. Error overlays in some other tools prevent you from doing that, or require you to repeatedly close it. In elm-watch, you can close the overlay (with the close button, or by pressing Escape), and it then stays closed until the next time you save and get errors. Press Escape again to bring it back, or open the panel and click the “Show errors” button.
 
 (A cool little detail: The error overlay picks up the colors from your terminal, if possible.)
 

@@ -1061,7 +1061,6 @@ function onCompileSuccess(
                 outputPath,
                 elmCompiledTimestamp,
                 outputState.compilationMode,
-                outputState.browserUiPosition,
                 runMode.webSocketConnection,
                 runMode.webSocketToken,
                 loggerConfig.debug,
@@ -1235,7 +1234,6 @@ async function postprocessHelper({
               outputPath,
               elmCompiledTimestamp,
               outputState.compilationMode,
-              outputState.browserUiPosition,
               runMode.webSocketConnection,
               runMode.webSocketToken,
               logger.config.debug,
@@ -1531,7 +1529,6 @@ async function typecheck({
             Inject.proxyFile(
               outputPath,
               getNow().getTime(),
-              outputState.browserUiPosition,
               webSocketConnection,
               webSocketToken,
               logger.config.debug,

@@ -33,7 +33,6 @@ import type {
 import type { RunElmMakeError } from "./SpawnElm.ts";
 import {
   type AbsolutePath,
-  type BrowserUiPosition,
   type CompilationMode,
   type ElmJsonPath,
   type ElmWatchStuffDir,
@@ -170,8 +169,6 @@ export class OutputState extends TargetState {
 
   compilationMode: CompilationMode;
 
-  browserUiPosition: BrowserUiPosition;
-
   allRelatedElmFilePaths = new Set<AbsolutePath>();
 
   // We only calculate `recordFields` in optimize mode. Having `| undefined`
@@ -182,14 +179,12 @@ export class OutputState extends TargetState {
     inputs: NonEmptyArray<InputPath>,
     postprocess: Postprocess,
     compilationMode: CompilationMode,
-    browserUiPosition: BrowserUiPosition,
     getNow: GetNow,
   ) {
     super({ tag: "NotWrittenToDisk" }, getNow);
     this.inputs = inputs;
     this.postprocess = postprocess;
     this.compilationMode = compilationMode;
-    this.browserUiPosition = browserUiPosition;
   }
 }
 
@@ -314,7 +309,6 @@ export type TargetErrorWithMetadata = {
   outputPath: OutputPath | PackageTarget;
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
-  browserUiPosition: BrowserUiPosition;
   error: TargetError;
 };
 
@@ -460,10 +454,8 @@ export function initProject({
         );
 
         const persisted = elmWatchStuffJson?.targets[targetName];
-        const {
-          compilationMode: thisCompilationMode = compilationMode,
-          browserUiPosition = "BottomLeft",
-        } = persisted ?? {};
+        const { compilationMode: thisCompilationMode = compilationMode } =
+          persisted ?? {};
 
         switch (resolveResult.tag) {
           case "Success": {
@@ -479,7 +471,6 @@ export function initProject({
                       postprocessFunction: target.postprocess,
                     },
                 thisCompilationMode,
-                browserUiPosition,
                 getNow,
               ),
             ]);
@@ -492,7 +483,6 @@ export function initProject({
               outputPath,
               elmJsonPath,
               compilationMode: thisCompilationMode,
-              browserUiPosition,
               error: resolveResult,
             });
             break;
@@ -523,7 +513,6 @@ export function initProject({
             elmJsonPath,
             // These are only used for applications (in the browser UI).
             compilationMode,
-            browserUiPosition: "BottomLeft",
             error,
           });
         }

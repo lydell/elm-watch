@@ -216,127 +216,120 @@ describe("hot reloading", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 DebugLog
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 DebugLog
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 DebugLog
+      ▼ ⏳
       ================================================================================
-      ▼ 🔌 13:10:05 DebugLog
+      ▼ 🔌
       ================================================================================
-      ▼ 🔌 13:10:05 DebugLog
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 DebugLog
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 DebugLog
+      ▼ ✅
       ================================================================================
-      target DebugLog
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ DebugLog Successfully compiled · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 DebugLog
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target DebugLog
+      ▲ ⏳🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ⏳ DebugLog Waiting for compilation · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◯ (disabled) Standard
-      ◉ (disabled) Optimize 🚀
-      ↑↗
-      ·→
-      ▲ 🚀 ⏳ 13:10:05 DebugLog
+      ◉ (disabled) Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target DebugLog
+      ▲ ⏳🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ⏳ DebugLog Waiting for compilation · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◯ (disabled) Standard
-      ◉ (disabled) Optimize 🚀
-      ↑↗
-      ·→
-      ▲ 🚀 ⏳ 13:10:05 DebugLog
+      ◉ (disabled) Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target DebugLog
+      ▲ 🚨🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Compilation error
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Hide errors]
+      [Close elm-watch]
+      🚨 DebugLog Compilation error · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◯ Standard
-      ◉ Optimize 🚀 Note: The code currently running is in standard mode.
-      [Hide errors]
-      ↑↗
-      ·→
-      ▲ 🚀 🚨 13:10:05 DebugLog
+      ◉ Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Note: The code currently running is in standard mode.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target DebugLog
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Hide errors]
+      [Close elm-watch]
+      ⏳ DebugLog Waiting for compilation · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      [Hide errors]
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 DebugLog
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target DebugLog
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Hide errors]
+      [Close elm-watch]
+      ⏳ DebugLog Waiting for compilation · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      [Hide errors]
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 DebugLog
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target DebugLog
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Hide errors]
+      [Close elm-watch]
+      ⏳ DebugLog Waiting for compilation · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      [Hide errors]
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 DebugLog
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target DebugLog
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ DebugLog Successfully compiled · 13:10:05
+      Compilation mode for DebugLog
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 DebugLog
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 
@@ -621,11 +614,11 @@ describe("hot reloading", () => {
           case 6:
             overlays.push(getOverlay());
             // The overlay is shared by all targets.
-            expandUi("App");
-            hideErrors("App");
+            expandUi();
+            hideErrors();
             visibility.push(isOverlayVisible());
-            expandUi("AppOther");
-            showErrors("AppOther");
+            expandUi();
+            showErrors();
             visibility.push(isOverlayVisible());
             return "Stop";
           default:

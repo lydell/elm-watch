@@ -15,7 +15,7 @@ import type { ReadStream } from "../src/Helpers.ts";
 import type { HotTestHooks, Msg } from "../src/Hot.ts";
 import { makeLogger } from "../src/Logger.ts";
 import { markAsPort } from "../src/Port.ts";
-import type { BrowserUiPosition, CompilationMode } from "../src/Types.ts";
+import type { CompilationMode } from "../src/Types.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   badElmBinEnv,
@@ -507,7 +507,7 @@ function joinRenders(renders: Array<string>): string {
 export function withoutConnectionAttempts(renders: string): string {
   return renders
     .split(RENDER_SEPARATOR)
-    .filter((render) => !/^status (?:Connecting|Sleeping)$/m.test(render))
+    .filter((render) => !/ (?:Connecting|Sleeping) · \d/.test(render))
     .join(RENDER_SEPARATOR);
 }
 
@@ -654,26 +654,23 @@ function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
   }
 }
 
-export function expandUi(targetName?: string): void {
-  expandUiHelper(true, targetName);
+export function expandUi(): void {
+  expandUiHelper(true);
 }
 
-export function collapseUi(targetName?: string): void {
-  expandUiHelper(false, targetName);
+export function collapseUi(): void {
+  expandUiHelper(false);
 }
 
-function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
+function expandUiHelper(wantExpanded: boolean): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot.querySelector(
-      `${
-        targetName === undefined
-          ? "[data-target]"
-          : `[data-target="${targetName}"]`
-      } button[aria-expanded]`,
-    );
+    const button = shadowRoot.querySelector(`button[aria-expanded]`);
     if (button instanceof HTMLElement) {
       if (button.getAttribute("aria-expanded") !== wantExpanded.toString()) {
         button.click();
+        // Opening and closing the panel happens in the UI without involving
+        // the targets, so record a render here like the targets do.
+        window.__ELM_WATCH.ON_RENDER("expandUiHelper");
       }
     } else {
       throw new Error(`Could not button for expanding UI.`);
@@ -681,14 +678,10 @@ function expandUiHelper(wantExpanded: boolean, targetName?: string): void {
   });
 }
 
-export function showErrors(targetName?: string): void {
+export function showErrors(): void {
   withShadowRoot((shadowRoot) => {
     const button = shadowRoot.querySelector(
-      `${
-        targetName === undefined
-          ? "[data-target]"
-          : `[data-target="${targetName}"]`
-      } [data-test-id="ShowErrorOverlayButton"]`,
+      `[data-test-id="ShowErrorOverlayButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -698,14 +691,10 @@ export function showErrors(targetName?: string): void {
   });
 }
 
-export function hideErrors(targetName?: string): void {
+export function hideErrors(): void {
   withShadowRoot((shadowRoot) => {
     const button = shadowRoot.querySelector(
-      `${
-        targetName === undefined
-          ? "[data-target]"
-          : `[data-target="${targetName}"]`
-      } [data-test-id="HideErrorOverlayButton"]`,
+      `[data-test-id="HideErrorOverlayButton"]`,
     );
     if (button instanceof HTMLElement) {
       button.click();
@@ -777,18 +766,30 @@ export function clickFirstErrorLocation(): void {
   });
 }
 
-export function moveUi(position: BrowserUiPosition): void {
-  expandUi();
+// Moves the browser UI with Shift + an arrow key, and returns the classes of
+// the UI root element afterwards (which reflect the position).
+export function moveUi(
+  key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+): string {
+  let className = "";
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot.querySelector(
-      `button[data-position="${position}"]`,
-    );
+    const button = shadowRoot.querySelector(`button[aria-expanded]`);
     if (button instanceof HTMLButtonElement) {
-      button.click();
+      button.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key,
+          shiftKey: true,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        }),
+      );
+      className = button.parentElement?.className ?? "";
     } else {
-      throw new Error(`Could not find button for ${position}.`);
+      throw new Error(`Could not find the button for expanding the UI.`);
     }
   });
+  return className;
 }
 
 export function switchCompilationMode(compilationMode: CompilationMode): void {
@@ -838,41 +839,45 @@ export function assertDebugger(body: HTMLBodyElement): void {
   ).toStrictEqual(["svg"]);
 }
 
-function getTextContent(element: Node): string {
-  return Array.from(walkTextNodes(element))
-    .join("")
-    .trim()
-    .replace(/\n /g, "\n")
-    .replace(/[\n·↑↓←→↖↗↙↘]+/g, (match) => {
-      const chars = match.replace(/\s/g, "");
-      return chars === ""
-        ? match
-        : `\n${chars.slice(0, 2)}\n${chars.slice(2)}\n`;
-    });
+function getTextContent(node: Node): string {
+  const parts: Array<string> = [];
+  walkTextNodes(node, parts);
+  return parts.join("").trim().replace(/\n /g, "\n");
 }
 
-function* walkTextNodes(element: Node): Generator<string, void, void> {
-  if (shouldAddNewline(element)) {
-    yield "\n";
-  }
-  for (const node of element.childNodes) {
-    if (node instanceof Text) {
-      yield " ";
-      yield node.data.trim();
-    } else if (node instanceof HTMLInputElement && node.type === "radio") {
-      yield (node.checked ? "◉" : "◯") + (node.disabled ? " (disabled)" : "");
-    } else if (node instanceof HTMLButtonElement) {
-      const textContent = node.textContent.trim();
-      if (textContent.length === 1) {
-        yield textContent;
-      } else {
-        yield `\n[${textContent}]`;
-      }
-    } else if (node instanceof HTMLAnchorElement) {
-      const textContent = node.textContent.trim();
-      yield ` [${textContent}](${node.href})`;
+function walkTextNodes(node: Node, parts: Array<string>): void {
+  const newline = (): void => {
+    // Avoid empty lines from nested elements that all start a new line.
+    if (parts.at(-1) !== "\n") {
+      parts.push("\n");
+    }
+  };
+  if (node instanceof Text) {
+    parts.push(" ", node.data.trim());
+  } else if (node instanceof HTMLInputElement && node.type === "radio") {
+    parts.push(
+      (node.checked ? "◉" : "◯") + (node.disabled ? " (disabled)" : ""),
+    );
+  } else if (node instanceof HTMLButtonElement) {
+    const textContent = node.textContent.trim();
+    const expanded = node.getAttribute("aria-expanded");
+    if (expanded !== null) {
+      parts.push(`${expanded === "true" ? "▲" : "▼"} ${textContent}`);
     } else {
-      yield* walkTextNodes(node);
+      newline();
+      parts.push(
+        `[${textContent === "" ? (node.getAttribute("aria-label") ?? "") : textContent}]`,
+      );
+    }
+  } else if (node instanceof HTMLAnchorElement) {
+    const textContent = node.textContent.trim();
+    parts.push(` [${textContent}](${node.href})`);
+  } else {
+    if (shouldAddNewline(node)) {
+      newline();
+    }
+    for (const child of node.childNodes) {
+      walkTextNodes(child, parts);
     }
   }
 }
@@ -880,7 +885,7 @@ function* walkTextNodes(element: Node): Generator<string, void, void> {
 function shouldAddNewline(node: Node): boolean {
   switch (node.nodeName) {
     case "DIV":
-    case "DT":
+    case "HEADER":
     case "LEGEND":
     case "LABEL":
     case "P":

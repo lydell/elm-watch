@@ -54,19 +54,19 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ 🔌 13:10:05 Html
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 Html
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 Html
+      ▼ ✅
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
@@ -121,91 +121,78 @@ describe("hot", () => {
     `);
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Worker
+      ▼ 🔌
       ================================================================================
-      target Worker
+      ▲ 🔌
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Worker
+      [Close elm-watch]
+      🔌 Worker Connecting · 13:10:05
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Worker
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      [Close elm-watch]
+      ⏳ Worker Waiting for compilation · 13:10:05
+      Compilation mode for Worker
+      ◯ (disabled) Debug
       ◯ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 Worker
+      The Elm debugger isn't available at this point.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Worker
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      [Close elm-watch]
+      ⏳ Worker Waiting for compilation · 13:10:05
+      Compilation mode for Worker
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 Worker
+      The Elm debugger isn't available at this point.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      ▼ 🔌 13:10:05 Worker
+      ▼ 🔌
       ================================================================================
-      target Worker
+      ▲ 🔌
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Worker
+      [Close elm-watch]
+      🔌 Worker Connecting · 13:10:05
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Worker
+      ▲ 🔌
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Connecting
-      attempt 1
-      sleep 1.01 seconds
-      [Connecting web socket…]
-      ▲ 🔌 13:10:05 Worker
+      [Close elm-watch]
+      🔌 Worker Connecting · 13:10:05
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Worker
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
+      [Close elm-watch]
+      ⏳ Worker Waiting for compilation · 13:10:05
+      Compilation mode for Worker
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 Worker
+      The Elm debugger isn't supported by \`Platform.worker\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Worker
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Platform.worker\` programs.
+      [Close elm-watch]
+      ✅ Worker Successfully compiled · 13:10:05
+      Compilation mode for Worker
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 Worker
+      The Elm debugger isn't supported by \`Platform.worker\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 
@@ -330,26 +317,25 @@ describe("hot", () => {
     });
 
     expect(withoutConnectionAttempts(renders)).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 Main
+      ▼ 🔌
       ================================================================================
-      target Main
+      ▲ ⏳
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      [Close elm-watch]
+      ⏳ Main Waiting for compilation · 13:10:05
+      Compilation mode for Main
+      ◯ (disabled) Debug
       ◉ (disabled) Standard
       ◯ (disabled) Optimize
-      ↑↗
-      ·→
-      ▲ ⏳ 13:10:05 Main
+      The Elm debugger cannot be enabled until at least one Elm app has been initialized. (Check the browser console for errors if you expected an Elm app to be initialized by now.)
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target Main
+      ▲ 🚨
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status elm.json or inputs error
+      [Close elm-watch]
+      🚨 Main elm.json or inputs error · 13:10:05
       -- elm.json NOT FOUND ----------------------------------------------------------
       Target: Main
 
@@ -358,7 +344,7 @@ describe("hot", () => {
       /Users/you/project/tests/fixtures/hot/connect-with-elm-json-error/elm.json
 
       Is "elmJson" misspelled? Or do you need to run elm init to create it?
-      ▲ 🚨 13:10:05 Main
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 
@@ -399,19 +385,18 @@ describe("hot", () => {
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target Removed
+      ▲ 🚨
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Compilation error
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      [Hide errors]
+      [Close elm-watch]
+      🚨 Removed Compilation error · 13:10:05
+      Compilation mode for Removed
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      [Hide errors]
-      ↑↗
-      ·→
-      ▲ 🚨 13:10:05 Removed
+      The Elm debugger isn't available at this point.
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 
@@ -456,19 +441,18 @@ describe("hot", () => {
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-      target Readonly
+      ▲ 🚨
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Compilation error
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't available at this point.
+      [Hide errors]
+      [Close elm-watch]
+      🚨 Readonly Compilation error · 13:10:05
+      Compilation mode for Readonly
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      [Hide errors]
-      ↑↗
-      ·→
-      ▲ 🚨 13:10:05 Readonly
+      The Elm debugger isn't available at this point.
+      Drag the emoji to move it, or press Shift + arrow keys.
     `);
   });
 
@@ -563,11 +547,11 @@ describe("hot", () => {
       });
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target ParamsDecodeError
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ ParamsDecodeError Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         I ran into trouble parsing the web socket connection URL parameters:
 
@@ -582,46 +566,41 @@ describe("hot", () => {
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
 
         Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        ▲ ❌ 13:10:05 ParamsDecodeError
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target ParamsDecodeError
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Sleeping
-        attempt 1
-        sleep 1.01 seconds
-        [Reconnect web socket now]
-        ▲ 🔌 13:10:05 ParamsDecodeError
+        [Close elm-watch]
+        🔌 ParamsDecodeError Sleeping · 13:10:05
+        Attempt 1 failed. Trying again in 1.01 seconds.
+        [Reconnect now]
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target ParamsDecodeError
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 ParamsDecodeError
+        [Close elm-watch]
+        🔌 ParamsDecodeError Connecting · 13:10:05
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target ParamsDecodeError
+        ▲ ⏳
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Close elm-watch]
+        ⏳ ParamsDecodeError Waiting for compilation · 13:10:05
+        Compilation mode for ParamsDecodeError
+        ◯ (disabled) Debug
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 ParamsDecodeError
+        The Elm debugger isn't available at this point.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target ParamsDecodeError
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ ParamsDecodeError Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         I ran into trouble parsing the web socket connection URL parameters:
 
@@ -636,7 +615,7 @@ describe("hot", () => {
         The web socket code I generate is supposed to always connect using a correct URL, so something is up here.
 
         Or maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        ▲ ❌ 13:10:05 ParamsDecodeError
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -653,15 +632,11 @@ describe("hot", () => {
         onIdle: async () => {
           let received = 0;
           const allReceived = nextMsg(
-            (msg) => msg.tag === "WebSocketMessageReceived" && ++received === 3,
+            (msg) => msg.tag === "WebSocketMessageReceived" && ++received === 2,
           );
           send({
             tag: "ChangedCompilationMode",
             compilationMode: "optimize",
-          });
-          send({
-            tag: "ChangedBrowserUiPosition",
-            browserUiPosition: "TopLeft",
           });
           send({ tag: "FocusedTab" });
           // Wait for the above messages to be processed before stopping (needed
@@ -673,11 +648,11 @@ describe("hot", () => {
       });
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target WrongVersion
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ WrongVersion Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it was compiled with:
 
@@ -688,7 +663,7 @@ describe("hot", () => {
         elm-watch %VERSION%
 
         Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
-        ▲ ❌ 13:10:05 WrongVersion
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -810,11 +785,11 @@ describe("hot", () => {
       `);
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target Enabled1
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ Enabled1 Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
 
@@ -835,7 +810,7 @@ describe("hot", () => {
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         If so, try reloading the page.
-        ▲ ❌ 13:10:05 Enabled1
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -853,11 +828,11 @@ describe("hot", () => {
       });
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target Main
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ Main Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
 
@@ -871,7 +846,7 @@ describe("hot", () => {
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         If so, try reloading the page.
-        ▲ ❌ 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -890,11 +865,11 @@ describe("hot", () => {
       });
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target Main
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ Main Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
 
@@ -908,7 +883,7 @@ describe("hot", () => {
 
         Maybe this target used to exist in the elm-watch options, but you removed or changed it?
         If so, try reloading the page.
-        ▲ ❌ 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -956,33 +931,33 @@ describe("hot", () => {
       });
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 Main
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Main
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Main
+        ▼ ⏳
         ================================================================================
-        ▼ 🔌 13:10:05 Main
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Main
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Main
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Main
+        ▼ ✅
         ================================================================================
-        ▼ ⏳ 13:10:05 Main
+        ▼ ⏳
         ================================================================================
-        ▼ 🔌 13:10:05 Main
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Main
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Main
+        ▼ ⏳
         ================================================================================
-        target Main
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ Main Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
 
@@ -996,21 +971,21 @@ describe("hot", () => {
 
         Maybe this target used to exist in elm-watch.json, but you removed or changed it?
         If so, try reloading the page.
-        ▲ ❌ 13:10:05 Main
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        ▼ 🔌 13:10:05 Renamed
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Renamed
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Renamed
+        ▼ ⏳
         ================================================================================
-        ▼ 🔌 13:10:05 Renamed
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Renamed
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Renamed
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Renamed
+        ▼ ✅
       `);
     });
 
@@ -1028,11 +1003,11 @@ describe("hot", () => {
       });
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target TargetDisabled
+        ▲ ❌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ TargetDisabled Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser says it is for this target:
 
@@ -1062,7 +1037,7 @@ describe("hot", () => {
         "Esc\\apes"
 
         If you want to have this target compiled, restart elm-watch either with more CLI arguments or no CLI arguments at all!
-        ▲ ❌ 13:10:05 TargetDisabled
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -1101,50 +1076,47 @@ describe("hot", () => {
       });
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`
-        target SendBadJson
+        ▲ ✅
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Successfully compiled
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        [Close elm-watch]
+        ✅ SendBadJson Successfully compiled · 13:10:05
+        Compilation mode for SendBadJson
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        ↑↗
-        ·→
-        ▲ ✅ 13:10:05 SendBadJson
+        The Elm debugger isn't supported by \`Html\` programs.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target SendBadJson
+        ▲ ⏳🚀
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        [Close elm-watch]
+        ⏳ SendBadJson Waiting for compilation · 13:10:05
+        Compilation mode for SendBadJson
+        ◯ (disabled) Debug
         ◯ (disabled) Standard
-        ◉ (disabled) Optimize 🚀
-        ↑↗
-        ·→
-        ▲ 🚀 ⏳ 13:10:05 SendBadJson
+        ◉ (disabled) Optimize
+        The Elm debugger isn't supported by \`Html\` programs.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target SendBadJson
+        ▲ ❌🚀
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Unexpected error
+        [Close elm-watch]
+        ❌ SendBadJson Unexpected error · 13:10:05
         I ran into an unexpected error! This is the error message:
         The compiled JavaScript code running in the browser seems to have sent a message that the web socket server cannot recognize!
 
         At root["tag"]:
         Expected one of these tags:
          "ChangedCompilationMode",
-         "ChangedBrowserUiPosition",
          "FocusedTab",
          "PressedOpenEditor"
         Got: "Nope"
 
         The web socket code I generate is supposed to always send correct messages, so something is up here.
-        ▲ 🚀 ❌ 13:10:05 SendBadJson
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -1169,131 +1141,112 @@ describe("hot", () => {
       });
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        target Reconnect
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 Reconnect
+        [Close elm-watch]
+        🔌 Reconnect Connecting · 13:10:05
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Sleeping
-        attempt 2
-        sleep 1.04 seconds
-        [Reconnect web socket now]
-        ▲ 🔌 13:10:05 Reconnect
+        [Close elm-watch]
+        🔌 Reconnect Sleeping · 13:10:05
+        Attempt 2 failed. Trying again in 1.04 seconds.
+        [Reconnect now]
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 2
-        sleep 1.04 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 Reconnect
+        [Close elm-watch]
+        🔌 Reconnect Connecting · 13:10:05
+        Attempt 2.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Sleeping
-        attempt 3
-        sleep 1.09 seconds
-        [Reconnect web socket now]
-        ▲ 🔌 13:10:05 Reconnect
+        [Close elm-watch]
+        🔌 Reconnect Sleeping · 13:10:05
+        Attempt 3 failed. Trying again in 1.09 seconds.
+        [Reconnect now]
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 3
-        sleep 1.09 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 Reconnect
+        [Close elm-watch]
+        🔌 Reconnect Connecting · 13:10:05
+        Attempt 3.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ ⏳
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Close elm-watch]
+        ⏳ Reconnect Waiting for compilation · 13:10:05
+        Compilation mode for Reconnect
+        ◯ (disabled) Debug
         ◯ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 Reconnect
+        The Elm debugger isn't available at this point.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ ⏳
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't available at this point.
+        [Close elm-watch]
+        ⏳ Reconnect Waiting for compilation · 13:10:05
+        Compilation mode for Reconnect
+        ◯ (disabled) Debug
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 Reconnect
+        The Elm debugger isn't available at this point.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        target Reconnect
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 Reconnect
+        [Close elm-watch]
+        🔌 Reconnect Connecting · 13:10:05
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ 🔌
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Connecting
-        attempt 1
-        sleep 1.01 seconds
-        [Connecting web socket…]
-        ▲ 🔌 13:10:05 Reconnect
+        [Close elm-watch]
+        🔌 Reconnect Connecting · 13:10:05
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ ⏳
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Waiting for compilation
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        [Close elm-watch]
+        ⏳ Reconnect Waiting for compilation · 13:10:05
+        Compilation mode for Reconnect
+        ◯ (disabled) Debug
         ◉ (disabled) Standard
         ◯ (disabled) Optimize
-        ↑↗
-        ·→
-        ▲ ⏳ 13:10:05 Reconnect
+        The Elm debugger isn't supported by \`Html\` programs.
+        Drag the emoji to move it, or press Shift + arrow keys.
         ================================================================================
-        target Reconnect
+        ▲ ✅
+        --------------------------------------------------------------------------------
         elm-watch %VERSION%
-        web socket ws://localhost:59123/elm-watch
-        updated 2022-02-05 13:10:05
-        status Successfully compiled
-        Compilation mode
-        ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+        [Close elm-watch]
+        ✅ Reconnect Successfully compiled · 13:10:05
+        Compilation mode for Reconnect
+        ◯ (disabled) Debug
         ◉ Standard
         ◯ Optimize
-        ↑↗
-        ·→
-        ▲ ✅ 13:10:05 Reconnect
+        The Elm debugger isn't supported by \`Html\` programs.
+        Drag the emoji to move it, or press Shift + arrow keys.
       `);
     });
 
@@ -1323,23 +1276,23 @@ describe("hot", () => {
       `);
 
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 Html
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Html
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Html
+        ▼ ⏳
         ================================================================================
-        ▼ 🔌 13:10:05 Html
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Html
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Html
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Html
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Html
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Html
+        ▼ ✅
       `);
     });
   });
@@ -1480,27 +1433,27 @@ describe("hot", () => {
 
       expect(webSockets).toHaveLength(numWebSocketsBefore + 1);
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Reconnect
+        ▼ ✅
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Reconnect
+        ▼ ✅
       `);
     });
 
@@ -1540,27 +1493,27 @@ describe("hot", () => {
       expect(sentMessages).toStrictEqual([]);
       expect(consoleErrors).toStrictEqual([]);
       expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Reconnect
+        ▼ ✅
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ 🔌 13:10:05 Reconnect
+        ▼ 🔌
         ================================================================================
-        ▼ ⏳ 13:10:05 Reconnect
+        ▼ ⏳
         ================================================================================
-        ▼ ✅ 13:10:05 Reconnect
+        ▼ ✅
       `);
     });
   });

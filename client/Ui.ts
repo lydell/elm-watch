@@ -1,7 +1,8 @@
-import { formatDate, formatTime } from "../src/Helpers.ts";
+import * as Codec from "tiny-decoders";
+
+import { formatTime } from "../src/Helpers.ts";
 import type {
   AbsolutePath,
-  BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
 } from "../src/Types.ts";
@@ -9,22 +10,9 @@ import type { ErrorLocation, OpenEditorError } from "./WebSocketMessages.ts";
 
 export type UiMsg =
   | {
-      tag: "ChangedBrowserUiPosition";
-      browserUiPosition: BrowserUiPosition;
-      sendKey: SendKey;
-    }
-  | {
       tag: "ChangedCompilationMode";
       compilationMode: CompilationMode;
       sendKey: SendKey;
-    }
-  | {
-      // The UI shows or hides the error overlay itself. This message lets the
-      // target react to it too.
-      tag: "PressedErrorOverlayToggle";
-    }
-  | {
-      tag: "PressedChevron";
     }
   | {
       tag: "PressedOpenEditor";
@@ -116,16 +104,12 @@ export const UI_VERSION = 1;
 const CONTAINER_ID = `elm-watch-ui-${UI_VERSION}`;
 
 export type Ui = {
-  register: (
-    targetName: string,
-    initialBrowserUiPosition: BrowserUiPosition,
-  ) => UiTarget;
-  getBrowserUiPosition: () => BrowserUiPosition;
+  register: (targetName: string) => UiTarget;
 };
 
 export type UiTarget = {
   subscribe: (callbacks: UiTargetCallbacks) => () => void;
-  render: (snapshot: TargetSnapshot, manageFocus: boolean) => void;
+  render: (snapshot: TargetSnapshot) => void;
   flash: (flashType: FlashType) => void;
   // The error overlay shows the errors of all targets. It is opened when a
   // target gets new errors (`open: true`), and stays closed after the user
@@ -135,22 +119,20 @@ export type UiTarget = {
     sendKey: SendKey | undefined,
     options: { open: boolean },
   ) => void;
-  setBrowserUiPosition: (browserUiPosition: BrowserUiPosition) => void;
+  // For statuses that need the user’s attention.
+  openPanel: () => void;
   unregister: () => void;
 };
 
 export type UiTargetCallbacks = {
   onUiMsg: (msg: UiMsg) => void;
-  onBrowserUiMoved: (browserUiPosition: BrowserUiPosition) => void;
 };
 
 export type TargetSnapshot = {
   status: Status;
   compilationMode: CompilationModeWithProxy;
-  browserUiPosition: BrowserUiPosition;
   elmCompiledTimestamp: number;
   elmCompiledTimestampBeforeReload: number | undefined;
-  uiExpanded: boolean;
   info: Info;
   // For actions that work in more statuses than the ones with a `sendKey`.
   sendKey: SendKey | undefined;
@@ -158,10 +140,30 @@ export type TargetSnapshot = {
 
 type TargetEntry = {
   targetName: string;
-  targetRoot: HTMLElement;
   callbacks: UiTargetCallbacks | undefined;
   snapshot: TargetSnapshot | undefined;
 };
+
+// The emoji snaps to the left or right edge of the window. `y` goes from 0
+// (top) to 1 (bottom). The position is stored per origin in localStorage, so
+// that it is shared by all pages and targets.
+type UiPosition = Codec.Infer<typeof UiPosition>;
+const UiPosition = Codec.fields({
+  side: Codec.primitiveUnion(["left", "right"]),
+  y: Codec.number,
+});
+
+const UI_POSITION_STORAGE_KEY = "elm-watch:ui-position";
+
+// The Elm debugger’s button is in the bottom-right corner.
+const DEFAULT_UI_POSITION: UiPosition = { side: "left", y: 1 };
+
+// How far the pointer needs to move before a press on the emoji turns into
+// dragging it.
+const DRAG_THRESHOLD = 5;
+
+// Shift + up/down moves the emoji this much.
+const KEYBOARD_STEP = 0.25;
 
 export function createUi(): Ui {
   // Remove leftovers, in case the previous UI was not cleaned up.
@@ -178,9 +180,13 @@ export function createUi(): Ui {
   container.style.all = "initial";
 
   // `<dialog>` elements cannot have a shadow root, so we need an inner element.
+  // It covers the whole window, but lets clicks through to the page (except
+  // on our own elements).
   const containerInner = h(HTMLDivElement, {});
   containerInner.style.all = "initial";
   containerInner.style.position = "fixed";
+  containerInner.style.inset = "0";
+  containerInner.style.pointerEvents = "none";
   containerInner.style.zIndex = "2147483647"; // Maximum z-index supported by browsers. (Popover fallback.)
 
   // In Safari, when making a `<dialog>` element into a popovers, it
@@ -199,55 +205,158 @@ export function createUi(): Ui {
     hidden: true,
   });
 
-  const overlayCloseButton = h(HTMLButtonElement, {
-    className: CLASS.overlayCloseButton,
+  const overlayCloseBar = h(
+    HTMLDivElement,
+    { className: CLASS.overlayCloseBar, hidden: true },
+    h(
+      HTMLSpanElement,
+      { className: CLASS.overlayHint, attrs: { "aria-hidden": "true" } },
+      "Esc closes · press again to reopen",
+    ),
+    h(HTMLButtonElement, {
+      className: CLASS.overlayCloseButton,
+      attrs: {
+        "aria-label": "Close error overlay",
+        "aria-keyshortcuts": "Escape",
+        "data-test-id": "OverlayCloseButton",
+      },
+      onclick: closeErrorOverlay,
+    }),
+  );
+
+  const toggleButton = h(HTMLButtonElement, {
+    className: CLASS.toggleButton,
+    hidden: true,
     attrs: {
-      "aria-label": "Close error overlay",
-      "data-test-id": "OverlayCloseButton",
+      "aria-expanded": "false",
+      "aria-keyshortcuts":
+        "Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight",
     },
-    onclick: closeErrorOverlay,
   });
 
-  const root = h(HTMLDivElement, { className: CLASS.root });
+  const panel = h(HTMLDivElement, {
+    className: CLASS.panel,
+    attrs: {
+      role: "group",
+      "aria-label": "elm-watch",
+      // Using the attribute instead of the property so that it can be
+      // selected with `querySelector`.
+      tabindex: "-1",
+    },
+  });
+
+  const root = h(HTMLDivElement, { className: CLASS.root }, toggleButton);
 
   const shadowRoot = containerInner.attachShadow({ mode: "open" });
   shadowRoot.append(
     h(HTMLStyleElement, {}, CSS),
     overlay,
-    overlayCloseButton,
+    overlayCloseBar,
     root,
   );
   container.append(containerInner);
   document.documentElement.append(container);
 
   const entries: Array<TargetEntry> = [];
-  let browserUiPosition: BrowserUiPosition | undefined = undefined;
   let errorOverlayOpen = false;
+  let panelOpen = false;
+  let position = loadUiPosition();
 
-  const renderTarget = (entry: TargetEntry, manageFocus: boolean): void => {
-    const { targetRoot, snapshot } = entry;
-    if (snapshot === undefined) {
-      return;
-    }
-
-    targetRoot.replaceChildren(
-      view(
-        (msg) => {
-          if (msg.tag === "PressedErrorOverlayToggle") {
-            setErrorOverlayOpen(!errorOverlayOpen);
-          }
-          entry.callbacks?.onUiMsg(msg);
-        },
-        snapshot,
-        errorOverlayOpen,
-      ),
+  const getSnapshots = (): Array<TargetSnapshot> =>
+    entries.flatMap((entry) =>
+      entry.snapshot === undefined ? [] : [entry.snapshot],
     );
 
-    const firstFocusableElement =
-      targetRoot.querySelector(`button, [tabindex]`);
-    if (manageFocus && firstFocusableElement instanceof HTMLElement) {
-      firstFocusableElement.focus();
+  const dispatchToTarget = (targetName: string, msg: UiMsg): void => {
+    entries
+      .find((entry) => entry.targetName === targetName)
+      ?.callbacks?.onUiMsg(msg);
+  };
+
+  const render = (): void => {
+    const snapshots = getSnapshots();
+    toggleButton.hidden = snapshots.length === 0;
+    toggleButton.setAttribute("aria-expanded", panelOpen.toString());
+    toggleButton.setAttribute("aria-label", summaryLabel(snapshots));
+
+    const worst = worstStatus(snapshots);
+    const flashElement = toggleButton.querySelector(`.${CLASS.flash}`);
+    toggleButton.replaceChildren(
+      flashElement ??
+        h(HTMLSpanElement, {
+          className: CLASS.flash,
+          onanimationend: (event) => {
+            // The animations are designed to work even without this (they
+            // stay on the last frame). We also have `pointer-events: none`.
+            // But remove the absolutely positioned animation element just
+            // in case.
+            if (event.currentTarget instanceof HTMLElement) {
+              event.currentTarget.removeAttribute("data-flash");
+            }
+          },
+        }),
+      h(HTMLSpanElement, { className: CLASS.toggleEmoji }, worst?.icon ?? ""),
+      ...(snapshots.some((snapshot) => snapshot.compilationMode === "optimize")
+        ? [h(HTMLSpanElement, { className: CLASS.badge }, "🚀")]
+        : []),
+    );
+
+    if (panelOpen && snapshots.length > 0) {
+      renderPanel(snapshots);
+      if (!panel.isConnected) {
+        root.append(panel);
+      }
+    } else {
+      panel.remove();
+      panel.replaceChildren();
     }
+  };
+
+  const renderPanel = (snapshots: Array<TargetSnapshot>): void => {
+    // The panel is re-created on every render. Restore focus afterwards, so
+    // that keyboard users don’t lose their place.
+    const { activeElement } = shadowRoot;
+    const focusKey =
+      activeElement === panel
+        ? "panel"
+        : (activeElement?.getAttribute(DATA_FOCUS_KEY) ?? undefined);
+
+    panel.replaceChildren(
+      ...viewPanel({
+        snapshots,
+        hasErrors: overlay.hasChildNodes(),
+        errorOverlayOpen,
+        onToggleErrorOverlay: () => {
+          // Close the panel, so that it does not cover the errors.
+          panelOpen = false;
+          setErrorOverlayOpen(!errorOverlayOpen);
+          render();
+        },
+        onClose: closePanel,
+        dispatch: dispatchToTarget,
+      }),
+    );
+
+    if (focusKey !== undefined && focusKey !== "panel") {
+      const element = Array.from(
+        panel.querySelectorAll(`[${DATA_FOCUS_KEY}]`),
+      ).find(
+        (candidate) => candidate.getAttribute(DATA_FOCUS_KEY) === focusKey,
+      );
+      if (element instanceof HTMLElement && !element.matches(":disabled")) {
+        element.focus({ preventScroll: true });
+      } else {
+        // For example, the compilation mode radio buttons are disabled while
+        // compiling.
+        panel.focus({ preventScroll: true });
+      }
+    }
+  };
+
+  const closePanel = (): void => {
+    panelOpen = false;
+    render();
+    toggleButton.focus();
   };
 
   const isErrorOverlayVisible = (): boolean =>
@@ -256,10 +365,10 @@ export function createUi(): Ui {
   const updateErrorOverlayVisibility = (): void => {
     const hidden = !isErrorOverlayVisible();
     overlay.hidden = hidden;
-    overlayCloseButton.hidden = hidden;
+    overlayCloseBar.hidden = hidden;
 
     // Avoid drawing the close button on top of a scrollbar.
-    overlayCloseButton.style.right = `${
+    overlayCloseBar.style.right = `${
       overlay.offsetWidth - overlay.clientWidth
     }px`;
 
@@ -291,27 +400,187 @@ export function createUi(): Ui {
     }
     errorOverlayOpen = open;
     updateErrorOverlayVisibility();
-    // The “Show errors” / “Hide errors” buttons need updating.
-    for (const entry of entries) {
-      renderTarget(entry, false);
+    // The “Show errors” / “Hide errors” button needs updating.
+    render();
+  };
+
+  const applyUiPosition = (): void => {
+    root.style.setProperty("--y", position.y.toString());
+    root.classList.toggle(CLASS.rootRight, position.side === "right");
+    root.classList.toggle(CLASS.rootBottomHalf, position.y > 0.5);
+  };
+
+  const setUiPosition = (newPosition: UiPosition): void => {
+    position = newPosition;
+    applyUiPosition();
+    saveUiPosition(newPosition);
+  };
+
+  applyUiPosition();
+
+  toggleButton.onclick = () => {
+    if (drag.tag === "JustDropped") {
+      drag = { tag: "Idle" };
+      return;
+    }
+    panelOpen = !panelOpen;
+    render();
+  };
+
+  // Dragging works like the floating button in Expo’s developer menu: The
+  // emoji follows the pointer, and snaps to the closest side when released.
+  let drag:
+    | { tag: "Idle" }
+    | {
+        tag: "Pressed";
+        pointerId: number;
+        startX: number;
+        startY: number;
+        offsetX: number;
+        offsetY: number;
+      }
+    | {
+        tag: "Dragging";
+        pointerId: number;
+        offsetX: number;
+        offsetY: number;
+      }
+    | { tag: "JustDropped" } = { tag: "Idle" };
+
+  toggleButton.onpointerdown = (event) => {
+    if (!event.isPrimary || event.button !== 0) {
+      return;
+    }
+    const rect = toggleButton.getBoundingClientRect();
+    drag = {
+      tag: "Pressed",
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    // Keep getting pointer events even when the pointer quickly leaves the
+    // button. The click event still fires as usual.
+    toggleButton.setPointerCapture(event.pointerId);
+  };
+
+  toggleButton.onpointermove = (event) => {
+    switch (drag.tag) {
+      case "Idle":
+      case "JustDropped":
+        return;
+
+      case "Pressed":
+        if (
+          drag.pointerId !== event.pointerId ||
+          Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) <
+            DRAG_THRESHOLD
+        ) {
+          return;
+        }
+        drag = {
+          tag: "Dragging",
+          pointerId: drag.pointerId,
+          offsetX: drag.offsetX,
+          offsetY: drag.offsetY,
+        };
+        root.classList.add(CLASS.rootDragging);
+        break;
+
+      case "Dragging":
+        if (drag.pointerId !== event.pointerId) {
+          return;
+        }
+        break;
+    }
+    toggleButton.style.left = `${event.clientX - drag.offsetX}px`;
+    toggleButton.style.right = "auto";
+    toggleButton.style.top = `${event.clientY - drag.offsetY}px`;
+  };
+
+  const endDrag = (event: PointerEvent, save: boolean): void => {
+    if (drag.tag === "Pressed") {
+      drag = { tag: "Idle" };
+      return;
+    }
+    if (drag.tag !== "Dragging" || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const rect = toggleButton.getBoundingClientRect();
+    toggleButton.style.left = "";
+    toggleButton.style.right = "";
+    toggleButton.style.top = "";
+    root.classList.remove(CLASS.rootDragging);
+    // A click event follows `pointerup`. It should not toggle the panel.
+    drag = save ? { tag: "JustDropped" } : { tag: "Idle" };
+    if (save) {
+      setUiPosition({
+        side:
+          rect.left + rect.width / 2 < window.innerWidth / 2 ? "left" : "right",
+        y: topToY(rect.top),
+      });
     }
   };
 
-  const applyBrowserUiPosition = (
-    newBrowserUiPosition: BrowserUiPosition,
-  ): void => {
-    browserUiPosition = newBrowserUiPosition;
+  toggleButton.onpointerup = (event) => {
+    endDrag(event, true);
+  };
 
-    for (const [key, value] of Object.entries(
-      browserUiPositionToCss(newBrowserUiPosition),
-    )) {
-      containerInner.style.setProperty(key, value);
+  toggleButton.onpointercancel = (event) => {
+    endDrag(event, false);
+  };
+
+  // Converts the top of the emoji button (in pixels) to a `y` value, by
+  // measuring where the button ends up at the top and bottom.
+  const topToY = (top: number): number => {
+    const previousY = root.style.getPropertyValue("--y");
+    root.style.setProperty("--y", "0");
+    const minTop = toggleButton.getBoundingClientRect().top;
+    root.style.setProperty("--y", "1");
+    const maxTop = toggleButton.getBoundingClientRect().top;
+    root.style.setProperty("--y", previousY);
+    return maxTop > minTop ? clamp01((top - minTop) / (maxTop - minTop)) : 0;
+  };
+
+  root.onkeydown = (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
     }
 
-    const isInBottomHalf =
-      newBrowserUiPosition === "BottomLeft" ||
-      newBrowserUiPosition === "BottomRight";
-    root.classList.toggle(CLASS.rootBottomHalf, isInBottomHalf);
+    if (event.key === "Escape" && !event.shiftKey && panelOpen) {
+      // Don’t let this Escape re-open the error overlay.
+      event.preventDefault();
+      event.stopPropagation();
+      closePanel();
+      return;
+    }
+
+    if (!event.shiftKey) {
+      return;
+    }
+
+    const newPosition = ((): UiPosition | undefined => {
+      switch (event.key) {
+        case "ArrowLeft":
+          return { ...position, side: "left" };
+        case "ArrowRight":
+          return { ...position, side: "right" };
+        case "ArrowUp":
+          return { ...position, y: stepY(position.y, -1) };
+        case "ArrowDown":
+          return { ...position, y: stepY(position.y, 1) };
+        default:
+          return undefined;
+      }
+    })();
+
+    if (newPosition !== undefined) {
+      // Also stops the arrow keys from changing the compilation mode radio
+      // buttons.
+      event.preventDefault();
+      setUiPosition(newPosition);
+    }
   };
 
   // While the error overlay is open, the page is inert, so we can take
@@ -330,16 +599,24 @@ export function createUi(): Ui {
   // meant for the page.
   const onKeydownBubble = (event: KeyboardEvent): void => {
     if (
-      event.key === "Escape" &&
-      !event.defaultPrevented &&
-      !event.altKey &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      !event.shiftKey &&
-      !errorOverlayOpen &&
-      overlay.hasChildNodes() &&
-      !isEscapeLikelyForThePage(containerInner)
+      event.key !== "Escape" ||
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      isEscapeLikelyForThePage(containerInner)
     ) {
+      return;
+    }
+    if (panelOpen) {
+      // Escape inside the panel is handled by `root.onkeydown`. But Safari
+      // does not focus buttons when clicking them, so after opening the panel
+      // with the mouse, Escape ends up here instead.
+      event.preventDefault();
+      panelOpen = false;
+      render();
+    } else if (!errorOverlayOpen && overlay.hasChildNodes()) {
       // Otherwise the browser closes the dialog right away again, as the
       // default action of pressing Escape.
       event.preventDefault();
@@ -384,10 +661,9 @@ export function createUi(): Ui {
   };
 
   return {
-    register: (targetName, initialBrowserUiPosition) => {
+    register: (targetName) => {
       const entry: TargetEntry = {
         targetName,
-        targetRoot: createTargetRoot(targetName),
         callbacks: undefined,
         snapshot: undefined,
       };
@@ -395,14 +671,6 @@ export function createUi(): Ui {
         addListeners();
       }
       entries.push(entry);
-      root.append(entry.targetRoot);
-
-      // Only the first target is in charge of the browser UI position.
-      const isFirstTarget = (): boolean => entries[0] === entry;
-
-      if (isFirstTarget()) {
-        applyBrowserUiPosition(initialBrowserUiPosition);
-      }
 
       return {
         subscribe: (callbacks) => {
@@ -412,16 +680,18 @@ export function createUi(): Ui {
           };
         },
 
-        render: (snapshot, manageFocus) => {
+        render: (snapshot) => {
           entry.snapshot = snapshot;
-          renderTarget(entry, manageFocus);
+          render();
           moveToTopLayer(container, containerInner);
         },
 
         flash: (flashType) => {
-          for (const element of entry.targetRoot.querySelectorAll(
-            `.${CLASS.flash}`,
-          )) {
+          const element = toggleButton.querySelector(`.${CLASS.flash}`);
+          if (element instanceof HTMLElement) {
+            // Restart the animation if it is already running.
+            element.removeAttribute("data-flash");
+            void element.offsetWidth;
             element.setAttribute("data-flash", flashType);
           }
         },
@@ -435,23 +705,19 @@ export function createUi(): Ui {
             sendKey,
             errors,
             overlay,
-            overlayCloseButton,
+            overlayCloseBar,
           );
           if (open && !errorOverlayOpen) {
             setErrorOverlayOpen(true);
           } else {
             updateErrorOverlayVisibility();
+            render();
           }
         },
 
-        setBrowserUiPosition: (newBrowserUiPosition) => {
-          if (!isFirstTarget()) {
-            return;
-          }
-          applyBrowserUiPosition(newBrowserUiPosition);
-          for (const otherEntry of entries) {
-            otherEntry.callbacks?.onBrowserUiMoved(newBrowserUiPosition);
-          }
+        openPanel: () => {
+          panelOpen = true;
+          render();
         },
 
         unregister: () => {
@@ -460,23 +726,55 @@ export function createUi(): Ui {
             return;
           }
           entries.splice(index, 1);
-          entry.targetRoot.remove();
+          render();
           if (entries.length === 0) {
             removeListeners();
           }
         },
       };
     },
-
-    getBrowserUiPosition: () => {
-      if (browserUiPosition === undefined) {
-        throw new Error(
-          "elm-watch: getBrowserUiPosition was called before any target was registered.",
-        );
-      }
-      return browserUiPosition;
-    },
   };
+}
+
+function loadUiPosition(): UiPosition {
+  try {
+    const stored = window.localStorage.getItem(UI_POSITION_STORAGE_KEY);
+    if (stored !== null) {
+      const result = Codec.JSON.parse(UiPosition, stored);
+      if (result.tag === "Valid" && Number.isFinite(result.value.y)) {
+        return { ...result.value, y: clamp01(result.value.y) };
+      }
+    }
+  } catch {
+    // localStorage might not be available.
+  }
+  return DEFAULT_UI_POSITION;
+}
+
+function saveUiPosition(position: UiPosition): void {
+  try {
+    window.localStorage.setItem(
+      UI_POSITION_STORAGE_KEY,
+      Codec.JSON.stringify(UiPosition, position),
+    );
+  } catch {
+    // localStorage might not be available.
+  }
+}
+
+function clamp01(number: number): number {
+  return Math.min(1, Math.max(0, number));
+}
+
+function stepY(y: number, direction: -1 | 1): number {
+  // Snap to the steps, in case `y` is somewhere in between after dragging.
+  const steps = 1 / KEYBOARD_STEP;
+  const current = y * steps;
+  const next =
+    direction === 1
+      ? Math.floor(current + 1e-9) + 1
+      : Math.ceil(current - 1e-9) - 1;
+  return clamp01(next / steps);
 }
 
 function isEscapeLikelyForThePage(containerInner: HTMLElement): boolean {
@@ -535,50 +833,6 @@ function moveToTopLayer(
   containerInner.style.opacity = isInert ? "0.5" : "";
 }
 
-function createTargetRoot(targetName: string): HTMLElement {
-  return h(HTMLDivElement, {
-    className: CLASS.targetRoot,
-    attrs: { "data-target": targetName },
-  });
-}
-
-type PositionCss<Position> = {
-  top: Position;
-  bottom: Position;
-  left: Position;
-  right: Position;
-};
-
-function browserUiPositionToCss(
-  browserUiPosition: BrowserUiPosition,
-): PositionCss<"-1px" | "auto"> {
-  switch (browserUiPosition) {
-    case "TopLeft":
-      return { top: "-1px", bottom: "auto", left: "-1px", right: "auto" };
-    case "TopRight":
-      return { top: "-1px", bottom: "auto", left: "auto", right: "-1px" };
-    case "BottomLeft":
-      return { top: "auto", bottom: "-1px", left: "-1px", right: "auto" };
-    case "BottomRight":
-      return { top: "auto", bottom: "-1px", left: "auto", right: "-1px" };
-  }
-}
-
-function browserUiPositionToCssForChooser(
-  browserUiPosition: BrowserUiPosition,
-): PositionCss<"0" | "auto"> {
-  switch (browserUiPosition) {
-    case "TopLeft":
-      return { top: "auto", bottom: "0", left: "auto", right: "0" };
-    case "TopRight":
-      return { top: "auto", bottom: "0", left: "0", right: "auto" };
-    case "BottomLeft":
-      return { top: "0", bottom: "auto", left: "auto", right: "0" };
-    case "BottomRight":
-      return { top: "0", bottom: "auto", left: "0", right: "auto" };
-  }
-}
-
 export function retryWaitMs(attemptNumber: number): number {
   // At least 1010 ms, at most 1 minute.
   return Math.min(1000 + 10 * attemptNumber ** 2, 1000 * 60);
@@ -601,7 +855,7 @@ function h<T extends HTMLElement>(
       style: Partial<CSSStyleDeclaration>;
     }
   >,
-  ...children: Array<HTMLElement | string | undefined>
+  ...children: Array<Node | string | undefined>
 ): T {
   const element = document.createElement(
     localName ??
@@ -638,6 +892,39 @@ function h<T extends HTMLElement>(
   return element;
 }
 
+function svg(
+  localName: string,
+  attrs: Record<string, string>,
+  ...children: Array<SVGElement>
+): SVGElement {
+  const element = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    localName,
+  );
+  for (const [key, value] of Object.entries(attrs)) {
+    element.setAttribute(key, value);
+  }
+  element.append(...children);
+  return element;
+}
+
+function closeIcon(): SVGElement {
+  return svg(
+    "svg",
+    {
+      viewBox: "0 0 16 16",
+      width: "16",
+      height: "16",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linecap": "round",
+      "aria-hidden": "true",
+    },
+    svg("path", { d: "M4 4l8 8M12 4l-8 8" }),
+  );
+}
+
 export type Info = {
   version: string;
   webSocketUrl: URL;
@@ -647,30 +934,50 @@ export type Info = {
 };
 
 const CLASS = {
-  browserUiPositionButton: "browserUiPositionButton",
-  browserUiPositionChooser: "browserUiPositionChooser",
-  chevronButton: "chevronButton",
-  compilationModeWithIcon: "compilationModeWithIcon",
-  container: "container",
-  debugModeIcon: "debugModeIcon",
+  badge: "badge",
+  button: "button",
+  closeButton: "closeButton",
+  details: "details",
   envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
-  expandedUiContainer: "expandedUiContainer",
   flash: "flash",
+  footer: "footer",
+  header: "header",
+  modes: "modes",
+  note: "note",
   overlay: "overlay",
+  overlayCloseBar: "overlayCloseBar",
   overlayCloseButton: "overlayCloseButton",
+  overlayHint: "overlayHint",
+  panel: "panel",
   root: "root",
   rootBottomHalf: "rootBottomHalf",
-  shortStatusContainer: "shortStatusContainer",
+  rootDragging: "rootDragging",
+  rootRight: "rootRight",
+  row: "row",
+  rowIcon: "rowIcon",
+  rowText: "rowText",
+  statusLine: "statusLine",
+  target: "target",
   targetName: "targetName",
-  targetRoot: "targetRoot",
+  targets: "targets",
+  title: "title",
+  toggleButton: "toggleButton",
+  toggleEmoji: "toggleEmoji",
+  version: "version",
+  visuallyHidden: "visuallyHidden",
 };
+
+const DATA_FOCUS_KEY = "data-focus-key";
 
 export type FlashType = "error" | "success";
 
 const CHEVRON_UP = "▲";
 const CHEVRON_DOWN = "▼";
+
+// The size of the emoji button. 44px is the recommended minimum touch target.
+const TOGGLE_SIZE = "44px";
 
 const CSS = `
 input,
@@ -686,45 +993,12 @@ textarea {
   margin: 0;
 }
 
-fieldset {
-  display: grid;
-  gap: 0.25em;
-  margin: 0;
-  border: 1px solid var(--grey);
-  padding: 0.25em 0.75em 0.5em;
-}
-
-fieldset:disabled {
-  color: var(--grey);
-}
-
-p,
-dd {
+p {
   margin: 0;
 }
 
-dl {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 0.25em 1em;
-  margin: 0;
-  white-space: nowrap;
-}
-
-dt {
-  text-align: right;
-  color: var(--grey);
-}
-
-time {
-  display: inline-grid;
-  overflow: hidden;
-}
-
-time::after {
-  content: attr(data-format);
-  visibility: hidden;
-  height: 0;
+[hidden] {
+  display: none !important;
 }
 
 .${CLASS.overlay} {
@@ -734,15 +1008,39 @@ time::after {
   overflow-y: auto;
   padding: 2ch 0;
   user-select: text;
+  pointer-events: auto;
 }
 
-.${CLASS.overlayCloseButton} {
+.${CLASS.overlayCloseBar} {
   position: fixed;
   z-index: -1;
   top: 0;
   right: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--foregroundColor);
+}
+
+.${CLASS.overlayHint} {
+  opacity: 0.7;
+  filter: drop-shadow(0 0 0.125em var(--backgroundColor));
+}
+
+@media (hover: none) {
+  .${CLASS.overlayHint} {
+    display: none;
+  }
+}
+
+.${CLASS.overlayCloseButton} {
+  position: relative;
   appearance: none;
-  padding: 1em;
+  width: 3.5em;
+  height: 3.5em;
+  padding: 0;
   border: none;
   border-radius: 0;
   background: none;
@@ -839,142 +1137,85 @@ details[open] > summary > .${CLASS.errorTitle}::before {
 
 .${CLASS.root} {
   all: initial;
-  --grey: #767676;
-  display: flex;
-  align-items: start;
-  overflow: auto;
-  max-height: 100vh;
-  max-width: 100vw;
-  color: black;
-  font-family: system-ui;
-}
-
-.${CLASS.rootBottomHalf} {
-  align-items: end;
-}
-
-.${CLASS.targetRoot} + .${CLASS.targetRoot} {
-  margin-left: -1px;
-}
-
-.${CLASS.targetRoot}:only-of-type .${CLASS.debugModeIcon},
-.${CLASS.targetRoot}:only-of-type .${CLASS.targetName} {
-  display: none;
-}
-
-.${CLASS.container} {
-  display: flex;
-  flex-direction: column-reverse;
-  background-color: white;
-  border: 1px solid var(--grey);
-}
-
-.${CLASS.rootBottomHalf} .${CLASS.container} {
-  flex-direction: column;
-}
-
-.${CLASS.envNotSet} {
-  display: grid;
-  gap: 0.75em;
-  margin: 2em 0;
-}
-
-.${CLASS.envNotSet},
-.${CLASS.root} pre {
-  border-left: 0.25em solid var(--grey);
-  padding-left: 0.5em;
-}
-
-.${CLASS.root} pre {
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.${CLASS.expandedUiContainer} {
-  padding: 1em;
-  padding-top: 0.75em;
-  display: grid;
-  gap: 0.75em;
-  outline: none;
-  contain: paint;
-}
-
-.${CLASS.rootBottomHalf} .${CLASS.expandedUiContainer} {
-  padding-bottom: 0.75em;
-}
-
-.${CLASS.expandedUiContainer}:is(.length0, .length1) {
-  grid-template-columns: min-content;
-}
-
-.${CLASS.expandedUiContainer} > dl {
-  justify-self: start;
-}
-
-.${CLASS.expandedUiContainer} label {
-  display: grid;
-  grid-template-columns: min-content auto;
-  align-items: center;
-  gap: 0.25em;
-}
-
-.${CLASS.expandedUiContainer} label.Disabled {
-  color: var(--grey);
-}
-
-.${CLASS.expandedUiContainer} label > small {
-  grid-column: 2;
-}
-
-.${CLASS.compilationModeWithIcon} {
-  display: flex;
-  align-items: center;
-  gap: 0.25em;
-}
-
-.${CLASS.browserUiPositionChooser} {
+  color-scheme: light dark;
+  --muted: color-mix(in srgb, CanvasText 62%, Canvas);
+  --border: color-mix(in srgb, CanvasText 18%, Canvas);
+  --border-strong: color-mix(in srgb, CanvasText 45%, Canvas);
+  --subtle: color-mix(in srgb, CanvasText 6%, Canvas);
+  --hover: color-mix(in srgb, CanvasText 11%, Canvas);
+  --focus: light-dark(#0b57d0, #a8c7fa);
+  --edge-top: max(env(safe-area-inset-top), 4px);
+  --edge-bottom: max(env(safe-area-inset-bottom), 4px);
+  --edge-left: max(env(safe-area-inset-left), 4px);
+  --edge-right: max(env(safe-area-inset-right), 4px);
+  --top: calc(var(--edge-top) + var(--y) * (100% - var(--edge-top) - var(--edge-bottom) - ${TOGGLE_SIZE}));
+  --gap: 4px;
   position: absolute;
-  display: grid;
-  grid-template-columns: min-content min-content;
-  pointer-events: none;
+  inset: 0;
+  color: CanvasText;
+  font: 13px/1.4 system-ui, sans-serif;
 }
 
-.${CLASS.browserUiPositionButton} {
-  appearance: none;
+.${CLASS.root} :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.${CLASS.toggleButton} {
+  pointer-events: auto;
+  position: absolute;
+  top: var(--top);
+  left: var(--edge-left);
+  display: grid;
+  place-items: center;
+  width: ${TOGGLE_SIZE};
+  height: ${TOGGLE_SIZE};
   padding: 0;
   border: none;
+  border-radius: 50%;
   background: none;
-  border-radius: none;
-  pointer-events: auto;
-  width: 1em;
-  height: 1em;
-  text-align: center;
-  line-height: 1em;
-}
-
-.${CLASS.browserUiPositionButton}:hover {
-  background-color: rgba(0, 0, 0, 0.25);
-}
-
-.${CLASS.targetRoot}:not(:first-child) .${CLASS.browserUiPositionChooser} {
-  display: none;
-}
-
-.${CLASS.shortStatusContainer} {
+  font-size: 22px;
   line-height: 1;
-  padding: 0.25em;
   cursor: pointer;
+  touch-action: none;
   user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 0.25em;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.${CLASS.root} .${CLASS.toggleButton}:focus-visible {
+  outline-offset: -4px;
+}
+
+.${CLASS.rootRight} .${CLASS.toggleButton} {
+  left: auto;
+  right: var(--edge-right);
+}
+
+.${CLASS.rootDragging} .${CLASS.toggleButton} {
+  cursor: grabbing;
+}
+
+.${CLASS.toggleEmoji} {
+  position: relative;
+}
+
+.${CLASS.badge} {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  font-size: 11px;
+}
+
+.${CLASS.flash} {
+  position: absolute;
+  top: 50%;
+  left: 50%;
 }
 
 [data-flash]::before {
   content: "";
   position: absolute;
-  margin-top: 0.5em;
-  margin-left: 0.5em;
   --size: min(500px, 100vmin);
   width: var(--size);
   height: var(--size);
@@ -1022,234 +1263,253 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   }
 }
 
-.${CLASS.chevronButton} {
+.${CLASS.panel} {
+  pointer-events: auto;
+  position: absolute;
+  top: calc(var(--top) + ${TOGGLE_SIZE} + var(--gap));
+  left: var(--edge-left);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(30rem, 100% - var(--edge-left) - var(--edge-right));
+  max-height: calc(100% - var(--top) - ${TOGGLE_SIZE} - var(--gap) - var(--edge-bottom));
+  overflow: auto;
+  overscroll-behavior: contain;
+  background-color: Canvas;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+}
+
+.${CLASS.rootRight} .${CLASS.panel} {
+  left: auto;
+  right: var(--edge-right);
+}
+
+.${CLASS.rootBottomHalf} .${CLASS.panel} {
+  top: auto;
+  bottom: calc(100% - var(--top) + var(--gap));
+  max-height: calc(var(--top) - var(--gap) - var(--edge-top));
+}
+
+.${CLASS.rootDragging} .${CLASS.panel} {
+  display: none;
+}
+
+.${CLASS.header} {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.${CLASS.title} {
+  flex: 1;
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.${CLASS.version} {
+  color: var(--muted);
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.${CLASS.button} {
   appearance: none;
-  border: none;
-  border-radius: 0;
-  background: none;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background-color: var(--subtle);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.${CLASS.button}:hover {
+  background-color: var(--hover);
+}
+
+.${CLASS.closeButton} {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
   cursor: pointer;
 }
+
+.${CLASS.closeButton}:hover {
+  background-color: var(--hover);
+  color: CanvasText;
+}
+
+.${CLASS.targets} {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.${CLASS.target} {
+  padding: 10px 12px;
+}
+
+.${CLASS.target} + .${CLASS.target} {
+  border-top: 1px solid var(--border);
+}
+
+.${CLASS.row} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.${CLASS.rowIcon} {
+  width: 20px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.${CLASS.rowText} {
+  flex: 1 1 10em;
+  display: grid;
+  min-width: 0;
+}
+
+.${CLASS.targetName} {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.${CLASS.statusLine} {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.${CLASS.modes} {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.${CLASS.modes} label {
+  position: relative;
+  padding: 2px 8px;
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.${CLASS.modes} label:hover {
+  color: CanvasText;
+}
+
+.${CLASS.modes} label:has(:checked) {
+  color: CanvasText;
+  background-color: var(--subtle);
+  outline: 1px solid var(--border-strong);
+}
+
+.${CLASS.modes} label:has(:focus-visible) {
+  outline: 2px solid var(--focus);
+}
+
+.${CLASS.modes} label:has(:disabled) {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.${CLASS.modes} label:has(:disabled):hover {
+  color: var(--muted);
+}
+
+.${CLASS.modes} label:has(:checked:disabled):hover {
+  color: CanvasText;
+}
+
+.${CLASS.modes} input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.${CLASS.details} {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0 30px;
+}
+
+.${CLASS.note} {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.${CLASS.details} pre {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid var(--border);
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.${CLASS.details} a {
+  color: inherit;
+}
+
+.${CLASS.details} .${CLASS.button} {
+  justify-self: start;
+}
+
+.${CLASS.envNotSet} {
+  display: grid;
+  gap: 6px;
+}
+
+.${CLASS.footer} {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.${CLASS.visuallyHidden} {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 `;
-
-function view(
-  dispatch: (msg: UiMsg) => void,
-  snapshot: TargetSnapshot,
-  errorOverlayOpen: boolean,
-): HTMLElement {
-  const statusData: StatusData = {
-    ...statusIconAndText(snapshot),
-    ...viewStatus(dispatch, snapshot, errorOverlayOpen),
-  };
-
-  return h(
-    HTMLDivElement,
-    { className: CLASS.container },
-    snapshot.uiExpanded
-      ? viewExpandedUi(snapshot, statusData, dispatch)
-      : undefined,
-    h(
-      HTMLDivElement,
-      {
-        className: CLASS.shortStatusContainer,
-        // Placed on the div to increase clickable area.
-        onclick: () => {
-          dispatch({ tag: "PressedChevron" });
-        },
-      },
-      h(
-        HTMLButtonElement,
-        {
-          className: CLASS.chevronButton,
-          attrs: { "aria-expanded": snapshot.uiExpanded.toString() },
-        },
-        icon(
-          snapshot.uiExpanded ? CHEVRON_UP : CHEVRON_DOWN,
-          snapshot.uiExpanded ? "Collapse elm-watch" : "Expand elm-watch",
-        ),
-      ),
-      compilationModeIcon(snapshot.compilationMode),
-      icon(statusData.icon, statusData.status, {
-        className: CLASS.flash,
-        onanimationend: (event) => {
-          // The animations are designed to work even without this (they
-          // stay on the last frame). We also have `pointer-events: none`.
-          // But remove the absolutely positioned animation element just
-          // in case.
-          if (event.currentTarget instanceof HTMLElement) {
-            event.currentTarget.removeAttribute("data-flash");
-          }
-        },
-      }),
-      h(
-        HTMLTimeElement,
-        { dateTime: snapshot.status.date.toISOString() },
-        formatTime(snapshot.status.date),
-      ),
-      h(
-        HTMLSpanElement,
-        { className: CLASS.targetName },
-        snapshot.info.targetName,
-      ),
-    ),
-  );
-}
-
-function icon(
-  emoji: string,
-  alt: string,
-  props?: Partial<HTMLSpanElement>,
-): HTMLElement {
-  return h(
-    HTMLSpanElement,
-    { attrs: { "aria-label": alt }, ...props },
-    h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, emoji),
-  );
-}
-
-function viewExpandedUi(
-  { status, info, browserUiPosition, sendKey }: TargetSnapshot,
-  statusData: StatusData,
-  dispatch: (msg: UiMsg) => void,
-): HTMLElement {
-  const items: Array<[string, HTMLElement | string]> = [
-    ["target", info.targetName],
-    ["elm-watch", info.version],
-    ["web socket", printWebSocketUrl(info.webSocketUrl)],
-    [
-      "updated",
-      h(
-        HTMLTimeElement,
-        {
-          dateTime: status.date.toISOString(),
-          attrs: { "data-format": "2044-04-30 04:44:44" },
-        },
-        `${formatDate(status.date)} ${formatTime(status.date)}`,
-      ),
-    ],
-    ["status", statusData.status],
-    ...statusData.dl,
-  ];
-
-  return h(
-    HTMLDivElement,
-    {
-      className: `${CLASS.expandedUiContainer} length${statusData.content.length}`,
-      attrs: {
-        // Using the attribute instead of the property so that it can be
-        // selected with `querySelector`.
-        tabindex: "-1",
-      },
-    },
-    h(
-      HTMLDListElement,
-      {},
-      ...items.flatMap(([key, value]) => [
-        h(HTMLElement, { localName: "dt" }, key),
-        h(HTMLElement, { localName: "dd" }, value),
-      ]),
-    ),
-    ...statusData.content,
-    sendKey === undefined
-      ? undefined
-      : viewBrowserUiPositionChooser(browserUiPosition, dispatch, sendKey),
-  );
-}
-
-const allBrowserUiPositionsInOrder: Array<BrowserUiPosition> = [
-  "TopLeft",
-  "TopRight",
-  "BottomLeft",
-  "BottomRight",
-];
-
-function viewBrowserUiPositionChooser(
-  currentPosition: BrowserUiPosition,
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey,
-): HTMLElement {
-  const arrows = getBrowserUiPositionArrows(currentPosition);
-  return h(
-    HTMLDivElement,
-    {
-      className: CLASS.browserUiPositionChooser,
-      style: browserUiPositionToCssForChooser(currentPosition),
-    },
-    ...allBrowserUiPositionsInOrder.map((position) => {
-      const arrow = arrows[position];
-      return arrow === undefined
-        ? h(HTMLDivElement, { style: { visibility: "hidden" } }, "·")
-        : h(
-            HTMLButtonElement,
-            {
-              className: CLASS.browserUiPositionButton,
-              attrs: { "data-position": position },
-              onclick: () => {
-                dispatch({
-                  tag: "ChangedBrowserUiPosition",
-                  browserUiPosition: position,
-                  sendKey,
-                });
-              },
-            },
-            arrow,
-          );
-    }),
-  );
-}
-
-const ARROW_UP = "↑";
-const ARROW_DOWN = "↓";
-const ARROW_LEFT = "←";
-const ARROW_RIGHT = "→";
-const ARROW_UP_LEFT = "↖";
-const ARROW_UP_RIGHT = "↗";
-const ARROW_DOWN_LEFT = "↙";
-const ARROW_DOWN_RIGHT = "↘";
-
-function getBrowserUiPositionArrows(browserUiPosition: BrowserUiPosition): {
-  [key in BrowserUiPosition]: string | undefined;
-} {
-  switch (browserUiPosition) {
-    case "TopLeft":
-      return {
-        TopLeft: undefined,
-        TopRight: ARROW_RIGHT,
-        BottomLeft: ARROW_DOWN,
-        BottomRight: ARROW_DOWN_RIGHT,
-      };
-
-    case "TopRight":
-      return {
-        TopLeft: ARROW_LEFT,
-        TopRight: undefined,
-        BottomLeft: ARROW_DOWN_LEFT,
-        BottomRight: ARROW_DOWN,
-      };
-
-    case "BottomLeft":
-      return {
-        TopLeft: ARROW_UP,
-        TopRight: ARROW_UP_RIGHT,
-        BottomLeft: undefined,
-        BottomRight: ARROW_RIGHT,
-      };
-
-    case "BottomRight":
-      return {
-        TopLeft: ARROW_UP_LEFT,
-        TopRight: ARROW_UP,
-        BottomLeft: ARROW_LEFT,
-        BottomRight: undefined,
-      };
-  }
-}
 
 type StatusData = {
   icon: string;
   status: string;
-  dl: Array<[string, string]>;
-  content: Array<HTMLElement>;
+  // Used to pick which status to show for the collapsed UI: The one with the
+  // highest number.
+  severity: number;
 };
 
 export function statusIconAndText(
@@ -1257,229 +1517,443 @@ export function statusIconAndText(
     TargetSnapshot,
     "status" | "elmCompiledTimestamp" | "elmCompiledTimestampBeforeReload"
   >,
-): Pick<StatusData, "icon" | "status"> {
+): StatusData {
   switch (snapshot.status.tag) {
     case "Busy":
       return {
         icon: "⏳",
         status: "Waiting for compilation",
+        severity: 1,
       };
 
     case "CompileError":
       return {
         icon: "🚨",
         status: "Compilation error",
+        severity: 3,
       };
 
     case "Connecting":
       return {
         icon: "🔌",
         status: "Connecting",
+        severity: 2,
       };
 
     case "ElmJsonError":
       return {
         icon: "🚨",
         status: "elm.json or inputs error",
+        severity: 3,
       };
 
     case "EvalError":
       return {
         icon: "⛔️",
         status: "Eval error",
+        severity: 4,
       };
 
     case "Idle":
       return {
         icon: "✅",
         status: "Successfully compiled",
+        severity: 0,
       };
 
     case "SleepingBeforeReconnect":
       return {
         icon: "🔌",
         status: "Sleeping",
+        severity: 2,
       };
 
     case "UnexpectedError":
       return {
         icon: "❌",
         status: "Unexpected error",
+        severity: 5,
       };
 
     case "WaitingForReload":
-      return snapshot.elmCompiledTimestamp ===
-        snapshot.elmCompiledTimestampBeforeReload
+      return isReloadTrouble(snapshot)
         ? {
             icon: "❌",
             status: "Reload trouble",
+            severity: 5,
           }
         : {
             icon: "⏳",
             status: "Waiting for reload",
+            severity: 1,
           };
   }
 }
 
-function viewStatus(
-  dispatch: (msg: UiMsg) => void,
-  snapshot: TargetSnapshot,
-  errorOverlayOpen: boolean,
-): Pick<StatusData, "content" | "dl"> {
-  const { status, compilationMode, info } = snapshot;
-  switch (status.tag) {
-    case "Busy":
-      return {
-        dl: [],
-        content: [
-          ...viewCompilationModeChooser({
-            dispatch,
-            sendKey: undefined,
-            compilationMode,
-            // Avoid the warning flashing by when switching modes (which is usually very fast).
-            warnAboutCompilationModeMismatch: false,
-            info,
-          }),
-          ...(status.errors === undefined
-            ? []
-            : [viewErrorOverlayToggleButton(dispatch, errorOverlayOpen)]),
-        ],
-      };
+// Statuses with at least this severity count as errors.
+const ERROR_SEVERITY = 3;
 
-    case "CompileError":
-      return {
-        dl: [],
-        content: [
-          ...viewCompilationModeChooser({
-            dispatch,
-            sendKey: status.sendKey,
-            compilationMode,
-            warnAboutCompilationModeMismatch: true,
-            info,
-          }),
-          viewErrorOverlayToggleButton(dispatch, errorOverlayOpen),
-          ...(status.openEditorError === undefined
-            ? []
-            : viewOpenEditorError(status.openEditorError)),
-        ],
-      };
+function isReloadTrouble(
+  snapshot: Pick<
+    TargetSnapshot,
+    "elmCompiledTimestamp" | "elmCompiledTimestampBeforeReload"
+  >,
+): boolean {
+  return (
+    snapshot.elmCompiledTimestamp === snapshot.elmCompiledTimestampBeforeReload
+  );
+}
 
-    case "Connecting":
-      return {
-        dl: [
-          ["attempt", status.attemptNumber.toString()],
-          ["sleep", printRetryWaitMs(status.attemptNumber)],
-        ],
-        content: [
-          ...viewHttpsInfo(info.webSocketUrl),
-          h(HTMLButtonElement, { disabled: true }, "Connecting web socket…"),
-        ],
-      };
+function worstStatus(snapshots: Array<TargetSnapshot>): StatusData | undefined {
+  let worst: StatusData | undefined = undefined;
+  for (const snapshot of snapshots) {
+    const statusData = statusIconAndText(snapshot);
+    if (worst === undefined || statusData.severity > worst.severity) {
+      worst = statusData;
+    }
+  }
+  return worst;
+}
 
-    case "ElmJsonError":
-      return {
-        dl: [],
-        content: [
-          h(HTMLPreElement, { style: { minWidth: "80ch" } }, status.error),
-        ],
-      };
+function summaryLabel(snapshots: Array<TargetSnapshot>): string {
+  const statuses = snapshots.map(statusIconAndText);
+  const worst = worstStatus(snapshots);
+  const { length } = statuses;
 
-    case "EvalError":
-      return {
-        dl: [],
-        content: [
-          h(
-            HTMLParagraphElement,
-            {},
-            "Check the console in the browser developer tools to see errors!",
-          ),
-        ],
-      };
+  if (worst === undefined) {
+    return "elm-watch";
+  }
 
-    case "Idle":
-      return {
-        dl: [],
-        content: viewCompilationModeChooser({
-          dispatch,
-          sendKey: status.sendKey,
-          compilationMode,
-          warnAboutCompilationModeMismatch: true,
-          info,
-        }),
-      };
+  if (length === 1) {
+    return `elm-watch: ${worst.status}`;
+  }
 
-    case "SleepingBeforeReconnect":
-      return {
-        dl: [
-          ["attempt", status.attemptNumber.toString()],
-          ["sleep", printRetryWaitMs(status.attemptNumber)],
-        ],
-        content: [
-          ...viewHttpsInfo(info.webSocketUrl),
-          h(
+  const numErrors = statuses.filter(
+    (statusData) => statusData.severity >= ERROR_SEVERITY,
+  ).length;
+  if (numErrors > 0) {
+    return `elm-watch: ${numErrors} of ${length} targets ${
+      numErrors === 1 ? "has" : "have"
+    } errors`;
+  }
+
+  const numWorst = statuses.filter(
+    (statusData) => statusData.status === worst.status,
+  ).length;
+  return numWorst === length
+    ? `elm-watch: All ${length} targets: ${worst.status}`
+    : `elm-watch: ${numWorst} of ${length} targets: ${worst.status}`;
+}
+
+function viewPanel({
+  snapshots,
+  hasErrors,
+  errorOverlayOpen,
+  onToggleErrorOverlay,
+  onClose,
+  dispatch,
+}: {
+  snapshots: Array<TargetSnapshot>;
+  hasErrors: boolean;
+  errorOverlayOpen: boolean;
+  onToggleErrorOverlay: () => void;
+  onClose: () => void;
+  dispatch: (targetName: string, msg: UiMsg) => void;
+}): Array<HTMLElement> {
+  const version = snapshots[0]?.info.version ?? "";
+  const isTouch =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
+  return [
+    h(
+      HTMLElement,
+      { localName: "header", className: CLASS.header },
+      h(
+        HTMLHeadingElement,
+        { localName: "h2", className: CLASS.title },
+        "elm-watch ",
+        h(HTMLSpanElement, { className: CLASS.version }, version),
+      ),
+      hasErrors
+        ? h(
             HTMLButtonElement,
             {
-              onclick: () => {
-                dispatch({ tag: "PressedReconnectNow" });
+              className: CLASS.button,
+              attrs: {
+                [DATA_FOCUS_KEY]: "errors",
+                "data-test-id": errorOverlayOpen
+                  ? "HideErrorOverlayButton"
+                  : "ShowErrorOverlayButton",
               },
+              onclick: onToggleErrorOverlay,
             },
-            "Reconnect web socket now",
+            errorOverlayOpen ? "Hide errors" : "Show errors",
+          )
+        : undefined,
+      h(
+        HTMLButtonElement,
+        {
+          className: CLASS.closeButton,
+          attrs: {
+            [DATA_FOCUS_KEY]: "close",
+            "aria-label": "Close elm-watch",
+          },
+          onclick: onClose,
+        },
+        closeIcon(),
+      ),
+    ),
+    h(
+      HTMLUListElement,
+      { className: CLASS.targets },
+      ...snapshots.map((snapshot) =>
+        viewTarget(snapshot, (msg) => {
+          dispatch(snapshot.info.targetName, msg);
+        }),
+      ),
+    ),
+    h(
+      HTMLParagraphElement,
+      { className: CLASS.footer },
+      isTouch
+        ? "Drag the emoji to move it."
+        : "Drag the emoji to move it, or press Shift + arrow keys.",
+    ),
+  ];
+}
+
+function viewTarget(
+  snapshot: TargetSnapshot,
+  dispatch: (msg: UiMsg) => void,
+): HTMLElement {
+  const { status, info } = snapshot;
+  const statusData = statusIconAndText(snapshot);
+  const chooser = viewCompilationModeChooser(snapshot, dispatch);
+  const details = [
+    ...chooser.details,
+    ...viewStatusDetails(snapshot, dispatch),
+  ];
+
+  return h(
+    HTMLLIElement,
+    { className: CLASS.target, attrs: { "data-target": info.targetName } },
+    h(
+      HTMLDivElement,
+      { className: CLASS.row },
+      h(
+        HTMLSpanElement,
+        { className: CLASS.rowIcon, attrs: { "aria-hidden": "true" } },
+        statusData.icon,
+      ),
+      h(
+        HTMLSpanElement,
+        { className: CLASS.rowText },
+        h(HTMLSpanElement, { className: CLASS.targetName }, info.targetName),
+        h(
+          HTMLSpanElement,
+          { className: CLASS.statusLine },
+          `${statusData.status} · `,
+          h(
+            HTMLTimeElement,
+            { dateTime: status.date.toISOString() },
+            formatTime(status.date),
           ),
-        ],
-      };
+        ),
+      ),
+      chooser.fieldset,
+    ),
+    details.length === 0
+      ? undefined
+      : h(HTMLDivElement, { className: CLASS.details }, ...details),
+  );
+}
+
+function viewStatusDetails(
+  snapshot: TargetSnapshot,
+  dispatch: (msg: UiMsg) => void,
+): Array<HTMLElement> {
+  const { status, info } = snapshot;
+  switch (status.tag) {
+    case "Busy":
+    case "Idle":
+      return [];
+
+    case "CompileError":
+      return status.openEditorError === undefined
+        ? []
+        : viewOpenEditorError(status.openEditorError);
+
+    case "Connecting":
+      return [
+        ...(status.attemptNumber > 1
+          ? [h(HTMLParagraphElement, {}, `Attempt ${status.attemptNumber}.`)]
+          : []),
+        ...viewHttpsInfo(info.webSocketUrl),
+      ];
+
+    case "ElmJsonError":
+      return [h(HTMLPreElement, {}, status.error)];
+
+    case "EvalError":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "Check the console in the browser developer tools to see errors!",
+        ),
+      ];
+
+    case "SleepingBeforeReconnect":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          `Attempt ${status.attemptNumber} failed. Trying again in ${printRetryWaitMs(status.attemptNumber)}.`,
+        ),
+        ...viewHttpsInfo(info.webSocketUrl),
+        h(
+          HTMLButtonElement,
+          {
+            className: CLASS.button,
+            attrs: { [DATA_FOCUS_KEY]: `reconnect:${info.targetName}` },
+            onclick: () => {
+              dispatch({ tag: "PressedReconnectNow" });
+            },
+          },
+          "Reconnect now",
+        ),
+      ];
 
     case "UnexpectedError":
-      return {
-        dl: [],
-        content: [
-          h(
-            HTMLParagraphElement,
-            {},
-            "I ran into an unexpected error! This is the error message:",
-          ),
-          h(HTMLPreElement, {}, status.message),
-        ],
-      };
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "I ran into an unexpected error! This is the error message:",
+        ),
+        h(HTMLPreElement, {}, status.message),
+      ];
 
     case "WaitingForReload":
-      return {
-        dl: [],
-        content:
-          snapshot.elmCompiledTimestamp ===
-          snapshot.elmCompiledTimestampBeforeReload
-            ? [
-                "A while ago I reloaded the page to get new compiled JavaScript.",
-                "But it looks like after the last page reload I got the same JavaScript as before, instead of new stuff!",
-                `The old JavaScript was compiled ${new Date(
-                  snapshot.elmCompiledTimestamp,
-                ).toLocaleString()}, and so was the JavaScript currently running.`,
-                "I currently need to reload the page again, but fear a reload loop if I try.",
-                "Do you have accidental HTTP caching enabled maybe?",
-                "Try hard refreshing the page and see if that helps, and consider disabling HTTP caching during development.",
-              ].map((text) => h(HTMLParagraphElement, {}, text))
-            : [h(HTMLParagraphElement, {}, "Waiting for other targets…")],
-      };
+      return isReloadTrouble(snapshot)
+        ? [
+            "A while ago I reloaded the page to get new compiled JavaScript.",
+            "But it looks like after the last page reload I got the same JavaScript as before, instead of new stuff!",
+            `The old JavaScript was compiled ${new Date(
+              snapshot.elmCompiledTimestamp,
+            ).toLocaleString()}, and so was the JavaScript currently running.`,
+            "I currently need to reload the page again, but fear a reload loop if I try.",
+            "Do you have accidental HTTP caching enabled maybe?",
+            "Try hard refreshing the page and see if that helps, and consider disabling HTTP caching during development.",
+          ].map((text) => h(HTMLParagraphElement, {}, text))
+        : [h(HTMLParagraphElement, {}, "Waiting for other targets…")];
   }
 }
 
-function viewErrorOverlayToggleButton(
+type CompilationModeOption = {
+  mode: CompilationMode;
+  name: string;
+  toggled: Toggled;
+};
+
+export type Toggled =
+  | {
+      tag: "Disabled";
+      reason: string;
+    }
+  | {
+      tag: "Enabled";
+    };
+
+function viewCompilationModeChooser(
+  { status, compilationMode: selectedMode, info, sendKey }: TargetSnapshot,
   dispatch: (msg: UiMsg) => void,
-  errorOverlayOpen: boolean,
-): HTMLElement {
-  return h(
-    HTMLButtonElement,
-    {
-      attrs: {
-        "data-test-id": errorOverlayOpen
-          ? "HideErrorOverlayButton"
-          : "ShowErrorOverlayButton",
-      },
-      onclick: () => {
-        dispatch({ tag: "PressedErrorOverlayToggle" });
-      },
-    },
-    errorOverlayOpen ? "Hide errors" : "Show errors",
+): { fieldset: HTMLElement | undefined; details: Array<HTMLElement> } {
+  switch (status.tag) {
+    case "Busy":
+    case "CompileError":
+    case "Idle":
+      break;
+    default:
+      return { fieldset: undefined, details: [] };
+  }
+
+  // `Busy` has a special case send key, but switching compilation mode while
+  // busy is not supported.
+  const modeSendKey = status.tag === "Busy" ? undefined : sendKey;
+
+  const compilationModes: Array<CompilationModeOption> = [
+    { mode: "debug", name: "Debug", toggled: info.debugModeToggled },
+    { mode: "standard", name: "Standard", toggled: { tag: "Enabled" } },
+    { mode: "optimize", name: "Optimize", toggled: { tag: "Enabled" } },
+  ];
+
+  const fieldset = h(
+    HTMLFieldSetElement,
+    { className: CLASS.modes, disabled: modeSendKey === undefined },
+    h(
+      HTMLLegendElement,
+      { className: CLASS.visuallyHidden },
+      `Compilation mode for ${info.targetName}`,
+    ),
+    ...compilationModes.map(({ mode, name, toggled }) =>
+      h(
+        HTMLLabelElement,
+        {
+          title: toggled.tag === "Disabled" ? toggled.reason : "",
+        },
+        h(HTMLInputElement, {
+          type: "radio",
+          name: `CompilationMode-${info.targetName}`,
+          value: mode,
+          checked: mode === selectedMode,
+          disabled: modeSendKey === undefined || toggled.tag === "Disabled",
+          attrs: { [DATA_FOCUS_KEY]: `mode:${info.targetName}:${mode}` },
+          onchange:
+            modeSendKey === undefined
+              ? null
+              : () => {
+                  dispatch({
+                    tag: "ChangedCompilationMode",
+                    compilationMode: mode,
+                    sendKey: modeSendKey,
+                  });
+                },
+        }),
+        name,
+      ),
+    ),
   );
+
+  const details: Array<HTMLElement> = [];
+
+  if (info.debugModeToggled.tag === "Disabled") {
+    details.push(
+      h(
+        HTMLParagraphElement,
+        { className: CLASS.note },
+        info.debugModeToggled.reason,
+      ),
+    );
+  }
+
+  if (
+    // Avoid the note flashing by when switching modes (which is usually very fast).
+    status.tag !== "Busy" &&
+    selectedMode !== info.originalCompilationMode &&
+    info.originalCompilationMode !== "proxy"
+  ) {
+    details.push(
+      h(
+        HTMLParagraphElement,
+        { className: CLASS.note },
+        `Note: The code currently running is in ${info.originalCompilationMode} mode.`,
+      ),
+    );
+  }
+
+  return { fieldset, details };
 }
 
 function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
@@ -1532,28 +2006,6 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
   }
 }
 
-function compilationModeIcon(
-  compilationMode: CompilationModeWithProxy,
-): HTMLElement | undefined {
-  switch (compilationMode) {
-    case "proxy":
-      return undefined;
-    case "debug":
-      return icon("🐛", "Debug mode", { className: CLASS.debugModeIcon });
-    case "standard":
-      return undefined;
-    case "optimize":
-      return icon("🚀", "Optimize mode");
-  }
-}
-
-function printWebSocketUrl(url: URL): string {
-  const hostname = url.hostname.endsWith(".localhost")
-    ? "localhost"
-    : url.hostname;
-  return `${url.protocol}//${hostname}:${url.port}${url.pathname}`;
-}
-
 function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
   return webSocketUrl.protocol === "wss:"
     ? [
@@ -1582,97 +2034,6 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
     : [];
 }
 
-type CompilationModeOption = {
-  mode: CompilationMode;
-  name: string;
-  toggled: Toggled;
-};
-
-export type Toggled =
-  | {
-      tag: "Disabled";
-      reason: string;
-    }
-  | {
-      tag: "Enabled";
-    };
-
-function viewCompilationModeChooser({
-  dispatch,
-  sendKey,
-  compilationMode: selectedMode,
-  warnAboutCompilationModeMismatch,
-  info,
-}: {
-  dispatch: (msg: UiMsg) => void;
-  sendKey: SendKey | undefined;
-  compilationMode: CompilationModeWithProxy;
-  warnAboutCompilationModeMismatch: boolean;
-  info: Info;
-}): Array<HTMLElement> {
-  const compilationModes: Array<CompilationModeOption> = [
-    { mode: "debug", name: "Debug", toggled: info.debugModeToggled },
-    { mode: "standard", name: "Standard", toggled: { tag: "Enabled" } },
-    { mode: "optimize", name: "Optimize", toggled: { tag: "Enabled" } },
-  ];
-
-  return [
-    h(
-      HTMLFieldSetElement,
-      { disabled: sendKey === undefined },
-      h(HTMLLegendElement, {}, "Compilation mode"),
-      ...compilationModes.map(({ mode, name, toggled: status }) => {
-        const nameWithIcon = h(
-          HTMLSpanElement,
-          { className: CLASS.compilationModeWithIcon },
-          name,
-          mode === selectedMode ? compilationModeIcon(mode) : undefined,
-        );
-
-        return h(
-          HTMLLabelElement,
-          { className: status.tag },
-          h(HTMLInputElement, {
-            type: "radio",
-            name: `CompilationMode-${info.targetName}`,
-            value: mode,
-            checked: mode === selectedMode,
-            disabled: sendKey === undefined || status.tag === "Disabled",
-            onchange:
-              sendKey === undefined
-                ? null
-                : () => {
-                    dispatch({
-                      tag: "ChangedCompilationMode",
-                      compilationMode: mode,
-                      sendKey,
-                    });
-                  },
-          }),
-          ...(status.tag === "Enabled"
-            ? [
-                nameWithIcon,
-                warnAboutCompilationModeMismatch &&
-                mode === selectedMode &&
-                selectedMode !== info.originalCompilationMode &&
-                info.originalCompilationMode !== "proxy"
-                  ? h(
-                      HTMLElement,
-                      { localName: "small" },
-                      `Note: The code currently running is in ${info.originalCompilationMode} mode.`,
-                    )
-                  : undefined,
-              ]
-            : [
-                nameWithIcon,
-                h(HTMLElement, { localName: "small" }, status.reason),
-              ]),
-        );
-      }),
-    ),
-  ];
-}
-
 const DATA_TARGET_NAMES = "data-target-names";
 
 function updateErrorOverlay(
@@ -1681,7 +2042,7 @@ function updateErrorOverlay(
   sendKey: SendKey | undefined,
   errors: Map<string, OverlayError>,
   overlay: HTMLElement,
-  overlayCloseButton: HTMLElement,
+  overlayCloseBar: HTMLElement,
 ): void {
   const existingErrorElements = new Map<
     string,
@@ -1728,11 +2089,11 @@ function updateErrorOverlay(
         previousElement.after(element);
       }
       overlay.style.backgroundColor = error.backgroundColor;
-      overlayCloseButton.style.setProperty(
+      overlayCloseBar.style.setProperty(
         "--foregroundColor",
         error.foregroundColor,
       );
-      overlayCloseButton.style.setProperty(
+      overlayCloseBar.style.setProperty(
         "--backgroundColor",
         error.backgroundColor,
       );

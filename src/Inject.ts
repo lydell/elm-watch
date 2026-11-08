@@ -3,7 +3,6 @@ import * as Codec from "tiny-decoders";
 import * as ClientCode from "./ClientCode.ts";
 import { CLIENT_CONFIG_IDENTIFIER, type ClientConfig } from "./ClientConfig.ts";
 import type {
-  BrowserUiPosition,
   CompilationMode,
   CompilationModeWithProxy,
   OutputPath,
@@ -910,7 +909,6 @@ function updateString(
 export function proxyFile(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
-  browserUiPosition: BrowserUiPosition,
   webSocketConnection: WebSocketConnection,
   webSocketToken: WebSocketToken,
   debug: boolean,
@@ -919,7 +917,6 @@ export function proxyFile(
     outputPath,
     elmCompiledTimestamp,
     "proxy",
-    browserUiPosition,
     webSocketConnection,
     webSocketToken,
     debug,
@@ -935,7 +932,6 @@ export function clientCode(
   outputPath: OutputPath,
   elmCompiledTimestamp: number,
   compilationMode: CompilationModeWithProxy,
-  browserUiPosition: BrowserUiPosition,
   webSocketConnection: WebSocketConnection,
   webSocketToken: WebSocketToken,
   debug: boolean,
@@ -944,7 +940,6 @@ export function clientCode(
     targetName: outputPath.targetName,
     initialElmCompiledTimestamp: elmCompiledTimestamp,
     originalCompilationMode: compilationMode,
-    originalBrowserUiPosition: browserUiPosition,
     webSocketConnection: webSocketConnectionToPrimitive(webSocketConnection),
     webSocketToken,
     debug,

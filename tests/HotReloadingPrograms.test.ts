@@ -63,114 +63,109 @@ describe("hot reloading", () => {
     });
 
     expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌 13:10:05 HtmlMain
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ ⏳
       ================================================================================
-      ▼ 🔌 13:10:05 HtmlMain
+      ▼ 🔌
       ================================================================================
-      ▼ 🔌 13:10:05 HtmlMain
+      ▼ 🔌
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 HtmlMain
+      ▼ ✅
       ================================================================================
-      target HtmlMain
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ HtmlMain Successfully compiled · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 HtmlMain
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      ▼ ✅ 13:10:05 HtmlMain
+      ▼ ✅
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 HtmlMain
+      ▼ ✅
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ ⏳
       ================================================================================
-      ▼ ⏳ 13:10:05 HtmlMain
+      ▼ ⏳
       ================================================================================
-      ▼ ✅ 13:10:05 HtmlMain
+      ▼ ✅
       ================================================================================
-      target HtmlMain
+      ▲ ✅
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ HtmlMain Successfully compiled · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
       ◉ Standard
       ◯ Optimize
-      ↑↗
-      ·→
-      ▲ ✅ 13:10:05 HtmlMain
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HtmlMain
+      ▲ ⏳🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ⏳ HtmlMain Waiting for compilation · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
       ◯ (disabled) Standard
-      ◉ (disabled) Optimize 🚀
-      ↑↗
-      ·→
-      ▲ 🚀 ⏳ 13:10:05 HtmlMain
+      ◉ (disabled) Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      target HtmlMain
+      ▲ ⏳🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Waiting for compilation
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ⏳ HtmlMain Waiting for compilation · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
       ◯ (disabled) Standard
-      ◉ (disabled) Optimize 🚀
-      ↑↗
-      ·→
-      ▲ 🚀 ⏳ 13:10:05 HtmlMain
+      ◉ (disabled) Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      ▼ 🚀 🔌 13:10:05 HtmlMain
+      ▼ 🔌🚀
       ================================================================================
-      ▼ 🚀 🔌 13:10:05 HtmlMain
+      ▼ 🔌🚀
       ================================================================================
-      ▼ 🚀 ⏳ 13:10:05 HtmlMain
+      ▼ ⏳🚀
       ================================================================================
-      ▼ 🚀 ✅ 13:10:05 HtmlMain
+      ▼ ✅🚀
       ================================================================================
-      target HtmlMain
+      ▲ ✅🚀
+      --------------------------------------------------------------------------------
       elm-watch %VERSION%
-      web socket ws://localhost:59123/elm-watch
-      updated 2022-02-05 13:10:05
-      status Successfully compiled
-      Compilation mode
-      ◯ (disabled) Debug The Elm debugger isn't supported by \`Html\` programs.
+      [Close elm-watch]
+      ✅ HtmlMain Successfully compiled · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
       ◯ Standard
-      ◉ Optimize 🚀
-      ↑↗
-      ·→
-      ▲ 🚀 ✅ 13:10:05 HtmlMain
+      ◉ Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag the emoji to move it, or press Shift + arrow keys.
       ================================================================================
-      ▼ 🚀 ✅ 13:10:05 HtmlMain
+      ▼ ✅🚀
       ================================================================================
-      ▼ 🚀 ⏳ 13:10:05 HtmlMain
+      ▼ ⏳🚀
       ================================================================================
-      ▼ 🚀 ⏳ 13:10:05 HtmlMain
+      ▼ ⏳🚀
       ================================================================================
-      ▼ 🚀 ✅ 13:10:05 HtmlMain
+      ▼ ✅🚀
     `);
 
     function assertInit(div: HTMLDivElement): void {
