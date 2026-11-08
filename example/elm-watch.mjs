@@ -113,6 +113,8 @@ process.exitCode = await elmWatch({
       ? "debug"
       : "standard",
   targets: enabledTargets,
+  // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+  host: process.env.ELM_WATCH_HOST,
   openEditor: openEditorFromEnv(),
 });
 

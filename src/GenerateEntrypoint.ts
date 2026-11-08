@@ -51,6 +51,8 @@ export function generateEntrypoint(
 
   const extraOptions = [
     json.port === undefined ? undefined : `port: ${js(json.port)},`,
+    "// For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.",
+    "host: process.env.ELM_WATCH_HOST,",
     json.serve === undefined ? undefined : `staticFilesDir: ${js(json.serve)},`,
     json.webSocketUrl === undefined
       ? undefined

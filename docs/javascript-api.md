@@ -157,7 +157,7 @@ Each target looks like this:
 
 `elmWatch()` returns a promise of an exit code: 0 for success and 1 for errors. Use it with `process.exitCode = await elmWatch(...)`.
 
-Optional options can also be set to `undefined`, which is handy for environment variables: `host: process.env.HOST`.
+Optional options can also be set to `undefined`, which is handy for environment variables: `host: process.env.ELM_WATCH_HOST`.
 
 The options are validated, and you get an error message if something is wrong – also if you write plain JavaScript instead of TypeScript. You can use `// @ts-check` and JSDoc to get type checking in plain JavaScript files:
 

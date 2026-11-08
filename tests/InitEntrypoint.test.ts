@@ -152,6 +152,8 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+        host: process.env.ELM_WATCH_HOST,
         openEditor: openEditorFromEnv(),
       });
 
@@ -251,6 +253,8 @@ describe("init --javascript and --typescript", () => {
             : "standard",
         targets: enabledTargets,
         port: 9876,
+        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+        host: process.env.ELM_WATCH_HOST,
         staticFilesDir: "public/",
         webSocketUrl: "wss://dev.example.com/elm-watch",
         allowedHosts: ["other.example.com"],
@@ -367,6 +371,8 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+        host: process.env.ELM_WATCH_HOST,
         openEditor: openEditorFromEnv(),
       });
 
@@ -484,6 +490,8 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+        host: process.env.ELM_WATCH_HOST,
         openEditor: openEditorFromEnv(),
       });
 
@@ -630,6 +638,8 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
+        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+        host: process.env.ELM_WATCH_HOST,
         openEditor: openEditorFromEnv(),
       });
 
@@ -848,6 +858,8 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
+          // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+          host: process.env.ELM_WATCH_HOST,
           openEditor: openEditorFromEnv(),
         });
 
@@ -945,6 +957,8 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
+          // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+          host: process.env.ELM_WATCH_HOST,
           openEditor: openEditorFromEnv(),
         });
 
@@ -1057,6 +1071,8 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
+          // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
+          host: process.env.ELM_WATCH_HOST,
           openEditor: openEditorFromEnv(),
         });
 

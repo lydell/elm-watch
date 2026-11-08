@@ -43,7 +43,7 @@ function functionCodec<T extends object>(): Codec.Codec<T> {
 }
 
 // Optional options can also be set to `undefined`, which is convenient when
-// reading environment variables, for example: `host: process.env.HOST`.
+// reading environment variables, for example: `host: process.env.ELM_WATCH_HOST`.
 // oxlint-disable-next-line typescript/explicit-function-return-type
 function optionalField<Decoded, Encoded>(codec: Codec.Codec<Decoded, Encoded>) {
   return Codec.field(Codec.undefinedOr(codec), { optional: true });
