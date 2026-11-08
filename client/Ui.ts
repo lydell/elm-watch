@@ -1400,9 +1400,8 @@ the corner of its hit area. The panel may cover parts of it.
 
 .${CLASS.row} {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
+  gap: 10px;
 }
 
 .${CLASS.rowIcon} {
@@ -1429,6 +1428,7 @@ the corner of its hit area. The panel may cover parts of it.
 }
 
 .${CLASS.modes} {
+  justify-self: start;
   display: inline-flex;
   gap: 2px;
   margin: 0;
@@ -1486,7 +1486,7 @@ the corner of its hit area. The panel may cover parts of it.
 .${CLASS.details} {
   display: grid;
   gap: 6px;
-  margin: 8px 0 0 30px;
+  margin: 6px 0 0 30px;
 }
 
 .${CLASS.note} {
@@ -1765,6 +1765,7 @@ function viewTarget(
   const statusData = statusIconAndText(snapshot);
   const chooser = viewCompilationModeChooser(snapshot, dispatch);
   const details = [
+    ...(chooser.fieldset === undefined ? [] : [chooser.fieldset]),
     ...chooser.details,
     ...viewStatusDetails(snapshot, dispatch),
   ];
@@ -1795,7 +1796,6 @@ function viewTarget(
           ),
         ),
       ),
-      chooser.fieldset,
     ),
     details.length === 0
       ? undefined
