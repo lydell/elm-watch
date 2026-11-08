@@ -34,6 +34,17 @@ The file server is completely optional. It only serves files. So if you serve yo
 - Serves files in a directory.
 - Serves the closest [index.html](#indexhtml) file if the URL does not point to any file, for `Browser.application` programs.
 - Hot reloads CSS – when `.css` files in the static files directory that is served change, elm-watch reloads them in the browser.
+- Waits for Elm outputs to be compiled – see [Serving Elm outputs](#serving-elm-outputs).
+
+## Serving Elm outputs
+
+If a request is for the output JS file of a target, elm-watch makes sure to respond with the latest compiled code:
+
+- If the output is up to date, it is served right away.
+- Otherwise (the file does not exist yet, it is a placeholder file that elm-watch writes for targets that nobody has requested yet, or it is out of date), elm-watch compiles the target and responds once done. This means that the first page load after starting elm-watch can take a while, but you won’t see a flash of old content or an extra page reload.
+- If there are compilation errors, elm-watch responds with a small placeholder script that shows the errors in the browser.
+
+This only applies to outputs inside the directory to serve, requested via elm-watch’s server.
 
 ## Why?
 

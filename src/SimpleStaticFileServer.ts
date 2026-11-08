@@ -653,6 +653,38 @@ Only GET and HEAD requests are supported. Got: ${method}`,
   };
 }
 
+// The file system path that `serveStatic` would serve a file from, if the
+// request is for a file. Used to find out if the request is for an output.
+export function requestedFilePath(
+  staticFilesDir: StaticFilesDir,
+  request: http.IncomingMessage,
+): AbsolutePath | undefined {
+  switch (request.method) {
+    case "HEAD":
+    case "GET": {
+      const { url = "/" } = request;
+      const fsPath = toFsPath(staticFilesDir, url);
+      return fsPath.tag === "FsPath" && !fsPath.hadTrailingSlash
+        ? fsPath.theFsPath
+        : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
+
+export function respondJavaScript(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  code: string,
+): void {
+  writeHead(response, 200, {
+    "Content-Type": "text/javascript; charset=utf-8",
+    "Content-Length": Buffer.byteLength(code),
+  });
+  response.end(request.method === "HEAD" ? undefined : code);
+}
+
 function getContentType(fsPath: FsPath | IndexFsPath): string | undefined {
   return MIME_TYPES[path.extname(toAbsolutePath(fsPath)).toLowerCase()];
 }

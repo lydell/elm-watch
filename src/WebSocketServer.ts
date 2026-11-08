@@ -1,4 +1,5 @@
 import * as crypto from "crypto";
+import type * as http from "http";
 import * as https from "https";
 import type { AddressInfo } from "net";
 import * as net from "net";
@@ -18,7 +19,7 @@ import { toError } from "./Helpers.ts";
 import type { Host } from "./Host.ts";
 import { markAsPort, type Port, type PortChoice } from "./Port.ts";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer.ts";
-import type { CreateServer, StaticFilesDir } from "./Types.ts";
+import type { AbsolutePath, CreateServer, StaticFilesDir } from "./Types.ts";
 import type { WebSocketToken } from "./Types.ts";
 
 // We used to require `/?`. Putting “elm-watch” in the path is useful for people
@@ -27,6 +28,13 @@ import type { WebSocketToken } from "./Types.ts";
 const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
 
 export type WebSocketServerMsg =
+  | {
+      tag: "OutputRequested";
+      absolutePath: AbsolutePath;
+      request: http.IncomingMessage;
+      response: http.ServerResponse;
+      serveStatic: () => void;
+    }
   | {
       tag: "WebSocketClosed";
       webSocket: WebSocket;
@@ -98,6 +106,12 @@ export class WebSocketServer {
 
   private dispatch: (msg: WebSocketServerMsg) => void;
 
+  // Requests for outputs are dispatched instead of served right away, so that
+  // they can wait for the output to be compiled. This is kept between restarts
+  // (where the messages are queued), so that requests made while restarting
+  // also wait.
+  private isOutputPath: (absolutePath: AbsolutePath) => boolean = () => false;
+
   private msgQueue: Array<WebSocketServerMsg> = [];
 
   listening: Promise<void>;
@@ -128,17 +142,34 @@ export class WebSocketServer {
         }
 
         if (staticFilesDirectory !== undefined) {
-          try {
-            SimpleStaticFileServer.serveStatic(
-              configSource,
-              staticFilesDirectory,
-            )(request, response);
-          } catch (unknownError) {
-            SimpleStaticFileServer.respondHtml(
+          const serveStatic = (): void => {
+            try {
+              SimpleStaticFileServer.serveStatic(
+                configSource,
+                staticFilesDirectory,
+              )(request, response);
+            } catch (unknownError) {
+              SimpleStaticFileServer.respondHtml(
+                response,
+                500,
+                SimpleStaticFileServer.errorHtml(toError(unknownError).message),
+              );
+            }
+          };
+          const absolutePath = SimpleStaticFileServer.requestedFilePath(
+            staticFilesDirectory,
+            request,
+          );
+          if (absolutePath !== undefined && this.isOutputPath(absolutePath)) {
+            this.dispatch({
+              tag: "OutputRequested",
+              absolutePath,
+              request,
               response,
-              500,
-              SimpleStaticFileServer.errorHtml(toError(unknownError).message),
-            );
+              serveStatic,
+            });
+          } else {
+            serveStatic();
           }
         } else {
           SimpleStaticFileServer.respondHtml(
@@ -334,6 +365,10 @@ export class WebSocketServer {
         }
       });
     }
+  }
+
+  setIsOutputPath(isOutputPath: (absolutePath: AbsolutePath) => boolean): void {
+    this.isOutputPath = isOutputPath;
   }
 
   unsetDispatch(): void {

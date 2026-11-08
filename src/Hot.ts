@@ -36,6 +36,7 @@ import {
   toError,
 } from "./Helpers.ts";
 import { getHost, type Host } from "./Host.ts";
+import * as Inject from "./Inject.ts";
 import type { Logger, LoggerConfig } from "./Logger.ts";
 import {
   isNonEmptyArray,
@@ -52,6 +53,7 @@ import {
   type Project,
   projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project.ts";
+import * as SimpleStaticFileServer from "./SimpleStaticFileServer.ts";
 import { waitForRunningCommands } from "./Spawn.ts";
 import { runTeaProgram } from "./TeaProgram.ts";
 import * as Theme from "./Theme.ts";
@@ -74,7 +76,10 @@ import {
   WebSocketServer,
   type WebSocketServerMsg,
 } from "./WebSocketServer.ts";
-import type { WebSocketUrl } from "./WebSocketUrl.ts";
+import type {
+  WebSocketConnection as WebSocketUrlConnection,
+  WebSocketUrl,
+} from "./WebSocketUrl.ts";
 
 // We can’t tell whether something was added or changed, since `fs.watch`
 // does not reliably say. That also doesn’t matter much.
@@ -136,7 +141,14 @@ type WebSocketRelatedEvent =
       reason: WebSocketConnectionRejectedReason;
     };
 
+type OutputRequestedEvent = {
+  tag: "OutputRequestedNeedingCompilation";
+  date: Date;
+  outputPath: OutputPath;
+};
+
 export type LatestEvent =
+  | OutputRequestedEvent
   | WebSocketRelatedEvent
   | (WatcherEvent & { affectsAnyTarget: boolean });
 
@@ -144,6 +156,7 @@ type Mutable = {
   watcher: Watcher.Watcher;
   webSocketServer: WebSocketServer;
   webSocketConnections: Array<WebSocketConnection>;
+  outputRequests: Array<OutputRequest>;
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
@@ -156,6 +169,13 @@ type Mutable = {
 type WebSocketConnection = {
   webSocket: WebSocket;
   outputPath: OutputPath | OutputPathError;
+  priority: number;
+};
+
+// An HTTP request for an output that waits for the output to be compiled.
+type OutputRequest = {
+  msg: Extract<WebSocketServerMsg, { tag: "OutputRequested" }>;
+  outputPath: OutputPath;
   priority: number;
 };
 
@@ -190,6 +210,12 @@ export type Msg =
       tag: "InstallDependenciesDone";
       date: Date;
       installResult: Compile.InstallDependenciesResult;
+    }
+  | {
+      tag: "OutputRequested";
+      date: Date;
+      outputPath: OutputPath;
+      outputState: OutputState;
     }
   | {
       tag: "SleepBeforeNextActionDone";
@@ -326,6 +352,16 @@ type Cmd =
   | {
       tag: "PrintCompileErrors";
       errors: NonEmptyArray<ErrorTemplate>;
+    }
+  | {
+      tag: "RespondToOutputRequests";
+      // What to do with requests for outputs that aren’t done.
+      // - KeepWaiting: They will be compiled soon.
+      // - RespondIfNotDirty: Compilation is over. Respond with a proxy file
+      //   rather than waiting forever if something unexpected happened. Dirty
+      //   outputs will be compiled soon.
+      // - RespondToAll: Nothing more will happen until some file changes.
+      waiting: "KeepWaiting" | "RespondIfNotDirty" | "RespondToAll";
     }
   | {
       tag: "Restart";
@@ -570,6 +606,7 @@ const initMutable =
       watcher,
       webSocketServer,
       webSocketConnections,
+      outputRequests: [],
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
@@ -594,6 +631,11 @@ const initMutable =
         msg,
       );
     });
+
+    webSocketServer.setIsOutputPath(
+      (absolutePath) =>
+        findOutputForPath(mutable.project, absolutePath) !== undefined,
+    );
 
     // The port isn’t finalized until a few moments later (when the persisted
     // port is not available).
@@ -888,11 +930,17 @@ function update(
             msg.handleOutputActionResult,
           );
 
+          const respondCmd: Cmd = {
+            tag: "RespondToOutputRequests",
+            waiting: "KeepWaiting",
+          };
+
           if (isNonEmptyArray(outputActions.actions)) {
             return [
               model,
               [
                 cmd,
+                respondCmd,
                 {
                   tag: "CompileAllOutputsAsNeeded",
                   mode: "ContinueCompilation",
@@ -906,7 +954,7 @@ function update(
             outputActions.numExecuting > 0 ||
             outputActions.numInterrupted > 0
           ) {
-            return [model, [cmd]];
+            return [model, [cmd, respondCmd]];
           }
 
           const errors = Compile.extractErrors(project);
@@ -915,6 +963,7 @@ function update(
             { ...model, hotState: { tag: "Idle" }, latestEvents: [] },
             [
               cmd,
+              { tag: "RespondToOutputRequests", waiting: "RespondIfNotDirty" },
               isNonEmptyArray(errors)
                 ? { tag: "PrintCompileErrors", errors }
                 : { tag: "NoCmd" },
@@ -945,7 +994,10 @@ function update(
             case "Error":
               return [
                 { ...model, hotState: { tag: "Idle" } },
-                [exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" }],
+                [
+                  { tag: "RespondToOutputRequests", waiting: "RespondToAll" },
+                  exitOnError ? { tag: "ExitOnIdle" } : { tag: "NoCmd" },
+                ],
               ];
 
             // We only kill installing dependencies when a restart is needed.
@@ -994,6 +1046,14 @@ function update(
             ],
           ];
       }
+
+    case "OutputRequested":
+      return onOutputRequested(
+        msg.date,
+        model,
+        msg.outputPath,
+        msg.outputState,
+      );
 
     case "WebSocketClosed":
       return [
@@ -1578,9 +1638,7 @@ const runCmd =
           project: mutable.project,
           runMode: "hot",
           includeInterrupted: cmd.includeInterrupted,
-          prioritizedOutputs: makePrioritizedOutputs(
-            mutable.webSocketConnections,
-          ),
+          prioritizedOutputs: makePrioritizedOutputs(mutable),
         });
 
         switch (cmd.mode) {
@@ -1618,10 +1676,7 @@ const runCmd =
               getNow,
               runMode: {
                 tag: "hot",
-                webSocketConnection: mutable.project.webSocketUrl ?? {
-                  tag: "AutomaticUrl",
-                  port: mutable.webSocketServer.port,
-                },
+                webSocketConnection: getWebSocketConnection(mutable),
                 webSocketToken,
               },
               total: outputActions.total,
@@ -1631,9 +1686,7 @@ const runCmd =
                 dispatch({
                   tag: "CompilationPartDone",
                   date: getNow(),
-                  prioritizedOutputs: makePrioritizedOutputs(
-                    mutable.webSocketConnections,
-                  ),
+                  prioritizedOutputs: makePrioritizedOutputs(mutable),
                   handleOutputActionResult,
                 });
               })
@@ -1643,9 +1696,7 @@ const runCmd =
           dispatch({
             tag: "CompilationPartDone",
             date: getNow(),
-            prioritizedOutputs: makePrioritizedOutputs(
-              mutable.webSocketConnections,
-            ),
+            prioritizedOutputs: makePrioritizedOutputs(mutable),
             handleOutputActionResult: { tag: "Nothing" },
           });
         }
@@ -1827,6 +1878,56 @@ const runCmd =
         });
         return;
 
+      case "RespondToOutputRequests": {
+        const flatOutputs = getFlatOutputs(mutable.project);
+        mutable.outputRequests = mutable.outputRequests.filter(
+          ({ msg, outputPath }) => {
+            const output = flatOutputs.find(
+              (flatOutput) =>
+                flatOutput.outputPath.theOutputPath ===
+                outputPath.theOutputPath,
+            );
+            if (output === undefined) {
+              msg.serveStatic();
+              return false;
+            }
+            const response = getOutputRequestResponse(output.outputState);
+            const respondAnyway =
+              cmd.waiting === "RespondToAll" ||
+              (cmd.waiting === "RespondIfNotDirty" &&
+                !output.outputState.dirty);
+            switch (
+              response === "Wait" && respondAnyway ? "ServeProxy" : response
+            ) {
+              case "ServeFile":
+                msg.serveStatic();
+                return false;
+
+              // The proxy file connects to the web socket server, which shows
+              // errors, or compiles and reloads the page.
+              case "ServeProxy":
+                SimpleStaticFileServer.respondJavaScript(
+                  msg.request,
+                  msg.response,
+                  Inject.proxyFile(
+                    outputPath,
+                    getNow().getTime(),
+                    output.outputState.browserUiPosition,
+                    getWebSocketConnection(mutable),
+                    webSocketToken,
+                    logger.config.debug,
+                  ),
+                );
+                return false;
+
+              case "Wait":
+                return true;
+            }
+          },
+        );
+        return;
+      }
+
       case "Restart": {
         // Outputs and port may have changed if elm-watch.json changes.
         const elmWatchJsonChanged = cmd.restartReasons.some((event) => {
@@ -1844,6 +1945,12 @@ const runCmd =
           killWebSocketServer: elmWatchJsonChanged,
         })
           .then(() => {
+            if (!elmWatchJsonChanged) {
+              // Let waiting requests wait for the next run instead.
+              for (const { msg } of mutable.outputRequests) {
+                mutable.webSocketServer.dispatchToQueue(msg);
+              }
+            }
             resolvePromise({
               tag: "Restart",
               restartReasons: cmd.restartReasons,
@@ -1962,6 +2069,33 @@ function onWebSocketServerMsg(
   msg: WebSocketServerMsg,
 ): void {
   switch (msg.tag) {
+    case "OutputRequested": {
+      const output = findOutputForPath(mutable.project, msg.absolutePath);
+      if (output === undefined) {
+        msg.serveStatic();
+        return;
+      }
+      const outputRequest: OutputRequest = {
+        msg,
+        outputPath: output.outputPath,
+        priority: now.getTime(),
+      };
+      mutable.outputRequests.push(outputRequest);
+      // Stop prioritizing the output if the browser gives up on the request.
+      msg.response.once("close", () => {
+        mutable.outputRequests = mutable.outputRequests.filter(
+          (request) => request !== outputRequest,
+        );
+      });
+      dispatch({
+        tag: "OutputRequested",
+        date: now,
+        outputPath: output.outputPath,
+        outputState: output.outputState,
+      });
+      return;
+    }
+
     case "WebSocketConnected": {
       const result = parseWebSocketConnectRequestUrl(
         mutable.project,
@@ -2170,17 +2304,53 @@ async function closeAll(
   }
 }
 
-function makePrioritizedOutputs(
-  webSocketConnections: Array<WebSocketConnection>,
-): Map<TargetName, number> {
+function makePrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
   const map = new Map<TargetName, number>();
-  for (const { outputPath, priority } of webSocketConnections) {
+  for (const { outputPath, priority } of [
+    ...mutable.webSocketConnections,
+    ...mutable.outputRequests,
+  ]) {
     if (outputPath.tag !== "OutputPathError") {
       const previous = map.get(outputPath.targetName) ?? 0;
       map.set(outputPath.targetName, Math.max(priority, previous));
     }
   }
   return map;
+}
+
+function findOutputForPath(
+  project: Project,
+  absolutePath: AbsolutePath,
+): ReturnType<typeof getFlatOutputs>[number] | undefined {
+  const realRequestedPath = realpathDirname(absolutePath);
+  return getFlatOutputs(project).find(
+    ({ outputPath }) =>
+      outputPath.theOutputPath === absolutePath ||
+      realpathDirname(outputPath.theOutputPath) === realRequestedPath,
+  );
+}
+
+// The static files server follows symlinks, so a request might go to an output
+// via a symlinked directory. The file itself might not exist yet, so only the
+// directory is resolved.
+function realpathDirname(absolutePath: AbsolutePath): string {
+  try {
+    return path.join(
+      fs.realpathSync(path.dirname(absolutePath)),
+      path.basename(absolutePath),
+    );
+  } catch {
+    return absolutePath;
+  }
+}
+
+function getWebSocketConnection(mutable: Mutable): WebSocketUrlConnection {
+  return (
+    mutable.project.webSocketUrl ?? {
+      tag: "AutomaticUrl",
+      port: mutable.webSocketServer.port,
+    }
+  );
 }
 
 function makeWatcherEvent(
@@ -2645,6 +2815,99 @@ function onWebSocketConnected(
   }
 }
 
+function onOutputRequested(
+  date: Date,
+  model: Model,
+  outputPath: OutputPath,
+  outputState: OutputState,
+): [Model, Array<Cmd>] {
+  const withEvent = (newModel: Model): Model => ({
+    ...newModel,
+    latestEvents: [
+      ...newModel.latestEvents,
+      { tag: "OutputRequestedNeedingCompilation", date, outputPath },
+    ],
+  });
+
+  switch (model.hotState.tag) {
+    // The output is compiled once done, since it is prioritized.
+    case "Restarting":
+    case "Dependencies":
+      return [withEvent(model), []];
+
+    case "Idle":
+    case "Compiling":
+      switch (getOutputRequestResponse(outputState)) {
+        case "ServeFile":
+        case "ServeProxy":
+          return [
+            model,
+            [{ tag: "RespondToOutputRequests", waiting: "KeepWaiting" }],
+          ];
+
+        case "Wait": {
+          if (
+            model.hotState.tag === "Compiling" &&
+            isBeingCompiled(outputState)
+          ) {
+            return [withEvent(model), []];
+          }
+          const [newModel, cmds] = onWebSocketRecompileNeeded(
+            model,
+            outputPath,
+            outputState,
+          );
+          return [withEvent(newModel), cmds];
+        }
+      }
+  }
+}
+
+// Fully compiled, not just typechecked.
+function isBeingCompiled(outputState: OutputState): boolean {
+  switch (outputState.status.tag) {
+    case "ElmMake":
+    case "Postprocess":
+    case "Interrupted":
+    case "QueuedForElmMake":
+    case "QueuedForPostprocess":
+      return true;
+    default:
+      return false;
+  }
+}
+
+type OutputRequestResponse = "ServeFile" | "ServeProxy" | "Wait";
+
+function getOutputRequestResponse(
+  outputState: OutputState,
+): OutputRequestResponse {
+  if (outputState.dirty) {
+    return "Wait";
+  }
+  switch (outputState.status.tag) {
+    case "Success":
+      return "ServeFile";
+
+    // The file on disk is missing, a proxy file, or out of date.
+    case "ElmMake":
+    case "ElmMakeTypecheckOnly":
+    case "Interrupted":
+    case "NotWrittenToDisk":
+    case "Postprocess":
+    case "QueuedForElmMake":
+    case "QueuedForPostprocess":
+      return "Wait";
+
+    default: {
+      // Make sure only error statuses are left.
+      const _: OutputError = outputState.status;
+      void _;
+      return "ServeProxy";
+    }
+  }
+}
+
 function onChangedCompilationModeOrBrowserUiPosition(
   model: Model,
   outputPath: OutputPath,
@@ -2894,6 +3157,7 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     // That’s useful when there are burst connections because of multiple
     // scripts on the same page, or many tabs with elm-watch. This is slower
     // than file system events.
+    case "OutputRequestedNeedingCompilation":
     case "WebSocketClosed":
     case "WebSocketConnectedNeedingCompilation":
     case "WebSocketConnectedNeedingNoAction":
@@ -3078,6 +3342,9 @@ function printEventMessage(event: LatestEvent): string {
           ? event.file.absolutePath
           : event.file.urlPath
       }`;
+
+    case "OutputRequestedNeedingCompilation":
+      return `HTTP request needing compilation of: ${event.outputPath.targetName}`;
 
     case "WebSocketClosed":
       return `Web socket disconnected for: ${
