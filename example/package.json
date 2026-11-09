@@ -12,11 +12,11 @@
     "dev": "npm --prefix .. run build && node --watch elm-watch.mjs hot"
   },
   "devDependencies": {
-    "@swc/core": "1.13.3",
+    "@swc/core": "1.16.20",
     "elm": "0.19.1-6",
     "elm-format": "0.8.8",
     "elm-watch": "file:../build",
-    "esbuild": "0.25.8",
-    "run-pty": "5.0.0"
+    "esbuild": "0.28.2",
+    "run-pty": "6.0.2"
   }
 }
