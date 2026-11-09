@@ -315,11 +315,12 @@ export function getOpenEditorLocation(
 }
 
 // The selected error, followed by a line about where you are and which keys to
-// press.
+// press (last, so they are right next to the cursor and easy to find).
 export function render(
   loggerConfig: LoggerConfig,
   selection: Selection,
   targets: Array<ErrorViewTarget>,
+  notice: string | undefined,
 ): string {
   const target = targets.find(
     (otherTarget) => otherTarget.targetName === selection.targetName,
@@ -333,10 +334,13 @@ export function render(
 
   if (target === undefined || error === undefined) {
     return [
+      ...(notice === undefined ? [] : [notice, ""]),
       `${loggerConfig.fancy ? "✅ " : ""}${bold(selection.targetName)} has no errors.`,
       keyHints([
-        hasOtherTargetsWithErrors ? "tab next target with errors" : undefined,
-        "a show all",
+        hasOtherTargetsWithErrors
+          ? ["tab", "next target with errors"]
+          : undefined,
+        ["a", "show all"],
       ]),
     ].join("\n");
   }
@@ -364,23 +368,60 @@ export function render(
       loggerConfig.noColor,
     ),
     "",
+    ...(notice === undefined ? [] : [notice, ""]),
     `${loggerConfig.fancy ? "🚨 " : ""}${position}`,
     keyHints([
-      target.numErrors > 1 ? "←/→ error" : undefined,
-      target.files.length > 1 ? "↑/↓ file" : undefined,
-      hasOtherTargetsWithErrors ? "tab target" : undefined,
+      [
+        [
+          ["←", errorNumber > 1],
+          ["→", errorNumber < target.numErrors],
+        ],
+        "error",
+      ],
+      [
+        [
+          ["↑", selection.fileIndex > 0],
+          ["↓", selection.fileIndex + 1 < target.files.length],
+        ],
+        "file",
+      ],
+      hasOtherTargetsWithErrors ? ["tab", "target"] : undefined,
       getOpenEditorLocation(error.location) === undefined
         ? undefined
-        : "enter open in editor",
-      "a show all",
+        : ["enter", "open in editor"],
+      ["a", "show all"],
     ]),
   ].join("\n");
 }
 
 export function renderShowAllHint(): string {
-  return keyHints(["a show one error at a time"]);
+  return keyHints([["a", "show one error at a time"]]);
 }
 
-function keyHints(hints: Array<string | undefined>): string {
-  return dim(hints.flatMap((hint) => hint ?? []).join(" · "));
+// A key, or several keys with whether each of them does anything right now.
+type HintKeys = string | Array<[key: string, enabled: boolean]>;
+
+// Styled like in run-pty: [key] label
+// Keys that don’t do anything right now are dimmed (and the label too, if none
+// of the keys do anything).
+function keyHints(
+  hints: Array<[keys: HintKeys, label: string] | undefined>,
+): string {
+  return hints
+    .flatMap((hint) => {
+      if (hint === undefined) {
+        return [];
+      }
+      const [keys, label] = hint;
+      const keysArray: Array<[string, boolean]> =
+        typeof keys === "string" ? [[keys, true]] : keys;
+      const styledKeys = keysArray
+        .map(([key, enabled]) => (enabled ? bold(key) : dim(key)))
+        .join("");
+      const anyEnabled = keysArray.some(([, enabled]) => enabled);
+      return [
+        `${dim("[")}${styledKeys}${dim("]")} ${anyEnabled ? label : dim(label)}`,
+      ];
+    })
+    .join("   ");
 }

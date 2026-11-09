@@ -7,8 +7,10 @@ import {
   navigate,
   parseKeys,
   reconcile,
+  render,
   type Selection,
 } from "../src/ErrorView.ts";
+import type { LoggerConfig } from "../src/Logger.ts";
 import {
   markAsAbsolutePath,
   markAsTargetName,
@@ -262,5 +264,53 @@ describe("navigate", () => {
     expect(show(selection, targets)).toBe("A: X.elm:1:a1");
     selection = navigate(selection, targets, "PreviousTarget");
     expect(show(selection, targets)).toBe("C: X.elm:1:c1");
+  });
+});
+
+describe("render", () => {
+  const loggerConfig: LoggerConfig = {
+    debug: false,
+    noColor: false,
+    fancy: true,
+    isTTY: true,
+    mockedTimings: true,
+    columns: 80,
+    rows: 24,
+  };
+
+  // Shows bold as *x* and dim as ~x~.
+  function keyHintsLine(
+    selection: Selection,
+    targets: Array<ErrorViewTarget>,
+  ): string {
+    return (
+      render(loggerConfig, selection, targets, undefined).split("\n").at(-1) ??
+      ""
+    )
+      .replace(/\x1B\[0m\x1B\[1m(.*?)\x1B\[0m/g, "*$1*")
+      .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "~$1~");
+  }
+
+  test("arrow keys that don’t do anything are dimmed", () => {
+    const targets = [
+      target("A", ["X.elm:1:a1", "X.elm:2:a2", "Y.elm:1:a3"]),
+      target("B", ["X.elm:1:b1"]),
+    ];
+    const first = start(targets);
+    expect(keyHintsLine(first, targets)).toMatchInlineSnapshot(
+      `"~[~~←~*→*~]~ error   ~[~~↑~*↓*~]~ file   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"`,
+    );
+    const last = navigate(
+      navigate(first, targets, "NextFile"),
+      targets,
+      "NextError",
+    );
+    expect(keyHintsLine(last, targets)).toMatchInlineSnapshot(
+      `"~[~*←*~→~~]~ error   ~[~*↑*~↓~~]~ file   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"`,
+    );
+    const only = navigate(first, targets, "NextTarget");
+    expect(keyHintsLine(only, targets)).toMatchInlineSnapshot(
+      `"~[~~←~~→~~]~ ~error~   ~[~~↑~~↓~~]~ ~file~   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"`,
+    );
   });
 });

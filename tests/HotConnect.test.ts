@@ -342,6 +342,12 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       🚨 ⧙Removed⧘: 1 error ◀
 
+      📊 ⧙server:⧘ http://localhost:59123
+      📊 ⧙web socket connections:⧘ 1
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Removed⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
       ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
       ⧙Target: Removed⧘
 
@@ -354,13 +360,7 @@ describe("hot", () => {
       ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js'
 
       🚨 error ⧙1⧘/1
-      ⧙a show all⧘
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Removed⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
@@ -395,6 +395,12 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       🚨 ⧙Readonly⧘: 1 error ◀
 
+      📊 ⧙server:⧘ http://localhost:59123
+      📊 ⧙web socket connections:⧘ 1
+
+      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Readonly⧘
+      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+
       ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
       ⧙Target: Readonly⧘
 
@@ -411,13 +417,7 @@ describe("hot", () => {
       EACCES: permission denied, open '/Users/you/project/tests/fixtures/hot/basic/build/Readonly.js'
 
       🚨 error ⧙1⧘/1
-      ⧙a show all⧘
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Readonly⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`

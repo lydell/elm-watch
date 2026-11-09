@@ -1856,6 +1856,18 @@ const runCmd =
           events: filterLatestEvents(cmd.events),
           hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
         });
+        if (errorViewIsActive(logger, exitOnError, mutable.project)) {
+          mutable.lastInfoMessage = fullMessage;
+          renderErrorView(
+            logger,
+            mutable,
+            getErrorViewTargets(mutable.project),
+            {
+              notice: undefined,
+            },
+          );
+          return;
+        }
         logger.withSynchronizedOutput(() => {
           if (mutable.lastInfoMessage !== undefined) {
             logger.moveCursor(0, -mutable.lastInfoMessage.split("\n").length);
@@ -1912,10 +1924,7 @@ const runCmd =
         return;
 
       case "HandleKeys": {
-        if (
-          !errorViewIsInteractive(logger, exitOnError) ||
-          !isNonEmptyArray(Compile.extractErrors(mutable.project))
-        ) {
+        if (!errorViewIsActive(logger, exitOnError, mutable.project)) {
           return;
         }
         const { errorView } = mutable;
@@ -1957,36 +1966,25 @@ const runCmd =
           }
         }
         errorView.selection = selection;
-        renderErrorView(logger, mutable, targets, {
-          notice: undefined,
-          reprintInfoMessage: true,
-        });
+        renderErrorView(logger, mutable, targets, { notice: undefined });
         return;
       }
 
       case "RenderErrorView":
-        if (
-          errorViewIsInteractive(logger, exitOnError) &&
-          isNonEmptyArray(Compile.extractErrors(mutable.project))
-        ) {
+        if (errorViewIsActive(logger, exitOnError, mutable.project)) {
           renderErrorView(
             logger,
             mutable,
             getErrorViewTargets(mutable.project),
-            { notice: cmd.notice, reprintInfoMessage: true },
+            { notice: cmd.notice },
           );
         }
         return;
 
       case "PrintCompileErrors":
-        if (errorViewIsInteractive(logger, exitOnError)) {
-          renderErrorView(
-            logger,
-            mutable,
-            getErrorViewTargets(mutable.project),
-            { notice: undefined, reprintInfoMessage: false },
-          );
-        } else {
+        // The error view is rendered together with the info message, which is
+        // logged right after this.
+        if (!errorViewIsActive(logger, exitOnError, mutable.project)) {
           logger.withSynchronizedOutput(() => {
             Compile.printErrors(logger, cmd.errors);
           });
@@ -3635,8 +3633,16 @@ function openEditorWithFunction(
 // Errors are shown one at a time, navigated with the keyboard, when we can read
 // keypresses. Otherwise (and when exiting on the first error), all errors are
 // printed.
-function errorViewIsInteractive(logger: Logger, exitOnError: boolean): boolean {
-  return logger.isRawMode() && !exitOnError;
+function errorViewIsActive(
+  logger: Logger,
+  exitOnError: boolean,
+  project: Project,
+): boolean {
+  return (
+    logger.isRawMode() &&
+    !exitOnError &&
+    isNonEmptyArray(Compile.extractErrors(project))
+  );
 }
 
 // In the same order as the status lines.
@@ -3668,18 +3674,17 @@ function getErrorViewTargets(
   ];
 }
 
-// Redraw the whole screen: Status lines, the selected error (or all errors),
-// and the info message.
+// Redraw the whole screen. One error at a time: Status lines, info message,
+// the selected error and keys to press. Show all: Status lines, all errors,
+// info message and keys to press. The keys are always last, so they are right
+// next to the cursor and easy to find.
 function renderErrorView(
   logger: Logger,
   mutable: Mutable,
   targets: Array<ErrorView.ErrorViewTarget>,
-  {
-    notice,
-    reprintInfoMessage,
-  }: { notice: string | undefined; reprintInfoMessage: boolean },
+  { notice }: { notice: string | undefined },
 ): void {
-  const { errorView } = mutable;
+  const { errorView, lastInfoMessage } = mutable;
   errorView.selection = ErrorView.reconcile(
     errorView.selection,
     targets,
@@ -3702,23 +3707,22 @@ function renderErrorView(
       if (isNonEmptyArray(errors)) {
         Compile.printErrors(logger, errors);
       }
+      if (lastInfoMessage !== undefined) {
+        logger.write(lastInfoMessage);
+      }
+      logger.write("");
       logger.write(ErrorView.renderShowAllHint());
     } else {
+      if (lastInfoMessage !== undefined) {
+        logger.write(lastInfoMessage);
+      }
       logger.write("");
-      logger.write(ErrorView.render(logger.config, selection, targets));
+      logger.write(ErrorView.render(logger.config, selection, targets, notice));
     }
 
-    if (notice !== undefined) {
-      logger.write("");
-      logger.write(notice);
-    }
-
-    if (reprintInfoMessage && mutable.lastInfoMessage !== undefined) {
-      logger.write(mutable.lastInfoMessage);
-      logger.clearScreenDown();
-    } else {
-      mutable.lastInfoMessage = undefined;
-    }
+    // For the `run-pty` tool: Let it know that it’s safe to render the
+    // keyboard shortcuts below the cursor text again.
+    logger.clearScreenDown();
   });
 }
 
