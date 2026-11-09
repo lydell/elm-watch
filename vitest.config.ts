@@ -6,6 +6,12 @@ export default defineConfig({
     // The slowest tests take 2-4 seconds alone, but up to 10 seconds when
     // running all tests in parallel.
     testTimeout: 30000,
+    // The tests are CPU bound (lots of `elm make`). Vitest’s default (number
+    // of cores minus one) oversubscribes the CPU, making every test slower
+    // and the whole run slower too: On a 14-core machine (10 performance
+    // cores), 13 workers took ~49 s, while 8–10 workers took ~34–38 s.
+    // On CI, use Vitest’s default, since CI runners only have a few cores.
+    ...(process.env["CI"] === undefined ? { maxWorkers: 9 } : {}),
     environmentOptions: {
       jsdom: {
         url: "http://localhost",
