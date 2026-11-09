@@ -27,6 +27,12 @@ class Simulation {
 
   private readonly transcript: Array<string> = [];
 
+  // From the `SleepBeforeReconnect` cmds, to fire their timers.
+  private readonly sleeps: Array<{
+    attemptNumber: number;
+    sleepStartDate: Date;
+  }> = [];
+
   private readonly config: UpdateConfig;
 
   constructor(config: Partial<UpdateConfig> = {}) {
@@ -50,8 +56,27 @@ class Simulation {
     const msg = makeMsg(this.date());
     const [model, cmds] = update(this.config, msg, this.model);
     this.model = model;
+    for (const cmd of cmds) {
+      if (cmd.tag === "SleepBeforeReconnect") {
+        this.sleeps.push(cmd);
+      }
+    }
     this.log(describeMsg(msg), cmds);
     return this;
+  }
+
+  // Defaults to the timer of the latest sleep.
+  timerFired(sleepIndex = this.sleeps.length - 1): this {
+    const sleep = this.sleeps[sleepIndex];
+    if (sleep === undefined) {
+      throw new Error(`No sleep at index ${sleepIndex}.`);
+    }
+    return this.send((date) => ({
+      tag: "SleepBeforeReconnectDone",
+      date,
+      attemptNumber: sleep.attemptNumber,
+      sleepStartDate: sleep.sleepStartDate,
+    }));
   }
 
   receive(message: WebSocketToClientMessage): this {
@@ -87,6 +112,8 @@ function describeMsg(msg: Msg): string {
   switch (msg.tag) {
     case "UiMsg":
       return `${msg.tag} ${msg.msg.tag}`;
+    case "SleepBeforeReconnectDone":
+      return `${msg.tag} (attempt ${msg.attemptNumber}, sleep started at ${msg.sleepStartDate.getTime()} ms)`;
     case "WebSocketMessageReceived": {
       const data = typeof msg.data === "string" ? msg.data : "";
       const tag = /"tag":"(\w+)"/.exec(data)?.[1] ?? data;
@@ -135,7 +162,6 @@ function describeCmd(cmd: Cmd): string {
 const msg = {
   connected: (date: Date): Msg => ({ tag: "WebSocketConnected", date }),
   closed: (date: Date): Msg => ({ tag: "WebSocketClosed", date }),
-  sleepDone: (date: Date): Msg => ({ tag: "SleepBeforeReconnectDone", date }),
   focused: (): Msg => ({ tag: "FocusedTab" }),
   visible: (date: Date): Msg => ({
     tag: "PageVisibilityChangedToVisible",
@@ -201,14 +227,13 @@ describe("client update", () => {
         .send(msg.closed)
         // Both "error" and "close" happen: Only start reconnecting once.
         .send(msg.closed)
-        // The timeout from a previous sleep: Not enough time has passed.
+        // Timers can fire a millisecond “early” according to `Date`. That must
+        // not stop us from reconnecting.
         .wait(retryWaitMs(2) - 1)
-        .send(msg.sleepDone)
-        .wait(1)
-        .send(msg.sleepDone)
+        .timerFired()
         .send(msg.closed)
         .wait(retryWaitMs(3))
-        .send(msg.sleepDone)
+        .timerFired()
         .send(msg.connected)
         .receive(upToDate)
         .toString(),
@@ -225,12 +250,7 @@ describe("client update", () => {
 
       (1039 ms later)
 
-      > SleepBeforeReconnectDone
-        status: SleepingBeforeReconnect, attempt 2, mode: standard, timestamp: 1
-
-      (1 ms later)
-
-      > SleepBeforeReconnectDone
+      > SleepBeforeReconnectDone (attempt 2, sleep started at 0 ms)
         status: Connecting, attempt 2, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
@@ -240,7 +260,7 @@ describe("client update", () => {
 
       (1090 ms later)
 
-      > SleepBeforeReconnectDone
+      > SleepBeforeReconnectDone (attempt 3, sleep started at 1039 ms)
         status: Connecting, attempt 3, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
@@ -259,6 +279,9 @@ describe("client update", () => {
         .send(msg.closed)
         .send(msg.reconnectNow)
         .send(msg.closed)
+        // The timer from the sleep before “Reconnect now”: Ignored.
+        .wait(retryWaitMs(2))
+        .timerFired(0)
         .send(msg.visible)
         // Only reconnects when sleeping.
         .send(msg.visible)
@@ -279,6 +302,11 @@ describe("client update", () => {
         status: SleepingBeforeReconnect, attempt 3, mode: standard, timestamp: 1
         cmd: SleepBeforeReconnect (attempt 3, 1090 ms)
 
+      (1040 ms later)
+
+      > SleepBeforeReconnectDone (attempt 2, sleep started at 0 ms)
+        status: SleepingBeforeReconnect, attempt 3, mode: standard, timestamp: 1
+
       > PageVisibilityChangedToVisible
         status: Connecting, attempt 3, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
@@ -296,9 +324,8 @@ describe("client update", () => {
         .send(msg.focused)
         .send(msg.closed)
         .send(msg.focused)
-        .send(msg.sleepDone)
         .wait(retryWaitMs(2))
-        .send(msg.sleepDone)
+        .timerFired()
         .send(msg.connected)
         .send(msg.focused)
         .receive({ tag: "FocusedTabAcknowledged" })
@@ -317,12 +344,9 @@ describe("client update", () => {
       > FocusedTab
         status: SleepingBeforeReconnect, attempt 2, mode: standard, timestamp: 1
 
-      > SleepBeforeReconnectDone
-        status: SleepingBeforeReconnect, attempt 2, mode: standard, timestamp: 1
-
       (1040 ms later)
 
-      > SleepBeforeReconnectDone
+      > SleepBeforeReconnectDone (attempt 2, sleep started at 0 ms)
         status: Connecting, attempt 2, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 

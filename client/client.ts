@@ -973,7 +973,12 @@ const runCmd =
             typeof document === "undefined" ||
             document.visibilityState === "visible"
           ) {
-            dispatch({ tag: "SleepBeforeReconnectDone", date: getNow() });
+            dispatch({
+              tag: "SleepBeforeReconnectDone",
+              date: getNow(),
+              attemptNumber: cmd.attemptNumber,
+              sleepStartDate: cmd.sleepStartDate,
+            });
           }
         }, retryWaitMs(cmd.attemptNumber));
         return;

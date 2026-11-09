@@ -9,7 +9,6 @@ import type { CompilationModeWithProxy } from "../src/Types.ts";
 import {
   type FlashType,
   type OverlayError,
-  retryWaitMs,
   SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
   type SendKey,
   type Status,
@@ -115,6 +114,8 @@ export type Msg =
   | {
       tag: "SleepBeforeReconnectDone";
       date: Date;
+      attemptNumber: number;
+      sleepStartDate: Date;
     }
   | {
       tag: "UiMsg";
@@ -179,6 +180,7 @@ export type Cmd =
   | {
       tag: "SleepBeforeReconnect";
       attemptNumber: number;
+      sleepStartDate: Date;
     }
   | {
       tag: "TriggerReachedIdleState";
@@ -326,7 +328,11 @@ export function update(
       ];
 
     case "SleepBeforeReconnectDone":
-      return reconnect(model, msg.date, { force: false });
+      return reconnect(model, msg.date, {
+        force: false,
+        attemptNumber: msg.attemptNumber,
+        sleepStartDate: msg.sleepStartDate,
+      });
 
     case "UiMsg":
       return onUiMsg(msg.date, msg.msg, model);
@@ -349,7 +355,13 @@ export function update(
               attemptNumber,
             },
           },
-          [{ tag: "SleepBeforeReconnect", attemptNumber }],
+          [
+            {
+              tag: "SleepBeforeReconnect",
+              attemptNumber,
+              sleepStartDate: msg.date,
+            },
+          ],
         ];
       }
 
@@ -642,15 +654,19 @@ function statusChanged(
 function reconnect(
   model: Model,
   date: Date,
-  { force }: { force: boolean },
+  options:
+    | { force: true }
+    | { force: false; attemptNumber: number; sleepStartDate: Date },
 ): [Model, Array<Cmd>] {
-  // We never clear reconnect `setTimeout`s. Instead, check that the required
-  // amount of time has passed. This is needed since we have the “Reconnect now”
-  // button.
+  // We never clear reconnect `setTimeout`s. Instead, check that the timeout
+  // belongs to the current sleep. This is needed since we have the “Reconnect
+  // now” button. Don’t check that enough time has passed using `Date`: Timers
+  // can fire a millisecond “early” according to `Date`, and some browsers
+  // reduce the precision of `Date`. Then we would never reconnect.
   return model.status.tag === "SleepingBeforeReconnect" &&
-    (date.getTime() - model.status.date.getTime() >=
-      retryWaitMs(model.status.attemptNumber) ||
-      force)
+    (options.force ||
+      (model.status.attemptNumber === options.attemptNumber &&
+        model.status.date.getTime() === options.sleepStartDate.getTime()))
     ? [
         {
           ...model,
