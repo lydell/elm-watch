@@ -15,6 +15,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 | --- | --- |
 | [application-proxy](./application-proxy/) | `Browser.application`, and proxying `/api/` to a backend via a custom server. |
 | [multiple-apps](./multiple-apps/) | Two `Browser.application` programs with shared code, and an `index.html` each. |
+| [multiple-apps-subdomains](./multiple-apps-subdomains/) | The same, but with the apps on `localhost` and `admin.localhost`, using a custom server. |
 | [https](./https/) | Serving over `https://` with a custom HTTPS server, and a self-signed certificate. |
 
 ## TypeScript, CSS and npm packages

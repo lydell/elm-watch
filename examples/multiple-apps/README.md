@@ -16,6 +16,8 @@ public/
    └── index.html      <- loads /build/admin.js
 ```
 
+If you can’t make the apps path based, see the [multiple apps on subdomains example](../multiple-apps-subdomains/).
+
 elm-watch’s static file server serves the [closest index.html](https://lydell.github.io/elm-watch/server/#indexhtml) for URLs that aren’t files. So `/about` gets `public/index.html` (the main app), and `/admin/users` gets `public/admin/index.html` (the admin app). Reloading the page works on any URL. elm-watch only compiles the apps you have open in the browser, and prioritizes the ones you are looking at.
 
 See [Running an example](../README.md#running-an-example) first.
