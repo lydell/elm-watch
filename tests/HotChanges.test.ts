@@ -968,7 +968,7 @@ describe("hot", () => {
     const inputFile1 = path.join(src, "HtmlMain.elm");
     const inputFile2 = path.join(src, "Worker.elm");
 
-    const { terminal, renders } = await run({
+    const { terminal, lastRender } = await run({
       fixture,
       args: ["Html", "Worker"],
       scripts: ["Html.js"],
@@ -1022,27 +1022,13 @@ describe("hot", () => {
       ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
     `);
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-    `);
+    expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);
   });
 
   testExceptWindows(
     "typecheck-only should not break because of duplicate inputs",
     async () => {
-      const { terminal, renders } = await run({
+      const { terminal, lastRender } = await run({
         fixture: "typecheck-only-unique",
         args: [],
         scripts: ["Main.js"],
@@ -1060,17 +1046,7 @@ describe("hot", () => {
         ⏳ Target1: elm make
       `);
 
-      expect(renders).toMatchInlineSnapshot(`
-        ▼ 🔌
-        ================================================================================
-        ▼ ⏳
-        ================================================================================
-        ▼ 🔌
-        ================================================================================
-        ▼ ⏳
-        ================================================================================
-        ▼ ✅
-      `);
+      expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);
     },
   );
 

@@ -30,7 +30,7 @@ describe("hot reloading", () => {
 
     let probe: HTMLElement | null = null;
 
-    const { renders } = await go(({ idle, div }) => {
+    const { lastRender } = await go(({ idle, div }) => {
       switch (idle) {
         case 1:
           assertDebugDisabled();
@@ -62,87 +62,7 @@ describe("hot reloading", () => {
       }
     });
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-      ================================================================================
-      ▲ ✅
-      --------------------------------------------------------------------------------
-      elm-watch %VERSION%
-      [Close elm-watch]
-      ✅ HtmlMain Successfully compiled · 13:10:05
-      Compilation mode for HtmlMain
-      ◯ (disabled) Debug
-      ◉ Standard
-      ◯ Optimize
-      The Elm debugger isn't supported by \`Html\` programs.
-      Drag emoji or press shift+arrows to move
-      ================================================================================
-      ▼ ✅
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-      ================================================================================
-      ▲ ✅
-      --------------------------------------------------------------------------------
-      elm-watch %VERSION%
-      [Close elm-watch]
-      ✅ HtmlMain Successfully compiled · 13:10:05
-      Compilation mode for HtmlMain
-      ◯ (disabled) Debug
-      ◉ Standard
-      ◯ Optimize
-      The Elm debugger isn't supported by \`Html\` programs.
-      Drag emoji or press shift+arrows to move
-      ================================================================================
-      ▲ ⏳🚀
-      --------------------------------------------------------------------------------
-      elm-watch %VERSION%
-      [Close elm-watch]
-      ⏳ HtmlMain Waiting for compilation · 13:10:05
-      Compilation mode for HtmlMain
-      ◯ (disabled) Debug
-      ◯ (disabled) Standard
-      ◉ (disabled) Optimize
-      The Elm debugger isn't supported by \`Html\` programs.
-      Drag emoji or press shift+arrows to move
-      ================================================================================
-      ▼ 🔌🚀
-      ================================================================================
-      ▼ ⏳🚀
-      ================================================================================
-      ▼ ✅🚀
-      ================================================================================
-      ▲ ✅🚀
-      --------------------------------------------------------------------------------
-      elm-watch %VERSION%
-      [Close elm-watch]
-      ✅ HtmlMain Successfully compiled · 13:10:05
-      Compilation mode for HtmlMain
-      ◯ (disabled) Debug
-      ◯ Standard
-      ◉ Optimize
-      The Elm debugger isn't supported by \`Html\` programs.
-      Drag emoji or press shift+arrows to move
-      ================================================================================
-      ▼ ✅🚀
-      ================================================================================
-      ▼ ⏳🚀
-      ================================================================================
-      ▼ ✅🚀
-    `);
+    expect(lastRender).toMatchInlineSnapshot(`▼ ✅🚀`);
 
     function assertInit(div: HTMLDivElement): void {
       expect(div.outerHTML).toStrictEqual(

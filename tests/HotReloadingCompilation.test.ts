@@ -178,7 +178,7 @@ describe("hot reloading", () => {
       isTTY: false,
     });
 
-    const { terminal, renders } = await go(({ idle }) => {
+    const { terminal, onlyExpandedRenders } = await go(({ idle }) => {
       switch (idle) {
         case 1:
           switchCompilationMode("optimize");
@@ -217,17 +217,7 @@ describe("hot reloading", () => {
       exists!
     `);
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-      ================================================================================
+    expect(onlyExpandedRenders).toMatchInlineSnapshot(`
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%

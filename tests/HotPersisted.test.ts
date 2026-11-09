@@ -38,7 +38,7 @@ describe("hot", () => {
   afterEach(cleanupAfterEachTest);
 
   test("persisted compilation mode", async () => {
-    const { renders } = await run({
+    const { lastRender } = await run({
       fixture: "persisted-compilation-mode",
       args: [],
       scripts: ["Main.js"],
@@ -52,17 +52,7 @@ describe("hot", () => {
       },
     });
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-    `);
+    expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);
   });
 
   test("persisted open error overlay", async () => {

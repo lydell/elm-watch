@@ -211,6 +211,7 @@ export async function run({
   terminal: string;
   browserConsole: string;
   renders: string;
+  lastRender: string;
   onlyExpandedRenders: string;
   div: HTMLDivElement;
 }> {
@@ -481,6 +482,7 @@ export async function run({
     terminal: stdoutString,
     browserConsole: browserConsole.join("\n\n"),
     renders: joinRenders(renders),
+    lastRender: clean(renders.at(-1) ?? "(none)"),
     onlyExpandedRenders: joinRenders(
       renders.filter((render) => render.includes("▲")),
     ),

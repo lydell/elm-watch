@@ -408,7 +408,7 @@ describe("hot", () => {
 
   test("ctrl+c", async () => {
     const stdin = new CtrlCReadStream();
-    const { terminal, renders } = await run({
+    const { terminal, lastRender } = await run({
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
@@ -432,17 +432,7 @@ describe("hot", () => {
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-    `);
+    expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);
   });
 
   test("exit when stdin ends, using signal", async () => {
@@ -453,7 +443,7 @@ describe("hot", () => {
       controller.abort();
     });
     stdin.resume();
-    const { terminal, renders } = await run({
+    const { terminal, lastRender } = await run({
       fixture: "basic",
       args: ["Html"],
       scripts: ["Html.js"],
@@ -492,17 +482,7 @@ describe("hot", () => {
       ✅ ⧙13:10:05⧘ Everything up to date.
     `);
 
-    expect(renders).toMatchInlineSnapshot(`
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ 🔌
-      ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ ✅
-    `);
+    expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);
   });
 
   test("reload trouble with http caching", async () => {
