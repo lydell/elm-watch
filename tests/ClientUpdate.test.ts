@@ -136,6 +136,9 @@ function describeModel(model: Model): string {
     ...("reasons" in status
       ? status.reasons.map((reason) => `reason: ${reason}`)
       : []),
+    ...("openEditorError" in status && status.openEditorError !== undefined
+      ? [`openEditorError: ${status.openEditorError.tag}`]
+      : []),
     `mode: ${model.compilationMode}`,
     `timestamp: ${model.elmCompiledTimestamp}`,
   ];
@@ -154,6 +157,12 @@ function describeCmd(cmd: Cmd): string {
       return `${cmd.tag} ${cmd.reason}`;
     case "Eval":
       return `${cmd.tag} ${cmd.code}`;
+    case "HandleStaticFilesChanged":
+      return `${cmd.tag} ${
+        typeof cmd.changedFileUrlPaths === "string"
+          ? cmd.changedFileUrlPaths
+          : cmd.changedFileUrlPaths.join(", ")
+      }`;
     default:
       return cmd.tag;
   }
@@ -182,6 +191,19 @@ const msg = {
     },
   }),
   evalSucceeded: (date: Date): Msg => ({ tag: "EvalSucceeded", date }),
+  evalErrored: (date: Date): Msg => ({ tag: "EvalErrored", date }),
+};
+
+const successfullyCompiled: WebSocketToClientMessage = {
+  tag: "SuccessfullyCompiled",
+  code: "/* new code */",
+  elmCompiledTimestamp: 2,
+  compilationMode: "standard",
+};
+
+const openEditorFailed: WebSocketToClientMessage = {
+  tag: "OpenEditorFailed",
+  error: { tag: "CommandFailed", message: "exit 1" },
 };
 
 const upToDate: WebSocketToClientMessage = {
@@ -485,6 +507,137 @@ describe("client update", () => {
       > WebSocketMessageReceived StatusChanged AlreadyUpToDate
         status: Idle, mode: optimize, timestamp: 1
         cmd: TriggerReachedIdleState AlreadyUpToDate
+    `);
+  });
+
+  test("eval errored", () => {
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(successfullyCompiled)
+        .send(msg.evalErrored)
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived SuccessfullyCompiled
+        status: Busy, mode: standard, timestamp: 2
+        cmd: Eval /* new code */
+
+      > EvalErrored
+        status: EvalError, mode: standard, timestamp: 2
+        cmd: OpenPanel
+        cmd: TriggerReachedIdleState EvalErrored
+    `);
+  });
+
+  test("eval needs reload, with duplicate reasons removed", () => {
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(successfullyCompiled)
+        .send((date) => ({
+          tag: "EvalNeedsReload",
+          date,
+          reasons: [
+            { tag: "NewPortAdded", name: "toJs", moduleName: "Main" },
+            { tag: "NewPortAdded", name: "toJs", moduleName: "Main" },
+            { tag: "PortTypeChanged", name: "fromJs", moduleName: "Main" },
+          ],
+        }))
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived SuccessfullyCompiled
+        status: Busy, mode: standard, timestamp: 2
+        cmd: Eval /* new code */
+
+      > EvalNeedsReload
+        status: WaitingForReload, reason: a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!, reason: the type of the port 'fromJs' changed. The idea is to give JavaScript code a chance to set it up!, mode: standard, timestamp: 2
+    `);
+  });
+
+  test("open editor failed", () => {
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(compileError)
+        // Shown in the panel together with the errors.
+        .receive(openEditorFailed)
+        // A new compile error clears the open editor error.
+        .receive(compileError)
+        .receive(upToDate)
+        // Ignored when there are no errors.
+        .receive(openEditorFailed)
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived StatusChanged CompileError
+        status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState CompileError
+
+      > WebSocketMessageReceived OpenEditorFailed
+        status: CompileError, 1 errors, openEditorError: CommandFailed, mode: standard, timestamp: 1
+        cmd: OpenPanel
+        cmd: TriggerReachedIdleState OpenEditorFailed
+
+      > WebSocketMessageReceived StatusChanged CompileError
+        status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState CompileError
+
+      > WebSocketMessageReceived StatusChanged AlreadyUpToDate
+        status: Idle, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState AlreadyUpToDate
+
+      > WebSocketMessageReceived OpenEditorFailed
+        status: Idle, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState OpenEditorFailed
+    `);
+  });
+
+  test("static files changed", () => {
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(upToDate)
+        .receive({
+          tag: "StaticFilesChanged",
+          changedFileUrlPaths: ["/style.css", "/index.html"],
+        })
+        .receive({ tag: "StaticFilesMayHaveChangedWhileDisconnected" })
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived StatusChanged AlreadyUpToDate
+        status: Idle, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState AlreadyUpToDate
+
+      > WebSocketMessageReceived StaticFilesChanged
+        status: Idle, mode: standard, timestamp: 1
+        cmd: HandleStaticFilesChanged /style.css, /index.html
+
+      > WebSocketMessageReceived StaticFilesMayHaveChangedWhileDisconnected
+        status: Idle, mode: standard, timestamp: 1
+        cmd: HandleStaticFilesChanged AnyFileMayHaveChanged
     `);
   });
 
