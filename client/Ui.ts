@@ -194,6 +194,10 @@ export function createUi(): Ui {
   containerInner.style.inset = "0";
   containerInner.style.pointerEvents = "none";
   containerInner.style.zIndex = "2147483647"; // Maximum z-index supported by browsers. (Popover fallback.)
+  // `all` does not reset `direction`, so a right-to-left page would otherwise
+  // mirror elm-watch’s UI (and mess up the punctuation in error messages).
+  // Everything in the shadow root inherits this.
+  containerInner.style.direction = "ltr";
 
   // In Safari, when making a `<dialog>` element into a popovers, it
   // always covers the entire page (making it impossible to click things),
