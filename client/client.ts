@@ -48,6 +48,7 @@ const HAS_WINDOW = window.window !== undefined;
 type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
+  RETRY_WAIT_MS: (attemptNumber: number) => number;
   CHANGED_CSS: Date;
   CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
@@ -159,6 +160,10 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   // takes around 2-4 ms. In iOS Safari via WiFi, I’ve seen it take up to 120 ms.
   // So 1 second should be plenty above the threshold, while not taking too long.
   WEBSOCKET_TIMEOUT: 1000,
+
+  // Used in tests to not have to wait for so long before reconnecting. The UI
+  // still shows the default wait time, to keep test snapshots stable.
+  RETRY_WAIT_MS: retryWaitMs,
 
   ON_RENDER: () => {
     // Do nothing.
@@ -980,7 +985,7 @@ const runCmd =
               sleepStartDate: cmd.sleepStartDate,
             });
           }
-        }, retryWaitMs(cmd.attemptNumber));
+        }, __ELM_WATCH.RETRY_WAIT_MS(cmd.attemptNumber));
         return;
 
       case "TriggerReachedIdleState":

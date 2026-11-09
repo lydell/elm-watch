@@ -4,6 +4,7 @@ import * as Codec from "tiny-decoders";
 import { expect } from "vitest";
 
 import type { ElmModule, UppercaseLetter } from "../client/client.ts";
+import { retryWaitMs } from "../client/Ui.ts";
 import type { ReachedIdleStateReason } from "../client/Update.ts";
 import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson.ts";
@@ -349,6 +350,11 @@ export async function run({
     (window as unknown as Record<string, unknown>)["__ELM_WATCH"] = {};
 
     window.__ELM_WATCH.MOCKED_TIMINGS = true;
+
+    // Reconnect quicker than in real life, to speed up the tests. The UI still
+    // shows the default wait time.
+    window.__ELM_WATCH.RETRY_WAIT_MS = (attemptNumber) =>
+      retryWaitMs(attemptNumber) / 100;
 
     window.__ELM_WATCH.RELOAD_PAGE = (message) => {
       if (message !== undefined) {
