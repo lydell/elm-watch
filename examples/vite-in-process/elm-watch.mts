@@ -54,8 +54,6 @@ const viteDevServer =
           middlewareMode: true,
           // Vite’s hot reloading WebSocket uses the same server, too.
           hmr: { server: httpServer },
-          // elm-watch hot reloads the Elm code. Vite should not react to it.
-          watch: { ignored: ["**/public/build/**"] },
         },
       })
     : undefined;
