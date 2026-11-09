@@ -1,7 +1,9 @@
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
+import type { Config } from "../src/Config.ts";
 import * as ElmWatchJson from "../src/ElmWatchJson.ts";
+import { type Env, ELM_WATCH_WEBSOCKET_URL } from "../src/Env.ts";
 import { DEFAULT_HOST } from "../src/Host.ts";
 import {
   initProject,
@@ -21,6 +23,7 @@ import {
   markAsTargetName,
 } from "../src/Types.ts";
 import { removeCoveredWatchDirs } from "../src/Watcher.ts";
+import type { WebSocketUrl } from "../src/WebSocketUrl.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 
 const getNow: GetNow = () => new Date();
@@ -342,51 +345,57 @@ describe("Project", () => {
       `);
   });
 
+  // Only reads from the fixtures, so no copies are needed.
+  function initFixtureProject(
+    fixture: string,
+    {
+      env = {},
+      configOverrides = {},
+    }: { env?: Env; configOverrides?: Partial<Config> } = {},
+  ): Project {
+    const cwd = markAsCwd(
+      markAsAbsolutePath(path.join(import.meta.dirname, "fixtures", fixture)),
+    );
+    const parseResult = ElmWatchJson.findReadAndParse(cwd);
+    if (parseResult.tag !== "Parsed") {
+      throw new Error(`Failed to parse elm-watch.json: ${parseResult.tag}`);
+    }
+    const result = initProject({
+      env,
+      getNow,
+      compilationMode: "standard",
+      config: { ...parseResult.value, ...configOverrides },
+      enabledTargetsSubstrings: [""],
+      elmWatchStuffDir: markAsElmWatchStuffDir(
+        markAsAbsolutePath("/elm-stuff/elm-watch"),
+      ),
+      elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
+        markAsAbsolutePath("/elm-stuff/elm-watch/stuff.json"),
+      ),
+      elmWatchStuffJson: undefined,
+    });
+    if (result.tag !== "Project") {
+      throw new Error(`Failed to init project: ${result.tag}`);
+    }
+    return result.project;
+  }
+
   describe("watchDirs", () => {
     const repoRoot = path.dirname(import.meta.dirname);
 
-    // Only reads from the fixtures, so no copies are needed.
     function printWatchDirs(fixture: string): string {
-      const cwd = markAsCwd(
-        markAsAbsolutePath(path.join(import.meta.dirname, "fixtures", fixture)),
-      );
-      const parseResult = ElmWatchJson.findReadAndParse(cwd);
-      if (parseResult.tag !== "Parsed") {
-        throw new Error(`Failed to parse elm-watch.json: ${parseResult.tag}`);
-      }
-      const result = initProject({
-        env: {},
-        getNow,
-        compilationMode: "standard",
-        config: parseResult.value,
-        enabledTargetsSubstrings: [""],
-        elmWatchStuffDir: markAsElmWatchStuffDir(
-          markAsAbsolutePath("/elm-stuff/elm-watch"),
-        ),
-        elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
-          markAsAbsolutePath("/elm-stuff/elm-watch/stuff.json"),
-        ),
-        elmWatchStuffJson: undefined,
-      });
-      if (result.tag !== "Project") {
-        throw new Error(`Failed to init project: ${result.tag}`);
-      }
+      const { watchDirs } = initFixtureProject(fixture);
       // Show what is actually watched, after removing duplicates.
-      const lines = removeCoveredWatchDirs(result.project.watchDirs).map(
-        ({ tag, dir }) => {
-          const relative = path
-            .relative(repoRoot, dir)
-            .split(path.sep)
-            .join("/");
-          return `${tag}: ${
-            relative === ""
-              ? "."
-              : relative.startsWith("..")
-                ? "<outside repo>"
-                : relative
-          }`;
-        },
-      );
+      const lines = removeCoveredWatchDirs(watchDirs).map(({ tag, dir }) => {
+        const relative = path.relative(repoRoot, dir).split(path.sep).join("/");
+        return `${tag}: ${
+          relative === ""
+            ? "."
+            : relative.startsWith("..")
+              ? "<outside repo>"
+              : relative
+        }`;
+      });
       // Directories outside the repo vary between machines.
       return lines
         .filter((line, index) => line !== lines[index - 1])
@@ -423,6 +432,82 @@ describe("Project", () => {
           Shallow: tests/fixtures/errors/elm-json-not-found
           Shallow: tests/fixtures/errors/elm-json-not-found/pages
         `);
+    });
+  });
+
+  describe("ELM_WATCH_WEBSOCKET_URL", () => {
+    const fixture = "hot/single";
+
+    const configUrl: WebSocketUrl = {
+      tag: "UrlFromConfig",
+      url: new URL("wss://config.example.com/elm-watch"),
+      source: "elm-watch.json",
+    };
+
+    function getWebSocketUrl(
+      envValue: string | undefined,
+      configOverrides: Partial<Config> = {},
+    ): { webSocketUrl: string | undefined; allowedHosts: Array<string> } {
+      const { webSocketUrl, allowedHosts } = initFixtureProject(fixture, {
+        env: { [ELM_WATCH_WEBSOCKET_URL]: envValue },
+        configOverrides,
+      });
+      return {
+        webSocketUrl:
+          webSocketUrl === undefined
+            ? undefined
+            : `${webSocketUrl.url.href} (${webSocketUrl.source})`,
+        allowedHosts,
+      };
+    }
+
+    test("not set", () => {
+      expect(getWebSocketUrl(undefined)).toStrictEqual({
+        webSocketUrl: undefined,
+        allowedHosts: [],
+      });
+      expect(
+        getWebSocketUrl(undefined, { webSocketUrl: configUrl }),
+      ).toStrictEqual({
+        webSocketUrl: "wss://config.example.com/elm-watch (elm-watch.json)",
+        allowedHosts: ["config.example.com"],
+      });
+    });
+
+    test("overrides elm-watch.json, and its host is allowed", () => {
+      expect(
+        getWebSocketUrl("ws://env.example.com:8080/ws", {
+          webSocketUrl: configUrl,
+        }),
+      ).toStrictEqual({
+        webSocketUrl: "ws://env.example.com:8080/ws (Env)",
+        allowedHosts: ["env.example.com"],
+      });
+    });
+
+    test.each([
+      "",
+      "not a url",
+      "http://env.example.com",
+      "ws://env.example.com/#hash",
+    ])("invalid value is silently ignored: %j", (envValue) => {
+      expect(
+        getWebSocketUrl(envValue, { webSocketUrl: configUrl }),
+      ).toStrictEqual({
+        webSocketUrl: "wss://config.example.com/elm-watch (elm-watch.json)",
+        allowedHosts: ["config.example.com"],
+      });
+    });
+
+    test("ignored when using the JavaScript API", () => {
+      expect(
+        getWebSocketUrl("ws://env.example.com/ws", {
+          source: { tag: "Options" },
+        }),
+      ).toStrictEqual({
+        webSocketUrl: undefined,
+        allowedHosts: [],
+      });
     });
   });
 });
