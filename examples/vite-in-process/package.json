@@ -11,6 +11,7 @@
     "@types/node": "24.19.2",
     "elm": "0.19.1-6",
     "elm-format": "0.8.8",
+    "elm-ts-types": "1.0.2",
     "elm-watch": "file:../../build",
     "js-confetti": "0.13.1",
     "rolldown": "1.2.15",
