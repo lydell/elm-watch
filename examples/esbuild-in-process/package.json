@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "example-esbuild-in-process",
+  "scripts": {
+    "start": "node --watch elm-watch.mjs hot",
+    "build": "node elm-watch.mjs make --optimize",
+    "check": "tsc"
+  },
+  "devDependencies": {
+    "elm": "0.19.1-6",
+    "elm-format": "0.8.8",
+    "elm-watch": "file:../../build",
+    "esbuild": "0.28.2",
+    "js-confetti": "0.13.1",
+    "typescript": "7.0.2"
+  }
+}

@@ -20,6 +20,7 @@ jobs:
           - application-proxy
           - multiple-apps
           - esbuild-side-by-side
+          - esbuild-in-process
 
     defaults:
       run:
