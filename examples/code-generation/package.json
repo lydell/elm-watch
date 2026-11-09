@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "example-code-generation",
+  "scripts": {
+    "start": "node --watch elm-watch.mjs hot",
+    "build": "node elm-watch.mjs make --optimize"
+  },
+  "devDependencies": {
+    "elm": "0.19.1-6",
+    "elm-format": "0.8.8",
+    "elm-watch": "file:../../build"
+  }
+}

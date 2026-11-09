@@ -14,6 +14,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 | [vite-in-process](./vite-in-process/) | TypeScript, CSS and npm packages with Vite’s dev server running inside elm-watch’s server, in `elm-watch.mts`. |
 | [vite-side-by-side](./vite-side-by-side/) | The same, but with Vite and elm-watch running side by side, and the Elm code loaded straight from elm-watch’s server. |
 | [esm](./esm/) | Turning the compiled Elm code into an ECMAScript module with a postprocess function. |
+| [code-generation](./code-generation/) | Generating an Elm module from JSON in `elm-watch.mjs`, and regenerating it on changes. |
 
 ## Running an example
 

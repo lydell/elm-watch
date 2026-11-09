@@ -1,0 +1,14 @@
+{
+  "English": {
+    "title": "Counter",
+    "increment": "Add one",
+    "decrement": "Remove one",
+    "language": "Language"
+  },
+  "Svenska": {
+    "title": "Räknare",
+    "increment": "Lägg till en",
+    "decrement": "Ta bort en",
+    "language": "Språk"
+  }
+}
