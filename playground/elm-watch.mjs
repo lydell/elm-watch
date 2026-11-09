@@ -1,5 +1,6 @@
 // @ts-check
 import { exec } from "node:child_process";
+import * as http from "node:http";
 import { parseArgs, promisify } from "node:util";
 import { elmWatch } from "elm-watch";
 import { postprocessFor } from "./postprocess.js";
@@ -28,14 +29,13 @@ if (runMode !== "hot" && runMode !== "make") {
  * @param {string} name
  * @param {[string, ...Array<string>]} inputs
  * @param {string} output
- * @param {string} [elmJson]
  * @returns {import("elm-watch").Target}
  */
-function target(name, inputs, output, elmJson = "elm.json") {
+function target(name, inputs, output) {
   return {
     type: "application",
     name,
-    elmJson,
+    elmJson: "elm.json",
     inputs,
     output,
     postprocess: postprocessFor(name),
@@ -67,43 +67,6 @@ const targets = [
     ],
     "public/build/Frankenstein.js",
   ),
-  target("ESM", ["src/HtmlMain.elm"], "public/build/ESM.js"),
-  target(
-    "🇫🇷 Azimutt",
-    ["public/submodules/azimutt/.elm-spa/defaults/Main.elm"],
-    "public/submodules/azimutt/public/dist/elm.js",
-    "public/submodules/azimutt/elm.json",
-  ),
-  target(
-    "🇨🇦 Concourse",
-    ["public/submodules/concourse/web/elm/src/Main.elm"],
-    "public/submodules/concourse/web/public/elm.min.js",
-    "public/submodules/concourse/web/elm/elm.json",
-  ),
-  target(
-    "🧖🏼 Elm SPA Example",
-    ["public/submodules/elm-spa-example/src/Main.elm"],
-    "public/submodules/elm-spa-example/elm-output.js",
-    "public/submodules/elm-spa-example/elm.json",
-  ),
-  target(
-    "🇩🇪 Kite",
-    ["public/submodules/kite/src/Main.elm"],
-    "public/submodules/kite/dist/elm.js",
-    "public/submodules/kite/elm.json",
-  ),
-  target(
-    "🇬🇧 Seeds Game",
-    ["public/submodules/seeds-game/src/elm/Main.elm"],
-    "public/submodules/seeds-game/dist/Main.js",
-    "public/submodules/seeds-game/elm.json",
-  ),
-  target(
-    "✂️ Unison Share",
-    ["public/submodules/codebase-ui/src/UnisonShare.elm"],
-    "public/submodules/codebase-ui/dist/UnisonShare.js",
-    "public/submodules/codebase-ui/elm.json",
-  ),
 ];
 
 const enabledTargets =
@@ -126,7 +89,19 @@ process.exitCode = await elmWatch({
     : values.debug
       ? "debug"
       : "standard",
+  staticFilesDir: "public",
   targets: enabledTargets,
+  createServer: ({ onRequest, onUpgrade }) =>
+    http
+      .createServer((request, response) => {
+        // Visit any page via cached.localhost to test that hot reloading
+        // works even if the browser has cached the compiled Elm code.
+        if (request.headers.host?.startsWith("cached.localhost:") === true) {
+          response.setHeader("Cache-Control", "max-age=3600");
+        }
+        onRequest(request, response);
+      })
+      .on("upgrade", onUpgrade),
   // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
   host: process.env.ELM_WATCH_HOST,
   openEditor: openEditorFromEnv(),

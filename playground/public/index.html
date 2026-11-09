@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>elm-watch playground</title>
+  </head>
+  <body>
+    <h1>elm-watch playground</h1>
+    <h2>Program types</h2>
+    <ul>
+      <li><a href="/HtmlMain.html">Html</a></li>
+      <li><a href="/SandboxMain.html">Browser.sandbox</a></li>
+      <li><a href="/ElementMain.html">Browser.element</a></li>
+      <li><a href="/DocumentMain.html">Browser.document</a></li>
+      <li><a href="/application/">Browser.application</a></li>
+      <li><a href="/WorkerMain.html">Platform.worker</a></li>
+    </ul>
+    <h2>Special cases</h2>
+    <ul>
+      <li>
+        <a href="/Hostile.html">Hostile</a> – page styles that try to break
+        elm-watch’s browser UI
+      </li>
+      <li><a href="/Many.html">Many</a> – several targets on one page</li>
+      <li>
+        <a href="/Frankenstein.html">Frankenstein</a> – several programs in one
+        target
+      </li>
+      <li>
+        <a href="/Typo.html">Typo</a> – a typo in the <code>init</code> call
+      </li>
+      <li>
+        <a href="/WebWorkerMain.html">Web worker</a> – a
+        <code>Platform.worker</code> in a web worker
+      </li>
+      <li>
+        <a href="/WebWorkerMainESM.html">Web worker (ESM)</a> – the same, but in
+        a module web worker
+      </li>
+    </ul>
+    <p>
+      Open any page via
+      <a id="cached" href="http://cached.localhost/">cached.localhost</a> to
+      test hot reloading when the browser has cached the compiled Elm code.
+    </p>
+    <script>
+      cached.port = location.port;
+    </script>
+  </body>
+</html>

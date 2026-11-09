@@ -45,9 +45,9 @@ view model =
     { title = model.url.path
     , body =
         [ Html.nav []
-            [ Html.a [ Attr.href "/" ] [ Html.text "Home" ]
+            [ Html.a [ Attr.href "/application" ] [ Html.text "Home" ]
             , Html.text " | "
-            , Html.a [ Attr.href "/about" ] [ Html.text "About" ]
+            , Html.a [ Attr.href "/application/about" ] [ Html.text "About" ]
             ]
         , Html.p [] [ Html.text ("Current path: " ++ model.url.path) ]
         ]
