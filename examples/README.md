@@ -6,7 +6,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 
 | Example | What it shows |
 | --- | --- |
-| [minimal](./minimal/) | The bare minimum: `elm-watch.json` and an HTML file. |
+| [minimal](./minimal/) | The bare minimum: `elm-watch.json` and an HTML file that you open straight in the browser. No server needed. |
 | [javascript-api](./javascript-api/) | `elm-watch.mjs` (from `elm-watch init --javascript`) instead of `elm-watch.json`. |
 
 ## Server

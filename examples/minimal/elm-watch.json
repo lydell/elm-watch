@@ -1,5 +1,4 @@
 {
-    "serve": ".",
     "targets": {
         "Main": {
             "type": "application",
