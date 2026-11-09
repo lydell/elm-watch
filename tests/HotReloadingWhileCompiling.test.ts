@@ -135,7 +135,7 @@ describe("hot reloading", () => {
     ]);
 
     expect(terminal).toMatchInlineSnapshot(`
-      📊 ⧙server:⧘ http://localhost:59123
+      🌐 http://localhost:59123
       ⏳ InterruptElm: elm make (typecheck only)
       ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 

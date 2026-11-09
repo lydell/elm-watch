@@ -44,6 +44,9 @@ export type Logger = {
   clearScreen: () => void;
   clearScreenDown: () => void;
   clearLine: (dir: readline.Direction) => void;
+  // Move the cursor to the start of the last `numLines` lines printed, and
+  // clear them, for printing them again.
+  clearLastLines: (numLines: number) => void;
   moveCursor: (dx: number, dy: number) => void;
   setRawMode: (onExit: () => void, onData?: (data: string) => void) => void;
   // Whether we read keypresses (see `setRawMode`).
@@ -190,6 +193,20 @@ export function makeLogger({
     clearLine(dir: readline.Direction) {
       if (config.isTTY) {
         readline.clearLine(stdout, dir);
+      }
+    },
+    clearLastLines(numLines: number) {
+      if (config.isTTY) {
+        if (needsNewline) {
+          // The cursor is at the end of the last line, rather than at the
+          // start of the line below it.
+          readline.cursorTo(stdout, 0);
+          readline.moveCursor(stdout, 0, -(numLines - 1));
+          needsNewline = false;
+        } else {
+          readline.moveCursor(stdout, 0, -numLines);
+        }
+        readline.clearScreenDown(stdout);
       }
     },
     moveCursor(dx: number, dy: number) {

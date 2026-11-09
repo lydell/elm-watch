@@ -8,6 +8,7 @@ import {
   cleanupAfterEachTest,
   fixtureDir,
   nextMsg,
+  nextWatcherEventHandled,
   run,
 } from "./HotHelpers.ts";
 
@@ -47,12 +48,7 @@ describe("hot error view", () => {
     expect(screens.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       🚨 ⧙Main⧘: 3 errors ◀
       🚨 Other: 1 error
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Main⧘
-      🚨 ⧙13:10:05⧘ Everything up to date.
+      🌐 http://localhost:59123
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5
@@ -71,17 +67,13 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      🚨 error ⧙1⧘/3   file ⧙1⧘/2
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 error 1/3   file 1/2
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 ⧙Main⧘: 3 errors ◀
       🚨 Other: 1 error
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Main⧘
-      🚨 ⧙13:10:05⧘ Everything up to date.
+      🌐 http://localhost:59123
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:11:5
@@ -100,17 +92,13 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      🚨 error ⧙2⧘/3   file ⧙1⧘/2
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 error 2/3   file 1/2
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 ⧙Main⧘: 3 errors ◀
       🚨 Other: 1 error
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Main⧘
-      🚨 ⧙13:10:05⧘ Everything up to date.
+      🌐 http://localhost:59123
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/B.elm:6:5
@@ -129,17 +117,13 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      🚨 error ⧙3⧘/3   file ⧙2⧘/2
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 error 3/3   file 2/2
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 Main: 3 errors
       🚨 ⧙Other⧘: 1 error ◀
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Main⧘
-      🚨 ⧙13:10:05⧘ Everything up to date.
+      🌐 http://localhost:59123
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20
@@ -152,11 +136,13 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
 
-      🚨 error ⧙1⧘/1
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 error 1/1
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 Main: 3 errors
       🚨 Other: 1 error
+      🌐 http://localhost:59123
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5
@@ -220,24 +206,13 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
 
-      🚨 ⧙4⧘ errors found
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Main⧘
-      🚨 ⧙13:10:05⧘ Everything up to date.
-
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 4 errors
       ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
       ================================================================================
       🚨 Main: 3 errors
       🚨 ⧙Other⧘: 1 error ◀
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Main⧘
-      🚨 ⧙13:10:05⧘ Everything up to date.
+      🌐 http://localhost:59123
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20
@@ -250,7 +225,8 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
 
-      🚨 error ⧙1⧘/1
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 error 1/1
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
@@ -290,12 +266,7 @@ describe("hot error view", () => {
     expect(terminal).toMatchInlineSnapshot(`
       🚨 ⧙Main⧘: 2 errors ◀
       🚨 Other: 1 error
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures-copies/Hot⧘…
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      🌐 http://localhost:59123
 
       ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/B.elm:6:5
@@ -314,7 +285,8 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      🚨 error ⧙2⧘/2   file ⧙2⧘/2
+      ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/A.elm⧘
+      🚨 error 2/2   file 2/2
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
@@ -348,8 +320,35 @@ describe("hot error view", () => {
 
         Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-        🚨 error ⧙1⧘/1
+        ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
+        🚨 error 1/1
         ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       `);
+  });
+
+  test("one-line info message for files not imported by any target", async () => {
+    const fixture = "error-view";
+    const unused = path.join(fixtureDir(fixture), "src", "Unused.elm");
+    let screen = "";
+
+    await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async ({ stdout }) => {
+        const handled = nextWatcherEventHandled(unused);
+        fs.writeFileSync(unused, "module Unused exposing (x)\n\nx = 1\n");
+        await handled;
+        screen = clean(stdout.getOutput());
+        return "Stop" as const;
+      },
+    });
+
+    expect(screen.split("\n").at(-3)).toMatchInlineSnapshot(
+      `ℹ️ ⧙13:10:05⧘ Nothing to do   ⧙src/Unused.elm – not imported by any target⧘`,
+    );
   });
 });

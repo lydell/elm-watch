@@ -1786,9 +1786,9 @@ export const EMOJI = {
     emoji: "ℹ️",
     description: "info",
   },
-  Stats: {
-    emoji: "📊",
-    description: "stats",
+  Server: {
+    emoji: "🌐",
+    description: "server",
   },
 };
 
@@ -1881,21 +1881,29 @@ export function printStatusLinesForTargetsErrors(
   }
 }
 
-export function printErrors(
-  logger: Logger,
-  errors: NonEmptyArray<Errors.ErrorTemplate>,
-): void {
-  const errorStrings = Array.from(
+// The same error can occur in several targets – only print it once.
+export function errorsToTerminalStrings(
+  loggerConfig: LoggerConfig,
+  errors: Array<Errors.ErrorTemplate>,
+): Array<string> {
+  return Array.from(
     new Set(
       errors.map((template) =>
         Errors.toTerminalString(
           template,
-          logger.config.columns,
-          logger.config.noColor,
+          loggerConfig.columns,
+          loggerConfig.noColor,
         ),
       ),
     ),
   );
+}
+
+export function printErrors(
+  logger: Logger,
+  errors: NonEmptyArray<Errors.ErrorTemplate>,
+): void {
+  const errorStrings = errorsToTerminalStrings(logger.config, errors);
 
   logger.write("");
   logger.write(errorStrings.join("\n\n"));

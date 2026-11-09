@@ -258,12 +258,9 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+        🌐 http://localhost:59123
 
-        📊 ⧙server:⧘ http://localhost:59123
-        📊 ⧙web socket connections:⧘ 1
-
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
-        ✅ ⧙13:10:05⧘ Everything up to date.
+        ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html +1 more⧘
       `);
     });
 
@@ -822,12 +819,9 @@ describe("hot", () => {
 
       expect(terminal).toMatchInlineSnapshot(`
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+        🌐 http://localhost:59123
 
-        📊 ⧙server:⧘ http://localhost:59123
-        📊 ⧙web socket connections:⧘ 1
-
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html +1 more⧘
       `);
 
       expect(renders).toMatchInlineSnapshot(`

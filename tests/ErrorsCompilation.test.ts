@@ -370,7 +370,7 @@ describe("errors", () => {
       );
 
       expect(adjustedOutput).toMatchInlineSnapshot(`
-        📊 ⧙server:⧘ http://localhost:59123
+        🌐 http://localhost:59123
         ⏳ Main: elm make (typecheck only)
         ⏳ Main: interrupted
         ⏳ Main: elm make (typecheck only)
@@ -521,10 +521,9 @@ describe("errors", () => {
 
         The file contains nothing essential, but something weird is going on.
 
-        📊 ⧙server:⧘ http://localhost:59123
-        📊 ⧙web socket connections:⧘ 0
+        🌐 http://localhost:59123
 
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       `);
     });
   });
@@ -643,10 +642,9 @@ describe("errors", () => {
 
       🚨 ⧙1⧘ error found
 
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 0
+      🌐 http://localhost:59123
 
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
     `);
   });
 

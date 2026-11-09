@@ -111,12 +111,9 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      🌐 http://localhost:59123
 
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main +1 more⧘
     `);
   });
 

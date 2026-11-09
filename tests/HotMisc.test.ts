@@ -428,12 +428,9 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      🌐 http://localhost:59123
 
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html +1 more⧘
     `);
 
     expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);
@@ -478,12 +475,9 @@ describe("hot", () => {
       ✅ Reconnect
       ✅ HttpCaching
       ✅ "Esc\\apes"
+      🌐 http://localhost:59123
 
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html +1 more⧘
     `);
 
     expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);
@@ -581,12 +575,9 @@ describe("hot", () => {
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Dependencies
       ✅ Main⧙                                                      1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      🌐 http://localhost:59123
 
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/elm-json-above-elm-watch-json/elm.json⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed ../elm.json⧘
     `);
   });
 
@@ -616,12 +607,9 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                                      1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      🌐 http://localhost:59123
 
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/source-directories-above-elm-watch-json/src/Answer.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed ../../src/Answer.elm⧘
     `);
   });
 

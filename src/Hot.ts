@@ -162,6 +162,8 @@ type Mutable = {
   outputRequests: Array<OutputRequest>;
   project: Project;
   lastInfoMessage: string | undefined;
+  // The one-line version of the info message (TTY only), for the error view.
+  lastInfoLine: string | undefined;
   errorView: ErrorView.ErrorViewState;
   watcherTimeoutId: NodeJS.Timeout | undefined;
   watcherProbe: WatcherProbe | undefined;
@@ -338,7 +340,10 @@ export type Cmd =
     }
   | {
       tag: "LogInfoMessageWithTimeline";
+      // For logs (not a TTY), printed below a timeline of all events.
       message: string;
+      // For TTYs, printed on one line together with the latest event.
+      shortMessage: string;
       events: Array<LatestEvent>;
     }
   | {
@@ -676,6 +681,7 @@ const initMutable =
       outputRequests: [],
       project,
       lastInfoMessage: undefined,
+      lastInfoLine: undefined,
       errorView: { showAll: false, selection: undefined },
       watcherTimeoutId: undefined,
       watcherProbe,
@@ -717,9 +723,11 @@ const initMutable =
         const isRestart = webSocketState !== undefined;
         if (!logger.config.isTTY && !isRestart) {
           logger.write(
-            printStats(logger.config, [
-              printServerLinks(mutable.webSocketServer, mutable.project.host),
-            ]),
+            printServerLine(
+              logger.config,
+              mutable.webSocketServer,
+              mutable.project.host,
+            ),
           );
         }
       })
@@ -1072,6 +1080,10 @@ export function update(
               {
                 tag: "LogInfoMessageWithTimeline",
                 message: compileFinishedMessage(loggerConfig, duration),
+                shortMessage: compileFinishedShortMessage(
+                  loggerConfig,
+                  duration,
+                ),
                 events: model.latestEvents,
               },
               isNonEmptyArray(errors) && exitOnError
@@ -1687,6 +1699,7 @@ function runNextAction(
                       model.latestEvents,
                       project.disabledOutputs,
                     ),
+                    shortMessage: printEventsShortMessage(model.latestEvents),
                     events: model.latestEvents,
                   },
                 ],
@@ -1805,6 +1818,11 @@ const runCmd =
                 mutable.elmWatchStuffJsonWriteError,
               ),
             );
+            // In a TTY, the info message starts right away (to be right below
+            // the status lines), so we need an empty line.
+            if (logger.config.isTTY) {
+              logger.write("");
+            }
             if (exitOnError) {
               closeAll(logger, mutable)
                 .then(() => {
@@ -1847,33 +1865,59 @@ const runCmd =
       }
 
       case "LogInfoMessageWithTimeline": {
-        const fullMessage = infoMessageWithTimeline({
+        const date = getNow();
+        const events = filterLatestEvents(cmd.events);
+        const hasErrors = isNonEmptyArray(
+          Compile.extractErrors(mutable.project),
+        );
+
+        if (!logger.config.isTTY) {
+          logger.write(
+            infoMessageWithTimeline({
+              loggerConfig: logger.config,
+              date,
+              message: cmd.message,
+              events,
+              hasErrors,
+            }),
+          );
+          return;
+        }
+
+        const infoLine = printInfoLine({
           loggerConfig: logger.config,
-          date: getNow(),
-          mutable,
-          host: mutable.project.host,
-          message: cmd.message,
-          events: filterLatestEvents(cmd.events),
-          hasErrors: isNonEmptyArray(Compile.extractErrors(mutable.project)),
+          date,
+          message: cmd.shortMessage,
+          events,
+          root: mutable.project.root,
+          hasErrors,
         });
+        mutable.lastInfoLine = infoLine;
+
         if (errorViewIsActive(logger, exitOnError, mutable.project)) {
-          mutable.lastInfoMessage = fullMessage;
           renderErrorView(
             logger,
             mutable,
             getErrorViewTargets(mutable.project),
-            {
-              notice: undefined,
-            },
+            { notice: undefined },
           );
           return;
         }
+
+        const fullMessage = [
+          printServerLine(
+            logger.config,
+            mutable.webSocketServer,
+            mutable.project.host,
+          ),
+          "",
+          infoLine,
+        ].join("\n");
         logger.withSynchronizedOutput(() => {
           if (mutable.lastInfoMessage !== undefined) {
-            logger.moveCursor(0, -mutable.lastInfoMessage.split("\n").length);
-            logger.clearScreenDown();
+            logger.clearLastLines(mutable.lastInfoMessage.split("\n").length);
           }
-          logger.write(fullMessage);
+          logger.writeWithoutTrailingNewline(fullMessage);
           // For the `run-pty` tool: Let it know that it’s safe to render the
           // keyboard shortcuts below the cursor text again.
           logger.clearScreenDown();
@@ -1987,6 +2031,10 @@ const runCmd =
         if (!errorViewIsActive(logger, exitOnError, mutable.project)) {
           logger.withSynchronizedOutput(() => {
             Compile.printErrors(logger, cmd.errors);
+            // See `HandleElmWatchStuffJsonWriteError`.
+            if (logger.config.isTTY) {
+              logger.write("");
+            }
           });
         }
         return;
@@ -3305,27 +3353,22 @@ function filterLatestEvents(events: Array<LatestEvent>): Array<LatestEvent> {
   return isNonEmptyArray(filtered) ? filtered : events;
 }
 
+// For logs (not a TTY).
 function infoMessageWithTimeline({
   loggerConfig,
   date,
-  mutable,
-  host,
   message,
   events,
   hasErrors,
 }: {
   loggerConfig: LoggerConfig;
   date: Date;
-  mutable: Mutable;
-  host: Host;
   message: string;
   events: Array<LatestEvent>;
   hasErrors: boolean;
 }): string {
   return [
-    loggerConfig.isTTY ? "" : undefined, // Empty line separator.
-    loggerConfig.isTTY ? printAllStats(loggerConfig, mutable, host) : undefined,
-    "",
+    "", // Empty line separator.
     printTimeline(loggerConfig, events),
     printMessageWithTimeAndEmoji({
       loggerConfig,
@@ -3337,6 +3380,97 @@ function infoMessageWithTimeline({
   ]
     .flatMap((part) => part ?? [])
     .join("\n");
+}
+
+// For TTYs: The time, the message and the latest event on one line. When there
+// are errors, the status lines and the error view already say so, so we use
+// the information emoji to not repeat 🚨 over and over.
+function printInfoLine({
+  loggerConfig,
+  date,
+  message,
+  events,
+  root,
+  hasErrors,
+}: {
+  loggerConfig: LoggerConfig;
+  date: Date;
+  message: string;
+  events: Array<LatestEvent>;
+  root: AbsolutePath;
+  hasErrors: boolean;
+}): string {
+  const summary = summarizeEvents(events, root);
+  return printMessageWithTimeAndEmoji({
+    loggerConfig,
+    emojiName: hasErrors ? "Information" : "Success",
+    date,
+    dateHighlight: bold,
+    message: summary === undefined ? message : `${message}   ${dim(summary)}`,
+  });
+}
+
+function summarizeEvents(
+  events: Array<LatestEvent>,
+  root: AbsolutePath,
+): string | undefined {
+  const latest = events.at(-1);
+  if (latest === undefined) {
+    return undefined;
+  }
+  const more = events.length > 1 ? ` +${events.length - 1} more` : "";
+  return latest.tag === "WatcherEvent" && eventsAreOnlyNotImported(events)
+    ? `${printWatcherEventPath(latest, root)}${more} – not imported by any target`
+    : `${printEventShort(latest, root)}${more}`;
+}
+
+function eventsAreOnlyNotImported(events: Array<LatestEvent>): boolean {
+  return events.every(
+    (event) => event.tag === "WatcherEvent" && !event.affectsAnyTarget,
+  );
+}
+
+function printWatcherEventPath(
+  event: Extract<LatestEvent, { tag: "WatcherEvent" }>,
+  root: AbsolutePath,
+): string {
+  return event.file.tag === "AbsolutePath"
+    ? path.relative(root, event.file.absolutePath)
+    : event.file.urlPath;
+}
+
+function printEventShort(event: LatestEvent, root: AbsolutePath): string {
+  switch (event.tag) {
+    case "WatcherEvent":
+      return `${event.eventName} ${printWatcherEventPath(event, root)}`;
+
+    case "OutputRequestedNeedingCompilation":
+      return `HTTP request: ${event.outputPath.targetName}`;
+
+    case "WebSocketClosed":
+      return `web socket disconnected: ${
+        event.outputPath.tag === "OutputPath"
+          ? event.outputPath.targetName
+          : "(no matching target)"
+      }`;
+
+    case "WebSocketConnectedNeedingCompilation":
+    case "WebSocketConnectedNeedingNoAction":
+      return `web socket connected: ${event.outputPath.targetName}`;
+
+    case "WebSocketConnectedWithErrors":
+      return "web socket connected with errors (see the browser)";
+
+    case "WebSocketConnectionRejected":
+      return `rejected web socket from ${
+        event.origin === undefined ? "unknown origin" : quote(event.origin)
+      }: ${printWebSocketConnectionRejectedReason(event.reason)}`;
+
+    case "WebSocketChangedCompilationMode":
+      return `compilation mode ${quote(event.compilationMode)}: ${
+        event.outputPath.targetName
+      }`;
+  }
 }
 
 function printMessageWithTimeAndEmoji({
@@ -3364,32 +3498,18 @@ function printMessageWithTimeAndEmoji({
   });
 }
 
-function printAllStats(
+function printServerLine(
   loggerConfig: LoggerConfig,
-  mutable: Mutable,
+  webSocketServer: WebSocketServer,
   host: Host,
 ): string {
-  return printStats(loggerConfig, [
-    printServerLinks(mutable.webSocketServer, host),
-    `${dim("web socket connections:")} ${mutable.webSocketConnections.length}`,
-  ]);
-}
-
-function printStats(
-  loggerConfig: LoggerConfig,
-  stats: NonEmptyArray<string>,
-): string {
-  return stats
-    .map((part) =>
-      Compile.printStatusLine({
-        maxWidth: loggerConfig.columns,
-        fancy: loggerConfig.fancy,
-        isTTY: loggerConfig.isTTY,
-        emojiName: "Stats",
-        string: part,
-      }),
-    )
-    .join("\n");
+  return Compile.printStatusLine({
+    maxWidth: loggerConfig.columns,
+    fancy: loggerConfig.fancy,
+    isTTY: loggerConfig.isTTY,
+    emojiName: "Server",
+    string: printServerLinks(webSocketServer, host),
+  });
 }
 
 function printServerLinks(
@@ -3402,7 +3522,7 @@ function printServerLinks(
   if (host !== "0.0.0.0") {
     // `localhost` is easier to read, and the same thing in practice.
     const hostname = host === "127.0.0.1" ? "localhost" : host;
-    return `${dim("server:")} ${protocol}://${hostname}:${port}`;
+    return `${protocol}://${hostname}:${port}`;
   }
 
   const networkIps = Object.values(os.networkInterfaces())
@@ -3413,8 +3533,8 @@ function printServerLinks(
     )
     .map(({ address }) => address);
 
-  return `${dim("server:")} ${protocol}://localhost:${port}${networkIps
-    .map((ip) => `${dim(", network:")} ${protocol}://${ip}:${port}`)
+  return `${protocol}://localhost:${port}${networkIps
+    .map((ip) => `   ${dim("network:")} ${protocol}://${ip}:${port}`)
     .join("")}`;
 }
 
@@ -3505,6 +3625,19 @@ function compileFinishedMessage(
   return `Compilation finished in ${bold(
     printDurationMs(loggerConfig.mockedTimings ? 123 : duration).trim(),
   )}.`;
+}
+
+function compileFinishedShortMessage(
+  loggerConfig: LoggerConfig,
+  duration: number,
+): string {
+  return `Compiled in ${bold(
+    printDurationMs(loggerConfig.mockedTimings ? 123 : duration).trim(),
+  )}`;
+}
+
+function printEventsShortMessage(events: Array<LatestEvent>): string {
+  return eventsAreOnlyNotImported(events) ? "Nothing to do" : "Up to date";
 }
 
 function printEventsMessage(
@@ -3674,17 +3807,16 @@ function getErrorViewTargets(
   ];
 }
 
-// Redraw the whole screen. One error at a time: Status lines, info message,
-// the selected error and keys to press. Show all: Status lines, all errors,
-// info message and keys to press. The keys are always last, so they are right
-// next to the cursor and easy to find.
+// Redraw the whole screen: Status lines, server line, the selected error (or
+// all errors), the info line and keys to press. Only the error area changes
+// when switching between one error at a time and showing all errors.
 function renderErrorView(
   logger: Logger,
   mutable: Mutable,
   targets: Array<ErrorView.ErrorViewTarget>,
   { notice }: { notice: string | undefined },
 ): void {
-  const { errorView, lastInfoMessage } = mutable;
+  const { errorView } = mutable;
   errorView.selection = ErrorView.reconcile(
     errorView.selection,
     targets,
@@ -3701,31 +3833,42 @@ function renderErrorView(
         0,
       selected: !errorView.showAll && selection?.targetName === targetName,
     }));
+    logger.write(
+      printServerLine(
+        logger.config,
+        mutable.webSocketServer,
+        mutable.project.host,
+      ),
+    );
+    logger.write("");
 
-    if (errorView.showAll || selection === undefined) {
-      const errors = Compile.extractErrors(mutable.project);
-      if (isNonEmptyArray(errors)) {
-        Compile.printErrors(logger, errors);
-      }
-      if (lastInfoMessage !== undefined) {
-        logger.write(lastInfoMessage);
-      }
-      logger.write("");
-      logger.writeWithoutTrailingNewline(ErrorView.renderShowAllHint());
-    } else {
-      if (lastInfoMessage !== undefined) {
-        logger.write(lastInfoMessage);
-      }
-      logger.write("");
-      logger.writeWithoutTrailingNewline(
-        ErrorView.render(logger.config, selection, targets, notice),
-      );
-    }
+    logger.writeWithoutTrailingNewline(
+      errorView.showAll || selection === undefined
+        ? ErrorView.renderShowAll({
+            loggerConfig: logger.config,
+            errorStrings: Compile.errorsToTerminalStrings(
+              logger.config,
+              Compile.extractErrors(mutable.project),
+            ),
+            infoLine: mutable.lastInfoLine,
+          })
+        : ErrorView.render({
+            loggerConfig: logger.config,
+            selection,
+            targets,
+            notice,
+            infoLine: mutable.lastInfoLine,
+          }),
+    );
 
     // For the `run-pty` tool: Let it know that it’s safe to render the
     // keyboard shortcuts below the cursor text again.
     logger.clearScreenDown();
   });
+
+  // The info message is part of the error view, and can’t be updated on its
+  // own.
+  mutable.lastInfoMessage = undefined;
 }
 
 function printWebSocketConnectionRejectedReason(

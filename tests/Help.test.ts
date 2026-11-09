@@ -83,7 +83,7 @@ describe("help", () => {
           ⛔️ skipped
           ✅ success
           ℹ️ info
-          📊 stats
+          🌐 server
 
       ⧙Durations legend:⧘
 

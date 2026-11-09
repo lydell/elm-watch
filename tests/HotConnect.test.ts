@@ -34,12 +34,9 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      🌐 http://localhost:59123   ⧙network:⧘ http://192.168.0.1:59123
 
-      📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html +1 more⧘
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -69,8 +66,8 @@ describe("hot", () => {
       onIdle: () => "Stop",
     });
 
-    expect(grep(terminal, /server:/)).toMatchInlineSnapshot(
-      `📊 ⧙server:⧘ http://localhost:59123⧙, network:⧘ http://192.168.0.1:59123`,
+    expect(grep(terminal, /🌐/)).toMatchInlineSnapshot(
+      `🌐 http://localhost:59123   ⧙network:⧘ http://192.168.0.1:59123`,
     );
   });
 
@@ -88,7 +85,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      📊 ⧙server:⧘ http://localhost:59123
+      🌐 http://localhost:59123
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Worker: elm make (typecheck only)
@@ -190,12 +187,9 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
+      http://localhost:59123
 
-      server: http://localhost:59123
-      web socket connections: 1
-
-      13:10:05 Web socket connected for: Html
-      13:10:05 Everything up to date.
+      13:10:05 Up to date   web socket connected: Html +1 more
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
@@ -217,7 +211,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      server: http://localhost:59123
+      http://localhost:59123
       Dependencies: in progress
       Dependencies: success
       Html: elm make (typecheck only)
@@ -271,12 +265,9 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      🌐 http://localhost:59123
 
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Main⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main +1 more⧘
     `);
 
     rm(path.join(dir, "elm.json"));
@@ -341,12 +332,7 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       🚨 ⧙Removed⧘: 1 error ◀
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Removed⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      🌐 http://localhost:59123
 
       ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
       ⧙Target: Removed⧘
@@ -359,7 +345,8 @@ describe("hot", () => {
 
       ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js'
 
-      🚨 error ⧙1⧘/1
+      ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Removed⧘
+      🚨 error 1/1
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 
@@ -394,12 +381,7 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       🚨 ⧙Readonly⧘: 1 error ◀
-
-      📊 ⧙server:⧘ http://localhost:59123
-      📊 ⧙web socket connections:⧘ 1
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Readonly⧘
-      🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      🌐 http://localhost:59123
 
       ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
       ⧙Target: Readonly⧘
@@ -416,7 +398,8 @@ describe("hot", () => {
 
       EACCES: permission denied, open '/Users/you/project/tests/fixtures/hot/basic/build/Readonly.js'
 
-      🚨 error ⧙1⧘/1
+      ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Readonly⧘
+      🚨 error 1/1
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 

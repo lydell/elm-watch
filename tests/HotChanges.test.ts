@@ -595,7 +595,7 @@ describe("hot", () => {
     const adjustedTerminal = terminal.replace(/\w+\.elm/g, "File.elm");
 
     expect(adjustedTerminal).toMatchInlineSnapshot(`
-      📊 ⧙server:⧘ http://localhost:59123
+      🌐 http://localhost:59123
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Html: elm make (typecheck only)

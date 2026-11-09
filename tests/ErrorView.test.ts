@@ -284,8 +284,15 @@ describe("render", () => {
     targets: Array<ErrorViewTarget>,
   ): string {
     return (
-      render(loggerConfig, selection, targets, undefined).split("\n").at(-1) ??
-      ""
+      render({
+        loggerConfig,
+        selection,
+        targets,
+        notice: undefined,
+        infoLine: undefined,
+      })
+        .split("\n")
+        .at(-1) ?? ""
     )
       .replace(/\x1B\[0m\x1B\[1m(.*?)\x1B\[0m/g, "*$1*")
       .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "~$1~");

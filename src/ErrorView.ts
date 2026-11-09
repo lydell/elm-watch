@@ -314,14 +314,23 @@ export function getOpenEditorLocation(
   }
 }
 
-// The selected error, followed by a line about where you are and which keys to
-// press (last, so they are right next to the cursor and easy to find).
-export function render(
-  loggerConfig: LoggerConfig,
-  selection: Selection,
-  targets: Array<ErrorViewTarget>,
-  notice: string | undefined,
-): string {
+// Everything below the status lines and server line: The selected error, the
+// info message line, where you are and which keys to press. The keys are last,
+// so they are right next to the cursor and easy to find. Only the error area
+// changes when switching to showing all errors (see `renderShowAll`).
+export function render({
+  loggerConfig,
+  selection,
+  targets,
+  notice,
+  infoLine,
+}: {
+  loggerConfig: LoggerConfig;
+  selection: Selection;
+  targets: Array<ErrorViewTarget>;
+  notice: string | undefined;
+  infoLine: string | undefined;
+}): string {
   const target = targets.find(
     (otherTarget) => otherTarget.targetName === selection.targetName,
   );
@@ -331,10 +340,13 @@ export function render(
       otherTarget.numErrors > 0,
   );
   const error = getSelectedError(selection, targets);
+  const noticeLines = notice === undefined ? [] : [notice, ""];
+  const infoLines = infoLine === undefined ? [] : [infoLine];
 
   if (target === undefined || error === undefined) {
     return [
-      ...(notice === undefined ? [] : [notice, ""]),
+      ...noticeLines,
+      ...infoLines,
       `${loggerConfig.fancy ? "✅ " : ""}${bold(selection.targetName)} has no errors.`,
       keyHints([
         hasOtherTargetsWithErrors
@@ -353,9 +365,9 @@ export function render(
     1;
 
   const position = [
-    `error ${bold(errorNumber.toString())}/${target.numErrors}`,
+    `error ${errorNumber}/${target.numErrors}`,
     target.files.length > 1
-      ? `file ${bold((selection.fileIndex + 1).toString())}/${target.files.length}`
+      ? `file ${selection.fileIndex + 1}/${target.files.length}`
       : undefined,
   ]
     .flatMap((part) => part ?? [])
@@ -368,7 +380,8 @@ export function render(
       loggerConfig.noColor,
     ),
     "",
-    ...(notice === undefined ? [] : [notice, ""]),
+    ...noticeLines,
+    ...infoLines,
     `${loggerConfig.fancy ? "🚨 " : ""}${position}`,
     keyHints([
       [
@@ -394,8 +407,23 @@ export function render(
   ].join("\n");
 }
 
-export function renderShowAllHint(): string {
-  return keyHints([["a", "show one error at a time"]]);
+// Like `render`, but with all errors (of all targets).
+export function renderShowAll({
+  loggerConfig,
+  errorStrings,
+  infoLine,
+}: {
+  loggerConfig: LoggerConfig;
+  errorStrings: Array<string>;
+  infoLine: string | undefined;
+}): string {
+  const numErrors = errorStrings.length;
+  return [
+    ...(numErrors === 0 ? [] : [errorStrings.join("\n\n"), ""]),
+    ...(infoLine === undefined ? [] : [infoLine]),
+    `${loggerConfig.fancy ? "🚨 " : ""}${numErrors} error${numErrors === 1 ? "" : "s"}`,
+    keyHints([["a", "show one error at a time"]]),
+  ].join("\n");
 }
 
 // A key, or several keys with whether each of them does anything right now.

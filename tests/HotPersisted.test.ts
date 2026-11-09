@@ -116,12 +116,7 @@ describe("hot", () => {
 
     expect(terminal).toMatchInlineSnapshot(`
       Main: 1 error <
-
-      server: http://localhost:59123
-      web socket connections: 1
-
-      13:10:05 Web socket connected needing compilation of: Main
-      13:10:05 Everything up to date.
+      http://localhost:59123
 
       -- TYPE MISMATCH ---------------------------------------------------------------
       /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
@@ -136,6 +131,7 @@ describe("hot", () => {
 
       Hint: Only Int and Float values work as numbers.
 
+      13:10:05 Up to date   web socket connected: Main
       error 1/1
       [←→] error   [↑↓] file   [enter] open in editor   [a] show all
     `);

@@ -566,12 +566,12 @@ export function clean(string: string): string {
     .replace(/\/private\//g, "/") // Ends up before `os.tmpdir()` on macOS in `fs` errors.
     .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
     .replace(
-      /(\S*server:\S*) http:\/\/localhost:\d+(\S*, network:\S*) http:\/\/.+/g,
-      "$1 http://localhost:59123$2 http://192.168.0.1:59123",
+      /^((?:🌐\S* )?)http:\/\/localhost:\d+(\s+\S*network:\S*) http:\/\/.+$/gm,
+      "$1http://localhost:59123$2 http://192.168.0.1:59123",
     )
     .replace(
-      /(\S*server:\S*) http:\/\/localhost:\d+$/gm,
-      "$1 http://localhost:59123",
+      /^((?:🌐\S* )?)http:\/\/localhost:\d+$/gm,
+      "$1http://localhost:59123",
     )
     .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
     .replace(/\x1B\[0?m/g, "⧘")
