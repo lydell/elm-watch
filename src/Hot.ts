@@ -250,7 +250,8 @@ export type Msg =
       data: WebSocket.Data;
     };
 
-type Model = {
+// Exported for tests.
+export type Model = {
   nextAction: NextAction;
   hotState: HotState;
   latestEvents: Array<LatestEvent>;
@@ -293,7 +294,8 @@ type HotState =
       tag: "Restarting";
     };
 
-type Cmd =
+// Exported for tests.
+export type Cmd =
   | {
       tag: "ChangeCompilationMode";
       outputState: OutputState;
@@ -810,7 +812,8 @@ function writeElmWatchStuffJson(
   }
 }
 
-const init = (
+// Exported for tests.
+export const init = (
   now: Date,
   restartReasons: Array<LatestEvent>,
   targetsErrors: Array<ApplicationTargetErrorWithMetadata>,
@@ -841,7 +844,8 @@ const init = (
   ],
 ];
 
-function update(
+// Exported for tests.
+export function update(
   loggerConfig: LoggerConfig,
   project: Project,
   exitOnError: boolean,

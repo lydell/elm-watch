@@ -1,172 +1,24 @@
 import { describe, expect, test } from "vitest";
 
 import { getOutputActions, type OutputActions } from "../src/Compile.ts";
-import { DEFAULT_HOST } from "../src/Host.ts";
+import type { Project } from "../src/Project.ts";
 import {
-  type OutputStatus,
-  OutputState,
-  type PackageState,
-  type PackageStatus,
-  type Project,
-  TargetState,
-} from "../src/Project.ts";
-import {
-  type ElmJsonPath,
-  type GetNow,
-  markAsAbsolutePath,
-  markAsElmJsonPath,
-  markAsElmWatchStuffJsonPath,
   markAsTargetName,
-  type OutputPath,
-  type PackageTarget,
   type RunMode,
   type TargetName,
 } from "../src/Types.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
+import {
+  makeProject,
+  type StatusName,
+  type TargetSpec,
+} from "./ProjectHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 // `getOutputActions` decides what to compile next. These tests cover the
 // ordering and queueing that the integration tests (HotMisc, SuccessfulMake)
 // can only check loosely, since there it depends on timing.
-
-const getNow: GetNow = () => new Date(0);
-
-const noop = (): void => {
-  // Do nothing.
-};
-
-// Shorthands for statuses.
-const S = {
-  dirty: {
-    tag: "Success",
-    elmFileSize: 0,
-    postprocessFileSize: 0,
-    elmCompiledTimestamp: 0,
-  },
-  clean: {
-    tag: "Success",
-    elmFileSize: 0,
-    postprocessFileSize: 0,
-    elmCompiledTimestamp: 0,
-  },
-  elmMake: {
-    tag: "ElmMake",
-    compilationMode: "standard",
-    elmDurationMs: 0,
-    walkerDurationMs: 0,
-    injectDurationMs: 0,
-    kill: noop,
-  },
-  typecheckOnly: {
-    tag: "ElmMakeTypecheckOnly",
-    elmDurationMs: 0,
-    walkerDurationMs: 0,
-    kill: noop,
-  },
-  postprocess: { tag: "Postprocess", kill: noop },
-  queuedForElmMake: { tag: "QueuedForElmMake" },
-  queuedForPostprocess: {
-    tag: "QueuedForPostprocess",
-    postprocess: { tag: "Postprocess", postprocessFunction: () => "" },
-    code: "",
-    elmCompiledTimestamp: 0,
-    recordFields: undefined,
-  },
-  interrupted: { tag: "Interrupted" },
-  error: {
-    tag: "ReadOutputError",
-    error: new Error("Test"),
-    triedPath: markAsAbsolutePath("/project/build/Error.js"),
-  },
-} satisfies Record<string, OutputStatus>;
-
-type StatusName = keyof typeof S;
-
-type TargetSpec = [name: string, status: StatusName];
-
-function makeProject({
-  maxParallel = 2,
-  elmJsons,
-  packages = {},
-}: {
-  maxParallel?: number;
-  // elm.json name -> targets using it.
-  elmJsons: Record<string, Array<TargetSpec>>;
-  // elm.json name -> package target using it.
-  packages?: Record<string, TargetSpec>;
-}): Project {
-  const elmJsonPath = (name: string): ElmJsonPath =>
-    markAsElmJsonPath(markAsAbsolutePath(`/project/${name}/elm.json`));
-
-  return {
-    watchDirs: [],
-    missingSourceDirectories: new Set(),
-    root: markAsAbsolutePath("/project"),
-    staticFilesDir: undefined,
-    configSource: { tag: "Options" },
-    elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
-      markAsAbsolutePath("/project/elm-stuff/elm-watch/stuff.json"),
-    ),
-    disabledOutputs: [],
-    targetsErrors: [],
-    elmJsons: new Map(
-      Object.entries(elmJsons).map(([elmJsonName, targets]) => [
-        elmJsonPath(elmJsonName),
-        targets.map(([name, statusName]): [OutputPath, OutputState] => {
-          const outputPath: OutputPath = {
-            tag: "OutputPath",
-            theOutputPath: markAsAbsolutePath(`/project/build/${name}.js`),
-            temporaryOutputPath: markAsAbsolutePath(
-              `/project/elm-stuff/elm-watch/${name}.js`,
-            ),
-            originalString: `build/${name}.js`,
-            targetName: markAsTargetName(name),
-          };
-          const inputPath = markAsAbsolutePath(`/project/src/${name}.elm`);
-          const outputState = new OutputState(
-            [
-              {
-                tag: "InputPath",
-                theInputPath: inputPath,
-                originalString: `src/${name}.elm`,
-                realpath: inputPath,
-              },
-            ],
-            { tag: "NoPostprocess" },
-            "standard",
-            getNow,
-          );
-          outputState.setStatus(S[statusName]);
-          outputState.dirty = statusName === "dirty";
-          return [outputPath, outputState];
-        }),
-      ]),
-    ),
-    packages: new Map(
-      Object.entries(packages).map(([elmJsonName, [name, statusName]]) => {
-        const packageTarget: PackageTarget = {
-          tag: "PackageTarget",
-          targetName: markAsTargetName(name),
-        };
-        const packageState: PackageState = new TargetState<PackageStatus>(
-          { tag: "NotWrittenToDisk" },
-          getNow,
-        );
-        if (statusName !== "dirty" && statusName !== "clean") {
-          packageState.setStatus(S[statusName] as PackageStatus);
-        }
-        packageState.dirty = statusName === "dirty";
-        return [elmJsonPath(elmJsonName), [packageTarget, packageState]];
-      }),
-    ),
-    maxParallel,
-    host: DEFAULT_HOST,
-    webSocketUrl: undefined,
-    allowedHosts: [],
-    openEditor: { tag: "NotSet" },
-  };
-}
 
 function priorities(record: Record<string, number>): Map<TargetName, number> {
   return new Map(
