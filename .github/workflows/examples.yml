@@ -26,6 +26,7 @@ jobs:
           - esm
           - code-generation
           - nodejs
+          - asset-paths
 
     defaults:
       run:
