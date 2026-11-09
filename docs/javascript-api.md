@@ -189,6 +189,12 @@ import { elmWatch } from "elm-watch";
 const targets = [];
 ```
 
+## Top-level await
+
+`await elmWatch(...)` doesn’t finish until elm-watch exits. Until then, the rest of your file hasn’t run yet. That matters for the functions you pass to elm-watch, such as [postprocess](../postprocess/) functions, since elm-watch calls them while it is running: If they use a `const` or `let` variable that is defined _below_ the `elmWatch` call, you get an error like `ReferenceError: Cannot access 'x' before initialization`. So define everything those functions need _above_ the `elmWatch` call. (Function declarations are hoisted, so they work anywhere – but the variables they use are not.)
+
+Code _after_ `await elmWatch(...)` is useful for things to do once elm-watch is done, such as finishing a production build after `make`. See the [production example](https://github.com/lydell/elm-watch/tree/main/examples/production#readme).
+
 ## Generating targets
 
 Some projects have so many targets that they generate `elm-watch.json`. With the JavaScript API, you can compute the targets directly instead. For example, one target per `src/Pages/*.elm` file, using the globs built into Node.js ([fs.globSync], Node.js 22 or later):

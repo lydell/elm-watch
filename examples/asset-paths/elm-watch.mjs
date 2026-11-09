@@ -12,8 +12,9 @@ import { elmWatch } from "elm-watch";
 //
 // `--watch-path=public/assets` restarts this script when an asset is added,
 // removed or changed, which regenerates Assets.elm. Note that `--watch-path`
-// turns off the default `--watch` behavior of watching the script itself, so
-// we need `--watch-path=elm-watch.mjs` too.
+// turns off the default `--watch` behavior of watching the script itself and
+// the files it imports, so we need `--watch-path=elm-watch.mjs` too. If you
+// split this script into several files, add a `--watch-path` for each of them.
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
