@@ -431,6 +431,9 @@ export type HotTestHooks = {
   // they are up and running (see `WatcherProbe`). Changes made before that
   // might be missed, and are ignored.
   onWatcherReadyChange?: (isReady: boolean) => void;
+  // Set while running (like `kill`). Resolves once elm-watch has received the
+  // events for all file changes made before the call (see `WatcherProbe`).
+  flushWatcher?: () => Promise<void>;
   // Replaces listening for SIGTERM on `process`. Returns an unsubscribe function.
   subscribeToSigterm?: (listener: () => void) => () => void;
 };
@@ -622,7 +625,10 @@ const initMutable =
           .catch(rejectPromise);
       },
     );
-    watcherProbe?.start();
+    if (watcherProbe !== undefined) {
+      watcherProbe.start();
+      hotTestHooks.flushWatcher = watcherProbe.flush;
+    }
 
     const {
       webSocketServer = new WebSocketServer(
@@ -3031,12 +3037,26 @@ function getNextActionSleepMs(model: Model): number {
 // before that are ignored: They are from before we started watching. Events
 // are delivered in order per `fs.watch` watcher, but not across watchers,
 // which is why every watched directory needs its own probe.
+//
+// The same technique lets tests wait until all events for changes they made
+// have arrived (`flush`), instead of sleeping.
 type WatcherProbe = {
   // Call after the watchers have been created.
   start: () => void;
+  // Resolves once all events for changes made before the call have arrived.
+  flush: () => Promise<void>;
   // Returns `true` for events that should not be dispatched.
   ignore: (absolutePath: AbsolutePath) => boolean;
   stop: () => void;
+};
+
+type WatcherProbeRound = {
+  probePaths: Array<string>;
+  pendingProbePaths: Set<string>;
+  intervalId: NodeJS.Timeout | undefined;
+  onDone: () => void;
+  // Whether `onDone` should be called when stopping before done.
+  isFlush: boolean;
 };
 
 const WATCHER_PROBE_PREFIX = "elm-watch-test-probe-";
@@ -3047,67 +3067,90 @@ function makeWatcherProbe(
   watchDirs: Array<Watcher.WatchDir>,
   onReady: () => void,
 ): WatcherProbe {
-  watcherProbeCounter++;
-  // A new name each time, so that late events from a previous probe aren’t
-  // mistaken for this one.
-  const probeName = `${WATCHER_PROBE_PREFIX}${watcherProbeCounter}`;
-  const probePaths = new Set<string>();
-  const pendingProbePaths = new Set<string>();
+  const rounds = new Set<WatcherProbeRound>();
   let isReady = false;
-  let intervalId: NodeJS.Timeout | undefined = undefined;
 
-  const stop = (): void => {
-    clearInterval(intervalId);
-    for (const probePath of probePaths) {
+  const finish = (round: WatcherProbeRound, isDone: boolean): void => {
+    rounds.delete(round);
+    clearInterval(round.intervalId);
+    for (const probePath of round.probePaths) {
       fs.rmSync(probePath, { force: true });
     }
-  };
-
-  const checkReady = (): void => {
-    if (!isReady && pendingProbePaths.size === 0) {
-      isReady = true;
-      stop();
-      onReady();
+    if (isDone || round.isFlush) {
+      round.onDone();
     }
   };
 
-  const write = (): void => {
-    for (const probePath of pendingProbePaths) {
+  const write = (round: WatcherProbeRound): void => {
+    for (const probePath of round.pendingProbePaths) {
       try {
         fs.writeFileSync(probePath, Date.now().toString());
       } catch {
         // The directory was removed, so there is nothing to wait for there.
-        pendingProbePaths.delete(probePath);
+        round.pendingProbePaths.delete(probePath);
       }
     }
-    checkReady();
+    if (round.pendingProbePaths.size === 0) {
+      finish(round, true);
+    }
+  };
+
+  const probe = (onDone: () => void, isFlush: boolean): void => {
+    watcherProbeCounter++;
+    // A new name each time, so that late events from a previous probe aren’t
+    // mistaken for this one.
+    const probeName = `${WATCHER_PROBE_PREFIX}${watcherProbeCounter}`;
+    const probePaths = watchDirs.flatMap(({ dir }) =>
+      fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true
+        ? [path.join(dir, probeName)]
+        : [],
+    );
+    const round: WatcherProbeRound = {
+      probePaths,
+      pendingProbePaths: new Set(probePaths),
+      intervalId: undefined,
+      onDone,
+      isFlush,
+    };
+    rounds.add(round);
+    write(round);
+    if (rounds.has(round)) {
+      round.intervalId = setInterval(() => {
+        write(round);
+      }, WATCHER_PROBE_INTERVAL_MS);
+    }
   };
 
   return {
     start: () => {
-      for (const { dir } of watchDirs) {
-        if (
-          fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true
-        ) {
-          const probePath = path.join(dir, probeName);
-          probePaths.add(probePath);
-          pendingProbePaths.add(probePath);
-        }
-      }
-      write();
-      if (!isReady) {
-        intervalId = setInterval(write, WATCHER_PROBE_INTERVAL_MS);
-      }
+      probe(() => {
+        isReady = true;
+        onReady();
+      }, false);
     },
+    flush: async () =>
+      new Promise((resolve) => {
+        probe(resolve, true);
+      }),
     ignore: (absolutePath) => {
       if (path.basename(absolutePath).startsWith(WATCHER_PROBE_PREFIX)) {
-        pendingProbePaths.delete(absolutePath);
-        checkReady();
+        for (const round of rounds) {
+          if (round.pendingProbePaths.delete(absolutePath)) {
+            if (round.pendingProbePaths.size === 0) {
+              finish(round, true);
+            }
+          }
+        }
         return true;
       }
       return !isReady;
     },
-    stop,
+    // Pending flushes resolve: No more events will come.
+    stop: () => {
+      for (const round of rounds) {
+        finish(round, false);
+      }
+    },
   };
 }
 

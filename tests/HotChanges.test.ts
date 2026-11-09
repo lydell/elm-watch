@@ -20,6 +20,7 @@ import {
   expandUi,
   fixtureDir,
   run,
+  waitForWatcherToSettle,
 } from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -179,7 +180,8 @@ describe("hot", () => {
             // Other elm.json files don’t matter, even if closer to an input.
             touch(roguePath);
             fs.writeFileSync(elmJsonPathSub, elmJsonString);
-            await wait(100);
+            // Let those be handled (and ignored) before the next change.
+            await waitForWatcherToSettle();
             fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
             return "KeepGoing";
           case 2:
@@ -388,7 +390,7 @@ describe("hot", () => {
             fs.writeFileSync(elmJsonPath, elmJsonString.slice(0, -10));
             return "KeepGoing";
           default:
-            await wait(100);
+            await waitForWatcherToSettle();
             return "Stop";
         }
       },
@@ -946,7 +948,7 @@ describe("hot", () => {
             return "KeepGoing";
           }
           default:
-            await wait(100);
+            await waitForWatcherToSettle();
             return "Stop";
         }
       },
@@ -983,7 +985,7 @@ describe("hot", () => {
             touch(inputFile2);
             return "KeepGoing";
           default:
-            await wait(100);
+            await waitForWatcherToSettle();
             return "Stop";
         }
       },

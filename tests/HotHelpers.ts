@@ -104,6 +104,18 @@ export async function waitForElmWatchIdle(): Promise<void> {
   await waitFor(() => elmWatchIsIdle && watcherIsReady);
 }
 
+// Resolves once elm-watch has received the events for all file changes made
+// before the call, and has acted on them. Use this instead of sleeping, for
+// example to make sure that nothing more happens after a change.
+export async function waitForWatcherToSettle(): Promise<void> {
+  const { flushWatcher } = hotTestHooks;
+  if (flushWatcher === undefined) {
+    throw new Error("waitForWatcherToSettle: elm-watch is not running.");
+  }
+  await flushWatcher();
+  await waitForElmWatchIdle();
+}
+
 // Resolves once elm-watch is ready to pick up file changes. Changes made before
 // that are ignored.
 export async function waitForWatcherReady(): Promise<void> {
