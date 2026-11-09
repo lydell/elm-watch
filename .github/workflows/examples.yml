@@ -21,6 +21,7 @@ jobs:
           - multiple-apps
           - esbuild-side-by-side
           - esbuild-in-process
+          - vite-in-process
 
     defaults:
       run:

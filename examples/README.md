@@ -11,6 +11,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 | [multiple-apps](./multiple-apps/) | Two `Browser.application` programs with shared code, and an `index.html` each. |
 | [esbuild-side-by-side](./esbuild-side-by-side/) | TypeScript and npm packages with esbuild (and `tsc --watch`) running next to elm-watch, using run-pty. |
 | [esbuild-in-process](./esbuild-in-process/) | The same, but with esbuild’s JavaScript API running inside `elm-watch.mjs`, showing esbuild errors in the browser. |
+| [vite-in-process](./vite-in-process/) | TypeScript, CSS and npm packages with Vite’s dev server running inside elm-watch’s server, in `elm-watch.mts`. |
 
 ## Running an example
 
