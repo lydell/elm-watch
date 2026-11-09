@@ -30,11 +30,14 @@ describe("hot error view", () => {
       },
       onIdle: async ({ stdout }) => {
         expect(stdout.cursorVisible).toBe(false);
+        // The key hints are at the very bottom, not followed by an empty line.
+        expect(stdout.isCursorOnLastLine()).toBe(true);
         screens.push(clean(stdout.getOutput()));
         for (const key of ["l", "\x1B[B", "\t", "a", "a"]) {
           const handled = nextMsg((msg) => msg.tag === "KeysPressed");
           stdin.press(key);
           await handled;
+          expect(stdout.isCursorOnLastLine()).toBe(true);
           screens.push(clean(stdout.getOutput()));
         }
         return "Stop" as const;

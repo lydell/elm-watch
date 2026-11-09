@@ -35,6 +35,9 @@ export type Logger = {
   // But if there’s a use case for `elm-watch something 2>/dev/null` – use
   // `writeToStderrMakesALotOfSenseHere`.
   write: (message: string) => void;
+  // Leaves the cursor at the end of the last line, so that the last line can be
+  // at the very bottom of the screen. The next write adds the newline first.
+  writeWithoutTrailingNewline: (message: string) => void;
   writeToStderrMakesALotOfSenseHere: (message: string) => void;
   errorTemplate: (template: Errors.ErrorTemplate) => void;
   debug: typeof console.debug;
@@ -90,6 +93,14 @@ export function makeLogger({
   let onExit = defaultOnExit;
   let onData: ((data: string) => void) | undefined = undefined;
   let cursorHidden = false;
+  let needsNewline = false;
+  const newlineIfNeeded = (): string => {
+    if (needsNewline) {
+      needsNewline = false;
+      return "\n";
+    }
+    return "";
+  };
   const exitOnCtrlC = (data: Buffer): void => {
     const string = data.toString("utf8");
     if (string === "\x03") {
@@ -134,14 +145,18 @@ export function makeLogger({
 
   return {
     write(message) {
-      stdout.write(`${handleColor(message)}\n`);
+      stdout.write(`${newlineIfNeeded()}${handleColor(message)}\n`);
+    },
+    writeWithoutTrailingNewline(message) {
+      stdout.write(`${newlineIfNeeded()}${handleColor(message)}`);
+      needsNewline = true;
     },
     writeToStderrMakesALotOfSenseHere(message: string) {
       stderr.write(`${handleColor(message)}\n`);
     },
     errorTemplate(template) {
       stdout.write(
-        `${Errors.toTerminalString(template, config.columns, noColor)}\n`,
+        `${newlineIfNeeded()}${Errors.toTerminalString(template, config.columns, noColor)}\n`,
       );
     },
     debug(...args) {
@@ -164,6 +179,7 @@ export function makeLogger({
     clearScreen(): void {
       if (config.isTTY) {
         stdout.write(CLEAR);
+        needsNewline = false;
       }
     },
     clearScreenDown(): void {
@@ -211,6 +227,9 @@ export function makeLogger({
         stdout.write(SHOW_CURSOR);
         cursorHidden = false;
       }
+      // Don’t leave the shell prompt (or anything else) on the same line as
+      // the last thing we printed.
+      stdout.write(newlineIfNeeded());
     },
     async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {
       if (!stdin.isRaw) {

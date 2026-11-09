@@ -498,6 +498,12 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
     callback();
   }
 
+  // Whether the cursor is on the last line with text (rather than on an empty
+  // line below it).
+  isCursorOnLastLine(): boolean {
+    return this.cursor.y === this.lines.length - 1 && this.cursor.x > 0;
+  }
+
   getOutput(): string {
     // Emoji take two columns, but the above code doesn’t understand that.
     // This is a hack to remove the extra space caused by that in snapshots.

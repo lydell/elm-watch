@@ -3711,13 +3711,15 @@ function renderErrorView(
         logger.write(lastInfoMessage);
       }
       logger.write("");
-      logger.write(ErrorView.renderShowAllHint());
+      logger.writeWithoutTrailingNewline(ErrorView.renderShowAllHint());
     } else {
       if (lastInfoMessage !== undefined) {
         logger.write(lastInfoMessage);
       }
       logger.write("");
-      logger.write(ErrorView.render(logger.config, selection, targets, notice));
+      logger.writeWithoutTrailingNewline(
+        ErrorView.render(logger.config, selection, targets, notice),
+      );
     }
 
     // For the `run-pty` tool: Let it know that it’s safe to render the
