@@ -89,6 +89,8 @@ Application targets also need:
 - inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input, but if you’ve ever used `elm make` with multiple inputs – you can do that with elm-watch as well.
 - output: `string`. A `.js` file, relative to `elm-watch.json`. Unlike `elm make`, only `.js` is supported (and `.html` isn’t). Once you reach for elm-watch, you’re ready to be in charge of your own HTML file.
 
+Globs (like `"src/Pages/*.elm"`) are not supported in `elm-watch.json`. Use the [JavaScript API](../javascript-api/#generating-targets) instead, where you can use the globs built into Node.js to compute your targets.
+
 ## Package targets
 
 A target with `"type": "package"` typechecks an Elm package, like running `elm make` without arguments does: The modules in `"exposed-modules"` and everything they import are typechecked. Package targets have no inputs and no output, so they don’t show up in the browser – only in the terminal. An `elm.json` used by a package target can’t be used by any other target.

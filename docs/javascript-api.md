@@ -191,22 +191,22 @@ const targets = [];
 
 ## Generating targets
 
-Some projects have so many targets that they generate `elm-watch.json`. With the JavaScript API, you can compute the targets directly instead. For example, one target per `src/Pages/*.elm` file:
+Some projects have so many targets that they generate `elm-watch.json`. With the JavaScript API, you can compute the targets directly instead. For example, one target per `src/Pages/*.elm` file, using the globs built into Node.js ([fs.globSync], Node.js 22 or later):
 
 ```js
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { elmWatch } from "elm-watch";
 
 const targets = fs
-  .readdirSync(new URL("src/Pages", import.meta.url))
-  .filter((file) => file.endsWith(".elm"))
+  .globSync("src/Pages/*.elm", { cwd: import.meta.dirname })
   .map((file) => {
-    const name = file.slice(0, -".elm".length);
+    const name = path.basename(file, ".elm");
     return {
       type: "application",
       name,
       elmJson: "elm.json",
-      inputs: [`src/Pages/${file}`],
+      inputs: [file],
       output: `build/${name}.js`,
     };
   });
@@ -217,6 +217,10 @@ process.exitCode = await elmWatch({
   targets,
 });
 ```
+
+Or one target with many inputs: `inputs: fs.globSync("src/Widgets/*.elm", { cwd: import.meta.dirname })`. (Note that `inputs` must not be empty.)
+
+The glob runs once, when your script starts. If you add or remove files matching the glob, restart your script (or touch it, if you run it with `node --watch`). See also the [asset paths example](https://github.com/lydell/elm-watch/tree/main/examples/asset-paths#readme), which uses `fs.globSync` together with `node --watch-path` to restart automatically when files in a directory change.
 
 ## Stopping elm-watch
 
@@ -238,5 +242,6 @@ process.exitCode = await elmWatch({
 ```
 
 [abortsignal]: https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal
+[fs.globsync]: https://nodejs.org/api/fs.html#fsglobsyncpattern-options
 [node --watch]: https://nodejs.org/api/cli.html#--watch
 [util.parseArgs]: https://nodejs.org/api/util.html#utilparseargsconfig

@@ -8,6 +8,8 @@ Since [elm-watch.mjs](./elm-watch.mjs) is just a Node.js script, it can do thing
 - In hot mode, it watches `translations.json` and regenerates `Translations.elm` when it changes. elm-watch notices that an Elm file changed, recompiles and hot reloads.
 - If generation fails (for example, if a language is missing a translation), it generates a `Translations.elm` with a deliberate type error that contains the error message. Elm then shows the message like any other compilation error, both in the terminal and in the browser. That way, there’s no need to print to the terminal, which would mess up elm-watch’s output.
 
+Compare with the [asset paths example](../asset-paths/), which restarts the whole script with `node --watch-path` instead of watching a file itself.
+
 See [Running an example](../README.md#running-an-example) first.
 
 1. Run `npm start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
