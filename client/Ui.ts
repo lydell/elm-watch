@@ -184,6 +184,11 @@ export function createUi(): Ui {
   // Note: If we add any more styling to this element, Chrome and Safari expand all the styles
   // in the element inspector, which takes several lines and is pretty distracting.
   container.style.all = "initial";
+  // elm-watch’s UI is in English, even if the page is in another language.
+  // This matters for screen readers, for example. (This is also set on the
+  // elements in the shadow root, since browsers don’t agree on whether
+  // the language is inherited into it.)
+  container.lang = "en";
 
   // `<dialog>` elements cannot have a shadow root, so we need an inner element.
   // It covers the whole window, but lets clicks through to the page (except
@@ -275,6 +280,10 @@ export function createUi(): Ui {
     panel.popover = "auto";
     toggleButton.popoverTargetElement = panel;
     root.append(panel);
+  }
+
+  for (const element of [overlay, overlayCloseBar, root]) {
+    element.lang = "en";
   }
 
   const shadowRoot = containerInner.attachShadow({ mode: "open" });
