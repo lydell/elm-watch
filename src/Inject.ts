@@ -521,9 +521,7 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
-			_VirtualDom_divertHrefToApp = divertHrefToApp; // added by elm-watch
 			var currNode = _VirtualDom_virtualize(bodyNode);
-			_VirtualDom_divertHrefToApp = 0; // added by elm-watch
 			return _Browser_makeAnimator(initialModel, function(model)
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
@@ -634,9 +632,7 @@ var _Debugger_document = F4(function(impl, flagDecoder, debugMetadata, args)
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
-			_VirtualDom_divertHrefToApp = divertHrefToApp; // added by elm-watch
 			var currNode = _VirtualDom_virtualize(bodyNode);
-			_VirtualDom_divertHrefToApp = 0; // added by elm-watch
 			var currBlocker = $elm$browser$Debugger$Main$toBlockerType(initialModel);
 			var currPopout;
 
@@ -801,9 +797,12 @@ export function inject(
     code
       .replace(
         REPLACEMENT_REGEX,
-        (match, name1: string, name: string = name1) =>
-          replacements[name] ??
-          `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`,
+        (match, name1: string, name: string = name1) => {
+          const replacement = replacements[name];
+          return replacement === undefined
+            ? `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
+            : keepForkChanges(name, match, replacement);
+        },
       )
       // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
       .replace(
@@ -811,6 +810,56 @@ export function inject(
         `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
       )
   );
+}
+
+// The replacements are based on elm/browser. lydell/browser@safe (see
+// https://github.com/lydell/elm-safe-virtual-dom) has changes in some of the
+// functions we replace. We keep those changes only if the original function has
+// them, so that development behaves the same as production, whether you use the
+// fork or not.
+const FORK_CHANGES: Array<{
+  names: Array<string>;
+  original: RegExp;
+  replace: string;
+  with: string;
+}> = [
+  // Use `divertHrefToApp` when virtualizing, so that virtualized `<a>` elements
+  // get their click listener (requires lydell/virtual-dom@safe too).
+  {
+    names: ["_Browser_document", "_Debugger_document"],
+    original:
+      /_VirtualDom_divertHrefToApp = divertHrefToApp;\s*var currNode = _VirtualDom_virtualize\(bodyNode\);/,
+    replace: `
+			var currNode = _VirtualDom_virtualize(bodyNode);
+`,
+    with: `
+			_VirtualDom_divertHrefToApp = divertHrefToApp; // added by lydell/browser@safe
+			var currNode = _VirtualDom_virtualize(bodyNode);
+			_VirtualDom_divertHrefToApp = 0; // added by lydell/browser@safe
+`,
+  },
+  // Don’t route clicks on `<a>` elements without `href`.
+  {
+    names: ["_Browser_application"],
+    original:
+      /!domNode\.hasAttribute\('download'\) && domNode\.hasAttribute\('href'\)\)/,
+    replace: `!domNode.hasAttribute('download'))`,
+    with: `!domNode.hasAttribute('download') && domNode.hasAttribute('href')) // changed by lydell/browser@safe`,
+  },
+];
+
+function keepForkChanges(
+  name: string,
+  original: string,
+  replacement: string,
+): string {
+  let result = replacement;
+  for (const change of FORK_CHANGES) {
+    if (change.names.includes(name) && change.original.test(original)) {
+      result = result.replace(change.replace, change.with);
+    }
+  }
+  return result;
 }
 
 function getReplacements(

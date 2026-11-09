@@ -35,6 +35,7 @@
     "submodules",
     "client/proxy.js",
     "tests/fixtures/hot/changes-to-postprocess/src/postprocess.js",
+    "tests/fixtures/inject",
     "**/*.txt/*.md",
     "tests/fixtures-copies"
   ]
