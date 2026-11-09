@@ -15,6 +15,7 @@ jobs:
       matrix:
         example:
           - minimal
+          - javascript-api
 
     defaults:
       run:
