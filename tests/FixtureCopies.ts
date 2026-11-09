@@ -87,6 +87,11 @@ function copyFixtureFolder(fixture: string): string {
     fixtureCopies.delete(key);
     if (task.result?.state === "pass") {
       await rimraf(testDir);
+      try {
+        fs.rmdirSync(path.dirname(testDir));
+      } catch {
+        // Not empty: Contains copies from failing tests.
+      }
     }
   });
   return copy;
