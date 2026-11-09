@@ -166,11 +166,14 @@ function spawnChild(
 }
 
 // Like `which`, but for Windows only. We only ever spawn `elm`, so this only
-// supports bare command names without extension.
-function findOnWindowsPath(
+// supports bare command names without extension. `platformPath` and `isFile`
+// can be swapped out to test this on any platform.
+export function findOnWindowsPath(
   command: string,
   cwd: AbsolutePath,
   env: Env,
+  platformPath: path.PlatformPath = path,
+  isFile: (file: string) => boolean = isFileOnDisk,
 ): string | undefined {
   // Environment variables are case insensitive on Windows. Node.js sorts the
   // keys and uses the first match, so do the same here.
@@ -186,7 +189,7 @@ function findOnWindowsPath(
     .filter((extension) => extension !== "");
 
   const dirs = (getEnv("PATH") ?? "")
-    .split(path.delimiter)
+    .split(platformPath.delimiter)
     // PATH entries are allowed to be wrapped in double quotes on Windows.
     .map((dir) => dir.replace(/^"(.*)"$/, "$1"))
     .filter((dir) => dir !== "");
@@ -194,13 +197,9 @@ function findOnWindowsPath(
   for (const dir of dirs) {
     for (const extension of extensions) {
       // Relative PATH entries are relative to the cwd of the spawned command.
-      const file = path.resolve(cwd, dir, command + extension);
-      try {
-        if (fs.statSync(file).isFile()) {
-          return file;
-        }
-      } catch {
-        // Try the next one.
+      const file = platformPath.resolve(cwd, dir, command + extension);
+      if (isFile(file)) {
+        return file;
       }
     }
   }
@@ -208,7 +207,15 @@ function findOnWindowsPath(
   return undefined;
 }
 
-function windowsEscape(arg: string): string {
+function isFileOnDisk(file: string): boolean {
+  try {
+    return fs.statSync(file).isFile();
+  } catch {
+    return false;
+  }
+}
+
+export function windowsEscape(arg: string): string {
   // The args we pass to `elm` are flags and file paths. File paths cannot
   // contain double quotes and newlines on Windows. That makes it much easier to
   // escape: We just need to wrap in double quotes. There is one exception:
