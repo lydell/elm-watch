@@ -3,11 +3,8 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { expect } from "vitest";
 
-import type {
-  ElmModule,
-  ReachedIdleStateReason,
-  UppercaseLetter,
-} from "../client/client.ts";
+import type { ElmModule, UppercaseLetter } from "../client/client.ts";
+import type { ReachedIdleStateReason } from "../client/Update.ts";
 import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
 import { ElmWatchStuffJson } from "../src/ElmWatchStuffJson.ts";
 import type { Env } from "../src/Env.ts";
