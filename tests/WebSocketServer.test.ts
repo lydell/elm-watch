@@ -1,6 +1,7 @@
 import * as http from "http";
 import * as net from "net";
-import { describe, expect, test } from "vitest";
+import { setTimeout } from "node:timers/promises";
+import { describe, expect, test, vi } from "vitest";
 import WebSocket from "ws";
 
 import { AllowedHost } from "../src/AllowedHosts.ts";
@@ -226,6 +227,94 @@ describe("WebSocketServer", () => {
     });
   });
 
+  test("messages received while dispatch is unset are queued and replayed", async () => {
+    const server = new WebSocketServer(
+      ({ onRequest, onUpgrade }) =>
+        http.createServer(onRequest).on("upgrade", onUpgrade),
+      { tag: "NoPort" },
+      markAsHost("127.0.0.1"),
+      undefined,
+      markAsWebSocketToken(TOKEN),
+      [],
+      { tag: "Options" },
+    );
+
+    const log: Array<string> = [];
+    const describeMsg = (msg: WebSocketServerMsg): string =>
+      msg.tag === "WebSocketMessageReceived"
+        ? `${msg.tag} ${(msg.data as Buffer).toString()}`
+        : msg.tag;
+    const record =
+      (name: string) =>
+      (msg: WebSocketServerMsg): void => {
+        log.push(`${name}: ${describeMsg(msg)}`);
+      };
+
+    // Spy on the queueing, to know when messages have arrived.
+    let numQueued = 0;
+    const originalDispatchToQueue = server.dispatchToQueue;
+    server.dispatchToQueue = (msg) => {
+      numQueued++;
+      originalDispatchToQueue(msg);
+    };
+    const waitForQueued = (n: number): Promise<void> =>
+      vi.waitFor(() => {
+        expect(numQueued).toBe(n);
+      });
+
+    server.setDispatch(record("A"));
+    await server.listening;
+    server.unsetDispatch();
+
+    const webSocket = new WebSocket(
+      `ws://127.0.0.1:${server.port}/elm-watch?webSocketToken=${TOKEN}`,
+    );
+    try {
+      await new Promise<void>((resolve, reject) => {
+        webSocket.on("open", () => {
+          resolve();
+        });
+        webSocket.on("error", reject);
+      });
+      webSocket.send("one");
+      webSocket.send("two");
+      await waitForQueued(3);
+      expect(log).toStrictEqual([]);
+
+      // Replayed in a microtask, not during `setDispatch`.
+      server.setDispatch(record("B"));
+      expect(log).toStrictEqual([]);
+      await setTimeout(0);
+      expect(log).toStrictEqual([
+        "B: WebSocketConnected",
+        "B: WebSocketMessageReceived one",
+        "B: WebSocketMessageReceived two",
+      ]);
+
+      // If dispatch is unset again before the replay, the messages are queued
+      // again (not lost), and replayed on the next `setDispatch`.
+      log.length = 0;
+      server.unsetDispatch();
+      webSocket.send("three");
+      await waitForQueued(4);
+      server.setDispatch(record("C"));
+      server.unsetDispatch();
+      await setTimeout(0);
+      expect(log).toStrictEqual([]);
+      server.setDispatch(record("D"));
+      await setTimeout(0);
+      expect(log).toStrictEqual(["D: WebSocketMessageReceived three"]);
+
+      // The queue is cleared after replaying.
+      server.setDispatch(record("E"));
+      await setTimeout(0);
+      expect(log).toStrictEqual(["D: WebSocketMessageReceived three"]);
+    } finally {
+      webSocket.close();
+      await server.close();
+    }
+  });
+
   describe("port conflicts", () => {
     async function listenOther(host: string | undefined): Promise<http.Server> {
       const server = http.createServer();
@@ -288,9 +377,7 @@ describe("WebSocketServer", () => {
       const server = createServer(port);
       await server.close();
       // Give the port check time to finish.
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100);
-      });
+      await setTimeout(100);
 
       // The port should not have been taken after closing.
       const again = http.createServer();
