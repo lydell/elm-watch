@@ -11,6 +11,7 @@ import {
   NO_COLOR,
 } from "../src/Env.ts";
 import * as Errors from "../src/Errors.ts";
+import type { HotTestHooks } from "../src/Hot.ts";
 import { markAsPort } from "../src/Port.ts";
 import {
   markAsAbsolutePath,
@@ -32,7 +33,7 @@ import {
   rm,
   stringSnapshotSerializer,
   TEST_ENV,
-  wait,
+  waitFor,
 } from "./Helpers.ts";
 import { spawnSync } from "./Spawn.js";
 
@@ -322,6 +323,23 @@ describe("errors", () => {
       fs.writeFileSync(mainFile, mainFileString);
       fs.writeFileSync(lock, "");
 
+      let watcherIsReady = false;
+      let sawChange = false;
+      let changeHandled = false;
+      const hotTestHooks: HotTestHooks = {
+        kill: undefined,
+        onUpdate: (msg) => {
+          if (msg.tag === "GotWatcherEvent" && msg.absolutePath === mainFile) {
+            sawChange = true;
+          } else if (sawChange && msg.tag === "SleepBeforeNextActionDone") {
+            changeHandled = true;
+          }
+        },
+        onWatcherReadyChange: (isReady) => {
+          watcherIsReady = isReady;
+        },
+      };
+
       const [output] = await Promise.all([
         run(fixture, ["hot"], {
           isTTY: false,
@@ -330,13 +348,17 @@ describe("errors", () => {
             [__ELM_WATCH_EXIT_ON_ERROR]: "",
           },
           originalStdout: true,
+          hotTestHooks,
         }),
         (async () => {
-          while (fs.readFileSync(lock, "utf8") !== "typecheck-only-started") {
-            await wait(100);
-          }
+          await waitFor(
+            () =>
+              watcherIsReady &&
+              fs.readFileSync(lock, "utf8") === "typecheck-only-started",
+          );
           fs.writeFileSync(mainFile, mainFileString.slice(0, -5));
-          await wait(100);
+          // Let elm-watch pick up the change before the typecheck finishes.
+          await waitFor(() => changeHandled);
           fs.writeFileSync(lock, "typecheck-only-ok-to-exit");
         })(),
       ]);

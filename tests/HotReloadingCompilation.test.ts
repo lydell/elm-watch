@@ -11,7 +11,6 @@ import {
   TerminalColorReadStream,
   testExceptWindows,
   touch,
-  wait,
   waitFor,
 } from "./Helpers.ts";
 import {
@@ -22,6 +21,7 @@ import {
   getOverlay,
   hideErrors,
   isOverlayVisible,
+  nextMsg,
   nextWatcherEventHandled,
   pressEscape,
   runHotReload,
@@ -336,11 +336,17 @@ describe("hot reloading", () => {
 
     const { browserConsole } = await go(async ({ idle }) => {
       switch (idle) {
-        case 1:
+        case 1: {
+          // Once elm-watch has received the new compilation mode, it is
+          // compiling (and the postprocess is slow).
+          const compiling = nextMsg(
+            (msg) => msg.tag === "WebSocketMessageReceived",
+          );
           switchCompilationMode("optimize");
-          await wait(200);
+          await compiling;
           window.__ELM_WATCH.DISCONNECT(/^SlowPostprocess$/);
           return "KeepGoing";
+        }
         default:
           return "Stop";
       }

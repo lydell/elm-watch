@@ -6,6 +6,7 @@ import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
 import { __ELM_WATCH_EXIT_ON_ERROR, type Env } from "../src/Env.ts";
 import * as Errors from "../src/Errors.ts";
 import { toError } from "../src/Helpers.ts";
+import type { HotTestHooks } from "../src/Hot.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
@@ -42,6 +43,7 @@ type RunOptions = {
   originalStdout?: boolean;
   // Use `elmWatch()` with these options instead of the CLI with `args`.
   elmWatchOptions?: Record<string, unknown>;
+  hotTestHooks?: HotTestHooks;
 };
 
 export async function runAbsolute(
@@ -53,6 +55,7 @@ export async function runAbsolute(
     exitHotOnError = false,
     originalStdout = false,
     elmWatchOptions,
+    hotTestHooks,
   }: RunOptions = {},
 ): Promise<string> {
   const stdout = new CursorWriteStream();
@@ -70,6 +73,7 @@ export async function runAbsolute(
     stdout,
     stderr,
     logDebug,
+    ...(hotTestHooks === undefined ? {} : { hotTestHooks }),
   };
 
   const exitCode =

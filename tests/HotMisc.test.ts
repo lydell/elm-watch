@@ -16,7 +16,6 @@ import {
   stringSnapshotSerializer,
   testExceptWindows,
   touch,
-  wait,
 } from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
@@ -110,7 +109,7 @@ describe("hot", () => {
         window.Elm?.["Main3"]?.init({ node: node1 });
         window.Elm?.["Main4"]?.init({ node: node2 });
       },
-      onIdle: async ({ idle }) => {
+      onIdle: ({ idle }) => {
         switch (idle) {
           case 1:
             return "KeepGoing";
@@ -120,7 +119,6 @@ describe("hot", () => {
           case 3:
             return "KeepGoing";
           case 4:
-            await wait(100);
             touch(main4Path);
             return "KeepGoing";
           default:

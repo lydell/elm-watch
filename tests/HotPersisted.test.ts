@@ -19,7 +19,7 @@ import {
   onlyErrorMessages,
   rm,
   stringSnapshotSerializer,
-  wait,
+  waitFor,
 } from "./Helpers.ts";
 import {
   assertDebugger,
@@ -630,9 +630,7 @@ describe("hot", () => {
         },
         onIdle: async () => {
           clickFirstErrorLocation();
-          while (!fs.existsSync(outputFile)) {
-            await wait(100);
-          }
+          await waitFor(() => fs.existsSync(outputFile));
           return "Stop" as const;
         },
       });
@@ -669,9 +667,7 @@ describe("hot", () => {
       },
       onIdle: async () => {
         clickFirstErrorLocation();
-        while (calls.length === 0) {
-          await wait(10);
-        }
+        await waitFor(() => calls.length > 0);
         return "Stop" as const;
       },
     });

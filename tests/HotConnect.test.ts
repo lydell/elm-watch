@@ -12,6 +12,7 @@ import {
   rm,
   stringSnapshotSerializer,
   wait,
+  waitOneFrame,
 } from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
@@ -1389,7 +1390,8 @@ describe("hot", () => {
               );
               oldWebSocket.dispatchEvent(new Event("error"));
               oldWebSocket.dispatchEvent(new Event("close"));
-              await wait(100);
+              // The client handles these right away. Give it a frame to render.
+              await waitOneFrame();
               return "Stop";
           }
         },
@@ -1429,7 +1431,6 @@ describe("hot", () => {
         onIdle: async ({ idle }) => {
           switch (idle) {
             case 1:
-              window.__ELM_WATCH.WEBSOCKET_TIMEOUT = 100;
               numWebSocketsBefore = webSockets.length;
               // Like on iOS: The web socket closes while the phone is locked.
               await closeAndWait(getLastWebSocket());
@@ -1439,9 +1440,9 @@ describe("hot", () => {
               focus();
               return "KeepGoing";
             default:
-              // Wait longer than the timeout, to make sure that the new web
-              // socket isn’t closed due to a missing `FocusedTabAcknowledged`.
-              await wait(300);
+              // The new web socket used to be closed due to a missing
+              // `FocusedTabAcknowledged`. That timeout only starts when
+              // `FocusedTab` is sent, which `sentMessages` below checks.
               return "Stop";
           }
         },
