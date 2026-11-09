@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 import { expect } from "vitest";
+import * as vm from "vm";
 
 import type { ElmModule, UppercaseLetter } from "../client/client.ts";
 import { retryWaitMs } from "../client/Ui.ts";
@@ -318,7 +319,13 @@ export async function run({
                     `$1 = document.documentElement.children[${bodyIndex}];`,
                   );
           fs.writeFileSync(newScript, content);
-          allExports.push(await import(newScript));
+          // Running the script directly is much faster than `import()`, which
+          // goes through Vitest’s module pipeline. ES modules still need it.
+          allExports.push(
+            /\bexport default\b/.test(content)
+              ? await import(newScript)
+              : vm.runInThisContext(content, { filename: newScript }),
+          );
         }
         return allExports;
       })()
