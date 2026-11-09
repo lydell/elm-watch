@@ -222,10 +222,6 @@ describe("hot reloading", () => {
       ================================================================================
       ▼ ⏳
       ================================================================================
-      ▼ ⏳
-      ================================================================================
-      ▼ 🔌
-      ================================================================================
       ▼ 🔌
       ================================================================================
       ▼ ⏳
@@ -256,18 +252,6 @@ describe("hot reloading", () => {
       The Elm debugger isn't supported by \`Html\` programs.
       Drag emoji or press shift+arrows to move
       ================================================================================
-      ▲ ⏳🚀
-      --------------------------------------------------------------------------------
-      elm-watch %VERSION%
-      [Close elm-watch]
-      ⏳ DebugLog Waiting for compilation · 13:10:05
-      Compilation mode for DebugLog
-      ◯ (disabled) Debug
-      ◯ (disabled) Standard
-      ◉ (disabled) Optimize
-      The Elm debugger isn't supported by \`Html\` programs.
-      Drag emoji or press shift+arrows to move
-      ================================================================================
       ▲ 🚨🚀
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
@@ -280,32 +264,6 @@ describe("hot reloading", () => {
       ◉ Optimize
       The Elm debugger isn't supported by \`Html\` programs.
       Note: The code currently running is in standard mode.
-      Drag emoji or press shift+arrows to move
-      ================================================================================
-      ▲ ⏳
-      --------------------------------------------------------------------------------
-      elm-watch %VERSION%
-      [Hide errors]
-      [Close elm-watch]
-      ⏳ DebugLog Waiting for compilation · 13:10:05
-      Compilation mode for DebugLog
-      ◯ (disabled) Debug
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      The Elm debugger isn't supported by \`Html\` programs.
-      Drag emoji or press shift+arrows to move
-      ================================================================================
-      ▲ ⏳
-      --------------------------------------------------------------------------------
-      elm-watch %VERSION%
-      [Hide errors]
-      [Close elm-watch]
-      ⏳ DebugLog Waiting for compilation · 13:10:05
-      Compilation mode for DebugLog
-      ◯ (disabled) Debug
-      ◉ (disabled) Standard
-      ◯ (disabled) Optimize
-      The Elm debugger isn't supported by \`Html\` programs.
       Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳

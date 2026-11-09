@@ -503,18 +503,29 @@ function getUniquePort(): number {
   return 20000 + poolId * 500 + (portCounter % 500);
 }
 
+// Whether the browser UI renders the same thing once or several times in a row
+// depends on timing (for example, whether two messages arrive in the same
+// frame). Only keep the first of identical consecutive renders to make
+// snapshots stable.
 function joinRenders(renders: Array<string>): string {
-  return clean(renders.join(RENDER_SEPARATOR));
+  return withoutConsecutiveDuplicates(
+    clean(renders.join(RENDER_SEPARATOR)).split(RENDER_SEPARATOR),
+  ).join(RENDER_SEPARATOR);
+}
+
+function withoutConsecutiveDuplicates(renders: Array<string>): Array<string> {
+  return renders.filter((render, index) => render !== renders[index - 1]);
 }
 
 // Whether the browser UI needs one or several attempts to connect to the web
 // socket depends on timing. Remove the (expanded) connection attempts to make
 // snapshots stable.
 export function withoutConnectionAttempts(renders: string): string {
-  return renders
-    .split(RENDER_SEPARATOR)
-    .filter((render) => !/ (?:Connecting|Sleeping) · \d/.test(render))
-    .join(RENDER_SEPARATOR);
+  return withoutConsecutiveDuplicates(
+    renders
+      .split(RENDER_SEPARATOR)
+      .filter((render) => !/ (?:Connecting|Sleeping) · \d/.test(render)),
+  ).join(RENDER_SEPARATOR);
 }
 
 export function runHotReload({
