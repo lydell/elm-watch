@@ -63,7 +63,7 @@ type Postprocess = (
 - `info.runMode` is either `"make"` or `"hot"`. I recommend doing the same work for both modes, but in case that’s not feasible you have the possibility.
 - Return the new JS, or a promise of it.
 - Throw an error (or return a rejected promise) on failure. elm-watch shows the error just like a compilation error.
-- Don’t do any side effects. Think of your function as a `String -> String` pure function.
+- Think of your function as a `String -> String` pure function. Some side effects can be OK, if done with care – see [Side effects](#side-effects).
 
 Since postprocess is per target, you don’t get the target name as a parameter – you already know which target the function is for. To use the same function for several targets, define it once and refer to it from each target. If it needs to behave differently for some targets, either use different functions, or create the function with a little helper that takes the target name.
 
@@ -125,7 +125,39 @@ Your postprocess function runs in the same thread as elm-watch itself. Simple th
 
 Minifiers like [SWC] and [esbuild] do their work on other threads, so they don’t have this problem. Also, you probably only minify in optimize mode, which you rarely use while developing.
 
-Postprocessing for several targets runs in parallel (as long as your function is async – like when using a minifier that runs on another thread).
+Postprocessing for several targets runs concurrently (as long as your function is async – like when using a minifier that runs on another thread).
+
+## Side effects
+
+Your postprocess function is supposed to be a pure `String -> String` function: elm-watch decides when to call it, and assumes that calling it is harmless. But some side effects can be OK, if done with care. For example, generating TypeScript types for your Elm app’s flags and ports with [elm-ts-types], and writing them to a `.d.ts` file.
+
+Postprocess functions run in the same thread as elm-watch, so two synchronous side effects never run at the same time. But there are still things to keep in mind:
+
+- **Your function might be called for code that ends up being thrown away.** If an Elm file changes during postprocessing, elm-watch ignores the result and starts over. elm-watch can’t stop your function, though, so its side effects still happen. Side effects that only depend on `code` and are done synchronously are fine: The latest call always finishes last. After an `await`, on the other hand, an older call might finish after a newer one.
+- **Async functions for several targets interleave** (see [Performance](#performance)). Don’t let several targets write to the same file.
+- **Slow side effects delay the code from reaching the browser.** Use `setTimeout` to run them later: elm-watch writes the output file and sends the code to the browser right after your function returns, before any `setTimeout` callback gets a chance to run.
+- **Errors thrown in a `setTimeout` callback crash elm-watch.** Catch them. Since elm-watch owns the terminal, report them some other way, such as in the generated file itself.
+- **In hot mode, elm-watch only compiles targets that are open in a browser** (and only typechecks the rest). So your function only runs for those.
+
+```js
+import * as fs from "node:fs";
+import { generateTypeScript } from "elm-ts-types";
+
+function postprocess(code) {
+  setTimeout(() => {
+    let types;
+    try {
+      types = generateTypeScript(code);
+    } catch (error) {
+      types = `// elm-ts-types failed: ${error}`;
+    }
+    fs.writeFileSync("src/elm.d.ts", types);
+  }, 0);
+  return code;
+}
+```
+
+See the [vite-in-process example] for a full example.
 
 ## Warning: “Bricked” setup
 
@@ -201,9 +233,12 @@ You might wonder why minifying for production is a concern for elm-watch, which 
 - elm-watch needs postprocessing anyway for patching during development.
 - I think it’s nice to be able to easily test your minified code. With elm-watch, it’s one click away.
 
-Apart from minifying, you might be tempted to also cache-bust the JS files by putting a hash of their content in the file name. For example: `main.js` ➡️ `main.50f612.js`. It’s not a good idea to do that _in the postprocess function,_ though. While you might get away with creating the files as a side effect in your postprocess function, you also want to keep track of them all in one place and update HTML files pointing to them. Since postprocessing runs in parallel, that can be tricky to do correctly. I suggest doing that as a separate step afterwards – for example in your entrypoint after `await elmWatch(...)` in make mode. elm-watch assumes that your function is pure, so if you do things that makes that assumption not hold you’re on your own.
+Apart from minifying, you might be tempted to also cache-bust the JS files by putting a hash of their content in the file name. For example: `main.js` ➡️ `main.50f612.js`. It’s not a good idea to do that _in the postprocess function,_ though. While you might get away with creating the files as a side effect in your postprocess function, you also want to keep track of them all in one place and update HTML files pointing to them. Since postprocessing for several targets can run concurrently, that can be tricky to do correctly. I suggest doing that as a separate step afterwards – for example in your entrypoint after `await elmWatch(...)` in make mode, like in the [production example]. See also [Side effects](#side-effects).
 
 [child_process.spawn]: https://nodejs.org/api/child_process.html#child_processspawncommand-args-options
+[elm-ts-types]: https://github.com/lydell/elm-ts-types
 [esbuild]: https://esbuild.github.io/
+[production example]: https://github.com/lydell/elm-watch/tree/main/examples/production#readme
 [swc]: https://swc.rs/
+[vite-in-process example]: https://github.com/lydell/elm-watch/tree/main/examples/vite-in-process#readme
 [webpack plugin]: https://webpack.js.org/api/plugins/
