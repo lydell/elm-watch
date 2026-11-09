@@ -1,0 +1,119 @@
+/*
+This page tries hard to mess with elm-watch’s browser UI. elm-watch puts its UI
+in `<dialog id="elm-watch-ui-…">` (directly in `<html>`), which contains a `<div>`
+that is a popover with a shadow root. The shadow root protects against most
+selectors, but not against everything.
+*/
+
+/* Inherited properties, which go into the shadow root. `all: initial` resets
+them, except for `direction` (and custom properties, see below). */
+html {
+  color: magenta;
+  cursor: nesw-resize;
+  direction: rtl;
+  font-family: "Comic Sans MS", cursive;
+  font-size: 32px;
+  font-style: italic;
+  font-weight: bold;
+  letter-spacing: 0.3em;
+  line-height: 3;
+  text-align: right;
+  text-indent: 3em;
+  text-shadow: 1px 1px 1px black;
+  text-transform: uppercase;
+  visibility: visible;
+  white-space: pre;
+  word-spacing: 2em;
+}
+
+/* Custom properties are inherited into the shadow root as well. These have the
+same names as the ones elm-watch uses internally. */
+:root {
+  --gap: 200px;
+  --size: 300px;
+  --grow: 100px;
+  --muted: lime;
+  --border: 10px dashed red;
+  --focus: lime;
+  --y: 0.9;
+  --top: 0;
+}
+
+/* A typical CSS reset. `*` matches elm-watch’s `<dialog>` and `<div>`. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Typical styling of all dialogs and popovers on a page. These match
+elm-watch’s elements too. */
+dialog,
+[popover] {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 1em;
+  border: 5px solid red;
+  border-radius: 1em;
+  background: yellow;
+  box-shadow: 0 0 2em black;
+}
+
+:popover-open {
+  display: flex;
+  outline: 5px solid blue;
+}
+
+/* Backdrops are shown for modal dialogs – and for popovers! */
+::backdrop {
+  background: rgb(255 0 0 / 0.3);
+  backdrop-filter: blur(4px);
+}
+
+/* Some sites hide empty divs. elm-watch’s popover `<div>` has no children
+(only a shadow root), so it matches `:empty`. */
+div:empty {
+  display: none;
+}
+
+/* Rules like these don’t reach into shadow roots. */
+button {
+  all: unset;
+  border: 3px solid;
+  padding: 0.25em;
+}
+
+:focus,
+:focus-visible {
+  outline: 5px dashed orange;
+}
+
+/* Transitions and animations on everything. */
+* {
+  transition: all 2s;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  /* Opt out of the hostile styles above for the page’s own content, to keep it
+  readable. */
+  all: initial;
+  display: block;
+  padding: 1em;
+  font-family: system-ui;
+}
+
+.fixed-max-z-index {
+  position: fixed;
+  top: 0;
+  right: 0;
+  margin: 0;
+  background: red;
+  z-index: 2147483647;
+}

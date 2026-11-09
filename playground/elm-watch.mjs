@@ -47,6 +47,7 @@ const targets = [
   target("Sandbox", ["src/SandboxMain.elm"], "public/build/SandboxMain.js"),
   target("Element", ["src/ElementMain.elm"], "public/build/ElementMain.js"),
   target("Document", ["src/DocumentMain.elm"], "public/build/DocumentMain.js"),
+  target("Hostile", ["src/HostileMain.elm"], "public/build/HostileMain.js"),
   target(
     "Application",
     ["src/ApplicationMain.elm"],

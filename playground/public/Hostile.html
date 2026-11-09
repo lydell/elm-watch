@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hostile</title>
+    <link rel="stylesheet" href="hostile.css" />
+  </head>
+  <body>
+    <script src="build/HostileMain.js"></script>
+    <script>
+      const app = Elm.HostileMain.init();
+      app.ports.openModalDialog.subscribe(() => {
+        document.getElementById("dialog").showModal();
+      });
+    </script>
+  </body>
+</html>
