@@ -11,5 +11,9 @@
     "elm-format": "0.8.8",
     "elm-watch": "file:../../build",
     "run-pty": "6.0.2"
+  },
+  "allowScripts": {
+    "elm": true,
+    "elm-format": true
   }
 }

@@ -14,5 +14,10 @@
     "esbuild": "0.28.2",
     "js-confetti": "0.13.1",
     "typescript": "7.0.2"
+  },
+  "allowScripts": {
+    "elm": true,
+    "elm-format": true,
+    "esbuild": true
   }
 }

@@ -16,5 +16,10 @@
     "js-confetti": "0.13.1",
     "run-pty": "6.0.2",
     "typescript": "7.0.2"
+  },
+  "allowScripts": {
+    "elm": true,
+    "elm-format": true,
+    "esbuild": true
   }
 }

@@ -32,5 +32,10 @@
   "dependencies": {
     "tiny-decoders": "^24.0.0",
     "ws": "^8.22.0"
+  },
+  "allowScripts": {
+    "elm": true,
+    "elm-format": true,
+    "fsevents": false
   }
 }
