@@ -12,20 +12,16 @@ import {
   MemoryWriteStream,
   readFile,
   rimraf,
-  rm,
   SilentReadStream,
   stringSnapshotSerializer,
   testExceptWindows,
 } from "./Helpers.ts";
 
-const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "init");
-
 async function initSuccessHelper(
   fixture: string,
 ): Promise<{ stdout: string; json: string }> {
-  const dir = path.join(FIXTURES_DIR, fixture);
+  const dir = copyFixture("init", fixture);
   const elmWatchJsonPath = path.join(dir, "elm-watch.json");
-  rm(elmWatchJsonPath);
 
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
@@ -52,7 +48,7 @@ async function initFailHelper(
   fixture: string,
   ...args: Array<string>
 ): Promise<string> {
-  const dir = path.join(FIXTURES_DIR, fixture);
+  const dir = copyFixture("init", fixture);
 
   const stdout = new MemoryWriteStream();
   const stderr = new MemoryWriteStream();
@@ -103,6 +99,13 @@ async function initUpgrade(
   };
 }
 
+// An empty folder can’t be stored in git, so it is created here.
+function makeReadonlyFixture(): void {
+  const dir = copyFixture("init", "readonly");
+  fs.mkdirSync(path.dirname(dir), { recursive: true });
+  fs.mkdirSync(dir, { mode: "0444" });
+}
+
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("init", () => {
@@ -141,7 +144,7 @@ describe("init", () => {
   });
 
   test("already exists as folder", async () => {
-    const dir = path.join(FIXTURES_DIR, "already-exists-as-folder");
+    const dir = copyFixture("init", "already-exists-as-folder");
     const stdout = new MemoryWriteStream();
     const stderr = new MemoryWriteStream();
     const exitCode = await elmWatchCli(["init"], {
@@ -167,10 +170,7 @@ describe("init", () => {
   });
 
   testExceptWindows("fail to write", async () => {
-    fs.mkdirSync(path.join(FIXTURES_DIR, "readonly"), {
-      recursive: true,
-      mode: "0444", // readonly
-    });
+    makeReadonlyFixture();
     expect(await initFailHelper("readonly")).toMatchInlineSnapshot(`
       Failed to write ⧙elm-watch.json⧘:
 
@@ -180,10 +180,7 @@ describe("init", () => {
   });
 
   testExceptWindows("fail to write, --javascript", async () => {
-    fs.mkdirSync(path.join(FIXTURES_DIR, "readonly"), {
-      recursive: true,
-      mode: "0444", // readonly
-    });
+    makeReadonlyFixture();
     expect(await initFailHelper("readonly", "--javascript"))
       .toMatchInlineSnapshot(`
       Failed to write ⧙elm-watch.mjs⧘:
@@ -272,7 +269,7 @@ describe("init", () => {
     fs.mkdirSync(path.join(dir, "src"), { recursive: true });
     fs.writeFileSync(
       path.join(dir, "elm.json"),
-      readFile(path.join(FIXTURES_DIR, "discover", "elm.json")),
+      readFile(path.join(copyFixture("init", "discover"), "elm.json")),
     );
     for (let i = 1; i <= 11; i++) {
       fs.writeFileSync(
