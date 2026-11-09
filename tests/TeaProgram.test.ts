@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import { describe, expect, test } from "vitest";
 
 import { runTeaProgram } from "../src/TeaProgram.ts";
@@ -154,6 +155,28 @@ describe("runTeaProgram", () => {
       "update RunCmds",
       "a",
       "b",
+    ]);
+  });
+
+  test("messages dispatched after the queue has been drained are handled with the latest model", async () => {
+    const { promise, events, callbacks } = runProgram({ initCmds: [] });
+
+    callbacks.dispatch({ tag: "Increment" });
+    await setTimeout(0);
+    callbacks.dispatch({ tag: "Increment" });
+    await setTimeout(0);
+    callbacks.dispatch({
+      tag: "RunCmds",
+      cmds: [{ tag: "Resolve", result: "Done" }],
+    });
+
+    await expect(promise).resolves.toBe("Done");
+    expect(events).toStrictEqual([
+      "update Increment",
+      "count 1",
+      "update Increment",
+      "count 2",
+      "update RunCmds",
     ]);
   });
 
@@ -382,6 +405,38 @@ describe("runTeaProgram", () => {
       onInitMutable: ({ dispatch, resolve }) => {
         dispatch({ tag: "Increment" });
         resolve("Done");
+      },
+    });
+
+    await expect(promise).resolves.toBe("Done");
+
+    // Dispatching after the program has finished does nothing.
+    callbacks.dispatch({ tag: "Increment" });
+
+    expect(events).toStrictEqual([]);
+  });
+
+  test("only the first resolve or reject counts", async () => {
+    const { promise, events, callbacks } = runProgram({ initCmds: [] });
+
+    callbacks.resolve("First");
+    callbacks.reject(new Error("Second"));
+    callbacks.resolve("Third");
+    await expect(promise).resolves.toBe("First");
+
+    // Dispatching after the program has finished does nothing.
+    callbacks.dispatch({ tag: "Increment" });
+
+    expect(events).toStrictEqual([]);
+  });
+
+  test("exception after resolve in initMutable does not reject", async () => {
+    const { promise, events, callbacks } = runProgram({
+      initCmds: [{ tag: "Log", message: "init" }],
+      onInitMutable: ({ dispatch, resolve }) => {
+        dispatch({ tag: "Increment" });
+        resolve("Done");
+        throw new Error("Thrown");
       },
     });
 
