@@ -75,6 +75,8 @@ process.exitCode = await elmWatch({
 });
 ```
 
+See the [HTTPS example](https://github.com/lydell/elm-watch/tree/main/examples/https#readme) for a complete setup, which also creates a self-signed certificate for you.
+
 ## Research
 
 Here are my findings from testing different combinations of http/s, ws/s, localhost vs not-localhost, and self-signed vs valid certificates:

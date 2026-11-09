@@ -394,7 +394,7 @@ process.exitCode = await elmWatch({
 
 As you can see, this pretty small API surface from elm-watch gives you full control to do what you need in your project (at the expense of being slightly more verbose for the simplest of cases).
 
-On top of that, it also lets you set up [HTTPS](../https/):
+On top of that, it also lets you set up [HTTPS](../https/) (see also the [HTTPS example](https://github.com/lydell/elm-watch/tree/main/examples/https#readme)):
 
 ```js
 // elm-watch.mjs

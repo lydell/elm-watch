@@ -18,6 +18,7 @@ jobs:
           - javascript-api
           - application-proxy
           - multiple-apps
+          - https
           - esbuild-side-by-side
           - esbuild-in-process
           - vite-side-by-side
