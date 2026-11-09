@@ -2,9 +2,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Increase the default timeout for each test from 5 seconds to 10 seconds.
-    // The slowest tests take a few seconds when running all tests in parallel.
-    testTimeout: 10000,
+    // Increase the default timeout for each test from 5 seconds to 30 seconds.
+    // The slowest tests take 2-4 seconds alone, but up to 10 seconds when
+    // running all tests in parallel.
+    testTimeout: 30000,
     environmentOptions: {
       jsdom: {
         url: "http://localhost",
