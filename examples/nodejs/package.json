@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "example-nodejs",
+  "scripts": {
+    "start": "run-pty % elm-watch hot % node --watch program.js",
+    "build": "elm-watch make --optimize"
+  },
+  "devDependencies": {
+    "elm": "0.19.1-6",
+    "elm-format": "0.8.8",
+    "elm-watch": "file:../../build",
+    "run-pty": "6.0.2"
+  }
+}

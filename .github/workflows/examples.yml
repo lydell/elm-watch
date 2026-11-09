@@ -25,6 +25,7 @@ jobs:
           - vite-side-by-side
           - esm
           - code-generation
+          - nodejs
 
     defaults:
       run:
