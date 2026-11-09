@@ -16,6 +16,7 @@ jobs:
         example:
           - minimal
           - javascript-api
+          - production
 
     defaults:
       run:
