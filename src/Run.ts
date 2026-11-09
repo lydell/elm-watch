@@ -70,6 +70,7 @@ export async function run(
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
+        hotTestHooks,
       );
 
     case "DecoderError":
@@ -85,6 +86,7 @@ export async function run(
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
+        hotTestHooks,
       );
 
     case "ElmWatchJsonNotFound":
@@ -260,6 +262,7 @@ export async function runConfig({
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
+                hotTestHooks,
               );
             case "Options":
               // The options can only change by restarting the whole program.
@@ -281,6 +284,7 @@ export async function runConfig({
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
+                hotTestHooks,
               );
             case "Options":
               // The options can only change by restarting the whole program.
@@ -355,6 +359,7 @@ async function handleElmWatchJsonError(
   runMode: RunMode,
   elmWatchJsonPath: ElmWatchJsonPath,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
+  hotTestHooks: Hot.HotTestHooks,
 ): Promise<RunResult> {
   switch (runMode) {
     case "make":
@@ -364,6 +369,7 @@ async function handleElmWatchJsonError(
       const elmWatchJsonEvent = await Hot.watchElmWatchJsonOnce(
         getNow,
         elmWatchJsonPath,
+        hotTestHooks,
         // Print this once the watcher is ready, so that if the user (or a
         // test) reacts to it, the change is guaranteed to be picked up.
         () => {

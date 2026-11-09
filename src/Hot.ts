@@ -70,6 +70,7 @@ import {
   type ElmWatchJsonPath,
   type InputPath,
   type GetNow,
+  markAsAbsolutePath,
   type OutputPath,
   type TargetLocation,
   TargetName,
@@ -159,7 +160,7 @@ type Mutable = {
   project: Project;
   lastInfoMessage: string | undefined;
   watcherTimeoutId: NodeJS.Timeout | undefined;
-  watcherReadyTimeoutId: NodeJS.Timeout | undefined;
+  watcherProbe: WatcherProbe | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
   unsubscribeFromGracefulExit: () => void;
@@ -425,8 +426,8 @@ export type HotTestHooks = {
   // instead of sleeping.
   onUpdate?: (msg: Msg, isIdle: boolean) => void;
   // Called with `false` when file watchers are created, and with `true` once
-  // they should be up and running (see `WATCHER_READY_DELAY_MS`). Changes made
-  // before that might be missed.
+  // they are up and running (see `WatcherProbe`). Changes made before that
+  // might be missed, and are ignored.
   onWatcherReadyChange?: (isReady: boolean) => void;
   // Replaces listening for SIGTERM on `process`. Returns an unsubscribe function.
   subscribeToSigterm?: (listener: () => void) => () => void;
@@ -525,14 +526,27 @@ export async function run(
 export async function watchElmWatchJsonOnce(
   getNow: GetNow,
   elmWatchJsonPath: ElmWatchJsonPath,
+  hotTestHooks: HotTestHooks,
   onReady: () => void,
 ): Promise<WatcherEvent> {
   return new Promise((resolve, reject) => {
     // Watch the directory rather than the file itself, since editors might
     // replace the file (giving it a new inode) when saving.
+    const dir = markAsAbsolutePath(path.dirname(elmWatchJsonPath));
     const basename = path.basename(elmWatchJsonPath);
-    const watcher = fs.watch(path.dirname(elmWatchJsonPath), (_, filename) => {
+    const watcherProbe =
+      hotTestHooks.onWatcherReadyChange === undefined
+        ? undefined
+        : makeWatcherProbe([{ tag: "Shallow", dir }], onReady);
+    const watcher = fs.watch(dir, (_, filename) => {
+      const absolutePath = markAsAbsolutePath(
+        filename === null ? dir : path.join(dir, filename),
+      );
+      if (watcherProbe?.ignore(absolutePath) === true) {
+        return;
+      }
       if (filename === null || filename === basename) {
+        watcherProbe?.stop();
         watcher.close();
         resolve({
           tag: "WatcherEvent",
@@ -546,10 +560,15 @@ export async function watchElmWatchJsonOnce(
       }
     });
     watcher.on("error", (error) => {
+      watcherProbe?.stop();
       watcher.close();
       reject(error);
     });
-    onReady();
+    if (watcherProbe === undefined) {
+      onReady();
+    } else {
+      watcherProbe.start();
+    }
   });
 }
 
@@ -570,10 +589,20 @@ const initMutable =
     resolvePromise: (result: HotRunResult) => void,
     rejectPromise: (error: Error) => void,
   ): Mutable => {
-    hotTestHooks.onWatcherReadyChange?.(false);
+    const { onWatcherReadyChange } = hotTestHooks;
+    onWatcherReadyChange?.(false);
+    const watcherProbe =
+      onWatcherReadyChange === undefined
+        ? undefined
+        : makeWatcherProbe(project.watchDirs, () => {
+            onWatcherReadyChange(true);
+          });
     const watcher = Watcher.watch(
       project.watchDirs,
       (absolutePath) => {
+        if (watcherProbe?.ignore(absolutePath) === true) {
+          return;
+        }
         dispatch({
           tag: "GotWatcherEvent",
           date: getNow(),
@@ -591,6 +620,7 @@ const initMutable =
           .catch(rejectPromise);
       },
     );
+    watcherProbe?.start();
 
     const {
       webSocketServer = new WebSocketServer(
@@ -613,9 +643,7 @@ const initMutable =
       project,
       lastInfoMessage: undefined,
       watcherTimeoutId: undefined,
-      watcherReadyTimeoutId: setTimeout(() => {
-        hotTestHooks.onWatcherReadyChange?.(true);
-      }, WATCHER_READY_DELAY_MS),
+      watcherProbe,
       elmWatchStuffJsonWriteError: undefined,
       killInstallDependencies: undefined,
       unsubscribeFromGracefulExit: () => {
@@ -2263,7 +2291,7 @@ async function closeAll(
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
   }
-  clearTimeout(mutable.watcherReadyTimeoutId);
+  mutable.watcherProbe?.stop();
 
   mutable.webSocketServer.unsetDispatch();
   mutable.watcher.close();
@@ -2988,13 +3016,96 @@ function getNextActionSleepMs(model: Model): number {
   );
 }
 
-// On macOS, all `fs.watch` watchers share a single FSEvents stream, which libuv
-// recreates on a separate thread every time a watcher is added or removed.
-// Events happening before the new stream is up are lost. That usually takes
-// less than a millisecond, but can take longer under heavy load. There is no
-// way to know when the stream is up, so the test hook (which tests use to know
-// when it is safe to make file changes) waits a little.
-const WATCHER_READY_DELAY_MS = 100;
+// This is only used in tests, which need to know when it is safe to make file
+// changes. On macOS, all `fs.watch` watchers share a single FSEvents stream,
+// which libuv recreates on a separate thread every time a watcher is added or
+// removed. Events happening before the new stream is up are lost. That usually
+// takes less than a millisecond, but can take longer under heavy load. Changes
+// made shortly _before_ the stream is created can also be reported late. There
+// is no way to know when the stream is up, so we repeatedly write a probe file
+// in each watched directory until the watcher has reported all of them. Events
+// before that are ignored: They are from before we started watching. Events
+// are delivered in order per `fs.watch` watcher, but not across watchers,
+// which is why every watched directory needs its own probe.
+type WatcherProbe = {
+  // Call after the watchers have been created.
+  start: () => void;
+  // Returns `true` for events that should not be dispatched.
+  ignore: (absolutePath: AbsolutePath) => boolean;
+  stop: () => void;
+};
+
+const WATCHER_PROBE_PREFIX = "elm-watch-test-probe-";
+const WATCHER_PROBE_INTERVAL_MS = 20;
+let watcherProbeCounter = 0;
+
+function makeWatcherProbe(
+  watchDirs: Array<Watcher.WatchDir>,
+  onReady: () => void,
+): WatcherProbe {
+  watcherProbeCounter++;
+  // A new name each time, so that late events from a previous probe aren’t
+  // mistaken for this one.
+  const probeName = `${WATCHER_PROBE_PREFIX}${watcherProbeCounter}`;
+  const probePaths = new Set<string>();
+  const pendingProbePaths = new Set<string>();
+  let isReady = false;
+  let intervalId: NodeJS.Timeout | undefined = undefined;
+
+  const stop = (): void => {
+    clearInterval(intervalId);
+    for (const probePath of probePaths) {
+      fs.rmSync(probePath, { force: true });
+    }
+  };
+
+  const checkReady = (): void => {
+    if (!isReady && pendingProbePaths.size === 0) {
+      isReady = true;
+      stop();
+      onReady();
+    }
+  };
+
+  const write = (): void => {
+    for (const probePath of pendingProbePaths) {
+      try {
+        fs.writeFileSync(probePath, Date.now().toString());
+      } catch {
+        // The directory was removed, so there is nothing to wait for there.
+        pendingProbePaths.delete(probePath);
+      }
+    }
+    checkReady();
+  };
+
+  return {
+    start: () => {
+      for (const { dir } of watchDirs) {
+        if (
+          fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true
+        ) {
+          const probePath = path.join(dir, probeName);
+          probePaths.add(probePath);
+          pendingProbePaths.add(probePath);
+        }
+      }
+      write();
+      if (!isReady) {
+        intervalId = setInterval(write, WATCHER_PROBE_INTERVAL_MS);
+      }
+    },
+    ignore: (absolutePath) => {
+      if (path.basename(absolutePath).startsWith(WATCHER_PROBE_PREFIX)) {
+        pendingProbePaths.delete(absolutePath);
+        checkReady();
+        return true;
+      }
+      return !isReady;
+    },
+    stop,
+  };
+}
 
 // Sleep for a little bit to avoid unnecessary recompilation when using “save
 // all” in an editor, or when running `git switch some-branch` or `git restore

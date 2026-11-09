@@ -106,6 +106,12 @@ export async function nextWatcherEventHandled(
 export async function waitForElmWatchIdle(): Promise<void> {
   await waitFor(() => elmWatchIsIdle && watcherIsReady);
 }
+
+// Resolves once elm-watch is ready to pick up file changes. Changes made before
+// that are ignored.
+export async function waitForWatcherReady(): Promise<void> {
+  await waitFor(() => watcherIsReady);
+}
 let describeUnfinishedRun: (() => string) | undefined = undefined;
 
 export async function cleanupAfterEachTest(): Promise<void> {

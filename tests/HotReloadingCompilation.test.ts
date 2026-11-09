@@ -28,6 +28,7 @@ import {
   showErrors,
   switchCompilationMode,
   waitForElmWatchIdle,
+  waitForWatcherReady,
 } from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -142,6 +143,7 @@ describe("hot reloading", () => {
       go(() => "Stop"),
       (async () => {
         await waitFor(() => fs.readFileSync(lockFile, "utf8") === "DelayAck");
+        await waitForWatcherReady();
         const changed = nextWatcherEventHandled(elmJsonPath);
         touch(elmJsonPath);
         // Wait for the watcher to pick up the change before releasing the previous compilation.
