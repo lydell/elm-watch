@@ -15,4 +15,11 @@ This is a playground for developing elm-watch itself. It has Elm programs of all
 
 You can also enable only some targets: `node elm-watch.mjs hot Html Sandbox`.
 
+## Generated targets
+
+On top of the targets for `src/`, [generate.js](./generate.js) generates a bunch of Elm projects in `generated/`, each with its own `elm.json` and a small and a large target. That’s useful for seeing how elm-watch behaves with many targets: several “Dependencies” lines, and compilations that aren’t instant. Their `elm-stuff/` folders are deleted on every start, so Elm compiles them from scratch every time.
+
+- `--scale=3` makes the large targets three times as large.
+- `--no-generated` skips them.
+
 [examples]: https://github.com/lydell/elm-watch/tree/main/examples#readme

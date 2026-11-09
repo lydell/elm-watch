@@ -3,6 +3,7 @@ import { exec } from "node:child_process";
 import * as http from "node:http";
 import { parseArgs, promisify } from "node:util";
 import { elmWatch } from "elm-watch";
+import { generate } from "./generate.js";
 import { postprocessFor } from "./postprocess.js";
 
 // Usage:
@@ -10,11 +11,18 @@ import { postprocessFor } from "./postprocess.js";
 //     node --watch elm-watch.mjs hot
 //     node elm-watch.mjs make --optimize
 //     node elm-watch.mjs make --optimize Html Sandbox
+//     node --watch elm-watch.mjs hot --no-generated
+//     node --watch elm-watch.mjs hot --scale=3
 const { positionals, values } = parseArgs({
   allowPositionals: true,
+  allowNegative: true,
   options: {
     debug: { type: "boolean", default: false },
     optimize: { type: "boolean", default: false },
+    // Generate lots of targets, see generate.js.
+    generated: { type: "boolean", default: true },
+    // Make the large generated targets larger (slower to compile).
+    scale: { type: "string", default: "1" },
   },
 });
 
@@ -29,13 +37,14 @@ if (runMode !== "hot" && runMode !== "make") {
  * @param {string} name
  * @param {[string, ...Array<string>]} inputs
  * @param {string} output
+ * @param {string} [elmJson]
  * @returns {import("elm-watch").Target}
  */
-function target(name, inputs, output) {
+function target(name, inputs, output, elmJson = "elm.json") {
   return {
     type: "application",
     name,
-    elmJson: "elm.json",
+    elmJson,
     inputs,
     output,
     postprocess: postprocessFor(name),
@@ -67,6 +76,11 @@ const targets = [
     ],
     "public/build/Frankenstein.js",
   ),
+  ...(values.generated
+    ? generate(import.meta.dirname, Number(values.scale)).map((t) =>
+        target(t.name, t.inputs, t.output, t.elmJson),
+      )
+    : []),
 ];
 
 const enabledTargets =
