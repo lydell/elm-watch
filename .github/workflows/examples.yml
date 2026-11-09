@@ -19,6 +19,7 @@ jobs:
           - production
           - application-proxy
           - multiple-apps
+          - esbuild-side-by-side
 
     defaults:
       run:

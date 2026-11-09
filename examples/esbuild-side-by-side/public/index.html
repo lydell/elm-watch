@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>example-esbuild-side-by-side</title>
+    <link rel="stylesheet" href="/style.css" />
+    <!-- Elm, compiled by elm-watch. -->
+    <script src="/build/main.js"></script>
+    <!-- TypeScript, compiled by esbuild. -->
+    <script type="module" src="/build/app.js"></script>
+    <script>
+      // elm-watch hot reloads Elm and CSS. For other files that change in the
+      // static files directory, it dispatches this event. Reload the page when
+      // esbuild has rebuilt the TypeScript code.
+      window.addEventListener("elm-watch:changed-file-url-paths", (event) => {
+        if (event.detail.has("/build/app.js")) {
+          window.location.reload();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

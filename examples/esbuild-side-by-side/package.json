@@ -1,0 +1,20 @@
+{
+  "private": true,
+  "name": "example-esbuild-side-by-side",
+  "scripts": {
+    "start": "run-pty % elm-watch hot % npm run esbuild -- --watch % tsc --watch",
+    "build": "elm-watch make --optimize && npm run esbuild -- --minify && npm run minify-elm",
+    "check": "tsc",
+    "esbuild": "esbuild ts/main.ts --bundle --format=esm --outfile=public/build/app.js",
+    "minify-elm": "esbuild public/build/main.js --minify --allow-overwrite --outfile=public/build/main.js"
+  },
+  "devDependencies": {
+    "elm": "0.19.1-6",
+    "elm-format": "0.8.8",
+    "elm-watch": "file:../../build",
+    "esbuild": "0.28.2",
+    "js-confetti": "0.13.1",
+    "run-pty": "6.0.2",
+    "typescript": "7.0.2"
+  }
+}
