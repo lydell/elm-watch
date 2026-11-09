@@ -185,10 +185,14 @@ export function createUi(): Ui {
   // in the element inspector, which takes several lines and is pretty distracting.
   container.style.all = "initial";
   // elm-watch’s UI is in English, even if the page is in another language.
-  // This matters for screen readers, for example. (This is also set on the
-  // elements in the shadow root, since browsers don’t agree on whether
-  // the language is inherited into it.)
+  // This matters for screen readers, for example. Also, don’t let page
+  // translators (like the ones built into Safari and Firefox) translate the UI:
+  // When testing a page with a translator on, you don’t want elm-watch’s UI
+  // (including error messages and code) to be translated. (These are also set
+  // on the elements in the shadow root, since browsers don’t agree on whether
+  // they are inherited into it.)
   container.lang = "en";
+  container.setAttribute("translate", "no");
 
   // `<dialog>` elements cannot have a shadow root, so we need an inner element.
   // It covers the whole window, but lets clicks through to the page (except
@@ -284,6 +288,7 @@ export function createUi(): Ui {
 
   for (const element of [overlay, overlayCloseBar, root]) {
     element.lang = "en";
+    element.setAttribute("translate", "no");
   }
 
   const shadowRoot = containerInner.attachShadow({ mode: "open" });
