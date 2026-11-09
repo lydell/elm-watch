@@ -54,12 +54,16 @@ You can pair elm-watch with either of webpack, Parcel, Vite, esbuild or any othe
    - You might be able to re-use your build tool for minifying the built Elm JS, or you can install a minifier separately and use it in elm-watch [postprocess](../postprocess/).
    - You might want to hash the built Elm JS file, and update its link in the HTML to include the hash. If nothing else, you could make a small script that does that and run it after elm-watch and your build tool.
 
+There are [examples] of pairing elm-watch with esbuild and Vite, both running side by side and running in the same process. There’s also a [production build example] that minifies and hashes the built Elm JS.
+
 It’s up to you to decide if you think the extra work of pairing a build tool with elm-watch is worth it.
 
 [elm-go]: https://github.com/lucamug/elm-go
 [elm-live]: https://github.com/wking-io/elm-live
 [esbuild]: https://esbuild.github.io/
+[examples]: https://github.com/lydell/elm-watch/tree/main/examples#readme
 [parcel]: https://parceljs.org/
+[production build example]: https://github.com/lydell/elm-watch/tree/main/examples/production#readme
 [vite-elm-template]: https://github.com/lindsaykwardell/vite-elm-template
 [vite]: https://vitejs.dev/
 [webpack]: https://webpack.js.org/

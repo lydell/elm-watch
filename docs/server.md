@@ -434,8 +434,9 @@ process.exitCode = await elmWatch({
 {: .warning }  
 You can’t really log anything in your custom server code – you’ll compete with the output of elm-watch, which clears the screen and moves the cursor to update parts of the output. If your custom server is complicated enough to need logging, make a separate proxy server. Extending elm-watch’s server is better for smaller, “silent” customizations, such as doing a little bit of proxying or setting up HTTPS.
 
-It is _not_ recommended to run other compilers as part of the elm-watch server, such as esbuild or Sass, since they also need to print error messages. Run them as separate watchers. [run-pty] is one way of easily starting multiple watchers with one command.
+Be careful with running other compilers as part of the elm-watch server, such as esbuild or Sass, since they also need to print error messages. The simplest is to run them as separate watchers. [run-pty] is one way of easily starting multiple watchers with one command. If you do want to run them in the same process, make them silent and show their errors in the browser instead. There are [examples] of both approaches, with esbuild and Vite.
 
 [dns rebinding]: https://en.wikipedia.org/wiki/DNS_rebinding
+[examples]: https://github.com/lydell/elm-watch/tree/main/examples#readme
 [http-proxy]: https://github.com/http-party/node-http-proxy
 [run-pty]: https://github.com/lydell/run-pty
