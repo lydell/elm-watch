@@ -2,21 +2,48 @@
 
 Each folder is a small, standalone project showing one way of using elm-watch.
 
+## Basics
+
 | Example | What it shows |
 | --- | --- |
 | [minimal](./minimal/) | The bare minimum: `elm-watch.json` and an HTML file. |
-| [javascript-api](./javascript-api/) | elm-watch.mjs (from `elm-watch init --javascript`) instead of `elm-watch.json`. |
-| [production](./production/) | Minification with SWC, and content hashes in file names. |
+| [javascript-api](./javascript-api/) | `elm-watch.mjs` (from `elm-watch init --javascript`) instead of `elm-watch.json`. |
+
+## Server
+
+| Example | What it shows |
+| --- | --- |
 | [application-proxy](./application-proxy/) | `Browser.application`, and proxying `/api/` to a backend via a custom server. |
 | [multiple-apps](./multiple-apps/) | Two `Browser.application` programs with shared code, and an `index.html` each. |
-| [esbuild-side-by-side](./esbuild-side-by-side/) | TypeScript and npm packages with esbuild (and `tsc --watch`) running next to elm-watch, using run-pty. |
+
+## TypeScript, CSS and npm packages
+
+| Example | What it shows |
+| --- | --- |
+| [esbuild-side-by-side](./esbuild-side-by-side/) | esbuild (and `tsc --watch`) running next to elm-watch, using run-pty. |
 | [esbuild-in-process](./esbuild-in-process/) | The same, but with esbuild’s JavaScript API running inside `elm-watch.mjs`, showing esbuild errors in the browser. |
-| [vite-in-process](./vite-in-process/) | TypeScript, CSS and npm packages with Vite’s dev server running inside elm-watch’s server, in `elm-watch.mts`. TypeScript types for Elm with elm-ts-types. |
-| [vite-side-by-side](./vite-side-by-side/) | The same, but with Vite and elm-watch running side by side, and the Elm code loaded straight from elm-watch’s server. |
+| [vite-side-by-side](./vite-side-by-side/) | Vite running next to elm-watch, using run-pty, with the Elm code loaded straight from elm-watch’s server. |
+| [vite-in-process](./vite-in-process/) | The same, but with Vite’s dev server running inside elm-watch’s server, in `elm-watch.mts`. Also generates TypeScript types for Elm with elm-ts-types. |
+
+## Production builds
+
+| Example | What it shows |
+| --- | --- |
+| [production](./production/) | Minification with SWC, and content hashes in file names. |
 | [esm](./esm/) | Turning the compiled Elm code into an ECMAScript module with a postprocess function. |
+
+## Code generation
+
+| Example | What it shows |
+| --- | --- |
 | [code-generation](./code-generation/) | Generating an Elm module from JSON in `elm-watch.mjs`, and regenerating it on changes. |
-| [nodejs](./nodejs/) | A `Platform.worker` program in Node.js, with hot reloading. |
 | [asset-paths](./asset-paths/) | Generating an Elm module with paths to images, restarting with `node --watch-path` when they change. |
+
+## Outside the browser
+
+| Example | What it shows |
+| --- | --- |
+| [nodejs](./nodejs/) | A `Platform.worker` program in Node.js, with hot reloading. |
 
 ## Running an example
 

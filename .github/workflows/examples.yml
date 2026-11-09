@@ -16,17 +16,17 @@ jobs:
         example:
           - minimal
           - javascript-api
-          - production
           - application-proxy
           - multiple-apps
           - esbuild-side-by-side
           - esbuild-in-process
-          - vite-in-process
           - vite-side-by-side
+          - vite-in-process
+          - production
           - esm
           - code-generation
-          - nodejs
           - asset-paths
+          - nodejs
 
     defaults:
       run:
