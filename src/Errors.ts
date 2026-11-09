@@ -263,7 +263,7 @@ export function toHtml(
   htmlContent: string;
 } {
   const renderPiece = (piece: Piece): string =>
-    noColor ? piece.text : renderPieceToHtml(piece, theme);
+    noColor ? escapeHtml(piece.text) : renderPieceToHtml(piece, theme);
 
   const { title, location, content } = errorTemplate(
     DEFAULT_COLUMNS,
