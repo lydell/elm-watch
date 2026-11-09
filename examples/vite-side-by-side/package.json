@@ -1,0 +1,19 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "example-vite-side-by-side",
+  "scripts": {
+    "start": "run-pty % elm-watch hot % vite",
+    "build": "elm-watch make --optimize && vite build",
+    "check": "tsc"
+  },
+  "devDependencies": {
+    "elm": "0.19.1-6",
+    "elm-format": "0.8.8",
+    "elm-watch": "file:../../build",
+    "js-confetti": "0.13.1",
+    "run-pty": "6.0.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  }
+}

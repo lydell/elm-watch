@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>example-vite-side-by-side</title>
+    <!-- Elm, compiled by elm-watch. During development, this is loaded
+    directly from elm-watch’s server, bypassing Vite completely.
+    VITE_ELM_WATCH_ORIGIN is set in .env.development, and empty in production.
+    A plain script tag (no type="module"), so Vite leaves it alone. -->
+    <script src="%VITE_ELM_WATCH_ORIGIN%/build/main.js"></script>
+    <!-- TypeScript and CSS, handled by Vite. -->
+    <script type="module" src="/ts/main.ts"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
