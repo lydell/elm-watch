@@ -9,6 +9,7 @@ import type WebSocket from "ws";
 
 import {
   encodeWebSocketToClientMessage,
+  type OpenEditorError,
   type WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages.ts";
@@ -25,6 +26,7 @@ import {
 } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import type { ErrorTemplate } from "./Errors.ts";
+import * as ErrorView from "./ErrorView.ts";
 import {
   bold,
   capitalize,
@@ -160,6 +162,7 @@ type Mutable = {
   outputRequests: Array<OutputRequest>;
   project: Project;
   lastInfoMessage: string | undefined;
+  errorView: ErrorView.ErrorViewState;
   watcherTimeoutId: NodeJS.Timeout | undefined;
   watcherProbe: WatcherProbe | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
@@ -211,6 +214,16 @@ export type Msg =
       tag: "InstallDependenciesDone";
       date: Date;
       installResult: Compile.InstallDependenciesResult;
+    }
+  | {
+      tag: "KeysPressed";
+      date: Date;
+      keys: NonEmptyArray<ErrorView.ErrorViewKey>;
+    }
+  | {
+      tag: "OpenEditorFromTerminalFailed";
+      date: Date;
+      message: string;
     }
   | {
       tag: "OutputRequested";
@@ -317,6 +330,10 @@ export type Cmd =
       tag: "HandleElmWatchStuffJsonWriteError";
     }
   | {
+      tag: "HandleKeys";
+      keys: NonEmptyArray<ErrorView.ErrorViewKey>;
+    }
+  | {
       tag: "InstallDependencies";
     }
   | {
@@ -346,6 +363,10 @@ export type Cmd =
   | {
       tag: "PrintCompileErrors";
       errors: NonEmptyArray<ErrorTemplate>;
+    }
+  | {
+      tag: "RenderErrorView";
+      notice: string;
     }
   | {
       tag: "RespondToOutputRequests";
@@ -655,6 +676,7 @@ const initMutable =
       outputRequests: [],
       project,
       lastInfoMessage: undefined,
+      errorView: { showAll: false, selection: undefined },
       watcherTimeoutId: undefined,
       watcherProbe,
       elmWatchStuffJsonWriteError: undefined,
@@ -728,16 +750,24 @@ const initMutable =
       resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
     };
 
-    logger.setRawMode(() => {
-      kill()
-        .then(() => {
-          resolvePromise({
-            tag: "ExitOnIdle",
-            reason: "CtrlCPressed",
-          });
-        })
-        .catch(rejectPromise);
-    });
+    logger.setRawMode(
+      () => {
+        kill()
+          .then(() => {
+            resolvePromise({
+              tag: "ExitOnIdle",
+              reason: "CtrlCPressed",
+            });
+          })
+          .catch(rejectPromise);
+      },
+      (data) => {
+        const keys = ErrorView.parseKeys(data);
+        if (isNonEmptyArray(keys)) {
+          dispatch({ tag: "KeysPressed", date: getNow(), keys });
+        }
+      },
+    );
 
     // `node --watch` sends SIGTERM when restarting. Unlike ctrl+c, we let `elm`
     // finish (up to a timeout) before exiting, so that the next elm-watch
@@ -864,6 +894,24 @@ export function update(
   model: Model,
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    // Keys are only handled while idle: While compiling, the screen is busy
+    // showing progress.
+    case "KeysPressed":
+      return [
+        model,
+        model.hotState.tag === "Idle"
+          ? [{ tag: "HandleKeys", keys: msg.keys }]
+          : [],
+      ];
+
+    case "OpenEditorFromTerminalFailed":
+      return [
+        model,
+        model.hotState.tag === "Idle"
+          ? [{ tag: "RenderErrorView", notice: msg.message }]
+          : [],
+      ];
+
     case "GotWatcherEvent":
       return [
         {
@@ -1857,40 +1905,92 @@ const runCmd =
       case "NoCmd":
         return;
 
-      case "OpenEditor": {
-        const { openEditor } = mutable.project;
-        if (openEditor.tag === "NotSet") {
-          webSocketSend(cmd.webSocket, {
-            tag: "OpenEditorFailed",
-            error: { tag: "EnvNotSet" },
-          });
-        } else if (
-          !projectHasFilePathThatCanBeOpenedInEditor(mutable.project, cmd.file)
+      case "OpenEditor":
+        openEditor(env, mutable, cmd, (error) => {
+          webSocketSend(cmd.webSocket, { tag: "OpenEditorFailed", error });
+        });
+        return;
+
+      case "HandleKeys": {
+        if (
+          !errorViewIsInteractive(logger, exitOnError) ||
+          !isNonEmptyArray(Compile.extractErrors(mutable.project))
         ) {
-          webSocketSend(cmd.webSocket, {
-            tag: "OpenEditorFailed",
-            error: {
-              tag: "InvalidFilePath",
-              message: Errors.openEditorInvalidFilePath(cmd.file),
-            },
-          });
-        } else {
-          switch (openEditor.tag) {
-            case "Command":
-              openEditorWithCommand(env, mutable, cmd, openEditor.command);
-              return;
-            case "Function":
-              openEditorWithFunction(cmd, openEditor.openEditor);
-              return;
+          return;
+        }
+        const { errorView } = mutable;
+        const targets = getErrorViewTargets(mutable.project);
+        let selection = ErrorView.reconcile(
+          errorView.selection,
+          targets,
+          makePrioritizedOutputs(mutable),
+        );
+        for (const key of cmd.keys) {
+          switch (key) {
+            case "ToggleShowAll":
+              errorView.showAll = !errorView.showAll;
+              break;
+
+            case "OpenEditor": {
+              if (errorView.showAll || selection === undefined) {
+                break;
+              }
+              const location = ErrorView.getOpenEditorLocation(
+                ErrorView.getSelectedError(selection, targets)?.location,
+              );
+              if (location !== undefined) {
+                openEditor(env, mutable, location, (error) => {
+                  dispatch({
+                    tag: "OpenEditorFromTerminalFailed",
+                    date: getNow(),
+                    message: printOpenEditorErrorForTerminal(error),
+                  });
+                });
+              }
+              break;
+            }
+
+            default:
+              if (!errorView.showAll && selection !== undefined) {
+                selection = ErrorView.navigate(selection, targets, key);
+              }
           }
         }
+        errorView.selection = selection;
+        renderErrorView(logger, mutable, targets, {
+          notice: undefined,
+          reprintInfoMessage: true,
+        });
         return;
       }
 
+      case "RenderErrorView":
+        if (
+          errorViewIsInteractive(logger, exitOnError) &&
+          isNonEmptyArray(Compile.extractErrors(mutable.project))
+        ) {
+          renderErrorView(
+            logger,
+            mutable,
+            getErrorViewTargets(mutable.project),
+            { notice: cmd.notice, reprintInfoMessage: true },
+          );
+        }
+        return;
+
       case "PrintCompileErrors":
-        logger.withSynchronizedOutput(() => {
-          Compile.printErrors(logger, cmd.errors);
-        });
+        if (errorViewIsInteractive(logger, exitOnError)) {
+          renderErrorView(
+            logger,
+            mutable,
+            getErrorViewTargets(mutable.project),
+            { notice: undefined, reprintInfoMessage: false },
+          );
+        } else {
+          logger.withSynchronizedOutput(() => {
+            Compile.printErrors(logger, cmd.errors);
+          });
+        }
         return;
 
       case "RespondToOutputRequests": {
@@ -3423,11 +3523,58 @@ function printEventsMessage(
     : "Everything up to date.";
 }
 
+type OpenEditorLocation = { file: AbsolutePath; line: number; column: number };
+
+function openEditor(
+  env: Env,
+  mutable: Mutable,
+  location: OpenEditorLocation,
+  onError: (error: OpenEditorError) => void,
+): void {
+  const { openEditor: projectOpenEditor } = mutable.project;
+  if (projectOpenEditor.tag === "NotSet") {
+    onError({ tag: "EnvNotSet" });
+  } else if (
+    !projectHasFilePathThatCanBeOpenedInEditor(mutable.project, location.file)
+  ) {
+    onError({
+      tag: "InvalidFilePath",
+      message: Errors.openEditorInvalidFilePath(location.file),
+    });
+  } else {
+    switch (projectOpenEditor.tag) {
+      case "Command":
+        openEditorWithCommand(
+          env,
+          mutable,
+          location,
+          projectOpenEditor.command,
+          onError,
+        );
+        return;
+      case "Function":
+        openEditorWithFunction(location, projectOpenEditor.openEditor, onError);
+        return;
+    }
+  }
+}
+
+function printOpenEditorErrorForTerminal(error: OpenEditorError): string {
+  switch (error.tag) {
+    case "EnvNotSet":
+      return Errors.openEditorEnvNotSetForTerminal();
+    case "InvalidFilePath":
+    case "CommandFailed":
+      return `${bold("Opening the location in your editor failed!")}\n\n${error.message}`;
+  }
+}
+
 function openEditorWithCommand(
   env: Env,
   mutable: Mutable,
-  cmd: Extract<Cmd, { tag: "OpenEditor" }>,
+  location: OpenEditorLocation,
   command: string,
+  onError: (error: OpenEditorError) => void,
 ): void {
   const cwd = mutable.project.root;
   const timeout = silentlyReadIntEnvValue(
@@ -3435,9 +3582,9 @@ function openEditorWithCommand(
     5000,
   );
   const extraEnv = {
-    file: cmd.file,
-    line: cmd.line.toString(),
-    column: cmd.column.toString(),
+    file: location.file,
+    line: location.line.toString(),
+    column: location.column.toString(),
   };
   childProcess.exec(
     command,
@@ -3449,20 +3596,17 @@ function openEditorWithCommand(
     },
     (error, stdout, stderr) => {
       if (error !== null) {
-        webSocketSend(cmd.webSocket, {
-          tag: "OpenEditorFailed",
-          error: {
-            tag: "CommandFailed",
-            message: Errors.openEditorCommandFailed({
-              error,
-              command,
-              cwd,
-              timeout,
-              env: extraEnv,
-              stdout,
-              stderr,
-            }),
-          },
+        onError({
+          tag: "CommandFailed",
+          message: Errors.openEditorCommandFailed({
+            error,
+            command,
+            cwd,
+            timeout,
+            env: extraEnv,
+            stdout,
+            stderr,
+          }),
         });
       }
     },
@@ -3470,23 +3614,111 @@ function openEditorWithCommand(
 }
 
 function openEditorWithFunction(
-  cmd: Extract<Cmd, { tag: "OpenEditor" }>,
-  openEditor: OpenEditorFunction,
+  { file, line, column }: OpenEditorLocation,
+  openEditorFunction: OpenEditorFunction,
+  onError: (error: OpenEditorError) => void,
 ): void {
-  const location = { file: cmd.file, line: cmd.line, column: cmd.column };
+  const location = { file, line, column };
   new Promise((resolve) => {
-    resolve(openEditor(location));
+    resolve(openEditorFunction(location));
   }).catch((error: unknown) => {
-    webSocketSend(cmd.webSocket, {
-      tag: "OpenEditorFailed",
-      error: {
-        tag: "CommandFailed",
-        message: Errors.openEditorFunctionFailed(
-          location,
-          unknownErrorToString(error),
-        ),
-      },
+    onError({
+      tag: "CommandFailed",
+      message: Errors.openEditorFunctionFailed(
+        location,
+        unknownErrorToString(error),
+      ),
     });
+  });
+}
+
+// Errors are shown one at a time, navigated with the keyboard, when we can read
+// keypresses. Otherwise (and when exiting on the first error), all errors are
+// printed.
+function errorViewIsInteractive(logger: Logger, exitOnError: boolean): boolean {
+  return logger.isRawMode() && !exitOnError;
+}
+
+// In the same order as the status lines.
+function getErrorViewTargets(
+  project: Project,
+): Array<ErrorView.ErrorViewTarget> {
+  return [
+    ...project.targetsErrors.map((targetError) =>
+      ErrorView.makeErrorViewTarget(targetError.outputPath.targetName, [
+        Compile.renderTargetError(targetError),
+      ]),
+    ),
+    ...Array.from(project.elmJsons).flatMap(([elmJsonPath, outputs]) =>
+      Array.from(outputs, ([outputPath, { status }]) =>
+        ErrorView.makeErrorViewTarget(
+          outputPath.targetName,
+          Compile.renderOutputErrors(elmJsonPath, outputPath, status, true),
+        ),
+      ),
+    ),
+    ...Array.from(
+      project.packages,
+      ([elmJsonPath, [packageTarget, { status }]]) =>
+        ErrorView.makeErrorViewTarget(
+          packageTarget.targetName,
+          Compile.renderOutputErrors(elmJsonPath, packageTarget, status, true),
+        ),
+    ),
+  ];
+}
+
+// Redraw the whole screen: Status lines, the selected error (or all errors),
+// and the info message.
+function renderErrorView(
+  logger: Logger,
+  mutable: Mutable,
+  targets: Array<ErrorView.ErrorViewTarget>,
+  {
+    notice,
+    reprintInfoMessage,
+  }: { notice: string | undefined; reprintInfoMessage: boolean },
+): void {
+  const { errorView } = mutable;
+  errorView.selection = ErrorView.reconcile(
+    errorView.selection,
+    targets,
+    makePrioritizedOutputs(mutable),
+  );
+  const { selection } = errorView;
+
+  logger.withSynchronizedOutput(() => {
+    logger.clearScreen();
+
+    Compile.printAllStatusLines(logger, mutable.project, (targetName) => ({
+      numErrors:
+        targets.find((target) => target.targetName === targetName)?.numErrors ??
+        0,
+      selected: !errorView.showAll && selection?.targetName === targetName,
+    }));
+
+    if (errorView.showAll || selection === undefined) {
+      const errors = Compile.extractErrors(mutable.project);
+      if (isNonEmptyArray(errors)) {
+        Compile.printErrors(logger, errors);
+      }
+      logger.write(ErrorView.renderShowAllHint());
+    } else {
+      logger.write("");
+      logger.write(ErrorView.render(logger.config, selection, targets));
+    }
+
+    if (notice !== undefined) {
+      logger.write("");
+      logger.write(notice);
+    }
+
+    if (reprintInfoMessage && mutable.lastInfoMessage !== undefined) {
+      logger.write(mutable.lastInfoMessage);
+      logger.clearScreenDown();
+    } else {
+      mutable.lastInfoMessage = undefined;
+    }
   });
 }
 

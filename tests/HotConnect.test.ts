@@ -340,7 +340,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      🚨 Removed
+      🚨 ⧙Removed⧘: 1 error ◀
 
       ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
       ⧙Target: Removed⧘
@@ -353,7 +353,8 @@ describe("hot", () => {
 
       ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js'
 
-      🚨 ⧙1⧘ error found
+      🚨 error ⧙1⧘/1
+      ⧙a show all⧘
 
       📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1
@@ -392,7 +393,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      🚨 Readonly
+      🚨 ⧙Readonly⧘: 1 error ◀
 
       ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
       ⧙Target: Readonly⧘
@@ -409,7 +410,8 @@ describe("hot", () => {
 
       EACCES: permission denied, open '/Users/you/project/tests/fixtures/hot/basic/build/Readonly.js'
 
-      🚨 ⧙1⧘ error found
+      🚨 error ⧙1⧘/1
+      ⧙a show all⧘
 
       📊 ⧙server:⧘ http://localhost:59123
       📊 ⧙web socket connections:⧘ 1

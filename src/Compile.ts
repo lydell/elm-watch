@@ -1741,13 +1741,16 @@ function updateStatusLine({
   // If the status line has scrolled out of view, we can’t reach it: Moving the
   // cursor up stops at the top of the screen, so we would overwrite some other
   // line instead. The cursor is always at the bottom of the screen in that case.
+  // Render the line anyway, since that flushes the durations (so that they can
+  // be printed again when redrawing the screen).
+  const line = statusLine(logger.config, runMode, outputPath, outputState);
   if (total - index >= logger.config.rows) {
     return;
   }
   logger.withSynchronizedOutput(() => {
     logger.moveCursor(0, -total + index);
     logger.clearLine(0);
-    logger.write(statusLine(logger.config, runMode, outputPath, outputState));
+    logger.write(line);
     logger.moveCursor(0, total - index - 1);
   });
 }
@@ -1914,13 +1917,25 @@ export function printNumErrors(logger: Logger, numErrors: number): void {
   );
 }
 
+// When redrawing the screen, we print the same durations as last time, and
+// error counts for the error view.
+type StatusLineRedraw = {
+  numErrors: number;
+  selected: boolean;
+};
+
 function statusLine(
   loggerConfig: LoggerConfig,
   runMode: RunMode,
   outputPath: TargetLocation,
   outputState: TargetState,
+  redraw?: StatusLineRedraw,
 ): string {
   const { status } = outputState;
+  const getDurations = (): Array<Duration> =>
+    redraw === undefined
+      ? outputState.flushDurations()
+      : outputState.lastFlushedDurations;
 
   const { targetName, delta } = targetNameEmojiTweak(
     loggerConfig,
@@ -1966,7 +1981,7 @@ function statusLine(
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
-        [maybePrintDurations(loggerConfig, outputState.flushDurations())],
+        [maybePrintDurations(loggerConfig, getDurations())],
         "Success",
         loggerConfig.fancy ? targetName : `${targetName}: success`,
       );
@@ -1986,7 +2001,7 @@ function statusLine(
             postprocessFileSize: status.postprocessFileSize,
             fancy: loggerConfig.fancy,
           }),
-          maybePrintDurations(loggerConfig, outputState.flushDurations()),
+          maybePrintDurations(loggerConfig, getDurations()),
         ],
         "Success",
         loggerConfig.fancy ? targetName : `${targetName}: success`,
@@ -2030,10 +2045,77 @@ function statusLine(
     case "ReadOutputError":
     case "WriteOutputError":
     case "WriteProxyOutputError":
-      return helper(
-        "Error",
-        loggerConfig.fancy ? targetName : `${targetName}: error`,
+      return redraw === undefined
+        ? helper(
+            "Error",
+            loggerConfig.fancy ? targetName : `${targetName}: error`,
+          )
+        : errorStatusLineWithCount(loggerConfig, targetName, delta, redraw);
+  }
+}
+
+function errorStatusLineWithCount(
+  loggerConfig: LoggerConfig,
+  targetName: TargetName,
+  delta: number,
+  { numErrors, selected }: StatusLineRedraw,
+): string {
+  const marker = selected ? (loggerConfig.fancy ? " ◀" : " <") : "";
+  return printStatusLine({
+    maxWidth: loggerConfig.columns - delta,
+    fancy: loggerConfig.fancy,
+    isTTY: loggerConfig.isTTY,
+    emojiName: "Error",
+    string: `${selected ? bold(targetName) : targetName}: ${numErrors} error${
+      numErrors === 1 ? "" : "s"
+    }${marker}`,
+  });
+}
+
+// Redraw the status lines of all targets, like they were printed during
+// compilation, but with error counts (for the error view).
+export function printAllStatusLines(
+  logger: Logger,
+  project: Project,
+  getRedraw: (targetName: TargetName) => StatusLineRedraw,
+): void {
+  for (const { outputPath } of project.targetsErrors) {
+    const { targetName, delta } = targetNameEmojiTweak(
+      logger.config,
+      outputPath.targetName,
+    );
+    logger.write(
+      errorStatusLineWithCount(
+        logger.config,
+        targetName,
+        delta,
+        getRedraw(outputPath.targetName),
+      ),
+    );
+  }
+  for (const [, outputs] of project.elmJsons) {
+    for (const [outputPath, outputState] of outputs) {
+      logger.write(
+        statusLine(
+          logger.config,
+          "hot",
+          outputPath,
+          outputState,
+          getRedraw(outputPath.targetName),
+        ),
       );
+    }
+  }
+  for (const [, [packageTarget, packageState]] of project.packages) {
+    logger.write(
+      statusLine(
+        logger.config,
+        "hot",
+        packageTarget,
+        packageState,
+        getRedraw(packageTarget.targetName),
+      ),
+    );
   }
 }
 

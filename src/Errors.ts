@@ -181,7 +181,7 @@ type ErrorTemplateData = {
   content: string;
 };
 
-type ErrorLocation =
+export type ErrorLocation =
   | {
       tag: "FileOnly";
       file: AbsolutePath;
@@ -247,6 +247,12 @@ export function toTerminalString(
     "",
     content,
   ].join("\n");
+}
+
+export function getErrorLocation(
+  errorTemplate: ErrorTemplate,
+): ErrorLocation | undefined {
+  return errorTemplate(DEFAULT_COLUMNS, (piece) => piece.text).location;
 }
 
 export function toPlainString(errorTemplate: ErrorTemplate): string {
@@ -1419,6 +1425,14 @@ The compiled JavaScript code running in the browser seems to have sent a message
 ${printJsonError(error).text}
 
 The web socket code I generate is supposed to always send correct messages, so something is up here.
+  `.trim();
+}
+
+export function openEditorEnvNotSetForTerminal(): string {
+  return `
+Opening errors in your editor only works if you set it up, using the ${ELM_WATCH_OPEN_EDITOR} environment variable or the openEditor option.
+
+Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
   `.trim();
 }
 

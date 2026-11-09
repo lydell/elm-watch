@@ -115,8 +115,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      Dependencies: success
-      Main: error
+      Main: 1 error <
 
       -- TYPE MISMATCH ---------------------------------------------------------------
       /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
@@ -131,7 +130,8 @@ describe("hot", () => {
 
       Hint: Only Int and Float values work as numbers.
 
-      1 error found
+      error 1/1
+      enter open in editor · a show all
 
       server: http://localhost:59123
       web socket connections: 1

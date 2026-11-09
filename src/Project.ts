@@ -88,6 +88,8 @@ export class TargetState<Status extends OutputStatus = OutputStatus> {
 
   private _durations: Array<Duration> = [];
 
+  private _lastFlushedDurations: Array<Duration> = [];
+
   private _lastStartTimestamp = 0;
 
   dirty = true;
@@ -105,7 +107,13 @@ export class TargetState<Status extends OutputStatus = OutputStatus> {
     // for the targets that were affected by the latest compilation cycle.
     const durations = this._durations.slice();
     this._durations.length = 0;
+    this._lastFlushedDurations = durations;
     return durations;
+  }
+
+  // For printing the same durations again, when redrawing the screen.
+  get lastFlushedDurations(): Array<Duration> {
+    return this._lastFlushedDurations;
   }
 
   get status(): Status {

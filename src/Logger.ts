@@ -40,7 +40,9 @@ export type Logger = {
   clearScreenDown: () => void;
   clearLine: (dir: readline.Direction) => void;
   moveCursor: (dx: number, dy: number) => void;
-  setRawMode: (onExit: () => void) => void;
+  setRawMode: (onExit: () => void, onData?: (data: string) => void) => void;
+  // Whether we read keypresses (see `setRawMode`).
+  isRawMode: () => boolean;
   reset: () => void;
   queryTerminal: (
     escapes: string,
@@ -84,10 +86,14 @@ export function makeLogger({
   };
 
   let onExit = defaultOnExit;
+  let onData: ((data: string) => void) | undefined = undefined;
   const exitOnCtrlC = (data: Buffer): void => {
-    if (data.toString("utf8") === "\x03") {
+    const string = data.toString("utf8");
+    if (string === "\x03") {
       // ctrl+c was pressed.
       onExit();
+    } else {
+      onData?.(string);
     }
   };
 
@@ -172,16 +178,21 @@ export function makeLogger({
         readline.moveCursor(stdout, dx, dy);
       }
     },
-    setRawMode(passedOnExit: () => void) {
+    setRawMode(passedOnExit, passedOnData) {
       onExit = passedOnExit;
+      onData = passedOnData;
       if (stdin.isTTY && stdout.isTTY && !stdin.isRaw) {
         stdin.setRawMode(true);
         stdin.on("data", exitOnCtrlC);
         stdin.resume();
       }
     },
+    isRawMode() {
+      return config.isTTY && stdin.isRaw;
+    },
     reset() {
       onExit = defaultOnExit;
+      onData = undefined;
       queryTerminalStatus = { tag: "NotQueried" };
       stdin.pause();
       stdin.off("data", exitOnCtrlC);

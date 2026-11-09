@@ -184,6 +184,13 @@ export class CtrlCReadStream extends SilentReadStream implements ReadStream {
   }
 }
 
+export class KeyReadStream extends SilentReadStream implements ReadStream {
+  press(key: string): void {
+    this.data.push(key);
+    this._read();
+  }
+}
+
 export class MemoryWriteStream extends stream.Writable implements WriteStream {
   isTTY = true;
 
