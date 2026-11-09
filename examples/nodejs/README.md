@@ -11,12 +11,12 @@ This example runs a [Platform.worker](https://package.elm-lang.org/packages/elm/
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` to start elm-watch and the program for development, using [run-pty].
+1. Run `node --run start` to start elm-watch and the program for development, using [run-pty].
 2. Select the program in run-pty. Type something and press Enter.
 3. Edit `src/Main.elm` (for example, change `String.toUpper` to `String.toLower`). Type something and press Enter again. Notice how the count continues – the program was hot reloaded, not restarted.
 4. Make a change that requires a full reload, such as replacing `Cmd.none` in `init` with `toJs ( "Hello from init", 0 )`. See the program restart.
 5. Stop elm-watch and the program.
-6. Run `npm run build` (which runs `elm-watch make --optimize`) to build for production.
+6. Run `node --run build` (which runs `elm-watch make --optimize`) to build for production.
 7. Run `node program.js` to try out the production build.
 
 [run-pty]: https://github.com/lydell/run-pty/

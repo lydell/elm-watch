@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node --watch elm-watch.mjs hot",
     "build": "node elm-watch.mjs make --optimize",
-    "dev": "npm --prefix .. run build && node --watch elm-watch.mjs hot"
+    "dev": "cd .. && node --run build && cd playground && node --watch elm-watch.mjs hot"
   },
   "devDependencies": {
     "elm": "0.19.1-6",

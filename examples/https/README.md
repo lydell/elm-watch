@@ -17,10 +17,10 @@ mkcert -key-file certificate/dev.key -cert-file certificate/dev.crt localhost 12
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
+1. Run `node --run start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
 2. The previous command prints an `https://` link to elm-watch’s server. Open it in a browser, and accept the self-signed certificate.
 3. Edit `src/Main.elm` or `public/style.css` and watch the browser be automatically updated.
 4. Stop elm-watch.
-5. Run `npm run build` (which runs `node elm-watch.mjs make --optimize`) to build for production. `createServer` is only used in hot mode, so no certificate is needed for that.
+5. Run `node --run build` (which runs `node elm-watch.mjs make --optimize`) to build for production. `createServer` is only used in hot mode, so no certificate is needed for that.
 
 [mkcert]: https://github.com/FiloSottile/mkcert

@@ -20,11 +20,11 @@ Things to be aware of:
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
+1. Run `node --run start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
 2. The previous command prints a link to elm-watch’s server. Open it in a browser.
 3. Edit `src/Main.elm` or `public/style.css` and watch the browser be automatically updated.
 4. Stop elm-watch.
-5. Run `npm run build` to build for production.
+5. Run `node --run build` to build for production.
 6. Serve `public/` with any static file server to try out the production build, for example `python3 -m http.server --directory public`. (Modules don’t work when opening an HTML file straight in a browser via `file://`.)
 
 [elm-esm]: https://github.com/ChristophP/elm-esm

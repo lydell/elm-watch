@@ -15,16 +15,16 @@ Trade-offs compared to the [Vite in process example](../vite-in-process/):
 - 👎 Two ports, and the elm-watch port is hard coded in two places. `localhost` is also hard coded, so testing on your phone requires some changes.
 - 👎 No minification of the Elm code, since that requires a [postprocess](https://lydell.github.io/elm-watch/postprocess/) function, which in turn requires the [JavaScript API](https://lydell.github.io/elm-watch/javascript-api/). Vite does not touch the Elm code. See the [production example](../production/) for how to do it.
 
-There’s no type checking during development – Vite only removes the types. In a project with not much TypeScript, your editor showing type errors is often enough. Run `npm run check` (which runs `tsc`) before committing, and on CI.
+There’s no type checking during development – Vite only removes the types. In a project with not much TypeScript, your editor showing type errors is often enough. Run `node --run check` (which runs `tsc`) before committing, and on CI.
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` to start elm-watch and Vite for development, using [run-pty].
+1. Run `node --run start` to start elm-watch and Vite for development, using [run-pty].
 2. Select Vite in run-pty. Open the link it prints in a browser.
 3. Edit `src/Main.elm` or `ts/style.css` and watch the browser be automatically updated.
 4. Edit `ts/main.ts` and watch the page reload. Try making a syntax error, and see it in the browser.
 5. Stop elm-watch and Vite.
-6. Run `npm run build` to build for production: elm-watch in `--optimize` mode, followed by `vite build`.
+6. Run `node --run build` to build for production: elm-watch in `--optimize` mode, followed by `vite build`.
 7. Run `npx vite preview` to try out the production build.
 
 [js-confetti]: https://github.com/loonywizard/js-confetti

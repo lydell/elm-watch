@@ -2,8 +2,8 @@
   "private": true,
   "name": "example-esbuild-side-by-side",
   "scripts": {
-    "start": "run-pty % elm-watch hot % npm run esbuild -- --watch % tsc --watch",
-    "build": "elm-watch make --optimize && npm run esbuild -- --minify && npm run minify-elm",
+    "start": "run-pty % elm-watch hot % node --run esbuild -- --watch % tsc --watch",
+    "build": "elm-watch make --optimize && node --run esbuild -- --minify && node --run minify-elm",
     "check": "tsc",
     "esbuild": "esbuild ts/main.ts --bundle --format=esm --outfile=public/build/app.js",
     "minify-elm": "esbuild public/build/main.js --minify --allow-overwrite --outfile=public/build/main.js"

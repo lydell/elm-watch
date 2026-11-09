@@ -8,12 +8,12 @@ This example shows:
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` to start elm-watch and the backend for development, using [run-pty].
+1. Run `node --run start` to start elm-watch and the backend for development, using [run-pty].
 2. Select elm-watch in run-pty. It prints a link to elm-watch’s server. Open it in a browser.
 3. Go to the Time page and click the button to make an API request.
 4. Reload the page: You should still be on the Time page.
 5. Edit `src/Main.elm` or `public/style.css` and watch the browser be automatically updated.
 6. Stop elm-watch and the backend.
-7. Run `npm run build` to build for production. In production, you would serve `public/` and route `/api/` to the backend with your production web server.
+7. Run `node --run build` to build for production. In production, you would serve `public/` and route `/api/` to the backend with your production web server.
 
 [run-pty]: https://github.com/lydell/run-pty/

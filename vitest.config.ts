@@ -19,7 +19,7 @@ export default defineConfig({
     },
     include: ["tests/*.test.ts"],
     // There are no coverage thresholds. Requiring 100 % coverage led to
-    // complex, brittle tests and lots of ignore comments. Run `npm run coverage`
+    // complex, brittle tests and lots of ignore comments. Run `node --run coverage`
     // and look at the report to find untested code paths worth testing.
     coverage: {
       include: ["src/**/*.ts"],

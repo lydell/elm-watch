@@ -8,9 +8,9 @@ There’s also `elm-watch init --typescript`, which creates `elm-watch.mts` inst
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development. Thanks to [node --watch](https://nodejs.org/api/cli.html#--watch), elm-watch restarts when you edit `elm-watch.mjs`.
+1. Run `node --run start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development. Thanks to [node --watch](https://nodejs.org/api/cli.html#--watch), elm-watch restarts when you edit `elm-watch.mjs`.
 2. The previous command prints a link to elm-watch’s server. Open it in a browser.
 3. Edit `src/Main.elm` or `style.css` and watch the browser be automatically updated.
 4. Stop elm-watch.
-5. Run `npm run build` (which runs `node elm-watch.mjs make --optimize`) to build for production.
+5. Run `node --run build` (which runs `node elm-watch.mjs make --optimize`) to build for production.
 6. Double-click `index.html` to open it straight in a browser to try out the production build.

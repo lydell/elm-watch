@@ -33,7 +33,7 @@ jobs:
         run: npm ci --no-audit
         working-directory: .
       - name: Internal build
-        run: npm run build
+        run: node --run build
         working-directory: .
 
       - name: Cache node_modules

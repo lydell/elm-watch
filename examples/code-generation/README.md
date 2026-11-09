@@ -12,10 +12,10 @@ Compare with the [asset paths example](../asset-paths/), which restarts the whol
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
+1. Run `node --run start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
 2. The previous command prints a link to elm-watch’s server. Open it in a browser.
 3. Edit `translations.json` and watch the browser be automatically updated. Try adding a key for only one of the languages, to see an error.
 4. Edit `src/Main.elm` or `style.css` and watch the browser be automatically updated.
 5. Stop elm-watch.
-6. Run `npm run build` (which runs `node elm-watch.mjs make --optimize`) to build for production.
+6. Run `node --run build` (which runs `node elm-watch.mjs make --optimize`) to build for production.
 7. Double-click `index.html` to open it straight in a browser to try out the production build.

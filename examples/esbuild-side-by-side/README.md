@@ -10,12 +10,12 @@ This example uses [esbuild] to compile TypeScript and bundle npm packages, by ru
 
 See [Running an example](../README.md#running-an-example) first.
 
-1. Run `npm start` to start elm-watch, esbuild and tsc for development, using [run-pty].
+1. Run `node --run start` to start elm-watch, esbuild and tsc for development, using [run-pty].
 2. Select elm-watch in run-pty. It prints a link to elm-watch’s server. Open it in a browser.
 3. Edit `src/Main.elm` or `public/style.css` and watch the browser be automatically updated.
 4. Edit `ts/main.ts` and watch the page reload. If you make a syntax error, esbuild removes `app.js`, so the page goes blank until you fix it. See the esbuild tab in run-pty for the error. Type errors are shown in the tsc tab.
 5. Stop elm-watch, esbuild and tsc.
-6. Run `npm run build` to build for production: elm-watch in `--optimize` mode, followed by esbuild for both bundling and minifying the TypeScript code, and for minifying the Elm code. (Note: `package.json` has no `"type": "module"` on purpose. With it, esbuild would treat the compiled Elm code as a module when minifying it, where top-level `this` is `undefined`, and `window.Elm` would not be created.)
+6. Run `node --run build` to build for production: elm-watch in `--optimize` mode, followed by esbuild for both bundling and minifying the TypeScript code, and for minifying the Elm code. (Note: `package.json` has no `"type": "module"` on purpose. With it, esbuild would treat the compiled Elm code as a module when minifying it, where top-level `this` is `undefined`, and `window.Elm` would not be created.)
 7. Run `npx esbuild --servedir=public` to try out the production build. (Note: This command is for trying out the production build locally, not something you’d actually run in production to serve the files.)
 
 [esbuild]: https://esbuild.github.io/

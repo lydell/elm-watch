@@ -53,7 +53,7 @@ The examples use a locally built elm-watch instead of a pre-built elm-watch from
 
 1. `cd` to the _repository root_ (not this folder).
 2. Run `npm ci` to install dependencies for building elm-watch.
-3. Run `npm run build` to build elm-watch.
+3. Run `node --run build` to build elm-watch.
 
 Then, for the example you’re interested in:
 

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "install-test-elm-dependencies": "node scripts/InstallTestDependencies.ts",
-    "pretest": "run-pty --auto-exit % oxfmt --check % oxlint --deny-warnings --report-unused-disable-directives % tsc % node scripts/EnsureTestDependencies.ts % npm run build",
+    "pretest": "run-pty --auto-exit % oxfmt --check % oxlint --deny-warnings --report-unused-disable-directives % tsc % node scripts/EnsureTestDependencies.ts % node --run build",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "build": "node scripts/Build.ts"

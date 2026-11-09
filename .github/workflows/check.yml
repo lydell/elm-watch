@@ -31,4 +31,4 @@ jobs:
       - if: steps.cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
 
-      - run: npm run pretest
+      - run: node --run pretest
