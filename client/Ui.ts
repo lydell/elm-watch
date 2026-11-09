@@ -284,7 +284,20 @@ export function createUi(): Ui {
     overlayCloseBar,
     root,
   );
-  container.append(containerInner);
+  container.append(
+    containerInner,
+    // Popovers get a `::backdrop`, just like modal dialogs. Pages often style
+    // `::backdrop` (for their own dialogs), which would then cover the whole
+    // page with elm-watch’s backdrop. Inline styles can’t target
+    // pseudo-elements, so this needs a style element in the page (rather than
+    // in the shadow root). The ID and `!important` make it win over the page’s
+    // styles.
+    h(
+      HTMLStyleElement,
+      {},
+      `#${CONTAINER_ID} > div::backdrop { display: none !important; }`,
+    ),
+  );
   document.documentElement.append(container);
 
   const entries: Array<TargetEntry> = [];
