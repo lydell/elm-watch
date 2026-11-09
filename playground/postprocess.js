@@ -26,9 +26,7 @@ export function postprocessFor(targetName) {
  * @returns {string}
  */
 function patch(targetName, code) {
-  if (targetName === "Node.js") {
-    return `(function(){const console = { warn() {/* Skip Elm's "Compiled in DEV mode" logs. */}, log: globalThis.console.warn /* Debug.log to stderr instead of stdout. */ }; ${code}}).call(this);`;
-  } else if (targetName.includes("ESM")) {
+  if (targetName.includes("ESM")) {
     // Turn the Elm JS into an ECMAScript module:
     return `const output = {}; (function(){${code}}).call(output); export default output.Elm;`;
   } else {

@@ -3,11 +3,11 @@
   "type": "module",
   "name": "example",
   "scripts": {
-    "start": "run-pty % node --watch elm-watch.mjs hot % npm run esbuild -- --serve=9000 --servedir=public % node dev-server.js 9000 % node --watch nodejs-program.js",
+    "start": "run-pty % node --watch elm-watch.mjs hot % npm run esbuild -- --serve=9000 --servedir=public % node dev-server.js 9000",
     "start-advanced": "run-pty run-pty.json",
-    "try-production": "run-pty % esbuild --serve=9000 --servedir=public % node dev-server.js 9000 % node nodejs-program.js",
+    "try-production": "run-pty % esbuild --serve=9000 --servedir=public % node dev-server.js 9000",
     "build": "node elm-watch.mjs make --optimize && npm run esbuild -- --minify",
-    "esbuild": "esbuild app.ts public/submodules/codebase-ui/src/unisonShare.js public/submodules/seeds-game/src/index.ts --bundle --outdir=public/build --public-path=/build/ --loader:.svg=file --loader:.woff2=file --loader:.mp3=file",
+    "esbuild": "esbuild public/submodules/codebase-ui/src/unisonShare.js public/submodules/seeds-game/src/index.ts --bundle --outdir=public/build --outbase=. --public-path=/build/ --loader:.svg=file --loader:.woff2=file --loader:.mp3=file",
     "start-advanced-dev": "run-pty run-pty-dev.json",
     "dev": "npm --prefix .. run build && node --watch elm-watch.mjs hot"
   },

@@ -68,7 +68,6 @@ const targets = [
     "public/build/Frankenstein.js",
   ),
   target("ESM", ["src/HtmlMain.elm"], "public/build/ESM.js"),
-  target("Node.js", ["src/NodeJS.elm"], "public/build/NodeJS.js"),
   target(
     "🇫🇷 Azimutt",
     ["public/submodules/azimutt/.elm-spa/defaults/Main.elm"],

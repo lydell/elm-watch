@@ -20,9 +20,5 @@
   {
     "command": ["node", "dev-server.js", "9000"],
     "title": "dev-server"
-  },
-  {
-    "command": ["node", "--watch", "nodejs-program.js"],
-    "title": "example Node.js program"
   }
 ]
