@@ -223,20 +223,6 @@ describe("hot reloading", () => {
   });
 
   test("Init with cancelable Task", async () => {
-    // oxlint-disable-next-line no-console
-    const originalConsoleError = console.error;
-
-    onTestFinished(() => {
-      // oxlint-disable-next-line no-console
-      console.error = originalConsoleError;
-    });
-
-    // The HTTP request made in the test fails, and jsdom logs that using `console.error`.
-    // oxlint-disable-next-line no-console
-    console.error = () => {
-      // Do nothing.
-    };
-
     const { replace, go } = runHotReload({
       name: "InitHttp",
       programType: "Element",

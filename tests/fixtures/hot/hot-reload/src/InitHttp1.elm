@@ -22,7 +22,7 @@ init () =
     , Http.task
         { method = "GET"
         , headers = []
-        , url = "/"
+        , url = "data:,"
         , body = Http.emptyBody
         , resolver = Http.stringResolver (\_ -> Ok ())
         , timeout = Nothing
