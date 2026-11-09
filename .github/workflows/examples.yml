@@ -1,4 +1,4 @@
-name: Example minimal
+name: Examples
 
 on:
   push:
@@ -10,9 +10,15 @@ jobs:
   main:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - minimal
+
     defaults:
       run:
-        working-directory: example-minimal
+        working-directory: examples/${{ matrix.example }}
 
     steps:
       - uses: actions/checkout@v7
@@ -21,7 +27,8 @@ jobs:
         with:
           node-version: 26
 
-      # Build elm-watch so we can use it in this example repo.
+      # Build elm-watch so we can use it in the examples.
+      # In your own project, you would install elm-watch from npm instead.
       - name: Internal cache node_modules
         id: internal-cache-node_modules
         uses: actions/cache@v6
@@ -40,18 +47,20 @@ jobs:
         id: cache-node_modules
         uses: actions/cache@v6
         with:
-          path: example-minimal/node_modules
-          key: node_modules-${{ hashFiles('example-minimal/package.json', 'example-minimal/package-lock.json') }}
+          path: examples/${{ matrix.example }}/node_modules
+          key: node_modules-${{ matrix.example }}-${{ hashFiles(format('examples/{0}/package.json', matrix.example), format('examples/{0}/package-lock.json', matrix.example)) }}
 
       - name: Cache ~/.elm
         uses: actions/cache@v6
         with:
           path: ~/.elm
-          key: elm-${{ hashFiles('example-minimal/elm.json') }}
+          key: elm-${{ hashFiles(format('examples/{0}/elm.json', matrix.example)) }}
 
       - if: steps.cache-node_modules.outputs.cache-hit != 'true'
         run: npm ci --no-audit
 
-      - run: npx elm-watch make --optimize
+      - run: npm run build
+
+      - run: npm run check --if-present
 
       - run: npx elm-format --validate src

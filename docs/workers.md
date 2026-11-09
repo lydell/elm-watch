@@ -19,9 +19,9 @@ globalThis.ELM_WATCH_FULL_RELOAD = () => {
 };
 ```
 
-For an example of how to do this in Node.js, see [example/nodejs-program.js]. It’s not particularly easy, but it is possible!
+For an example of how to do this in Node.js, see [playground/nodejs-program.js]. It’s not particularly easy, but it is possible!
 
 Note that you need a recent enough Node.js version that supports the `WebSocket` global (in short, basically Node.js 22 or later).
 
-[example/nodejs-program.js]: https://github.com/lydell/elm-watch/blob/main/example/nodejs-program.js
+[playground/nodejs-program.js]: https://github.com/lydell/elm-watch/blob/main/playground/nodejs-program.js
 [platform.worker]: https://package.elm-lang.org/packages/elm/core/latest/Platform#worker

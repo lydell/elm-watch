@@ -16,7 +16,7 @@ The core of elm-watch is more of a “professional” tool. Let elm-watch excel 
 
 However, there are some things that elm-watch needs anyway – such as an [HTTP server](../server/) – and by exposing just the right amount of it, you get a nice [elm-live]-like experience, both for beginners, and for experienced people with projects that haven’t gotten the most complicated requirements.
 
-That being said, it’s not super difficult to set elm-watch up together with other tools. See the [example/] folder for a lean and sweet setup with [esbuild], and [run-pty] for easily starting `elm-watch`, `esbuild` and a custom dev server in one go.
+That being said, it’s not super difficult to set elm-watch up together with other tools. See the [examples/] folder for setups with [esbuild] and [Vite], for example using [run-pty] for easily starting `elm-watch` and `esbuild` in one go.
 
 ## Tests
 
@@ -24,7 +24,7 @@ elm-watch compiles Elm applications, and can typecheck Elm packages (see [packag
 
 [elm-live]: https://github.com/wking-io/elm-live
 [esbuild]: https://esbuild.github.io/
-[example/]: https://github.com/lydell/elm-watch/tree/main/example#readme
+[examples/]: https://github.com/lydell/elm-watch/tree/main/examples#readme
 [parcel]: https://parceljs.org/
 [run-pty]: https://github.com/lydell/run-pty/
 [vite]: https://vitejs.dev/

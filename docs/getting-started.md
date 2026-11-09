@@ -102,7 +102,7 @@ Here’s some HTML to get you started.
   </script>
   ```
 
-  👉 [Minimal example](https://github.com/lydell/elm-watch/tree/main/example-minimal#readme)
+  👉 [Minimal example](https://github.com/lydell/elm-watch/tree/main/examples/minimal#readme)
 
 - For `Browser.document` and `Browser.application`:
 
@@ -123,7 +123,7 @@ Here’s some HTML to get you started.
   <script src="/build/bundle.js"></script>
   ```
 
-  👉 [Example with esbuild](https://github.com/lydell/elm-watch/tree/main/example#readme)
+  👉 [Examples with esbuild and Vite](https://github.com/lydell/elm-watch/tree/main/examples#readme)
 
 {: .info }  
 ℹ️ elm-watch **requires** [window.Elm](../window.Elm/) to exist!
