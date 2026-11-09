@@ -23,6 +23,7 @@ jobs:
           - esbuild-in-process
           - vite-in-process
           - vite-side-by-side
+          - esm
 
     defaults:
       run:
