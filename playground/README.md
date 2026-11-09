@@ -17,8 +17,8 @@ You can also enable only some targets: `node elm-watch.mjs hot Html Sandbox`.
 
 ## Generated targets
 
-Run `npm start -- --generated` (or `npm run dev -- --generated`) to also include generated targets: [generate.js](./generate.js) generates a bunch of Elm projects in `generated/`, each with its own `elm.json` and a small and a large target. That’s useful for seeing how elm-watch behaves with many targets: several “Dependencies” lines, and compilations that aren’t instant. Their `elm-stuff/` folders are deleted on every start, so Elm compiles them from scratch every time.
+Run `npm start -- --generated=1` (or `npm run dev -- --generated=1`) to also include generated targets: [generate.js](./generate.js) generates a bunch of Elm projects in `generated/`, each with its own `elm.json` and a small and a large target. That’s useful for seeing how elm-watch behaves with many targets: several “Dependencies” lines, and compilations that aren’t instant. Their `elm-stuff/` folders are deleted on every start, so Elm compiles them from scratch every time.
 
-- Add `--scale=3` to make the large targets three times as large.
+The number scales the size of the large targets: `--generated=3` makes them three times as large.
 
 [examples]: https://github.com/lydell/elm-watch/tree/main/examples#readme

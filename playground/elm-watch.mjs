@@ -11,21 +11,33 @@ import { postprocessFor } from "./postprocess.js";
 //     node --watch elm-watch.mjs hot
 //     node elm-watch.mjs make --optimize
 //     node elm-watch.mjs make --optimize Html Sandbox
-//     node --watch elm-watch.mjs hot --generated
-//     node --watch elm-watch.mjs hot --generated --scale=3
+//     node --watch elm-watch.mjs hot --generated=1
+//     node --watch elm-watch.mjs hot --generated=3
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
     debug: { type: "boolean", default: false },
     optimize: { type: "boolean", default: false },
-    // Generate lots of targets, see generate.js.
-    generated: { type: "boolean", default: false },
-    // Make the large generated targets larger (slower to compile).
-    scale: { type: "string", default: "1" },
+    // Generate lots of targets, see generate.js. The value scales the size
+    // of the large targets (larger is slower to compile).
+    generated: { type: "string" },
   },
 });
 
 const [runMode = "hot", ...targetNames] = positionals;
+
+const generatedScale =
+  values.generated === undefined ? undefined : Number(values.generated);
+
+if (
+  generatedScale !== undefined &&
+  !(Number.isFinite(generatedScale) && generatedScale > 0)
+) {
+  console.error(
+    `Expected --generated to be a positive number, but got: ${values.generated}`,
+  );
+  process.exit(1);
+}
 
 if (runMode !== "hot" && runMode !== "make") {
   console.error(`Expected "hot" or "make", but got: ${runMode}`);
@@ -75,8 +87,8 @@ const targets = [
     ],
     "public/build/Frankenstein.js",
   ),
-  ...(values.generated
-    ? generate(import.meta.dirname, Number(values.scale)).map((t) =>
+  ...(generatedScale !== undefined
+    ? generate(import.meta.dirname, generatedScale).map((t) =>
         target(t.name, t.inputs, t.output, t.elmJson),
       )
     : []),
