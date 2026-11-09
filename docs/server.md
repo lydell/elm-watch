@@ -61,7 +61,7 @@ This only applies to outputs inside the directory to serve, requested via elm-wa
 Here are some more advanced dev server needs, that elm-watch simple HTTP server doesn’t do out of the box, but that you can set up yourself:
 
 - Routing.
-- Proxying API requests. TODO: Create example.
+- Proxying API requests. See the [application-proxy example](https://github.com/lydell/elm-watch/tree/main/examples/application-proxy#readme).
 - HTML templating.
 - On-the-fly compilation of CSS and TypeScript.
 - HTTPS.

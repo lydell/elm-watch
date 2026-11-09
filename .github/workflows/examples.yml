@@ -17,6 +17,7 @@ jobs:
           - minimal
           - javascript-api
           - production
+          - application-proxy
 
     defaults:
       run:
