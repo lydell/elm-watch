@@ -11,16 +11,15 @@ import { postprocessFor } from "./postprocess.js";
 //     node --watch elm-watch.mjs hot
 //     node elm-watch.mjs make --optimize
 //     node elm-watch.mjs make --optimize Html Sandbox
-//     node --watch elm-watch.mjs hot --no-generated
-//     node --watch elm-watch.mjs hot --scale=3
+//     node --watch elm-watch.mjs hot --generated
+//     node --watch elm-watch.mjs hot --generated --scale=3
 const { positionals, values } = parseArgs({
   allowPositionals: true,
-  allowNegative: true,
   options: {
     debug: { type: "boolean", default: false },
     optimize: { type: "boolean", default: false },
     // Generate lots of targets, see generate.js.
-    generated: { type: "boolean", default: true },
+    generated: { type: "boolean", default: false },
     // Make the large generated targets larger (slower to compile).
     scale: { type: "string", default: "1" },
   },
