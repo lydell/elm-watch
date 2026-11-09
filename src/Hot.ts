@@ -19,6 +19,7 @@ import { ElmWatchStuffJson, type Target } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
+  __ELM_WATCH_WEBSOCKET_EVENT_SLEEP_MS,
   type Env,
   WATCH_REPORT_DEPENDENCIES,
 } from "./Env.ts";
@@ -461,6 +462,10 @@ export async function run(
   hotTestHooks: HotTestHooks,
 ): Promise<HotRunResult> {
   const exitOnError = __ELM_WATCH_EXIT_ON_ERROR in env;
+  const webSocketEventSleepMs = silentlyReadIntEnvValue(
+    env[__ELM_WATCH_WEBSOCKET_EVENT_SLEEP_MS],
+    100,
+  );
 
   const result = await runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
@@ -489,7 +494,7 @@ export async function run(
         newModel.pendingWatcherEvents.length > model.pendingWatcherEvents.length
           ? {
               tag: "SleepBeforeNextAction",
-              sleepMs: getNextActionSleepMs(newModel),
+              sleepMs: getNextActionSleepMs(newModel, webSocketEventSleepMs),
               watcherPaths: newModel.pendingWatcherEvents.map(
                 (event) => event.absolutePath,
               ),
@@ -3018,10 +3023,15 @@ function webSocketSendToOutput(
   }
 }
 
-function getNextActionSleepMs(model: Model): number {
+function getNextActionSleepMs(
+  model: Model,
+  webSocketEventSleepMs: number,
+): number {
   return Math.max(
     0,
-    ...model.latestEvents.map(getLatestEventSleepMs),
+    ...model.latestEvents.map((event) =>
+      getLatestEventSleepMs(event, webSocketEventSleepMs),
+    ),
     ...(model.pendingWatcherEvents.length > 0 ? [WATCHER_EVENT_SLEEP_MS] : []),
   );
 }
@@ -3161,7 +3171,10 @@ function makeWatcherProbe(
 // before we check if files exist.
 const WATCHER_EVENT_SLEEP_MS = 10;
 
-function getLatestEventSleepMs(event: LatestEvent): number {
+function getLatestEventSleepMs(
+  event: LatestEvent,
+  webSocketEventSleepMs: number,
+): number {
   switch (event.tag) {
     case "WatcherEvent":
       return WATCHER_EVENT_SLEEP_MS;
@@ -3169,14 +3182,14 @@ function getLatestEventSleepMs(event: LatestEvent): number {
     // Also sleep for a little bit when web sockets connect and disconnect.
     // That’s useful when there are burst connections because of multiple
     // scripts on the same page, or many tabs with elm-watch. This is slower
-    // than file system events.
+    // than file system events. Configurable for tests.
     case "OutputRequestedNeedingCompilation":
     case "WebSocketClosed":
     case "WebSocketConnectedNeedingCompilation":
     case "WebSocketConnectedNeedingNoAction":
     case "WebSocketConnectedWithErrors":
     case "WebSocketConnectionRejected":
-      return 100;
+      return webSocketEventSleepMs;
 
     // When switching compilation mode, sleep a short amount of time so that
     // the change feels more immediate.

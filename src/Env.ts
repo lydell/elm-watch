@@ -81,6 +81,13 @@ export const __ELM_WATCH_MAX_PARALLEL = "__ELM_WATCH_MAX_PARALLEL";
 // Type: Number.
 export const __ELM_WATCH_ELM_TIMEOUT_MS = "__ELM_WATCH_ELM_TIMEOUT_MS";
 
+// elm-watch waits a little bit after web socket connections and disconnections
+// before acting, to batch bursts of connections. Used in tests to not have to
+// wait for so long.
+// Type: Number.
+export const __ELM_WATCH_WEBSOCKET_EVENT_SLEEP_MS =
+  "__ELM_WATCH_WEBSOCKET_EVENT_SLEEP_MS";
+
 // Used in tests to quickly fall back to the default theme.
 // Type: Number.
 export const __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS =
