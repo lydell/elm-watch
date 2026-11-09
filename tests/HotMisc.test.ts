@@ -406,6 +406,7 @@ describe("hot", () => {
 
   test("ctrl+c", async () => {
     const stdin = new CtrlCReadStream();
+    let cursorVisible: () => boolean = () => true;
     const { terminal, lastRender } = await run({
       fixture: "basic",
       args: ["Html"],
@@ -414,11 +415,16 @@ describe("hot", () => {
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
       },
-      onIdle: () => {
+      onIdle: ({ stdout }) => {
+        expect(stdout.cursorVisible).toBe(false);
+        cursorVisible = () => stdout.cursorVisible;
         stdin.ctrlC();
         return "KeepGoing";
       },
     });
+
+    // The cursor is hidden while running, and shown again on exit.
+    expect(cursorVisible()).toBe(true);
 
     expect(terminal).toMatchInlineSnapshot(`
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘

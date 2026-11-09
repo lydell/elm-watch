@@ -6,7 +6,7 @@ import * as Help from "./Help.ts";
 import type { ReadStream, WriteStream } from "./Helpers.ts";
 import type { HotTestHooks } from "./Hot.ts";
 import { init } from "./Init.ts";
-import { makeLogger } from "./Logger.ts";
+import { type Logger, makeLogger } from "./Logger.ts";
 import { decodeOptions } from "./Options.ts";
 import { absolutePathFromString } from "./PathHelpers.ts";
 import { run, runConfig, type RunResult } from "./Run.ts";
@@ -83,7 +83,7 @@ export default async function elmWatchCli(
     case "make":
     case "hot": {
       const runMode = args[0];
-      return runUntilExit(stdin, undefined, (previous) =>
+      return runUntilExit(logger, undefined, (previous) =>
         run(
           cwd,
           env,
@@ -144,7 +144,7 @@ export async function elmWatch(options: unknown): Promise<number> {
       return 1;
 
     case "Valid":
-      return runUntilExit(stdin, signal, (previous) =>
+      return runUntilExit(logger, signal, (previous) =>
         runConfig({
           env,
           logger,
@@ -168,7 +168,7 @@ type PreviousRun = Omit<Extract<RunResult, { tag: "Restart" }>, "tag">;
 
 // Restarts elm-watch (for example when elm.json changes) until it exits.
 async function runUntilExit(
-  stdin: ReadStream,
+  logger: Logger,
   signal: AbortSignal | undefined,
   runOnce: (previous: PreviousRun) => Promise<RunResult>,
 ): Promise<number> {
@@ -200,12 +200,8 @@ async function runUntilExit(
         // Turn off raw mode so that ctrl+c automatically kills things left behind
         // accidentally on the event loop. That’s of course a bug, but if it
         // happens it should at least be possible to exit with a simple ctrl+c.
-        // Note: `.setRawMode` is `undefined` when stdin is not a TTY, but this is
-        // not reflected in the type definitions.
-        // oxlint-disable-next-line typescript/no-unnecessary-condition
-        if (stdin.setRawMode !== undefined && stdin.isRaw) {
-          stdin.setRawMode(false);
-        }
+        // This also shows the cursor again, even if something crashed.
+        logger.reset();
       });
   });
 }

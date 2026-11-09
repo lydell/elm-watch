@@ -28,6 +28,8 @@ export const BEGIN_SYNC_UPDATE = "\x1B[?2026h";
 export const END_SYNC_UPDATE = "\x1B[?2026l";
 
 export const CLEAR = "\x1B[2J\x1B[3J\x1B[H";
+export const HIDE_CURSOR = "\x1B[?25l";
+export const SHOW_CURSOR = "\x1B[?25h";
 export const RESET_COLOR = "\x1B[0m";
 
 export function bold(string: string): string {

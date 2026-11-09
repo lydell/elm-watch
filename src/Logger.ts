@@ -17,8 +17,10 @@ import {
   bold,
   CLEAR,
   END_SYNC_UPDATE,
+  HIDE_CURSOR,
   type ReadStream,
   removeColor,
+  SHOW_CURSOR,
   silentlyReadIntEnvValue,
   type WriteStream,
 } from "./Helpers.ts";
@@ -87,6 +89,7 @@ export function makeLogger({
 
   let onExit = defaultOnExit;
   let onData: ((data: string) => void) | undefined = undefined;
+  let cursorHidden = false;
   const exitOnCtrlC = (data: Buffer): void => {
     const string = data.toString("utf8");
     if (string === "\x03") {
@@ -185,6 +188,11 @@ export function makeLogger({
         stdin.setRawMode(true);
         stdin.on("data", exitOnCtrlC);
         stdin.resume();
+        // We only take keypresses, no typing, so the cursor is just noise.
+        if (config.isTTY) {
+          stdout.write(HIDE_CURSOR);
+          cursorHidden = true;
+        }
       }
     },
     isRawMode() {
@@ -198,6 +206,10 @@ export function makeLogger({
       stdin.off("data", exitOnCtrlC);
       if (stdin.isRaw) {
         stdin.setRawMode(false);
+      }
+      if (cursorHidden) {
+        stdout.write(SHOW_CURSOR);
+        cursorHidden = false;
       }
     },
     async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {

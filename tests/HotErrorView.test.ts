@@ -29,6 +29,7 @@ describe("hot error view", () => {
         // Do nothing.
       },
       onIdle: async ({ stdout }) => {
+        expect(stdout.cursorVisible).toBe(false);
         screens.push(clean(stdout.getOutput()));
         for (const key of ["l", "\x1B[B", "\t", "a", "a"]) {
           const handled = nextMsg((msg) => msg.tag === "KeysPressed");

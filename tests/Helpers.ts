@@ -365,11 +365,16 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
 
   private cursor = { x: 0, y: 0 };
 
+  cursorVisible = true;
+
   override _write(
     chunk: Buffer | string,
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ): void {
+    for (const match of chunk.toString().matchAll(/\x1B\[\?25([hl])/g)) {
+      this.cursorVisible = match[1] === "h";
+    }
     const parts = removeTerminalColorRequestsAndSyncOutputChanges(
       chunk.toString(),
     ).split(SPLIT_REGEX);
@@ -516,7 +521,7 @@ export class CursorWriteStream extends stream.Writable implements WriteStream {
 function removeTerminalColorRequestsAndSyncOutputChanges(
   string: string,
 ): string {
-  return string.replace(/\x1B\[\?2026[hl]|\x1B\][^\x1B]+\x1B\\/g, "");
+  return string.replace(/\x1B\[\?(?:2026|25)[hl]|\x1B\][^\x1B]+\x1B\\/g, "");
 }
 
 export function clean(string: string): string {
