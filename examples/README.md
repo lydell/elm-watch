@@ -8,6 +8,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 | [javascript-api](./javascript-api/) | elm-watch.mjs (from `elm-watch init --javascript`) instead of `elm-watch.json`. |
 | [production](./production/) | Minification with SWC, and content hashes in file names. |
 | [application-proxy](./application-proxy/) | `Browser.application`, and proxying `/api/` to a backend via a custom server. |
+| [multiple-apps](./multiple-apps/) | Two `Browser.application` programs with shared code, and an `index.html` each. |
 
 ## Running an example
 

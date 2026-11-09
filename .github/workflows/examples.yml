@@ -18,6 +18,7 @@ jobs:
           - javascript-api
           - production
           - application-proxy
+          - multiple-apps
 
     defaults:
       run:

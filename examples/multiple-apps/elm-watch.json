@@ -1,0 +1,21 @@
+{
+    "serve": "public",
+    "targets": {
+        "Main": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "public/build/main.js"
+        },
+        "Admin": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/Admin.elm"
+            ],
+            "output": "public/build/admin.js"
+        }
+    }
+}
