@@ -2,7 +2,13 @@ import * as path from "path";
 import { describe, expect, test } from "vitest";
 
 import type { InstallDependenciesResult } from "../src/Compile.ts";
-import { type Cmd, init, type Model, type Msg, update } from "../src/Hot.ts";
+import {
+  type Cmd,
+  init,
+  type Model,
+  type Msg,
+  update,
+} from "../src/HotUpdate.ts";
 import type { LoggerConfig } from "../src/Logger.ts";
 import type { Project } from "../src/Project.ts";
 import {
@@ -20,8 +26,8 @@ import {
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
-// Hot.ts is a TEA program: `update` is pure, and all side effects happen in
-// `runCmd`. These tests feed messages directly to `update`, which makes it
+// `elm-watch hot` is a TEA program: `update` (in HotUpdate.ts) is pure, and all
+// side effects happen in `runCmd` (in Hot.ts). These tests feed messages directly to `update`, which makes it
 // possible to test races (like a file changing while installing dependencies)
 // deterministically. The integration tests in Hot*.test.ts depend on timing.
 //

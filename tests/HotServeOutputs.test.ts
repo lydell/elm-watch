@@ -5,7 +5,8 @@ import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { elmWatch } from "../src/ElmWatch.ts";
-import type { HotTestHooks, Msg } from "../src/Hot.ts";
+import type { HotTestHooks } from "../src/Hot.ts";
+import type { Msg } from "../src/HotUpdate.ts";
 import type { CreateServer } from "../src/Types.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {

@@ -668,7 +668,8 @@ function getWatchDirs({
   return [
     ...elmJsonPaths.flatMap((elmJsonPath): Array<WatchDir> => {
       // The directory with elm.json also contains elm-stuff, which we want to
-      // know if it is removed. Same thing for elm-stuff/0.19.1 (see Hot.ts).
+      // know if it is removed. Same thing for elm-stuff/0.19.1 (see
+      // WatcherEvents.ts).
       const elmJsonDir = absoluteDirname(elmJsonPath);
       const elmJsonDirs = [
         shallow(elmJsonDir),
