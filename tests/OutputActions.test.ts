@@ -58,7 +58,7 @@ function describeActions(outputActions: OutputActions): string {
       case "NeedsElmMake":
         return `elm make: ${name(action.output)} (${action.source}, priority ${action.priority})`;
       case "NeedsElmMakeTypecheckOnly":
-        return `typecheck only: ${action.outputs
+        return `typecheck only${action.compiler === "elm" ? "" : ` (${action.compiler})`}: ${action.outputs
           .map(({ output, source }) => `${name(output)} (${source})`)
           .join(", ")}`;
       case "NeedsElmMakePackage":
@@ -259,6 +259,84 @@ describe("getOutputActions", () => {
         elm make: B (Dirty, priority 3)
         elm make: C (Dirty, priority 2)
         queue: A
+        without action: -
+        executing: 0, interrupted: 0, errors: 0
+      `);
+    });
+
+    // Each compiler has its own directory in elm-stuff/.
+    test("different compilers for the same elm.json compile in parallel", () => {
+      expect(
+        run({
+          project: makeProject({
+            maxParallel: 4,
+            elmJsons: {
+              app: [
+                ["Elm1", "dirty"],
+                ["Elm2", "dirty"],
+                ["Lamdera1", "dirty", "lamdera"],
+                ["Lamdera2", "dirty", "lamdera"],
+              ],
+            },
+          }),
+          prioritizedOutputs: priorities({
+            Elm1: 1,
+            Elm2: 2,
+            Lamdera1: 3,
+            Lamdera2: 4,
+          }),
+        }),
+      ).toMatchInlineSnapshot(`
+        elm make: Lamdera2 (Dirty, priority 4)
+        elm make: Elm2 (Dirty, priority 2)
+        queue: Lamdera1
+        queue: Elm1
+        without action: -
+        executing: 0, interrupted: 0, errors: 0
+      `);
+
+      // Elm1 is compiling, so Elm2 has to wait, but Lamdera1 doesn’t.
+      expect(
+        run({
+          project: makeProject({
+            maxParallel: 4,
+            elmJsons: {
+              app: [
+                ["Elm1", "elmMake"],
+                ["Elm2", "dirty"],
+                ["Lamdera1", "dirty", "lamdera"],
+              ],
+            },
+          }),
+          prioritizedOutputs: priorities({ Elm1: 1, Elm2: 2, Lamdera1: 3 }),
+        }),
+      ).toMatchInlineSnapshot(`
+        elm make: Lamdera1 (Dirty, priority 3)
+        queue: Elm2
+        without action: Elm1
+        executing: 1, interrupted: 0, errors: 0
+      `);
+    });
+
+    test("typecheck only, one elm make per compiler", () => {
+      expect(
+        run({
+          project: makeProject({
+            maxParallel: 4,
+            elmJsons: {
+              app: [
+                ["Elm1", "dirty"],
+                ["Lamdera1", "dirty", "lamdera"],
+                ["Elm2", "dirty"],
+                ["Lamdera2", "dirty", "lamdera"],
+              ],
+            },
+          }),
+          prioritizedOutputs: priorities({}),
+        }),
+      ).toMatchInlineSnapshot(`
+        typecheck only: Elm1 (Dirty), Elm2 (Dirty)
+        typecheck only (lamdera): Lamdera1 (Dirty), Lamdera2 (Dirty)
         without action: -
         executing: 0, interrupted: 0, errors: 0
       `);

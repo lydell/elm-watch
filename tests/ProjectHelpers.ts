@@ -9,6 +9,7 @@ import {
 } from "../src/Project.ts";
 import {
   type AbsolutePath,
+  type Compiler,
   type ElmJsonPath,
   type GetNow,
   markAsAbsolutePath,
@@ -75,7 +76,11 @@ export const S = {
 
 export type StatusName = keyof typeof S;
 
-export type TargetSpec = [name: string, status: StatusName];
+export type TargetSpec = [
+  name: string,
+  status: StatusName,
+  compiler?: Compiler,
+];
 
 export function elmJsonPath(name: string): ElmJsonPath {
   return markAsElmJsonPath(markAsAbsolutePath(`/project/${name}/elm.json`));
@@ -107,61 +112,66 @@ export function makeProject({
     ),
     disabledOutputs: [],
     targetsErrors: [],
-    compilers: new Map(),
     elmJsons: new Map(
       Object.entries(elmJsons).map(([elmJsonName, targets]) => [
         elmJsonPath(elmJsonName),
-        targets.map(([name, statusName]): [OutputPath, OutputState] => {
-          const outputPath: OutputPath = {
-            tag: "OutputPath",
-            theOutputPath: markAsAbsolutePath(`/project/build/${name}.js`),
-            temporaryOutputPath: markAsAbsolutePath(
-              `/project/elm-stuff/elm-watch/${name}.js`,
-            ),
-            originalString: `build/${name}.js`,
-            targetName: markAsTargetName(name),
-          };
-          const inputPath = elmFilePath(name);
-          const outputState = new OutputState(
-            [
-              {
-                tag: "InputPath",
-                theInputPath: inputPath,
-                originalString: `src/${name}.elm`,
-                realpath: inputPath,
-              },
-            ],
-            { tag: "NoPostprocess" },
-            "standard",
-            getNow,
-          );
-          // Pretend that every target imports Shared.elm.
-          outputState.allRelatedElmFilePaths = new Set([
-            inputPath,
-            elmFilePath("Shared"),
-          ]);
-          outputState.setStatus(S[statusName]);
-          outputState.dirty = statusName === "dirty";
-          return [outputPath, outputState];
-        }),
+        targets.map(
+          ([name, statusName, compiler = "elm"]): [OutputPath, OutputState] => {
+            const outputPath: OutputPath = {
+              tag: "OutputPath",
+              theOutputPath: markAsAbsolutePath(`/project/build/${name}.js`),
+              temporaryOutputPath: markAsAbsolutePath(
+                `/project/elm-stuff/elm-watch/${name}.js`,
+              ),
+              originalString: `build/${name}.js`,
+              targetName: markAsTargetName(name),
+            };
+            const inputPath = elmFilePath(name);
+            const outputState = new OutputState(
+              [
+                {
+                  tag: "InputPath",
+                  theInputPath: inputPath,
+                  originalString: `src/${name}.elm`,
+                  realpath: inputPath,
+                },
+              ],
+              { tag: "NoPostprocess" },
+              "standard",
+              compiler,
+              getNow,
+            );
+            // Pretend that every target imports Shared.elm.
+            outputState.allRelatedElmFilePaths = new Set([
+              inputPath,
+              elmFilePath("Shared"),
+            ]);
+            outputState.setStatus(S[statusName]);
+            outputState.dirty = statusName === "dirty";
+            return [outputPath, outputState];
+          },
+        ),
       ]),
     ),
     packages: new Map(
-      Object.entries(packages).map(([elmJsonName, [name, statusName]]) => {
-        const packageTarget: PackageTarget = {
-          tag: "PackageTarget",
-          targetName: markAsTargetName(name),
-        };
-        const packageState: PackageState = new TargetState<PackageStatus>(
-          { tag: "NotWrittenToDisk" },
-          getNow,
-        );
-        if (statusName !== "dirty" && statusName !== "clean") {
-          packageState.setStatus(S[statusName] as PackageStatus);
-        }
-        packageState.dirty = statusName === "dirty";
-        return [elmJsonPath(elmJsonName), [packageTarget, packageState]];
-      }),
+      Object.entries(packages).map(
+        ([elmJsonName, [name, statusName, compiler = "elm"]]) => {
+          const packageTarget: PackageTarget = {
+            tag: "PackageTarget",
+            targetName: markAsTargetName(name),
+          };
+          const packageState: PackageState = new TargetState<PackageStatus>(
+            { tag: "NotWrittenToDisk" },
+            compiler,
+            getNow,
+          );
+          if (statusName !== "dirty" && statusName !== "clean") {
+            packageState.setStatus(S[statusName] as PackageStatus);
+          }
+          packageState.dirty = statusName === "dirty";
+          return [elmJsonPath(elmJsonName), [packageTarget, packageState]];
+        },
+      ),
     ),
     maxParallel,
     host: DEFAULT_HOST,

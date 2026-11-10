@@ -866,23 +866,6 @@ describe("errors", () => {
       `);
     });
 
-    test("conflicting compilers for the same elm.json", async () => {
-      expect(await run("conflicting-compilers", ["make"]))
-        .toMatchInlineSnapshot(`
-        ⧙-- CONFLICTING COMPILERS -------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/conflicting-compilers/elm-watch.json
-
-        Targets using the same ⧙elm.json⧘ must use the same compiler. But these don’t:
-
-        /Users/you/project/tests/fixtures/errors/conflicting-compilers/elm.json
-        -> Main (elm)
-        -> Lamdera (lamdera)
-        -> Elm (elm)
-
-        Make sure that all targets using the same ⧙elm.json⧘ have the same "compiler"!
-      `);
-    });
-
     test("package target with type error", async () => {
       expect(await run("package-type-error", ["make"])).toMatchInlineSnapshot(`
         ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘

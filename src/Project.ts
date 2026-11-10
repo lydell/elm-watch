@@ -19,11 +19,7 @@ import {
 import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
 import { DEFAULT_HOST, getHostFromEnv, type Host } from "./Host.ts";
 import type { WalkImportsError } from "./ImportWalker.ts";
-import {
-  isNonEmptyArray,
-  mapNonEmptyArray,
-  type NonEmptyArray,
-} from "./NonEmptyArray.ts";
+import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
@@ -71,8 +67,6 @@ export type Project = {
   elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   // There can only be one package target per elm.json.
   packages: Map<ElmJsonPath, [PackageTarget, PackageState]>;
-  // All targets using the same elm.json use the same compiler.
-  compilers: Map<ElmJsonPath, Compiler>;
   maxParallel: number;
   host: Host;
   webSocketUrl: WebSocketUrl | undefined;
@@ -101,10 +95,13 @@ export class TargetState<Status extends OutputStatus = OutputStatus> {
 
   dirty = true;
 
+  readonly compiler: Compiler;
+
   private getNow: GetNow;
 
-  constructor(initialStatus: Status, getNow: GetNow) {
+  constructor(initialStatus: Status, compiler: Compiler, getNow: GetNow) {
     this._status = initialStatus;
+    this.compiler = compiler;
     this.getNow = getNow;
   }
 
@@ -194,9 +191,10 @@ export class OutputState extends TargetState {
     inputs: NonEmptyArray<InputPath>,
     postprocess: Postprocess,
     compilationMode: CompilationMode,
+    compiler: Compiler,
     getNow: GetNow,
   ) {
-    super({ tag: "NotWrittenToDisk" }, getNow);
+    super({ tag: "NotWrittenToDisk" }, compiler, getNow);
     this.inputs = inputs;
     this.postprocess = postprocess;
     this.compilationMode = compilationMode;
@@ -374,16 +372,6 @@ type InitProjectResult =
       }>;
     }
   | {
-      tag: "ConflictingCompilers";
-      conflictingCompilers: NonEmptyArray<{
-        elmJsonPath: ElmJsonPath;
-        usages: NonEmptyArray<{
-          compiler: Compiler;
-          targetName: TargetName;
-        }>;
-      }>;
-    }
-  | {
       tag: "Project";
       project: Project;
     };
@@ -418,11 +406,7 @@ export function initProject({
   >();
   const elmJsonUsages = new Map<
     ElmJsonPath,
-    NonEmptyArray<{
-      type: ElmJson.ElmJsonType;
-      compiler: Compiler;
-      targetName: TargetName;
-    }>
+    NonEmptyArray<{ type: ElmJson.ElmJsonType; targetName: TargetName }>
   >();
 
   for (const [index, target] of config.targets.entries()) {
@@ -434,7 +418,7 @@ export function initProject({
       target.name.includes(substring),
     );
 
-    const usage = { type: target.type, compiler: target.compiler, targetName };
+    const usage = { type: target.type, targetName };
     const previousUsages = elmJsonUsages.get(elmJsonPath);
     if (previousUsages === undefined) {
       elmJsonUsages.set(elmJsonPath, [usage]);
@@ -500,6 +484,7 @@ export function initProject({
                       postprocessFunction: target.postprocess,
                     },
                 thisCompilationMode,
+                target.compiler,
                 getNow,
               ),
             ]);
@@ -534,7 +519,11 @@ export function initProject({
         if (error === undefined) {
           packages.set(elmJsonPath, [
             packageTarget,
-            new TargetState<PackageStatus>({ tag: "NotWrittenToDisk" }, getNow),
+            new TargetState<PackageStatus>(
+              { tag: "NotWrittenToDisk" },
+              target.compiler,
+              getNow,
+            ),
           ]);
         } else {
           targetsErrors.push({
@@ -563,35 +552,6 @@ export function initProject({
       nonUniquePackageElmJsons,
     };
   }
-
-  const conflictingCompilers = Array.from(elmJsonUsages).flatMap(
-    ([elmJsonPath, usages]) =>
-      usages.some(({ compiler }) => compiler !== usages[0].compiler)
-        ? [
-            {
-              elmJsonPath,
-              usages: mapNonEmptyArray(usages, ({ compiler, targetName }) => ({
-                compiler,
-                targetName,
-              })),
-            },
-          ]
-        : [],
-  );
-
-  if (isNonEmptyArray(conflictingCompilers)) {
-    return {
-      tag: "ConflictingCompilers",
-      conflictingCompilers,
-    };
-  }
-
-  const compilers = new Map(
-    Array.from(elmJsonUsages, ([elmJsonPath, usages]) => [
-      elmJsonPath,
-      usages[0].compiler,
-    ]),
-  );
 
   const duplicateOutputs = Array.from(potentialOutputDuplicates)
     .filter(([, outputPaths]) => outputPaths.length >= 2)
@@ -679,7 +639,6 @@ export function initProject({
       targetsErrors,
       elmJsons,
       packages,
-      compilers,
       maxParallel,
       host,
       webSocketUrl,

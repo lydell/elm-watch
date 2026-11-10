@@ -144,7 +144,7 @@ The [Lamdera] compiler can compile vanilla Elm apps too – you don’t need to 
 }
 ```
 
-elm-watch then runs `lamdera make` instead of `elm make`. Your `elm.json` stays the same. You can install the compiler with `npm install --save-dev lamdera`. All targets using the same `elm.json` must use the same compiler. See the [lamdera-compiler example].
+elm-watch then runs `lamdera make` instead of `elm make`. Your `elm.json` stays the same. You can install the compiler with `npm install --save-dev lamdera`. Targets using the same `elm.json` can use different compilers, for example to try out the Lamdera compiler on one target at a time. See the [lamdera-compiler example].
 
 (Real Lamdera apps, with `Lamdera.frontend` and `Lamdera.backend`, need `lamdera live` and don’t work with elm-watch.)
 

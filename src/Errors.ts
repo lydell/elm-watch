@@ -37,7 +37,6 @@ import * as Theme from "./Theme.ts";
 import {
   type AbsolutePath,
   type CliArg,
-  type Compiler,
   type Cwd,
   type ElmJsonPath,
   type ElmWatchJsonPath,
@@ -713,38 +712,6 @@ ${joinTemplate(
 )}
 
 Make sure that every package target has an ${elmJson} of its own!
-`;
-}
-
-export function conflictingCompilers(
-  configSource: ConfigSource,
-  elmJsons: NonEmptyArray<{
-    elmJsonPath: ElmJsonPath;
-    usages: NonEmptyArray<{ compiler: Compiler; targetName: TargetName }>;
-  }>,
-): ErrorTemplate {
-  return fancyError(
-    "CONFLICTING COMPILERS",
-    configSourceLocation(configSource),
-  )`
-Targets using the same ${elmJson} must use the same compiler. But these don’t:
-
-${joinTemplate(
-  mapNonEmptyArray(elmJsons, ({ elmJsonPath, usages }) =>
-    join(
-      [
-        elmJsonPath,
-        ...usages.map(
-          ({ compiler, targetName }) => `-> ${targetName} (${compiler})`,
-        ),
-      ],
-      "\n",
-    ),
-  ),
-  "\n\n",
-)}
-
-Make sure that all targets using the same ${elmJson} have the same "compiler"!
 `;
 }
 

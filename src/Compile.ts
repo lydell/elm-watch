@@ -103,12 +103,21 @@ export function installDependencies(
     });
 
   const continuation = async (): Promise<InstallDependenciesResult> => {
-    const elmJsonsArray = [
-      ...project.elmJsons.keys(),
-      ...project.packages.keys(),
-    ];
+    // Each compiler downloads packages on its own.
+    const elmJsonsArray = uniqueElmJsonsAndCompilers([
+      ...Array.from(project.elmJsons, ([elmJsonPath, outputs]) =>
+        outputs.map(([, outputState]) => ({
+          elmJsonPath,
+          compiler: outputState.compiler,
+        })),
+      ).flat(),
+      ...Array.from(project.packages, ([elmJsonPath, [, packageState]]) => ({
+        elmJsonPath,
+        compiler: packageState.compiler,
+      })),
+    ]);
 
-    for (const [index, elmJsonPath] of elmJsonsArray.entries()) {
+    for (const [index, { elmJsonPath, compiler }] of elmJsonsArray.entries()) {
       // Don’t print `(x/y)` the first time, because chances are all packages are
       // downloaded via the first elm.json and that looks nicer.
       const message = `Dependencies${
@@ -148,7 +157,7 @@ export function installDependencies(
       };
 
       const { promise, kill } = SpawnElm.install({
-        compiler: getCompiler(project, elmJsonPath),
+        compiler,
         elmJsonPath,
         env,
         getNow,
@@ -255,13 +264,33 @@ export function installDependencies(
   };
 }
 
-function getCompiler(project: Project, elmJsonPath: ElmJsonPath): Compiler {
-  return project.compilers.get(elmJsonPath) ?? "elm";
+type ElmJsonAndCompiler = {
+  elmJsonPath: ElmJsonPath;
+  compiler: Compiler;
+};
+
+function uniqueElmJsonsAndCompilers(
+  items: Array<ElmJsonAndCompiler>,
+): Array<ElmJsonAndCompiler> {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = busyKey(item);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+// Each compiler has its own directory in elm-stuff/, so different compilers can
+// run at the same time for the same elm.json, but the same compiler can’t.
+function busyKey({ elmJsonPath, compiler }: ElmJsonAndCompiler): string {
+  return `${compiler}:${elmJsonPath}`;
 }
 
 type IndexedOutput = {
   index: number;
-  compiler: Compiler;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
@@ -269,7 +298,6 @@ type IndexedOutput = {
 
 type IndexedPackage = {
   index: number;
-  compiler: Compiler;
   elmJsonPath: ElmJsonPath;
   outputPath: PackageTarget;
   outputState: PackageState;
@@ -352,16 +380,15 @@ export function getOutputActions({
   const elmMakePackageActions: Array<NeedsElmMakePackageOutputAction> = [];
   const postprocessActions: Array<NeedsPostprocessOutputAction> = [];
   const outputsWithoutAction: Array<IndexedOutput | IndexedPackage> = [];
-  const busyElmJsons = new Set<ElmJsonPath>();
+  const busyElmJsons = new Set<string>();
 
   for (const [elmJsonPath, outputs] of project.elmJsons) {
-    const compiler = getCompiler(project, elmJsonPath);
-    const typecheckOnly: Array<IndexedOutputWithSource> = [];
+    // Outputs using the same compiler are typechecked with a single `elm make`.
+    const typecheckOnly = new Map<Compiler, Array<IndexedOutputWithSource>>();
 
     for (const [outputPath, outputState] of outputs) {
       const output: IndexedOutput = {
         index,
-        compiler,
         elmJsonPath,
         outputPath,
         outputState,
@@ -383,7 +410,9 @@ export function getOutputActions({
             priority,
           });
         } else {
-          typecheckOnly.push({ output, source });
+          const previous = typecheckOnly.get(outputState.compiler) ?? [];
+          previous.push({ output, source });
+          typecheckOnly.set(outputState.compiler, previous);
         }
       };
 
@@ -392,7 +421,9 @@ export function getOutputActions({
         case "ElmMakeTypecheckOnly":
           numExecuting++;
           outputsWithoutAction.push(output);
-          busyElmJsons.add(elmJsonPath);
+          busyElmJsons.add(
+            busyKey({ elmJsonPath, compiler: outputState.compiler }),
+          );
           break;
 
         case "Postprocess":
@@ -449,20 +480,21 @@ export function getOutputActions({
       }
     }
 
-    if (isNonEmptyArray(typecheckOnly)) {
-      elmMakeTypecheckOnlyActions.push({
-        tag: "NeedsElmMakeTypecheckOnly",
-        compiler,
-        elmJsonPath,
-        outputs: typecheckOnly,
-      });
+    for (const [compiler, typecheckOnlyOutputs] of typecheckOnly) {
+      if (isNonEmptyArray(typecheckOnlyOutputs)) {
+        elmMakeTypecheckOnlyActions.push({
+          tag: "NeedsElmMakeTypecheckOnly",
+          compiler,
+          elmJsonPath,
+          outputs: typecheckOnlyOutputs,
+        });
+      }
     }
   }
 
   for (const [elmJsonPath, [packageTarget, packageState]] of project.packages) {
     const output: IndexedPackage = {
       index,
-      compiler: getCompiler(project, elmJsonPath),
       elmJsonPath,
       outputPath: packageTarget,
       outputState: packageState,
@@ -482,7 +514,9 @@ export function getOutputActions({
       case "ElmMakeTypecheckOnly":
         numExecuting++;
         outputsWithoutAction.push(output);
-        busyElmJsons.add(elmJsonPath);
+        busyElmJsons.add(
+          busyKey({ elmJsonPath, compiler: packageState.compiler }),
+        );
         break;
 
       case "QueuedForElmMake":
@@ -545,9 +579,19 @@ export function getOutputActions({
       case "NeedsElmMake":
         if (
           actions.length < threadsLeft &&
-          !busyElmJsons.has(action.elmJsonPath)
+          !busyElmJsons.has(
+            busyKey({
+              elmJsonPath: action.elmJsonPath,
+              compiler: action.output.outputState.compiler,
+            }),
+          )
         ) {
-          busyElmJsons.add(action.elmJsonPath);
+          busyElmJsons.add(
+            busyKey({
+              elmJsonPath: action.elmJsonPath,
+              compiler: action.output.outputState.compiler,
+            }),
+          );
           actions.push(action);
         } else {
           switch (action.source) {
@@ -568,9 +612,9 @@ export function getOutputActions({
       case "NeedsElmMakeTypecheckOnly":
         if (
           actions.length < threadsLeft &&
-          !busyElmJsons.has(action.elmJsonPath)
+          !busyElmJsons.has(busyKey(action))
         ) {
-          busyElmJsons.add(action.elmJsonPath);
+          busyElmJsons.add(busyKey(action));
           actions.push(action);
         } else {
           for (const { output, source } of action.outputs) {
@@ -593,9 +637,19 @@ export function getOutputActions({
       case "NeedsElmMakePackage":
         if (
           actions.length < threadsLeft &&
-          !busyElmJsons.has(action.elmJsonPath)
+          !busyElmJsons.has(
+            busyKey({
+              elmJsonPath: action.elmJsonPath,
+              compiler: action.package.outputState.compiler,
+            }),
+          )
         ) {
-          busyElmJsons.add(action.elmJsonPath);
+          busyElmJsons.add(
+            busyKey({
+              elmJsonPath: action.elmJsonPath,
+              compiler: action.package.outputState.compiler,
+            }),
+          );
           actions.push(action);
         } else {
           switch (action.source) {
@@ -800,7 +854,6 @@ async function compileOneOutput({
   logger,
   getNow,
   runMode,
-  compiler,
   elmJsonPath,
   outputPath,
   outputState,
@@ -811,7 +864,6 @@ async function compileOneOutput({
   logger: Logger;
   getNow: GetNow;
   runMode: RunModeWithExtraData;
-  compiler: Compiler;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
   outputState: OutputState;
@@ -836,7 +888,7 @@ async function compileOneOutput({
   outputState.dirty = false as boolean;
 
   const { promise, kill } = SpawnElm.make({
-    compiler,
+    compiler: outputState.compiler,
     elmJsonPath,
     compilationMode: outputState.compilationMode,
     inputs: outputState.inputs,
@@ -1329,7 +1381,6 @@ async function typecheckPackage({
   logger,
   getNow,
   runMode,
-  compiler,
   elmJsonPath,
   outputPath,
   outputState,
@@ -1340,7 +1391,6 @@ async function typecheckPackage({
   logger: Logger;
   getNow: GetNow;
   runMode: RunMode;
-  compiler: Compiler;
   elmJsonPath: ElmJsonPath;
   outputPath: PackageTarget;
   outputState: PackageState;
@@ -1365,7 +1415,7 @@ async function typecheckPackage({
   outputState.dirty = false as boolean;
 
   const { promise, kill } = SpawnElm.make({
-    compiler,
+    compiler: outputState.compiler,
     elmJsonPath,
     compilationMode: "standard",
     inputs: [],

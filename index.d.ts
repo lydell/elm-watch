@@ -83,8 +83,7 @@ export type PackageTarget = {
 };
 
 // The command to run. "lamdera" (the Lamdera compiler) can compile vanilla Elm
-// apps too, with Lamdera’s improvements. All targets using the same elm.json
-// must use the same compiler.
+// apps too, with Lamdera’s improvements.
 // Default: "elm".
 export type Compiler = "elm" | "lamdera";
 

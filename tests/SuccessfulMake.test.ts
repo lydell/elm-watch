@@ -173,6 +173,25 @@ describe("successful make", () => {
       `);
   });
 
+  test("different compilers for the same elm.json", async () => {
+    expect(await run("mixed-compilers", ["make"])).toMatchInlineSnapshot(`
+      ✅ Dependencies
+      ✅ Dependencies (2/2)
+      ✅ elm⧙                                                         1 ms Q | 1.23 s E⧘
+      ✅ lamdera⧙                                                     1 ms Q | 1.23 s E⧘
+
+      ✅ Compilation finished in ⧙123 ms⧘.
+    `);
+
+    // Only Lamdera’s elm/core has `Elm.hot`.
+    const hasElmHot = (name: string): boolean =>
+      fs
+        .readFileSync(fixtureDir(`mixed-compilers/build/${name}.js`), "utf8")
+        .includes("'hot', {");
+    expect(hasElmHot("elm")).toBe(false);
+    expect(hasElmHot("lamdera")).toBe(true);
+  });
+
   test("package target, and an example application using the package", async () => {
     expect(await run("package", ["make"])).toMatchInlineSnapshot(`
       ✅ Dependencies
