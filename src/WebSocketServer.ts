@@ -378,7 +378,8 @@ export class WebSocketServer {
   async close(): Promise<void> {
     this.closed = true;
     this.unsetDispatch();
-    // This terminates all connections.
+    // Since ws 8, this does not close existing web sockets, but destroying
+    // all sockets below does (including the ones upgraded to web sockets).
     this.webSocketServer.close();
     for (const socket of this.sockets) {
       socket.destroy();
@@ -392,9 +393,6 @@ export class WebSocketServer {
         }
       });
     });
-    for (const webSocket of this.webSocketServer.clients) {
-      webSocket.close();
-    }
   }
 }
 
