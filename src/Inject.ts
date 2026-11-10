@@ -948,6 +948,37 @@ ${UTILS_EQ_ELM_WATCH_INTERNAL}
 `;
     });
 
+  return injectElmHotInitCmds(patchLamderaBrowserKey(newCode));
+}
+
+// Lamdera’s elm/browser stores the real navigation key function in the global
+// `_Browser_key` (the `Browser.Navigation.Key` in the model is a dummy
+// `{ $: 0 }`). After a hot reload, `Browser.Navigation.pushUrl` etc. come from
+// the new code, whose `_Browser_key` belongs to an app that was never set up,
+// so they crash. The model keeps the original key object, so store the set up
+// key function on it (non-enumerable, so that comparisons, the debugger and
+// `Debug.toString` don’t see it) and prefer that one. Each replacement is safe
+// on its own, and does nothing if Lamdera changes the code (fixes the bug).
+const LAMDERA_BROWSER_KEY_SETUP_REGEX =
+  /^(\t\t\tkey\.a = sendToApp;)(?=\r?\n\t\t\t_Browser_window\.addEventListener\('popstate', key\);$)/m;
+
+const LAMDERA_BROWSER_KEY_CALL_REGEX = /^\t\t_Browser_key\(\);$/gm;
+
+function patchLamderaBrowserKey(code: string): string {
+  return code
+    .replace(
+      LAMDERA_BROWSER_KEY_SETUP_REGEX,
+      `$1
+			// added by elm-watch
+			Object.defineProperty(modelKey, '__elmWatchKey', { value: key });`,
+    )
+    .replace(
+      LAMDERA_BROWSER_KEY_CALL_REGEX,
+      `\t\t(_key.__elmWatchKey || _Browser_key)(); // changed by elm-watch`,
+    );
+}
+
+function injectElmHotInitCmds(newCode: string): string {
   const enqueueMatch = ELM_HOT_ENQUEUE_INIT_CMDS_REGEX.exec(newCode);
   const appMatch = ELM_HOT_APP_REGEX.exec(newCode);
 

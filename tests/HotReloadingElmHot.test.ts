@@ -420,7 +420,7 @@ main =
   // whose `setup` never ran, and crashes with:
   // TypeError: Cannot read properties of undefined (reading 'onUrlChange')
   // That happens with `Elm.hot.reload` without elm-watch too.
-  test.fails("Application URL messages change", async () => {
+  test("Application URL messages change", async () => {
     const { replace, go } = runHotReload({
       name: "Application",
       programType: "Application",
