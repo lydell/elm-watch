@@ -49,6 +49,36 @@ describe("errors", () => {
       `);
     });
 
+    test("lamdera", async () => {
+      expect(
+        await run("lamdera-not-found", ["make"], {
+          env: {
+            ...TEST_ENV,
+            PATH: [
+              import.meta.dirname,
+              path.join(import.meta.dirname, "some", "bin"),
+            ].join(path.delimiter),
+          },
+        }),
+      ).toMatchInlineSnapshot(`
+        ⧙-- LAMDERA NOT FOUND -----------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/errors/lamdera-not-found/elm.json
+
+        I tried to execute ⧙lamdera⧘, but it does not appear to exist!
+
+        This is what the PATH environment variable looks like:
+
+        /Users/you/project/tests
+        /Users/you/project/tests/some/bin
+
+        Is the Lamdera compiler installed? You asked for it with "compiler": "lamdera".
+
+        Note: If you have installed Lamdera locally (for example using npm), execute
+        elm-watch using npx to make elm-watch automatically pick up that local
+        installation: ⧙npx elm-watch⧘
+      `);
+    });
+
     // On Windows, this causes `elm` to be found after all, but fail with `openBinaryFile: permission denied`.
     testExceptWindows("undefined PATH", async () => {
       expect(await run("valid", ["make", "app"], { env: {} }))

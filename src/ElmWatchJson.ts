@@ -22,6 +22,7 @@ import { Port } from "./Port.ts";
 import {
   type AbsolutePath,
   type CliArg,
+  Compiler,
   type Cwd,
   type ElmJsonPath,
   type ElmWatchJsonPath,
@@ -128,12 +129,14 @@ const Target = Codec.taggedUnion(
     {
       type: Codec.tag("application"),
       elmJson: ElmJsonPathString,
+      compiler: Codec.field(Compiler, { optional: true }),
       inputs: Inputs,
       output: Output,
     },
     {
       type: Codec.tag("package"),
       elmJson: ElmJsonPathString,
+      compiler: Codec.field(Compiler, { optional: true }),
     },
   ],
   { allowExtraFields: false },
@@ -441,12 +444,18 @@ function toConfig(
               type: target.type,
               name,
               elmJson: target.elmJson,
+              compiler: target.compiler ?? "elm",
               inputs: target.inputs,
               output: target.output,
               postprocess: undefined,
             };
           case "package":
-            return { type: target.type, name, elmJson: target.elmJson };
+            return {
+              type: target.type,
+              name,
+              elmJson: target.elmJson,
+              compiler: target.compiler ?? "elm",
+            };
         }
       },
     ) as NonEmptyArray<ConfigTarget>,

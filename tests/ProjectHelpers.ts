@@ -107,6 +107,7 @@ export function makeProject({
     ),
     disabledOutputs: [],
     targetsErrors: [],
+    compilers: new Map(),
     elmJsons: new Map(
       Object.entries(elmJsons).map(([elmJsonName, targets]) => [
         elmJsonPath(elmJsonName),

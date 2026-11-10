@@ -37,6 +37,7 @@ import * as Theme from "./Theme.ts";
 import {
   type AbsolutePath,
   type CliArg,
+  type Compiler,
   type Cwd,
   type ElmJsonPath,
   type ElmWatchJsonPath,
@@ -715,10 +716,56 @@ Make sure that every package target has an ${elmJson} of its own!
 `;
 }
 
+export function conflictingCompilers(
+  configSource: ConfigSource,
+  elmJsons: NonEmptyArray<{
+    elmJsonPath: ElmJsonPath;
+    usages: NonEmptyArray<{ compiler: Compiler; targetName: TargetName }>;
+  }>,
+): ErrorTemplate {
+  return fancyError(
+    "CONFLICTING COMPILERS",
+    configSourceLocation(configSource),
+  )`
+Targets using the same ${elmJson} must use the same compiler. But these don’t:
+
+${joinTemplate(
+  mapNonEmptyArray(elmJsons, ({ elmJsonPath, usages }) =>
+    join(
+      [
+        elmJsonPath,
+        ...usages.map(
+          ({ compiler, targetName }) => `-> ${targetName} (${compiler})`,
+        ),
+      ],
+      "\n",
+    ),
+  ),
+  "\n\n",
+)}
+
+Make sure that all targets using the same ${elmJson} have the same "compiler"!
+`;
+}
+
 export function elmNotFoundError(
   location: ElmJsonPathOrOutputPath,
   command: Command,
 ): ErrorTemplate {
+  if (command.command === "lamdera") {
+    return fancyError("LAMDERA NOT FOUND", location)`
+I tried to execute ${bold(command.command)}, but it does not appear to exist!
+
+${printPATH(command.options.env, IS_WINDOWS)}
+
+Is the Lamdera compiler installed? You asked for it with "compiler": "lamdera".
+
+Note: If you have installed Lamdera locally (for example using npm), execute
+elm-watch using npx to make elm-watch automatically pick up that local
+installation: ${bold("npx elm-watch")}
+`;
+  }
+
   return fancyError("ELM NOT FOUND", location)`
 I tried to execute ${bold(command.command)}, but it does not appear to exist!
 

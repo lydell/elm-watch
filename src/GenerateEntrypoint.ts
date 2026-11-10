@@ -42,7 +42,7 @@ export function generateEntrypoint(
   {
     type: ${js(target.type)},
     name: ${js(name)},
-    elmJson: ${js(target.elmJson)},
+    elmJson: ${js(target.elmJson)},${compilerLine(target.compiler)}
     inputs: ${jsArray(target.inputs)},
     output: ${js(target.output)},${
       postprocess === undefined
@@ -55,7 +55,7 @@ export function generateEntrypoint(
   {
     type: ${js(target.type)},
     name: ${js(name)},
-    elmJson: ${js(target.elmJson)},
+    elmJson: ${js(target.elmJson)},${compilerLine(target.compiler)}
   },`.slice(1);
       }
     })
@@ -308,6 +308,10 @@ function toImportPath(script: string): string {
 
 function jsArray(values: Array<string>): string {
   return `[${values.map(js).join(", ")}]`;
+}
+
+function compilerLine(compiler: string | undefined): string {
+  return compiler === undefined ? "" : `\n    compiler: ${js(compiler)},`;
 }
 
 function js(value: unknown): string {

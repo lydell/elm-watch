@@ -8,6 +8,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 | --- | --- |
 | [minimal](./minimal/) | The bare minimum: `elm-watch.json` and an HTML file that you open straight in the browser. No server needed. |
 | [javascript-api](./javascript-api/) | `elm-watch.mjs` (from `elm-watch init --javascript`) instead of `elm-watch.json`. |
+| [lamdera-compiler](./lamdera-compiler/) | Compiling a vanilla Elm app with the Lamdera compiler (`"compiler": "lamdera"`), for its improvements like built-in hot reloading. |
 
 ## Server
 
@@ -63,10 +64,11 @@ Then, for the example you’re interested in:
 
 In your own project, you would install elm-watch from npm instead: `npm install --save-dev elm-watch`.
 
-All examples use the [elm] and [elm-format] npm packages to install Elm and elm-format, but you can of course install them in any way you want.
+All examples use the [elm] and [elm-format] npm packages to install Elm and elm-format (except lamdera-compiler, which uses the [lamdera] package instead of elm), but you can of course install them in any way you want.
 
 See [examples.yml] for how the examples are built on CI.
 
 [elm]: https://www.npmjs.com/package/elm
 [elm-format]: https://www.npmjs.com/package/elm-format
+[lamdera]: https://www.npmjs.com/package/lamdera
 [examples.yml]: https://github.com/lydell/elm-watch/blob/main/.github/workflows/examples.yml

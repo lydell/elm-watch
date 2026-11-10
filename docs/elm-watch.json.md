@@ -26,12 +26,14 @@ type ElmWatchJson = {
       | {
           type: "application";
           elmJson: string;
+          compiler?: "elm" | "lamdera";
           inputs: NonEmptyArray<string>;
           output: string;
         }
       | {
           type: "package";
           elmJson: string;
+          compiler?: "elm" | "lamdera";
         };
   };
 };
@@ -84,6 +86,10 @@ For each target, provide the following:
 - type: `"application"` or `"package"`. Application targets compile Elm files with `main` to JavaScript. [Package targets](#package-targets) typecheck an Elm package.
 - elmJson: `string`. The `elm.json` to compile with, relative to `elm-watch.json`. Usually `"elm.json"`, but it can be any `elm.json`, such as `"admin/elm.json"` in a project with several Elm apps. elm-watch runs `elm` in the directory of that `elm.json`. Its `"type"` must match the target’s `"type"`.
 
+Optionally:
+
+- compiler: `"elm"` or `"lamdera"`. Default: `"elm"`. The command to compile with. See [Lamdera compiler](#lamdera-compiler).
+
 Application targets also need:
 
 - inputs: `NonEmptyArray<string>`. List of `.elm` files, relative to `elm-watch.json`. You probably only need one input, but if you’ve ever used `elm make` with multiple inputs – you can do that with elm-watch as well.
@@ -117,8 +123,35 @@ To try out your package in the browser while developing it, make an example appl
 }
 ```
 
+## Lamdera compiler
+
+The [Lamdera] compiler can compile vanilla Elm apps too – you don’t need to use Lamdera’s backend or packages. It comes with improvements to elm/core, elm/browser and elm/virtual-dom, such as built-in [hot reloading](../hot-reloading/#the-lamdera-compiler). Set `"compiler": "lamdera"` to use it:
+
+<!-- prettier-ignore -->
+```json
+{
+    "targets": {
+        "My target name": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "compiler": "lamdera",
+            "inputs": [
+                "src/Main.elm"
+            ],
+            "output": "build/main.js"
+        }
+    }
+}
+```
+
+elm-watch then runs `lamdera make` instead of `elm make`. Your `elm.json` stays the same. You can install the compiler with `npm install --save-dev lamdera`. All targets using the same `elm.json` must use the same compiler. See the [lamdera-compiler example].
+
+(Real Lamdera apps, with `Lamdera.frontend` and `Lamdera.backend`, need `lamdera live` and don’t work with elm-watch.)
+
 ## Upgrading from elm-watch 1
 
 In elm-watch 1, targets had no `"type"` and `"elmJson"`: elm-watch used the closest `elm.json` to the inputs, and only supported applications. Run `elm-watch init` to add `"type": "application"` and `"elmJson"` to all targets in your `elm-watch.json` automatically.
 
+[lamdera]: https://lamdera.com/
+[lamdera-compiler example]: https://github.com/lydell/elm-watch/tree/main/examples/lamdera-compiler
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking

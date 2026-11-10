@@ -169,6 +169,7 @@ Each target looks like this (see [targets in elm-watch.json](../elm-watch.json/#
 | type | `"application" \| "package"` | Application targets compile Elm files with `main` to JavaScript. [Package targets](../elm-watch.json/#package-targets) typecheck a package. |
 | name | `string` | Displayed in the terminal UI. Must be unique. |
 | elmJson | `string` | The `elm.json` to compile with, relative to `root`. Its `"type"` must match the target’s `type`. Usually `"elm.json"`. |
+| compiler | `"elm" \| "lamdera"` | Optional. Default: `"elm"`. See [Lamdera compiler](../elm-watch.json/#lamdera-compiler). |
 | inputs | `NonEmptyArray<string>` | Applications only. `.elm` files, relative to `root`. |
 | output | `string` | Applications only. A `.js` file, relative to `root`. |
 | postprocess | `function` | Applications only. Optional. See [Postprocess](../postprocess/). |

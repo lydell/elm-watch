@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import * as childProcess from "node:child_process";
 import { afterEach, describe, expect, test } from "vitest";
 
 import {
@@ -21,13 +20,9 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 // Lamdera ships with the `hot-reload-stop` branches of lydell/core,
 // lydell/browser and lydell/virtual-dom, which have built-in hot reloading
-// (`Elm.hot`). The `lamdera` bin in the fixtures runs `lamdera` instead of `elm`.
+// (`Elm.hot`). These tests compile vanilla Elm with `compiler: "lamdera"`.
 // These tests are versions of tests in the other HotReloading*.test.ts files.
-const HAS_LAMDERA =
-  childProcess.spawnSync("lamdera", ["--version"], { stdio: "ignore" })
-    .status === 0;
-
-describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
+describe("hot reloading with Elm.hot", () => {
   afterEach(cleanupAfterEachTest);
 
   test.each(["standard", "debug"] as const)(
@@ -42,7 +37,7 @@ describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
         name: "DomAndMsgChange",
         programType: "Element",
         compilationMode,
-        bin: "lamdera",
+        compiler: "lamdera",
         init: (node) => {
           node.append(node1, node2);
           return window.Elm?.["DomAndMsgChange"]?.init({ node: node1 });
@@ -125,7 +120,7 @@ describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
       name: "DomAndMsgChange",
       programType: "Element",
       compilationMode: "optimize",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     const { browserConsole } = await go(({ idle, div }) => {
@@ -170,7 +165,7 @@ describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
         name: "AddMsg",
         programType: "Element",
         compilationMode,
-        bin: "lamdera",
+        compiler: "lamdera",
       });
 
       const { browserConsole } = await go(async ({ idle, main }) => {
@@ -212,7 +207,7 @@ describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
       name: "InitTweakValue",
       programType: "Element",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     const { browserConsole } = await go(({ idle, div }) => {
@@ -240,7 +235,7 @@ describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
       name: "InitNewField",
       programType: "Element",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     const { browserConsole } = await go(({ idle, div }) => {
@@ -268,7 +263,7 @@ describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
       name: "InitHttp",
       programType: "Element",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     const { browserConsole } = await go(async ({ idle, div }) => {
@@ -298,7 +293,7 @@ describe.skipIf(!HAS_LAMDERA)("hot reloading with Elm.hot", () => {
       name: "ChangeProgramType",
       programType: "Sandbox",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     const { browserConsole } = await go(({ idle, div }) => {
@@ -344,7 +339,7 @@ main =
       name: "FlagsChange",
       programType: "Element",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
       init: (node) => {
         initCount++;
         return window.Elm?.["FlagsChange"]?.init({
@@ -385,7 +380,7 @@ main =
       name: "HtmlMain",
       programType: "Html",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     let probe: HTMLElement | null = null;
@@ -425,7 +420,7 @@ main =
       name: "Application",
       programType: "Application",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     const { browserConsole } = await go(async ({ idle, main }) => {
@@ -474,7 +469,7 @@ main =
       name: "ESM",
       programType: "Html",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
       init: (node) => window.Elm?.["ESM"]?.init({ node }),
     });
 
@@ -504,7 +499,7 @@ main =
       name: "InitCmds",
       programType: "Element",
       compilationMode: "standard",
-      bin: "lamdera",
+      compiler: "lamdera",
     });
 
     await go(async ({ idle, div }) => {

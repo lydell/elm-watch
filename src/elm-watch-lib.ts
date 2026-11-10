@@ -11,6 +11,7 @@ import { mapNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import { make, type RunElmMakeResult } from "./SpawnElm.ts";
 import {
   type CompilationMode,
+  type Compiler,
   markAsAbsolutePath,
   markAsElmJsonPath,
 } from "./Types.ts";
@@ -20,12 +21,14 @@ export { walkImports } from "./ImportWalker.ts";
 export { inject } from "./Inject.ts";
 
 export function elmMake({
+  compiler = "elm",
   elmJsonPath,
   compilationMode,
   inputs,
   outputPath,
   env,
 }: {
+  compiler?: Compiler;
   elmJsonPath: string;
   compilationMode: CompilationMode;
   inputs: NonEmptyArray<string>;
@@ -36,6 +39,7 @@ export function elmMake({
   kill: (options: { force: boolean }) => void;
 } {
   return make({
+    compiler,
     elmJsonPath: markAsElmJsonPath(markAsAbsolutePath(elmJsonPath)),
     compilationMode,
     inputs: mapNonEmptyArray(inputs, (rawInput) => ({

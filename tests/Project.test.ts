@@ -232,6 +232,7 @@ const project: Project = {
     ],
   ]),
   packages: new Map(),
+  compilers: new Map(),
 };
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);

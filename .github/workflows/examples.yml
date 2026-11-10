@@ -16,6 +16,7 @@ jobs:
         example:
           - minimal
           - javascript-api
+          - lamdera-compiler
           - application-proxy
           - multiple-apps
           - multiple-apps-subdomains

@@ -1,0 +1,31 @@
+{
+  "targets": {
+    "Main": {
+      "type": "application",
+      "elmJson": "elm.json",
+      "inputs": ["src/Main.elm"],
+      "output": "build/main.js"
+    },
+    "Lamdera": {
+      "type": "application",
+      "elmJson": "elm.json",
+      "compiler": "lamdera",
+      "inputs": ["src/Lamdera.elm"],
+      "output": "build/lamdera.js"
+    },
+    "Elm": {
+      "type": "application",
+      "elmJson": "./elm.json",
+      "compiler": "elm",
+      "inputs": ["src/Elm.elm"],
+      "output": "build/elm.js"
+    },
+    "Other": {
+      "type": "application",
+      "elmJson": "other/elm.json",
+      "compiler": "lamdera",
+      "inputs": ["other/src/Main.elm"],
+      "output": "build/other.js"
+    }
+  }
+}

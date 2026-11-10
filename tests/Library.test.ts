@@ -308,7 +308,8 @@ describe("library", () => {
         Expected only these fields:
           "type",
           "name",
-          "elmJson"
+          "elmJson",
+          "compiler"
         Found extra fields:
           "inputs",
           "output"

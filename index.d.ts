@@ -63,6 +63,7 @@ export type ApplicationTarget = {
   // An elm.json with "type": "application", relative to `root`.
   // Usually: "elm.json".
   elmJson: string;
+  compiler?: Compiler | undefined;
   // `.elm` files, relative to `root`.
   inputs: NonEmptyArray<string>;
   // A `.js` file, relative to `root`.
@@ -78,7 +79,14 @@ export type PackageTarget = {
   // An elm.json with "type": "package", relative to `root`.
   // Usually: "elm.json".
   elmJson: string;
+  compiler?: Compiler | undefined;
 };
+
+// The command to run. "lamdera" (the Lamdera compiler) can compile vanilla Elm
+// apps too, with Lamdera’s improvements. All targets using the same elm.json
+// must use the same compiler.
+// Default: "elm".
+export type Compiler = "elm" | "lamdera";
 
 export type Options = {
   runMode: RunMode;

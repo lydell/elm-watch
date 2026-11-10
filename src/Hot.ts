@@ -1521,13 +1521,16 @@ function onWatcherEvent(
   }
 }
 
-// Removing just the compiler’s directory, like elm-stuff/0.19.1/, is enough to
-// get rid of a corrupt cache. That preserves files from other tools in
-// elm-stuff/, like elm-watch, elm-review and elm-test.
+// Removing just the compiler’s directory, like elm-stuff/0.19.1/ (or
+// elm-stuff/lamdera-1.5.0-0.19.3/ for Lamdera), is enough to get rid of a
+// corrupt cache. That preserves files from other tools in elm-stuff/, like
+// elm-watch, elm-review and elm-test.
 function isElmStuffCompilerDir(absolutePath: AbsolutePath): boolean {
   return (
     path.basename(path.dirname(absolutePath)) === "elm-stuff" &&
-    /^\d+\.\d+\.\d+$/.test(path.basename(absolutePath))
+    /^(?:lamdera-\d+\.\d+\.\d+-)?\d+\.\d+\.\d+$/.test(
+      path.basename(absolutePath),
+    )
   );
 }
 

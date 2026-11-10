@@ -19,7 +19,11 @@ import {
 import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
 import { DEFAULT_HOST, getHostFromEnv, type Host } from "./Host.ts";
 import type { WalkImportsError } from "./ImportWalker.ts";
-import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
+import {
+  isNonEmptyArray,
+  mapNonEmptyArray,
+  type NonEmptyArray,
+} from "./NonEmptyArray.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
@@ -34,6 +38,7 @@ import type { RunElmMakeError } from "./SpawnElm.ts";
 import {
   type AbsolutePath,
   type CompilationMode,
+  type Compiler,
   type ElmJsonPath,
   type ElmWatchStuffDir,
   type ElmWatchStuffJsonPath,
@@ -66,6 +71,8 @@ export type Project = {
   elmJsons: Map<ElmJsonPath, Array<[OutputPath, OutputState]>>;
   // There can only be one package target per elm.json.
   packages: Map<ElmJsonPath, [PackageTarget, PackageState]>;
+  // All targets using the same elm.json use the same compiler.
+  compilers: Map<ElmJsonPath, Compiler>;
   maxParallel: number;
   host: Host;
   webSocketUrl: WebSocketUrl | undefined;
@@ -367,6 +374,16 @@ type InitProjectResult =
       }>;
     }
   | {
+      tag: "ConflictingCompilers";
+      conflictingCompilers: NonEmptyArray<{
+        elmJsonPath: ElmJsonPath;
+        usages: NonEmptyArray<{
+          compiler: Compiler;
+          targetName: TargetName;
+        }>;
+      }>;
+    }
+  | {
       tag: "Project";
       project: Project;
     };
@@ -401,7 +418,11 @@ export function initProject({
   >();
   const elmJsonUsages = new Map<
     ElmJsonPath,
-    NonEmptyArray<{ type: ElmJson.ElmJsonType; targetName: TargetName }>
+    NonEmptyArray<{
+      type: ElmJson.ElmJsonType;
+      compiler: Compiler;
+      targetName: TargetName;
+    }>
   >();
 
   for (const [index, target] of config.targets.entries()) {
@@ -413,7 +434,7 @@ export function initProject({
       target.name.includes(substring),
     );
 
-    const usage = { type: target.type, targetName };
+    const usage = { type: target.type, compiler: target.compiler, targetName };
     const previousUsages = elmJsonUsages.get(elmJsonPath);
     if (previousUsages === undefined) {
       elmJsonUsages.set(elmJsonPath, [usage]);
@@ -543,6 +564,35 @@ export function initProject({
     };
   }
 
+  const conflictingCompilers = Array.from(elmJsonUsages).flatMap(
+    ([elmJsonPath, usages]) =>
+      usages.some(({ compiler }) => compiler !== usages[0].compiler)
+        ? [
+            {
+              elmJsonPath,
+              usages: mapNonEmptyArray(usages, ({ compiler, targetName }) => ({
+                compiler,
+                targetName,
+              })),
+            },
+          ]
+        : [],
+  );
+
+  if (isNonEmptyArray(conflictingCompilers)) {
+    return {
+      tag: "ConflictingCompilers",
+      conflictingCompilers,
+    };
+  }
+
+  const compilers = new Map(
+    Array.from(elmJsonUsages, ([elmJsonPath, usages]) => [
+      elmJsonPath,
+      usages[0].compiler,
+    ]),
+  );
+
   const duplicateOutputs = Array.from(potentialOutputDuplicates)
     .filter(([, outputPaths]) => outputPaths.length >= 2)
     .map(([absolutePath, originalOutputPathStrings]) => ({
@@ -629,6 +679,7 @@ export function initProject({
       targetsErrors,
       elmJsons,
       packages,
+      compilers,
       maxParallel,
       host,
       webSocketUrl,

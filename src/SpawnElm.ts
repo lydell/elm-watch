@@ -15,6 +15,7 @@ import {
 import type {
   AbsolutePath,
   CompilationMode,
+  Compiler,
   ElmJsonPath,
   GetNow,
   InputPath,
@@ -68,6 +69,7 @@ type LocalOutputPath =
     });
 
 export function make({
+  compiler,
   elmJsonPath,
   compilationMode,
   inputs,
@@ -75,6 +77,7 @@ export function make({
   env,
   getNow,
 }: {
+  compiler: Compiler;
   elmJsonPath: ElmJsonPath;
   compilationMode: CompilationMode;
   // Empty for packages: `elm make` without inputs typechecks the package.
@@ -88,7 +91,7 @@ export function make({
 } {
   const cwd = absoluteDirname(elmJsonPath);
   const command: Command = {
-    command: "elm",
+    command: compiler,
     args: [
       "make",
       "--report=json",
@@ -348,10 +351,12 @@ const elmStuffErrorMessagePrefixRegex =
 const nonExistentFile = "elm.json/ElmWatchNonExistentFile.elm";
 
 export function install({
+  compiler,
   elmJsonPath,
   env,
   getNow,
 }: {
+  compiler: Compiler;
   elmJsonPath: ElmJsonPath;
   env: Env;
   getNow: GetNow;
@@ -360,7 +365,7 @@ export function install({
   kill: (options: { force: boolean }) => void;
 } {
   const command: Command = {
-    command: "elm",
+    command: compiler,
     // Don’t use `--report=json` here, because then Elm won’t print downloading
     // of packages. We unfortunately lose colors this way, but package download
     // errors aren’t very colorful anyway.

@@ -36,6 +36,11 @@ export const CompilationMode = Codec.primitiveUnion([
   "optimize",
 ]);
 
+// The Lamdera compiler can compile vanilla Elm apps too, with Lamdera’s
+// improvements (such as `Elm.hot`).
+export type Compiler = Codec.Infer<typeof Compiler>;
+export const Compiler = Codec.primitiveUnion(["elm", "lamdera"]);
+
 export type CompilationModeWithProxy = CompilationMode | "proxy";
 
 // If the user has enabled the simple static file server.

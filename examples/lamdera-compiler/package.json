@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "example-lamdera-compiler",
+  "scripts": {
+    "start": "elm-watch hot",
+    "build": "elm-watch make --optimize"
+  },
+  "devDependencies": {
+    "elm-format": "0.8.8",
+    "elm-watch": "file:../../build",
+    "lamdera": "0.19.3-1.5.0"
+  },
+  "allowScripts": {
+    "elm-format": true,
+    "lamdera": true
+  }
+}

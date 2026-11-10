@@ -192,6 +192,9 @@ type SharedRunOptions = {
   // CLI with `args`. The fixture’s postprocess.js is used for all targets.
   // Pass an object to add extra options.
   useElmWatchFunction?: boolean | Record<string, unknown>;
+  // Set `compiler` on all targets. Implies `useElmWatchFunction`, since the
+  // fixtures’ elm-watch.json files are shared with tests using `elm`.
+  compiler?: "lamdera";
 };
 
 export async function run({
@@ -212,6 +215,7 @@ export async function run({
   simulateHttpCacheOnReload = false,
   stdin = new SilentReadStream(),
   useElmWatchFunction = false,
+  compiler,
 }: SharedRunOptions & {
   fixture: string;
   scripts: Array<string>;
@@ -257,12 +261,15 @@ export async function run({
   stderr.isTTY = isTTY;
 
   const elmWatchOptions =
-    useElmWatchFunction === false
+    useElmWatchFunction === false && compiler === undefined
       ? undefined
-      : {
-          ...(await fixtureOptions(path.join(dir, cwd))),
-          ...(useElmWatchFunction === true ? {} : useElmWatchFunction),
-        };
+      : await fixtureOptions(path.join(dir, cwd)).then(({ root, targets }) => ({
+          root,
+          targets: targets.map((target) => ({ ...target, compiler })),
+          ...(typeof useElmWatchFunction === "object"
+            ? useElmWatchFunction
+            : {}),
+        }));
 
   const bodyIndex = bodyCounter + 2; // head + original body
   const body = document.createElement("body");

@@ -6,6 +6,7 @@ import type {
   Cwd,
   AbsolutePath,
   CompilationMode,
+  Compiler,
   ElmWatchJsonPath,
   RunMode,
 } from "./Types.ts";
@@ -42,6 +43,7 @@ export type Target =
       name: string;
       // Relative to `root`.
       elmJson: string;
+      compiler: Compiler;
       inputs: NonEmptyArray<string>;
       output: string;
       postprocess: PostprocessFunction | undefined;
@@ -52,6 +54,7 @@ export type Target =
       name: string;
       // Relative to `root`.
       elmJson: string;
+      compiler: Compiler;
     };
 
 // The return value is ignored, except that a returned promise is awaited.

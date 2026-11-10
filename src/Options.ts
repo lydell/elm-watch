@@ -20,6 +20,7 @@ import { Port } from "./Port.ts";
 import {
   type AbsolutePath,
   CompilationMode,
+  Compiler,
   markAsAbsolutePath,
   type RunMode,
 } from "./Types.ts";
@@ -79,6 +80,7 @@ const Target = Codec.taggedUnion(
       type: Codec.tag("application"),
       name: TargetName,
       elmJson: ElmJsonPathString,
+      compiler: optionalField(Compiler),
       inputs: Inputs,
       output: Output,
       postprocess: optionalField(functionCodec<PostprocessFunction>()),
@@ -87,6 +89,7 @@ const Target = Codec.taggedUnion(
       type: Codec.tag("package"),
       name: TargetName,
       elmJson: ElmJsonPathString,
+      compiler: optionalField(Compiler),
     },
   ],
   { allowExtraFields: false },
@@ -194,6 +197,7 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
                   type: target.type,
                   name: target.name,
                   elmJson: target.elmJson,
+                  compiler: target.compiler ?? "elm",
                   inputs: target.inputs,
                   output: target.output,
                   postprocess: target.postprocess,
@@ -203,6 +207,7 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
                   type: target.type,
                   name: target.name,
                   elmJson: target.elmJson,
+                  compiler: target.compiler ?? "elm",
                 };
             }
           }) as NonEmptyArray<Config["targets"][number]>,

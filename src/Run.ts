@@ -279,11 +279,17 @@ export async function runConfig({
           }
 
         case "NonUniquePackageElmJsons":
+        case "ConflictingCompilers":
           logger.errorTemplate(
-            Errors.nonUniquePackageElmJsons(
-              config.source,
-              initProjectResult.nonUniquePackageElmJsons,
-            ),
+            initProjectResult.tag === "NonUniquePackageElmJsons"
+              ? Errors.nonUniquePackageElmJsons(
+                  config.source,
+                  initProjectResult.nonUniquePackageElmJsons,
+                )
+              : Errors.conflictingCompilers(
+                  config.source,
+                  initProjectResult.conflictingCompilers,
+                ),
           );
           switch (config.source.tag) {
             case "ElmWatchJson":

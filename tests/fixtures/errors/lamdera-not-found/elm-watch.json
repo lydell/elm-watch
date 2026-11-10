@@ -1,0 +1,11 @@
+{
+  "targets": {
+    "app": {
+      "type": "application",
+      "elmJson": "elm.json",
+      "compiler": "lamdera",
+      "inputs": ["src/App.elm"],
+      "output": "build/app.js"
+    }
+  }
+}
