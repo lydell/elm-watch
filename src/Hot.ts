@@ -76,6 +76,7 @@ import {
 } from "./Types.ts";
 import * as Watcher from "./Watcher.ts";
 import type {
+  OutputRequest,
   WebSocketConnection,
   WebSocketConnectionRejectedReason,
   WebSocketServer,
@@ -1641,7 +1642,7 @@ const runCmd =
           project: mutable.project,
           runMode: "hot",
           includeInterrupted: cmd.includeInterrupted,
-          prioritizedOutputs: makePrioritizedOutputs(mutable),
+          prioritizedOutputs: getPrioritizedOutputs(mutable),
         });
 
         switch (cmd.mode) {
@@ -1683,7 +1684,7 @@ const runCmd =
                 dispatch({
                   tag: "CompilationPartDone",
                   date: getNow(),
-                  prioritizedOutputs: makePrioritizedOutputs(mutable),
+                  prioritizedOutputs: getPrioritizedOutputs(mutable),
                   handleOutputActionResult,
                 });
               })
@@ -1693,7 +1694,7 @@ const runCmd =
           dispatch({
             tag: "CompilationPartDone",
             date: getNow(),
-            prioritizedOutputs: makePrioritizedOutputs(mutable),
+            prioritizedOutputs: getPrioritizedOutputs(mutable),
             handleOutputActionResult: { tag: "Nothing" },
           });
         }
@@ -1866,7 +1867,7 @@ const runCmd =
         let selection = ErrorSelection.reconcile(
           errorView.selection,
           targets,
-          makePrioritizedOutputs(mutable),
+          getPrioritizedOutputs(mutable),
         );
         for (const key of cmd.keys) {
           switch (key) {
@@ -2282,21 +2283,33 @@ function closeAll(logger: Logger, mutable: Mutable): void {
   mutable.watcher.close();
 }
 
-function makePrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
+function getPrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
+  return makePrioritizedOutputs(
+    mutable.project,
+    mutable.webSocketServer.getConnections(),
+    mutable.webSocketServer.getOutputRequests(),
+  );
+}
+
+// Outputs with web sockets or output requests are fully compiled (not just
+// typechecked), most recently connected, focused or requested first.
+// Exported for tests.
+export function makePrioritizedOutputs(
+  project: Project,
+  connections: Iterable<Pick<WebSocketConnection, "urlParams" | "priority">>,
+  outputRequests: Iterable<Pick<OutputRequest, "targetName" | "priority">>,
+): Map<TargetName, number> {
   const map = new Map<TargetName, number>();
   const add = (targetName: TargetName, priority: number): void => {
     map.set(targetName, Math.max(priority, map.get(targetName) ?? 0));
   };
-  for (const connection of mutable.webSocketServer.getConnections()) {
-    const outputPath = getConnectionOutputPath(mutable.project, connection);
+  for (const connection of connections) {
+    const outputPath = getConnectionOutputPath(project, connection);
     if (outputPath.tag !== "OutputPathError") {
       add(outputPath.targetName, connection.priority);
     }
   }
-  for (const {
-    targetName,
-    priority,
-  } of mutable.webSocketServer.getOutputRequests()) {
+  for (const { targetName, priority } of outputRequests) {
     add(targetName, priority);
   }
   return map;
@@ -2417,7 +2430,7 @@ function getAllElmJsonPaths(project: Project): Array<ElmJsonPath> {
 // connected during a previous run.
 function getConnectionOutputPath(
   project: Project,
-  connection: WebSocketConnection,
+  connection: Pick<WebSocketConnection, "urlParams">,
 ): OutputPath | OutputPathError {
   return webSocketConnectRequestUrlResultToOutputPath(
     parseWebSocketConnectRequestUrl(project, connection.urlParams),
@@ -3500,7 +3513,7 @@ function renderErrorView(
   errorView.selection = ErrorSelection.reconcile(
     errorView.selection,
     targets,
-    makePrioritizedOutputs(mutable),
+    getPrioritizedOutputs(mutable),
   );
   const { selection } = errorView;
   const highlightSelected =
