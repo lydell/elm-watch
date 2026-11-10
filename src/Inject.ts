@@ -1019,7 +1019,14 @@ function injectElmHotInitCmds(newCode: string): string {
 const ELM_HOT_PROGRAM_TYPES: Record<string, string> = {
   _Platform_worker: `'Platform.worker'`,
   _VirtualDom_init: `'Html'`,
-  // `Browser.sandbox` also uses these, and can’t be told apart from `Browser.element`.
+  // `Browser.sandbox` also uses these, so with `Elm.hot` it is reported as
+  // `Browser.element`. (Without `Elm.hot`, elm-watch replaces
+  // `$elm$browser$Browser$sandbox` to tell them apart, but here we avoid
+  // replacing functions.) That’s fine: A sandbox _is_ an element at runtime,
+  // so switching between them is a compatible change for hot reloading (the
+  // flags, `init` and debug metadata checks still apply), and both support the
+  // debugger. It only means that “program type changed” never triggers between
+  // the two. See “Change program type” in HotReloadingElmHot.test.ts.
   _Browser_element: `'Browser.element'`,
   _Debugger_element: `'Browser.element'`,
   _Browser_document: `impl.%setup% ? 'Browser.application' : 'Browser.document'`,
