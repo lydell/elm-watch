@@ -29,6 +29,7 @@ import {
   type RunMode,
   type WebSocketToken,
 } from "./Types.ts";
+import type { WebSocketServer } from "./WebSocketServer.ts";
 
 export type RunResult =
   | {
@@ -38,7 +39,7 @@ export type RunResult =
   | {
       tag: "Restart";
       restartReasons: Array<Hot.LatestEvent>;
-      webSocketState: Hot.WebSocketState | undefined;
+      webSocketServer: WebSocketServer | undefined;
       webSocketToken: WebSocketToken | undefined;
       errorViewState: ErrorViewState | undefined;
     };
@@ -52,7 +53,7 @@ export async function run(
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.LatestEvent>,
-  webSocketState: Hot.WebSocketState | undefined,
+  webSocketServer: WebSocketServer | undefined,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
   errorViewState: ErrorViewState | undefined,
   hotTestHooks: Hot.HotTestHooks,
@@ -155,7 +156,7 @@ export async function run(
             targetsSubstrings: parseArgsResult.targetsSubstrings,
             config,
             restartReasons,
-            webSocketState,
+            webSocketServer,
             webSocketTokenFromPreviousRun,
             errorViewState,
             signal: undefined,
@@ -177,7 +178,7 @@ export async function runConfig({
   targetsSubstrings,
   config,
   restartReasons,
-  webSocketState,
+  webSocketServer,
   webSocketTokenFromPreviousRun,
   errorViewState,
   signal,
@@ -192,7 +193,7 @@ export async function runConfig({
   targetsSubstrings: Array<string>;
   config: Config;
   restartReasons: Array<Hot.LatestEvent>;
-  webSocketState: Hot.WebSocketState | undefined;
+  webSocketServer: WebSocketServer | undefined;
   webSocketTokenFromPreviousRun: WebSocketToken | undefined;
   errorViewState: ErrorViewState | undefined;
   signal: AbortSignal | undefined;
@@ -321,7 +322,7 @@ export async function runConfig({
                 getNow,
                 createServer,
                 restartReasons,
-                webSocketState,
+                webSocketServer,
                 elmWatchStuffJson?.webSocketToken ??
                   webSocketTokenFromPreviousRun ??
                   markAsWebSocketToken(crypto.randomUUID()),
@@ -387,7 +388,7 @@ async function handleElmWatchJsonError(
       return {
         tag: "Restart",
         restartReasons: [{ ...elmWatchJsonEvent, affectsAnyTarget: true }],
-        webSocketState: undefined,
+        webSocketServer: undefined,
         webSocketToken: webSocketTokenFromPreviousRun,
         errorViewState,
       };

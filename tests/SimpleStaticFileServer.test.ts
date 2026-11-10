@@ -74,20 +74,22 @@ async function withServer(
   fs.mkdirSync(dir);
   try {
     setup(dir);
-    const server = new WebSocketServer(
-      ({ onRequest, onUpgrade }) =>
+    const server = new WebSocketServer({
+      createServer: ({ onRequest, onUpgrade }) =>
         http.createServer(onRequest).on("upgrade", onUpgrade),
-      { tag: "NoPort" },
-      markAsHost("127.0.0.1"),
-      staticFilesDir === null
-        ? undefined
-        : markAsStaticFilesDir(
-            markAsAbsolutePath(path.join(tmpDir, staticFilesDir)),
-          ),
-      markAsWebSocketToken("token"),
-      [],
+      getNow: () => new Date(),
+      portChoice: { tag: "NoPort" },
+      host: markAsHost("127.0.0.1"),
+      staticFilesDirectory:
+        staticFilesDir === null
+          ? undefined
+          : markAsStaticFilesDir(
+              markAsAbsolutePath(path.join(tmpDir, staticFilesDir)),
+            ),
+      webSocketToken: markAsWebSocketToken("token"),
+      allowedHosts: [],
       configSource,
-    );
+    });
     try {
       await server.listening;
       await f(makeGet(server.port, tmpDir), server.port);

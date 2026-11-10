@@ -11,12 +11,25 @@ import { markAsWebSocketToken } from "../src/Types.ts";
 import {
   WebSocketServer,
   type WebSocketServerMsg,
+  type WebSocketServerOptions,
 } from "../src/WebSocketServer.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 const TOKEN = "token";
+
+const OPTIONS: WebSocketServerOptions = {
+  createServer: ({ onRequest, onUpgrade }) =>
+    http.createServer(onRequest).on("upgrade", onUpgrade),
+  getNow: () => new Date(),
+  portChoice: { tag: "NoPort" },
+  host: markAsHost("127.0.0.1"),
+  staticFilesDirectory: undefined,
+  webSocketToken: markAsWebSocketToken(TOKEN),
+  allowedHosts: [],
+  configSource: { tag: "Options" },
+};
 
 async function withServer(
   allowedHosts: Array<string>,
@@ -26,22 +39,16 @@ async function withServer(
     rejections: Array<unknown>;
   }) => Promise<void>,
 ): Promise<void> {
-  const server = new WebSocketServer(
-    ({ onRequest, onUpgrade }) =>
-      http.createServer(onRequest).on("upgrade", onUpgrade),
-    { tag: "NoPort" },
-    markAsHost("127.0.0.1"),
-    undefined,
-    markAsWebSocketToken(TOKEN),
-    allowedHosts.map((host) => {
+  const server = new WebSocketServer({
+    ...OPTIONS,
+    allowedHosts: allowedHosts.map((host) => {
       const result = AllowedHost.decoder(host);
       if (result.tag === "DecoderError") {
         throw new Error(`Invalid allowed host: ${host}`);
       }
       return result.value;
     }),
-    { tag: "Options" },
-  );
+  });
   const rejections: Array<unknown> = [];
   server.setDispatch((msg: WebSocketServerMsg) => {
     switch (msg.tag) {
@@ -49,7 +56,7 @@ async function withServer(
         rejections.push(msg);
         return;
       case "WebSocketConnected":
-        msg.webSocket.close();
+        msg.connection.webSocket.close();
         return;
       default:
         return;
@@ -127,18 +134,17 @@ describe("WebSocketServer", () => {
     let isAllowedHost:
       | ((request: http.IncomingMessage) => boolean)
       | undefined = undefined;
-    const server = new WebSocketServer(
-      ({ onRequest, onUpgrade, isAllowedHost: givenIsAllowedHost }) => {
+    const server = new WebSocketServer({
+      ...OPTIONS,
+      createServer: ({
+        onRequest,
+        onUpgrade,
+        isAllowedHost: givenIsAllowedHost,
+      }) => {
         isAllowedHost = givenIsAllowedHost;
         return http.createServer(onRequest).on("upgrade", onUpgrade);
       },
-      { tag: "NoPort" },
-      markAsHost("127.0.0.1"),
-      undefined,
-      markAsWebSocketToken(TOKEN),
-      [],
-      { tag: "Options" },
-    );
+    });
     server.setDispatch(() => {
       // Do nothing.
     });
@@ -228,16 +234,7 @@ describe("WebSocketServer", () => {
   });
 
   test("messages received while dispatch is unset are queued and replayed", async () => {
-    const server = new WebSocketServer(
-      ({ onRequest, onUpgrade }) =>
-        http.createServer(onRequest).on("upgrade", onUpgrade),
-      { tag: "NoPort" },
-      markAsHost("127.0.0.1"),
-      undefined,
-      markAsWebSocketToken(TOKEN),
-      [],
-      { tag: "Options" },
-    );
+    const server = new WebSocketServer(OPTIONS);
 
     const log: Array<string> = [];
     const describeMsg = (msg: WebSocketServerMsg): string =>
@@ -331,16 +328,10 @@ describe("WebSocketServer", () => {
     }
 
     function createServer(port: number): WebSocketServer {
-      return new WebSocketServer(
-        ({ onRequest, onUpgrade }) =>
-          http.createServer(onRequest).on("upgrade", onUpgrade),
-        { tag: "PortFromConfig", port: markAsPort(port) },
-        markAsHost("127.0.0.1"),
-        undefined,
-        markAsWebSocketToken(TOKEN),
-        [],
-        { tag: "Options" },
-      );
+      return new WebSocketServer({
+        ...OPTIONS,
+        portChoice: { tag: "PortFromConfig", port: markAsPort(port) },
+      });
     }
 
     // On macOS, listening on 127.0.0.1 succeeds even if another program

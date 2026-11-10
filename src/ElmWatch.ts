@@ -93,7 +93,7 @@ export default async function elmWatchCli(
           runMode,
           restArgs,
           previous.restartReasons,
-          previous.webSocketState,
+          previous.webSocketServer,
           previous.webSocketToken,
           previous.errorViewState,
           hotTestHooks,
@@ -156,7 +156,7 @@ export async function elmWatch(options: unknown): Promise<number> {
           targetsSubstrings: [],
           config: decoded.config,
           restartReasons: previous.restartReasons,
-          webSocketState: previous.webSocketState,
+          webSocketServer: previous.webSocketServer,
           webSocketTokenFromPreviousRun: previous.webSocketToken,
           errorViewState: previous.errorViewState,
           signal,
@@ -178,7 +178,7 @@ async function runUntilExit(
     const doIt = async (): Promise<number> => {
       let previous: PreviousRun = {
         restartReasons: [],
-        webSocketState: undefined,
+        webSocketServer: undefined,
         webSocketToken: undefined,
         errorViewState: undefined,
       };

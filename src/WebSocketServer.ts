@@ -19,13 +19,28 @@ import { toError } from "./Helpers.ts";
 import type { Host } from "./Host.ts";
 import { markAsPort, type Port, type PortChoice } from "./Port.ts";
 import * as SimpleStaticFileServer from "./SimpleStaticFileServer.ts";
-import type { AbsolutePath, CreateServer, StaticFilesDir } from "./Types.ts";
-import type { WebSocketToken } from "./Types.ts";
+import type {
+  AbsolutePath,
+  CreateServer,
+  GetNow,
+  StaticFilesDir,
+  WebSocketToken,
+} from "./Types.ts";
 
 // We used to require `/?`. Putting “elm-watch” in the path is useful for people
 // running elm-watch behind a proxy: They can use the same port for both the web
 // site and elm-watch, and direct traffic by path matching.
 const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
+
+// The server keeps track of the open web sockets, since it outlives each run of
+// Hot (it is kept when restarting).
+export type WebSocketConnection = {
+  webSocket: WebSocket;
+  urlParams: URLSearchParams;
+  // When the web socket connected, or when its tab was last focused. Outputs
+  // with recently connected or focused web sockets are compiled first.
+  priority: number;
+};
 
 export type WebSocketServerMsg =
   | {
@@ -36,13 +51,8 @@ export type WebSocketServerMsg =
       serveStatic: () => void;
     }
   | {
-      tag: "WebSocketClosed";
-      webSocket: WebSocket;
-    }
-  | {
       tag: "WebSocketConnected";
-      webSocket: WebSocket;
-      urlParams: URLSearchParams;
+      connection: WebSocketConnection;
     }
   | {
       tag: "WebSocketConnectionRejected";
@@ -51,7 +61,7 @@ export type WebSocketServerMsg =
     }
   | {
       tag: "WebSocketMessageReceived";
-      webSocket: WebSocket;
+      connection: WebSocketConnection;
       data: WebSocket.Data;
     }
   | {
@@ -93,6 +103,17 @@ export type WebSocketConnectionRejectedReason =
       tag: "WrongToken";
     };
 
+export type WebSocketServerOptions = {
+  createServer: CreateServer;
+  getNow: GetNow;
+  portChoice: PortChoice;
+  host: Host;
+  staticFilesDirectory: StaticFilesDir | undefined;
+  webSocketToken: WebSocketToken;
+  allowedHosts: ReadonlyArray<AllowedHost>;
+  configSource: ConfigSource;
+};
+
 export class WebSocketServer {
   private polyHttpServer: ReturnType<CreateServer>;
 
@@ -101,9 +122,13 @@ export class WebSocketServer {
   private webSocketServer = new WsServer({
     noServer: true,
     maxPayload: 1024 * 1024,
+    // We keep track of the connections ourselves (see `connections`).
+    clientTracking: false,
   });
 
   private sockets = new Set<Duplex>();
+
+  private connections = new Set<WebSocketConnection>();
 
   isHTTPS: boolean;
 
@@ -123,15 +148,16 @@ export class WebSocketServer {
 
   private closed = false;
 
-  constructor(
-    createServer: CreateServer,
-    portChoice: PortChoice,
-    host: Host,
-    staticFilesDirectory: StaticFilesDir | undefined,
-    webSocketToken: WebSocketToken,
-    allowedHosts: ReadonlyArray<AllowedHost>,
-    configSource: ConfigSource,
-  ) {
+  constructor({
+    createServer,
+    getNow,
+    portChoice,
+    host,
+    staticFilesDirectory,
+    webSocketToken,
+    allowedHosts,
+    configSource,
+  }: WebSocketServerOptions) {
     this.polyHttpServer = createServer({
       isAllowedHost: (request) =>
         checkHostHeader(allowedHosts, request.headers.host).tag === "Allowed",
@@ -262,22 +288,25 @@ export class WebSocketServer {
             )[util.inspect.custom] = (_depth, options) =>
               options.stylize("WebSocket", "special");
 
-            this.dispatch({
-              tag: "WebSocketConnected",
+            const connection: WebSocketConnection = {
               webSocket,
               urlParams,
-            });
+              priority: getNow().getTime(),
+            };
+            this.connections.add(connection);
+
+            this.dispatch({ tag: "WebSocketConnected", connection });
 
             webSocket.on("message", (data) => {
               this.dispatch({
                 tag: "WebSocketMessageReceived",
-                webSocket,
+                connection,
                 data,
               });
             });
 
             webSocket.on("close", () => {
-              this.dispatch({ tag: "WebSocketClosed", webSocket });
+              this.connections.delete(connection);
             });
 
             // Errors for a single web socket (such as a client sending an
@@ -347,6 +376,10 @@ export class WebSocketServer {
     } else {
       this.polyHttpServer.listen(port, host);
     }
+  }
+
+  getConnections(): ReadonlySet<WebSocketConnection> {
+    return this.connections;
   }
 
   dispatchToQueue = (msg: WebSocketServerMsg): void => {

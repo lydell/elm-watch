@@ -77,6 +77,7 @@ import {
 } from "./Types.ts";
 import * as Watcher from "./Watcher.ts";
 import {
+  type WebSocketConnection,
   type WebSocketConnectionRejectedReason,
   WebSocketServer,
   type WebSocketServerMsg,
@@ -135,7 +136,6 @@ export type LatestEvent =
 type Mutable = {
   watcher: Watcher.Watcher;
   webSocketServer: WebSocketServer;
-  webSocketConnections: Array<WebSocketConnection>;
   outputRequests: Array<OutputRequest>;
   project: Project;
   lastInfoMessage: string | undefined;
@@ -147,12 +147,6 @@ type Mutable = {
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
   unsubscribeFromGracefulExit: () => void;
-};
-
-type WebSocketConnection = {
-  webSocket: WebSocket;
-  outputPath: OutputPath | OutputPathError;
-  priority: number;
 };
 
 // An HTTP request for an output that waits for the output to be compiled.
@@ -234,7 +228,7 @@ export type Msg =
       tag: "WebSocketMessageReceived";
       date: Date;
       output: WebSocketMessageReceivedOutput;
-      webSocket: WebSocket;
+      connection: WebSocketConnection;
       data: WebSocket.Data;
     };
 
@@ -384,7 +378,7 @@ export type Cmd =
     }
   | {
       tag: "WebSocketUpdatePriority";
-      webSocket: WebSocket;
+      connection: WebSocketConnection;
     };
 
 type HotRunResult =
@@ -399,15 +393,10 @@ type HotRunResult =
   | {
       tag: "Restart";
       restartReasons: Array<LatestEvent>;
-      webSocketState: WebSocketState | undefined;
+      webSocketServer: WebSocketServer | undefined;
       webSocketToken: WebSocketToken;
       errorViewState: ErrorView.ErrorViewState;
     };
-
-export type WebSocketState = {
-  webSocketServer: WebSocketServer;
-  webSocketConnections: Array<WebSocketConnection>;
-};
 
 // This is only used in tests.
 export type HotTestHooks = {
@@ -446,7 +435,8 @@ export async function run(
   getNow: GetNow,
   createServer: CreateServer,
   restartReasons: Array<LatestEvent>,
-  webSocketState: WebSocketState | undefined,
+  // Kept between restarts, unless elm-watch.json changed.
+  previousWebSocketServer: WebSocketServer | undefined,
   webSocketToken: WebSocketToken,
   // Keep the error view selection (and show all toggle) across restarts.
   errorViewState: ErrorView.ErrorViewState | undefined,
@@ -466,7 +456,7 @@ export async function run(
       logger,
       getNow,
       createServer,
-      webSocketState,
+      previousWebSocketServer,
       webSocketToken,
       errorViewState,
       project,
@@ -578,7 +568,7 @@ const initMutable =
     logger: Logger,
     getNow: GetNow,
     createServer: CreateServer,
-    webSocketState: WebSocketState | undefined,
+    previousWebSocketServer: WebSocketServer | undefined,
     webSocketToken: WebSocketToken,
     errorViewState: ErrorView.ErrorViewState | undefined,
     project: Project,
@@ -627,23 +617,22 @@ const initMutable =
       hotTestHooks.flushWatcher = watcherProbe.flush;
     }
 
-    const {
-      webSocketServer = new WebSocketServer(
+    const webSocketServer =
+      previousWebSocketServer ??
+      new WebSocketServer({
         createServer,
+        getNow,
         portChoice,
-        project.host,
-        project.staticFilesDir,
+        host: project.host,
+        staticFilesDirectory: project.staticFilesDir,
         webSocketToken,
-        project.allowedHosts,
-        project.configSource,
-      ),
-      webSocketConnections = [],
-    } = webSocketState ?? {};
+        allowedHosts: project.allowedHosts,
+        configSource: project.configSource,
+      });
 
     const mutable: Mutable = {
       watcher,
       webSocketServer,
-      webSocketConnections,
       outputRequests: [],
       project,
       lastInfoMessage: undefined,
@@ -690,7 +679,7 @@ const initMutable =
         // are always 0 at that time).
         // This has to be done once the server is ready – we don’t know the
         // final port number to print until then.
-        const isRestart = webSocketState !== undefined;
+        const isRestart = previousWebSocketServer !== undefined;
         if (!logger.config.isTTY && !isRestart) {
           logger.write(
             printServerLine(
@@ -1232,7 +1221,7 @@ export function update(
           return onWebSocketToServerMessage(
             model,
             msg.output,
-            msg.webSocket,
+            msg.connection,
             result.message,
           );
 
@@ -1242,7 +1231,7 @@ export function update(
             [
               {
                 tag: "WebSocketSend",
-                webSocket: msg.webSocket,
+                webSocket: msg.connection.webSocket,
                 message: {
                   tag: "StatusChanged",
                   status: {
@@ -1852,17 +1841,13 @@ const runCmd =
           if ("kill" in outputState.status) {
             outputState.status.kill({ force: false });
           }
-          webSocketSendToOutput(
-            outputPath,
-            {
-              tag: "StatusChanged",
-              status: {
-                tag: "Busy",
-                compilationMode: outputState.compilationMode,
-              },
+          webSocketSendToOutput(mutable, outputPath, {
+            tag: "StatusChanged",
+            status: {
+              tag: "Busy",
+              compilationMode: outputState.compilationMode,
             },
-            mutable.webSocketConnections,
-          );
+          });
         }
         for (const packageState of cmd.packages) {
           packageState.dirty = true;
@@ -2034,12 +2019,9 @@ const runCmd =
             resolvePromise({
               tag: "Restart",
               restartReasons: cmd.restartReasons,
-              webSocketState: elmWatchJsonChanged
+              webSocketServer: elmWatchJsonChanged
                 ? undefined
-                : {
-                    webSocketServer: mutable.webSocketServer,
-                    webSocketConnections: mutable.webSocketConnections,
-                  },
+                : mutable.webSocketServer,
               webSocketToken,
               errorViewState: mutable.errorView,
             });
@@ -2091,8 +2073,8 @@ const runCmd =
         return;
 
       case "WebSocketSendAll":
-        for (const webSocketConnection of mutable.webSocketConnections) {
-          webSocketSend(webSocketConnection.webSocket, cmd.message);
+        for (const { webSocket } of mutable.webSocketServer.getConnections()) {
+          webSocketSend(webSocket, cmd.message);
         }
         return;
 
@@ -2111,29 +2093,17 @@ const runCmd =
                 backgroundColor: theme.background,
               },
             };
-            webSocketSendToOutput(
-              cmd.outputPath,
-              message,
-              mutable.webSocketConnections,
-            );
+            webSocketSendToOutput(mutable, cmd.outputPath, message);
           })
           .catch(rejectPromise);
         return;
 
       case "WebSocketSendToOutput":
-        webSocketSendToOutput(
-          cmd.outputPath,
-          cmd.message,
-          mutable.webSocketConnections,
-        );
+        webSocketSendToOutput(mutable, cmd.outputPath, cmd.message);
         return;
 
       case "WebSocketUpdatePriority":
-        for (const webSocketConnection of mutable.webSocketConnections) {
-          if (webSocketConnection.webSocket === cmd.webSocket) {
-            webSocketConnection.priority = getNow().getTime();
-          }
-        }
+        cmd.connection.priority = getNow().getTime();
         return;
     }
   };
@@ -2181,25 +2151,17 @@ function onWebSocketServerMsg(
       return;
     }
 
-    case "WebSocketConnected": {
-      const result = parseWebSocketConnectRequestUrl(
-        mutable.project,
-        msg.urlParams,
-      );
-      const webSocketConnection: WebSocketConnection = {
-        webSocket: msg.webSocket,
-        outputPath: webSocketConnectRequestUrlResultToOutputPath(result),
-        priority: now.getTime(),
-      };
-      mutable.webSocketConnections.push(webSocketConnection);
+    case "WebSocketConnected":
       dispatch({
         tag: "WebSocketConnected",
         date: now,
-        parseWebSocketConnectRequestUrlResult: result,
-        webSocket: msg.webSocket,
+        parseWebSocketConnectRequestUrlResult: parseWebSocketConnectRequestUrl(
+          mutable.project,
+          msg.connection.urlParams,
+        ),
+        webSocket: msg.connection.webSocket,
       });
       return;
-    }
 
     case "WebSocketConnectionRejected":
       dispatch({
@@ -2210,43 +2172,24 @@ function onWebSocketServerMsg(
       });
       return;
 
-    // The browser shows its own connection status, so disconnects aren’t
-    // printed.
-    case "WebSocketClosed":
-      mutable.webSocketConnections = mutable.webSocketConnections.filter(
-        (connection) => connection.webSocket !== msg.webSocket,
-      );
-      return;
-
     case "WebSocketMessageReceived": {
-      const webSocketConnection = mutable.webSocketConnections.find(
-        ({ webSocket }) => webSocket === msg.webSocket,
+      const result = parseWebSocketConnectRequestUrl(
+        mutable.project,
+        msg.connection.urlParams,
       );
-
-      if (webSocketConnection === undefined) {
-        rejectPromise(
-          new Error(
-            `No web socket connection found for web socket message ${quote(
-              msg.tag,
-            )}`,
-          ),
-        );
-        return;
-      }
-
-      const flatOutputs = getFlatOutputs(mutable.project);
-      const output = flatOutputs.find(({ outputPath }) =>
-        webSocketConnectionIsForOutputPath(webSocketConnection, outputPath),
-      );
-
       dispatch({
         tag: "WebSocketMessageReceived",
         date: now,
         output:
-          output === undefined
-            ? { tag: "OutputPathError" }
-            : { tag: "Output", ...output },
-        webSocket: msg.webSocket,
+          result.tag === "Success"
+            ? {
+                tag: "Output",
+                elmJsonPath: result.elmJsonPath,
+                outputPath: result.outputPath,
+                outputState: result.outputState,
+              }
+            : { tag: "OutputPathError" },
+        connection: msg.connection,
         data: msg.data,
       });
       return;
@@ -2381,7 +2324,10 @@ async function closeAll(
 function makePrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
   const map = new Map<TargetName, number>();
   for (const { outputPath, priority } of [
-    ...mutable.webSocketConnections,
+    ...Array.from(mutable.webSocketServer.getConnections(), (connection) => ({
+      outputPath: getConnectionOutputPath(mutable.project, connection),
+      priority: connection.priority,
+    })),
     ...mutable.outputRequests,
   ]) {
     if (outputPath.tag !== "OutputPathError") {
@@ -2502,20 +2448,16 @@ function getAllElmJsonPaths(project: Project): Array<ElmJsonPath> {
   ];
 }
 
-function webSocketConnectionIsForOutputPath(
-  webSocketConnection: WebSocketConnection,
-  outputPath: OutputPath,
-): boolean {
-  switch (webSocketConnection.outputPath.tag) {
-    case "OutputPathError":
-      return false;
-
-    case "OutputPath":
-      return (
-        webSocketConnection.outputPath.theOutputPath ===
-        outputPath.theOutputPath
-      );
-  }
+// The output is derived from the current project every time, rather than
+// stored when the web socket connects, since the web socket might have
+// connected during a previous run.
+function getConnectionOutputPath(
+  project: Project,
+  connection: WebSocketConnection,
+): OutputPath | OutputPathError {
+  return webSocketConnectRequestUrlResultToOutputPath(
+    parseWebSocketConnectRequestUrl(project, connection.urlParams),
+  );
 }
 
 const WebSocketConnectedParams = Codec.fields(
@@ -2988,9 +2930,10 @@ function compileNextAction(nextAction: NextAction): NextAction {
 function onWebSocketToServerMessage(
   model: Model,
   output: WebSocketMessageReceivedOutput,
-  webSocket: WebSocket,
+  connection: WebSocketConnection,
   message: WebSocketToServerMessage,
 ): [Model, Array<Cmd>] {
+  const { webSocket } = connection;
   switch (message.tag) {
     case "ChangedCompilationMode":
       switch (output.tag) {
@@ -3032,7 +2975,7 @@ function onWebSocketToServerMessage(
       return [
         model,
         [
-          { tag: "WebSocketUpdatePriority", webSocket },
+          { tag: "WebSocketUpdatePriority", connection },
           {
             tag: "WebSocketSend",
             webSocket,
@@ -3065,13 +3008,20 @@ function webSocketSend(
 }
 
 function webSocketSendToOutput(
+  mutable: Mutable,
   outputPath: OutputPath,
   message: WebSocketToClientMessage,
-  webSocketConnections: Array<WebSocketConnection>,
 ): void {
-  for (const webSocketConnection of webSocketConnections) {
-    if (webSocketConnectionIsForOutputPath(webSocketConnection, outputPath)) {
-      webSocketSend(webSocketConnection.webSocket, message);
+  for (const connection of mutable.webSocketServer.getConnections()) {
+    const connectionOutputPath = getConnectionOutputPath(
+      mutable.project,
+      connection,
+    );
+    if (
+      connectionOutputPath.tag === "OutputPath" &&
+      connectionOutputPath.theOutputPath === outputPath.theOutputPath
+    ) {
+      webSocketSend(connection.webSocket, message);
     }
   }
 }
