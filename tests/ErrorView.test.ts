@@ -8,6 +8,7 @@ import {
   parseKeys,
   render,
 } from "../src/ErrorView.ts";
+import { removeColor } from "../src/Helpers.ts";
 import type { LoggerConfig } from "../src/Logger.ts";
 import {
   markAsAbsolutePath,
@@ -318,5 +319,26 @@ describe("render", () => {
     expect(keyHintsLine(only, targets)).toMatchInlineSnapshot(
       `"~[~~←~~→~~]~ ~error~   ~[~~↑~~↓~~]~ ~file~   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"`,
     );
+  });
+
+  test("key hints wrap between hints in narrow terminals", () => {
+    const targets = [
+      target("A", ["X.elm:1:a1", "Y.elm:1:a2"]),
+      target("B", ["X.elm:1:b1"]),
+    ];
+    const output = render({
+      loggerConfig: { ...loggerConfig, columns: 40 },
+      expanded: false,
+      selection: start(targets),
+      targets,
+      notice: undefined,
+      infoLine: undefined,
+    });
+    // The key hints are below the last blank line.
+    expect(removeColor(output.slice(output.lastIndexOf("\n\n") + 2)))
+      .toMatchInlineSnapshot(`
+      "[←→] error   [↑↓] file   [tab] target
+      [enter] open in editor   [a] show all"
+    `);
   });
 });

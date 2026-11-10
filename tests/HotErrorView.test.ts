@@ -473,8 +473,11 @@ describe("hot error view", () => {
     // Everything below the server line.
     const screen = (output: string): string =>
       clean(output).split("\n").slice(3).join("\n");
-    const lastLines = (output: string): string =>
-      clean(output).split("\n").slice(-3).join("\n");
+    // From the position line (the key hints can wrap to several lines).
+    const lastLines = (output: string): string => {
+      const cleaned = clean(output);
+      return cleaned.slice(cleaned.lastIndexOf("🚨 error"));
+    };
 
     await run({
       fixture: "error-view-collapse",
@@ -602,7 +605,8 @@ describe("hot error view", () => {
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
       🚨 error 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse   ⧙[⧘⧙a⧘⧙]⧘ show all
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse
+      ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 error 2/2
 
@@ -610,7 +614,8 @@ describe("hot error view", () => {
       ================================================================================
       🚨 error 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse   ⧙[⧘⧙a⧘⧙]⧘ show all
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse
+      ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">

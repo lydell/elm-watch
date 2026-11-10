@@ -10,7 +10,7 @@ import {
   type NavigationKey,
   type Selection,
 } from "./ErrorSelection.ts";
-import { bold, dim } from "./Helpers.ts";
+import { bold, dim, removeColor } from "./Helpers.ts";
 import type { LoggerConfig } from "./Logger.ts";
 import type { TargetName } from "./Types.ts";
 
@@ -117,7 +117,7 @@ export function render({
       ...infoLines,
       `${loggerConfig.fancy ? "✅ " : ""}${bold(selection.targetName)} has no errors.`,
       "",
-      keyHints([
+      keyHints(loggerConfig.columns, [
         hasOtherTargetsWithErrors
           ? ["tab", "next target with errors"]
           : undefined,
@@ -149,7 +149,7 @@ export function render({
     ...infoLines,
     `${loggerConfig.fancy ? "🚨 " : ""}${position}`,
     "",
-    keyHints([
+    keyHints(loggerConfig.columns, [
       [
         [
           ["←", errorNumber > 1],
@@ -192,7 +192,7 @@ export function renderShowAll({
     ...(infoLine === undefined ? [] : [infoLine]),
     `${loggerConfig.fancy ? "🚨 " : ""}${numErrors} error${numErrors === 1 ? "" : "s"}`,
     "",
-    keyHints([["a", "show one error at a time"]]),
+    keyHints(loggerConfig.columns, [["a", "show one error at a time"]]),
   ].join("\n");
 }
 
@@ -202,24 +202,50 @@ type HintKeys = string | Array<[key: string, enabled: boolean]>;
 // Styled like in run-pty: [key] label
 // Keys that don’t do anything right now are dimmed (and the label too, if none
 // of the keys do anything).
+// If the hints don’t fit on one line, they wrap between hints rather than in
+// the middle of one.
 function keyHints(
+  columns: number,
   hints: Array<[keys: HintKeys, label: string] | undefined>,
 ): string {
-  return hints
-    .flatMap((hint) => {
-      if (hint === undefined) {
-        return [];
-      }
-      const [keys, label] = hint;
-      const keysArray: Array<[string, boolean]> =
-        typeof keys === "string" ? [[keys, true]] : keys;
-      const styledKeys = keysArray
-        .map(([key, enabled]) => (enabled ? bold(key) : dim(key)))
-        .join("");
-      const anyEnabled = keysArray.some(([, enabled]) => enabled);
-      return [
-        `${dim("[")}${styledKeys}${dim("]")} ${anyEnabled ? label : dim(label)}`,
-      ];
-    })
-    .join("   ");
+  const separator = "   ";
+  const lines: Array<string> = [];
+  let line = "";
+  let lineWidth = 0;
+  for (const hint of renderKeyHints(hints)) {
+    const width = Array.from(removeColor(hint)).length;
+    if (line === "") {
+      line = hint;
+      lineWidth = width;
+    } else if (lineWidth + separator.length + width <= columns) {
+      line += separator + hint;
+      lineWidth += separator.length + width;
+    } else {
+      lines.push(line);
+      line = hint;
+      lineWidth = width;
+    }
+  }
+  lines.push(line);
+  return lines.join("\n");
+}
+
+function renderKeyHints(
+  hints: Array<[keys: HintKeys, label: string] | undefined>,
+): Array<string> {
+  return hints.flatMap((hint) => {
+    if (hint === undefined) {
+      return [];
+    }
+    const [keys, label] = hint;
+    const keysArray: Array<[string, boolean]> =
+      typeof keys === "string" ? [[keys, true]] : keys;
+    const styledKeys = keysArray
+      .map(([key, enabled]) => (enabled ? bold(key) : dim(key)))
+      .join("");
+    const anyEnabled = keysArray.some(([, enabled]) => enabled);
+    return [
+      `${dim("[")}${styledKeys}${dim("]")} ${anyEnabled ? label : dim(label)}`,
+    ];
+  });
 }
