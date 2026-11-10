@@ -16,6 +16,14 @@ import {
 import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
 import * as Compile from "./Compile.ts";
 import type { ConfigSource, OpenEditorFunction } from "./Config.ts";
+import type {
+  OutputRequest,
+  WebSocketConnection,
+  WebSocketConnectionRejectedReason,
+  DevServer,
+  DevServerHolder,
+  DevServerMsg,
+} from "./DevServer.ts";
 import { ElmWatchStuffJson, type Target } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
@@ -76,14 +84,6 @@ import {
 } from "./Types.ts";
 import * as Watcher from "./Watcher.ts";
 import type {
-  OutputRequest,
-  WebSocketConnection,
-  WebSocketConnectionRejectedReason,
-  WebSocketServer,
-  WebSocketServerHolder,
-  WebSocketServerMsg,
-} from "./WebSocketServer.ts";
-import type {
   WebSocketConnection as WebSocketUrlConnection,
   WebSocketUrl,
 } from "./WebSocketUrl.ts";
@@ -136,7 +136,7 @@ export type LatestEvent =
 
 type Mutable = {
   watcher: Watcher.Watcher;
-  webSocketServer: WebSocketServer;
+  devServer: DevServer;
   project: Project;
   lastInfoMessage: string | undefined;
   // The one-line version of the info message (TTY only), for the error view.
@@ -427,7 +427,7 @@ export async function run(
   getNow: GetNow,
   createServer: CreateServer,
   restartReasons: Array<LatestEvent>,
-  webSocketServerHolder: WebSocketServerHolder,
+  devServerHolder: DevServerHolder,
   webSocketToken: WebSocketToken,
   // Keep the error view selection (and show all toggle) across restarts.
   errorViewState: ErrorView.ErrorViewState | undefined,
@@ -447,7 +447,7 @@ export async function run(
       logger,
       getNow,
       createServer,
-      webSocketServerHolder,
+      devServerHolder,
       webSocketToken,
       errorViewState,
       project,
@@ -490,7 +490,7 @@ export async function run(
       logger,
       getNow,
       exitOnError,
-      webSocketServerHolder,
+      devServerHolder,
       webSocketToken,
     ),
   });
@@ -566,7 +566,7 @@ const initMutable =
     logger: Logger,
     getNow: GetNow,
     createServer: CreateServer,
-    webSocketServerHolder: WebSocketServerHolder,
+    devServerHolder: DevServerHolder,
     webSocketToken: WebSocketToken,
     errorViewState: ErrorView.ErrorViewState | undefined,
     project: Project,
@@ -612,8 +612,8 @@ const initMutable =
       hotTestHooks.flushWatcher = watcherProbe.flush;
     }
 
-    const { server: webSocketServer, isNew: isNewWebSocketServer } =
-      webSocketServerHolder.getOrCreate({
+    const { server: devServer, isNew: isNewDevServer } =
+      devServerHolder.getOrCreate({
         createServer,
         getNow,
         portChoice,
@@ -626,7 +626,7 @@ const initMutable =
 
     const mutable: Mutable = {
       watcher,
-      webSocketServer,
+      devServer,
       project,
       lastInfoMessage: undefined,
       lastInfoLine: undefined,
@@ -644,8 +644,8 @@ const initMutable =
       },
     };
 
-    webSocketServer.setDispatch((msg) => {
-      onWebSocketServerMsg(
+    devServer.setDispatch((msg) => {
+      onDevServerMsg(
         getNow(),
         logger,
         mutable,
@@ -656,14 +656,14 @@ const initMutable =
       );
     });
 
-    webSocketServer.setResolveOutput(
+    devServer.setResolveOutput(
       (absolutePath) =>
         findOutputForPath(mutable.project, absolutePath)?.outputPath.targetName,
     );
 
     // The port isn’t finalized until a few moments later (when the persisted
     // port is not available).
-    webSocketServer.listening
+    devServer.listening
       .then(() => {
         writeElmWatchStuffJson(mutable, webSocketToken);
         // When not running as a TTY the output is a simple log, and it gets
@@ -672,11 +672,11 @@ const initMutable =
         // are always 0 at that time).
         // This has to be done once the server is ready – we don’t know the
         // final port number to print until then.
-        if (!logger.config.isTTY && isNewWebSocketServer) {
+        if (!logger.config.isTTY && isNewDevServer) {
           logger.write(
             printServerLine(
               logger.config,
-              mutable.webSocketServer,
+              mutable.devServer,
               mutable.project.host,
             ),
           );
@@ -789,7 +789,7 @@ function writeElmWatchStuffJson(
   ]);
 
   const json: ElmWatchStuffJson = {
-    port: mutable.webSocketServer.port,
+    port: mutable.devServer.port,
     webSocketToken,
     targets,
   };
@@ -1616,7 +1616,7 @@ const runCmd =
     logger: Logger,
     getNow: GetNow,
     exitOnError: boolean,
-    webSocketServerHolder: WebSocketServerHolder,
+    devServerHolder: DevServerHolder,
     webSocketToken: WebSocketToken,
   ) =>
   (
@@ -1733,8 +1733,8 @@ const runCmd =
         return;
 
       case "InstallDependencies": {
-        // If the web socket server fails to boot, don’t even bother with anything else.
-        mutable.webSocketServer.listening
+        // If the dev server fails to boot, don’t even bother with anything else.
+        mutable.devServer.listening
           .then(() => {
             const { promise, kill } = Compile.installDependencies(
               env,
@@ -1802,7 +1802,7 @@ const runCmd =
         const fullMessage = [
           printServerLine(
             logger.config,
-            mutable.webSocketServer,
+            mutable.devServer,
             mutable.project.host,
           ),
           "",
@@ -1940,7 +1940,7 @@ const runCmd =
         const flatOutputs = getFlatOutputs(mutable.project);
         // Copy, since responding removes the request from the set.
         for (const outputRequest of Array.from(
-          mutable.webSocketServer.getOutputRequests(),
+          mutable.devServer.getOutputRequests(),
         )) {
           const output = flatOutputs.find(
             ({ outputPath }) =>
@@ -2000,10 +2000,7 @@ const runCmd =
         // them get the status of their target in the new elm-watch.json.
         // Otherwise, the server (including waiting output requests) is kept
         // for the next run.
-        (elmWatchJsonChanged
-          ? webSocketServerHolder.close()
-          : Promise.resolve()
-        )
+        (elmWatchJsonChanged ? devServerHolder.close() : Promise.resolve())
           .then(() => {
             resolvePromise({
               tag: "Restart",
@@ -2056,7 +2053,7 @@ const runCmd =
         return;
 
       case "WebSocketSendAll":
-        for (const { webSocket } of mutable.webSocketServer.getConnections()) {
+        for (const { webSocket } of mutable.devServer.getConnections()) {
           webSocketSend(webSocket, cmd.message);
         }
         return;
@@ -2091,21 +2088,21 @@ const runCmd =
     }
   };
 
-function onWebSocketServerMsg(
+function onDevServerMsg(
   now: Date,
   logger: Logger,
   mutable: Mutable,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
   rejectPromise: (error: Error) => void,
-  msg: WebSocketServerMsg,
+  msg: DevServerMsg,
 ): void {
   switch (msg.tag) {
     case "OutputRequested": {
       const { outputRequest } = msg;
       // Requests made while restarting are queued. The browser might have
       // given up on the request since then.
-      if (!mutable.webSocketServer.getOutputRequests().has(outputRequest)) {
+      if (!mutable.devServer.getOutputRequests().has(outputRequest)) {
         return;
       }
       const output = getFlatOutputs(mutable.project).find(
@@ -2168,7 +2165,7 @@ function onWebSocketServerMsg(
       return;
     }
 
-    case "WebSocketServerError":
+    case "DevServerError":
       switch (msg.error.tag) {
         case "PortConflict": {
           const { portChoice } = msg.error;
@@ -2268,7 +2265,7 @@ function handleOutputActionResultToCmd(
   }
 }
 
-// The web socket server is closed by the caller of `run`, since it is kept
+// The dev server is closed by the caller of `run`, since it is kept
 // between restarts.
 function closeAll(logger: Logger, mutable: Mutable): void {
   logger.reset();
@@ -2279,15 +2276,15 @@ function closeAll(logger: Logger, mutable: Mutable): void {
   }
   mutable.watcherProbe?.stop();
 
-  mutable.webSocketServer.unsetDispatch();
+  mutable.devServer.unsetDispatch();
   mutable.watcher.close();
 }
 
 function getPrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
   return makePrioritizedOutputs(
     mutable.project,
-    mutable.webSocketServer.getConnections(),
-    mutable.webSocketServer.getOutputRequests(),
+    mutable.devServer.getConnections(),
+    mutable.devServer.getOutputRequests(),
   );
 }
 
@@ -2345,7 +2342,7 @@ function getWebSocketConnection(mutable: Mutable): WebSocketUrlConnection {
   return (
     mutable.project.webSocketUrl ?? {
       tag: "AutomaticUrl",
-      port: mutable.webSocketServer.port,
+      port: mutable.devServer.port,
     }
   );
 }
@@ -2989,7 +2986,7 @@ function webSocketSendToOutput(
   outputPath: OutputPath,
   message: WebSocketToClientMessage,
 ): void {
-  for (const connection of mutable.webSocketServer.getConnections()) {
+  for (const connection of mutable.devServer.getConnections()) {
     const connectionOutputPath = getConnectionOutputPath(
       mutable.project,
       connection,
@@ -3296,7 +3293,7 @@ function printMessageWithTimeAndEmoji({
 
 function printServerLine(
   loggerConfig: LoggerConfig,
-  webSocketServer: WebSocketServer,
+  devServer: DevServer,
   host: Host,
 ): string {
   return Compile.printStatusLine({
@@ -3304,16 +3301,13 @@ function printServerLine(
     fancy: loggerConfig.fancy,
     isTTY: loggerConfig.isTTY,
     emojiName: "Server",
-    string: printServerLinks(webSocketServer, host),
+    string: printServerLinks(devServer, host),
   });
 }
 
-function printServerLinks(
-  webSocketServer: WebSocketServer,
-  host: Host,
-): string {
-  const protocol = webSocketServer.isHTTPS ? "https" : "http";
-  const { port } = webSocketServer;
+function printServerLinks(devServer: DevServer, host: Host): string {
+  const protocol = devServer.isHTTPS ? "https" : "http";
+  const { port } = devServer;
 
   if (host !== "0.0.0.0") {
     // `localhost` is easier to read, and the same thing in practice.
@@ -3531,11 +3525,7 @@ function renderErrorView(
       selected: highlightSelected && selection.targetName === targetName,
     }));
     logger.write(
-      printServerLine(
-        logger.config,
-        mutable.webSocketServer,
-        mutable.project.host,
-      ),
+      printServerLine(logger.config, mutable.devServer, mutable.project.host),
     );
     logger.write("");
 

@@ -54,7 +54,7 @@ export type OutputRequest = {
   serveJavaScript: (code: string) => void;
 };
 
-export type WebSocketServerMsg =
+export type DevServerMsg =
   | {
       tag: "OutputRequested";
       outputRequest: OutputRequest;
@@ -74,11 +74,11 @@ export type WebSocketServerMsg =
       data: WebSocket.Data;
     }
   | {
-      tag: "WebSocketServerError";
-      error: WebSocketServerError;
+      tag: "DevServerError";
+      error: DevServerError;
     };
 
-type WebSocketServerError =
+type DevServerError =
   | {
       tag: "HostNotFound";
       host: Host;
@@ -112,7 +112,7 @@ export type WebSocketConnectionRejectedReason =
       tag: "WrongToken";
     };
 
-export type WebSocketServerOptions = {
+export type DevServerOptions = {
   createServer: CreateServer;
   getNow: GetNow;
   portChoice: PortChoice;
@@ -123,7 +123,9 @@ export type WebSocketServerOptions = {
   configSource: ConfigSource;
 };
 
-export class WebSocketServer {
+// Serves static files (if enabled), holds requests for outputs until they are
+// compiled, and accepts web socket connections from the browser.
+export class DevServer {
   private polyHttpServer: ReturnType<CreateServer>;
 
   // Messages from the client are tiny, so there’s no need for the default
@@ -145,7 +147,7 @@ export class WebSocketServer {
 
   port: Port;
 
-  private dispatch: (msg: WebSocketServerMsg) => void;
+  private dispatch: (msg: DevServerMsg) => void;
 
   // Requests for outputs are dispatched instead of served right away, so that
   // they can wait for the output to be compiled. This is kept between restarts
@@ -155,7 +157,7 @@ export class WebSocketServer {
     absolutePath: AbsolutePath,
   ) => TargetName | undefined = () => undefined;
 
-  private msgQueue: Array<WebSocketServerMsg> = [];
+  private msgQueue: Array<DevServerMsg> = [];
 
   listening: Promise<void>;
 
@@ -170,7 +172,7 @@ export class WebSocketServer {
     webSocketToken,
     allowedHosts,
     configSource,
-  }: WebSocketServerOptions) {
+  }: DevServerOptions) {
     this.polyHttpServer = createServer({
       isAllowedHost: (request) =>
         checkHostHeader(allowedHosts, request.headers.host).tag === "Allowed",
@@ -359,7 +361,7 @@ export class WebSocketServer {
 
     this.polyHttpServer.on("error", (error: NodeJS.ErrnoException) => {
       this.dispatch({
-        tag: "WebSocketServerError",
+        tag: "DevServerError",
         error:
           error.code === "EADDRINUSE"
             ? { tag: "PortConflict", portChoice, error }
@@ -415,11 +417,11 @@ export class WebSocketServer {
     return this.connections;
   }
 
-  dispatchToQueue = (msg: WebSocketServerMsg): void => {
+  dispatchToQueue = (msg: DevServerMsg): void => {
     this.msgQueue.push(msg);
   };
 
-  setDispatch(dispatch: (msg: WebSocketServerMsg) => void): void {
+  setDispatch(dispatch: (msg: DevServerMsg) => void): void {
     this.dispatch = dispatch;
     // Messages received while restarting (for example when elm.json changes)
     // are queued, and replayed here. Clear the queue so the messages aren’t
@@ -477,17 +479,17 @@ export class WebSocketServer {
 // The server is kept between restarts (unless elm-watch.json changes), so that
 // browsers stay connected. This owns it across restarts, so that it is closed
 // when elm-watch exits, no matter how.
-export class WebSocketServerHolder {
-  private server: WebSocketServer | undefined = undefined;
+export class DevServerHolder {
+  private server: DevServer | undefined = undefined;
 
-  getOrCreate(options: WebSocketServerOptions): {
-    server: WebSocketServer;
+  getOrCreate(options: DevServerOptions): {
+    server: DevServer;
     isNew: boolean;
   } {
     if (this.server !== undefined) {
       return { server: this.server, isNew: false };
     }
-    this.server = new WebSocketServer(options);
+    this.server = new DevServer(options);
     return { server: this.server, isNew: true };
   }
 

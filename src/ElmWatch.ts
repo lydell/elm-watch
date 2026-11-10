@@ -1,5 +1,6 @@
 import * as http from "http";
 
+import { DevServerHolder } from "./DevServer.ts";
 import type { Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import * as Help from "./Help.ts";
@@ -19,7 +20,6 @@ import {
   markAsCliArg,
   markAsCwd,
 } from "./Types.ts";
-import { WebSocketServerHolder } from "./WebSocketServer.ts";
 
 // Note: This must be in sync with index.d.ts, which is used by the npm package.
 type Options = {
@@ -84,24 +84,21 @@ export default async function elmWatchCli(
     case "make":
     case "hot": {
       const runMode = args[0];
-      return runUntilExit(
-        logger,
-        undefined,
-        (previous, webSocketServerHolder) =>
-          run(
-            cwd,
-            env,
-            logger,
-            getNow,
-            createServer,
-            runMode,
-            restArgs,
-            previous.restartReasons,
-            webSocketServerHolder,
-            previous.webSocketToken,
-            previous.errorViewState,
-            hotTestHooks,
-          ),
+      return runUntilExit(logger, undefined, (previous, devServerHolder) =>
+        run(
+          cwd,
+          env,
+          logger,
+          getNow,
+          createServer,
+          runMode,
+          restArgs,
+          previous.restartReasons,
+          devServerHolder,
+          previous.webSocketToken,
+          previous.errorViewState,
+          hotTestHooks,
+        ),
       );
     }
 
@@ -149,7 +146,7 @@ export async function elmWatch(options: unknown): Promise<number> {
       return 1;
 
     case "Valid":
-      return runUntilExit(logger, signal, (previous, webSocketServerHolder) =>
+      return runUntilExit(logger, signal, (previous, devServerHolder) =>
         runConfig({
           env,
           logger,
@@ -160,7 +157,7 @@ export async function elmWatch(options: unknown): Promise<number> {
           targetsSubstrings: [],
           config: decoded.config,
           restartReasons: previous.restartReasons,
-          webSocketServerHolder,
+          devServerHolder,
           webSocketTokenFromPreviousRun: previous.webSocketToken,
           errorViewState: previous.errorViewState,
           signal,
@@ -178,12 +175,12 @@ async function runUntilExit(
   signal: AbortSignal | undefined,
   runOnce: (
     previous: PreviousRun,
-    webSocketServerHolder: WebSocketServerHolder,
+    devServerHolder: DevServerHolder,
   ) => Promise<RunResult>,
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    // The web socket server is kept between restarts, and closed when exiting.
-    const webSocketServerHolder = new WebSocketServerHolder();
+    // The dev server is kept between restarts, and closed when exiting.
+    const devServerHolder = new DevServerHolder();
     const doIt = async (): Promise<number> => {
       let previous: PreviousRun = {
         restartReasons: [],
@@ -195,7 +192,7 @@ async function runUntilExit(
           if (signal?.aborted === true) {
             return 0;
           }
-          const result = await runOnce(previous, webSocketServerHolder);
+          const result = await runOnce(previous, devServerHolder);
           switch (result.tag) {
             case "Exit":
               return result.exitCode;
@@ -205,7 +202,7 @@ async function runUntilExit(
           }
         }
       } finally {
-        await webSocketServerHolder.close();
+        await devServerHolder.close();
       }
     };
     doIt()

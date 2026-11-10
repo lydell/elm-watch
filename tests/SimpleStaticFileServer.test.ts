@@ -10,6 +10,7 @@ import * as Codec from "tiny-decoders";
 import { describe, expect, test } from "vitest";
 
 import type { ConfigSource } from "../src/Config.ts";
+import { DevServer } from "../src/DevServer.ts";
 import { markAsHost } from "../src/Host.ts";
 import { errorHtml, respondHtml } from "../src/SimpleStaticFileServer.ts";
 import {
@@ -19,7 +20,6 @@ import {
   markAsStaticFilesDir,
   markAsWebSocketToken,
 } from "../src/Types.ts";
-import { WebSocketServer } from "../src/WebSocketServer.ts";
 import {
   httpGet,
   stringSnapshotSerializer,
@@ -49,7 +49,7 @@ function makeGet(port: number, tmpDir: string): Get {
       .replace(/content-length: \d{3,}\n/, "");
 }
 
-// Runs the real `WebSocketServer` (which handles Host headers and errors
+// Runs the real `DevServer` (which handles Host headers and errors
 // thrown by `serveStatic`), serving `staticFilesDir` (relative to a temporary
 // directory). `setup` gets the path to a `public` directory in the temporary
 // directory (which is the default `staticFilesDir`), to create files in.
@@ -74,7 +74,7 @@ async function withServer(
   fs.mkdirSync(dir);
   try {
     setup(dir);
-    const server = new WebSocketServer({
+    const server = new DevServer({
       createServer: ({ onRequest, onUpgrade }) =>
         http.createServer(onRequest).on("upgrade", onUpgrade),
       getNow: () => new Date(),
@@ -777,7 +777,7 @@ describe("SimpleStaticFileServer", () => {
 
               EACCES: permission denied, open &apos;/tmp/public/unreadable.txt&apos;</pre>
             `);
-            // `stat` fails with an unexpected error, which is thrown and caught by WebSocketServer.
+            // `stat` fails with an unexpected error, which is thrown and caught by DevServer.
             expect(await get("/locked/file.txt")).toMatchInlineSnapshot(`
               500
               content-type: text/html; charset=utf-8

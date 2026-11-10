@@ -8,6 +8,12 @@ import { describe, expect, test, vi } from "vitest";
 import WebSocket from "ws";
 
 import { AllowedHost } from "../src/AllowedHosts.ts";
+import {
+  type OutputRequest,
+  DevServer,
+  type DevServerMsg,
+  type DevServerOptions,
+} from "../src/DevServer.ts";
 import { markAsHost } from "../src/Host.ts";
 import { markAsPort } from "../src/Port.ts";
 import {
@@ -16,19 +22,13 @@ import {
   markAsWebSocketToken,
   type TargetName,
 } from "../src/Types.ts";
-import {
-  type OutputRequest,
-  WebSocketServer,
-  type WebSocketServerMsg,
-  type WebSocketServerOptions,
-} from "../src/WebSocketServer.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 const TOKEN = "token";
 
-const OPTIONS: WebSocketServerOptions = {
+const OPTIONS: DevServerOptions = {
   createServer: ({ onRequest, onUpgrade }) =>
     http.createServer(onRequest).on("upgrade", onUpgrade),
   getNow: () => new Date(),
@@ -48,7 +48,7 @@ async function withServer(
     rejections: Array<unknown>;
   }) => Promise<void>,
 ): Promise<void> {
-  const server = new WebSocketServer({
+  const server = new DevServer({
     ...OPTIONS,
     allowedHosts: allowedHosts.map((host) => {
       const result = AllowedHost.decoder(host);
@@ -59,7 +59,7 @@ async function withServer(
     }),
   });
   const rejections: Array<unknown> = [];
-  server.setDispatch((msg: WebSocketServerMsg) => {
+  server.setDispatch((msg: DevServerMsg) => {
     switch (msg.tag) {
       case "WebSocketConnectionRejected":
         rejections.push(msg);
@@ -115,7 +115,7 @@ async function withServer(
   }
 }
 
-describe("WebSocketServer", () => {
+describe("DevServer", () => {
   test("HTTP requests: Host header", async () => {
     await withServer(["dev.example.com"], async ({ get }) => {
       expect(await get({})).toMatchInlineSnapshot(
@@ -143,7 +143,7 @@ describe("WebSocketServer", () => {
     let isAllowedHost:
       | ((request: http.IncomingMessage) => boolean)
       | undefined = undefined;
-    const server = new WebSocketServer({
+    const server = new DevServer({
       ...OPTIONS,
       createServer: ({
         onRequest,
@@ -243,16 +243,16 @@ describe("WebSocketServer", () => {
   });
 
   test("messages received while dispatch is unset are queued and replayed", async () => {
-    const server = new WebSocketServer(OPTIONS);
+    const server = new DevServer(OPTIONS);
 
     const log: Array<string> = [];
-    const describeMsg = (msg: WebSocketServerMsg): string =>
+    const describeMsg = (msg: DevServerMsg): string =>
       msg.tag === "WebSocketMessageReceived"
         ? `${msg.tag} ${(msg.data as Buffer).toString()}`
         : msg.tag;
     const record =
       (name: string) =>
-      (msg: WebSocketServerMsg): void => {
+      (msg: DevServerMsg): void => {
         log.push(`${name}: ${describeMsg(msg)}`);
       };
 
@@ -325,7 +325,7 @@ describe("WebSocketServer", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "elm-watch-requests-"));
     fs.writeFileSync(path.join(dir, "Main.js"), "on disk");
     fs.writeFileSync(path.join(dir, "other.js"), "other");
-    const server = new WebSocketServer({
+    const server = new DevServer({
       ...OPTIONS,
       staticFilesDirectory: markAsStaticFilesDir(markAsAbsolutePath(dir)),
     });
@@ -427,8 +427,8 @@ describe("WebSocketServer", () => {
       });
     }
 
-    function createServer(port: number): WebSocketServer {
-      return new WebSocketServer({
+    function createServer(port: number): DevServer {
+      return new DevServer({
         ...OPTIONS,
         portChoice: { tag: "PortFromConfig", port: markAsPort(port) },
       });
@@ -444,9 +444,7 @@ describe("WebSocketServer", () => {
         const server = createServer(port);
         const result = await new Promise<string>((resolve, reject) => {
           server.setDispatch((msg) => {
-            resolve(
-              msg.tag === "WebSocketServerError" ? msg.error.tag : msg.tag,
-            );
+            resolve(msg.tag === "DevServerError" ? msg.error.tag : msg.tag);
           });
           server.listening
             .then(() => {

@@ -3,6 +3,7 @@ import * as crypto from "crypto";
 import * as CliArgs from "./CliArgs.ts";
 import * as Compile from "./Compile.ts";
 import type { Config } from "./Config.ts";
+import type { DevServerHolder } from "./DevServer.ts";
 import * as ElmWatchJson from "./ElmWatchJson.ts";
 import * as ElmWatchStuffJson from "./ElmWatchStuffJson.ts";
 import type { Env } from "./Env.ts";
@@ -29,7 +30,6 @@ import {
   type RunMode,
   type WebSocketToken,
 } from "./Types.ts";
-import type { WebSocketServerHolder } from "./WebSocketServer.ts";
 
 export type RunResult =
   | {
@@ -52,7 +52,7 @@ export async function run(
   runMode: RunMode,
   args: Array<CliArg>,
   restartReasons: Array<Hot.LatestEvent>,
-  webSocketServerHolder: WebSocketServerHolder,
+  devServerHolder: DevServerHolder,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
   errorViewState: ErrorViewState | undefined,
   hotTestHooks: Hot.HotTestHooks,
@@ -155,7 +155,7 @@ export async function run(
             targetsSubstrings: parseArgsResult.targetsSubstrings,
             config,
             restartReasons,
-            webSocketServerHolder,
+            devServerHolder,
             webSocketTokenFromPreviousRun,
             errorViewState,
             signal: undefined,
@@ -177,7 +177,7 @@ export async function runConfig({
   targetsSubstrings,
   config,
   restartReasons,
-  webSocketServerHolder,
+  devServerHolder,
   webSocketTokenFromPreviousRun,
   errorViewState,
   signal,
@@ -192,7 +192,7 @@ export async function runConfig({
   targetsSubstrings: Array<string>;
   config: Config;
   restartReasons: Array<Hot.LatestEvent>;
-  webSocketServerHolder: WebSocketServerHolder;
+  devServerHolder: DevServerHolder;
   webSocketTokenFromPreviousRun: WebSocketToken | undefined;
   errorViewState: ErrorViewState | undefined;
   signal: AbortSignal | undefined;
@@ -321,7 +321,7 @@ export async function runConfig({
                 getNow,
                 createServer,
                 restartReasons,
-                webSocketServerHolder,
+                devServerHolder,
                 elmWatchStuffJson?.webSocketToken ??
                   webSocketTokenFromPreviousRun ??
                   markAsWebSocketToken(crypto.randomUUID()),
