@@ -292,6 +292,19 @@ export function navigate(
   }
 }
 
+// Whether tab does anything. Only then is the selected target highlighted:
+// Otherwise there’s nothing to choose between, and the highlight would just be
+// confusing.
+export function canSwitchTarget(
+  selection: Selection,
+  targets: Array<ErrorViewTarget>,
+): boolean {
+  return targets.some(
+    (target) =>
+      target.targetName !== selection.targetName && target.numErrors > 0,
+  );
+}
+
 export function getSelectedError(
   selection: Selection,
   targets: Array<ErrorViewTarget>,
@@ -334,11 +347,7 @@ export function render({
   const target = targets.find(
     (otherTarget) => otherTarget.targetName === selection.targetName,
   );
-  const hasOtherTargetsWithErrors = targets.some(
-    (otherTarget) =>
-      otherTarget.targetName !== selection.targetName &&
-      otherTarget.numErrors > 0,
-  );
+  const hasOtherTargetsWithErrors = canSwitchTarget(selection, targets);
   const error = getSelectedError(selection, targets);
   const noticeLines = notice === undefined ? [] : [notice, ""];
   const infoLines = infoLine === undefined ? [] : [infoLine];

@@ -3823,6 +3823,10 @@ function renderErrorView(
     makePrioritizedOutputs(mutable),
   );
   const { selection } = errorView;
+  const highlightSelected =
+    !errorView.showAll &&
+    selection !== undefined &&
+    ErrorView.canSwitchTarget(selection, targets);
 
   logger.withSynchronizedOutput(() => {
     logger.clearScreen();
@@ -3831,7 +3835,7 @@ function renderErrorView(
       numErrors:
         targets.find((target) => target.targetName === targetName)?.numErrors ??
         0,
-      selected: !errorView.showAll && selection?.targetName === targetName,
+      selected: highlightSelected && selection.targetName === targetName,
     }));
     logger.write(
       printServerLine(

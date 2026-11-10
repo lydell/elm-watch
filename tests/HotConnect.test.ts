@@ -331,7 +331,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      🚨 ⧙Removed⧘: 1 error ◀
+      🚨 Removed: 1 error
       🌐 http://localhost:59123
 
       ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
@@ -380,7 +380,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      🚨 ⧙Readonly⧘: 1 error ◀
+      🚨 Readonly: 1 error
       🌐 http://localhost:59123
 
       ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘

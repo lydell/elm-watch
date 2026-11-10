@@ -115,7 +115,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      Main: 1 error <
+      Main: 1 error
       http://localhost:59123
 
       -- TYPE MISMATCH ---------------------------------------------------------------
