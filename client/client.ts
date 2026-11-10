@@ -68,6 +68,20 @@ type __ELM_WATCH = {
     elmExports: ElmExports,
     setSchedulerEnqueue: (schedulerEnqueue: unknown) => void,
   ) => void;
+  // Used instead of `REGISTER` and `HOT_RELOAD` for code with built-in hot
+  // reloading (`Elm.hot`). See `injectElmHot` in `Inject.ts`.
+  REGISTER_ELM_HOT: (
+    targetName: string,
+    elm: ElmHotExports,
+    initData: ElmHotInitData,
+    eq: ElmHotEq,
+  ) => void;
+  HOT_RELOAD_ELM_HOT: (
+    targetName: string,
+    newElm: ElmHotExports,
+    initData: ElmHotInitData,
+    eq: ElmHotEq,
+  ) => void;
   SHOULD_SKIP_INIT_CMDS: (targetName: string) => boolean;
   ON_RENDER: (targetName: string) => void;
   ON_REACHED_IDLE_STATE: (reason: ReachedIdleStateReason) => void;
@@ -78,11 +92,60 @@ type __ELM_WATCH = {
   UI_V1: Ui | undefined;
 };
 
-type TargetData = {
-  originalFlattenedElmExports: Map</* moduleName */ string, ElmModule>;
-  initializedElmApps: Map</* moduleName */ string, Array<ElmApp>>;
-  // `_Scheduler_enqueue` from the original script. See `_Platform_export` in `Inject.ts`.
-  originalSchedulerEnqueue: unknown;
+type TargetData =
+  | {
+      tag: "Patched";
+      originalFlattenedElmExports: Map</* moduleName */ string, ElmModule>;
+      initializedElmApps: Map</* moduleName */ string, Array<ElmApp>>;
+      // `_Scheduler_enqueue` from the original script. See `_Platform_export` in `Inject.ts`.
+      originalSchedulerEnqueue: unknown;
+    }
+  | {
+      tag: "ElmHot";
+      elm: ElmHotExports;
+      // From the latest successfully hot reloaded code.
+      initData: ElmHotInitData;
+      initializedElmApps: Map</* moduleName */ string, Array<ElmHotApp>>;
+    };
+
+// The `Elm` object, when compiled with packages that have built-in hot reloading.
+type ElmHotExports = ElmExports & {
+  // Only exists when not in optimize mode.
+  hot?: { reload: (newScope: { Elm: ElmHotExports }) => void };
+};
+
+// `init.elmWatch` and `init.hotReloadData` for each module. See `injectElmHot` in `Inject.ts`.
+type ElmHotInitData = Record<
+  /* moduleName */ string,
+  | {
+      elmWatch: ElmHotElmWatchData | undefined;
+      // Only exists when not in optimize mode. `impl` does not exist for `Html` programs.
+      hotReloadData:
+        | { impl?: { init: (flags: unknown) => unknown } }
+        | undefined;
+    }
+  | undefined
+>;
+
+type ElmHotElmWatchData = {
+  programType: ProgramType;
+  // Does not exist for `Html` programs.
+  decodeFlags?: (
+    flags: unknown,
+  ) => { tag: "Ok"; value: unknown } | { tag: "Err"; error: string };
+  debugMetadata?: unknown;
+};
+
+// `_Utils_eq_elmWatchInternal` from the compiled code.
+type ElmHotEq = (a: unknown, b: unknown) => boolean;
+
+type ElmHotApp = {
+  app: {
+    // Does not exist for `Html` programs.
+    __elmWatchRunInitCmds?: (cmds?: unknown) => void;
+  };
+  flags: unknown;
+  programType: ProgramType | undefined;
 };
 
 declare global {
@@ -223,6 +286,14 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   },
 
   HOT_RELOAD: () => {
+    // Do nothing.
+  },
+
+  REGISTER_ELM_HOT: () => {
+    // Do nothing.
+  },
+
+  HOT_RELOAD_ELM_HOT: () => {
     // Do nothing.
   },
 
@@ -513,6 +584,167 @@ function flattenElmExportsHelper(
   );
 }
 
+// Decides if a hot reload is possible, the same way as `__elmWatchHotReload` in
+// `Inject.ts`, except that we don’t check ports. If possible, does the hot reload
+// using `Elm.hot.reload`. Returns reasons for doing a full page reload instead.
+// Note: `eq` is from the new code. The old code might lack things needed to
+// compare the new values, like `$elm$core$Dict$toList` if the old code didn’t use `Dict`.
+function elmHotReload(
+  targetData: Extract<TargetData, { tag: "ElmHot" }>,
+  newElm: ElmHotExports,
+  newInitData: ElmHotInitData,
+  eq: ElmHotEq,
+): Array<ReloadReasonWithModuleName> {
+  const { hot } = targetData.elm;
+
+  // Optimize mode.
+  if (hot === undefined || newElm.hot === undefined) {
+    return Object.keys(newInitData).map((moduleName) => ({
+      tag: "ElmHotUnavailable",
+      moduleName,
+    }));
+  }
+
+  const reloadReasons: Array<ReloadReasonWithModuleName> = [];
+  const initCmds: Array<[ElmHotApp, unknown]> = [];
+
+  for (const [moduleName, apps] of targetData.initializedElmApps) {
+    const oldData = targetData.initData[moduleName];
+    const newData = newInitData[moduleName];
+    // If the module was removed, its apps keep running the old code.
+    if (newData === undefined) {
+      continue;
+    }
+    for (const app of apps) {
+      const result = elmHotReloadApp(oldData, newData, app.flags, eq);
+      switch (result.tag) {
+        case "Reload":
+          reloadReasons.push({ ...result.reason, moduleName });
+          break;
+        case "HotReload":
+          initCmds.push([app, result.initCmds]);
+          break;
+      }
+    }
+  }
+
+  if (reloadReasons.length > 0) {
+    return reloadReasons;
+  }
+
+  try {
+    hot.reload({ Elm: newElm });
+  } catch (error) {
+    return [
+      {
+        tag: "HotReloadCaughtError",
+        caughtError: error,
+        moduleName: Object.keys(newInitData).join(", "),
+      },
+    ];
+  }
+
+  targetData.initData = { ...targetData.initData, ...newInitData };
+
+  // Only runs the `Cmd`s if they were skipped (when the app was initialized
+  // with old code).
+  for (const [app, cmds] of initCmds) {
+    app.app.__elmWatchRunInitCmds?.(cmds);
+  }
+
+  return [];
+}
+
+function elmHotReloadApp(
+  oldData: ElmHotInitData[string],
+  newData: NonNullable<ElmHotInitData[string]>,
+  flags: unknown,
+  eq: ElmHotEq,
+):
+  | { tag: "Reload"; reason: ReloadReason }
+  | { tag: "HotReload"; initCmds: unknown } {
+  const oldElmWatch = oldData?.elmWatch;
+  const newElmWatch = newData.elmWatch;
+  if (
+    oldElmWatch === undefined ||
+    newElmWatch === undefined ||
+    oldData?.hotReloadData === undefined ||
+    newData.hotReloadData === undefined
+  ) {
+    return { tag: "Reload", reason: { tag: "ElmHotUnavailable" } };
+  }
+
+  if (oldElmWatch.programType !== newElmWatch.programType) {
+    return {
+      tag: "Reload",
+      reason: {
+        tag: "ProgramTypeChanged",
+        previousProgramType: oldElmWatch.programType,
+        newProgramType: newElmWatch.programType,
+      },
+    };
+  }
+
+  const oldInit = oldData.hotReloadData.impl?.init;
+  const newInit = newData.hotReloadData.impl?.init;
+  const { decodeFlags: oldDecodeFlags } = oldElmWatch;
+  const { decodeFlags: newDecodeFlags } = newElmWatch;
+
+  // `Html` programs have no `init`.
+  if (
+    oldInit === undefined ||
+    newInit === undefined ||
+    oldDecodeFlags === undefined ||
+    newDecodeFlags === undefined
+  ) {
+    return { tag: "HotReload", initCmds: undefined };
+  }
+
+  try {
+    const oldFlags = oldDecodeFlags(flags);
+    const newFlags = newDecodeFlags(flags);
+
+    if (newFlags.tag === "Err") {
+      return {
+        tag: "Reload",
+        reason: { tag: "FlagsTypeChanged", jsonErrorMessage: newFlags.error },
+      };
+    }
+
+    if (!eq(oldElmWatch.debugMetadata, newElmWatch.debugMetadata)) {
+      return {
+        tag: "Reload",
+        reason: { tag: "MessageTypeChangedInDebugMode" },
+      };
+    }
+
+    // The old flags decoded successfully when the app was initialized.
+    if (oldFlags.tag === "Err") {
+      return {
+        tag: "Reload",
+        reason: { tag: "FlagsTypeChanged", jsonErrorMessage: oldFlags.error },
+      };
+    }
+
+    // We call both the old and the new `init` now (rather than remembering what
+    // the old `init` returned when the app was initialized), since `Cmd`s are
+    // mutated when run. For `Browser.application`, both get the current URL.
+    const oldInitPair = oldInit(oldFlags.value);
+    const newInitPair = newInit(newFlags.value) as { b: unknown };
+
+    if (!eq(oldInitPair, newInitPair)) {
+      return { tag: "Reload", reason: { tag: "InitReturnValueChanged" } };
+    }
+
+    return { tag: "HotReload", initCmds: newInitPair.b };
+  } catch (error) {
+    return {
+      tag: "Reload",
+      reason: { tag: "HotReloadCaughtError", caughtError: error },
+    };
+  }
+}
+
 const initMutable =
   (getNow: GetNow, uiTarget: UiTarget | undefined) =>
   (
@@ -574,7 +806,7 @@ const initMutable =
     });
 
     const wrapElmAppInit = (
-      initializedElmApps: TargetData["initializedElmApps"],
+      initializedElmApps: Map</* moduleName */ string, Array<ElmApp>>,
       moduleName: string,
       module: ElmModule,
       init: ElmModule["init"],
@@ -604,12 +836,16 @@ const initMutable =
           `elm-watch: This target is already registered! Maybe a duplicate script is being loaded accidentally? Target: ${TARGET_NAME}`,
         );
       }
-      const initializedElmApps: TargetData["initializedElmApps"] = new Map();
+      const initializedElmApps = new Map<
+        /* moduleName */ string,
+        Array<ElmApp>
+      >();
       const flattenedElmExports = flattenElmExports(elmExports);
       for (const [moduleName, module] of flattenedElmExports) {
         wrapElmAppInit(initializedElmApps, moduleName, module, module.init);
       }
       __ELM_WATCH.TARGET_DATA.set(TARGET_NAME, {
+        tag: "Patched",
         originalFlattenedElmExports: new Map(flattenedElmExports),
         initializedElmApps,
         originalSchedulerEnqueue: schedulerEnqueue,
@@ -623,7 +859,7 @@ const initMutable =
         return;
       }
       const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
-      if (targetData === undefined) {
+      if (targetData?.tag !== "Patched") {
         return;
       }
       // Make the new code use the original code’s scheduler, so there’s only ever
@@ -673,6 +909,94 @@ const initMutable =
             }
           }
         }
+      }
+      mutable.shouldSkipInitCmds = false;
+      if (reloadReasons.length === 0) {
+        dispatch({
+          tag: "EvalSucceeded",
+          date: getNow(),
+        });
+      } else {
+        dispatch({
+          tag: "EvalNeedsReload",
+          date: getNow(),
+          reasons: reloadReasons,
+        });
+      }
+    };
+
+    const wrapElmHotAppInit = (
+      targetData: Extract<TargetData, { tag: "ElmHot" }>,
+      moduleName: string,
+      module: ElmModule,
+    ): void => {
+      const { init } = module;
+      module.init = (...args) => {
+        const app = init(...args);
+        const instance: ElmHotApp = {
+          app,
+          flags: args[0]?.flags,
+          programType: targetData.initData[moduleName]?.elmWatch?.programType,
+        };
+        const apps = targetData.initializedElmApps.get(moduleName);
+        if (apps === undefined) {
+          targetData.initializedElmApps.set(moduleName, [instance]);
+        } else {
+          apps.push(instance);
+        }
+        dispatch({ tag: "AppInit" });
+        return app;
+      };
+    };
+
+    // `Elm` can contain modules from other targets too.
+    const wrapElmHotAppInits = (
+      targetData: Extract<TargetData, { tag: "ElmHot" }>,
+      initData: ElmHotInitData,
+    ): void => {
+      for (const [moduleName, module] of flattenElmExports(targetData.elm)) {
+        if (moduleName in initData) {
+          wrapElmHotAppInit(targetData, moduleName, module);
+        }
+      }
+    };
+
+    const originalRegisterElmHot = __ELM_WATCH.REGISTER_ELM_HOT;
+    __ELM_WATCH.REGISTER_ELM_HOT = (targetName, elm, initData, eq) => {
+      originalRegisterElmHot(targetName, elm, initData, eq);
+      if (targetName !== TARGET_NAME) {
+        return;
+      }
+      __ELM_WATCH.IS_REGISTERING = false;
+      if (__ELM_WATCH.TARGET_DATA.has(TARGET_NAME)) {
+        throw new Error(
+          `elm-watch: This target is already registered! Maybe a duplicate script is being loaded accidentally? Target: ${TARGET_NAME}`,
+        );
+      }
+      const targetData: TargetData = {
+        tag: "ElmHot",
+        elm,
+        initData,
+        initializedElmApps: new Map(),
+      };
+      wrapElmHotAppInits(targetData, initData);
+      __ELM_WATCH.TARGET_DATA.set(TARGET_NAME, targetData);
+    };
+
+    const originalHotReloadElmHot = __ELM_WATCH.HOT_RELOAD_ELM_HOT;
+    __ELM_WATCH.HOT_RELOAD_ELM_HOT = (targetName, newElm, initData, eq) => {
+      originalHotReloadElmHot(targetName, newElm, initData, eq);
+      if (targetName !== TARGET_NAME) {
+        return;
+      }
+      const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
+      if (targetData?.tag !== "ElmHot") {
+        return;
+      }
+      const reloadReasons = elmHotReload(targetData, newElm, initData, eq);
+      if (reloadReasons.length === 0) {
+        // `Elm.hot.reload` replaced `init` of the modules with the new code’s.
+        wrapElmHotAppInits(targetData, initData);
       }
       mutable.shouldSkipInitCmds = false;
       if (reloadReasons.length === 0) {
@@ -1067,12 +1391,23 @@ function runInitCmds(mutable: Mutable): void {
     return;
   }
   const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
-  if (targetData !== undefined) {
-    for (const apps of targetData.initializedElmApps.values()) {
-      for (const app of apps) {
-        app.__elmWatchRunInitCmds();
+  switch (targetData?.tag) {
+    case undefined:
+      break;
+    case "Patched":
+      for (const apps of targetData.initializedElmApps.values()) {
+        for (const app of apps) {
+          app.__elmWatchRunInitCmds();
+        }
       }
-    }
+      break;
+    case "ElmHot":
+      for (const apps of targetData.initializedElmApps.values()) {
+        for (const { app } of apps) {
+          app.__elmWatchRunInitCmds?.();
+        }
+      }
+      break;
   }
   mutable.shouldSkipInitCmds = false;
 }
@@ -1196,9 +1531,15 @@ function getDebugModeToggled(): Toggled {
   const programTypes: Array<ProgramType> =
     targetData === undefined
       ? []
-      : Array.from(targetData.initializedElmApps.values()).flatMap((apps) =>
-          apps.map((app) => app.__elmWatchProgramType),
-        );
+      : targetData.tag === "Patched"
+        ? Array.from(targetData.initializedElmApps.values()).flatMap((apps) =>
+            apps.map((app) => app.__elmWatchProgramType),
+          )
+        : Array.from(targetData.initializedElmApps.values()).flatMap((apps) =>
+            apps.flatMap((app) =>
+              app.programType === undefined ? [] : [app.programType],
+            ),
+          );
 
   // It’s a valid use case to not initialize any Elm apps right away. (Maybe that is done when clicking a button.)
   // We can’t know if the debugger can be enabled until at least one Elm app has been initialized.

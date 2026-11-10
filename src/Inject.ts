@@ -28,6 +28,97 @@ const REPLACEMENT_REGEX =
 // replaced with shorter names in `optimize` mode.
 const PLACEHOLDER_REGEX = /%(\w+)%/g;
 
+// Used both by `REPLACEMENTS` and by `injectElmHot`.
+const UTILS_EQ_ELM_WATCH_INTERNAL = `
+// This whole function was added by elm-watch.
+// Copy-paste of _Utils_eq but does not assume that x and y have the same type,
+// and considers functions to always be equal.
+function _Utils_eq_elmWatchInternal(x, y)
+{
+	for (
+		var pair, stack = [], isEqual = _Utils_eqHelp_elmWatchInternal(x, y, 0, stack);
+		isEqual && (pair = stack.pop());
+		isEqual = _Utils_eqHelp_elmWatchInternal(pair.a, pair.b, 0, stack)
+		)
+	{}
+
+	return isEqual;
+}
+
+// This whole function was added by elm-watch.
+function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack)
+{
+	if (x === y) {
+		return true;
+	}
+
+	var xType = _Utils_typeof_elmWatchInternal(x);
+	var yType = _Utils_typeof_elmWatchInternal(y);
+
+	if (xType !== yType) {
+		return false;
+	}
+
+	switch (xType) {
+		case "primitive":
+			return false;
+		case "function":
+			return true;
+	}
+
+	if (x.$ !== y.$) {
+		return false;
+	}
+
+	if (x.$ === 'Set_elm_builtin') {
+		x = $elm$core$Set$toList(x);
+		y = $elm$core$Set$toList(y);
+	} else if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin' || x.$ < 0) {
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	} else if (x.$ === 'SeqDict_elm_builtin') { // Lamdera
+		x = $lamdera$containers$SeqDict$toList(x);
+		y = $lamdera$containers$SeqDict$toList(y);
+	} else if (x.$ === 'SeqSet_elm_builtin') { // Lamdera
+		x = $lamdera$containers$SeqSet$toList(x);
+		y = $lamdera$containers$SeqSet$toList(y);
+	}
+
+	if (Object.keys(x).length !== Object.keys(y).length) {
+		return false;
+	}
+
+	if (depth > 100) {
+		stack.push(_Utils_Tuple2(x, y));
+		return true;
+	}
+
+	for (var key in x) {
+		// Tasks made with \`_Scheduler_binding\` (\`$: 2\`) get their kill function (\`.c\`) set
+		// when run. A top-level task that has been run might have a function, \`undefined\` or
+		// \`null\` there. Ignore it, since we consider all functions to be equal anyway.
+		if (x.$ === 2 && key === 'c') {
+			continue;
+		}
+		if (!_Utils_eqHelp_elmWatchInternal(x[key], y[key], depth + 1, stack)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// This whole function was added by elm-watch.
+function _Utils_typeof_elmWatchInternal(x)
+{
+	var type = typeof x;
+	return type === "function"
+		? "function"
+		: type !== "object" || x === null
+		? "primitive"
+		: "objectOrArray";
+}
+`.trim();
+
 // The replacements should make the Elm JS stay strictly ES5 so that minifying
 // with esbuild in ES5 works.
 const REPLACEMENTS: Record<string, string> = {
@@ -197,81 +288,7 @@ function _elmWatchConverterSource(converter)
 	});
 }
 
-// This whole function was added by elm-watch.
-// Copy-paste of _Utils_eq but does not assume that x and y have the same type,
-// and considers functions to always be equal.
-function _Utils_eq_elmWatchInternal(x, y)
-{
-	for (
-		var pair, stack = [], isEqual = _Utils_eqHelp_elmWatchInternal(x, y, 0, stack);
-		isEqual && (pair = stack.pop());
-		isEqual = _Utils_eqHelp_elmWatchInternal(pair.a, pair.b, 0, stack)
-		)
-	{}
-
-	return isEqual;
-}
-
-// This whole function was added by elm-watch.
-function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack)
-{
-	if (x === y) {
-		return true;
-	}
-
-	var xType = _Utils_typeof_elmWatchInternal(x);
-	var yType = _Utils_typeof_elmWatchInternal(y);
-
-	if (xType !== yType) {
-		return false;
-	}
-
-	switch (xType) {
-		case "primitive":
-			return false;
-		case "function":
-			return true;
-	}
-
-	if (x.$ !== y.$) {
-		return false;
-	}
-
-	if (x.$ === 'Set_elm_builtin') {
-		x = $elm$core$Set$toList(x);
-		y = $elm$core$Set$toList(y);
-	} else if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin' || x.$ < 0) {
-		x = $elm$core$Dict$toList(x);
-		y = $elm$core$Dict$toList(y);
-	}
-
-	if (Object.keys(x).length !== Object.keys(y).length) {
-		return false;
-	}
-
-	if (depth > 100) {
-		stack.push(_Utils_Tuple2(x, y));
-		return true;
-	}
-
-	for (var key in x) {
-		if (!_Utils_eqHelp_elmWatchInternal(x[key], y[key], depth + 1, stack)) {
-			return false;
-		}
-	}
-	return true;
-}
-
-// This whole function was added by elm-watch.
-function _Utils_typeof_elmWatchInternal(x)
-{
-	var type = typeof x;
-	return type === "function"
-		? "function"
-		: type !== "object" || type === null
-		? "primitive"
-		: "objectOrArray";
-}
+${UTILS_EQ_ELM_WATCH_INTERNAL}
 				`.trim(),
 
   // Make sure these are always defined for easier code in `_Platform_initialize`.
@@ -791,26 +808,192 @@ export function inject(
   code: string,
   targetName?: TargetName,
 ): string {
-  const replacements = getReplacements(compilationMode, code);
-
   return (
-    code
-      .replace(
-        REPLACEMENT_REGEX,
-        (match, name1: string, name: string = name1) => {
-          const replacement = replacements[name];
-          return replacement === undefined
-            ? `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
-            : keepForkChanges(name, match, replacement);
-        },
-      )
-      // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
-      .replace(
-        /^var _elmWatchTargetName = "";$/m,
-        `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
-      )
+    usesElmHot(code)
+      ? injectElmHot(code)
+      : injectReplacements(compilationMode, code)
+  ).replace(
+    // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
+    /^var _elmWatchTargetName = "";$/m,
+    `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
   );
 }
+
+function injectReplacements(
+  compilationMode: CompilationMode,
+  code: string,
+): string {
+  const replacements = getReplacements(compilationMode, code);
+
+  return code.replace(
+    REPLACEMENT_REGEX,
+    (match, name1: string, name: string = name1) => {
+      const replacement = replacements[name];
+      return replacement === undefined
+        ? `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
+        : keepForkChanges(name, match, replacement);
+    },
+  );
+}
+
+// The `hot-reload-stop` branches of lydell/core, lydell/browser and
+// lydell/virtual-dom (which Lamdera ships with) have built-in hot reloading via
+// `Elm.hot.reload(newScope)`. See `javascript-interface.md` in lydell/core.
+// They also change many of the functions in `REPLACEMENTS`, so those can’t be
+// used. Instead, we use `Elm.hot` and only patch in what elm-watch needs on top:
+//
+// - `_Platform_export`: Register with elm-watch, and evaluate hot reloaded code
+//   into a new scope, as `Elm.hot.reload` expects.
+// - `init.elmWatch`: What elm-watch needs to decide if a hot reload is possible:
+//   The program type, a way to decode the flags, and the debug metadata.
+// - `_Platform_initialize`: Support skipping the `Cmd`s from `init`.
+//
+// `Elm.hot` (and `init.hotReloadData`) only exist when not in `--optimize` mode.
+// In `--optimize` mode, elm-watch does a full page reload instead of hot reloading.
+// The definition of `Elm.hot` is part of the code in both modes (but commented
+// out in `--optimize` mode, where `_Platform_export` is a different function).
+const ELM_HOT_REGEX =
+  /^\t\tscope\['Elm'\] = Object\.defineProperty\(scope\['Elm'\] \|\| \{\}, 'hot', \{$/m;
+
+const ELM_HOT_PLATFORM_EXPORT_REGEX =
+  /^function _Platform_export\(exports\)\r?\n\{\r?\n((?:.*\r?\n)*?)\}$/m;
+
+// Matches from the start of a program function to the (possibly commented out)
+// `init.hotReloadData = {` line inside it, without crossing the end of the
+// function (in case some function lacks `init.hotReloadData`).
+const ELM_HOT_INIT_REGEX =
+  /^var (_Platform_worker|_VirtualDom_init|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document) = (?:(?!\}\);\r?$).*\r?\n)*?(?=\t\/\*\*(?:_UNUSED)?\/\r?\n\tinit\.hotReloadData = \{$)/gm;
+
+const ELM_HOT_ENQUEUE_INIT_CMDS_REGEX =
+  /^\t_Platform_enqueueEffects\(managers, initPair\.b, (impl\.[\w$]+\(model\))\);$/m;
+
+const ELM_HOT_APP_REGEX =
+  /^\tvar app = \{\r?\n\t\tdetachView: detachView,\r?\n\t\tstop: stop\r?\n\t\};$/m;
+
+// `impl.setup` might be called `impl.x` in `--optimize` mode.
+const ELM_HOT_SETUP_REGEX = /^\s*var divertHrefToApp = impl\.([\w$]+)/m;
+
+export function usesElmHot(code: string): boolean {
+  return ELM_HOT_REGEX.test(code);
+}
+
+function injectElmHot(code: string): string {
+  const [, setup = "setup"] = ELM_HOT_SETUP_REGEX.exec(code) ?? [];
+
+  const newCode = code
+    .replace(ELM_HOT_PLATFORM_EXPORT_REGEX, (_, body: string) =>
+      `
+// added by elm-watch
+var _elmWatchTargetName = "";
+
+// This function was changed by elm-watch. The original function body is in \`original\`.
+// For hot reloads, it sets \`scope\` to a new object. That’s the same as evaluating the code
+// with \`new Function(code).call(newScope)\`, as \`Elm.hot.reload(newScope)\` expects.
+function _Platform_export(exports)
+{
+	function original()
+	{
+${body}	}
+
+	var initData = _elmWatchInitData('Elm', exports, {});
+
+	if (globalThis.__ELM_WATCH) {
+		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
+			original();
+			globalThis.__ELM_WATCH.REGISTER_ELM_HOT(_elmWatchTargetName, scope['Elm'], initData, _Utils_eq_elmWatchInternal);
+		} else {
+			scope = {};
+			original();
+			globalThis.__ELM_WATCH.HOT_RELOAD_ELM_HOT(_elmWatchTargetName, scope['Elm'], initData, _Utils_eq_elmWatchInternal);
+		}
+	} else {
+		original();
+	}
+}
+
+// This whole function was added by elm-watch.
+// \`init.hotReloadData\` is deleted when merging the exports into \`Elm\`, so grab it first.
+function _elmWatchInitData(moduleName, exports, result)
+{
+	for (var name in exports) {
+		var value = exports[name];
+		if (name === 'init') {
+			result[moduleName] = { elmWatch: value.elmWatch, hotReloadData: value.hotReloadData };
+		} else {
+			_elmWatchInitData(moduleName + '.' + name, value, result);
+		}
+	}
+	return result;
+}
+
+${UTILS_EQ_ELM_WATCH_INTERNAL}
+`.trim(),
+    )
+    .replace(ELM_HOT_INIT_REGEX, (match, name: string) => {
+      const programType = ELM_HOT_PROGRAM_TYPES[name] ?? "undefined";
+      const elmWatchData =
+        name === "_VirtualDom_init"
+          ? `{ programType: ${programType} }`
+          : `{
+		programType: ${programType},
+		decodeFlags: function(flags) {
+			var result = A2(_Json_run, flagDecoder, _Json_wrap(flags));
+			return $elm$core$Result$isOk(result) ? { tag: 'Ok', value: result.a } : { tag: 'Err', error: _Json_errorToString(result.a) };
+		},
+		debugMetadata: debugMetadata
+	}`;
+      return `${match}	// added by elm-watch
+	init.elmWatch = ${elmWatchData.replace(/%setup%/g, setup)};
+
+`;
+    });
+
+  const enqueueMatch = ELM_HOT_ENQUEUE_INIT_CMDS_REGEX.exec(newCode);
+  const appMatch = ELM_HOT_APP_REGEX.exec(newCode);
+
+  // `Html` programs don’t use `_Platform_initialize`.
+  if (enqueueMatch === null || appMatch === null) {
+    return newCode;
+  }
+
+  const [, subscriptions = "subscriptions_missing"] = enqueueMatch;
+
+  return newCode
+    .replace(
+      ELM_HOT_ENQUEUE_INIT_CMDS_REGEX,
+      `
+	// changed by elm-watch
+	var skippedInitCmds = globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.SHOULD_SKIP_INIT_CMDS(_elmWatchTargetName) : false;
+	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, ${subscriptions});
+`.slice(1, -1),
+    )
+    .replace(
+      ELM_HOT_APP_REGEX,
+      (match) => `${match}
+
+	// added by elm-watch
+	// Runs the skipped \`Cmd\`s from \`init\`. After a hot reload, \`cmds\` are the \`Cmd\`s
+	// from \`init\` of the new code.
+	Object.defineProperty(app, '__elmWatchRunInitCmds', {
+		value: function(cmds) {
+			if (skippedInitCmds && !stopped) {
+				skippedInitCmds = false;
+				_Platform_enqueueEffects(managers, cmds || initPair.b, ${subscriptions});
+			}
+		}
+	});`,
+    );
+}
+
+const ELM_HOT_PROGRAM_TYPES: Record<string, string> = {
+  _Platform_worker: `'Platform.worker'`,
+  _VirtualDom_init: `'Html'`,
+  // `Browser.sandbox` also uses these, and can’t be told apart from `Browser.element`.
+  _Browser_element: `'Browser.element'`,
+  _Debugger_element: `'Browser.element'`,
+  _Browser_document: `impl.%setup% ? 'Browser.application' : 'Browser.document'`,
+  _Debugger_document: `impl.%setup% ? 'Browser.application' : 'Browser.document'`,
+};
 
 // The replacements are based on elm/browser. lydell/browser@safe (see
 // https://github.com/lydell/elm-safe-virtual-dom) has changes in some of the

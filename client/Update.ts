@@ -29,6 +29,9 @@ export type UpdateConfig = {
 
 export type ReloadReason =
   | {
+      tag: "ElmHotUnavailable";
+    }
+  | {
       tag: "FlagsTypeChanged";
       jsonErrorMessage: string;
     }
@@ -721,6 +724,8 @@ export function reloadReasonToString(
   reason: ReloadReasonWithModuleName,
 ): string {
   switch (reason.tag) {
+    case "ElmHotUnavailable":
+      return `\`${reason.moduleName}\` uses built-in hot reloading (\`Elm.hot\`), which isn't available. It only exists when not in optimize mode, and when elm/core, elm/browser and elm/virtual-dom all support it.`;
     case "FlagsTypeChanged":
       return `the flags type in \`${reason.moduleName}\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\nThis is the error:\n${reason.jsonErrorMessage}`;
     case "HotReloadCaughtError":
