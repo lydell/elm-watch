@@ -20,6 +20,11 @@ import {
 
 type Response = { status: number; contentType: string; body: string };
 
+type HeldRequest = {
+  request: http.IncomingMessage;
+  response: http.ServerResponse;
+};
+
 type Kind = "compiled" | "proxy" | "other";
 
 function kind(code: string): Kind {
@@ -46,12 +51,19 @@ async function start(
   waitForIdle: () => Promise<void>;
   waitForMsg: (tag: Msg["tag"]) => Promise<void>;
   terminal: () => string;
+  getAbortedRequest: (urlPath: string) => Promise<() => void>;
+  onNextRunStart: (callback: () => void) => void;
 }> {
   const dir = copyFixture("hot", "serve-outputs");
   let server: http.Server | undefined = undefined;
   let isIdle = false;
   let watcherIsReady = false;
   let latestMsg: Msg | undefined = undefined;
+  let holdRequests = false;
+  let heldRequest: HeldRequest | undefined = undefined;
+  let runStartCallback: (() => void) | undefined = undefined;
+  let onRequest: Parameters<CreateServer>[0]["onRequest"] | undefined =
+    undefined;
 
   const hotTestHooks: HotTestHooks = {
     kill: undefined,
@@ -61,6 +73,11 @@ async function start(
     },
     onWatcherReadyChange: (isReady) => {
       watcherIsReady = isReady;
+      if (!isReady && runStartCallback !== undefined) {
+        const callback = runStartCallback;
+        runStartCallback = undefined;
+        callback();
+      }
     },
   };
 
@@ -78,8 +95,17 @@ async function start(
       elmJson: "elm.json",
       ...target,
     })),
-    createServer: (({ onRequest, onUpgrade }) => {
-      server = http.createServer(onRequest).on("upgrade", onUpgrade);
+    createServer: ((options) => {
+      ({ onRequest } = options);
+      server = http
+        .createServer((request, response) => {
+          if (holdRequests) {
+            heldRequest = { request, response };
+          } else {
+            options.onRequest(request, response);
+          }
+        })
+        .on("upgrade", options.onUpgrade);
       return server;
     }) satisfies CreateServer,
     env: { ...process.env, ...TEST_ENV },
@@ -128,6 +154,27 @@ async function start(
       await waitFor(() => latestMsg?.tag === tag);
     },
     terminal: () => clean(stdout.getOutput()),
+    // Makes a request that elm-watch doesn’t get to see until the returned
+    // function is called. By then, the browser has given up on it.
+    getAbortedRequest: async (urlPath) => {
+      holdRequests = true;
+      heldRequest = undefined;
+      const clientRequest = http.get({ port, path: urlPath, agent: false });
+      clientRequest.on("error", () => {
+        // Expected, since we abort the request.
+      });
+      await waitFor(() => heldRequest !== undefined);
+      holdRequests = false;
+      const held = heldRequest as unknown as HeldRequest;
+      clientRequest.destroy();
+      await waitFor(() => held.response.closed);
+      return () => {
+        onRequest?.(held.request, held.response);
+      };
+    },
+    onNextRunStart: (callback) => {
+      runStartCallback = callback;
+    },
   };
 }
 
@@ -204,6 +251,33 @@ describe("serving outputs in hot mode", () => {
     const response = await get("/build/Error.js");
     expect(response.status).toBe(200);
     expect(kind(response.body)).toBe("proxy");
+  });
+
+  // Requests made while restarting are queued until the next run starts. If
+  // the browser gives up on the request before that, it should be ignored
+  // rather than making elm-watch compile the output.
+  test("request aborted while restarting is ignored", async () => {
+    const { dir, waitForIdle, getAbortedRequest, onNextRunStart, terminal } =
+      await start([MAIN]);
+    const output = path.join(dir, "public", "build", "Main.js");
+    const elmJson = path.join(dir, "elm.json");
+
+    await waitForIdle();
+    expect(kind(fs.readFileSync(output, "utf8"))).toBe("proxy");
+
+    const deliver = await getAbortedRequest("/build/Main.js");
+    const restarted = new Promise<void>((resolve) => {
+      onNextRunStart(() => {
+        deliver();
+        resolve();
+      });
+    });
+    fs.writeFileSync(elmJson, fs.readFileSync(elmJson, "utf8"));
+    await restarted;
+    await waitForIdle();
+
+    expect(kind(fs.readFileSync(output, "utf8"))).toBe("proxy");
+    expect(terminal()).not.toContain("HTTP request: Main");
   });
 
   test("other files are served as usual", async () => {

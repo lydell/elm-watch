@@ -2149,6 +2149,12 @@ function onWebSocketServerMsg(
 ): void {
   switch (msg.tag) {
     case "OutputRequested": {
+      // Requests made while restarting are queued. The browser might have
+      // given up on the request since then, and then the "close" listener
+      // below would never be called.
+      if (msg.response.closed) {
+        return;
+      }
       const output = findOutputForPath(mutable.project, msg.absolutePath);
       if (output === undefined) {
         msg.serveStatic();
