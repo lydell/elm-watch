@@ -69,6 +69,7 @@ describe("hot error view", () => {
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
       🚨 error 1/3   file 1/2
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 ⧙Main⧘: 3 errors ◀
@@ -94,6 +95,7 @@ describe("hot error view", () => {
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
       🚨 error 2/3   file 1/2
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 ⧙Main⧘: 3 errors ◀
@@ -119,6 +121,7 @@ describe("hot error view", () => {
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
       🚨 error 3/3   file 2/2
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 Main: 3 errors
@@ -138,6 +141,7 @@ describe("hot error view", () => {
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
       🚨 error 1/1
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 Main: 3 errors
@@ -208,6 +212,7 @@ describe("hot error view", () => {
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
       🚨 4 errors
+
       ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
       ================================================================================
       🚨 Main: 3 errors
@@ -227,6 +232,7 @@ describe("hot error view", () => {
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
       🚨 error 1/1
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
@@ -287,6 +293,7 @@ describe("hot error view", () => {
 
       ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/A.elm⧘
       🚨 error 2/2   file 2/2
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
@@ -322,6 +329,7 @@ describe("hot error view", () => {
 
         ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
         🚨 error 1/1
+
         ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       `);
   });
@@ -348,7 +356,7 @@ describe("hot error view", () => {
     });
 
     expect(screen.split("\n").at(-3)).toMatchInlineSnapshot(
-      `ℹ️ ⧙13:10:05⧘ Nothing to do   ⧙src/Unused.elm – not imported by any target⧘`,
+      `🚨 error 1/3   file 1/2`,
     );
   });
 
@@ -388,7 +396,7 @@ describe("hot error view", () => {
         ✅ Other⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
         🌐 http://localhost:59123
         …
-        🚨 error 1/3   file 1/2
+
         ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       `);
   });

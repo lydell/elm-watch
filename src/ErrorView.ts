@@ -357,6 +357,7 @@ export function render({
       ...noticeLines,
       ...infoLines,
       `${loggerConfig.fancy ? "✅ " : ""}${bold(selection.targetName)} has no errors.`,
+      "",
       keyHints([
         hasOtherTargetsWithErrors
           ? ["tab", "next target with errors"]
@@ -392,6 +393,7 @@ export function render({
     ...noticeLines,
     ...infoLines,
     `${loggerConfig.fancy ? "🚨 " : ""}${position}`,
+    "",
     keyHints([
       [
         [
@@ -431,6 +433,7 @@ export function renderShowAll({
     ...(numErrors === 0 ? [] : [errorStrings.join("\n\n"), ""]),
     ...(infoLine === undefined ? [] : [infoLine]),
     `${loggerConfig.fancy ? "🚨 " : ""}${numErrors} error${numErrors === 1 ? "" : "s"}`,
+    "",
     keyHints([["a", "show one error at a time"]]),
   ].join("\n");
 }

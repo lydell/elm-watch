@@ -347,6 +347,7 @@ describe("hot", () => {
 
       ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Removed⧘
       🚨 error 1/1
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 
@@ -400,6 +401,7 @@ describe("hot", () => {
 
       ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Readonly⧘
       🚨 error 1/1
+
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 

@@ -133,6 +133,7 @@ describe("hot", () => {
 
       13:10:05 Up to date   web socket connected: Main
       error 1/1
+
       [←→] error   [↑↓] file   [enter] open in editor   [a] show all
     `);
 
