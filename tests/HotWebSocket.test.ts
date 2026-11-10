@@ -329,6 +329,50 @@ describe("hot", () => {
       `);
     });
 
+    test("web socket protocol error does not crash elm-watch", async () => {
+      let webSocketUrl: string | undefined = undefined;
+      modifyUrl((url) => {
+        webSocketUrl = url.href;
+      });
+
+      const { terminal } = await run({
+        fixture: "basic",
+        args: ["ProtocolError"],
+        scripts: ["ProtocolError.js"],
+        isTTY: false,
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async ({ idle }) => {
+          switch (idle) {
+            case 1: {
+              if (webSocketUrl === undefined) {
+                throw new Error("Expected webSocketUrl to be set.");
+              }
+              await sendInvalidFrame(webSocketUrl);
+              return "KeepGoing" as const;
+            }
+            default:
+              return "Stop" as const;
+          }
+        },
+      });
+
+      expect(terminal).toMatchInlineSnapshot(`
+        🌐 http://localhost:59123
+        ⏳ Dependencies
+        ✅ Dependencies
+        ⏳ ProtocolError: elm make (typecheck only)
+        ✅ ProtocolError⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
+        ⏳ ProtocolError: elm make
+        ✅ ProtocolError⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: ProtocolError⧘
+      `);
+    });
+
     test("target not found", async () => {
       modifyUrl((url) => {
         url.searchParams.set("targetName", "nope");
@@ -592,6 +636,7 @@ describe("hot", () => {
         WrongVersion
         WrongToken
         HostOrOriginNotAllowed
+        ProtocolError
         SendBadJson
         Reconnect
         HttpCaching
@@ -1049,6 +1094,22 @@ describe("hot", () => {
     });
   });
 });
+
+// Opcode 0xF is reserved, so the server’s `ws` emits an error for the socket.
+async function sendInvalidFrame(url: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const webSocket = new NodeWebSocket(url);
+    webSocket.on("open", () => {
+      (
+        webSocket as unknown as { _socket: NodeJS.WritableStream }
+      )._socket.write(Buffer.from([0x8f, 0x80, 0, 0, 0, 0]));
+    });
+    webSocket.on("close", () => {
+      resolve();
+    });
+    webSocket.on("error", reject);
+  });
+}
 
 async function connectRejectedNodeWebSocket(
   url: string,

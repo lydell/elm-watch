@@ -468,6 +468,7 @@ describe("hot", () => {
       ✅ WrongVersion
       ✅ WrongToken
       ✅ HostOrOriginNotAllowed
+      ✅ ProtocolError
       ✅ TargetDisabled
       ✅ SendBadJson
       ✅ Reconnect

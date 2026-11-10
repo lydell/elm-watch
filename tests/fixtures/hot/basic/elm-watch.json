@@ -80,6 +80,14 @@
             ],
             "output": "build/HostOrOriginNotAllowed.js"
         },
+        "ProtocolError": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/HtmlMain.elm"
+            ],
+            "output": "build/ProtocolError.js"
+        },
         "TargetDisabled": {
             "type": "application",
             "elmJson": "elm.json",

@@ -275,11 +275,11 @@ export class WebSocketServer {
               this.dispatch({ tag: "WebSocketClosed", webSocket });
             });
 
-            webSocket.on("error", (error) => {
-              this.dispatch({
-                tag: "WebSocketServerError",
-                error: { tag: "OtherError", error },
-              });
+            // Errors for a single web socket (such as a client sending an
+            // invalid frame) are followed by "close", so there’s nothing more
+            // to do. Without a listener, the error would crash elm-watch.
+            webSocket.on("error", () => {
+              // Do nothing.
             });
           },
         );
