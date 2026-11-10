@@ -16,6 +16,7 @@ import {
   expandUi,
   fixtureDir,
   getOverlay,
+  getOverlayAnnouncement,
   hideErrors,
   isOverlayVisible,
   pressOverlayKey,
@@ -402,6 +403,7 @@ describe("hot reloading", () => {
 
       const overlays: Array<string> = [];
       const visibility: Array<boolean> = [];
+      const announcements: Array<string> = [];
 
       await go(({ idle }) => {
         switch (idle) {
@@ -432,14 +434,19 @@ describe("hot reloading", () => {
             return "KeepGoing"; // First script finished.
           case 6:
             overlays.push(getOverlay());
+            announcements.push(getOverlayAnnouncement());
             // The errors of all targets are navigated together.
             pressOverlayKey("ArrowDown");
             overlays.push(getOverlay());
+            announcements.push(getOverlayAnnouncement());
             pressOverlayKey("l");
+            announcements.push(getOverlayAnnouncement());
             pressOverlayKey("ArrowLeft");
             overlays.push(getOverlay());
+            announcements.push(getOverlayAnnouncement());
             pressOverlayKey("a");
             overlays.push(getOverlay());
+            announcements.push(getOverlayAnnouncement());
             pressOverlayKey("a");
             // The overlay is shared by all targets.
             expandUi();
@@ -455,6 +462,17 @@ describe("hot reloading", () => {
       });
 
       expect(visibility).toStrictEqual([false, false, true]);
+
+      // For screen readers.
+      expect(announcements).toMatchInlineSnapshot(`
+        [
+          Error 1 of 3: NEEDS DOUBLE QUOTES,
+          Error 2 of 3: UNKNOWN EXPORT,
+          Error 3 of 3: PROBLEM IN TYPE ANNOTATION,
+          Error 2 of 3: UNKNOWN EXPORT,
+          3 errors,
+        ]
+      `);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
         <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">

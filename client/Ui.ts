@@ -237,6 +237,15 @@ export function createUi(): Ui {
     hidden: true,
   });
 
+  // The overlay content is re-created on every render, and screen readers
+  // usually don’t announce newly inserted live regions. So this one stays put,
+  // and says which error is shown when it changes.
+  const overlayAnnouncement = h(HTMLParagraphElement, {
+    className: CLASS.visuallyHidden,
+    attrs: { "aria-live": "polite" },
+    hidden: true,
+  });
+
   const overlayCloseBar = h(
     HTMLDivElement,
     { className: CLASS.overlayCloseBar, hidden: true },
@@ -299,7 +308,7 @@ export function createUi(): Ui {
     root.append(panel);
   }
 
-  for (const element of [overlay, overlayCloseBar, root]) {
+  for (const element of [overlay, overlayAnnouncement, overlayCloseBar, root]) {
     element.lang = "en";
     element.setAttribute("translate", "no");
   }
@@ -308,6 +317,7 @@ export function createUi(): Ui {
   shadowRoot.append(
     h(HTMLStyleElement, {}, CSS),
     overlay,
+    overlayAnnouncement,
     overlayCloseBar,
     root,
   );
@@ -409,6 +419,15 @@ export function createUi(): Ui {
 
     // Start from the top when going to another error.
     overlay.scrollTop = renderedKey === overlayRenderedKey ? scrollTop : 0;
+    // Only touch the live region when the text changes, to avoid repeated
+    // announcements.
+    const announcement = getOverlayAnnouncement(
+      group,
+      overlayShowAll ? undefined : overlaySelection,
+    );
+    if (overlayAnnouncement.textContent !== announcement) {
+      overlayAnnouncement.textContent = announcement;
+    }
     overlayRenderedKey = renderedKey;
 
     if (focusKey !== undefined) {
@@ -589,6 +608,7 @@ export function createUi(): Ui {
   const updateErrorOverlayVisibility = (): void => {
     const hidden = !isErrorOverlayVisible();
     overlay.hidden = hidden;
+    overlayAnnouncement.hidden = hidden;
     overlayCloseBar.hidden = hidden;
 
     // Avoid drawing the close button on top of a scrollbar.
@@ -2544,6 +2564,24 @@ function getOverlayOpenEditorMsg(
   return item?.sendKey === undefined || location === undefined
     ? undefined
     : { tag: "PressedOpenEditor", ...location, sendKey: item.sendKey };
+}
+
+// For screen readers: Which error is shown, or how many errors there are when
+// showing all of them.
+function getOverlayAnnouncement(
+  group: ErrorGroup<OverlayErrorItem>,
+  selection: Selection | undefined,
+): string {
+  if (group.numErrors === 0) {
+    return "";
+  }
+  if (selection === undefined) {
+    return `${group.numErrors} error${group.numErrors === 1 ? "" : "s"}`;
+  }
+  const item = getSelectedError(selection, [group]);
+  return item === undefined
+    ? ""
+    : `Error ${getErrorNumber(selection, group)} of ${group.numErrors}: ${item.error.title}`;
 }
 
 function viewOverlay({

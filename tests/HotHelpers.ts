@@ -833,6 +833,16 @@ export function getOverlayElement(selector: string): HTMLElement {
   throw new Error(`Could not find ${selector} in overlay.`);
 }
 
+export function getOverlayAnnouncement(): string {
+  let text = "(Announcement not found)";
+  withShadowRoot((shadowRoot) => {
+    text =
+      shadowRoot.querySelector(`[aria-live]`)?.textContent ??
+      "(Announcement not found)";
+  });
+  return text;
+}
+
 export function clickFirstErrorLocation(): void {
   withShadowRoot((shadowRoot) => {
     const button = shadowRoot.querySelector(`[data-test-id="Overlay"] button`);
