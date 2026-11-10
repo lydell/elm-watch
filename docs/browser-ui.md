@@ -30,6 +30,25 @@ I often want to play around with my app while making changes. I might refactor s
 
 (A cool little detail: The error overlay picks up the colors from your terminal, if possible.)
 
+## One error at a time
+
+The error overlay shows one error at a time, so you can focus on fixing it before moving on to the next. If there are several targets on the page, their errors are shown together.
+
+At the bottom of the overlay you can see which error and file you’re at, and which keys you can use. The keys are also buttons, so you can click them.
+
+| Key | Action |
+| --- | --- |
+| ← → (or h l) | Previous/next error. |
+| ↑ ↓ (or k j) | Previous/next file. |
+| Enter (or o) | Open the error in your editor (see [Clickable error locations](#clickable-error-locations)). |
+| Space | Expand or collapse long code (see below). |
+| a | Show all errors at once (press again to go back to one at a time). |
+| Escape | Close the error overlay. |
+
+Sometimes Elm shows a lot of code in an error. For example, if you forget a branch in a `case` expression with 50 branches, Elm shows the whole `case` expression. To make it easier to see what the error is about at a glance, elm-watch collapses long code: It keeps the start of the code and the lines Elm points at (with some context), and replaces the rest with a line like `¦ (16 lines)`. Press Space, or click “(16 lines)”, to see all of the code. It stays expanded for all errors until you press Space again. When showing all errors at once, nothing is collapsed.
+
+The terminal works the same way – it also shows one error at a time, with the same keys (except Escape). The terminal also has Tab to switch between targets, since it shows the errors of one target at a time. (When the output isn’t an interactive terminal, such as when piping to a file, all errors are printed as usual.)
+
 When the status changes to 🚨, there’s a similar animation as for ✅ – a growing and fading _red_ circle.
 
 ## Clickable error locations
