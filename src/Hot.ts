@@ -3,19 +3,16 @@ import * as os from "os";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 import * as url from "url";
-import type { URLSearchParams } from "url";
 import type WebSocket from "ws";
 
 import {
   encodeWebSocketToClientMessage,
   type WebSocketToClientMessage,
-  WebSocketToServerMessage,
+  type WebSocketToServerMessage,
 } from "../client/WebSocketMessages.ts";
 import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
 import * as Compile from "./Compile.ts";
-import type { ConfigSource } from "./Config.ts";
 import type {
-  OutputRequest,
   WebSocketConnection,
   WebSocketConnectionRejectedReason,
   DevServer,
@@ -74,16 +71,21 @@ import {
   type GetNow,
   markAsAbsolutePath,
   type OutputPath,
-  type TargetLocation,
-  TargetName,
+  type TargetName,
   type WebSocketToken,
 } from "./Types.ts";
 import * as Watcher from "./Watcher.ts";
 import { makeWatcherProbe, type WatcherProbe } from "./WatcherProbe.ts";
-import type {
-  WebSocketConnection as WebSocketUrlConnection,
-  WebSocketUrl,
-} from "./WebSocketUrl.ts";
+import {
+  getConnectionOutputPath,
+  makePrioritizedOutputs,
+  type OutputPathError,
+  type ParseWebSocketConnectRequestUrlResult,
+  parseWebSocketConnectRequestUrl,
+  parseWebSocketToServerMessage,
+  webSocketConnectRequestUrlErrorToString,
+} from "./WebSocketConnect.ts";
+import type { WebSocketConnection as WebSocketUrlConnection } from "./WebSocketUrl.ts";
 
 // We can’t tell whether something was added or changed, since `fs.watch`
 // does not reliably say. That also doesn’t matter much.
@@ -145,8 +147,6 @@ type Mutable = {
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
   unsubscribeFromGracefulExit: () => void;
 };
-
-type OutputPathError = { tag: "OutputPathError" };
 
 type WebSocketMessageReceivedOutput =
   | OutputPathError
@@ -2285,30 +2285,6 @@ function getPrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
   );
 }
 
-// Outputs with web sockets or output requests are fully compiled (not just
-// typechecked), most recently connected, focused or requested first.
-// Exported for tests.
-export function makePrioritizedOutputs(
-  project: Project,
-  connections: Iterable<Pick<WebSocketConnection, "urlParams" | "priority">>,
-  outputRequests: Iterable<Pick<OutputRequest, "targetName" | "priority">>,
-): Map<TargetName, number> {
-  const map = new Map<TargetName, number>();
-  const add = (targetName: TargetName, priority: number): void => {
-    map.set(targetName, Math.max(priority, map.get(targetName) ?? 0));
-  };
-  for (const connection of connections) {
-    const outputPath = getConnectionOutputPath(project, connection);
-    if (outputPath.tag !== "OutputPathError") {
-      add(outputPath.targetName, connection.priority);
-    }
-  }
-  for (const { targetName, priority } of outputRequests) {
-    add(targetName, priority);
-  }
-  return map;
-}
-
 function findOutputForPath(
   project: Project,
   absolutePath: AbsolutePath,
@@ -2417,245 +2393,6 @@ function getAllElmJsonPaths(project: Project): Array<ElmJsonPath> {
     ...project.packages.keys(),
     ...project.targetsErrors.map(({ elmJsonPath }) => elmJsonPath),
   ];
-}
-
-// The output is derived from the current project every time, rather than
-// stored when the web socket connects, since the web socket might have
-// connected during a previous run.
-function getConnectionOutputPath(
-  project: Project,
-  connection: Pick<WebSocketConnection, "urlParams">,
-): OutputPath | OutputPathError {
-  return webSocketConnectRequestUrlResultToOutputPath(
-    parseWebSocketConnectRequestUrl(project, connection.urlParams),
-  );
-}
-
-const WebSocketConnectedParams = Codec.fields(
-  {
-    elmWatchVersion: Codec.field(Codec.string, { optional: true }),
-    webSocketToken: Codec.string,
-    targetName: TargetName,
-    elmCompiledTimestamp: Codec.flatMap(Codec.string, {
-      decoder: (string) => {
-        const number = Number(string);
-        return Number.isFinite(number)
-          ? { tag: "Valid", value: number }
-          : {
-              tag: "DecoderError",
-              error: {
-                tag: "custom",
-                message: "Expected a number",
-                got: string,
-                path: [],
-              },
-            };
-      },
-      encoder: (value) => value.toString(),
-    }),
-  },
-  { allowExtraFields: false },
-);
-
-type ParseWebSocketConnectRequestUrlResult =
-  | ParseWebSocketConnectRequestUrlError
-  | {
-      tag: "ElmJsonError";
-      error: ApplicationTargetErrorWithMetadata;
-    }
-  | {
-      tag: "Success";
-      elmJsonPath: ElmJsonPath;
-      outputPath: OutputPath;
-      outputState: OutputState;
-      elmCompiledTimestamp: number;
-    };
-
-type ParseWebSocketConnectRequestUrlError =
-  | {
-      tag: "ParamsDecodeError";
-      error: Codec.DecoderError;
-      urlParams: URLSearchParams;
-    }
-  | {
-      tag: "TargetDisabled";
-      targetName: TargetName;
-      enabledOutputs: Array<TargetLocation>;
-      disabledOutputs: Array<TargetLocation>;
-    }
-  | {
-      tag: "TargetNotFound";
-      targetName: TargetName;
-      enabledOutputs: Array<TargetLocation>;
-      disabledOutputs: Array<TargetLocation>;
-    }
-  | {
-      tag: "WrongVersion";
-      expectedVersion: "%VERSION%";
-      actualVersion: string;
-    };
-
-function parseWebSocketConnectRequestUrl(
-  project: Project,
-  urlParams: URLSearchParams,
-): ParseWebSocketConnectRequestUrlResult {
-  const webSocketConnectedParamsResult = WebSocketConnectedParams.decoder(
-    Object.fromEntries(urlParams),
-  );
-  if (webSocketConnectedParamsResult.tag === "DecoderError") {
-    return {
-      tag: "ParamsDecodeError",
-      error: webSocketConnectedParamsResult.error,
-      urlParams,
-    };
-  }
-  const webSocketConnectedParams = webSocketConnectedParamsResult.value;
-
-  if (
-    webSocketConnectedParams.elmWatchVersion !== undefined &&
-    webSocketConnectedParams.elmWatchVersion !== "%VERSION%"
-  ) {
-    return {
-      tag: "WrongVersion",
-      expectedVersion: "%VERSION%",
-      actualVersion: webSocketConnectedParams.elmWatchVersion,
-    };
-  }
-
-  const flatOutputs = getFlatOutputs(project);
-
-  const { targetName } = webSocketConnectedParams;
-  const matchElmJsonError = getApplicationTargetsErrors(project).find(
-    ({ outputPath }) => outputPath.targetName === targetName,
-  );
-  const matchOutput = flatOutputs.find(
-    ({ outputPath }) => outputPath.targetName === targetName,
-  );
-
-  if (matchElmJsonError !== undefined) {
-    return {
-      tag: "ElmJsonError",
-      error: matchElmJsonError,
-    };
-  } else if (matchOutput !== undefined) {
-    return {
-      tag: "Success",
-      elmJsonPath: matchOutput.elmJsonPath,
-      outputPath: matchOutput.outputPath,
-      outputState: matchOutput.outputState,
-      elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
-    };
-  } else {
-    const enabledOutputs = [
-      ...project.targetsErrors.map(({ outputPath }) => outputPath),
-      ...flatOutputs.map(({ outputPath }) => outputPath),
-      ...Array.from(
-        project.packages.values(),
-        ([packageTarget]) => packageTarget,
-      ),
-    ];
-    const disabledOutputs = Array.from(project.disabledOutputs);
-    const disabledMatch = disabledOutputs.find(
-      (outputPath) => outputPath.targetName === targetName,
-    );
-    return disabledMatch === undefined
-      ? {
-          tag: "TargetNotFound",
-          targetName,
-          enabledOutputs,
-          disabledOutputs,
-        }
-      : {
-          tag: "TargetDisabled",
-          targetName,
-          enabledOutputs,
-          disabledOutputs,
-        };
-  }
-}
-
-function webSocketConnectRequestUrlResultToOutputPath(
-  result: ParseWebSocketConnectRequestUrlResult,
-): OutputPath | OutputPathError {
-  switch (result.tag) {
-    case "Success":
-      return result.outputPath;
-    case "ElmJsonError":
-      return result.error.outputPath;
-    default: {
-      // Make sure only error results are left.
-      const _: ParseWebSocketConnectRequestUrlError = result;
-      void _;
-      return { tag: "OutputPathError" };
-    }
-  }
-}
-
-function webSocketConnectRequestUrlErrorToString(
-  configSource: ConfigSource,
-  webSocketUrl: WebSocketUrl | undefined,
-  error: ParseWebSocketConnectRequestUrlError,
-): string {
-  switch (error.tag) {
-    case "ParamsDecodeError":
-      return Errors.webSocketParamsDecodeError(
-        webSocketUrl,
-        error.error,
-        error.urlParams,
-      );
-
-    case "WrongVersion":
-      return Errors.webSocketWrongVersion(
-        error.expectedVersion,
-        error.actualVersion,
-      );
-
-    case "TargetNotFound":
-      return Errors.webSocketTargetNotFound(
-        configSource,
-        error.targetName,
-        error.enabledOutputs,
-        error.disabledOutputs,
-      );
-
-    case "TargetDisabled":
-      return Errors.webSocketTargetDisabled(
-        error.targetName,
-        error.enabledOutputs,
-        error.disabledOutputs,
-      );
-  }
-}
-
-type ParseWebSocketToServerMessageResult =
-  | {
-      tag: "DecoderError";
-      error: Codec.DecoderError;
-    }
-  | {
-      tag: "Success";
-      message: WebSocketToServerMessage;
-    };
-
-function parseWebSocketToServerMessage(
-  data: WebSocket.Data,
-): ParseWebSocketToServerMessageResult {
-  const stringData =
-    typeof data === "string"
-      ? data
-      : Array.isArray(data)
-        ? Buffer.concat(data).toString("utf8")
-        : data instanceof ArrayBuffer
-          ? new TextDecoder("utf8").decode(data)
-          : data.toString("utf8");
-
-  const parsed = Codec.JSON.parse(WebSocketToServerMessage, stringData);
-  switch (parsed.tag) {
-    case "DecoderError":
-      return { tag: "DecoderError", error: parsed.error };
-    case "Valid":
-      return { tag: "Success", message: parsed.value };
-  }
 }
 
 function onWebSocketConnected(

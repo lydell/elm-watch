@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { makePrioritizedOutputs } from "../src/Hot.ts";
 import { markAsTargetName, type TargetName } from "../src/Types.ts";
+import { makePrioritizedOutputs } from "../src/WebSocketConnect.ts";
 import { makeProject } from "./ProjectHelpers.ts";
 
 // `makePrioritizedOutputs` decides which outputs are fully compiled (not just
