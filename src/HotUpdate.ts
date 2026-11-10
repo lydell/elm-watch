@@ -71,6 +71,12 @@ export type Msg =
       handleOutputActionResult: Compile.HandleOutputActionResult;
     }
   | {
+      // Writing elm-stuff/elm-watch/stuff.json failed (and the error has been
+      // printed).
+      tag: "ElmWatchStuffJsonWriteFailed";
+      date: Date;
+    }
+  | {
       tag: "ExitRequested";
       date: Date;
     }
@@ -343,6 +349,9 @@ export function update(
         },
         [],
       ];
+
+    case "ElmWatchStuffJsonWriteFailed":
+      return [model, exitOnError ? [{ tag: "ExitOnIdle" }] : []];
 
     case "ExitRequested":
       if (model.hotState.tag !== "Idle") {

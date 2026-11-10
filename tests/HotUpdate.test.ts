@@ -27,9 +27,9 @@ import {
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 // `elm-watch hot` is a TEA program: `update` (in HotUpdate.ts) is pure, and all
-// side effects happen in `runCmd` (in Hot.ts). These tests feed messages directly to `update`, which makes it
-// possible to test races (like a file changing while installing dependencies)
-// deterministically. The integration tests in Hot*.test.ts depend on timing.
+// side effects happen in `runCmd` (in Hot.ts). These tests feed messages
+// directly to `update`, which makes it possible to test races (like a file
+// changing while installing dependencies) deterministically. The integration tests in Hot*.test.ts depend on timing.
 //
 // In the real program, some commands (like `MarkAsDirty` and
 // `CompileAllOutputsAsNeeded`) mutate the project. Here, each step instead
@@ -87,6 +87,10 @@ const msg = {
     handleOutputActionResult: { tag: "Nothing" },
   }),
   exitRequested: (): Msg => ({ tag: "ExitRequested", date }),
+  elmWatchStuffJsonWriteFailed: (): Msg => ({
+    tag: "ElmWatchStuffJsonWriteFailed",
+    date,
+  }),
 };
 
 class Simulation {
@@ -601,6 +605,43 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondToAll
         cmd: ExitOnIdle
+    `);
+  });
+
+  // `runCmd` dispatches this after `HandleElmWatchStuffJsonWriteError` printed
+  // the error. Messages are handled after the commands, so the info line is
+  // printed before exiting.
+  test("stuff.json write error", () => {
+    const run = (exitOnError: boolean): string =>
+      new Simulation(idleProject(), { exitOnError })
+        .send(msg.installDone("Success"))
+        .send(msg.compilationPartDone())
+        .send(msg.elmWatchStuffJsonWriteFailed())
+        .toString()
+        .split("\n\n")
+        .slice(-2)
+        .join("\n\n");
+
+    expect(run(true)).toMatchInlineSnapshot(`
+      > CompilationPartDone
+        state: Idle, next: NoAction, events: 0, pending: 0
+        cmd: RespondToOutputRequests RespondIfNotDirty
+        cmd: HandleElmWatchStuffJsonWriteError
+        cmd: LogInfoMessage: Compiled in 123 ms
+
+      > ElmWatchStuffJsonWriteFailed
+        state: Idle, next: NoAction, events: 0, pending: 0
+        cmd: ExitOnIdle
+    `);
+    expect(run(false)).toMatchInlineSnapshot(`
+      > CompilationPartDone
+        state: Idle, next: NoAction, events: 0, pending: 0
+        cmd: RespondToOutputRequests RespondIfNotDirty
+        cmd: HandleElmWatchStuffJsonWriteError
+        cmd: LogInfoMessage: Compiled in 123 ms
+
+      > ElmWatchStuffJsonWriteFailed
+        state: Idle, next: NoAction, events: 0, pending: 0
     `);
   });
 

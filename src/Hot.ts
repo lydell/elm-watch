@@ -632,14 +632,7 @@ const runCmd =
             if (logger.config.isTTY) {
               logger.write("");
             }
-            if (exitOnError) {
-              // Exit once the rest of the commands (like logging the info
-              // message) have run.
-              queueMicrotask(() => {
-                closeAll(logger, mutable);
-                resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
-              });
-            }
+            dispatch({ tag: "ElmWatchStuffJsonWriteFailed", date: getNow() });
           }
         }
         return;
