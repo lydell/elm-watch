@@ -474,6 +474,30 @@ export class WebSocketServer {
   }
 }
 
+// The server is kept between restarts (unless elm-watch.json changes), so that
+// browsers stay connected. This owns it across restarts, so that it is closed
+// when elm-watch exits, no matter how.
+export class WebSocketServerHolder {
+  private server: WebSocketServer | undefined = undefined;
+
+  getOrCreate(options: WebSocketServerOptions): {
+    server: WebSocketServer;
+    isNew: boolean;
+  } {
+    if (this.server !== undefined) {
+      return { server: this.server, isNew: false };
+    }
+    this.server = new WebSocketServer(options);
+    return { server: this.server, isNew: true };
+  }
+
+  async close(): Promise<void> {
+    const { server } = this;
+    this.server = undefined;
+    await server?.close();
+  }
+}
+
 const LOOPBACK_IPV4 = "127.0.0.1";
 
 type ProbeResult =

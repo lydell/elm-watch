@@ -53,6 +53,8 @@ async function start(
   terminal: () => string;
   getAbortedRequest: (urlPath: string) => Promise<() => void>;
   onNextRunStart: (callback: () => void) => void;
+  done: Promise<number>;
+  isListening: () => boolean;
 }> {
   const dir = copyFixture("hot", "serve-outputs");
   let server: http.Server | undefined = undefined;
@@ -175,6 +177,8 @@ async function start(
     onNextRunStart: (callback) => {
       runStartCallback = callback;
     },
+    done,
+    isListening: () => (server as unknown as http.Server).listening,
   };
 }
 
@@ -280,6 +284,29 @@ describe("serving outputs in hot mode", () => {
 
     expect(kind(fs.readFileSync(output, "utf8"))).toBe("proxy");
     expect(terminal()).not.toContain("HTTP request: Main");
+  });
+
+  // When restarting (for example because elm.json changed), the server is kept.
+  // If the next run exits before starting (here: because stuff.json is
+  // invalid), the server must still be closed. Otherwise the process wouldn’t
+  // exit.
+  test("server is closed when exiting during restart", async () => {
+    const { dir, waitForIdle, done, isListening, terminal } = await start([
+      MAIN,
+    ]);
+    const elmJson = path.join(dir, "elm.json");
+
+    await waitForIdle();
+    fs.writeFileSync(
+      path.join(dir, "elm-stuff", "elm-watch", "stuff.json"),
+      "invalid",
+    );
+    fs.writeFileSync(elmJson, fs.readFileSync(elmJson, "utf8"));
+
+    expect(await done).toBe(1);
+    kill = undefined;
+    expect(terminal()).toContain("stuff.json");
+    expect(isListening()).toBe(false);
   });
 
   test("other files are served as usual", async () => {

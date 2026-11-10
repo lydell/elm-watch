@@ -75,11 +75,12 @@ import {
   type WebSocketToken,
 } from "./Types.ts";
 import * as Watcher from "./Watcher.ts";
-import {
-  type WebSocketConnection,
-  type WebSocketConnectionRejectedReason,
+import type {
+  WebSocketConnection,
+  WebSocketConnectionRejectedReason,
   WebSocketServer,
-  type WebSocketServerMsg,
+  WebSocketServerHolder,
+  WebSocketServerMsg,
 } from "./WebSocketServer.ts";
 import type {
   WebSocketConnection as WebSocketUrlConnection,
@@ -384,7 +385,6 @@ type HotRunResult =
   | {
       tag: "Restart";
       restartReasons: Array<LatestEvent>;
-      webSocketServer: WebSocketServer | undefined;
       webSocketToken: WebSocketToken;
       errorViewState: ErrorView.ErrorViewState;
     };
@@ -426,8 +426,7 @@ export async function run(
   getNow: GetNow,
   createServer: CreateServer,
   restartReasons: Array<LatestEvent>,
-  // Kept between restarts, unless elm-watch.json changed.
-  previousWebSocketServer: WebSocketServer | undefined,
+  webSocketServerHolder: WebSocketServerHolder,
   webSocketToken: WebSocketToken,
   // Keep the error view selection (and show all toggle) across restarts.
   errorViewState: ErrorView.ErrorViewState | undefined,
@@ -447,7 +446,7 @@ export async function run(
       logger,
       getNow,
       createServer,
-      previousWebSocketServer,
+      webSocketServerHolder,
       webSocketToken,
       errorViewState,
       project,
@@ -485,7 +484,14 @@ export async function run(
       );
       return [newModel, allCmds];
     },
-    runCmd: runCmd(env, logger, getNow, exitOnError, webSocketToken),
+    runCmd: runCmd(
+      env,
+      logger,
+      getNow,
+      exitOnError,
+      webSocketServerHolder,
+      webSocketToken,
+    ),
   });
 
   hotTestHooks.kill = undefined;
@@ -559,7 +565,7 @@ const initMutable =
     logger: Logger,
     getNow: GetNow,
     createServer: CreateServer,
-    previousWebSocketServer: WebSocketServer | undefined,
+    webSocketServerHolder: WebSocketServerHolder,
     webSocketToken: WebSocketToken,
     errorViewState: ErrorView.ErrorViewState | undefined,
     project: Project,
@@ -593,14 +599,11 @@ const initMutable =
         });
       },
       (error) => {
-        closeAll(logger, mutable)
-          .then(() => {
-            resolvePromise({
-              tag: "ExitOnHandledFatalError",
-              errorTemplate: Errors.watcherError(error),
-            });
-          })
-          .catch(rejectPromise);
+        closeAll(logger, mutable);
+        resolvePromise({
+          tag: "ExitOnHandledFatalError",
+          errorTemplate: Errors.watcherError(error),
+        });
       },
     );
     if (watcherProbe !== undefined) {
@@ -608,9 +611,8 @@ const initMutable =
       hotTestHooks.flushWatcher = watcherProbe.flush;
     }
 
-    const webSocketServer =
-      previousWebSocketServer ??
-      new WebSocketServer({
+    const { server: webSocketServer, isNew: isNewWebSocketServer } =
+      webSocketServerHolder.getOrCreate({
         createServer,
         getNow,
         portChoice,
@@ -669,8 +671,7 @@ const initMutable =
         // are always 0 at that time).
         // This has to be done once the server is ready – we don’t know the
         // final port number to print until then.
-        const isRestart = previousWebSocketServer !== undefined;
-        if (!logger.config.isTTY && !isRestart) {
+        if (!logger.config.isTTY && isNewWebSocketServer) {
           logger.write(
             printServerLine(
               logger.config,
@@ -682,7 +683,7 @@ const initMutable =
       })
       .catch(rejectPromise);
 
-    const kill = async (): Promise<void> => {
+    const kill = (): void => {
       try {
         if (mutable.killInstallDependencies !== undefined) {
           mutable.killInstallDependencies({ force: true });
@@ -692,7 +693,7 @@ const initMutable =
             targetState.status.kill({ force: true });
           }
         }
-        await closeAll(logger, mutable);
+        closeAll(logger, mutable);
       } catch (unknownError) {
         const error = toError(unknownError);
         rejectPromise(toError(error));
@@ -701,22 +702,20 @@ const initMutable =
       hotTestHooks.kill = undefined;
     };
 
-    hotTestHooks.kill = async () => {
+    hotTestHooks.kill = () => {
       dispatch({ tag: "ExitRequested", date: getNow() });
-      await kill();
+      kill();
       resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
+      return Promise.resolve();
     };
 
     logger.setRawMode(
       () => {
-        kill()
-          .then(() => {
-            resolvePromise({
-              tag: "ExitOnIdle",
-              reason: "CtrlCPressed",
-            });
-          })
-          .catch(rejectPromise);
+        kill();
+        resolvePromise({
+          tag: "ExitOnIdle",
+          reason: "CtrlCPressed",
+        });
       },
       (data) => {
         const keys = ErrorView.parseKeys(data);
@@ -739,8 +738,8 @@ const initMutable =
           targetState.status.kill({ force: false });
         }
       }
-      closeAll(logger, mutable)
-        .then(waitForRunningCommands)
+      closeAll(logger, mutable);
+      waitForRunningCommands()
         .then(() => {
           resolvePromise({ tag: "ExitOnIdle", reason: "GracefulExit" });
         })
@@ -1616,6 +1615,7 @@ const runCmd =
     logger: Logger,
     getNow: GetNow,
     exitOnError: boolean,
+    webSocketServerHolder: WebSocketServerHolder,
     webSocketToken: WebSocketToken,
   ) =>
   (
@@ -1720,11 +1720,12 @@ const runCmd =
               logger.write("");
             }
             if (exitOnError) {
-              closeAll(logger, mutable)
-                .then(() => {
-                  resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
-                })
-                .catch(rejectPromise);
+              // Exit once the rest of the commands (like logging the info
+              // message) have run.
+              queueMicrotask(() => {
+                closeAll(logger, mutable);
+                resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
+              });
             }
           }
         }
@@ -1993,18 +1994,19 @@ const runCmd =
               return false;
           }
         });
-        closeAll(logger, mutable, {
-          killWebSocketServer: elmWatchJsonChanged,
-        })
+        closeAll(logger, mutable);
+        // Connected browsers reconnect when the server is closed, which makes
+        // them get the status of their target in the new elm-watch.json.
+        // Otherwise, the server (including waiting output requests) is kept
+        // for the next run.
+        (elmWatchJsonChanged
+          ? webSocketServerHolder.close()
+          : Promise.resolve()
+        )
           .then(() => {
-            // Waiting output requests are kept by the server, and are
-            // responded to by the next run.
             resolvePromise({
               tag: "Restart",
               restartReasons: cmd.restartReasons,
-              webSocketServer: elmWatchJsonChanged
-                ? undefined
-                : mutable.webSocketServer,
               webSocketToken,
               errorViewState: mutable.errorView,
             });
@@ -2014,11 +2016,8 @@ const runCmd =
       }
 
       case "ExitOnIdle":
-        closeAll(logger, mutable)
-          .then(() => {
-            resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
-          })
-          .catch(rejectPromise);
+        closeAll(logger, mutable);
+        resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
         return;
 
       case "SleepBeforeNextAction":
@@ -2172,35 +2171,29 @@ function onWebSocketServerMsg(
       switch (msg.error.tag) {
         case "PortConflict": {
           const { portChoice } = msg.error;
-          closeAll(logger, mutable)
-            .then(() => {
-              resolvePromise({
-                tag: "ExitOnHandledFatalError",
-                errorTemplate: portChoiceError(
-                  mutable.project,
-                  portChoice,
-                  msg.error.error,
-                ),
-              });
-            })
-            .catch(rejectPromise);
+          closeAll(logger, mutable);
+          resolvePromise({
+            tag: "ExitOnHandledFatalError",
+            errorTemplate: portChoiceError(
+              mutable.project,
+              portChoice,
+              msg.error.error,
+            ),
+          });
           return;
         }
 
         case "HostNotFound": {
           const { host } = msg.error;
-          closeAll(logger, mutable)
-            .then(() => {
-              resolvePromise({
-                tag: "ExitOnHandledFatalError",
-                errorTemplate: Errors.hostNotFound(
-                  mutable.project.configSource,
-                  host,
-                  msg.error.error,
-                ),
-              });
-            })
-            .catch(rejectPromise);
+          closeAll(logger, mutable);
+          resolvePromise({
+            tag: "ExitOnHandledFatalError",
+            errorTemplate: Errors.hostNotFound(
+              mutable.project.configSource,
+              host,
+              msg.error.error,
+            ),
+          });
           return;
         }
 
@@ -2274,11 +2267,9 @@ function handleOutputActionResultToCmd(
   }
 }
 
-async function closeAll(
-  logger: Logger,
-  mutable: Mutable,
-  { killWebSocketServer = true } = {},
-): Promise<void> {
+// The web socket server is closed by the caller of `run`, since it is kept
+// between restarts.
+function closeAll(logger: Logger, mutable: Mutable): void {
   logger.reset();
   mutable.unsubscribeFromGracefulExit();
 
@@ -2289,9 +2280,6 @@ async function closeAll(
 
   mutable.webSocketServer.unsetDispatch();
   mutable.watcher.close();
-  if (killWebSocketServer) {
-    await mutable.webSocketServer.close();
-  }
 }
 
 function makePrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
