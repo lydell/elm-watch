@@ -255,7 +255,9 @@ describe("serving outputs in hot mode", () => {
 
   // Requests made while restarting are queued until the next run starts. If
   // the browser gives up on the request before that, it should be ignored
-  // rather than making elm-watch compile the output.
+  // rather than making elm-watch compile the output. (The request is delivered
+  // to elm-watch after it was aborted, like a custom `createServer` calling
+  // `onRequest` late could do.)
   test("request aborted while restarting is ignored", async () => {
     const { dir, waitForIdle, getAbortedRequest, onNextRunStart, terminal } =
       await start([MAIN]);

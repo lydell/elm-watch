@@ -57,7 +57,6 @@ import {
   type Project,
   projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project.ts";
-import * as SimpleStaticFileServer from "./SimpleStaticFileServer.ts";
 import { waitForRunningCommands } from "./Spawn.ts";
 import { runTeaProgram } from "./TeaProgram.ts";
 import * as Theme from "./Theme.ts";
@@ -136,7 +135,6 @@ export type LatestEvent =
 type Mutable = {
   watcher: Watcher.Watcher;
   webSocketServer: WebSocketServer;
-  outputRequests: Array<OutputRequest>;
   project: Project;
   lastInfoMessage: string | undefined;
   // The one-line version of the info message (TTY only), for the error view.
@@ -147,13 +145,6 @@ type Mutable = {
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
   unsubscribeFromGracefulExit: () => void;
-};
-
-// An HTTP request for an output that waits for the output to be compiled.
-type OutputRequest = {
-  msg: Extract<WebSocketServerMsg, { tag: "OutputRequested" }>;
-  outputPath: OutputPath;
-  priority: number;
 };
 
 type OutputPathError = { tag: "OutputPathError" };
@@ -633,7 +624,6 @@ const initMutable =
     const mutable: Mutable = {
       watcher,
       webSocketServer,
-      outputRequests: [],
       project,
       lastInfoMessage: undefined,
       lastInfoLine: undefined,
@@ -663,9 +653,9 @@ const initMutable =
       );
     });
 
-    webSocketServer.setIsOutputPath(
+    webSocketServer.setResolveOutput(
       (absolutePath) =>
-        findOutputForPath(mutable.project, absolutePath) !== undefined,
+        findOutputForPath(mutable.project, absolutePath)?.outputPath.targetName,
     );
 
     // The port isn’t finalized until a few moments later (when the persisted
@@ -1946,50 +1936,47 @@ const runCmd =
 
       case "RespondToOutputRequests": {
         const flatOutputs = getFlatOutputs(mutable.project);
-        mutable.outputRequests = mutable.outputRequests.filter(
-          ({ msg, outputPath }) => {
-            const output = flatOutputs.find(
-              (flatOutput) =>
-                flatOutput.outputPath.theOutputPath ===
-                outputPath.theOutputPath,
-            );
-            if (output === undefined) {
-              msg.serveStatic();
-              return false;
-            }
-            const response = getOutputRequestResponse(output.outputState);
-            const respondAnyway =
-              cmd.waiting === "RespondToAll" ||
-              (cmd.waiting === "RespondIfNotDirty" &&
-                !output.outputState.dirty);
-            switch (
-              response === "Wait" && respondAnyway ? "ServeProxy" : response
-            ) {
-              case "ServeFile":
-                msg.serveStatic();
-                return false;
+        // Copy, since responding removes the request from the set.
+        for (const outputRequest of Array.from(
+          mutable.webSocketServer.getOutputRequests(),
+        )) {
+          const output = flatOutputs.find(
+            ({ outputPath }) =>
+              outputPath.targetName === outputRequest.targetName,
+          );
+          if (output === undefined) {
+            outputRequest.serveFile();
+            continue;
+          }
+          const response = getOutputRequestResponse(output.outputState);
+          const respondAnyway =
+            cmd.waiting === "RespondToAll" ||
+            (cmd.waiting === "RespondIfNotDirty" && !output.outputState.dirty);
+          switch (
+            response === "Wait" && respondAnyway ? "ServeProxy" : response
+          ) {
+            case "ServeFile":
+              outputRequest.serveFile();
+              break;
 
-              // The proxy file connects to the web socket server, which shows
-              // errors, or compiles and reloads the page.
-              case "ServeProxy":
-                SimpleStaticFileServer.respondJavaScript(
-                  msg.request,
-                  msg.response,
-                  Inject.proxyFile(
-                    outputPath,
-                    getNow().getTime(),
-                    getWebSocketConnection(mutable),
-                    webSocketToken,
-                    logger.config.debug,
-                  ),
-                );
-                return false;
+            // The proxy file connects to the web socket server, which shows
+            // errors, or compiles and reloads the page.
+            case "ServeProxy":
+              outputRequest.serveJavaScript(
+                Inject.proxyFile(
+                  output.outputPath,
+                  getNow().getTime(),
+                  getWebSocketConnection(mutable),
+                  webSocketToken,
+                  logger.config.debug,
+                ),
+              );
+              break;
 
-              case "Wait":
-                return true;
-            }
-          },
-        );
+            case "Wait":
+              break;
+          }
+        }
         return;
       }
 
@@ -2010,12 +1997,8 @@ const runCmd =
           killWebSocketServer: elmWatchJsonChanged,
         })
           .then(() => {
-            if (!elmWatchJsonChanged) {
-              // Let waiting requests wait for the next run instead.
-              for (const { msg } of mutable.outputRequests) {
-                mutable.webSocketServer.dispatchToQueue(msg);
-              }
-            }
+            // Waiting output requests are kept by the server, and are
+            // responded to by the next run.
             resolvePromise({
               tag: "Restart",
               restartReasons: cmd.restartReasons,
@@ -2119,29 +2102,19 @@ function onWebSocketServerMsg(
 ): void {
   switch (msg.tag) {
     case "OutputRequested": {
+      const { outputRequest } = msg;
       // Requests made while restarting are queued. The browser might have
-      // given up on the request since then, and then the "close" listener
-      // below would never be called.
-      if (msg.response.closed) {
+      // given up on the request since then.
+      if (!mutable.webSocketServer.getOutputRequests().has(outputRequest)) {
         return;
       }
-      const output = findOutputForPath(mutable.project, msg.absolutePath);
+      const output = getFlatOutputs(mutable.project).find(
+        ({ outputPath }) => outputPath.targetName === outputRequest.targetName,
+      );
       if (output === undefined) {
-        msg.serveStatic();
+        outputRequest.serveFile();
         return;
       }
-      const outputRequest: OutputRequest = {
-        msg,
-        outputPath: output.outputPath,
-        priority: now.getTime(),
-      };
-      mutable.outputRequests.push(outputRequest);
-      // Stop prioritizing the output if the browser gives up on the request.
-      msg.response.once("close", () => {
-        mutable.outputRequests = mutable.outputRequests.filter(
-          (request) => request !== outputRequest,
-        );
-      });
       dispatch({
         tag: "OutputRequested",
         date: now,
@@ -2323,17 +2296,20 @@ async function closeAll(
 
 function makePrioritizedOutputs(mutable: Mutable): Map<TargetName, number> {
   const map = new Map<TargetName, number>();
-  for (const { outputPath, priority } of [
-    ...Array.from(mutable.webSocketServer.getConnections(), (connection) => ({
-      outputPath: getConnectionOutputPath(mutable.project, connection),
-      priority: connection.priority,
-    })),
-    ...mutable.outputRequests,
-  ]) {
+  const add = (targetName: TargetName, priority: number): void => {
+    map.set(targetName, Math.max(priority, map.get(targetName) ?? 0));
+  };
+  for (const connection of mutable.webSocketServer.getConnections()) {
+    const outputPath = getConnectionOutputPath(mutable.project, connection);
     if (outputPath.tag !== "OutputPathError") {
-      const previous = map.get(outputPath.targetName) ?? 0;
-      map.set(outputPath.targetName, Math.max(priority, previous));
+      add(outputPath.targetName, connection.priority);
     }
+  }
+  for (const {
+    targetName,
+    priority,
+  } of mutable.webSocketServer.getOutputRequests()) {
+    add(targetName, priority);
   }
   return map;
 }

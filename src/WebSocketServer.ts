@@ -1,5 +1,4 @@
 import * as crypto from "crypto";
-import type * as http from "http";
 import * as https from "https";
 import type { AddressInfo } from "net";
 import * as net from "net";
@@ -24,6 +23,7 @@ import type {
   CreateServer,
   GetNow,
   StaticFilesDir,
+  TargetName,
   WebSocketToken,
 } from "./Types.ts";
 
@@ -42,13 +42,22 @@ export type WebSocketConnection = {
   priority: number;
 };
 
+// An HTTP request for an output, which waits for the output to be compiled.
+// Like web sockets, these are kept track of by the server, since they might
+// need to wait across restarts.
+export type OutputRequest = {
+  targetName: TargetName;
+  // When the request was made. Outputs with recent requests are compiled first.
+  priority: number;
+  // Serve the file on disk.
+  serveFile: () => void;
+  serveJavaScript: (code: string) => void;
+};
+
 export type WebSocketServerMsg =
   | {
       tag: "OutputRequested";
-      absolutePath: AbsolutePath;
-      request: http.IncomingMessage;
-      response: http.ServerResponse;
-      serveStatic: () => void;
+      outputRequest: OutputRequest;
     }
   | {
       tag: "WebSocketConnected";
@@ -130,6 +139,8 @@ export class WebSocketServer {
 
   private connections = new Set<WebSocketConnection>();
 
+  private outputRequests = new Set<OutputRequest>();
+
   isHTTPS: boolean;
 
   port: Port;
@@ -140,7 +151,9 @@ export class WebSocketServer {
   // they can wait for the output to be compiled. This is kept between restarts
   // (where the messages are queued), so that requests made while restarting
   // also wait.
-  private isOutputPath: (absolutePath: AbsolutePath) => boolean = () => false;
+  private resolveOutput: (
+    absolutePath: AbsolutePath,
+  ) => TargetName | undefined = () => undefined;
 
   private msgQueue: Array<WebSocketServerMsg> = [];
 
@@ -191,16 +204,36 @@ export class WebSocketServer {
             staticFilesDirectory,
             request,
           );
-          if (absolutePath !== undefined && this.isOutputPath(absolutePath)) {
-            this.dispatch({
-              tag: "OutputRequested",
-              absolutePath,
-              request,
-              response,
-              serveStatic,
-            });
-          } else {
+          const targetName =
+            absolutePath === undefined
+              ? undefined
+              : this.resolveOutput(absolutePath);
+          if (targetName === undefined) {
             serveStatic();
+          } else if (!response.closed) {
+            // (A custom `createServer` might call `onRequest` after the
+            // browser has given up on the request already.)
+            const outputRequest: OutputRequest = {
+              targetName,
+              priority: getNow().getTime(),
+              serveFile: () => {
+                this.outputRequests.delete(outputRequest);
+                serveStatic();
+              },
+              serveJavaScript: (code) => {
+                this.outputRequests.delete(outputRequest);
+                SimpleStaticFileServer.respondJavaScript(
+                  request,
+                  response,
+                  code,
+                );
+              },
+            };
+            this.outputRequests.add(outputRequest);
+            response.once("close", () => {
+              this.outputRequests.delete(outputRequest);
+            });
+            this.dispatch({ tag: "OutputRequested", outputRequest });
           }
         } else {
           SimpleStaticFileServer.respondHtml(
@@ -405,8 +438,15 @@ export class WebSocketServer {
     }
   }
 
-  setIsOutputPath(isOutputPath: (absolutePath: AbsolutePath) => boolean): void {
-    this.isOutputPath = isOutputPath;
+  // Requests not yet responded to, and not given up on by the browser.
+  getOutputRequests(): ReadonlySet<OutputRequest> {
+    return this.outputRequests;
+  }
+
+  setResolveOutput(
+    resolveOutput: (absolutePath: AbsolutePath) => TargetName | undefined,
+  ): void {
+    this.resolveOutput = resolveOutput;
   }
 
   unsetDispatch(): void {

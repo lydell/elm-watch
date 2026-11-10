@@ -1,14 +1,23 @@
+import * as fs from "fs";
 import * as http from "http";
 import * as net from "net";
 import { setTimeout } from "node:timers/promises";
+import * as os from "os";
+import * as path from "path";
 import { describe, expect, test, vi } from "vitest";
 import WebSocket from "ws";
 
 import { AllowedHost } from "../src/AllowedHosts.ts";
 import { markAsHost } from "../src/Host.ts";
 import { markAsPort } from "../src/Port.ts";
-import { markAsWebSocketToken } from "../src/Types.ts";
 import {
+  markAsAbsolutePath,
+  markAsStaticFilesDir,
+  markAsWebSocketToken,
+  type TargetName,
+} from "../src/Types.ts";
+import {
+  type OutputRequest,
   WebSocketServer,
   type WebSocketServerMsg,
   type WebSocketServerOptions,
@@ -309,6 +318,97 @@ describe("WebSocketServer", () => {
     } finally {
       webSocket.close();
       await server.close();
+    }
+  });
+
+  test("output requests are kept track of until responded to or given up on", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "elm-watch-requests-"));
+    fs.writeFileSync(path.join(dir, "Main.js"), "on disk");
+    fs.writeFileSync(path.join(dir, "other.js"), "other");
+    const server = new WebSocketServer({
+      ...OPTIONS,
+      staticFilesDirectory: markAsStaticFilesDir(markAsAbsolutePath(dir)),
+    });
+    server.setResolveOutput((absolutePath) =>
+      path.basename(absolutePath) === "Main.js"
+        ? ("Main" as TargetName)
+        : undefined,
+    );
+    const received: Array<OutputRequest> = [];
+    server.setDispatch((msg) => {
+      if (msg.tag === "OutputRequested") {
+        received.push(msg.outputRequest);
+      }
+    });
+    await server.listening;
+
+    const request = (
+      urlPath: string,
+    ): { response: Promise<string>; abort: () => void } => {
+      const clientRequest = http.get({
+        port: server.port,
+        path: urlPath,
+        agent: false,
+      });
+      const response = new Promise<string>((resolve, reject) => {
+        clientRequest.on("response", (incoming) => {
+          let body = "";
+          incoming.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+          });
+          incoming.on("end", () => {
+            resolve(body);
+          });
+        });
+        clientRequest.on("error", reject);
+      });
+      return {
+        response,
+        abort: () => {
+          response.catch(() => {
+            // Expected.
+          });
+          clientRequest.destroy();
+        },
+      };
+    };
+
+    try {
+      // Other files are served right away.
+      expect(await request("/other.js").response).toBe("other");
+      expect(received).toStrictEqual([]);
+
+      // Responded to.
+      const first = request("/Main.js");
+      await vi.waitFor(() => {
+        expect(received).toHaveLength(1);
+      });
+      expect(Array.from(server.getOutputRequests())).toStrictEqual(received);
+      received[0]?.serveJavaScript("compiled");
+      expect(server.getOutputRequests().size).toBe(0);
+      expect(await first.response).toBe("compiled");
+
+      const second = request("/Main.js");
+      await vi.waitFor(() => {
+        expect(received).toHaveLength(2);
+      });
+      received[1]?.serveFile();
+      expect(server.getOutputRequests().size).toBe(0);
+      expect(await second.response).toBe("on disk");
+
+      // Given up on.
+      const third = request("/Main.js");
+      await vi.waitFor(() => {
+        expect(received).toHaveLength(3);
+      });
+      expect(server.getOutputRequests().size).toBe(1);
+      third.abort();
+      await vi.waitFor(() => {
+        expect(server.getOutputRequests().size).toBe(0);
+      });
+    } finally {
+      await server.close();
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
