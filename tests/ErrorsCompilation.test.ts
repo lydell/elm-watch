@@ -400,8 +400,7 @@ describe("errors", () => {
 
         🚨 ⧙1⧘ error found
 
-        ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm⧘
-        🚨 ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        🚨 ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm⧘
       `);
     });
   });

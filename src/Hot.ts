@@ -30,7 +30,6 @@ import * as ErrorSelection from "./ErrorSelection.ts";
 import * as ErrorView from "./ErrorView.ts";
 import {
   bold,
-  capitalize,
   dim,
   formatTime,
   printDurationMs,
@@ -42,11 +41,7 @@ import {
 import type { Host } from "./Host.ts";
 import * as Inject from "./Inject.ts";
 import type { Logger, LoggerConfig } from "./Logger.ts";
-import {
-  isNonEmptyArray,
-  mapNonEmptyArray,
-  type NonEmptyArray,
-} from "./NonEmptyArray.ts";
+import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import { absoluteDirname } from "./PathHelpers.ts";
 import type { PortChoice } from "./Port.ts";
 import {
@@ -97,7 +92,6 @@ type WatcherEventName = "changed" | "removed";
 
 type WatcherEvent<File = TaggedAbsolutePath | StaticFilesDirPath> = {
   tag: "WatcherEvent";
-  date: Date;
   eventName: WatcherEventName;
   file: File;
 };
@@ -115,39 +109,21 @@ type StaticFilesDirPath = {
 type WebSocketRelatedEvent =
   | {
       tag: "WebSocketChangedCompilationMode";
-      date: Date;
       outputPath: OutputPath;
       compilationMode: CompilationMode;
     }
   | {
-      tag: "WebSocketClosed";
-      date: Date;
-      outputPath: OutputPath | OutputPathError;
-    }
-  | {
       tag: "WebSocketConnectedNeedingCompilation";
-      date: Date;
       outputPath: OutputPath;
-    }
-  | {
-      tag: "WebSocketConnectedNeedingNoAction";
-      date: Date;
-      outputPath: OutputPath;
-    }
-  | {
-      tag: "WebSocketConnectedWithErrors";
-      date: Date;
     }
   | {
       tag: "WebSocketConnectionRejected";
-      date: Date;
       origin: string | undefined;
       reason: WebSocketConnectionRejectedReason;
     };
 
 type OutputRequestedEvent = {
   tag: "OutputRequestedNeedingCompilation";
-  date: Date;
   outputPath: OutputPath;
 };
 
@@ -243,11 +219,6 @@ export type Msg =
       changedSourceDirectories: Array<AbsolutePath>;
     }
   | {
-      tag: "WebSocketClosed";
-      date: Date;
-      outputPath: OutputPath | OutputPathError;
-    }
-  | {
       tag: "WebSocketConnected";
       date: Date;
       webSocket: WebSocket;
@@ -276,12 +247,7 @@ export type Model = {
   // Then we check if the paths exist. Atomic saves (write to a temporary
   // file, then rename it over the original) can briefly make a file look
   // removed, so we don’t want to check right away.
-  pendingWatcherEvents: Array<PendingWatcherEvent>;
-};
-
-type PendingWatcherEvent = {
-  date: Date;
-  absolutePath: AbsolutePath;
+  pendingWatcherEvents: Array<AbsolutePath>;
 };
 
 type NextAction =
@@ -340,11 +306,9 @@ export type Cmd =
       tag: "InstallDependencies";
     }
   | {
-      tag: "LogInfoMessageWithTimeline";
-      // For logs (not a TTY), printed below a timeline of all events.
+      tag: "LogInfoMessage";
+      // Printed on one line together with the latest event.
       message: string;
-      // For TTYs, printed on one line together with the latest event.
-      shortMessage: string;
       events: Array<LatestEvent>;
     }
   | {
@@ -526,9 +490,7 @@ export async function run(
           ? {
               tag: "SleepBeforeNextAction",
               sleepMs: getNextActionSleepMs(newModel, webSocketEventSleepMs),
-              watcherPaths: newModel.pendingWatcherEvents.map(
-                (event) => event.absolutePath,
-              ),
+              watcherPaths: newModel.pendingWatcherEvents,
             }
           : { tag: "NoCmd" },
       ];
@@ -565,7 +527,6 @@ export async function run(
 }
 
 export async function watchElmWatchJsonOnce(
-  getNow: GetNow,
   elmWatchJsonPath: ElmWatchJsonPath,
   hotTestHooks: HotTestHooks,
   onReady: () => void,
@@ -591,7 +552,6 @@ export async function watchElmWatchJsonOnce(
         watcher.close();
         resolve({
           tag: "WatcherEvent",
-          date: getNow(),
           eventName: fs.existsSync(elmWatchJsonPath) ? "changed" : "removed",
           file: {
             tag: "AbsolutePath",
@@ -936,7 +896,7 @@ export function update(
           ...model,
           pendingWatcherEvents: [
             ...model.pendingWatcherEvents,
-            { date: msg.date, absolutePath: msg.absolutePath },
+            msg.absolutePath,
           ],
         },
         [],
@@ -973,7 +933,7 @@ export function update(
           ];
 
         case "NoAction":
-          return runNextAction(msg.date, project, model);
+          return runNextAction(msg.date, model);
       }
 
     case "SleepBeforeNextActionDone": {
@@ -990,11 +950,7 @@ export function update(
             ? [event.file.urlPath]
             : [],
       );
-      const [newModel, cmds] = runNextAction(
-        msg.date,
-        project,
-        modelWithEvents,
-      );
+      const [newModel, cmds] = runNextAction(msg.date, modelWithEvents);
       return [
         {
           ...newModel,
@@ -1088,12 +1044,8 @@ export function update(
                 : { tag: "NoCmd" },
               { tag: "HandleElmWatchStuffJsonWriteError" },
               {
-                tag: "LogInfoMessageWithTimeline",
+                tag: "LogInfoMessage",
                 message: compileFinishedMessage(loggerConfig, duration),
-                shortMessage: compileFinishedShortMessage(
-                  loggerConfig,
-                  duration,
-                ),
                 events: model.latestEvents,
               },
               isNonEmptyArray(errors) && exitOnError
@@ -1171,28 +1123,7 @@ export function update(
       }
 
     case "OutputRequested":
-      return onOutputRequested(
-        msg.date,
-        model,
-        msg.outputPath,
-        msg.outputState,
-      );
-
-    case "WebSocketClosed":
-      return [
-        {
-          ...model,
-          latestEvents: [
-            ...model.latestEvents,
-            {
-              tag: "WebSocketClosed",
-              date: msg.date,
-              outputPath: msg.outputPath,
-            },
-          ],
-        },
-        [],
-      ];
+      return onOutputRequested(model, msg.outputPath, msg.outputState);
 
     case "WebSocketConnected": {
       const result = msg.parseWebSocketConnectRequestUrlResult;
@@ -1211,7 +1142,6 @@ export function update(
       switch (result.tag) {
         case "Success": {
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
-            msg.date,
             model,
             result.elmJsonPath,
             result.outputPath,
@@ -1219,27 +1149,20 @@ export function update(
             result.elmCompiledTimestamp,
           );
           return [
-            {
-              ...newModel,
-              latestEvents: [...newModel.latestEvents, latestEvent],
-            },
+            latestEvent === undefined
+              ? newModel
+              : {
+                  ...newModel,
+                  latestEvents: [...newModel.latestEvents, latestEvent],
+                },
             [...cmds, ...cssCmd],
           ];
         }
 
         case "ElmJsonError": {
           const targetError = result.error;
-          const event: WebSocketRelatedEvent = {
-            tag: "WebSocketConnectedNeedingNoAction",
-            date: msg.date,
-            outputPath: targetError.outputPath,
-          };
-
           return [
-            {
-              ...model,
-              latestEvents: [...model.latestEvents, event],
-            },
+            model,
             [
               {
                 tag: "WebSocketSendToOutput",
@@ -1259,18 +1182,10 @@ export function update(
           ];
         }
 
+        // The browser shows the error.
         default:
           return [
-            {
-              ...model,
-              latestEvents: [
-                ...model.latestEvents,
-                {
-                  tag: "WebSocketConnectedWithErrors",
-                  date: msg.date,
-                },
-              ],
-            },
+            model,
             [
               {
                 tag: "WebSocketSend",
@@ -1301,7 +1216,6 @@ export function update(
             ...model.latestEvents,
             {
               tag: "WebSocketConnectionRejected",
-              date: msg.date,
               origin: msg.origin,
               reason: msg.reason,
             },
@@ -1317,7 +1231,6 @@ export function update(
         case "Success":
           return onWebSocketToServerMessage(
             model,
-            msg.date,
             msg.output,
             msg.webSocket,
             result.message,
@@ -1358,15 +1271,16 @@ function handlePendingWatcherEvents(
   // parent of a missing source directory is added, we only get an event for
   // the parent.
   const [changedSourceDirectory] = changedSourceDirectories;
-  const [firstEvent] = model.pendingWatcherEvents;
-  if (changedSourceDirectory !== undefined && firstEvent !== undefined) {
+  if (
+    changedSourceDirectory !== undefined &&
+    isNonEmptyArray(model.pendingWatcherEvents)
+  ) {
     const [nextAction, latestEvent, cmds] = makeRestartNextAction(
       makeWatcherEvent(
         project.missingSourceDirectories.has(changedSourceDirectory)
           ? "changed"
           : "removed",
         changedSourceDirectory,
-        firstEvent.date,
       ),
       project,
     );
@@ -1383,19 +1297,18 @@ function handlePendingWatcherEvents(
 
   // Editors and file systems often emit several events for the same file.
   // Only handle the latest one for each path.
-  const latestByPath = new Map<AbsolutePath, PendingWatcherEvent>();
-  for (const event of model.pendingWatcherEvents) {
-    latestByPath.delete(event.absolutePath);
-    latestByPath.set(event.absolutePath, event);
+  const latestPaths = new Set<AbsolutePath>();
+  for (const absolutePath of model.pendingWatcherEvents) {
+    latestPaths.delete(absolutePath);
+    latestPaths.add(absolutePath);
   }
 
   let { nextAction } = model;
   const latestEvents = [...model.latestEvents];
   const cmds: Array<Cmd> = [];
 
-  for (const { date, absolutePath } of latestByPath.values()) {
+  for (const absolutePath of latestPaths) {
     const result = onWatcherEvent(
-      date,
       project,
       removedPaths.has(absolutePath) ? "removed" : "changed",
       absolutePath,
@@ -1416,7 +1329,6 @@ function handlePendingWatcherEvents(
 }
 
 function onWatcherEvent(
-  now: Date,
   project: Project,
   eventName: WatcherEventName,
   absolutePath: AbsolutePath,
@@ -1425,7 +1337,7 @@ function onWatcherEvent(
   if (absolutePath.endsWith(".elm")) {
     return onElmFileWatcherEvent(
       project,
-      makeWatcherEvent(eventName, absolutePath, now),
+      makeWatcherEvent(eventName, absolutePath),
       nextAction,
     );
   }
@@ -1446,7 +1358,7 @@ function onWatcherEvent(
         eventName === "changed"
       ) {
         return makeRestartNextAction(
-          makeWatcherEvent(eventName, absolutePath, now),
+          makeWatcherEvent(eventName, absolutePath),
           project,
         );
       }
@@ -1455,7 +1367,7 @@ function onWatcherEvent(
     case "elm.json":
       if (getAllElmJsonPaths(project).some((p) => absolutePath === p)) {
         return makeRestartNextAction(
-          makeWatcherEvent(eventName, absolutePath, now),
+          makeWatcherEvent(eventName, absolutePath),
           project,
         );
       }
@@ -1470,7 +1382,7 @@ function onWatcherEvent(
       switch (eventName) {
         case "removed":
           return makeRestartNextAction(
-            makeWatcherEvent(eventName, absolutePath, now),
+            makeWatcherEvent(eventName, absolutePath),
             project,
           );
 
@@ -1481,7 +1393,7 @@ function onWatcherEvent(
     default:
       if (eventName === "removed" && isElmStuffCompilerDir(absolutePath)) {
         return makeRestartNextAction(
-          makeWatcherEvent(eventName, absolutePath, now),
+          makeWatcherEvent(eventName, absolutePath),
           project,
         );
       }
@@ -1497,7 +1409,7 @@ function onWatcherEvent(
           return [
             nextAction,
             {
-              ...makeWatcherEvent(eventName, absolutePath, now),
+              ...makeWatcherEvent(eventName, absolutePath),
               affectsAnyTarget: true,
               file: {
                 tag: "StaticFilesDirPath",
@@ -1515,7 +1427,7 @@ function onWatcherEvent(
       // event for the directory itself, not for every file inside it.
       return onDirectoryWatcherEvent(
         project,
-        makeWatcherEvent(eventName, absolutePath, now),
+        makeWatcherEvent(eventName, absolutePath),
         nextAction,
       );
   }
@@ -1637,11 +1549,7 @@ function onElmFilesWatcherEvent(
     : [nextAction, { ...event, affectsAnyTarget: false }, []];
 }
 
-function runNextAction(
-  start: Date,
-  project: Project,
-  model: Model,
-): [Model, Array<Cmd>] {
+function runNextAction(start: Date, model: Model): [Model, Array<Cmd>] {
   switch (model.nextAction.tag) {
     case "Restart":
       switch (model.hotState.tag) {
@@ -1707,12 +1615,8 @@ function runNextAction(
                 { ...model, latestEvents: [] },
                 [
                   {
-                    tag: "LogInfoMessageWithTimeline",
-                    message: printEventsMessage(
-                      model.latestEvents,
-                      project.disabledOutputs,
-                    ),
-                    shortMessage: printEventsShortMessage(model.latestEvents),
+                    tag: "LogInfoMessage",
+                    message: printEventsMessage(model.latestEvents),
                     events: model.latestEvents,
                   },
                 ],
@@ -1877,34 +1781,31 @@ const runCmd =
         return;
       }
 
-      case "LogInfoMessageWithTimeline": {
-        const date = getNow();
-        const events = filterLatestEvents(cmd.events);
+      case "LogInfoMessage": {
         const hasErrors = isNonEmptyArray(
           Compile.extractErrors(mutable.project),
         );
+        const infoLine = printInfoLine({
+          loggerConfig: logger.config,
+          // In a TTY, the status lines and the error view already say that
+          // there are errors, so use the information emoji to not repeat 🚨
+          // over and over. In logs, 🚨 marks the end of the errors.
+          emojiName: !hasErrors
+            ? "Success"
+            : logger.config.isTTY
+              ? "Information"
+              : "Error",
+          date: getNow(),
+          message: cmd.message,
+          events: filterLatestEvents(cmd.events),
+          project: mutable.project,
+        });
 
         if (!logger.config.isTTY) {
-          logger.write(
-            infoMessageWithTimeline({
-              loggerConfig: logger.config,
-              date,
-              message: cmd.message,
-              events,
-              hasErrors,
-            }),
-          );
+          logger.write(`\n${infoLine}`);
           return;
         }
 
-        const infoLine = printInfoLine({
-          loggerConfig: logger.config,
-          date,
-          message: cmd.shortMessage,
-          events,
-          root: mutable.project.root,
-          hasErrors,
-        });
         mutable.lastInfoLine = infoLine;
 
         if (errorViewIsActive(logger, exitOnError, mutable.project)) {
@@ -2303,23 +2204,13 @@ function onWebSocketServerMsg(
       });
       return;
 
-    case "WebSocketClosed": {
-      const removedConnection = mutable.webSocketConnections.find(
-        (connection) => connection.webSocket === msg.webSocket,
-      );
+    // The browser shows its own connection status, so disconnects aren’t
+    // printed.
+    case "WebSocketClosed":
       mutable.webSocketConnections = mutable.webSocketConnections.filter(
         (connection) => connection.webSocket !== msg.webSocket,
       );
-      dispatch({
-        tag: "WebSocketClosed",
-        date: now,
-        outputPath:
-          removedConnection === undefined
-            ? { tag: "OutputPathError" }
-            : removedConnection.outputPath,
-      });
       return;
-    }
 
     case "WebSocketMessageReceived": {
       const webSocketConnection = mutable.webSocketConnections.find(
@@ -2533,11 +2424,9 @@ function getWebSocketConnection(mutable: Mutable): WebSocketUrlConnection {
 function makeWatcherEvent(
   eventName: WatcherEventName,
   absolutePath: AbsolutePath,
-  date: Date,
 ): WatcherEvent<TaggedAbsolutePath> {
   return {
     tag: "WatcherEvent",
-    date,
     eventName,
     file: { tag: "AbsolutePath", absolutePath },
   };
@@ -2851,16 +2740,14 @@ function parseWebSocketToServerMessage(
 }
 
 function onWebSocketConnected(
-  date: Date,
   model: Model,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   outputState: OutputState,
   elmCompiledTimestamp: number,
-): [Model, LatestEvent, Array<Cmd>] {
+): [Model, LatestEvent | undefined, Array<Cmd>] {
   const event: WebSocketRelatedEvent = {
     tag: "WebSocketConnectedNeedingCompilation",
-    date,
     outputPath,
   };
 
@@ -2886,11 +2773,8 @@ function onWebSocketConnected(
             elmCompiledTimestamp
             ? [
                 model,
-                {
-                  tag: "WebSocketConnectedNeedingNoAction",
-                  date,
-                  outputPath,
-                },
+                // Nothing happened, so nothing to print.
+                undefined,
                 [
                   {
                     tag: "WebSocketSendToOutput",
@@ -2950,7 +2834,6 @@ function onWebSocketConnected(
 }
 
 function onOutputRequested(
-  date: Date,
   model: Model,
   outputPath: OutputPath,
   outputState: OutputState,
@@ -2959,7 +2842,7 @@ function onOutputRequested(
     ...newModel,
     latestEvents: [
       ...newModel.latestEvents,
-      { tag: "OutputRequestedNeedingCompilation", date, outputPath },
+      { tag: "OutputRequestedNeedingCompilation", outputPath },
     ],
   });
 
@@ -3098,7 +2981,6 @@ function compileNextAction(nextAction: NextAction): NextAction {
 
 function onWebSocketToServerMessage(
   model: Model,
-  date: Date,
   output: WebSocketMessageReceivedOutput,
   webSocket: WebSocket,
   message: WebSocketToServerMessage,
@@ -3123,7 +3005,6 @@ function onWebSocketToServerMessage(
                 ...newModel.latestEvents,
                 {
                   tag: "WebSocketChangedCompilationMode",
-                  date,
                   outputPath: output.outputPath,
                   compilationMode: message.compilationMode,
                 },
@@ -3345,15 +3226,12 @@ function getLatestEventSleepMs(
     case "WatcherEvent":
       return WATCHER_EVENT_SLEEP_MS;
 
-    // Also sleep for a little bit when web sockets connect and disconnect.
-    // That’s useful when there are burst connections because of multiple
+    // Also sleep for a little bit when web sockets connect or outputs are
+    // requested over HTTP. That’s useful when there are burst connections because of multiple
     // scripts on the same page, or many tabs with elm-watch. This is slower
     // than file system events. Configurable for tests.
     case "OutputRequestedNeedingCompilation":
-    case "WebSocketClosed":
     case "WebSocketConnectedNeedingCompilation":
-    case "WebSocketConnectedNeedingNoAction":
-    case "WebSocketConnectedWithErrors":
     case "WebSocketConnectionRejected":
       return webSocketEventSleepMs;
 
@@ -3373,94 +3251,50 @@ function filterLatestEvents(events: Array<LatestEvent>): Array<LatestEvent> {
   return isNonEmptyArray(filtered) ? filtered : events;
 }
 
-// For logs (not a TTY).
-function infoMessageWithTimeline({
-  loggerConfig,
-  date,
-  message,
-  events,
-  hasErrors,
-}: {
-  loggerConfig: LoggerConfig;
-  date: Date;
-  message: string;
-  events: Array<LatestEvent>;
-  hasErrors: boolean;
-}): string {
-  return [
-    "", // Empty line separator.
-    printTimeline(loggerConfig, events),
-    printMessageWithTimeAndEmoji({
-      loggerConfig,
-      emojiName: hasErrors ? "Error" : "Success",
-      date,
-      dateHighlight: bold,
-      message,
-    }),
-  ]
-    .flatMap((part) => part ?? [])
-    .join("\n");
-}
-
-// For TTYs: The time, the message and the latest event on one line. When there
-// are errors, the status lines and the error view already say so, so we use
-// the information emoji to not repeat 🚨 over and over.
+// The time, the message and the latest event on one line.
 function printInfoLine({
   loggerConfig,
+  emojiName,
   date,
   message,
   events,
-  root,
-  hasErrors,
+  project,
 }: {
   loggerConfig: LoggerConfig;
+  emojiName: Compile.EmojiName;
   date: Date;
   message: string;
   events: Array<LatestEvent>;
-  root: AbsolutePath;
-  hasErrors: boolean;
+  project: Project;
 }): string {
-  const summary = summarizeEvents(events, root);
+  const summary = summarizeEvents(
+    events,
+    project.root,
+    project.disabledOutputs.length > 0,
+  );
   return printMessageWithTimeAndEmoji({
     loggerConfig,
-    emojiName: hasErrors ? "Information" : "Success",
+    emojiName,
     date,
     dateHighlight: bold,
     message: summary === undefined ? message : `${message}   ${dim(summary)}`,
   });
 }
 
-function summarizeEvents(
-  allEvents: Array<LatestEvent>,
+// Exported for tests.
+export function summarizeEvents(
+  events: Array<LatestEvent>,
   root: AbsolutePath,
+  hasDisabledTargets: boolean,
 ): string | undefined {
-  // A page reload is a disconnect followed by a connect. Only the connect is
-  // interesting. (Whether both end up in the same batch of events depends on
-  // timing.)
-  const events = allEvents.filter((event, index) => {
-    if (
-      event.tag !== "WebSocketClosed" ||
-      event.outputPath.tag !== "OutputPath"
-    ) {
-      return true;
-    }
-    const { targetName } = event.outputPath;
-    return !allEvents
-      .slice(index + 1)
-      .some(
-        (laterEvent) =>
-          (laterEvent.tag === "WebSocketConnectedNeedingCompilation" ||
-            laterEvent.tag === "WebSocketConnectedNeedingNoAction") &&
-          laterEvent.outputPath.targetName === targetName,
-      );
-  });
   const latest = events.at(-1);
   if (latest === undefined) {
     return undefined;
   }
   const more = events.length > 1 ? ` +${events.length - 1} more` : "";
+  const what = hasDisabledTargets ? "any enabled target" : "any target";
   return latest.tag === "WatcherEvent" && eventsAreOnlyNotImported(events)
-    ? `${printWatcherEventPath(latest, root)}${more} – not imported by any target`
+    ? `${printWatcherEventPath(latest, root)}${more} – not imported by ${what}`
     : `${printEventShort(latest, root)}${more}`;
 }
 
@@ -3487,19 +3321,8 @@ function printEventShort(event: LatestEvent, root: AbsolutePath): string {
     case "OutputRequestedNeedingCompilation":
       return `HTTP request: ${event.outputPath.targetName}`;
 
-    case "WebSocketClosed":
-      return `web socket disconnected: ${
-        event.outputPath.tag === "OutputPath"
-          ? event.outputPath.targetName
-          : "(no matching target)"
-      }`;
-
     case "WebSocketConnectedNeedingCompilation":
-    case "WebSocketConnectedNeedingNoAction":
       return `web socket connected: ${event.outputPath.targetName}`;
-
-    case "WebSocketConnectedWithErrors":
-      return "web socket connected with errors (see the browser)";
 
     case "WebSocketConnectionRejected":
       return `rejected web socket from ${
@@ -3578,96 +3401,7 @@ function printServerLinks(
     .join("")}`;
 }
 
-export function printTimeline(
-  loggerConfig: LoggerConfig,
-  events: Array<LatestEvent>,
-): string | undefined {
-  if (!isNonEmptyArray(events)) {
-    return undefined;
-  }
-
-  const base = 2;
-
-  if (events.length <= 2 * base + 1) {
-    return mapNonEmptyArray(events, (event) =>
-      printEvent(loggerConfig, event),
-    ).join("\n");
-  }
-
-  const start = events.slice(0, base);
-  const end = events.slice(-base);
-
-  const numMoreEvents = events.length - 2 * base;
-
-  return [
-    ...start.map((event) => printEvent(loggerConfig, event)),
-    `${loggerConfig.fancy ? "   " : ""}(${numMoreEvents} more events)`,
-    ...end.map((event) => printEvent(loggerConfig, event)),
-  ].join("\n");
-}
-
-function printEvent(loggerConfig: LoggerConfig, event: LatestEvent): string {
-  return printMessageWithTimeAndEmoji({
-    loggerConfig,
-    emojiName: "Information",
-    date: event.date,
-    dateHighlight: dim,
-    message: dim(printEventMessage(event)),
-  });
-}
-
-function printEventMessage(event: LatestEvent): string {
-  switch (event.tag) {
-    case "WatcherEvent":
-      // TODO: Don’t really want to print changes to files in static dir?
-      return `${capitalize(event.eventName)} ${
-        event.file.tag === "AbsolutePath"
-          ? event.file.absolutePath
-          : event.file.urlPath
-      }`;
-
-    case "OutputRequestedNeedingCompilation":
-      return `HTTP request needing compilation of: ${event.outputPath.targetName}`;
-
-    case "WebSocketClosed":
-      return `Web socket disconnected for: ${
-        event.outputPath.tag === "OutputPath"
-          ? event.outputPath.targetName
-          : "(no matching target)"
-      }`;
-
-    case "WebSocketConnectedNeedingCompilation":
-      return `Web socket connected needing compilation of: ${event.outputPath.targetName}`;
-
-    case "WebSocketConnectedNeedingNoAction":
-      return `Web socket connected for: ${event.outputPath.targetName}`;
-
-    case "WebSocketConnectedWithErrors":
-      return `Web socket connected with errors (see the browser for details)`;
-
-    case "WebSocketConnectionRejected": {
-      const origin =
-        event.origin === undefined ? "unknown origin" : quote(event.origin);
-      return `Web socket connection from ${origin} rejected due to: ${printWebSocketConnectionRejectedReason(event.reason)}`;
-    }
-
-    case "WebSocketChangedCompilationMode":
-      return `Changed compilation mode to ${quote(event.compilationMode)} of: ${
-        event.outputPath.targetName
-      }`;
-  }
-}
-
 function compileFinishedMessage(
-  loggerConfig: LoggerConfig,
-  duration: number,
-): string {
-  return `Compilation finished in ${bold(
-    printDurationMs(loggerConfig.mockedTimings ? 123 : duration).trim(),
-  )}.`;
-}
-
-function compileFinishedShortMessage(
   loggerConfig: LoggerConfig,
   duration: number,
 ): string {
@@ -3676,22 +3410,8 @@ function compileFinishedShortMessage(
   )}`;
 }
 
-function printEventsShortMessage(events: Array<LatestEvent>): string {
+function printEventsMessage(events: Array<LatestEvent>): string {
   return eventsAreOnlyNotImported(events) ? "Nothing to do" : "Up to date";
-}
-
-function printEventsMessage(
-  events: Array<LatestEvent>,
-  disabledOutputs: Array<TargetLocation>,
-): string {
-  const what1 = events.length === 1 ? "file is" : "files are";
-  const what2 =
-    disabledOutputs.length > 0 ? "any of the enabled targets" : "any target";
-  return events.every(
-    (event) => event.tag === "WatcherEvent" && !event.affectsAnyTarget,
-  )
-    ? `FYI: The above Elm ${what1} not imported by ${what2}. Nothing to do!`
-    : "Everything up to date.";
 }
 
 type OpenEditorLocation = { file: AbsolutePath; line: number; column: number };

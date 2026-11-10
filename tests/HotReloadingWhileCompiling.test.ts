@@ -139,16 +139,11 @@ describe("hot reloading", () => {
       ⏳ InterruptElm: elm make (typecheck only)
       ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/hot-reload/elm.json⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed elm.json⧘
       ⏳ InterruptElm: elm make
       ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: InterruptElm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: InterruptElm⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: InterruptElm⧘
     `);
   });
 });

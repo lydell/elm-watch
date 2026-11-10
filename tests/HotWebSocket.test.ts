@@ -93,7 +93,7 @@ describe("hot", () => {
       });
 
       expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(
-        `ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "http://localhost" rejected due to: wrong URL prefix – "/elm-watch?" != "/nope?elmWa"⧘`,
+        `✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "http://localhost": wrong URL prefix – "/elm-watch?" != "/nope?elmWa"⧘`,
       );
     });
 
@@ -260,7 +260,7 @@ describe("hot", () => {
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
         🌐 http://localhost:59123
 
-        ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html⧘
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html⧘
       `);
     });
 
@@ -285,7 +285,7 @@ describe("hot", () => {
       });
 
       expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(
-        `ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "http://localhost" rejected due to: invalid security token⧘`,
+        `✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "http://localhost": invalid security token⧘`,
       );
     });
 
@@ -314,16 +314,18 @@ describe("hot", () => {
             { Origin: "not a url" },
           ]) {
             await connectRejectedNodeWebSocket(webSocketUrl, headers);
+            // Wait for each rejection to be printed on its own line.
+            await waitForElmWatchIdle();
           }
           return "Stop" as const;
         },
       });
 
       expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(`
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: Host header not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from unknown origin rejected due to: invalid Host header: "evil.com/"⧘
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "https://evil.com" rejected due to: origin not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
-        ℹ️ ⧙13:10:05⧘ ⧙Web socket connection from "not a url" rejected due to: invalid origin: "not a url"⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: Host header not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: invalid Host header: "evil.com/"⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "https://evil.com": origin not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "not a url": invalid origin: "not a url"⧘
       `);
     });
 

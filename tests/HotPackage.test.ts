@@ -82,7 +82,7 @@ async function start(): Promise<{
   };
 
   const countFinished = (): number =>
-    stdout.getOutput().split("Compilation finished").length - 1;
+    stdout.getOutput().split("Compiled in").length - 1;
 
   const waitForIdle = (): Promise<void> =>
     waitFor(() => isIdle && watcherIsReady);
@@ -139,10 +139,10 @@ describe("package targets in hot mode", () => {
     `);
     expect(terminal().trimEnd().split("\n").slice(-5).sort().join("\n"))
       .toMatchInlineSnapshot(`
-        ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/package/src/Package/Internal.elm⧘
+        ⏳ Package: elm make (typecheck only)
         ✅ Example⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
         ✅ Package⧙     1 ms Q | 765 ms T⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Package/Internal.elm⧘
       `);
   });
 
@@ -178,10 +178,10 @@ describe("package targets in hot mode", () => {
     `);
     expect(terminal().trimEnd().split("\n").slice(-5).sort().join("\n"))
       .toMatchInlineSnapshot(`
-        ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/package/elm.json⧘
+        ⏳ Package: elm make (typecheck only)
         ✅ Example⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
         ✅ Package⧙     1 ms Q | 765 ms T⧘
-        ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed elm.json⧘
       `);
   });
 });

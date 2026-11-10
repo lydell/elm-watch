@@ -80,10 +80,9 @@ describe("hot", () => {
       one by one until you figure out which it is!
     `);
 
-    expect(terminal.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(`
-      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/elm-stuff⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-    `);
+    expect(terminal.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(
+      `✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed elm-stuff⧘`,
+    );
   });
 
   test("delete elm-stuff/0.19.1", async () => {
@@ -121,10 +120,9 @@ describe("hot", () => {
       /CORRUPT CACHE/,
     );
 
-    expect(terminal.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(`
-      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/delete-elm-stuff/elm-stuff/0.19.1⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-    `);
+    expect(terminal.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(
+      `✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed elm-stuff/0.19.1⧘`,
+    );
   });
 
   test("move directory out of and into source directory", async () => {
@@ -179,9 +177,9 @@ describe("hot", () => {
       your elm.json to make sure all the packages you need are listed there!
     `);
 
-    expect(grep(terminal, /ℹ️.*(?:Changed|Removed)/)).toMatchInlineSnapshot(`
-      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/watched-directories/src/Dir⧘
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/src/Dir⧘
+    expect(grep(terminal, / {3}⧙(?:changed|removed) /)).toMatchInlineSnapshot(`
+      🚨 ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed src/Dir⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Dir⧘
     `);
 
     function assert(div: HTMLDivElement): void {
@@ -230,9 +228,9 @@ describe("hot", () => {
       Is something misspelled? Or do you need to create them?
     `);
 
-    expect(grep(terminal, /ℹ️.*(?:Changed|Removed)/)).toMatchInlineSnapshot(`
-      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/watched-directories/src/Other⧘
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/src/Other⧘
+    expect(grep(terminal, / {3}⧙(?:changed|removed) /)).toMatchInlineSnapshot(`
+      🚨 ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed src/Other⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Other⧘
     `);
   });
 
@@ -300,9 +298,9 @@ describe("hot", () => {
       I cannot find it though. Is it missing? Is there a typo?
     `);
 
-    expect(grep(terminal, /ℹ️.*(?:Changed|Removed)/)).toMatchInlineSnapshot(`
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/lib⧘
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/lib/Lib/Text.elm⧘
+    expect(grep(terminal, / {3}⧙(?:changed|removed) /)).toMatchInlineSnapshot(`
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed lib⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed lib/Lib/Text.elm⧘
     `);
 
     function assert1(div: HTMLDivElement): void {
@@ -356,15 +354,15 @@ describe("hot", () => {
     expect(
       grep(
         terminal,
-        /MISSING SOURCE DIRECTORY|⏳ Dependencies|ℹ️.*(?:Changed|Removed)/,
+        /MISSING SOURCE DIRECTORY|⏳ Dependencies| {3}⧙(?:changed|removed) /,
       ),
     ).toMatchInlineSnapshot(`
       ⏳ Dependencies
       ⧙-- MISSING SOURCE DIRECTORY ----------------------------------------------------⧘
       ⏳ Dependencies
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/watched-directories/lib⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed lib⧘
       ⏳ Dependencies
-      ℹ️ ⧙13:10:05⧘ ⧙Removed /Users/you/project/tests/fixtures/hot/watched-directories/lib⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed lib⧘
     `);
 
     function assert1(div: HTMLDivElement): void {
@@ -462,28 +460,29 @@ describe("hot", () => {
           await wait(1);
           touch(path.join(unusedFolder, filePath));
         }
+        // Each “Nothing to do” line covers one batch of changed files.
         await waitFor(() => {
-          const output = stdout.getOutput();
-          return (
-            (output.match(/Changed/g) ?? []).length === files.length &&
-            /Changed.*\n.*FYI.*\s*$/.test(output)
-          );
+          const numChanged = stdout
+            .getOutput()
+            .split("\n")
+            .filter((line) => line.includes("Nothing to do"))
+            .map((line) => 1 + Number(/\+(\d+) more/.exec(line)?.[1] ?? 0))
+            .reduce((a, b) => a + b, 0);
+          return numChanged === files.length;
         });
         return "Stop" as const;
       },
     });
 
-    // The order in which the files are detected by the watcher
-    // is not defined when they happen so close to each other.
-    expect(grep(terminal, /Changed/).replace(/\w+\.elm/g, "File.elm"))
-      .toMatchInlineSnapshot(`
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-disabled-targets/src/Unused/File.elm⧘
-    `);
-
-    // The changes usually end up in the same batch, but not always.
-    expect(grep(terminal, /FYI/).split("\n").at(-1)).toMatch(
-      /FYI: The above Elm files? (?:are|is) not imported by any of the enabled targets\. Nothing to do!/,
+    // The changes usually end up in the same batch, but not always. The order
+    // in which the files are detected by the watcher is not defined when they
+    // happen so close to each other.
+    expect(
+      grep(terminal, /Nothing to do/)
+        .split("\n")
+        .at(-1),
+    ).toMatch(
+      /^✅ ⧙13:10:05⧘ Nothing to do {3}⧙src\/Unused\/\w+\.elm(?: \+\d+ more)? – not imported by any enabled target⧘$/,
     );
 
     function assert(div: HTMLDivElement): void {
@@ -506,15 +505,14 @@ describe("hot", () => {
       onIdle: async ({ div, stdout }) => {
         assert(div);
         touch(unusedFile1);
-        await waitFor(() => stdout.getOutput().includes("FYI"));
+        await waitFor(() => stdout.getOutput().includes("Nothing to do"));
         return "Stop" as const;
       },
     });
 
-    expect(grep(terminal, /Changed|FYI/)).toMatchInlineSnapshot(`
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/non-interesting-elm-files-changed-all-targets/src/Unused.elm⧘
-      ✅ ⧙13:10:05⧘ FYI: The above Elm file is not imported by any target. Nothing to do!
-    `);
+    expect(grep(terminal, /Nothing to do/)).toMatchInlineSnapshot(
+      `✅ ⧙13:10:05⧘ Nothing to do   ⧙src/Unused.elm – not imported by any target⧘`,
+    );
 
     function assert(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>The text!</div>`);
@@ -553,11 +551,11 @@ describe("hot", () => {
       },
     });
 
-    // The events might be split over two debounce windows, causing two
-    // “Changed” lines and an extra compilation. But never “Removed” or a
-    // restart (which would mean a second “Dependencies” line).
+    // The events might be split over two debounce windows, causing an extra
+    // compilation. But never “removed” or a restart (which would mean a second
+    // “Dependencies” line).
     expect(grep(terminal, /HtmlMain\.elm|Dependencies/)).toMatch(
-      /^⏳ Dependencies\n✅ Dependencies\n(?:ℹ️ .*Changed .*HtmlMain\.elm.*\n?)+$/,
+      /^⏳ Dependencies\n✅ Dependencies\n(?:✅ .*changed src\/HtmlMain\.elm.*\n?)+$/,
     );
   });
 
@@ -603,24 +601,18 @@ describe("hot", () => {
       ✅ Html⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
       ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       ⏳ Html: elm make
       ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Html⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Html⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html⧘
       ⏳ Html: elm make
       ⚪️ Worker: queued
       ✅ Html⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ Worker: elm make (typecheck only)
       ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
-      ℹ️ ⧙13:10:05⧘ ⧙Changed /Users/you/project/tests/fixtures/hot/two-changes-at-the-same-time/src/File.elm⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/File.elm +1 more⧘
     `);
 
     expect(lastRender).toMatchInlineSnapshot(`▼ ✅`);

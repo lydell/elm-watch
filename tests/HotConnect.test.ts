@@ -36,7 +36,7 @@ describe("hot", () => {
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123   ⧙network:⧘ http://192.168.0.1:59123
 
-      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html⧘
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -91,15 +91,11 @@ describe("hot", () => {
       ⏳ Worker: elm make (typecheck only)
       ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
 
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       ⏳ Worker: elm make
       ✅ Worker⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
 
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected needing compilation of: Worker⧘
-      ✅ ⧙13:10:05⧘ Compilation finished in ⧙123 ms⧘.
-
-      ℹ️ ⧙13:10:05⧘ ⧙Web socket connected for: Worker⧘
-      ✅ ⧙13:10:05⧘ Everything up to date.
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Worker⧘
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -189,7 +185,7 @@ describe("hot", () => {
       Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
       http://localhost:59123
 
-      13:10:05 Up to date   web socket connected: Html
+      13:10:05 Compiled in 123 ms   web socket connected: Html
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
@@ -217,15 +213,11 @@ describe("hot", () => {
       Html: elm make (typecheck only)
       Html: success     1 ms Q | 765 ms T /  50 ms W
 
-      13:10:05 Compilation finished in 123 ms.
+      13:10:05 Compiled in 123 ms
       Html: elm make
       Html: success     1 ms Q | 1.23 s E /  55 ms W |   9 ms I
 
-      13:10:05 Web socket connected needing compilation of: Html
-      13:10:05 Compilation finished in 123 ms.
-
-      13:10:05 Web socket connected for: Html
-      13:10:05 Everything up to date.
+      13:10:05 Compiled in 123 ms   web socket connected: Html
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
@@ -267,7 +259,7 @@ describe("hot", () => {
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
-      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
     `);
 
     rm(path.join(dir, "elm.json"));

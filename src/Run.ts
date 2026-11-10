@@ -69,7 +69,6 @@ export async function run(
       );
       return handleElmWatchJsonError(
         logger,
-        getNow,
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
@@ -86,7 +85,6 @@ export async function run(
       );
       return handleElmWatchJsonError(
         logger,
-        getNow,
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
@@ -266,7 +264,6 @@ export async function runConfig({
             case "ElmWatchJson":
               return handleElmWatchJsonError(
                 logger,
-                getNow,
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
@@ -289,7 +286,6 @@ export async function runConfig({
             case "ElmWatchJson":
               return handleElmWatchJsonError(
                 logger,
-                getNow,
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
@@ -366,7 +362,6 @@ export async function runConfig({
 
 async function handleElmWatchJsonError(
   logger: Logger,
-  getNow: GetNow,
   runMode: RunMode,
   elmWatchJsonPath: ElmWatchJsonPath,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
@@ -379,7 +374,6 @@ async function handleElmWatchJsonError(
 
     case "hot": {
       const elmWatchJsonEvent = await Hot.watchElmWatchJsonOnce(
-        getNow,
         elmWatchJsonPath,
         hotTestHooks,
         // Print this once the watcher is ready, so that if the user (or a

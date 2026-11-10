@@ -145,7 +145,7 @@ describe("serving outputs in hot mode", () => {
     expect(response.status).toBe(200);
     expect(response.contentType).toBe("text/javascript; charset=utf-8");
     expect(kind(response.body)).toBe("compiled");
-    expect(terminal()).toContain("HTTP request needing compilation of: Main");
+    expect(terminal()).toContain("HTTP request: Main");
   });
 
   test("typechecked only output gets compiled", async () => {

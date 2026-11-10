@@ -591,18 +591,6 @@ export function clean(string: string): string {
     .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
     .replace(/EOF/g, "EPIPE")
     .replace(
-      /\n.+Web socket disconnected for: (.+)(\n.+Web socket connected (?:for|needing compilation of): \1)/g,
-      "$2",
-    )
-    .replace(
-      /\n.*web socket connections:.? 0.+\n\n.+Web socket disconnected for:.+\n.+Everything up to date.+\n/g,
-      "",
-    )
-    .replace(
-      /\n.+Web socket disconnected for: (.+)\n.+Everything up to date.+\n(?=\n.+Web socket connected (?:for|needing compilation of): \1)/g,
-      "",
-    )
-    .replace(
       /&webSocketToken=[\da-f-]+/g,
       "&webSocketToken=37476437-1911-402a-9c87-fd94405770d2",
     );

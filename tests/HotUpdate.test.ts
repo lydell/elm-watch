@@ -169,7 +169,7 @@ function describeCmd(cmd: Cmd): string {
       return `${cmd.tag} ${cmd.outputs
         .map(({ outputPath }) => outputPath.targetName)
         .join(", ")}${cmd.killInstallDependencies ? " (kill install)" : ""}`;
-    case "LogInfoMessageWithTimeline":
+    case "LogInfoMessage":
       return `${cmd.tag}: ${
         cmd.message.replace(/\x1B\[\d+m/g, "").split("\n")[0] ?? ""
       }`;
@@ -217,7 +217,7 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
 
       > GotWatcherEvent src/Shared.elm
         state: Idle, next: NoAction, events: 0, pending: 1
@@ -231,7 +231,7 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
     `);
   });
 
@@ -270,7 +270,7 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
     `);
   });
 
@@ -320,14 +320,14 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
 
       > GotWatcherEvent src/Unrelated.elm
         state: Idle, next: NoAction, events: 0, pending: 1
 
       > SleepBeforeNextActionDone
         state: Idle, next: NoAction, events: 0, pending: 0
-        cmd: LogInfoMessageWithTimeline: FYI: The above Elm file is not imported by any target. Nothing to do!
+        cmd: LogInfoMessage: Nothing to do
     `);
   });
 
@@ -462,7 +462,7 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
 
       > GotWatcherEvent src/Shared.elm
         state: Idle, next: NoAction, events: 0, pending: 1
@@ -503,7 +503,7 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
 
       > GotWatcherEvent src/Main.elm
         state: Idle, next: NoAction, events: 0, pending: 1
@@ -541,7 +541,7 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
 
       > GotWatcherEvent lib
         state: Idle, next: NoAction, events: 0, pending: 1
@@ -575,7 +575,7 @@ describe("Hot update", () => {
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: PrintCompileErrors
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
         cmd: ExitOnIdle
     `);
   });
@@ -624,7 +624,7 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: RespondToOutputRequests RespondIfNotDirty
         cmd: HandleElmWatchStuffJsonWriteError
-        cmd: LogInfoMessageWithTimeline: Compilation finished in 123 ms.
+        cmd: LogInfoMessage: Compiled in 123 ms
 
       > ExitRequested
         state: Idle, next: NoAction, events: 0, pending: 0

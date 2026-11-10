@@ -559,7 +559,7 @@ describe("hot reloading", () => {
       ✅ OutputsWithoutActionOther1
       🌐 http://localhost:59123
 
-      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: OutputsWithoutAction⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: OutputsWithoutAction⧘
     `);
   });
 
