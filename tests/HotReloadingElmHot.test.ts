@@ -462,6 +462,66 @@ main =
     expect(browserConsole).toStrictEqual("");
   });
 
+  // The targets are separate scripts, but share `window.Elm.hot` (the second
+  // script reuses the one the first script created). So `Elm.hot.reload` for one
+  // target redraws the apps of the other target too – with their own, unchanged
+  // code. The other target must keep its view and state.
+  test.each(["standard", "debug"] as const)(
+    "two targets on the same page: %s",
+    async (compilationMode) => {
+      const { replace, go } = runHotReload({
+        name: "ElmHotTwoTargets",
+        programType: "Element",
+        compilationMode,
+        compiler: "lamdera",
+        extraScripts: ["ElmHotTwoTargetsOther1.js"],
+        extraElmWatchStuffJson: {
+          ElmHotTwoTargetsOther1: { compilationMode },
+        },
+        init: (node) => {
+          const node1 = document.createElement("div");
+          const node2 = document.createElement("div");
+          node.append(node1, node2);
+          window.Elm?.["ElmHotTwoTargets"]?.init({ node: node1 });
+          return window.Elm?.["ElmHotTwoTargetsOther1"]?.init({ node: node2 });
+        },
+      });
+
+      const both = (div: HTMLDivElement): string =>
+        [".main", ".other"]
+          .map((selector) => div.querySelector(selector)?.textContent ?? "-")
+          .join(" | ");
+
+      const { browserConsole } = await go(async ({ idle, div }) => {
+        switch (idle) {
+          case 1:
+            return "KeepGoing"; // First script has loaded.
+          case 2:
+            click(div, ".main button");
+            click(div, ".other button");
+            click(div, ".other button");
+            await waitOneFrame();
+            expect(both(div)).toStrictEqual("Before hot reload1 | Other2");
+            replace((content) =>
+              content.replace("Before hot reload", "After hot reload"),
+            );
+            return "KeepGoing";
+          default:
+            // Only the edited target changed, and both kept their state.
+            expect(both(div)).toStrictEqual("After hot reload1 | Other2");
+            // Both still work.
+            click(div, ".main button");
+            click(div, ".other button");
+            await waitOneFrame();
+            expect(both(div)).toStrictEqual("After hot reload2 | Other3");
+            return "Stop";
+        }
+      });
+
+      expect(browserConsole).toStrictEqual("");
+    },
+  );
+
   test("hot reload code postprocessed to ESM", async () => {
     const { go, replace } = runHotReload({
       fixture: "hot-reload-postprocess",

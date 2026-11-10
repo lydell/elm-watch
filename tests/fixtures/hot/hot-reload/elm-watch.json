@@ -184,6 +184,22 @@
             ],
             "output": "build/MultipleTargetsOther1.js"
         },
+        "ElmHotTwoTargets": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/ElmHotTwoTargets.elm"
+            ],
+            "output": "build/ElmHotTwoTargets.js"
+        },
+        "ElmHotTwoTargetsOther1": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/ElmHotTwoTargetsOther1.elm"
+            ],
+            "output": "build/ElmHotTwoTargetsOther1.js"
+        },
         "InterruptElm": {
             "type": "application",
             "elmJson": "elm.json",
