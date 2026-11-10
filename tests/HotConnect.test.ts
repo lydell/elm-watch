@@ -36,7 +36,7 @@ describe("hot", () => {
       ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123   ⧙network:⧘ http://192.168.0.1:59123
 
-      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html +1 more⧘
+      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html⧘
     `);
 
     expect(renders).toMatchInlineSnapshot(`
@@ -189,7 +189,7 @@ describe("hot", () => {
       Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
       http://localhost:59123
 
-      13:10:05 Up to date   web socket connected: Html +1 more
+      13:10:05 Up to date   web socket connected: Html
     `);
 
     expect(div.outerHTML).toMatchInlineSnapshot(`<div>Hello, World!</div>`);
@@ -267,7 +267,7 @@ describe("hot", () => {
       ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
-      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main +1 more⧘
+      ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
     `);
 
     rm(path.join(dir, "elm.json"));

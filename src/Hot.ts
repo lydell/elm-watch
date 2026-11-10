@@ -3411,9 +3411,29 @@ function printInfoLine({
 }
 
 function summarizeEvents(
-  events: Array<LatestEvent>,
+  allEvents: Array<LatestEvent>,
   root: AbsolutePath,
 ): string | undefined {
+  // A page reload is a disconnect followed by a connect. Only the connect is
+  // interesting. (Whether both end up in the same batch of events depends on
+  // timing.)
+  const events = allEvents.filter((event, index) => {
+    if (
+      event.tag !== "WebSocketClosed" ||
+      event.outputPath.tag !== "OutputPath"
+    ) {
+      return true;
+    }
+    const { targetName } = event.outputPath;
+    return !allEvents
+      .slice(index + 1)
+      .some(
+        (laterEvent) =>
+          (laterEvent.tag === "WebSocketConnectedNeedingCompilation" ||
+            laterEvent.tag === "WebSocketConnectedNeedingNoAction") &&
+          laterEvent.outputPath.targetName === targetName,
+      );
+  });
   const latest = events.at(-1);
   if (latest === undefined) {
     return undefined;

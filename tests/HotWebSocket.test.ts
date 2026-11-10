@@ -260,7 +260,7 @@ describe("hot", () => {
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
         🌐 http://localhost:59123
 
-        ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html +1 more⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Html⧘
       `);
     });
 
@@ -821,7 +821,7 @@ describe("hot", () => {
         ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
         🌐 http://localhost:59123
 
-        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html +1 more⧘
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html⧘
       `);
 
       expect(renders).toMatchInlineSnapshot(`
