@@ -198,7 +198,7 @@ export class WebSocketServer {
         }
 
         if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
-          rejectUpgrade(socket, "401 Unauthorized", "Invalid URL");
+          rejectUpgrade(socket, "404 Not Found", "Invalid URL");
           this.dispatch({
             tag: "WebSocketConnectionRejected",
             origin,
@@ -443,7 +443,7 @@ async function probe(port: number, host: string): Promise<ProbeResult> {
 
 function rejectUpgrade(
   socket: Duplex,
-  status: "401 Unauthorized" | "403 Forbidden",
+  status: "401 Unauthorized" | "403 Forbidden" | "404 Not Found",
   message: string,
 ): void {
   socket.write(`HTTP/1.1 ${status}\r\nX-Reason: ${message}\r\n\r\n`);

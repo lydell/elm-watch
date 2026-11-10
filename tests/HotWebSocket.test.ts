@@ -289,8 +289,9 @@ describe("hot", () => {
       );
     });
 
-    test("host or origin not allowed", async () => {
+    test("rejected connections", async () => {
       let webSocketUrl: string | undefined = undefined;
+      const statuses: Array<number | undefined> = [];
       modifyUrl((url) => {
         webSocketUrl = url.href;
       });
@@ -307,13 +308,22 @@ describe("hot", () => {
           if (webSocketUrl === undefined) {
             throw new Error("Expected webSocketUrl to be set.");
           }
-          for (const headers of [
-            { Host: "evil.com:1234" },
-            { Host: "evil.com/" },
-            { Origin: "https://evil.com" },
-            { Origin: "not a url" },
-          ]) {
-            await connectRejectedNodeWebSocket(webSocketUrl, headers);
+          const url = new URL(webSocketUrl);
+          const badUrl = new URL(url);
+          badUrl.pathname = "/nope";
+          const wrongToken = new URL(url);
+          wrongToken.searchParams.set("webSocketToken", "wrong");
+          for (const [urlToConnect, headers] of [
+            [url, { Host: "evil.com:1234" }],
+            [url, { Host: "evil.com/" }],
+            [url, { Origin: "https://evil.com" }],
+            [url, { Origin: "not a url" }],
+            [badUrl, {}],
+            [wrongToken, {}],
+          ] as const) {
+            statuses.push(
+              await connectRejectedNodeWebSocket(urlToConnect.href, headers),
+            );
             // Wait for each rejection to be printed on its own line.
             await waitForElmWatchIdle();
           }
@@ -326,7 +336,11 @@ describe("hot", () => {
         ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: invalid Host header: "evil.com/"⧘
         ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "https://evil.com": origin not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
         ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "not a url": invalid origin: "not a url"⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: wrong URL prefix – "/elm-watch?" != "/nope?elmWa"⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: invalid security token⧘
       `);
+
+      expect(statuses).toStrictEqual([403, 403, 403, 403, 404, 401]);
     });
 
     test("web socket protocol error does not crash elm-watch", async () => {
@@ -1114,15 +1128,15 @@ async function sendInvalidFrame(url: string): Promise<void> {
 async function connectRejectedNodeWebSocket(
   url: string,
   headers: Record<string, string>,
-): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
+): Promise<number | undefined> {
+  return new Promise((resolve, reject) => {
     const webSocket = new NodeWebSocket(url, { headers });
     webSocket.on("open", () => {
       webSocket.close();
       reject(new Error(`Expected the connection to be rejected: ${url}`));
     });
-    webSocket.on("unexpected-response", () => {
-      resolve();
+    webSocket.on("unexpected-response", (_request, response) => {
+      resolve(response.statusCode);
     });
     webSocket.on("error", reject);
   });
