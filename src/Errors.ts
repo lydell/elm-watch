@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
+import { collapseExcerpts, type Elision } from "./CollapseExcerpts.ts";
 import type { ConfigSource } from "./Config.ts";
 import type { ElmJsonType, TooOldPackage } from "./ElmJson.ts";
 import type * as ElmMakeError from "./ElmMakeError.ts";
@@ -179,6 +180,8 @@ type ErrorTemplateData = {
   title: string;
   location: ErrorLocation | undefined;
   content: string;
+  // `content` with long code excerpts collapsed, if there are any.
+  collapsedContent?: string;
 };
 
 export type ErrorLocation =
@@ -229,12 +232,16 @@ export function toTerminalString(
   errorTemplate: ErrorTemplate,
   width: number,
   noColor: boolean,
+  collapse = false,
 ): string {
   const renderPiece = noColor
     ? (piece: Piece): string => piece.text
     : renderPieceForTerminal;
 
-  const { title, location, content } = errorTemplate(width, renderPiece);
+  const { title, location, content, collapsedContent } = errorTemplate(
+    width,
+    renderPiece,
+  );
   const prefix = `-- ${title} `;
   const line = "-".repeat(Math.max(0, width - prefix.length));
   const titleWithSeparator = renderPiece(bold(`${prefix}${line}`));
@@ -245,8 +252,15 @@ export function toTerminalString(
       ? []
       : [renderPiece(renderErrorLocation(location))]),
     "",
-    content,
+    collapse ? (collapsedContent ?? content) : content,
   ].join("\n");
+}
+
+export function isCollapsible(errorTemplate: ErrorTemplate): boolean {
+  return (
+    errorTemplate(DEFAULT_COLUMNS, (piece) => piece.text).collapsedContent !==
+    undefined
+  );
 }
 
 export function getErrorLocation(
@@ -267,17 +281,23 @@ export function toHtml(
   title: string;
   location?: ErrorLocation;
   htmlContent: string;
+  htmlContentCollapsed?: string;
 } {
   const renderPiece = (piece: Piece): string =>
     noColor ? escapeHtml(piece.text) : renderPieceToHtml(piece, theme);
 
-  const { title, location, content } = errorTemplate(
+  const { title, location, content, collapsedContent } = errorTemplate(
     DEFAULT_COLUMNS,
     renderPiece,
   );
-  return location === undefined
-    ? { title, htmlContent: content }
-    : { title, location, htmlContent: content };
+  return {
+    title,
+    ...(location === undefined ? {} : { location }),
+    htmlContent: content,
+    ...(collapsedContent === undefined
+      ? {}
+      : { htmlContentCollapsed: collapsedContent }),
+  };
 }
 
 function renderPieceForTerminal(piece: Piece): string {
@@ -894,29 +914,44 @@ export function elmMakeProblem(
   problem: ElmMakeError.Problem,
   extraError: string | undefined,
 ): ErrorTemplate {
-  return fancyError(problem.title, {
-    tag: "FileWithLineAndColumn",
-    file: filePath,
-    line: problem.region.start.line,
-    column: problem.region.start.column,
-  })`
+  const render = (
+    message: Array<Elision | ElmMakeError.MessageChunk>,
+  ): ErrorTemplate =>
+    fancyError(problem.title, {
+      tag: "FileWithLineAndColumn",
+      file: filePath,
+      line: problem.region.start.line,
+      column: problem.region.start.column,
+    })`
 ${text(extraError ?? "")}
 
-${joinTemplate(problem.message.map(renderMessageChunk), "")}
+${joinTemplate(message.map(renderMessageChunk), "")}
 `;
+  const full = render(problem.message);
+  const collapsedMessage = collapseExcerpts(problem.message);
+  if (collapsedMessage === undefined) {
+    return full;
+  }
+  const collapsed = render(collapsedMessage);
+  return (width, renderPiece) => ({
+    ...full(width, renderPiece),
+    collapsedContent: collapsed(width, renderPiece).content,
+  });
 }
 
-function renderMessageChunk(chunk: ElmMakeError.MessageChunk): Piece {
+function renderMessageChunk(chunk: Elision | ElmMakeError.MessageChunk): Piece {
   return typeof chunk === "string"
     ? // This does not use `text()` since that function trims whitespace.
       { tag: "Text", text: chunk }
-    : {
-        tag: "ElmStyle",
-        text: chunk.string,
-        bold: chunk.bold,
-        underline: chunk.underline,
-        color: chunk.color ?? undefined,
-      };
+    : "tag" in chunk
+      ? { tag: "Dim", text: chunk.text }
+      : {
+          tag: "ElmStyle",
+          text: chunk.string,
+          bold: chunk.bold,
+          underline: chunk.underline,
+          color: chunk.color ?? undefined,
+        };
 }
 
 export function stuckInProgressState(

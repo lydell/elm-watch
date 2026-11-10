@@ -616,6 +616,7 @@ function statusChanged(
                   title: error.title,
                   location: error.location,
                   htmlContent: error.htmlContent,
+                  htmlContentCollapsed: error.htmlContentCollapsed,
                   foregroundColor: status.foregroundColor,
                   backgroundColor: status.backgroundColor,
                 };

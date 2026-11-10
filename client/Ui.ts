@@ -40,6 +40,8 @@ export type OverlayError = {
   title: string;
   location: ErrorLocation | undefined;
   htmlContent: string;
+  // Only set if there are long code excerpts to collapse.
+  htmlContentCollapsed: string | undefined;
   foregroundColor: string;
   backgroundColor: string;
 };
@@ -339,6 +341,7 @@ export function createUi(): Ui {
   // Like in the terminal: Errors are shown one at a time by default. Not
   // saved: One at a time should be the default each time.
   let overlayShowAll = false;
+  let overlayExpanded = false;
   let overlaySelection: Selection | undefined = undefined;
   // What the overlay showed last time it was rendered, to keep the scroll
   // position when it is still the same.
@@ -399,6 +402,7 @@ export function createUi(): Ui {
         group,
         selection: overlaySelection,
         showAll: overlayShowAll,
+        expanded: overlayExpanded,
         onKey: handleOverlayKey,
       }),
     );
@@ -417,10 +421,24 @@ export function createUi(): Ui {
     }
   };
 
+  // Space scrolls as usual if there is nothing to collapse.
+  const canToggleExpanded = (): boolean =>
+    !overlayShowAll &&
+    overlaySelection !== undefined &&
+    getSelectedError(overlaySelection, [getErrorGroup()])?.error
+      .htmlContentCollapsed !== undefined;
+
   const handleOverlayKey = (key: OverlayKey): void => {
     switch (key) {
       case "ToggleShowAll":
         overlayShowAll = !overlayShowAll;
+        break;
+
+      case "ToggleExpanded":
+        if (!canToggleExpanded()) {
+          return;
+        }
+        overlayExpanded = !overlayExpanded;
         break;
 
       case "OpenEditor": {
@@ -882,6 +900,7 @@ export function createUi(): Ui {
     const key = overlayKeyFromEvent(event);
     if (
       key === undefined ||
+      (key === "ToggleExpanded" && !canToggleExpanded()) ||
       // Let Enter press the focused button.
       (event.key === "Enter" &&
         shadowRoot.activeElement instanceof HTMLButtonElement)
@@ -2467,7 +2486,11 @@ type OverlayErrorItem = {
   dispatch: (msg: UiMsg) => void;
 };
 
-type OverlayKey = NavigationKey | "OpenEditor" | "ToggleShowAll";
+type OverlayKey =
+  | NavigationKey
+  | "OpenEditor"
+  | "ToggleExpanded"
+  | "ToggleShowAll";
 
 // Like in the terminal, minus tab for switching target: In the browser, the
 // errors of all targets on the page are shown together.
@@ -2491,6 +2514,8 @@ function overlayKeyFromEvent(event: KeyboardEvent): OverlayKey | undefined {
     case "Enter":
     case "o":
       return "OpenEditor";
+    case " ":
+      return "ToggleExpanded";
     case "a":
       return "ToggleShowAll";
     default:
@@ -2511,11 +2536,13 @@ function viewOverlay({
   group,
   selection,
   showAll,
+  expanded,
   onKey,
 }: {
   group: ErrorGroup<OverlayErrorItem>;
   selection: Selection | undefined;
   showAll: boolean;
+  expanded: boolean;
   onKey: (key: OverlayKey) => void;
 }): Array<HTMLElement> {
   if (group.numErrors === 0) {
@@ -2525,7 +2552,7 @@ function viewOverlay({
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
     return [
-      ...items.map(viewOverlayError),
+      ...items.map((item) => viewOverlayError(item, true)),
       viewOverlayFooter(
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
         [
@@ -2554,7 +2581,7 @@ function viewOverlay({
     .join("   ");
 
   return [
-    viewOverlayError(item),
+    viewOverlayError(item, expanded),
     viewOverlayFooter(
       `🚨 ${position}`,
       [
@@ -2583,6 +2610,19 @@ function viewOverlay({
               [["enter", "OpenEditor", true, "Open in editor"]],
               "open in editor",
             ],
+        item.error.htmlContentCollapsed === undefined
+          ? undefined
+          : [
+              [
+                [
+                  "space",
+                  "ToggleExpanded",
+                  true,
+                  expanded ? "Collapse long code" : "Expand long code",
+                ],
+              ],
+              expanded ? "collapse" : "expand",
+            ],
         [[["a", "ToggleShowAll", true, "Show all errors"]], "show all"],
       ],
       onKey,
@@ -2590,7 +2630,10 @@ function viewOverlay({
   ];
 }
 
-function viewOverlayError(item: OverlayErrorItem): HTMLElement {
+function viewOverlayError(
+  item: OverlayErrorItem,
+  expanded: boolean,
+): HTMLElement {
   const { error } = item;
   return h(
     HTMLDivElement,
@@ -2622,7 +2665,11 @@ function viewOverlayError(item: OverlayErrorItem): HTMLElement {
             viewErrorLocation(item.dispatch, item.sendKey, error.location),
           ),
     ),
-    h(HTMLPreElement, { innerHTML: error.htmlContent }),
+    h(HTMLPreElement, {
+      innerHTML: expanded
+        ? error.htmlContent
+        : (error.htmlContentCollapsed ?? error.htmlContent),
+    }),
   );
 }
 

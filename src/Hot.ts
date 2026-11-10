@@ -688,7 +688,11 @@ const initMutable =
       project,
       lastInfoMessage: undefined,
       lastInfoLine: undefined,
-      errorView: errorViewState ?? { showAll: false, selection: undefined },
+      errorView: errorViewState ?? {
+        showAll: false,
+        expanded: false,
+        selection: undefined,
+      },
       watcherTimeoutId: undefined,
       watcherProbe,
       elmWatchStuffJsonWriteError: undefined,
@@ -1988,6 +1992,12 @@ const runCmd =
           switch (key) {
             case "ToggleShowAll":
               errorView.showAll = !errorView.showAll;
+              break;
+
+            case "ToggleExpanded":
+              if (!errorView.showAll) {
+                errorView.expanded = !errorView.expanded;
+              }
               break;
 
             case "OpenEditor": {
@@ -3885,6 +3895,7 @@ function renderErrorView(
           })
         : ErrorView.render({
             loggerConfig: logger.config,
+            expanded: errorView.expanded,
             selection,
             targets,
             notice,

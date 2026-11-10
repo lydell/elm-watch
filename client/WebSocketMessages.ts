@@ -57,6 +57,7 @@ const CompileError = Codec.fields({
   title: Codec.string,
   location: Codec.field(ErrorLocation, { optional: true }),
   htmlContent: Codec.string,
+  htmlContentCollapsed: Codec.field(Codec.string, { optional: true }),
 });
 
 export type StatusChange = Codec.Infer<typeof StatusChange>;

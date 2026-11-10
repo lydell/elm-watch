@@ -284,6 +284,7 @@ describe("render", () => {
     return (
       render({
         loggerConfig,
+        expanded: false,
         selection,
         targets,
         notice: undefined,

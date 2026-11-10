@@ -7,8 +7,10 @@ import { clean, KeyReadStream, stringSnapshotSerializer } from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   fixtureDir,
+  getOverlay,
   nextMsg,
   nextWatcherEventHandled,
+  pressOverlayKey,
   run,
 } from "./HotHelpers.ts";
 
@@ -455,6 +457,217 @@ describe("hot error view", () => {
       🚨 error 2/3   file 1/2
 
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+    `);
+  });
+
+  test("collapse and expand long code excerpts", async () => {
+    const stdin = new KeyReadStream();
+    const screens: Array<string> = [];
+    const overlays: Array<string> = [];
+    const press = async (key: string): Promise<void> => {
+      const handled = nextMsg((msg) => msg.tag === "KeysPressed");
+      stdin.press(key);
+      await handled;
+    };
+    // Everything below the server line.
+    const screen = (output: string): string =>
+      clean(output).split("\n").slice(3).join("\n");
+    const lastLines = (output: string): string =>
+      clean(output).split("\n").slice(-3).join("\n");
+
+    await run({
+      fixture: "error-view-collapse",
+      args: [],
+      scripts: ["Main.js"],
+      stdin,
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async ({ stdout }) => {
+        // Collapsed by default.
+        screens.push(screen(stdout.getOutput()));
+        await press(" ");
+        screens.push(screen(stdout.getOutput()));
+        // Nothing to collapse in the other error: No space key hint.
+        await press("l");
+        screens.push(lastLines(stdout.getOutput()));
+        // Still expanded when going back.
+        await press("h");
+        screens.push(lastLines(stdout.getOutput()));
+
+        // The browser has its own state, and is collapsed by default too.
+        overlays.push(getOverlay());
+        pressOverlayKey(" ");
+        overlays.push(getOverlay());
+        // Space scrolls as usual when there is nothing to collapse.
+        pressOverlayKey("l");
+        const space = new KeyboardEvent("keydown", {
+          key: " ",
+          cancelable: true,
+        });
+        window.dispatchEvent(space);
+        expect(space.defaultPrevented).toBe(false);
+        return "Stop" as const;
+      },
+    });
+
+    expect(screens.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
+      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5
+
+      Something is off with the body of the \`f\` definition:
+
+      19|⧙>⧘    String.length <|
+      20|⧙>⧘        case t of
+      21|⧙>⧘            C1 ->
+      22|⧙>⧘                "1"
+      23|⧙>⧘
+      24|⧙>⧘            C2 ->
+      ⧙  ⋮ (16 lines)⧘
+      41|⧙>⧘
+      42|⧙>⧘            C8 ->
+      43|⧙>⧘                "8"
+
+      The body is:
+
+          ⧙Int⧘
+
+      But the type annotation on \`f\` says it should be:
+
+          ⧙String⧘
+
+      ⧙Hint⧘: Want to convert an Int into a String? Use the ⧙String.fromInt⧘ function!
+
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 error 1/2
+
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ expand   ⧙[⧘⧙a⧘⧙]⧘ show all
+      ================================================================================
+      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      /Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5
+
+      Something is off with the body of the \`f\` definition:
+
+      19|⧙>⧘    String.length <|
+      20|⧙>⧘        case t of
+      21|⧙>⧘            C1 ->
+      22|⧙>⧘                "1"
+      23|⧙>⧘
+      24|⧙>⧘            C2 ->
+      25|⧙>⧘                "2"
+      26|⧙>⧘
+      27|⧙>⧘            C3 ->
+      28|⧙>⧘                "3"
+      29|⧙>⧘
+      30|⧙>⧘            C4 ->
+      31|⧙>⧘                "4"
+      32|⧙>⧘
+      33|⧙>⧘            C5 ->
+      34|⧙>⧘                "5"
+      35|⧙>⧘
+      36|⧙>⧘            C6 ->
+      37|⧙>⧘                "6"
+      38|⧙>⧘
+      39|⧙>⧘            C7 ->
+      40|⧙>⧘                "7"
+      41|⧙>⧘
+      42|⧙>⧘            C8 ->
+      43|⧙>⧘                "8"
+
+      The body is:
+
+          ⧙Int⧘
+
+      But the type annotation on \`f\` says it should be:
+
+          ⧙String⧘
+
+      ⧙Hint⧘: Want to convert an Int into a String? Use the ⧙String.fromInt⧘ function!
+
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
+      🚨 error 1/2
+
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse   ⧙[⧘⧙a⧘⧙]⧘ show all
+      ================================================================================
+      🚨 error 2/2
+
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      ================================================================================
+      🚨 error 1/2
+
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse   ⧙[⧘⧙a⧘⧙]⧘ show all
+    `);
+    expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5</button></p></div>
+      <pre>Something is off with the body of the \`f\` definition:
+
+      19|<span style="color: rgb(241, 76, 76)">&gt;</span>    String.length &lt;|
+      20|<span style="color: rgb(241, 76, 76)">&gt;</span>        case t of
+      21|<span style="color: rgb(241, 76, 76)">&gt;</span>            C1 -&gt;
+      22|<span style="color: rgb(241, 76, 76)">&gt;</span>                "1"
+      23|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      24|<span style="color: rgb(241, 76, 76)">&gt;</span>            C2 -&gt;
+      <span style="opacity: 0.6">  ⋮ (16 lines)</span>
+      41|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      42|<span style="color: rgb(241, 76, 76)">&gt;</span>            C8 -&gt;
+      43|<span style="color: rgb(241, 76, 76)">&gt;</span>                "8"
+
+      The body is:
+
+          <span style="color: rgb(229, 229, 16)">Int</span>
+
+      But the type annotation on \`f\` says it should be:
+
+          <span style="color: rgb(229, 229, 16)">String</span>
+
+      <u>Hint</u>: Want to convert an Int into a String? Use the <span style="color: rgb(35, 209, 139)">String.fromInt</span> function!</pre></div>
+      --------------------------------------------------------------------------------
+      <footer>🚨 error 1/2 | [_→] error | [__] file | [enter] open in editor | [space] expand | [a] show all</footer>
+      </overlay>
+      ================================================================================
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5</button></p></div>
+      <pre>Something is off with the body of the \`f\` definition:
+
+      19|<span style="color: rgb(241, 76, 76)">&gt;</span>    String.length &lt;|
+      20|<span style="color: rgb(241, 76, 76)">&gt;</span>        case t of
+      21|<span style="color: rgb(241, 76, 76)">&gt;</span>            C1 -&gt;
+      22|<span style="color: rgb(241, 76, 76)">&gt;</span>                "1"
+      23|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      24|<span style="color: rgb(241, 76, 76)">&gt;</span>            C2 -&gt;
+      25|<span style="color: rgb(241, 76, 76)">&gt;</span>                "2"
+      26|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      27|<span style="color: rgb(241, 76, 76)">&gt;</span>            C3 -&gt;
+      28|<span style="color: rgb(241, 76, 76)">&gt;</span>                "3"
+      29|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      30|<span style="color: rgb(241, 76, 76)">&gt;</span>            C4 -&gt;
+      31|<span style="color: rgb(241, 76, 76)">&gt;</span>                "4"
+      32|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      33|<span style="color: rgb(241, 76, 76)">&gt;</span>            C5 -&gt;
+      34|<span style="color: rgb(241, 76, 76)">&gt;</span>                "5"
+      35|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      36|<span style="color: rgb(241, 76, 76)">&gt;</span>            C6 -&gt;
+      37|<span style="color: rgb(241, 76, 76)">&gt;</span>                "6"
+      38|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      39|<span style="color: rgb(241, 76, 76)">&gt;</span>            C7 -&gt;
+      40|<span style="color: rgb(241, 76, 76)">&gt;</span>                "7"
+      41|<span style="color: rgb(241, 76, 76)">&gt;</span>
+      42|<span style="color: rgb(241, 76, 76)">&gt;</span>            C8 -&gt;
+      43|<span style="color: rgb(241, 76, 76)">&gt;</span>                "8"
+
+      The body is:
+
+          <span style="color: rgb(229, 229, 16)">Int</span>
+
+      But the type annotation on \`f\` says it should be:
+
+          <span style="color: rgb(229, 229, 16)">String</span>
+
+      <u>Hint</u>: Want to convert an Int into a String? Use the <span style="color: rgb(35, 209, 139)">String.fromInt</span> function!</pre></div>
+      --------------------------------------------------------------------------------
+      <footer>🚨 error 1/2 | [_→] error | [__] file | [enter] open in editor | [space] collapse | [a] show all</footer>
+      </overlay>
     `);
   });
 });

@@ -27,10 +27,16 @@ type ErrorViewError = {
 
 export type ErrorViewState = {
   showAll: boolean;
+  // Long code excerpts are collapsed by default. See CollapseExcerpts.ts.
+  expanded: boolean;
   selection: Selection | undefined;
 };
 
-export type ErrorViewKey = NavigationKey | "OpenEditor" | "ToggleShowAll";
+export type ErrorViewKey =
+  | NavigationKey
+  | "OpenEditor"
+  | "ToggleExpanded"
+  | "ToggleShowAll";
 
 const KEYS: Array<[string, ErrorViewKey]> = [
   ["\x1B[C", "NextError"],
@@ -45,6 +51,7 @@ const KEYS: Array<[string, ErrorViewKey]> = [
   ["\x1B[Z", "PreviousTarget"],
   ["\r", "OpenEditor"],
   ["o", "OpenEditor"],
+  [" ", "ToggleExpanded"],
   ["a", "ToggleShowAll"],
 ];
 
@@ -85,12 +92,14 @@ export function makeErrorViewTarget(
 // changes when switching to showing all errors (see `renderShowAll`).
 export function render({
   loggerConfig,
+  expanded,
   selection,
   targets,
   notice,
   infoLine,
 }: {
   loggerConfig: LoggerConfig;
+  expanded: boolean;
   selection: Selection;
   targets: Array<ErrorViewTarget>;
   notice: string | undefined;
@@ -133,6 +142,7 @@ export function render({
       error.template,
       loggerConfig.columns,
       loggerConfig.noColor,
+      !expanded,
     ),
     "",
     ...noticeLines,
@@ -158,6 +168,9 @@ export function render({
       getOpenEditorLocation(error.location) === undefined
         ? undefined
         : ["enter", "open in editor"],
+      Errors.isCollapsible(error.template)
+        ? ["space", expanded ? "collapse" : "expand"]
+        : undefined,
       ["a", "show all"],
     ]),
   ].join("\n");
