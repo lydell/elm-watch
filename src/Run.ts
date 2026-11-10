@@ -7,6 +7,7 @@ import * as ElmWatchJson from "./ElmWatchJson.ts";
 import * as ElmWatchStuffJson from "./ElmWatchStuffJson.ts";
 import type { Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
+import type { ErrorViewState } from "./ErrorView.ts";
 import * as Hot from "./Hot.ts";
 import type { Logger } from "./Logger.ts";
 import * as Make from "./Make.ts";
@@ -39,6 +40,7 @@ export type RunResult =
       restartReasons: Array<Hot.LatestEvent>;
       webSocketState: Hot.WebSocketState | undefined;
       webSocketToken: WebSocketToken | undefined;
+      errorViewState: ErrorViewState | undefined;
     };
 
 export async function run(
@@ -52,6 +54,7 @@ export async function run(
   restartReasons: Array<Hot.LatestEvent>,
   webSocketState: Hot.WebSocketState | undefined,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
+  errorViewState: ErrorViewState | undefined,
   hotTestHooks: Hot.HotTestHooks,
 ): Promise<RunResult> {
   const parseResult = ElmWatchJson.findReadAndParse(cwd);
@@ -70,6 +73,7 @@ export async function run(
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
+        errorViewState,
         hotTestHooks,
       );
 
@@ -86,6 +90,7 @@ export async function run(
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
+        errorViewState,
         hotTestHooks,
       );
 
@@ -154,6 +159,7 @@ export async function run(
             restartReasons,
             webSocketState,
             webSocketTokenFromPreviousRun,
+            errorViewState,
             signal: undefined,
             hotTestHooks,
           });
@@ -175,6 +181,7 @@ export async function runConfig({
   restartReasons,
   webSocketState,
   webSocketTokenFromPreviousRun,
+  errorViewState,
   signal,
   hotTestHooks,
 }: {
@@ -189,6 +196,7 @@ export async function runConfig({
   restartReasons: Array<Hot.LatestEvent>;
   webSocketState: Hot.WebSocketState | undefined;
   webSocketTokenFromPreviousRun: WebSocketToken | undefined;
+  errorViewState: ErrorViewState | undefined;
   signal: AbortSignal | undefined;
   hotTestHooks: Hot.HotTestHooks;
 }): Promise<RunResult> {
@@ -262,6 +270,7 @@ export async function runConfig({
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
+                errorViewState,
                 hotTestHooks,
               );
             case "Options":
@@ -284,6 +293,7 @@ export async function runConfig({
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
+                errorViewState,
                 hotTestHooks,
               );
             case "Options":
@@ -319,6 +329,7 @@ export async function runConfig({
                 elmWatchStuffJson?.webSocketToken ??
                   webSocketTokenFromPreviousRun ??
                   markAsWebSocketToken(crypto.randomUUID()),
+                errorViewState,
                 project,
                 config.port !== undefined
                   ? { tag: "PortFromConfig", port: config.port }
@@ -359,6 +370,7 @@ async function handleElmWatchJsonError(
   runMode: RunMode,
   elmWatchJsonPath: ElmWatchJsonPath,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
+  errorViewState: ErrorViewState | undefined,
   hotTestHooks: Hot.HotTestHooks,
 ): Promise<RunResult> {
   switch (runMode) {
@@ -383,6 +395,7 @@ async function handleElmWatchJsonError(
         restartReasons: [{ ...elmWatchJsonEvent, affectsAnyTarget: true }],
         webSocketState: undefined,
         webSocketToken: webSocketTokenFromPreviousRun,
+        errorViewState,
       };
     }
   }

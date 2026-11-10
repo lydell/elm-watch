@@ -95,6 +95,7 @@ export default async function elmWatchCli(
           previous.restartReasons,
           previous.webSocketState,
           previous.webSocketToken,
+          previous.errorViewState,
           hotTestHooks,
         ),
       );
@@ -157,6 +158,7 @@ export async function elmWatch(options: unknown): Promise<number> {
           restartReasons: previous.restartReasons,
           webSocketState: previous.webSocketState,
           webSocketTokenFromPreviousRun: previous.webSocketToken,
+          errorViewState: previous.errorViewState,
           signal,
           hotTestHooks,
         }),
@@ -178,6 +180,7 @@ async function runUntilExit(
         restartReasons: [],
         webSocketState: undefined,
         webSocketToken: undefined,
+        errorViewState: undefined,
       };
       for (;;) {
         if (signal?.aborted === true) {

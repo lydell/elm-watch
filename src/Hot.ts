@@ -436,6 +436,7 @@ type HotRunResult =
       restartReasons: Array<LatestEvent>;
       webSocketState: WebSocketState | undefined;
       webSocketToken: WebSocketToken;
+      errorViewState: ErrorView.ErrorViewState;
     };
 
 export type WebSocketState = {
@@ -482,6 +483,8 @@ export async function run(
   restartReasons: Array<LatestEvent>,
   webSocketState: WebSocketState | undefined,
   webSocketToken: WebSocketToken,
+  // Keep the error view selection (and show all toggle) across restarts.
+  errorViewState: ErrorView.ErrorViewState | undefined,
   project: Project,
   portChoice: PortChoice,
   signal: AbortSignal | undefined,
@@ -500,6 +503,7 @@ export async function run(
       createServer,
       webSocketState,
       webSocketToken,
+      errorViewState,
       project,
       portChoice,
       signal,
@@ -615,6 +619,7 @@ const initMutable =
     createServer: CreateServer,
     webSocketState: WebSocketState | undefined,
     webSocketToken: WebSocketToken,
+    errorViewState: ErrorView.ErrorViewState | undefined,
     project: Project,
     portChoice: PortChoice,
     signal: AbortSignal | undefined,
@@ -682,7 +687,7 @@ const initMutable =
       project,
       lastInfoMessage: undefined,
       lastInfoLine: undefined,
-      errorView: { showAll: false, selection: undefined },
+      errorView: errorViewState ?? { showAll: false, selection: undefined },
       watcherTimeoutId: undefined,
       watcherProbe,
       elmWatchStuffJsonWriteError: undefined,
@@ -2121,6 +2126,7 @@ const runCmd =
                     webSocketConnections: mutable.webSocketConnections,
                   },
               webSocketToken,
+              errorViewState: mutable.errorView,
             });
           })
           .catch(rejectPromise);

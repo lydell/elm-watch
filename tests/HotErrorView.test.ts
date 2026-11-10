@@ -400,4 +400,61 @@ describe("hot error view", () => {
         ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       `);
   });
+
+  test("selection and show all are kept across restarts", async () => {
+    const fixture = "error-view";
+    const elmJsonPath = path.join(fixtureDir(fixture), "elm.json");
+    const stdin = new KeyReadStream();
+    const press = async (key: string): Promise<void> => {
+      const handled = nextMsg((msg) => msg.tag === "KeysPressed");
+      stdin.press(key);
+      await handled;
+    };
+    const footers: Array<string> = [];
+    const footer = (output: string): string =>
+      clean(output).split("\n").slice(-3).join("\n");
+
+    await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      stdin,
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async ({ idle, stdout }) => {
+        switch (idle) {
+          case 1:
+            // Go to error 2/3, and show all errors.
+            await press("l");
+            await press("a");
+            footers.push(footer(stdout.getOutput()));
+            // Touching elm.json restarts elm-watch.
+            fs.writeFileSync(elmJsonPath, fs.readFileSync(elmJsonPath));
+            return "KeepGoing";
+          default:
+            // Still showing all errors after the restart.
+            footers.push(footer(stdout.getOutput()));
+            // Back to one at a time: Still at error 2/3.
+            await press("a");
+            footers.push(footer(stdout.getOutput()));
+            return "Stop";
+        }
+      },
+    });
+
+    expect(footers.join("\n---\n")).toMatchInlineSnapshot(`
+      🚨 4 errors
+
+      ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
+      ---
+      🚨 4 errors
+
+      ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
+      ---
+      🚨 error 2/3   file 1/2
+
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+    `);
+  });
 });
