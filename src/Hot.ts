@@ -1,4 +1,3 @@
-import * as childProcess from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -9,13 +8,12 @@ import type WebSocket from "ws";
 
 import {
   encodeWebSocketToClientMessage,
-  type OpenEditorError,
   type WebSocketToClientMessage,
   WebSocketToServerMessage,
 } from "../client/WebSocketMessages.ts";
 import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
 import * as Compile from "./Compile.ts";
-import type { ConfigSource, OpenEditorFunction } from "./Config.ts";
+import type { ConfigSource } from "./Config.ts";
 import type {
   OutputRequest,
   WebSocketConnection,
@@ -27,7 +25,6 @@ import type {
 import { ElmWatchStuffJson, type Target } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
-  __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   __ELM_WATCH_WEBSOCKET_EVENT_SLEEP_MS,
   type Env,
   WATCH_REPORT_DEPENDENCIES,
@@ -44,12 +41,12 @@ import {
   quote,
   silentlyReadIntEnvValue,
   toError,
-  unknownErrorToString,
 } from "./Helpers.ts";
 import type { Host } from "./Host.ts";
 import * as Inject from "./Inject.ts";
 import type { Logger, LoggerConfig } from "./Logger.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
+import { openEditor, printOpenEditorErrorForTerminal } from "./OpenEditor.ts";
 import { absoluteDirname } from "./PathHelpers.ts";
 import type { PortChoice } from "./Port.ts";
 import {
@@ -63,7 +60,6 @@ import {
   type OutputState,
   type PackageState,
   type Project,
-  projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project.ts";
 import { waitForRunningCommands } from "./Spawn.ts";
 import { runTeaProgram } from "./TeaProgram.ts";
@@ -1854,7 +1850,7 @@ const runCmd =
         return;
 
       case "OpenEditor":
-        openEditor(env, mutable, cmd, (error) => {
+        openEditor(env, mutable.project, cmd, (error) => {
           webSocketSend(cmd.webSocket, { tag: "OpenEditorFailed", error });
         });
         return;
@@ -1890,7 +1886,7 @@ const runCmd =
                 ErrorSelection.getSelectedError(selection, targets)?.location,
               );
               if (location !== undefined) {
-                openEditor(env, mutable, location, (error) => {
+                openEditor(env, mutable.project, location, (error) => {
                   dispatch({
                     tag: "OpenEditorFromTerminalFailed",
                     date: getNow(),
@@ -3212,115 +3208,6 @@ function compileFinishedMessage(
 
 function printEventsMessage(events: Array<LatestEvent>): string {
   return eventsAreOnlyNotImported(events) ? "Nothing to do" : "Up to date";
-}
-
-type OpenEditorLocation = { file: AbsolutePath; line: number; column: number };
-
-function openEditor(
-  env: Env,
-  mutable: Mutable,
-  location: OpenEditorLocation,
-  onError: (error: OpenEditorError) => void,
-): void {
-  const { openEditor: projectOpenEditor } = mutable.project;
-  if (projectOpenEditor.tag === "NotSet") {
-    onError({ tag: "EnvNotSet" });
-  } else if (
-    !projectHasFilePathThatCanBeOpenedInEditor(mutable.project, location.file)
-  ) {
-    onError({
-      tag: "InvalidFilePath",
-      message: Errors.openEditorInvalidFilePath(location.file),
-    });
-  } else {
-    switch (projectOpenEditor.tag) {
-      case "Command":
-        openEditorWithCommand(
-          env,
-          mutable,
-          location,
-          projectOpenEditor.command,
-          onError,
-        );
-        return;
-      case "Function":
-        openEditorWithFunction(location, projectOpenEditor.openEditor, onError);
-        return;
-    }
-  }
-}
-
-function printOpenEditorErrorForTerminal(error: OpenEditorError): string {
-  switch (error.tag) {
-    case "EnvNotSet":
-      return Errors.openEditorEnvNotSetForTerminal();
-    case "InvalidFilePath":
-    case "CommandFailed":
-      return `${bold("Opening the location in your editor failed!")}\n\n${error.message}`;
-  }
-}
-
-function openEditorWithCommand(
-  env: Env,
-  mutable: Mutable,
-  location: OpenEditorLocation,
-  command: string,
-  onError: (error: OpenEditorError) => void,
-): void {
-  const cwd = mutable.project.root;
-  const timeout = silentlyReadIntEnvValue(
-    env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
-    5000,
-  );
-  const extraEnv = {
-    file: location.file,
-    line: location.line.toString(),
-    column: location.column.toString(),
-  };
-  childProcess.exec(
-    command,
-    {
-      cwd,
-      env: { ...env, ...extraEnv },
-      encoding: "utf8",
-      timeout,
-    },
-    (error, stdout, stderr) => {
-      if (error !== null) {
-        onError({
-          tag: "CommandFailed",
-          message: Errors.openEditorCommandFailed({
-            error,
-            command,
-            cwd,
-            timeout,
-            env: extraEnv,
-            stdout,
-            stderr,
-          }),
-        });
-      }
-    },
-  );
-}
-
-function openEditorWithFunction(
-  { file, line, column }: OpenEditorLocation,
-  openEditorFunction: OpenEditorFunction,
-  onError: (error: OpenEditorError) => void,
-): void {
-  const location = { file, line, column };
-  new Promise((resolve) => {
-    resolve(openEditorFunction(location));
-  }).catch((error: unknown) => {
-    onError({
-      tag: "CommandFailed",
-      message: Errors.openEditorFunctionFailed(
-        location,
-        unknownErrorToString(error),
-      ),
-    });
-  });
 }
 
 // Errors are shown one at a time, navigated with the keyboard, when we can read
