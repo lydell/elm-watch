@@ -96,7 +96,12 @@ export type WebSocketConnectionRejectedReason =
 export class WebSocketServer {
   private polyHttpServer: ReturnType<CreateServer>;
 
-  private webSocketServer = new WsServer({ noServer: true });
+  // Messages from the client are tiny, so there’s no need for the default
+  // limit of 100 MiB.
+  private webSocketServer = new WsServer({
+    noServer: true,
+    maxPayload: 1024 * 1024,
+  });
 
   private sockets = new Set<Duplex>();
 

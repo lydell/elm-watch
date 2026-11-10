@@ -343,7 +343,8 @@ describe("hot", () => {
       expect(statuses).toStrictEqual([403, 403, 403, 403, 404, 401]);
     });
 
-    test("web socket protocol error does not crash elm-watch", async () => {
+    test("web socket protocol errors do not crash elm-watch", async () => {
+      const closeCodes: Array<number> = [];
       let webSocketUrl: string | undefined = undefined;
       modifyUrl((url) => {
         webSocketUrl = url.href;
@@ -363,7 +364,20 @@ describe("hot", () => {
               if (webSocketUrl === undefined) {
                 throw new Error("Expected webSocketUrl to be set.");
               }
-              await sendInvalidFrame(webSocketUrl);
+              // Opcode 0xF is reserved.
+              closeCodes.push(
+                await sendBadData(webSocketUrl, (webSocket) => {
+                  (
+                    webSocket as unknown as { _socket: NodeJS.WritableStream }
+                  )._socket.write(Buffer.from([0x8f, 0x80, 0, 0, 0, 0]));
+                }),
+              );
+              // Larger than `maxPayload`.
+              closeCodes.push(
+                await sendBadData(webSocketUrl, (webSocket) => {
+                  webSocket.send("a".repeat(1024 * 1024 + 1));
+                }),
+              );
               return "KeepGoing" as const;
             }
             default:
@@ -385,6 +399,8 @@ describe("hot", () => {
 
         ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: ProtocolError⧘
       `);
+
+      expect(closeCodes).toStrictEqual([1002, 1009]);
     });
 
     test("target not found", async () => {
@@ -1109,17 +1125,19 @@ describe("hot", () => {
   });
 });
 
-// Opcode 0xF is reserved, so the server’s `ws` emits an error for the socket.
-async function sendInvalidFrame(url: string): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
+// Connects, sends something the server’s `ws` emits an error for, and resolves
+// with the close code.
+async function sendBadData(
+  url: string,
+  send: (webSocket: NodeWebSocket) => void,
+): Promise<number> {
+  return new Promise((resolve, reject) => {
     const webSocket = new NodeWebSocket(url);
     webSocket.on("open", () => {
-      (
-        webSocket as unknown as { _socket: NodeJS.WritableStream }
-      )._socket.write(Buffer.from([0x8f, 0x80, 0, 0, 0, 0]));
+      send(webSocket);
     });
-    webSocket.on("close", () => {
-      resolve();
+    webSocket.on("close", (code) => {
+      resolve(code);
     });
     webSocket.on("error", reject);
   });
