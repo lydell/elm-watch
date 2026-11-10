@@ -77,11 +77,10 @@ export function collapseExcerpts(
         lineIndex++;
       }
       collapsedAny = true;
+      // A broken version of the `|` after the line numbers.
       result.push([
-        {
-          tag: "Elision",
-          text: `${" ".repeat(gutterWidth)}⋮ (${lineIndex - hiddenStart} lines)`,
-        },
+        `${" ".repeat(gutterWidth)}¦`,
+        { tag: "Elision", text: ` (${lineIndex - hiddenStart} lines)` },
       ]);
     }
   }

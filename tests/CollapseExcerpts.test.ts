@@ -118,7 +118,7 @@ Missing possibilities include:
        41|>
        42|>        C2 ->
        43|>            "c2"
-         ⋮ (12 lines)
+         ¦ (12 lines)
        56|>
        57|>        C7 ->
        58|>            "c7"
@@ -157,7 +157,7 @@ I was expecting to see an expression like 42 or "hello".`),
       I am partway through parsing a \`case\` expression, but I got stuck here:
 
        4|     case x of
-        ⋮ (8 lines)
+        ¦ (8 lines)
       13|
       14|         4 ->
       15|             "c4"
@@ -198,7 +198,7 @@ The 10th element is a string of type:`),
       The 10th element of this list does not match all the previous elements:
 
        9|         [ text "1"
-        ⋮ (3 lines)
+        ¦ (3 lines)
       13|         , text "5"
       14|         , text "6"
       15|         , text "7"
@@ -207,7 +207,7 @@ The 10th element is a string of type:`),
       18|>        , "10"
       19|         , text "11"
       20|         , text "12"
-        ⋮ (5 lines)
+        ¦ (5 lines)
 
       The 10th element is a string of type:
     `);
@@ -238,7 +238,7 @@ The end.`),
        4|>    line4
        5|>    line5
        6|>    line6
-        ⋮ (11 lines)
+        ¦ (11 lines)
       18|>    line18
       19|>    line19
       20|>    line20
@@ -253,7 +253,7 @@ The end.`),
       Third:
 
       201|     line201
-         ⋮ (11 lines)
+         ¦ (11 lines)
       213|     line213
       214|     line214
       215|     line215

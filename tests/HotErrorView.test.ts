@@ -523,7 +523,7 @@ describe("hot error view", () => {
       22|⧙>⧘                "1"
       23|⧙>⧘
       24|⧙>⧘            C2 ->
-      ⧙  ⋮ (16 lines)⧘
+        ¦⧙ (16 lines)⧘
       41|⧙>⧘
       42|⧙>⧘            C8 ->
       43|⧙>⧘                "8"
@@ -608,7 +608,7 @@ describe("hot error view", () => {
       22|<span style="color: rgb(241, 76, 76)">&gt;</span>                "1"
       23|<span style="color: rgb(241, 76, 76)">&gt;</span>
       24|<span style="color: rgb(241, 76, 76)">&gt;</span>            C2 -&gt;
-      <span style="opacity: 0.6">  ⋮ (16 lines)</span>
+        ¦<span style="opacity: 0.6"> (16 lines)</span>
       41|<span style="color: rgb(241, 76, 76)">&gt;</span>
       42|<span style="color: rgb(241, 76, 76)">&gt;</span>            C8 -&gt;
       43|<span style="color: rgb(241, 76, 76)">&gt;</span>                "8"
