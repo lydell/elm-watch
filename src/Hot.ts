@@ -26,6 +26,7 @@ import {
 } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import type { ErrorTemplate } from "./Errors.ts";
+import * as ErrorSelection from "./ErrorSelection.ts";
 import * as ErrorView from "./ErrorView.ts";
 import {
   bold,
@@ -1978,7 +1979,7 @@ const runCmd =
         }
         const { errorView } = mutable;
         const targets = getErrorViewTargets(mutable.project);
-        let selection = ErrorView.reconcile(
+        let selection = ErrorSelection.reconcile(
           errorView.selection,
           targets,
           makePrioritizedOutputs(mutable),
@@ -1993,8 +1994,8 @@ const runCmd =
               if (errorView.showAll || selection === undefined) {
                 break;
               }
-              const location = ErrorView.getOpenEditorLocation(
-                ErrorView.getSelectedError(selection, targets)?.location,
+              const location = ErrorSelection.getOpenEditorLocation(
+                ErrorSelection.getSelectedError(selection, targets)?.location,
               );
               if (location !== undefined) {
                 openEditor(env, mutable, location, (error) => {
@@ -2010,7 +2011,7 @@ const runCmd =
 
             default:
               if (!errorView.showAll && selection !== undefined) {
-                selection = ErrorView.navigate(selection, targets, key);
+                selection = ErrorSelection.navigate(selection, targets, key);
               }
           }
         }
@@ -3843,7 +3844,7 @@ function renderErrorView(
   { notice }: { notice: string | undefined },
 ): void {
   const { errorView } = mutable;
-  errorView.selection = ErrorView.reconcile(
+  errorView.selection = ErrorSelection.reconcile(
     errorView.selection,
     targets,
     makePrioritizedOutputs(mutable),
@@ -3852,7 +3853,7 @@ function renderErrorView(
   const highlightSelected =
     !errorView.showAll &&
     selection !== undefined &&
-    ErrorView.canSwitchTarget(selection, targets);
+    ErrorSelection.canSwitchTarget(selection, targets);
 
   logger.withSynchronizedOutput(() => {
     logger.clearScreen();

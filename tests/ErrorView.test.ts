@@ -1,14 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { ErrorTemplate } from "../src/Errors.ts";
+import { navigate, reconcile, type Selection } from "../src/ErrorSelection.ts";
 import {
   type ErrorViewTarget,
   makeErrorViewTarget,
-  navigate,
   parseKeys,
-  reconcile,
   render,
-  type Selection,
 } from "../src/ErrorView.ts";
 import type { LoggerConfig } from "../src/Logger.ts";
 import {
