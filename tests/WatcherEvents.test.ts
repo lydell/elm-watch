@@ -91,6 +91,8 @@ describe("classifyWatcherEvent", () => {
     expect(classify(project, "removed", "/project/app")).toBe("restart");
     // Contains an elm.json.
     expect(classify(project, "changed", "/project/pkg")).toBe("restart");
+    // Like for applications, a package’s source directory itself counts.
+    expect(classify(project, "changed", "/project/pkg/src")).toBe("dirty: Pkg");
     expect(classify(project, "changed", "/project/other")).toBe("ignored");
   });
 

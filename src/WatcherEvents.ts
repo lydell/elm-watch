@@ -229,10 +229,13 @@ function onElmFilesWatcherEvent(
     }
   }
 
-  // Packages typecheck everything in their source directory (src/).
+  // Packages typecheck everything in their source directory (src/). The event
+  // can be for a file inside it, the directory itself, or a directory
+  // containing it.
   for (const [elmJsonPath, [, packageState]] of project.packages) {
     const sourceDirectory = getPackageSourceDirectory(elmJsonPath);
     if (
+      event.file.absolutePath === sourceDirectory ||
       event.file.absolutePath.startsWith(sourceDirectory + path.sep) ||
       matches(sourceDirectory)
     ) {
