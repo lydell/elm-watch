@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
-import * as url from "url";
 import type WebSocket from "ws";
 
 import {
@@ -45,10 +44,8 @@ import {
   makeWatcherEvent,
   printEventsMessage,
   printInfoLine,
-  type TaggedAbsolutePath,
   WATCHER_EVENT_SLEEP_MS,
   type WatcherEvent,
-  type WatcherEventName,
   type WebSocketRelatedEvent,
 } from "./LatestEvent.ts";
 import type { Logger, LoggerConfig } from "./Logger.ts";
@@ -61,7 +58,6 @@ import {
   getAllTargetStates,
   getApplicationTargetsErrors,
   getFlatOutputs,
-  getPackageSourceDirectory,
   getPackageStates,
   type OutputError,
   type OutputState,
@@ -77,7 +73,6 @@ import {
   type CreateServer,
   type ElmJsonPath,
   type ElmWatchJsonPath,
-  type InputPath,
   type GetNow,
   markAsAbsolutePath,
   type OutputPath,
@@ -85,6 +80,10 @@ import {
   type WebSocketToken,
 } from "./Types.ts";
 import * as Watcher from "./Watcher.ts";
+import {
+  classifyWatcherEvent,
+  type WatcherEventEffect,
+} from "./WatcherEvents.ts";
 import { makeWatcherProbe, type WatcherProbe } from "./WatcherProbe.ts";
 import {
   getConnectionOutputPath,
@@ -1215,15 +1214,20 @@ function handlePendingWatcherEvents(
     changedSourceDirectory !== undefined &&
     isNonEmptyArray(model.pendingWatcherEvents)
   ) {
-    const [nextAction, latestEvent, cmds] = makeRestartNextAction(
-      makeWatcherEvent(
+    const [nextAction, cmds] = applyWatcherEventEffect(
+      project,
+      { tag: "Restart" },
+      model.nextAction,
+    );
+    const latestEvent: LatestEvent = {
+      ...makeWatcherEvent(
         project.missingSourceDirectories.has(changedSourceDirectory)
           ? "changed"
           : "removed",
         changedSourceDirectory,
       ),
-      project,
-    );
+      affectsAnyTarget: true,
+    };
     return [
       {
         ...model,
@@ -1248,16 +1252,19 @@ function handlePendingWatcherEvents(
   const cmds: Array<Cmd> = [];
 
   for (const absolutePath of latestPaths) {
-    const result = onWatcherEvent(
+    const result = classifyWatcherEvent(
       project,
       removedPaths.has(absolutePath) ? "removed" : "changed",
       absolutePath,
-      nextAction,
     );
     if (result !== undefined) {
-      const [updatedNextAction, latestEvent, newCmds] = result;
+      const [updatedNextAction, newCmds] = applyWatcherEventEffect(
+        project,
+        result.effect,
+        nextAction,
+      );
       nextAction = updatedNextAction;
-      latestEvents.push(latestEvent);
+      latestEvents.push(result.event);
       cmds.push(...newCmds);
     }
   }
@@ -1266,227 +1273,6 @@ function handlePendingWatcherEvents(
     { ...model, nextAction, latestEvents, pendingWatcherEvents: [] },
     cmds,
   ];
-}
-
-function onWatcherEvent(
-  project: Project,
-  eventName: WatcherEventName,
-  absolutePath: AbsolutePath,
-  nextAction: NextAction,
-): [NextAction, LatestEvent, Array<Cmd>] | undefined {
-  if (absolutePath.endsWith(".elm")) {
-    return onElmFileWatcherEvent(
-      project,
-      makeWatcherEvent(eventName, absolutePath),
-      nextAction,
-    );
-  }
-
-  const basename = path.basename(absolutePath);
-
-  switch (basename) {
-    case "elm-watch.json":
-      // elm-watch.json files are irrelevant when not using elm-watch.json.
-      if (project.configSource.tag !== "ElmWatchJson") {
-        return undefined;
-      }
-      // We don’t know if an elm-watch.json other than the current one was
-      // added or changed. Adding one could change which one is used, so
-      // restart to be safe.
-      if (
-        absolutePath === project.configSource.elmWatchJsonPath ||
-        eventName === "changed"
-      ) {
-        return makeRestartNextAction(
-          makeWatcherEvent(eventName, absolutePath),
-          project,
-        );
-      }
-      return undefined;
-
-    case "elm.json":
-      if (getAllElmJsonPaths(project).some((p) => absolutePath === p)) {
-        return makeRestartNextAction(
-          makeWatcherEvent(eventName, absolutePath),
-          project,
-        );
-      }
-      return undefined;
-
-    // Some compiler error messages suggest removing elm-stuff to fix the error.
-    // Restart when that happens. Note: This could be a totally unrelated
-    // elm-stuff directory, but I don’t think it’s worth the trouble trying to
-    // check if it affects the project, and possibly logging if it isn’t.
-    // See also `isElmStuffCompilerDir` below.
-    case "elm-stuff":
-      switch (eventName) {
-        case "removed":
-          return makeRestartNextAction(
-            makeWatcherEvent(eventName, absolutePath),
-            project,
-          );
-
-        default:
-          return undefined;
-      }
-
-    default:
-      if (eventName === "removed" && isElmStuffCompilerDir(absolutePath)) {
-        return makeRestartNextAction(
-          makeWatcherEvent(eventName, absolutePath),
-          project,
-        );
-      }
-
-      if (project.staticFilesDir !== undefined) {
-        const prefix = project.staticFilesDir + path.sep;
-        if (
-          absolutePath.startsWith(prefix) &&
-          !getFlatOutputs(project).some(
-            ({ outputPath }) => absolutePath === outputPath.theOutputPath,
-          )
-        ) {
-          return [
-            nextAction,
-            {
-              ...makeWatcherEvent(eventName, absolutePath),
-              affectsAnyTarget: true,
-              file: {
-                tag: "StaticFilesDirPath",
-                urlPath: url.pathToFileURL(
-                  path.sep + absolutePath.slice(prefix.length),
-                ).pathname,
-              },
-            },
-            [],
-          ];
-        }
-      }
-
-      // A directory might have been moved, added or removed. We only get an
-      // event for the directory itself, not for every file inside it.
-      return onDirectoryWatcherEvent(
-        project,
-        makeWatcherEvent(eventName, absolutePath),
-        nextAction,
-      );
-  }
-}
-
-// Removing just the compiler’s directory, like elm-stuff/0.19.1/ (or
-// elm-stuff/lamdera-1.5.0-0.19.3/ for Lamdera), is enough to get rid of a
-// corrupt cache. That preserves files from other tools in elm-stuff/, like
-// elm-watch, elm-review and elm-test.
-function isElmStuffCompilerDir(absolutePath: AbsolutePath): boolean {
-  return (
-    path.basename(path.dirname(absolutePath)) === "elm-stuff" &&
-    /^(?:lamdera-\d+\.\d+\.\d+-)?\d+\.\d+\.\d+$/.test(
-      path.basename(absolutePath),
-    )
-  );
-}
-
-function onDirectoryWatcherEvent(
-  project: Project,
-  event: WatcherEvent<TaggedAbsolutePath>,
-  nextAction: NextAction,
-): [NextAction, LatestEvent, Array<Cmd>] | undefined {
-  const prefix = event.file.absolutePath + path.sep;
-  const isInside = (absolutePath: AbsolutePath): boolean =>
-    absolutePath.startsWith(prefix);
-
-  if (
-    (project.configSource.tag === "ElmWatchJson" &&
-      isInside(project.configSource.elmWatchJsonPath)) ||
-    getAllElmJsonPaths(project).some(isInside) ||
-    isElmFileRelatedToTargetsErrors(isInside, project.targetsErrors)
-  ) {
-    return makeRestartNextAction(event, project);
-  }
-
-  const result = onElmFilesWatcherEvent(project, event, isInside, nextAction);
-  // Ignore other types of files.
-  return result[1].tag === "WatcherEvent" && !result[1].affectsAnyTarget
-    ? undefined
-    : result;
-}
-
-function onElmFileWatcherEvent(
-  project: Project,
-  event: WatcherEvent<TaggedAbsolutePath>,
-  nextAction: NextAction,
-): [NextAction, LatestEvent, Array<Cmd>] {
-  const elmFile = event.file.absolutePath;
-  const isElmFile = (absolutePath: AbsolutePath): boolean =>
-    absolutePath === elmFile;
-
-  if (isElmFileRelatedToTargetsErrors(isElmFile, project.targetsErrors)) {
-    return makeRestartNextAction(event, project);
-  }
-
-  return onElmFilesWatcherEvent(project, event, isElmFile, nextAction);
-}
-
-// `matches` is either an exact match for an .elm file, or checks if a path is
-// inside a directory.
-function onElmFilesWatcherEvent(
-  project: Project,
-  event: WatcherEvent<TaggedAbsolutePath>,
-  matches: (absolutePath: AbsolutePath) => boolean,
-  nextAction: NextAction,
-): [NextAction, LatestEvent, Array<Cmd>] {
-  const matchesInputPath = (inputPath: InputPath): boolean =>
-    matches(inputPath.theInputPath) || matches(inputPath.realpath);
-
-  const dirtyOutputs: Array<{
-    outputPath: OutputPath;
-    outputState: OutputState;
-  }> = [];
-  const dirtyPackages: Array<PackageState> = [];
-
-  for (const [elmJsonPath, outputs] of project.elmJsons) {
-    for (const [outputPath, outputState] of outputs) {
-      if (
-        event.eventName === "removed" &&
-        outputState.inputs.some(matchesInputPath)
-      ) {
-        return makeRestartNextAction(event, project);
-      }
-      Compile.ensureAllRelatedElmFilePaths(elmJsonPath, outputState);
-      if (
-        outputState.allRelatedElmFilePaths.has(event.file.absolutePath) ||
-        Array.from(outputState.allRelatedElmFilePaths).some(matches)
-      ) {
-        dirtyOutputs.push({ outputPath, outputState });
-      }
-    }
-  }
-
-  // Packages typecheck everything in their source directory (src/).
-  for (const [elmJsonPath, [, packageState]] of project.packages) {
-    const sourceDirectory = getPackageSourceDirectory(elmJsonPath);
-    if (
-      event.file.absolutePath.startsWith(sourceDirectory + path.sep) ||
-      matches(sourceDirectory)
-    ) {
-      dirtyPackages.push(packageState);
-    }
-  }
-
-  return isNonEmptyArray(dirtyOutputs) || isNonEmptyArray(dirtyPackages)
-    ? [
-        compileNextAction(nextAction),
-        { ...event, affectsAnyTarget: true },
-        [
-          {
-            tag: "MarkAsDirty",
-            outputs: dirtyOutputs,
-            packages: dirtyPackages,
-            killInstallDependencies: false,
-          },
-        ],
-      ]
-    : [nextAction, { ...event, affectsAnyTarget: false }, []];
 }
 
 function runNextAction(start: Date, model: Model): [Model, Array<Cmd>] {
@@ -2284,68 +2070,42 @@ function getWebSocketConnection(mutable: Mutable): WebSocketUrlConnection {
   );
 }
 
-function makeRestartNextAction(
-  event: WatcherEvent,
+function applyWatcherEventEffect(
   project: Project,
-): [NextAction, LatestEvent, Array<Cmd>] {
-  return [
-    { tag: "Restart" },
-    { ...event, affectsAnyTarget: true },
-    [
-      {
-        // Interrupt all compilation.
-        tag: "MarkAsDirty",
-        outputs: getFlatOutputs(project),
-        packages: getPackageStates(project),
-        killInstallDependencies: true,
-      },
-    ],
-  ];
-}
+  effect: WatcherEventEffect,
+  nextAction: NextAction,
+): [NextAction, Array<Cmd>] {
+  switch (effect.tag) {
+    case "Restart":
+      return [
+        { tag: "Restart" },
+        [
+          {
+            // Interrupt all compilation.
+            tag: "MarkAsDirty",
+            outputs: getFlatOutputs(project),
+            packages: getPackageStates(project),
+            killInstallDependencies: true,
+          },
+        ],
+      ];
 
-// `matches` is either an exact match for an .elm file, or checks if a path is
-// inside a directory.
-function isElmFileRelatedToTargetsErrors(
-  matches: (absolutePath: AbsolutePath) => boolean,
-  targetsErrors: Project["targetsErrors"],
-): boolean {
-  const matchesInputPath = (inputPath: InputPath): boolean =>
-    matches(inputPath.theInputPath) || matches(inputPath.realpath);
-  return targetsErrors.some(({ error }) => {
-    switch (error.tag) {
-      case "DuplicateInputs":
-        return error.duplicates.some(
-          ({ inputs, resolved }) =>
-            matches(resolved) || inputs.some(matchesInputPath),
-        );
+    case "MarkAsDirty":
+      return [
+        compileNextAction(nextAction),
+        [
+          {
+            tag: "MarkAsDirty",
+            outputs: effect.outputs,
+            packages: effect.packages,
+            killInstallDependencies: false,
+          },
+        ],
+      ];
 
-      // elm.json is watched separately.
-      case "ElmJsonNotFound":
-      case "ElmJsonTypeMismatch":
-        return false;
-
-      // The only way I’ve found to trigger this is by a symlink loop.
-      case "InputsFailedToResolve":
-        return error.inputsFailedToResolve.some(({ inputPath }) =>
-          matches(inputPath.theUncheckedInputPath),
-        );
-
-      case "InputsNotFound":
-        return error.inputsNotFound.some((inputPath) =>
-          matches(inputPath.theUncheckedInputPath),
-        );
-    }
-  });
-}
-
-// Including the elm.json files of targets with errors: The elm.json might be
-// missing, or have the wrong "type".
-function getAllElmJsonPaths(project: Project): Array<ElmJsonPath> {
-  return [
-    ...project.elmJsons.keys(),
-    ...project.packages.keys(),
-    ...project.targetsErrors.map(({ elmJsonPath }) => elmJsonPath),
-  ];
+    case "NoEffect":
+      return [nextAction, []];
+  }
 }
 
 function onWebSocketConnected(
