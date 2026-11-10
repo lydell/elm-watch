@@ -779,14 +779,15 @@ export function getOverlay(): string {
     const overlay = shadowRoot.querySelector(`[data-test-id="Overlay"]`);
     if (overlay instanceof HTMLElement) {
       const children = Array.from(overlay.children, (child, index) => {
+        if (child.classList.contains("overlayFooter")) {
+          return printOverlayFooter(child);
+        }
         const clone = child.cloneNode(true) as HTMLElement;
         clone.id = index.toString();
-        for (const element of clone.querySelectorAll("[class]")) {
+        for (const element of [clone, ...clone.querySelectorAll("[class]")]) {
           element.removeAttribute("class");
         }
-        return clone.outerHTML
-          .replace("<summary", "\n<summary")
-          .replace("</summary>", "</summary>\n");
+        return clone.outerHTML.replace("<pre>", "\n<pre>");
       }).join(`\n${"-".repeat(80)}\n`);
       result = `<overlay ${overlay.hidden !== false ? "hidden" : "visible"} style="${
         overlay.getAttribute("style") ?? ""
@@ -794,6 +795,28 @@ export function getOverlay(): string {
     }
   });
   return clean(result);
+}
+
+// Prints the footer as text, with keys that don’t do anything replaced by "_":
+// <footer>🚨 error 1/2 | [_→] error | [_↓] file | [enter] open in editor</footer>
+function printOverlayFooter(footer: Element): string {
+  const parts = Array.from(footer.children, (child) =>
+    child.children.length === 0
+      ? [child.textContent]
+      : Array.from(child.children, (hint) =>
+          Array.from(hint.childNodes, (node) =>
+            node instanceof HTMLButtonElement && node.disabled
+              ? "_"
+              : node.textContent,
+          ).join(""),
+        ),
+  );
+  return `<footer>${parts.flat().join(" | ")}</footer>`;
+}
+
+// Presses a key while the error overlay is open.
+export function pressOverlayKey(key: string): void {
+  window.dispatchEvent(new KeyboardEvent("keydown", { key, cancelable: true }));
 }
 
 export function clickFirstErrorLocation(): void {

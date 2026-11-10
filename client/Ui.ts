@@ -1,5 +1,16 @@
 import * as Codec from "tiny-decoders";
 
+import {
+  type ErrorGroup,
+  getErrorNumber,
+  getOpenEditorLocation,
+  getSelectedError,
+  makeErrorGroup,
+  navigate,
+  type NavigationKey,
+  reconcile,
+  type Selection,
+} from "../src/ErrorSelection.ts";
 import { formatTime } from "../src/Helpers.ts";
 import type {
   AbsolutePath,
@@ -316,8 +327,122 @@ export function createUi(): Ui {
 
   const entries: Array<TargetEntry> = [];
   let errorOverlayOpen = false;
+  // The errors of each target, in the order they first had errors.
+  const overlayErrors = new Map<
+    string,
+    {
+      errors: Map<string, OverlayError>;
+      sendKey: SendKey | undefined;
+      dispatch: (msg: UiMsg) => void;
+    }
+  >();
+  // Like in the terminal: Errors are shown one at a time by default. Not
+  // saved: One at a time should be the default each time.
+  let overlayShowAll = false;
+  let overlaySelection: Selection | undefined = undefined;
+  // What the overlay showed last time it was rendered, to keep the scroll
+  // position when it is still the same.
+  let overlayRenderedKey: string | undefined = undefined;
   let panelOpen = false;
   let position = loadUiPosition();
+
+  // The errors of all targets put together, without duplicates.
+  const getErrorGroup = (): ErrorGroup<OverlayErrorItem> =>
+    makeErrorGroup(
+      "",
+      Array.from(overlayErrors.values(), ({ errors, sendKey, dispatch }) =>
+        Array.from(errors, ([id, error]): OverlayErrorItem => ({
+          id,
+          location: error.location,
+          error,
+          sendKey,
+          dispatch,
+        })),
+      ).flat(),
+    );
+
+  const hasErrors = (): boolean =>
+    Array.from(overlayErrors.values()).some(({ errors }) => errors.size > 0);
+
+  const renderOverlay = (): void => {
+    const group = getErrorGroup();
+    overlaySelection = reconcile(overlaySelection, [group], new Map());
+    const selectedError =
+      overlaySelection === undefined
+        ? undefined
+        : getSelectedError(overlaySelection, [group]);
+    const firstError = group.files[0]?.errors[0]?.error;
+
+    if (firstError !== undefined) {
+      overlay.style.backgroundColor = firstError.backgroundColor;
+      overlay.style.color = firstError.foregroundColor;
+      overlayCloseBar.style.setProperty(
+        "--foregroundColor",
+        firstError.foregroundColor,
+      );
+      overlayCloseBar.style.setProperty(
+        "--backgroundColor",
+        firstError.backgroundColor,
+      );
+    }
+
+    // Restore focus after re-creating the key hint buttons, so that keyboard
+    // users don’t lose their place.
+    const focusKey =
+      shadowRoot.activeElement?.getAttribute(DATA_FOCUS_KEY) ?? undefined;
+    const { scrollTop } = overlay;
+    // The error ID is JSON, so it can’t be confused with "show all".
+    const renderedKey = overlayShowAll ? "show all" : selectedError?.id;
+
+    overlay.replaceChildren(
+      ...viewOverlay({
+        group,
+        selection: overlaySelection,
+        showAll: overlayShowAll,
+        onKey: handleOverlayKey,
+      }),
+    );
+
+    // Start from the top when going to another error.
+    overlay.scrollTop = renderedKey === overlayRenderedKey ? scrollTop : 0;
+    overlayRenderedKey = renderedKey;
+
+    if (focusKey !== undefined) {
+      const element = overlay.querySelector(
+        `[${DATA_FOCUS_KEY}="${focusKey}"]`,
+      );
+      if (element instanceof HTMLElement && !element.matches(":disabled")) {
+        element.focus({ preventScroll: true });
+      }
+    }
+  };
+
+  const handleOverlayKey = (key: OverlayKey): void => {
+    switch (key) {
+      case "ToggleShowAll":
+        overlayShowAll = !overlayShowAll;
+        break;
+
+      case "OpenEditor": {
+        if (overlayShowAll || overlaySelection === undefined) {
+          return;
+        }
+        const item = getSelectedError(overlaySelection, [getErrorGroup()]);
+        const msg = getOverlayOpenEditorMsg(item);
+        if (item !== undefined && msg !== undefined) {
+          item.dispatch(msg);
+        }
+        return;
+      }
+
+      default:
+        if (overlayShowAll || overlaySelection === undefined) {
+          return;
+        }
+        overlaySelection = navigate(overlaySelection, [getErrorGroup()], key);
+    }
+    renderOverlay();
+  };
 
   const getSnapshots = (): Array<TargetSnapshot> =>
     entries.flatMap((entry) =>
@@ -406,7 +531,7 @@ export function createUi(): Ui {
     panel.replaceChildren(
       ...viewPanel({
         snapshots,
-        hasErrors: overlay.hasChildNodes(),
+        hasErrors: hasErrors(),
         errorOverlayOpen,
         onToggleErrorOverlay: () => {
           // Close the panel, so that it does not cover the errors.
@@ -441,8 +566,7 @@ export function createUi(): Ui {
     toggleButton.focus();
   };
 
-  const isErrorOverlayVisible = (): boolean =>
-    errorOverlayOpen && overlay.hasChildNodes();
+  const isErrorOverlayVisible = (): boolean => errorOverlayOpen && hasErrors();
 
   const updateErrorOverlayVisibility = (): void => {
     const hidden = !isErrorOverlayVisible();
@@ -744,13 +868,29 @@ export function createUi(): Ui {
   };
 
   // While the error overlay is open, the page is inert, so we can take
-  // Escape for ourselves.
+  // Escape and the error navigation keys for ourselves.
   const onKeydownCapture = (event: KeyboardEvent): void => {
-    if (event.key === "Escape" && isErrorOverlayVisible()) {
+    if (!isErrorOverlayVisible()) {
+      return;
+    }
+    if (event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
       closeErrorOverlay();
+      return;
     }
+    const key = overlayKeyFromEvent(event);
+    if (
+      key === undefined ||
+      // Let Enter press the focused button.
+      (event.key === "Enter" &&
+        shadowRoot.activeElement instanceof HTMLButtonElement)
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    handleOverlayKey(key);
   };
 
   // Pressing Escape again re-opens the error overlay. The page might use
@@ -776,7 +916,7 @@ export function createUi(): Ui {
       event.preventDefault();
       panelOpen = false;
       render();
-    } else if (!errorOverlayOpen && overlay.hasChildNodes()) {
+    } else if (!errorOverlayOpen && hasErrors()) {
       // Otherwise the browser closes the dialog right away again, as the
       // default action of pressing Escape.
       event.preventDefault();
@@ -857,16 +997,18 @@ export function createUi(): Ui {
         },
 
         setErrors: (errors, sendKey, { open }) => {
-          updateErrorOverlay(
-            entry.targetName,
-            (msg) => {
-              entry.callbacks?.onUiMsg(msg);
-            },
-            sendKey,
-            errors,
-            overlay,
-            overlayCloseBar,
-          );
+          if (errors.size === 0) {
+            overlayErrors.delete(entry.targetName);
+          } else {
+            overlayErrors.set(entry.targetName, {
+              errors,
+              sendKey,
+              dispatch: (msg) => {
+                entry.callbacks?.onUiMsg(msg);
+              },
+            });
+          }
+          renderOverlay();
           if (open && !errorOverlayOpen) {
             setErrorOverlayOpen(true);
           } else {
@@ -1116,7 +1258,13 @@ const CLASS = {
   overlay: "overlay",
   overlayCloseBar: "overlayCloseBar",
   overlayCloseButton: "overlayCloseButton",
+  overlayError: "overlayError",
+  overlayErrorHeader: "overlayErrorHeader",
+  overlayFooter: "overlayFooter",
   overlayHint: "overlayHint",
+  overlayKeyHint: "overlayKeyHint",
+  overlayKeyHints: "overlayKeyHints",
+  overlayPosition: "overlayPosition",
   panel: "panel",
   root: "root",
   rootBottomEdge: "rootBottomEdge",
@@ -1142,9 +1290,6 @@ const CLASS = {
 const DATA_FOCUS_KEY = "data-focus-key";
 
 export type FlashType = "error" | "success";
-
-const CHEVRON_UP = "▲";
-const CHEVRON_DOWN = "▼";
 
 // The size of the emoji button. For touch, the hit area is enlarged to the
 // recommended minimum touch target size (see `TOUCH_SIZE`).
@@ -1181,10 +1326,23 @@ p {
   z-index: -2;
   inset: 0;
   overflow-y: auto;
+  /* The footer sticks to the bottom, even if the error is short. */
+  display: flex;
+  flex-direction: column;
   /* Room for the close button above the first error. */
-  padding: calc(${OVERLAY_CLOSE_BUTTON_SIZE} - 2ch) 0 2ch;
+  padding-top: calc(${OVERLAY_CLOSE_BUTTON_SIZE} - 2ch);
   user-select: text;
   pointer-events: auto;
+}
+
+.${CLASS.overlay} > * {
+  flex-shrink: 0;
+}
+
+/* Browsers make scrollable elements focusable, and the dialog focuses the
+   overlay when it opens. An outline around the whole window is just noise. */
+.${CLASS.overlay}:focus-visible {
+  outline: none;
 }
 
 .${CLASS.overlayCloseBar} {
@@ -1236,32 +1394,18 @@ p {
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 }
 
-.${CLASS.overlay} details {
+.${CLASS.overlayError} {
   --border-thickness: 0.125em;
   border-top: var(--border-thickness) solid;
   margin: 2ch 0;
 }
 
-.${CLASS.overlay} summary {
-  cursor: pointer;
-  pointer-events: none;
+.${CLASS.overlayErrorHeader} {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   padding: 0 2ch;
   word-break: break-word;
-}
-
-.${CLASS.overlay} summary::-webkit-details-marker {
-  display: none;
-}
-
-.${CLASS.overlay} summary::marker {
-  content: none;
-}
-
-.${CLASS.overlay} summary > * {
-  pointer-events: auto;
 }
 
 .${CLASS.errorTitle} {
@@ -1270,17 +1414,6 @@ p {
   --padding: 1ch;
   padding: 0 var(--padding);
   transform: translate(calc(var(--padding) * -1), calc(-50% - var(--border-thickness) / 2));
-}
-
-.${CLASS.errorTitle}::before {
-  content: "${CHEVRON_DOWN}";
-  display: inline-block;
-  margin-right: 1ch;
-  transform: translateY(-0.0625em);
-}
-
-details[open] > summary > .${CLASS.errorTitle}::before {
-  content: "${CHEVRON_UP}";
 }
 
 .${CLASS.errorLocationButton} {
@@ -1298,6 +1431,52 @@ details[open] > summary > .${CLASS.errorTitle}::before {
   margin: 0;
   padding: 2ch;
   overflow-x: auto;
+}
+
+.${CLASS.overlayFooter} {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  /* Otherwise the emoji makes the position text taller than the key hints. */
+  line-height: 1.5;
+  gap: 1ch 3ch;
+  /* Room for the emoji button, which can be on either side. */
+  padding: 1ch calc(${TOGGLE_SIZE} + 2ch);
+  border-top: 0.125em solid;
+  background-color: inherit;
+}
+
+.${CLASS.overlayPosition} {
+  white-space: pre-wrap;
+}
+
+.${CLASS.overlayKeyHints} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 3ch;
+}
+
+.${CLASS.overlayKeyHint} > [aria-hidden],
+.${CLASS.overlayKeyHint}[data-disabled] {
+  opacity: 0.6;
+}
+
+.${CLASS.overlayKeyHint} button {
+  appearance: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.${CLASS.overlayKeyHint} button:disabled {
+  font-weight: normal;
+  opacity: 0.6;
+  cursor: default;
 }
 
 .${CLASS.root} {
@@ -2278,105 +2457,153 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
     : [];
 }
 
-const DATA_TARGET_NAMES = "data-target-names";
+// One error from one or more targets. Opening the editor goes via the first
+// target that has the error.
+type OverlayErrorItem = {
+  id: string;
+  location: ErrorLocation | undefined;
+  error: OverlayError;
+  sendKey: SendKey | undefined;
+  dispatch: (msg: UiMsg) => void;
+};
 
-function updateErrorOverlay(
-  targetName: string,
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey | undefined,
-  errors: Map<string, OverlayError>,
-  overlay: HTMLElement,
-  overlayCloseBar: HTMLElement,
-): void {
-  const existingErrorElements = new Map<
-    string,
-    { targetNames: Set<string>; element: Element }
-  >(
-    Array.from(overlay.children, (element) => [
-      element.id,
-      {
-        targetNames: new Set(
-          // Newline is not a valid target name character.
-          (element.getAttribute(DATA_TARGET_NAMES) ?? "").split("\n"),
-        ),
-        element,
-      },
-    ]),
-  );
+type OverlayKey = NavigationKey | "OpenEditor" | "ToggleShowAll";
 
-  for (const [id, { targetNames, element }] of existingErrorElements) {
-    if (targetNames.has(targetName) && !errors.has(id)) {
-      targetNames.delete(targetName);
-      if (targetNames.size === 0) {
-        element.remove();
-      } else {
-        element.setAttribute(DATA_TARGET_NAMES, [...targetNames].join("\n"));
-      }
-    }
+// Like in the terminal, minus tab for switching target: In the browser, the
+// errors of all targets on the page are shown together.
+function overlayKeyFromEvent(event: KeyboardEvent): OverlayKey | undefined {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return undefined;
   }
-
-  let previousElement: Element | undefined = undefined;
-
-  for (const [id, error] of errors) {
-    const maybeExisting = existingErrorElements.get(id);
-    if (maybeExisting === undefined) {
-      const element = viewOverlayError(
-        targetName,
-        dispatch,
-        sendKey,
-        id,
-        error,
-      );
-      if (previousElement === undefined) {
-        overlay.prepend(element);
-      } else {
-        previousElement.after(element);
-      }
-      overlay.style.backgroundColor = error.backgroundColor;
-      overlayCloseBar.style.setProperty(
-        "--foregroundColor",
-        error.foregroundColor,
-      );
-      overlayCloseBar.style.setProperty(
-        "--backgroundColor",
-        error.backgroundColor,
-      );
-      previousElement = element;
-    } else {
-      if (!maybeExisting.targetNames.has(targetName)) {
-        maybeExisting.element.setAttribute(
-          DATA_TARGET_NAMES,
-          [...maybeExisting.targetNames, targetName].join("\n"),
-        );
-      }
-      previousElement = maybeExisting.element;
-    }
+  switch (event.key) {
+    case "ArrowRight":
+    case "l":
+      return "NextError";
+    case "ArrowLeft":
+    case "h":
+      return "PreviousError";
+    case "ArrowDown":
+    case "j":
+      return "NextFile";
+    case "ArrowUp":
+    case "k":
+      return "PreviousFile";
+    case "Enter":
+    case "o":
+      return "OpenEditor";
+    case "a":
+      return "ToggleShowAll";
+    default:
+      return undefined;
   }
 }
 
-function viewOverlayError(
-  targetName: string,
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey | undefined,
-  id: string,
-  error: OverlayError,
-): HTMLElement {
+function getOverlayOpenEditorMsg(
+  item: OverlayErrorItem | undefined,
+): UiMsg | undefined {
+  const location = getOpenEditorLocation(item?.location);
+  return item?.sendKey === undefined || location === undefined
+    ? undefined
+    : { tag: "PressedOpenEditor", ...location, sendKey: item.sendKey };
+}
+
+function viewOverlay({
+  group,
+  selection,
+  showAll,
+  onKey,
+}: {
+  group: ErrorGroup<OverlayErrorItem>;
+  selection: Selection | undefined;
+  showAll: boolean;
+  onKey: (key: OverlayKey) => void;
+}): Array<HTMLElement> {
+  if (group.numErrors === 0) {
+    return [];
+  }
+
+  if (showAll || selection === undefined) {
+    const items = group.files.flatMap((file) => file.errors);
+    return [
+      ...items.map(viewOverlayError),
+      viewOverlayFooter(
+        `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
+        [
+          [
+            [["a", "ToggleShowAll", true, "Show one error at a time"]],
+            "show one error at a time",
+          ],
+        ],
+        onKey,
+      ),
+    ];
+  }
+
+  const item = getSelectedError(selection, [group]);
+  if (item === undefined) {
+    return [];
+  }
+  const errorNumber = getErrorNumber(selection, group);
+  const position = [
+    `error ${errorNumber}/${group.numErrors}`,
+    group.files.length > 1
+      ? `file ${selection.fileIndex + 1}/${group.files.length}`
+      : undefined,
+  ]
+    .flatMap((part) => part ?? [])
+    .join("   ");
+
+  return [
+    viewOverlayError(item),
+    viewOverlayFooter(
+      `🚨 ${position}`,
+      [
+        [
+          [
+            ["←", "PreviousError", errorNumber > 1, "Previous error"],
+            ["→", "NextError", errorNumber < group.numErrors, "Next error"],
+          ],
+          "error",
+        ],
+        [
+          [
+            ["↑", "PreviousFile", selection.fileIndex > 0, "Previous file"],
+            [
+              "↓",
+              "NextFile",
+              selection.fileIndex + 1 < group.files.length,
+              "Next file",
+            ],
+          ],
+          "file",
+        ],
+        getOverlayOpenEditorMsg(item) === undefined
+          ? undefined
+          : [
+              [["enter", "OpenEditor", true, "Open in editor"]],
+              "open in editor",
+            ],
+        [[["a", "ToggleShowAll", true, "Show all errors"]], "show all"],
+      ],
+      onKey,
+    ),
+  ];
+}
+
+function viewOverlayError(item: OverlayErrorItem): HTMLElement {
+  const { error } = item;
   return h(
-    HTMLDetailsElement,
+    HTMLDivElement,
     {
-      open: true,
-      id,
+      className: CLASS.overlayError,
       style: {
         backgroundColor: error.backgroundColor,
         color: error.foregroundColor,
       },
-      attrs: {
-        [DATA_TARGET_NAMES]: targetName,
-      },
     },
     h(
-      HTMLElement,
-      { localName: "summary" },
+      HTMLDivElement,
+      { className: CLASS.overlayErrorHeader },
       h(
         HTMLSpanElement,
         {
@@ -2392,10 +2619,72 @@ function viewOverlayError(
         : h(
             HTMLParagraphElement,
             {},
-            viewErrorLocation(dispatch, sendKey, error.location),
+            viewErrorLocation(item.dispatch, item.sendKey, error.location),
           ),
     ),
     h(HTMLPreElement, { innerHTML: error.htmlContent }),
+  );
+}
+
+// Key, which key it acts as, whether it does anything right now, and a label
+// for screen readers.
+type OverlayHintKey = [
+  key: string,
+  overlayKey: OverlayKey,
+  enabled: boolean,
+  label: string,
+];
+
+// Styled like in the terminal: [key] label
+// The keys are buttons, so that they work with the mouse and on touch screens.
+function viewOverlayFooter(
+  position: string,
+  hints: Array<[keys: Array<OverlayHintKey>, label: string] | undefined>,
+  onKey: (key: OverlayKey) => void,
+): HTMLElement {
+  return h(
+    HTMLDivElement,
+    { className: CLASS.overlayFooter },
+    h(HTMLParagraphElement, { className: CLASS.overlayPosition }, position),
+    h(
+      HTMLParagraphElement,
+      { className: CLASS.overlayKeyHints },
+      ...hints.flatMap((hint) => {
+        if (hint === undefined) {
+          return [];
+        }
+        const [keys, label] = hint;
+        const anyEnabled = keys.some(([, , enabled]) => enabled);
+        return [
+          h(
+            HTMLSpanElement,
+            {
+              className: CLASS.overlayKeyHint,
+              attrs: anyEnabled ? {} : { "data-disabled": "" },
+            },
+            h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "["),
+            ...keys.map(([key, overlayKey, enabled, buttonLabel]) =>
+              h(
+                HTMLButtonElement,
+                {
+                  disabled: !enabled,
+                  attrs: {
+                    "aria-label": buttonLabel,
+                    [DATA_FOCUS_KEY]: overlayKey,
+                  },
+                  onclick: () => {
+                    onKey(overlayKey);
+                  },
+                },
+                key,
+              ),
+            ),
+            h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "]"),
+            ` ${label}`,
+          ),
+        ];
+      }),
+    ),
   );
 }
 

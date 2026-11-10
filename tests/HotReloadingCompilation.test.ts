@@ -18,6 +18,7 @@ import {
   getOverlay,
   hideErrors,
   isOverlayVisible,
+  pressOverlayKey,
   nextMsg,
   nextWatcherEventHandled,
   pressEscape,
@@ -431,6 +432,15 @@ describe("hot reloading", () => {
             return "KeepGoing"; // First script finished.
           case 6:
             overlays.push(getOverlay());
+            // The errors of all targets are navigated together.
+            pressOverlayKey("ArrowDown");
+            overlays.push(getOverlay());
+            pressOverlayKey("l");
+            pressOverlayKey("ArrowLeft");
+            overlays.push(getOverlay());
+            pressOverlayKey("a");
+            overlays.push(getOverlay());
+            pressOverlayKey("a");
             // The overlay is shared by all targets.
             expandUi();
             hideErrors();
@@ -447,9 +457,8 @@ describe("hot reloading", () => {
       expect(visibility).toStrictEqual([false, false, true]);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -461,20 +470,13 @@ describe("hot reloading", () => {
         <u>Note</u>: Elm uses double quotes for strings like "hello", whereas it uses single
         quotes for individual characters like 'a' and 'ø'. This distinction helps with
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
-        individual characters.</pre></details>
+        individual characters.</pre></div>
+        --------------------------------------------------------------------------------
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
-        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
-
-        3| text := "AppOther"
-                 <span style="color: rgb(241, 76, 76)">^</span>
-        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
-        --------------------------------------------------------------------------------
-        <details open="" id="1" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -486,28 +488,51 @@ describe("hot reloading", () => {
         <u>Note</u>: Elm uses double quotes for strings like "hello", whereas it uses single
         quotes for individual characters like 'a' and 'ø'. This distinction helps with
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
-        individual characters.</pre></details>
+        individual characters.</pre></div>
+        --------------------------------------------------------------------------------
+        <footer>🚨 error 1/2   file 1/2 | [_→] error | [_↓] file | [enter] open in editor | [a] show all</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="AppOther" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></summary>
-        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
+        <pre>The following string uses single quotes:
 
-        3| text := "AppOther"
-                 <span style="color: rgb(241, 76, 76)">^</span>
-        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></details>
+        3| text = 'App'
+                  <span style="color: rgb(241, 76, 76)">^^^^^</span>
+        Please switch to double quotes instead:
+
+            <span style="color: rgb(229, 229, 16)">'this'</span> =&gt; <span style="color: rgb(35, 209, 139)">"this"</span>
+
+        <u>Note</u>: Elm uses double quotes for strings like "hello", whereas it uses single
+        quotes for individual characters like 'a' and 'ø'. This distinction helps with
+        code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
+        individual characters.</pre></div>
         --------------------------------------------------------------------------------
-        <details open="" id="1" data-target-names="AppOther
-        App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></summary>
+        <footer>🚨 error 1/3   file 1/3 | [_→] error | [_↓] file | [enter] open in editor | [a] show all</footer>
+        </overlay>
+        ================================================================================
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
-        Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></details>
+        Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
         --------------------------------------------------------------------------------
-        <details open="" id="2" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></summary>
+        <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all</footer>
+        </overlay>
+        ================================================================================
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></div>
+        <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
+        definition.
+
+        Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
+        --------------------------------------------------------------------------------
+        <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all</footer>
+        </overlay>
+        ================================================================================
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -519,7 +544,22 @@ describe("hot reloading", () => {
         <u>Note</u>: Elm uses double quotes for strings like "hello", whereas it uses single
         quotes for individual characters like 'a' and 'ø'. This distinction helps with
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
-        individual characters.</pre></details>
+        individual characters.</pre></div>
+        --------------------------------------------------------------------------------
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="1"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></div>
+        <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
+        definition.
+
+        Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
+        --------------------------------------------------------------------------------
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="2"><div><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></div>
+        <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
+
+        3| text := "AppOther"
+                 <span style="color: rgb(241, 76, 76)">^</span>
+        I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></div>
+        --------------------------------------------------------------------------------
+        <footer>🚨 3 errors | [a] show one error at a time</footer>
         </overlay>
       `);
     });
@@ -574,25 +614,25 @@ describe("hot reloading", () => {
       expect(visibility).toStrictEqual([true, false, true, false, true]);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></div>
         <pre>I cannot do addition with <span style="color: rgb(229, 229, 16)">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)
                              <span style="color: rgb(241, 76, 76)">^^^^^^^^^^^^^^^</span>
         The (+) operator only works with <span style="color: rgb(229, 229, 16)">Int</span> and <span style="color: rgb(229, 229, 16)">Float</span> values.
 
-        <u>Hint</u>: Switch to the <span style="color: rgb(35, 209, 139)">(++)</span> operator to append strings!</pre></details>
+        <u>Hint</u>: Switch to the <span style="color: rgb(35, 209, 139)">(++)</span> operator to append strings!</pre></div>
+        --------------------------------------------------------------------------------
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
         </overlay>
         ================================================================================
-        <overlay hidden style="background-color: rgb(32, 30, 30);">
+        <overlay hidden style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
 
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-        <summary><span style="background-color: rgb(32, 30, 30);">SYNTAX PROBLEM</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></summary>
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">SYNTAX PROBLEM</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></div>
         <pre>I got stuck here:
 
         1|  App exposing (main)
@@ -608,7 +648,9 @@ describe("hot reloading", () => {
         You should be able to copy those lines directly into your file. Check out the
         examples at &lt;https://elm-lang.org/examples&gt; for more help getting started!
 
-        <u>Note</u>: This can also happen when something is indented too much!</pre></details>
+        <u>Note</u>: This can also happen when something is indented too much!</pre></div>
+        --------------------------------------------------------------------------------
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
         </overlay>
       `);
     });
@@ -640,16 +682,17 @@ describe("hot reloading", () => {
       });
 
       expect(overlay).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(170, 187, 204);">
-        <details open="" id="0" data-target-names="App" style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
-        <summary><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></summary>
+        <overlay visible style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
+        <div style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);" id="0"><div><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></div>
         <pre>I cannot do addition with <span style="color: #333333">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)
                              <span style="color: #999999">^^^^^^^^^^^^^^^</span>
         The (+) operator only works with <span style="color: #333333">Int</span> and <span style="color: #333333">Float</span> values.
 
-        <u>Hint</u>: Switch to the <span style="color: #aaaaaa">(++)</span> operator to append strings!</pre></details>
+        <u>Hint</u>: Switch to the <span style="color: #aaaaaa">(++)</span> operator to append strings!</pre></div>
+        --------------------------------------------------------------------------------
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
         </overlay>
       `);
     });

@@ -83,9 +83,8 @@ describe("hot", () => {
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30);">
-      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></div>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -94,7 +93,9 @@ describe("hot", () => {
 
           <span style="color: rgb(229, 229, 16)">number</span>
 
-      <u>Hint</u>: Only <span style="color: rgb(35, 209, 139)">Int</span> and <span style="color: rgb(35, 209, 139)">Float</span> values work as numbers.</pre></details>
+      <u>Hint</u>: Only <span style="color: rgb(35, 209, 139)">Int</span> and <span style="color: rgb(35, 209, 139)">Float</span> values work as numbers.</pre></div>
+      --------------------------------------------------------------------------------
+      <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
       </overlay>
     `);
   });
@@ -138,9 +139,8 @@ describe("hot", () => {
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30);">
-      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></summary>
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></div>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -149,7 +149,9 @@ describe("hot", () => {
 
           number
 
-      Hint: Only Int and Float values work as numbers.</pre></details>
+      Hint: Only Int and Float values work as numbers.</pre></div>
+      --------------------------------------------------------------------------------
+      <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
       </overlay>
     `);
   });
@@ -193,9 +195,8 @@ describe("hot", () => {
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30);">
-      <details open="" id="0" data-target-names="Main" style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
-      <summary><span style="background-color: rgb(32, 30, 30);">UNEXPECTED ELM OUTPUT</span><p>Target: Main</p></summary>
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNEXPECTED ELM OUTPUT</span><p>Target: Main</p></div>
       <pre>I ran the following commands:
 
       cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
@@ -207,7 +208,9 @@ describe("hot", () => {
       <b>But it exited like this:</b>
 
       exit 2
-      <span style="opacity: 0.6">(no output)</span></pre></details>
+      <span style="opacity: 0.6">(no output)</span></pre></div>
+      --------------------------------------------------------------------------------
+      <footer>🚨 error 1/1 | [__] error | [__] file | [a] show all</footer>
       </overlay>
     `);
   });
