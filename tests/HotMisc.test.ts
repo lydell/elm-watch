@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, describe, expect, onTestFinished, test } from "vitest";
 
-import { type LatestEvent, summarizeEvents } from "../src/Hot.ts";
+import { type LatestEvent, summarizeEvents } from "../src/LatestEvent.ts";
 import { markAsAbsolutePath, markAsTargetName } from "../src/Types.ts";
 import {
   CtrlCReadStream,

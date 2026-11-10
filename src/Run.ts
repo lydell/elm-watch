@@ -10,6 +10,7 @@ import type { Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import type { ErrorViewState } from "./ErrorView.ts";
 import * as Hot from "./Hot.ts";
+import type { LatestEvent } from "./LatestEvent.ts";
 import type { Logger } from "./Logger.ts";
 import * as Make from "./Make.ts";
 import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray.ts";
@@ -38,7 +39,7 @@ export type RunResult =
     }
   | {
       tag: "Restart";
-      restartReasons: Array<Hot.LatestEvent>;
+      restartReasons: Array<LatestEvent>;
       webSocketToken: WebSocketToken | undefined;
       errorViewState: ErrorViewState | undefined;
     };
@@ -51,7 +52,7 @@ export async function run(
   createServer: CreateServer,
   runMode: RunMode,
   args: Array<CliArg>,
-  restartReasons: Array<Hot.LatestEvent>,
+  restartReasons: Array<LatestEvent>,
   devServerHolder: DevServerHolder,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
   errorViewState: ErrorViewState | undefined,
@@ -191,7 +192,7 @@ export async function runConfig({
   compilationMode: CompilationMode;
   targetsSubstrings: Array<string>;
   config: Config;
-  restartReasons: Array<Hot.LatestEvent>;
+  restartReasons: Array<LatestEvent>;
   devServerHolder: DevServerHolder;
   webSocketTokenFromPreviousRun: WebSocketToken | undefined;
   errorViewState: ErrorViewState | undefined;
