@@ -164,6 +164,8 @@ type Piece =
     }
   | { tag: "Bold"; text: string }
   | { tag: "Dim"; text: string }
+  // The “(N lines)” in a collapsed code excerpt.
+  | { tag: "Elision"; text: string }
   | { tag: "Text"; text: string };
 
 type Template = (
@@ -284,7 +286,12 @@ export function toHtml(
   htmlContentCollapsed?: string;
 } {
   const renderPiece = (piece: Piece): string =>
-    noColor ? escapeHtml(piece.text) : renderPieceToHtml(piece, theme);
+    piece.tag === "Elision"
+      ? // Clicking it expands the error (see client/Ui.ts).
+        `<button type="button" data-expand>${escapeHtml(piece.text)}</button>`
+      : noColor
+        ? escapeHtml(piece.text)
+        : renderPieceToHtml(piece, theme);
 
   const { title, location, content, collapsedContent } = errorTemplate(
     DEFAULT_COLUMNS,
@@ -305,6 +312,7 @@ function renderPieceForTerminal(piece: Piece): string {
     case "Bold":
       return boldTerminal(piece.text);
     case "Dim":
+    case "Elision":
       return dimTerminal(piece.text);
     case "ElmStyle":
       return (
@@ -326,6 +334,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
     case "Bold":
       return `<b>${escapeHtml(piece.text)}</b>`;
     case "Dim":
+    case "Elision":
       return `<span style="opacity: 0.6">${escapeHtml(piece.text)}</span>`;
     case "ElmStyle":
       return (
@@ -944,7 +953,7 @@ function renderMessageChunk(chunk: Elision | ElmMakeError.MessageChunk): Piece {
     ? // This does not use `text()` since that function trims whitespace.
       { tag: "Text", text: chunk }
     : "tag" in chunk
-      ? { tag: "Dim", text: chunk.text }
+      ? { tag: "Elision", text: chunk.text }
       : {
           tag: "ElmStyle",
           text: chunk.string,

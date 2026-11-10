@@ -819,6 +819,20 @@ export function pressOverlayKey(key: string): void {
   window.dispatchEvent(new KeyboardEvent("keydown", { key, cancelable: true }));
 }
 
+export function getOverlayElement(selector: string): HTMLElement {
+  let element: Element | undefined = undefined;
+  withShadowRoot((shadowRoot) => {
+    element =
+      shadowRoot.querySelector(`[data-test-id="Overlay"] ${selector}`) ??
+      undefined;
+  });
+  const found = element as Element | undefined;
+  if (found instanceof HTMLElement) {
+    return found;
+  }
+  throw new Error(`Could not find ${selector} in overlay.`);
+}
+
 export function clickFirstErrorLocation(): void {
   withShadowRoot((shadowRoot) => {
     const button = shadowRoot.querySelector(`[data-test-id="Overlay"] button`);

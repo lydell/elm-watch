@@ -1446,6 +1446,20 @@ p {
   cursor: pointer;
 }
 
+.${CLASS.overlay} pre [data-expand] {
+  appearance: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.${CLASS.overlay} pre [data-expand]:hover {
+  text-decoration: underline;
+}
+
 .${CLASS.overlay} pre {
   margin: 0;
   padding: 2ch;
@@ -2552,7 +2566,7 @@ function viewOverlay({
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
     return [
-      ...items.map((item) => viewOverlayError(item, true)),
+      ...items.map((item) => viewOverlayError(item, true, onKey)),
       viewOverlayFooter(
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
         [
@@ -2581,7 +2595,7 @@ function viewOverlay({
     .join("   ");
 
   return [
-    viewOverlayError(item, expanded),
+    viewOverlayError(item, expanded, onKey),
     viewOverlayFooter(
       `🚨 ${position}`,
       [
@@ -2633,6 +2647,7 @@ function viewOverlay({
 function viewOverlayError(
   item: OverlayErrorItem,
   expanded: boolean,
+  onKey: (key: OverlayKey) => void,
 ): HTMLElement {
   const { error } = item;
   return h(
@@ -2669,6 +2684,15 @@ function viewOverlayError(
       innerHTML: expanded
         ? error.htmlContent
         : (error.htmlContentCollapsed ?? error.htmlContent),
+      // The “(N lines)” buttons in collapsed code excerpts.
+      onclick: (event: MouseEvent) => {
+        if (
+          event.target instanceof Element &&
+          event.target.closest("[data-expand]") !== null
+        ) {
+          onKey("ToggleExpanded");
+        }
+      },
     }),
   );
 }

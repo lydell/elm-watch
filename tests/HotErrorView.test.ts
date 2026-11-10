@@ -8,6 +8,7 @@ import {
   cleanupAfterEachTest,
   fixtureDir,
   getOverlay,
+  getOverlayElement,
   nextMsg,
   nextWatcherEventHandled,
   pressOverlayKey,
@@ -499,6 +500,11 @@ describe("hot error view", () => {
         overlays.push(getOverlay());
         pressOverlayKey(" ");
         overlays.push(getOverlay());
+        // Clicking “(N lines)” expands too.
+        pressOverlayKey(" ");
+        expect(getOverlay()).toContain("[space] expand");
+        getOverlayElement("[data-expand]").click();
+        expect(getOverlay()).toContain("[space] collapse");
         // Space scrolls as usual when there is nothing to collapse.
         pressOverlayKey("l");
         const space = new KeyboardEvent("keydown", {
@@ -523,7 +529,7 @@ describe("hot error view", () => {
       22|⧙>⧘                "1"
       23|⧙>⧘
       24|⧙>⧘            C2 ->
-        ¦⧙ (16 lines)⧘
+        ¦ ⧙(16 lines)⧘
       41|⧙>⧘
       42|⧙>⧘            C8 ->
       43|⧙>⧘                "8"
@@ -608,7 +614,7 @@ describe("hot error view", () => {
       22|<span style="color: rgb(241, 76, 76)">&gt;</span>                "1"
       23|<span style="color: rgb(241, 76, 76)">&gt;</span>
       24|<span style="color: rgb(241, 76, 76)">&gt;</span>            C2 -&gt;
-        ¦<span style="opacity: 0.6"> (16 lines)</span>
+        ¦ <button type="button" data-expand="">(16 lines)</button>
       41|<span style="color: rgb(241, 76, 76)">&gt;</span>
       42|<span style="color: rgb(241, 76, 76)">&gt;</span>            C8 -&gt;
       43|<span style="color: rgb(241, 76, 76)">&gt;</span>                "8"
