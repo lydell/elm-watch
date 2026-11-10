@@ -351,4 +351,45 @@ describe("hot error view", () => {
       `ℹ️ ⧙13:10:05⧘ Nothing to do   ⧙src/Unused.elm – not imported by any target⧘`,
     );
   });
+
+  test("several targets but only one with errors: no highlight, and tab does nothing", async () => {
+    const fixture = "error-view";
+    fs.writeFileSync(
+      path.join(fixtureDir(fixture), "src", "Other.elm"),
+      'module Other exposing (main)\n\nimport Html\n\n\nmain =\n    Html.text "4"\n',
+    );
+    const stdin = new KeyReadStream();
+    const screens: Array<string> = [];
+
+    await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      stdin,
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async ({ stdout }) => {
+        screens.push(clean(stdout.getOutput()));
+        const handled = nextMsg((msg) => msg.tag === "KeysPressed");
+        stdin.press("\t");
+        await handled;
+        screens.push(clean(stdout.getOutput()));
+        return "Stop" as const;
+      },
+    });
+
+    const [before, after] = screens;
+    expect(after).toBe(before);
+    const lines = before?.split("\n") ?? [];
+    expect([...lines.slice(0, 3), "…", ...lines.slice(-2)].join("\n"))
+      .toMatchInlineSnapshot(`
+        🚨 Main: 3 errors
+        ✅ Other⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
+        🌐 http://localhost:59123
+        …
+        🚨 error 1/3   file 1/2
+        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      `);
+  });
 });
