@@ -505,6 +505,15 @@ describe("hot error view", () => {
         expect(getOverlay()).toContain("[space] expand");
         getOverlayElement("[data-expand]").click();
         expect(getOverlay()).toContain("[space] collapse");
+        // Space presses the focused button, instead of toggling.
+        getOverlayElement(`[aria-label="Next error"]`).focus();
+        const spaceOnButton = new KeyboardEvent("keydown", {
+          key: " ",
+          cancelable: true,
+        });
+        window.dispatchEvent(spaceOnButton);
+        expect(spaceOnButton.defaultPrevented).toBe(false);
+        expect(getOverlay()).toContain("[space] collapse");
         // Space scrolls as usual when there is nothing to collapse.
         pressOverlayKey("l");
         const space = new KeyboardEvent("keydown", {

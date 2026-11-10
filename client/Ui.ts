@@ -901,8 +901,8 @@ export function createUi(): Ui {
     if (
       key === undefined ||
       (key === "ToggleExpanded" && !canToggleExpanded()) ||
-      // Let Enter press the focused button.
-      (event.key === "Enter" &&
+      // Let Enter and Space press the focused button.
+      ((event.key === "Enter" || event.key === " ") &&
         shadowRoot.activeElement instanceof HTMLButtonElement)
     ) {
       return;
