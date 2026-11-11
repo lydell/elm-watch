@@ -615,7 +615,7 @@ describe("SimpleStaticFileServer", () => {
           // A real favicon.ico is served as usual.
           expect(await get("/favicon.ico")).toMatchInlineSnapshot(`
             200
-            content-type: text/plain; charset=utf-8
+            content-type: image/x-icon
             content-length: 4
             icon
           `);
