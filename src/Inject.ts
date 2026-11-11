@@ -984,26 +984,34 @@ function patchLamderaBrowserKey(code: string): string {
     );
 }
 
-// The two replacements are made together or not at all.
+// The two replacements are made together or not at all. `Html` programs don’t
+// use `_Platform_initialize`, so they have neither.
 function injectElmHotInitCmds(newCode: string): string {
-  let subscriptions: string | undefined;
-  let patchedApp = false;
+  const initCmdsMatch = ELM_HOT_ENQUEUE_INIT_CMDS_REGEX.exec(newCode);
+  const subscriptions = initCmdsMatch?.[1];
+  if (initCmdsMatch === null || subscriptions === undefined) {
+    return newCode;
+  }
 
-  const result = newCode
-    .replace(ELM_HOT_ENQUEUE_INIT_CMDS_REGEX, (_, subs: string) => {
-      subscriptions = subs;
-      return `
+  const withInitCmds = replaceMatch(
+    newCode,
+    initCmdsMatch,
+    `
 	// changed by elm-watch
 	var skippedInitCmds = globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.SHOULD_SKIP_INIT_CMDS(_elmWatchTargetName) : false;
-	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, ${subs});
-`.slice(1, -1);
-    })
-    .replace(ELM_HOT_APP_REGEX, (match) => {
-      if (subscriptions === undefined) {
-        return match;
-      }
-      patchedApp = true;
-      return `${match}
+	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, ${subscriptions});
+`.slice(1, -1),
+  );
+
+  const appMatch = ELM_HOT_APP_REGEX.exec(withInitCmds);
+  if (appMatch === null) {
+    return newCode;
+  }
+
+  return replaceMatch(
+    withInitCmds,
+    appMatch,
+    `${appMatch[0]}
 
 	// added by elm-watch
 	// Runs the skipped \`Cmd\`s from \`init\`. After a hot reload, \`cmds\` are the \`Cmd\`s
@@ -1015,11 +1023,22 @@ function injectElmHotInitCmds(newCode: string): string {
 				_Platform_enqueueEffects(managers, cmds || initPair.b, ${subscriptions});
 			}
 		}
-	});`;
-    });
+	});`,
+  );
+}
 
-  // `Html` programs don’t use `_Platform_initialize`.
-  return patchedApp ? result : newCode;
+// Like `string.replace(regex, replacement)`, but for a match we already have.
+// (`replacement` is used as-is, without special `$` patterns.)
+function replaceMatch(
+  string: string,
+  match: RegExpExecArray,
+  replacement: string,
+): string {
+  return (
+    string.slice(0, match.index) +
+    replacement +
+    string.slice(match.index + match[0].length)
+  );
 }
 
 const ELM_HOT_PROGRAM_TYPES: Record<string, string> = {
