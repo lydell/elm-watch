@@ -299,6 +299,7 @@ export const init = (
   now: Date,
   restartReasons: Array<LatestEvent>,
   targetsErrors: Array<ApplicationTargetErrorWithMetadata>,
+  hasErrorReporter: boolean,
 ): [Model, Array<Cmd>] => [
   {
     nextAction: { tag: "NoAction" },
@@ -312,6 +313,11 @@ export const init = (
   [
     { tag: "ClearScreen" },
     { tag: "InstallDependencies" },
+    // Browsers stay connected when restarting (when elm.json changes, for
+    // example). The external errors might have changed during the restart.
+    ...(hasErrorReporter
+      ? [{ tag: "WebSocketSendExternalErrors", webSocket: undefined } as const]
+      : []),
     ...targetsErrors.map((targetError): Cmd => ({
       tag: "WebSocketSendToOutput",
       outputPath: targetError.outputPath,

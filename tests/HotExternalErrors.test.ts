@@ -258,4 +258,49 @@ describe("hot external errors", () => {
       `[{"file":"/Users/you/project/tests/fixtures/hot/error-view/translations.json","line":3,"column":1}]`,
     );
   });
+
+  test("errors set while restarting reach connected browsers", async () => {
+    const fixture = "error-view";
+    for (const name of ["Main", "Other"]) {
+      fs.writeFileSync(
+        path.join(fixtureDir(fixture), "src", `${name}.elm`),
+        `module ${name} exposing (main)\n\nimport Html\n\n\nmain =\n    Html.text "4"\n`,
+      );
+    }
+    const elmJsonPath = path.join(fixtureDir(fixture), "elm.json");
+    const errors = createErrorReporter();
+
+    await run({
+      fixture,
+      scripts: ["Main.js"],
+      useElmWatchFunction: { errors },
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1: {
+            // Changing elm.json restarts elm-watch, but the browser stays
+            // connected.
+            const restarting = nextMsg(
+              (msg) => msg.tag === "SleepBeforeNextActionDone",
+            );
+            fs.writeFileSync(
+              elmJsonPath,
+              `${fs.readFileSync(elmJsonPath, "utf8")}\n`,
+            );
+            await restarting;
+            // Not subscribed to by any elm-watch run right now.
+            errors.set("codegen", [{ message: "Set while restarting" }]);
+            return "KeepGoing" as const;
+          }
+          default:
+            await waitFor(isOverlayVisible);
+            return "Stop" as const;
+        }
+      },
+    });
+
+    expect(getOverlay()).toContain("CODEGEN");
+  });
 });

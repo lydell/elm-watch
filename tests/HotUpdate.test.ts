@@ -106,7 +106,7 @@ class Simulation {
     project: Project,
     { exitOnError = false }: { exitOnError?: boolean } = {},
   ) {
-    const [model, cmds] = init(date, [], []);
+    const [model, cmds] = init(date, [], [], false);
     this.project = project;
     this.model = model;
     this.exitOnError = exitOnError;

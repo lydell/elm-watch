@@ -169,7 +169,12 @@ export async function run(
       signal,
       hotTestHooks,
     ),
-    init: init(getNow(), restartReasons, getApplicationTargetsErrors(project)),
+    init: init(
+      getNow(),
+      restartReasons,
+      getApplicationTargetsErrors(project),
+      project.errorReporter !== undefined,
+    ),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(
         logger.config,
