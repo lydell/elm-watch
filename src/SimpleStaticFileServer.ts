@@ -13,8 +13,8 @@ import {
 } from "./Types.ts";
 
 // Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
-// Added .ico. Removed markdown – otherwise that causes downloads in Firefox instead of
-// opening in the browser as plain text.
+// Added .ico, .vtt, audio and video. Removed markdown – otherwise that causes
+// downloads in Firefox instead of opening in the browser as plain text.
 const MIME_TYPES: Record<string, string> = {
   // Text
   ".css": "text/css; charset=utf-8",
@@ -23,6 +23,7 @@ const MIME_TYPES: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
+  ".vtt": "text/vtt; charset=utf-8",
   ".xhtml": "application/xhtml+xml; charset=utf-8",
   ".xml": "text/xml; charset=utf-8",
 
@@ -35,6 +36,20 @@ const MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".webp": "image/webp",
+
+  // Audio
+  ".flac": "audio/flac",
+  ".m4a": "audio/mp4",
+  ".mp3": "audio/mpeg",
+  ".oga": "audio/ogg",
+  ".ogg": "audio/ogg",
+  ".opus": "audio/ogg",
+  ".wav": "audio/wav",
+
+  // Video
+  ".mp4": "video/mp4",
+  ".ogv": "video/ogg",
+  ".webm": "video/webm",
 
   // Fonts
   ".eot": "application/vnd.ms-fontobject",
