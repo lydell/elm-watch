@@ -37,7 +37,8 @@ export type Command = {
   };
 };
 
-// Promises for all commands that are currently running.
+// Promises for all commands that are currently running (and other work that
+// should finish before exiting, see `trackRunning`).
 const running = new Set<Promise<unknown>>();
 
 // Resolves once all currently running commands have exited.
@@ -45,6 +46,14 @@ export async function waitForRunningCommands(): Promise<void> {
   while (running.size > 0) {
     await Promise.allSettled(running);
   }
+}
+
+// Makes `waitForRunningCommands` wait for `promise` too.
+export function trackRunning(promise: Promise<unknown>): void {
+  running.add(promise);
+  void promise.finally(() => {
+    running.delete(promise);
+  });
 }
 
 export function spawn(command: Command): {
@@ -119,10 +128,7 @@ export function spawn(command: Command): {
     };
   });
 
-  running.add(promise);
-  void promise.finally(() => {
-    running.delete(promise);
-  });
+  trackRunning(promise);
 
   return {
     promise,

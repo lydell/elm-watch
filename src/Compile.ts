@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as Codec from "tiny-decoders";
+import * as util from "util";
 
 import * as ElmJson from "./ElmJson.ts";
 import { STARTS_WITH_EMOJI_REGEX } from "./EmojiRegex.ts";
@@ -43,6 +44,7 @@ import {
   type TargetErrorWithMetadata,
   type TargetState,
 } from "./Project.ts";
+import { trackRunning } from "./Spawn.ts";
 import * as SpawnElm from "./SpawnElm.ts";
 import {
   type AbsolutePath,
@@ -777,8 +779,8 @@ export async function handleOutputAction({
   action: OutputAction;
 }): Promise<HandleOutputActionResult> {
   switch (action.tag) {
-    case "NeedsElmMake":
-      return compileOneOutput({
+    case "NeedsElmMake": {
+      const promise = compileOneOutput({
         env,
         logger,
         getNow,
@@ -786,6 +788,11 @@ export async function handleOutputAction({
         total,
         ...action.output,
       });
+      // Not just `elm make` itself, but also reading, injecting and writing
+      // its output, should finish before exiting gracefully.
+      trackRunning(promise);
+      return promise;
+    }
 
     case "NeedsElmMakeTypecheckOnly":
       switch (runMode.tag) {
@@ -1006,7 +1013,14 @@ async function compileOneOutput({
   }
 }
 
-function onCompileSuccess(
+// Reading `elm make`’s output is async on purpose, unlike most other IO in
+// elm-watch. Endpoint security software (such as Microsoft Defender) can scan a
+// freshly written file the first time it is opened, which takes seconds for
+// large outputs. Doing that synchronously blocks the whole event loop, so no
+// other targets make progress (and their timings get inflated).
+const readFile = util.promisify(fs.readFile);
+
+async function onCompileSuccess(
   loggerConfig: LoggerConfig,
   getNow: GetNow,
   updateStatusLineHelper: () => void,
@@ -1015,7 +1029,7 @@ function onCompileSuccess(
   outputPath: OutputPath,
   outputState: OutputState,
   outputStatus: Extract<OutputStatus, { tag: "ElmMake" }>,
-): HandleOutputActionResult {
+): Promise<HandleOutputActionResult> {
   const elmCompiledTimestamp = getNow().getTime();
   const { postprocess } = outputState;
 
@@ -1054,7 +1068,7 @@ function onCompileSuccess(
         case "Postprocess": {
           let buffer;
           try {
-            buffer = fs.readFileSync(outputPath.temporaryOutputPath);
+            buffer = await readFile(outputPath.temporaryOutputPath);
           } catch (unknownError) {
             const error = toError(unknownError);
             outputState.setStatus({
@@ -1085,7 +1099,7 @@ function onCompileSuccess(
     case "hot": {
       let code;
       try {
-        code = fs.readFileSync(outputPath.temporaryOutputPath, "utf8");
+        code = await readFile(outputPath.temporaryOutputPath, "utf8");
       } catch (unknownError) {
         const error = toError(unknownError);
         outputState.setStatus({
@@ -1100,6 +1114,13 @@ function onCompileSuccess(
           outputPath,
           outputState,
         };
+      }
+
+      // A file might have changed while reading.
+      if (outputState.dirty) {
+        outputState.setStatus({ tag: "Interrupted" });
+        updateStatusLineHelper();
+        return { tag: "Nothing" };
       }
 
       const recordFields = Inject.getRecordFields(

@@ -161,6 +161,7 @@ describe("hot", () => {
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
       ⏳ Main: elm make
       ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm⧘
     `);
   });
 
@@ -212,6 +213,7 @@ describe("hot", () => {
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
       ⏳ Main: elm make
       ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm⧘
     `);
   });
 
