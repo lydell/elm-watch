@@ -993,25 +993,25 @@ const runCmd =
         }
         return;
 
-      case "WebSocketSendCompileErrorToOutput":
-        Theme.getThemeFromTerminal(logger)
-          .then((theme) => {
-            const message: WebSocketToClientMessage = {
-              tag: "StatusChanged",
-              status: {
-                tag: "CompileError",
-                compilationMode: cmd.compilationMode,
-                errors: cmd.errors.map((errorTemplate) =>
-                  Errors.toHtml(errorTemplate, theme, logger.config.noColor),
-                ),
-                foregroundColor: theme.foreground,
-                backgroundColor: theme.background,
-              },
-            };
-            webSocketSendToOutput(mutable, cmd.outputPath, message);
-          })
-          .catch(rejectPromise);
+      case "WebSocketSendCompileErrorToOutput": {
+        const message = Theme.getThemeFromTerminal(logger).then(
+          (theme): WebSocketToClientMessage => ({
+            tag: "StatusChanged",
+            status: {
+              tag: "CompileError",
+              compilationMode: cmd.compilationMode,
+              errors: cmd.errors.map((errorTemplate) =>
+                Errors.toHtml(errorTemplate, theme, logger.config.noColor),
+              ),
+              foregroundColor: theme.foreground,
+              backgroundColor: theme.background,
+            },
+          }),
+        );
+        message.catch(rejectPromise);
+        webSocketSendToOutput(mutable, cmd.outputPath, message);
         return;
+      }
 
       case "WebSocketSendExternalErrors":
         sendExternalErrors(logger, mutable, cmd.webSocket, rejectPromise);
@@ -1223,7 +1223,40 @@ function getWebSocketConnection(mutable: Mutable): WebSocketUrlConnection {
   );
 }
 
+// Messages with errors need the terminal’s colors first, which is async. Later
+// messages to the same web socket wait for them, so that messages arrive in
+// the order they were created. For example, when a browser connects, it gets
+// the external errors before its status. Otherwise, it would briefly show ✅.
+const pendingSends = new WeakMap<WebSocket, Promise<void>>();
+
 function webSocketSend(
+  webSocket: WebSocket,
+  message: WebSocketToClientMessage | Promise<WebSocketToClientMessage>,
+): void {
+  const pending = pendingSends.get(webSocket);
+  if (pending === undefined && !(message instanceof Promise)) {
+    webSocketSendNow(webSocket, message);
+    return;
+  }
+  const next = (pending ?? Promise.resolve())
+    .then(() => message)
+    .then(
+      (resolvedMessage) => {
+        webSocketSendNow(webSocket, resolvedMessage);
+      },
+      () => {
+        // The error is handled by whoever created the message.
+      },
+    )
+    .finally(() => {
+      if (pendingSends.get(webSocket) === next) {
+        pendingSends.delete(webSocket);
+      }
+    });
+  pendingSends.set(webSocket, next);
+}
+
+function webSocketSendNow(
   webSocket: WebSocket,
   message: WebSocketToClientMessage,
 ): void {
@@ -1244,34 +1277,39 @@ function sendExternalErrors(
   rejectPromise: (error: Error) => void,
 ): void {
   const sources = Compile.renderExternalErrors(mutable.project);
-  Theme.getThemeFromTerminal(logger)
-    .then((theme) => {
-      const message: WebSocketToClientMessage = {
-        tag: "ExternalErrors",
-        sources: sources.map(([source, errors]) => ({
-          source,
-          errors: errors.map((errorTemplate) =>
-            Errors.toHtml(errorTemplate, theme, logger.config.noColor),
-          ),
-        })),
-        foregroundColor: theme.foreground,
-        backgroundColor: theme.background,
-      };
-      if (webSocket === undefined) {
-        for (const connection of mutable.devServer.getConnections()) {
-          webSocketSend(connection.webSocket, message);
-        }
-      } else {
-        webSocketSend(webSocket, message);
-      }
-    })
-    .catch(rejectPromise);
+  const toMessage = (theme: Theme.Theme): WebSocketToClientMessage => ({
+    tag: "ExternalErrors",
+    sources: sources.map(([source, errors]) => ({
+      source,
+      errors: errors.map((errorTemplate) =>
+        Errors.toHtml(errorTemplate, theme, logger.config.noColor),
+      ),
+    })),
+    foregroundColor: theme.foreground,
+    backgroundColor: theme.background,
+  });
+  // Without errors, the colors don’t matter, so don’t make other messages wait.
+  let message: WebSocketToClientMessage | Promise<WebSocketToClientMessage>;
+  if (isNonEmptyArray(sources)) {
+    const promise = Theme.getThemeFromTerminal(logger).then(toMessage);
+    promise.catch(rejectPromise);
+    message = promise;
+  } else {
+    message = toMessage(Theme.DEFAULT_THEME);
+  }
+  if (webSocket === undefined) {
+    for (const connection of mutable.devServer.getConnections()) {
+      webSocketSend(connection.webSocket, message);
+    }
+  } else {
+    webSocketSend(webSocket, message);
+  }
 }
 
 function webSocketSendToOutput(
   mutable: Mutable,
   outputPath: OutputPath,
-  message: WebSocketToClientMessage,
+  message: WebSocketToClientMessage | Promise<WebSocketToClientMessage>,
 ): void {
   for (const connection of mutable.devServer.getConnections()) {
     const connectionOutputPath = getConnectionOutputPath(

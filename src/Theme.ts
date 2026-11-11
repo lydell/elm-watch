@@ -65,7 +65,7 @@ export const COLOR_TO_TERMINAL_ESCAPE: Record<Color, string> = {
   WHITE: "\x1B[97m",
 };
 
-const DEFAULT_THEME: Theme = {
+export const DEFAULT_THEME: Theme = {
   // Picked using eye dropper on VSCode’s default dark theme, in its terminal.
   foreground: "rgb(204, 204, 204)",
   background: "rgb(32, 30, 30)",

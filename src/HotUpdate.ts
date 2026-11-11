@@ -633,7 +633,8 @@ export function update(
       const result = msg.parseWebSocketConnectRequestUrlResult;
 
       // Always sent, so that a browser that was connected to a previous
-      // elm-watch doesn’t keep showing old errors.
+      // elm-watch doesn’t keep showing old errors. Sent before the status
+      // (see `pendingSends` in Hot.ts).
       const externalErrorsCmd: Cmd = {
         tag: "WebSocketSendExternalErrors",
         webSocket: msg.webSocket,
@@ -668,7 +669,7 @@ export function update(
                   ...newModel,
                   latestEvents: [...newModel.latestEvents, latestEvent],
                 },
-            [...cmds, ...connectCmds],
+            [...connectCmds, ...cmds],
           ];
         }
 
