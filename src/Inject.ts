@@ -808,20 +808,17 @@ export function inject(
   code: string,
   targetName?: TargetName,
 ): string {
-  return (
-    usesElmHot(code)
-      ? injectElmHot(code)
-      : injectReplacements(compilationMode, code)
-  ).replace(
-    // Doing this as a separate replacement is faster than trying to add it to `REPLACEMENT_REGEX`.
-    /^var _elmWatchTargetName = "";$/m,
-    `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`,
-  );
+  // Set in the replacements rather than with a separate pass over all of `code`.
+  const targetNameDeclaration = `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`;
+  return usesElmHot(code)
+    ? injectElmHot(code, targetNameDeclaration)
+    : injectReplacements(compilationMode, code, targetNameDeclaration);
 }
 
 function injectReplacements(
   compilationMode: CompilationMode,
   code: string,
+  targetNameDeclaration: string,
 ): string {
   const replacements = getReplacements(compilationMode, code);
 
@@ -831,7 +828,16 @@ function injectReplacements(
       const replacement = replacements[name];
       return replacement === undefined
         ? `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
-        : keepForkChanges(name, match, replacement);
+        : keepForkChanges(
+            name,
+            match,
+            name === "_Platform_initialize"
+              ? replacement.replace(
+                  'var _elmWatchTargetName = "";',
+                  () => targetNameDeclaration,
+                )
+              : replacement,
+          );
     },
   );
 }
@@ -877,14 +883,12 @@ export function usesElmHot(code: string): boolean {
   return ELM_HOT_REGEX.test(code);
 }
 
-function injectElmHot(code: string): string {
-  const [, setup = "setup"] = ELM_HOT_SETUP_REGEX.exec(code) ?? [];
-
+function injectElmHot(code: string, targetNameDeclaration: string): string {
   const newCode = code
     .replace(ELM_HOT_PLATFORM_EXPORT_REGEX, (_, body: string) =>
       `
 // added by elm-watch
-var _elmWatchTargetName = "";
+${targetNameDeclaration}
 
 // This function was changed by elm-watch. The original function body is in \`original\`.
 // For hot reloads, it sets \`scope\` to a new object. That’s the same as evaluating the code
@@ -930,6 +934,8 @@ ${UTILS_EQ_ELM_WATCH_INTERNAL}
 `.trim(),
     )
     .replace(ELM_HOT_INIT_REGEX, (match, name: string) => {
+      // The `impl.setup` line (if any) is within `match`.
+      const [, setup = "setup"] = ELM_HOT_SETUP_REGEX.exec(match) ?? [];
       const programType = ELM_HOT_PROGRAM_TYPES[name] ?? "undefined";
       const elmWatchData =
         name === "_VirtualDom_init"
@@ -978,29 +984,26 @@ function patchLamderaBrowserKey(code: string): string {
     );
 }
 
+// The two replacements are made together or not at all.
 function injectElmHotInitCmds(newCode: string): string {
-  const enqueueMatch = ELM_HOT_ENQUEUE_INIT_CMDS_REGEX.exec(newCode);
-  const appMatch = ELM_HOT_APP_REGEX.exec(newCode);
+  let subscriptions: string | undefined;
+  let patchedApp = false;
 
-  // `Html` programs don’t use `_Platform_initialize`.
-  if (enqueueMatch === null || appMatch === null) {
-    return newCode;
-  }
-
-  const [, subscriptions = "subscriptions_missing"] = enqueueMatch;
-
-  return newCode
-    .replace(
-      ELM_HOT_ENQUEUE_INIT_CMDS_REGEX,
-      `
+  const result = newCode
+    .replace(ELM_HOT_ENQUEUE_INIT_CMDS_REGEX, (_, subs: string) => {
+      subscriptions = subs;
+      return `
 	// changed by elm-watch
 	var skippedInitCmds = globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.SHOULD_SKIP_INIT_CMDS(_elmWatchTargetName) : false;
-	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, ${subscriptions});
-`.slice(1, -1),
-    )
-    .replace(
-      ELM_HOT_APP_REGEX,
-      (match) => `${match}
+	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, ${subs});
+`.slice(1, -1);
+    })
+    .replace(ELM_HOT_APP_REGEX, (match) => {
+      if (subscriptions === undefined) {
+        return match;
+      }
+      patchedApp = true;
+      return `${match}
 
 	// added by elm-watch
 	// Runs the skipped \`Cmd\`s from \`init\`. After a hot reload, \`cmds\` are the \`Cmd\`s
@@ -1012,8 +1015,11 @@ function injectElmHotInitCmds(newCode: string): string {
 				_Platform_enqueueEffects(managers, cmds || initPair.b, ${subscriptions});
 			}
 		}
-	});`,
-    );
+	});`;
+    });
+
+  // `Html` programs don’t use `_Platform_initialize`.
+  return patchedApp ? result : newCode;
 }
 
 const ELM_HOT_PROGRAM_TYPES: Record<string, string> = {
