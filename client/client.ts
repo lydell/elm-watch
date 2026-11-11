@@ -1105,6 +1105,9 @@ function initWebSocket(
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
 
   const webSocket = new WebSocket(url);
+  // Compiled code is sent as binary messages. Get them synchronously as
+  // `ArrayBuffer` instead of the default `Blob`.
+  webSocket.binaryType = "arraybuffer";
 
   // After reconnecting, events from previous web sockets must be ignored. For
   // example, the "close" event of a broken connection can arrive long after we

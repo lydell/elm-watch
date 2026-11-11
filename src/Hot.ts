@@ -1192,7 +1192,13 @@ function webSocketSend(
   webSocket: WebSocket,
   message: WebSocketToClientMessage,
 ): void {
-  webSocket.send(encodeWebSocketToClientMessage(message));
+  webSocket.send(encodeWebSocketToClientMessage(message), {
+    // Browsers receive large binary messages faster than large text messages.
+    // For 14 MB of JS: Chromium ~45 ms instead of ~135 ms, WebKit ~40 ms
+    // instead of ~70 ms (Firefox is ~10 ms slower). Small messages stay text,
+    // which is easier to read in the browser devtools.
+    binary: message.tag === "SuccessfullyCompiled",
+  });
 }
 
 function webSocketSendToOutput(

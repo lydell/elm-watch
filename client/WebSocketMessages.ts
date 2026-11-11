@@ -173,7 +173,10 @@ export function encodeWebSocketToClientMessage(
 export function decodeWebSocketToClientMessage(
   data: unknown,
 ): Codec.DecoderResult<WebSocketToClientMessage> {
-  const messageResult = Codec.string.decoder(data);
+  // `SuccessfullyCompiled` is sent as a binary message (see `webSocketSend` in Hot.ts).
+  const messageResult = Codec.string.decoder(
+    isArrayBuffer(data) ? new TextDecoder().decode(data) : data,
+  );
   if (messageResult.tag === "DecoderError") {
     return messageResult;
   }
@@ -193,4 +196,9 @@ export function decodeWebSocketToClientMessage(
   } else {
     return Codec.JSON.parse(WebSocketToClientMessage, message);
   }
+}
+
+// `instanceof ArrayBuffer` does not work if the `WebSocket` comes from another realm.
+function isArrayBuffer(value: unknown): value is ArrayBuffer {
+  return Object.prototype.toString.call(value) === "[object ArrayBuffer]";
 }
