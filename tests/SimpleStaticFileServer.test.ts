@@ -539,6 +539,100 @@ describe("SimpleStaticFileServer", () => {
       );
     });
 
+    test("favicon.ico", async () => {
+      await withServer(
+        (dir) => {
+          fs.writeFileSync(path.join(dir, "index.html"), "<p>root</p>");
+          fs.mkdirSync(path.join(dir, "a"));
+        },
+        async (get) => {
+          // Empty response rather than index.html.
+          expect(await get("/favicon.ico")).toMatchInlineSnapshot(`204`);
+          expect(await get("/favicon.ico?v=1")).toMatchInlineSnapshot(`204`);
+          // Only at the root.
+          expect(await get("/a/favicon.ico")).toMatchInlineSnapshot(`
+            200
+            elm-watch-404: /tmp/public/a/favicon.ico
+            elm-watch-index-html: /tmp/public/index.html
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/server/#indexhtml
+            content-type: text/html; charset=utf-8
+            <!-- elm-watch debug information:
+
+            hacky_hint If_you_see_this_in_a_JS_syntax_error_then_your_JS_file_was_not_found___Click_the_file_name_to_the_right_for_more_information /*
+
+            This response could have been served as a 404 (Not Found),
+            but was served as 200 (OK) instead, because an index.html file was found.
+            This is for supporting Browser.application programs.
+
+            If you expected a file to served rather than this HTML,
+            make sure the URL is correct or that this file exists:
+            /tmp/public/a/favicon.ico
+
+            This is the closest index.html file, which was served instead:
+            /tmp/public/index.html
+
+            Learn more:
+            https://lydell.github.io/elm-watch/server/#indexhtml
+
+            -->
+            <p>root</p>
+          `);
+          expect(await get("/favicon.ico/")).toMatchInlineSnapshot(`
+            200
+            elm-watch-404: /tmp/public/favicon.ico
+            elm-watch-index-html: /tmp/public/index.html
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/server/#indexhtml
+            content-type: text/html; charset=utf-8
+            <!-- elm-watch debug information:
+
+            hacky_hint If_you_see_this_in_a_JS_syntax_error_then_your_JS_file_was_not_found___Click_the_file_name_to_the_right_for_more_information /*
+
+            This response could have been served as a 404 (Not Found),
+            but was served as 200 (OK) instead, because an index.html file was found.
+            This is for supporting Browser.application programs.
+
+            If you expected a file to served rather than this HTML,
+            make sure the URL is correct or that this file exists:
+            /tmp/public/favicon.ico
+
+            This is the closest index.html file, which was served instead:
+            /tmp/public/index.html
+
+            Learn more:
+            https://lydell.github.io/elm-watch/server/#indexhtml
+
+            -->
+            <p>root</p>
+          `);
+        },
+      );
+
+      await withServer(
+        (dir) => {
+          fs.writeFileSync(path.join(dir, "favicon.ico"), "icon");
+        },
+        async (get) => {
+          // A real favicon.ico is served as usual.
+          expect(await get("/favicon.ico")).toMatchInlineSnapshot(`
+            200
+            content-type: text/plain; charset=utf-8
+            content-length: 4
+            icon
+          `);
+        },
+      );
+
+      await withServer(
+        () => {
+          // No index.html.
+        },
+        async (get) => {
+          // Empty response rather than a 404 page.
+          expect(await get("/favicon.ico")).toMatchInlineSnapshot(`204`);
+        },
+      );
+    });
+
     // FIFOs are neither files nor directories.
     testExceptWindows("index.html: skips directories and FIFOs", async () => {
       await withServer(

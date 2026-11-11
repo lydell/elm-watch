@@ -589,6 +589,20 @@ export function serveStatic(
           case "NotFound":
           case "Other":
           case "Directory": {
+            // Browsers request /favicon.ico for pages without
+            // `<link rel="icon">`. Answer with an empty response rather than
+            // index.html or a 404 page (which shows up red in devtools).
+            if (
+              stats.tag === "NotFound" &&
+              !fsPath.hadTrailingSlash &&
+              fsPath.segments.length === 1 &&
+              fsPath.segments[0] === "favicon.ico"
+            ) {
+              writeHead(response, 204, {});
+              response.end();
+              return;
+            }
+
             for (let i = fsPath.segments.length; i >= 0; i--) {
               const indexFsPath = toIndexFsPath(staticFilesDir, fsPath, i);
               const indexStats = statSync(indexFsPath.theIndexFsPath);

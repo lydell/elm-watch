@@ -33,6 +33,7 @@ The file server is completely optional. It only serves files. So if you serve yo
 
 - Serves files in a directory.
 - Serves the closest [index.html](#indexhtml) file if the URL does not point to any file, for `Browser.application` programs.
+- Responds with an empty 204 (No Content) to `/favicon.ico` if there is no such file, to avoid a 404 or an HTML response when you have no favicon.
 - Hot reloads CSS – when `.css` files in the static files directory that is served change, elm-watch reloads them in the browser.
 - Waits for Elm outputs to be compiled – see [Serving Elm outputs](#serving-elm-outputs).
 
