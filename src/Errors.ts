@@ -835,7 +835,9 @@ export function externalError(
       : absolutePathFromString(root, location.file);
   const isPositiveInteger = (value: number | undefined): value is number =>
     Number.isInteger(value) && value !== undefined && value >= 1;
-  const { withColor, plain } = sanitizeTerminalText(error.message);
+  // Trim first: Trailing newlines after a color reset aren’t removed when the
+  // whole error is trimmed.
+  const { withColor, plain } = sanitizeTerminalText(error.message.trim());
   return fancyError(
     source.toUpperCase(),
     file === undefined

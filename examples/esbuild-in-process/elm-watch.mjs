@@ -1,8 +1,6 @@
 // @ts-check
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { parseArgs } from "node:util";
-import { elmWatch } from "elm-watch";
+import { createErrorReporter, elmWatch } from "elm-watch";
 import * as esbuild from "esbuild";
 
 // Usage:
@@ -33,70 +31,51 @@ const esbuildOptions = {
   outfile: "public/build/app.js",
 };
 
-/**
- * elm-watch owns the terminal: It clears the screen and moves the cursor
- * around to update its output. If esbuild printed to the terminal too, the two
- * would mess each other up. So esbuild is silent, and this plugin shows
- * esbuild’s errors in the browser instead: Instead of the compiled code, it
- * writes a script that displays the errors. elm-watch notices that the file
- * changed, which makes the page reload (see index.html).
- *
- * @type {esbuild.Plugin}
- */
-const writeOutputOrErrors = {
-  name: "write-output-or-errors",
+// elm-watch owns the terminal: It clears the screen and moves the cursor
+// around to update its output. If esbuild printed to the terminal too, the two
+// would mess each other up. So esbuild is silent, and its errors are shown by
+// elm-watch instead, in the terminal and in the browser, just like Elm errors.
+const errors = createErrorReporter();
+
+/** @type {esbuild.Plugin} */
+const reportErrors = {
+  name: "report-errors",
   setup(build) {
     build.onEnd(async (result) => {
-      if (result.errors.length > 0) {
-        const messages = await esbuild.formatMessages(result.errors, {
-          kind: "error",
-          color: false,
-        });
-        writeFile(
-          path.join(import.meta.dirname, "public/build/app.js"),
-          errorScript(messages.join("\n")),
-        );
-      } else {
-        for (const file of result.outputFiles ?? []) {
-          writeFile(file.path, file.contents);
-        }
-      }
+      // esbuild’s formatted messages include a code excerpt.
+      const messages = await esbuild.formatMessages(result.errors, {
+        kind: "error",
+        color: true,
+      });
+      // An empty array clears the errors.
+      errors.set(
+        "esbuild",
+        result.errors.map((error, index) => ({
+          message: messages[index] ?? error.text,
+          location:
+            error.location === null
+              ? undefined
+              : {
+                  file: error.location.file,
+                  line: error.location.line,
+                  // esbuild’s columns start at 0, elm-watch’s at 1.
+                  column: error.location.column + 1,
+                },
+        })),
+      );
     });
   },
 };
 
-/**
- * @param {string} filePath
- * @param {string | Uint8Array} contents
- */
-function writeFile(filePath, contents) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, contents);
-}
-
-/**
- * @param {string} message
- * @returns {string}
- */
-function errorScript(message) {
-  return `
-console.error(${JSON.stringify(message)});
-const pre = document.createElement("pre");
-pre.textContent = ${JSON.stringify(`esbuild failed:\n\n${message}`)};
-pre.style.cssText = "position: fixed; inset: 0; z-index: 2147483646; margin: 0; padding: 2em; overflow: auto; background: #300; color: #fdd; font-size: 14px; white-space: pre-wrap;";
-document.body.append(pre);
-`.trimStart();
-}
-
 // In hot mode, run esbuild in watch mode, in the same process as elm-watch.
-// `write: false` means that esbuild leaves writing files to the plugin above.
+// When there are errors, esbuild doesn’t write `app.js`, so the last working
+// version keeps running in the browser.
 const esbuildContext =
   runMode === "hot"
     ? await esbuild.context({
         ...esbuildOptions,
-        write: false,
         logLevel: "silent",
-        plugins: [writeOutputOrErrors],
+        plugins: [reportErrors],
       })
     : undefined;
 
@@ -111,6 +90,7 @@ process.exitCode = await elmWatch({
       ? "debug"
       : "standard",
   staticFilesDir: "public",
+  errors,
   targets: [
     {
       type: "application",

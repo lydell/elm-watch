@@ -439,7 +439,7 @@ describe("library", () => {
       errors.set("esbuild", [
         {
           message:
-            "Expected \x1B[1m;\x1B[0m but found \x1B[31mfoo\x1B[0m\x1B[2J",
+            "\nExpected \x1B[1m;\x1B[0m but found \x1B[31mfoo\x1B[0m\x1B[2J\n\n",
           location: { file: "ts/main.ts", line: 12, column: 9 },
         },
         { message: "Only a file", location: { file: "/absolute/file.ts" } },

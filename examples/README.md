@@ -24,7 +24,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 | Example | What it shows |
 | --- | --- |
 | [esbuild-side-by-side](./esbuild-side-by-side/) | esbuild (and `tsc --watch`) running next to elm-watch, using run-pty. |
-| [esbuild-in-process](./esbuild-in-process/) | The same, but with esbuild’s JavaScript API running inside `elm-watch.mjs`, showing esbuild errors in the browser. |
+| [esbuild-in-process](./esbuild-in-process/) | The same, but with esbuild’s JavaScript API running inside `elm-watch.mjs`, showing esbuild errors like Elm errors. |
 | [vite-side-by-side](./vite-side-by-side/) | Vite running next to elm-watch, using run-pty, with the Elm code loaded straight from elm-watch’s server. |
 | [vite-in-process](./vite-in-process/) | The same, but with Vite’s dev server running inside elm-watch’s server, in `elm-watch.mts`. Also generates TypeScript types for Elm with elm-ts-types. |
 

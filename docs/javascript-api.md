@@ -158,6 +158,7 @@ Type definition: `import type { Options } from "elm-watch"`.
 | allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable is ignored – use `process.env` yourself if needed. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |
 | openEditor | `function` | unset | Called with `{ file, line, column }` when you click an error location in the browser UI. See [Clickable error locations](../browser-ui/#with-the-javascript-api). The `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. |
+| errors | `ErrorReporter` | unset | Errors from other tools, shown like Elm’s errors. See [Showing errors from other tools](#showing-errors-from-other-tools). |
 | signal | `AbortSignal` | unset | Abort to make elm-watch exit (in `"hot"` mode). See [Stopping elm-watch](#stopping-elm-watch). |
 | env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. |
 | stdin, stdout, stderr | streams | `process.stdin` etc. | Where elm-watch reads keyboard input and writes output. |
@@ -228,6 +229,41 @@ process.exitCode = await elmWatch({
 Or one target with many inputs: `inputs: fs.globSync("src/Widgets/*.elm", { cwd: import.meta.dirname })`. (Note that `inputs` must not be empty.)
 
 The glob runs once, when your script starts. If you add or remove files matching the glob, restart your script (or touch it, if you run it with `node --watch`). See also the [asset paths example](https://github.com/lydell/elm-watch/tree/main/examples/asset-paths#readme), which uses `fs.globSync` together with `node --watch-path` to restart automatically when files in a directory change.
+
+## Showing errors from other tools
+
+elm-watch owns the terminal: It clears the screen and moves the cursor around to update its output. So if you run other tools in the same script – like esbuild, or some code generation – they can’t print their errors to the terminal without messing things up. Instead, pass the errors to elm-watch, which shows them just like Elm’s errors: In the terminal (with [one error at a time](../browser-ui/#one-error-at-a-time)), and in the browser.
+
+```js
+import { createErrorReporter, elmWatch } from "elm-watch";
+
+const errors = createErrorReporter();
+
+// Whenever your tool has run:
+errors.set("codegen", [
+  {
+    message: "Missing key: goodbye",
+    // Optional. Lets you open the error in your editor.
+    location: { file: "translations.json", line: 3, column: 5 },
+  },
+]);
+
+// When the errors are fixed:
+errors.set("codegen", []);
+
+process.exitCode = await elmWatch({
+  // ...
+  errors,
+});
+```
+
+- `errors.set(source, errors)` replaces all errors of `source`. An empty array clears them. You can call it both before and while elm-watch runs.
+- `source` is used as the title of the errors (`-- CODEGEN ---`), and is listed together with the targets. It can’t be the same as a target name.
+- `message` is shown as-is. It can contain colors (ANSI escape codes), which are removed in the browser. Other escape codes, like moving the cursor, are always removed.
+- `location` is optional. `file` is relative to `root` (or absolute), and `line` and `column` start at 1. With a location, you can open the error in your editor from the terminal and the browser (see [Clickable error locations](../browser-ui/#clickable-error-locations)).
+- In `"make"` mode, any errors when elm-watch is done make the exit code 1.
+
+See the [esbuild in-process example](https://github.com/lydell/elm-watch/tree/main/examples/esbuild-in-process#readme) and the [code generation example](https://github.com/lydell/elm-watch/tree/main/examples/code-generation#readme).
 
 ## Stopping elm-watch
 
