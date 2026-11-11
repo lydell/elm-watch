@@ -7,6 +7,7 @@ import * as Codec from "tiny-decoders";
 import type { NonEmptyArray } from "../src/NonEmptyArray.ts";
 import type { CompilationModeWithProxy } from "../src/Types.ts";
 import {
+  type ExternalErrorsSource,
   type FlashType,
   type OverlayError,
   SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
@@ -15,6 +16,7 @@ import {
   type UiMsg,
 } from "./Ui.ts";
 import {
+  type CompileError,
   decodeWebSocketToClientMessage,
   type StatusChange,
   type WebSocketToClientMessage,
@@ -194,6 +196,11 @@ export type Cmd =
       errors: Map<string, OverlayError>;
       sendKey: SendKey | undefined;
       open: boolean;
+    }
+  | {
+      tag: "UpdateExternalErrors";
+      sources: Array<ExternalErrorsSource>;
+      sendKey: SendKey;
     }
   | {
       tag: "UpdateGlobalStatus";
@@ -459,6 +466,26 @@ function onWebSocketToClientMessage(
   model: Model,
 ): [Model, Array<Cmd>] {
   switch (msg.tag) {
+    case "ExternalErrors":
+      return [
+        model,
+        [
+          {
+            tag: "UpdateExternalErrors",
+            sources: msg.sources.map(({ source, errors }) => ({
+              source,
+              errors: toOverlayErrors(
+                errors,
+                msg.foregroundColor,
+                msg.backgroundColor,
+              ),
+            })),
+            // We just got a message, so we are connected.
+            sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+          },
+        ],
+      ];
+
     case "FocusedTabAcknowledged":
       return [model, [{ tag: "WebSocketTimeoutClear" }]];
 
@@ -613,19 +640,10 @@ function statusChanged(
             tag: "CompileError",
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-            errors: new Map(
-              status.errors.map((error) => {
-                const overlayError: OverlayError = {
-                  title: error.title,
-                  location: error.location,
-                  htmlContent: error.htmlContent,
-                  htmlContentCollapsed: error.htmlContentCollapsed,
-                  foregroundColor: status.foregroundColor,
-                  backgroundColor: status.backgroundColor,
-                };
-                const id = Codec.JSON.stringify(Codec.unknown, overlayError);
-                return [id, overlayError];
-              }),
+            errors: toOverlayErrors(
+              status.errors,
+              status.foregroundColor,
+              status.backgroundColor,
             ),
             openEditorError: undefined,
           },
@@ -653,6 +671,27 @@ function statusChanged(
         ],
       ];
   }
+}
+
+function toOverlayErrors(
+  errors: Array<CompileError>,
+  foregroundColor: string,
+  backgroundColor: string,
+): Map<string, OverlayError> {
+  return new Map(
+    errors.map((error) => {
+      const overlayError: OverlayError = {
+        title: error.title,
+        location: error.location,
+        htmlContent: error.htmlContent,
+        htmlContentCollapsed: error.htmlContentCollapsed,
+        foregroundColor,
+        backgroundColor,
+      };
+      const id = Codec.JSON.stringify(Codec.unknown, overlayError);
+      return [id, overlayError];
+    }),
+  );
 }
 
 function reconnect(

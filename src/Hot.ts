@@ -20,6 +20,7 @@ import {
 import * as Errors from "./Errors.ts";
 import * as ErrorSelection from "./ErrorSelection.ts";
 import * as ErrorView from "./ErrorView.ts";
+import * as ExternalErrors from "./ExternalErrors.ts";
 import { dim, silentlyReadIntEnvValue, toError } from "./Helpers.ts";
 import type { Host } from "./Host.ts";
 import {
@@ -84,6 +85,7 @@ type Mutable = {
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
   unsubscribeFromGracefulExit: () => void;
+  unsubscribeFromExternalErrors: () => void;
 };
 
 type HotRunResult =
@@ -354,6 +356,22 @@ const initMutable =
       unsubscribeFromGracefulExit: () => {
         // Replaced below.
       },
+      unsubscribeFromExternalErrors:
+        project.errorReporter === undefined
+          ? () => {
+              // Nothing to unsubscribe from.
+            }
+          : ExternalErrors.subscribe(
+              project.errorReporter,
+              (source, numErrors) => {
+                dispatch({
+                  tag: "ExternalErrorsChanged",
+                  date: getNow(),
+                  source,
+                  numErrors,
+                });
+              },
+            ),
     };
 
     devServer.setDispatch((msg) => {
@@ -556,6 +574,18 @@ const runCmd =
           includeInterrupted: cmd.includeInterrupted,
           prioritizedOutputs: getPrioritizedOutputs(mutable),
         });
+
+        // Errors from outside elm-watch are only updated here, together with
+        // printing the status lines (see `Project.externalErrors`).
+        if (cmd.mode !== "ContinueCompilation") {
+          const previousVersion = mutable.project.externalErrors.version;
+          mutable.project.externalErrors = ExternalErrors.getSnapshot(
+            mutable.project.errorReporter,
+          );
+          if (mutable.project.externalErrors.version !== previousVersion) {
+            sendExternalErrors(logger, mutable, undefined, rejectPromise);
+          }
+        }
 
         switch (cmd.mode) {
           case "AfterInstallDependencies":
@@ -983,6 +1013,10 @@ const runCmd =
           .catch(rejectPromise);
         return;
 
+      case "WebSocketSendExternalErrors":
+        sendExternalErrors(logger, mutable, cmd.webSocket, rejectPromise);
+        return;
+
       case "WebSocketSendToOutput":
         webSocketSendToOutput(mutable, cmd.outputPath, cmd.message);
         return;
@@ -1135,6 +1169,7 @@ function portChoiceError(
 function closeAll(logger: Logger, mutable: Mutable): void {
   logger.reset();
   mutable.unsubscribeFromGracefulExit();
+  mutable.unsubscribeFromExternalErrors();
 
   if (mutable.watcherTimeoutId !== undefined) {
     clearTimeout(mutable.watcherTimeoutId);
@@ -1199,6 +1234,38 @@ function webSocketSend(
     // which is easier to read in the browser devtools.
     binary: message.tag === "SuccessfullyCompiled",
   });
+}
+
+function sendExternalErrors(
+  logger: Logger,
+  mutable: Mutable,
+  // `undefined` means all connections.
+  webSocket: WebSocket | undefined,
+  rejectPromise: (error: Error) => void,
+): void {
+  const sources = Compile.renderExternalErrors(mutable.project);
+  Theme.getThemeFromTerminal(logger)
+    .then((theme) => {
+      const message: WebSocketToClientMessage = {
+        tag: "ExternalErrors",
+        sources: sources.map(([source, errors]) => ({
+          source,
+          errors: errors.map((errorTemplate) =>
+            Errors.toHtml(errorTemplate, theme, logger.config.noColor),
+          ),
+        })),
+        foregroundColor: theme.foreground,
+        backgroundColor: theme.background,
+      };
+      if (webSocket === undefined) {
+        for (const connection of mutable.devServer.getConnections()) {
+          webSocketSend(connection.webSocket, message);
+        }
+      } else {
+        webSocketSend(webSocket, message);
+      }
+    })
+    .catch(rejectPromise);
 }
 
 function webSocketSendToOutput(
@@ -1277,6 +1344,9 @@ function getErrorViewTargets(
   project: Project,
 ): Array<ErrorView.ErrorViewTarget> {
   return [
+    ...Compile.renderExternalErrors(project).map(([source, errors]) =>
+      ErrorView.makeErrorViewTarget(source, errors),
+    ),
     ...project.targetsErrors.map((targetError) =>
       ErrorView.makeErrorViewTarget(targetError.outputPath.targetName, [
         Compile.renderTargetError(targetError),

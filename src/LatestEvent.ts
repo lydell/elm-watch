@@ -53,7 +53,15 @@ type OutputRequestedEvent = {
   outputPath: OutputPath;
 };
 
+// Errors from outside elm-watch were set. See ExternalErrors.ts.
+type ExternalErrorsChangedEvent = {
+  tag: "ExternalErrorsChanged";
+  source: string;
+  numErrors: number;
+};
+
 export type LatestEvent =
+  | ExternalErrorsChangedEvent
   | OutputRequestedEvent
   | WebSocketRelatedEvent
   | (WatcherEvent & { affectsAnyTarget: boolean });
@@ -82,6 +90,11 @@ export function getLatestEventSleepMs(
 ): number {
   switch (event.tag) {
     case "WatcherEvent":
+      return WATCHER_EVENT_SLEEP_MS;
+
+    // Errors are often set several times in a row (one source after another,
+    // or cleared and then set again), so wait a little bit like for files.
+    case "ExternalErrorsChanged":
       return WATCHER_EVENT_SLEEP_MS;
 
     // Also sleep for a little bit when web sockets connect or outputs are
@@ -176,6 +189,13 @@ function printEventShort(event: LatestEvent, root: AbsolutePath): string {
   switch (event.tag) {
     case "WatcherEvent":
       return `${event.eventName} ${printWatcherEventPath(event, root)}`;
+
+    case "ExternalErrorsChanged":
+      return `${event.source}: ${
+        event.numErrors === 0
+          ? "no errors"
+          : `${event.numErrors} error${event.numErrors === 1 ? "" : "s"}`
+      }`;
 
     case "OutputRequestedNeedingCompilation":
       return `HTTP request: ${event.outputPath.targetName}`;

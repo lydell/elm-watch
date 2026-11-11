@@ -14,6 +14,7 @@ import {
   Output,
   TargetName,
 } from "./ElmWatchJson.ts";
+import { isErrorReporter, setTargetNames } from "./ExternalErrors.ts";
 import { Host } from "./Host.ts";
 import { NonEmptyArray } from "./NonEmptyArray.ts";
 import { Port } from "./Port.ts";
@@ -118,6 +119,23 @@ const Targets = Codec.flatMap(NonEmptyArray(Target), {
   encoder: (value) => value,
 });
 
+const ErrorReporterCodec = Codec.flatMap(Codec.unknown, {
+  decoder: (value) =>
+    isErrorReporter(value)
+      ? { tag: "Valid", value }
+      : {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message: "Expected an error reporter from `createErrorReporter()`",
+            got: value,
+            path: [],
+          },
+        },
+  // Encoding is never used.
+  encoder: (value) => value,
+});
+
 const Options = Codec.fields(
   {
     runMode: Codec.primitiveUnion(["hot", "make"]),
@@ -130,6 +148,7 @@ const Options = Codec.fields(
     webSocketUrl: optionalField(WebSocketUrl("Options")),
     allowedHosts: optionalField(Codec.array(AllowedHost)),
     openEditor: optionalField(functionCodec<OpenEditorFunction>()),
+    errors: optionalField(ErrorReporterCodec),
     // These are validated by TypeScript only.
     createServer: optionalField(functionCodec<object>()),
     signal: optionalField(Codec.unknown),
@@ -183,6 +202,25 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
     case "Valid": {
       const { value } = result;
       const root: AbsolutePath = value.root;
+      const [clash] =
+        value.errors === undefined
+          ? []
+          : setTargetNames(
+              value.errors,
+              value.targets.map((target) => target.name),
+            );
+      if (clash !== undefined) {
+        return {
+          tag: "DecoderError",
+          error: {
+            tag: "custom",
+            message:
+              "An error source passed to `set()` has the same name as a target",
+            got: clash,
+            path: ["errors"],
+          },
+        };
+      }
       return {
         tag: "Valid",
         runMode: value.runMode,
@@ -217,6 +255,7 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
           staticFilesDir: value.staticFilesDir,
           allowedHosts: value.allowedHosts ?? [],
           openEditor: value.openEditor,
+          errorReporter: value.errors,
         },
       };
     }

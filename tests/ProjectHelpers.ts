@@ -1,3 +1,4 @@
+import { EMPTY_SNAPSHOT } from "../src/ExternalErrors.ts";
 import { DEFAULT_HOST } from "../src/Host.ts";
 import {
   type OutputStatus,
@@ -178,5 +179,7 @@ export function makeProject({
     webSocketUrl: undefined,
     allowedHosts: [],
     openEditor: { tag: "NotSet" },
+    errorReporter: undefined,
+    externalErrors: EMPTY_SNAPSHOT,
   };
 }

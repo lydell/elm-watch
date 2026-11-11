@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import { elmWatch } from "../src/index.ts";
+import { createErrorReporter, elmWatch } from "../src/index.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
@@ -357,6 +357,7 @@ describe("library", () => {
           "webSocketUrl",
           "allowedHosts",
           "openEditor",
+          "errors",
           "createServer",
           "signal",
           "env",
@@ -421,6 +422,165 @@ describe("library", () => {
         ]
         Or expected: undefined
       `);
+    });
+  });
+
+  describe("external errors", () => {
+    const target = {
+      type: "application",
+      name: "main",
+      elmJson: "elm.json",
+      inputs: ["src/Main.elm"],
+      output: "build/main.js",
+    };
+
+    test("make fails if there are errors at the end", async () => {
+      const errors = createErrorReporter();
+      errors.set("esbuild", [
+        {
+          message:
+            "Expected \x1B[1m;\x1B[0m but found \x1B[31mfoo\x1B[0m\x1B[2J",
+          location: { file: "ts/main.ts", line: 12, column: 9 },
+        },
+        { message: "Only a file", location: { file: "/absolute/file.ts" } },
+      ]);
+      errors.set("translations", [{ message: "Missing key: goodbye" }]);
+      errors.set("cleared", [{ message: "Not shown" }]);
+      errors.set("cleared", []);
+      const { stdout } = await run(1, (root) => ({
+        root,
+        runMode: "make",
+        targets: [
+          {
+            ...target,
+            // Errors set while compiling count too.
+            postprocess: (code: string) => {
+              errors.set("postprocess", [{ message: "Set while compiling" }]);
+              return code;
+            },
+          },
+        ],
+        errors,
+      }));
+      expect(stdout).toMatchInlineSnapshot(`
+        ✅ Dependencies
+        🚨 esbuild
+        🚨 translations
+        ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+
+        ⧙-- ESBUILD ---------------------------------------------------------------------⧘
+        /Users/you/project/tests/fixtures/library/ts/main.ts:12:9
+
+        Expected ⧙;⧘ but found ⧙foo⧘⧘
+
+        ⧙-- ESBUILD ---------------------------------------------------------------------⧘
+        /absolute/file.ts
+
+        Only a file
+
+        ⧙-- TRANSLATIONS ----------------------------------------------------------------⧘
+
+        Missing key: goodbye
+
+        ⧙-- POSTPROCESS -----------------------------------------------------------------⧘
+
+        Set while compiling
+
+        🚨 ⧙4⧘ errors found
+
+        🚨 Compilation finished in ⧙123 ms⧘.
+      `);
+    });
+
+    test("make succeeds if all errors have been cleared", async () => {
+      const errors = createErrorReporter();
+      errors.set("esbuild", [{ message: "Not shown" }]);
+      errors.set("esbuild", []);
+      const { stdout } = await run(0, (root) => ({
+        root,
+        runMode: "make",
+        targets: [target],
+        errors,
+      }));
+      expect(stdout).not.toContain("esbuild");
+    });
+
+    test("source with the same name as a target", async () => {
+      const errors = createErrorReporter();
+      errors.set("main", [{ message: "Clash" }]);
+      const { stdout } = await run(1, (root) => ({
+        root,
+        runMode: "make",
+        targets: [target],
+        errors,
+      }));
+      expect(stdout).toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+
+        I got invalid options passed to ⧙elmWatch()⧘:
+
+        At root["errors"]:
+        An error source passed to \`set()\` has the same name as a target
+        Got: "main"
+      `);
+      // Now that elm-watch knows the target names, `set` throws instead.
+      expect(() => {
+        errors.set("main", []);
+      }).toThrowErrorMatchingInlineSnapshot(
+        `[TypeError: ErrorReporter#set: The source must not have the same name as a target, but got: "main"]`,
+      );
+    });
+
+    test("not an error reporter", async () => {
+      const { stdout } = await run(1, (root) => ({
+        root,
+        runMode: "make",
+        targets: [target],
+        errors: { set: () => undefined },
+      }));
+      expect(stdout).toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+
+        I got invalid options passed to ⧙elmWatch()⧘:
+
+        At root["errors"]:
+        Expected an error reporter from \`createErrorReporter()\`
+        Got: {
+          "set": function "set"
+        }
+        Or expected: undefined
+      `);
+    });
+
+    test("set validates its arguments", () => {
+      const errors = createErrorReporter();
+      const set = errors.set as (source: unknown, errors: unknown) => void;
+      expect(() => {
+        set("", []);
+      }).toThrowErrorMatchingInlineSnapshot(
+        `[TypeError: ErrorReporter#set: Expected the source to be a non-empty, single line string, but got: ""]`,
+      );
+      expect(() => {
+        set("a\nb", []);
+      }).toThrowErrorMatchingInlineSnapshot(
+        `[TypeError: ErrorReporter#set: Expected the source to be a non-empty, single line string, but got: "a\\nb"]`,
+      );
+      expect(() => {
+        set("esbuild", [{ text: "esbuild uses text, not message" }]);
+      }).toThrowErrorMatchingInlineSnapshot(`
+        [TypeError: ErrorReporter#set: Invalid errors for "esbuild":
+
+        At root[0]:
+        Expected an object with a field called: "message"
+        Got: {
+          "text": "esbuild uses text, not message"
+        }]
+      `);
+      // Extra fields are allowed, so you can map over objects and only add
+      // `message`.
+      set("esbuild", [
+        { message: "a", extra: 1, location: { file: "a.ts", extra: 2 } },
+      ]);
     });
   });
 });

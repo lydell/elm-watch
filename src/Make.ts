@@ -1,5 +1,6 @@
 import * as Compile from "./Compile.ts";
 import type { Env } from "./Env.ts";
+import { getSnapshot } from "./ExternalErrors.ts";
 import { bold, printDurationMs } from "./Helpers.ts";
 import type { Logger, LoggerConfig } from "./Logger.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
@@ -84,6 +85,8 @@ export async function run(
     });
   }
 
+  // Errors from outside elm-watch might have been reported while compiling.
+  project.externalErrors = getSnapshot(project.errorReporter);
   const errors = Compile.extractErrors(project);
   const failed = isNonEmptyArray(errors);
 

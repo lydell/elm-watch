@@ -1331,6 +1331,15 @@ const runCmd =
         });
         return;
 
+      case "UpdateExternalErrors":
+        // Without a UI (Node.js and Web Workers), the errors are only shown in
+        // the terminal.
+        if (mutable.uiTarget !== undefined) {
+          mutable.uiTarget.setExternalErrors(cmd.sources, cmd.sendKey);
+          __ELM_WATCH.ON_RENDER(TARGET_NAME);
+        }
+        return;
+
       case "UpdateGlobalStatus":
         __ELM_WATCH.RELOAD_STATUSES.set(TARGET_NAME, cmd.reloadStatus);
         switch (cmd.reloadStatus.tag) {

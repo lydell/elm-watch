@@ -12,7 +12,6 @@ import {
 } from "./ErrorSelection.ts";
 import { bold, dim, removeColor } from "./Helpers.ts";
 import type { LoggerConfig } from "./Logger.ts";
-import type { TargetName } from "./Types.ts";
 
 // In the terminal, errors are shown one at a time, and you navigate between
 // them with the keyboard. See ErrorSelection.ts for which error is selected.
@@ -72,8 +71,10 @@ export function parseKeys(data: string): Array<ErrorViewKey> {
   return keys;
 }
 
+// `targetName` can also be the source of external errors (see
+// ExternalErrors.ts).
 export function makeErrorViewTarget(
-  targetName: TargetName,
+  targetName: string,
   templates: Array<Errors.ErrorTemplate>,
 ): ErrorViewTarget {
   return makeErrorGroup(

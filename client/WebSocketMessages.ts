@@ -105,6 +105,19 @@ export type WebSocketToClientMessage = Codec.Infer<
 >;
 export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
   {
+    // Errors from outside elm-watch (such as from esbuild). Sent to all
+    // targets, and shown regardless of the target’s status.
+    tag: Codec.tag("ExternalErrors"),
+    sources: Codec.array(
+      Codec.fields({
+        source: Codec.string,
+        errors: Codec.array(CompileError),
+      }),
+    ),
+    foregroundColor: Codec.string,
+    backgroundColor: Codec.string,
+  },
+  {
     tag: Codec.tag("FocusedTabAcknowledged"),
   },
   {

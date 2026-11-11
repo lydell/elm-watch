@@ -12,6 +12,7 @@ import type {
 import * as Errors from "./Errors.ts";
 import type { ErrorTemplate } from "./Errors.ts";
 import type * as ErrorView from "./ErrorView.ts";
+import { getSnapshot } from "./ExternalErrors.ts";
 import { bold, printDurationMs } from "./Helpers.ts";
 import {
   getLatestEventSleepMs,
@@ -79,6 +80,12 @@ export type Msg =
   | {
       tag: "ExitRequested";
       date: Date;
+    }
+  | {
+      tag: "ExternalErrorsChanged";
+      date: Date;
+      source: string;
+      numErrors: number;
     }
   | {
       tag: "GotWatcherEvent";
@@ -266,6 +273,13 @@ export type Cmd =
       message: WebSocketToClientMessage;
     }
   | {
+      // The external errors as of the last time the status lines were printed
+      // (see `Project.externalErrors`).
+      tag: "WebSocketSendExternalErrors";
+      // `undefined` means all connections.
+      webSocket: WebSocket | undefined;
+    }
+  | {
       tag: "WebSocketSendCompileErrorToOutput";
       outputPath: OutputPath;
       compilationMode: CompilationMode;
@@ -352,6 +366,25 @@ export function update(
 
     case "ElmWatchStuffJsonWriteFailed":
       return [model, exitOnError ? [{ tag: "ExitOnIdle" }] : []];
+
+    // Go through a compilation cycle (which most likely has nothing to
+    // compile), since that redraws the status lines and errors.
+    case "ExternalErrorsChanged":
+      return [
+        {
+          ...model,
+          nextAction: compileNextAction(model.nextAction),
+          latestEvents: [
+            ...model.latestEvents,
+            {
+              tag: "ExternalErrorsChanged",
+              source: msg.source,
+              numErrors: msg.numErrors,
+            },
+          ],
+        },
+        [],
+      ];
 
     case "ExitRequested":
       if (model.hotState.tag !== "Idle") {
@@ -483,6 +516,26 @@ export function update(
             return [model, [cmd, respondCmd]];
           }
 
+          // The external errors changed after the status lines were printed.
+          // Go again, to print them (and to compile anything else needed).
+          if (
+            project.externalErrors.version !==
+            getSnapshot(project.errorReporter).version
+          ) {
+            return [
+              model,
+              [
+                cmd,
+                respondCmd,
+                {
+                  tag: "CompileAllOutputsAsNeeded",
+                  mode: "AfterIdle",
+                  includeInterrupted,
+                },
+              ],
+            ];
+          }
+
           const errors = Compile.extractErrors(project);
 
           return [
@@ -579,16 +632,25 @@ export function update(
     case "WebSocketConnected": {
       const result = msg.parseWebSocketConnectRequestUrlResult;
 
-      const cssCmd: Array<Cmd> =
-        project.staticFilesDir === undefined
+      // Always sent, so that a browser that was connected to a previous
+      // elm-watch doesn’t keep showing old errors.
+      const externalErrorsCmd: Cmd = {
+        tag: "WebSocketSendExternalErrors",
+        webSocket: msg.webSocket,
+      };
+
+      const connectCmds: Array<Cmd> = [
+        externalErrorsCmd,
+        ...(project.staticFilesDir === undefined
           ? []
           : [
               {
                 tag: "WebSocketSend",
                 webSocket: msg.webSocket,
                 message: { tag: "StaticFilesMayHaveChangedWhileDisconnected" },
-              },
-            ];
+              } as const,
+            ]),
+      ];
 
       switch (result.tag) {
         case "Success": {
@@ -606,7 +668,7 @@ export function update(
                   ...newModel,
                   latestEvents: [...newModel.latestEvents, latestEvent],
                 },
-            [...cmds, ...cssCmd],
+            [...cmds, ...connectCmds],
           ];
         }
 
@@ -628,7 +690,7 @@ export function update(
                   },
                 },
               },
-              ...cssCmd,
+              ...connectCmds,
             ],
           ];
         }
@@ -653,7 +715,7 @@ export function update(
                   },
                 },
               },
-              ...cssCmd,
+              ...connectCmds,
             ],
           ];
       }

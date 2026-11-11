@@ -131,6 +131,9 @@ export type Options = {
   // Called when you click an error location in the browser UI.
   openEditor?: OpenEditor | undefined;
 
+  // Errors from other tools, shown like Elm’s errors. See `createErrorReporter`.
+  errors?: ErrorReporter | undefined;
+
   // Abort to make elm-watch exit (in "hot" mode). Like for SIGTERM, running
   // `elm` processes are allowed to finish first. The promise returned by
   // `elmWatch()` then resolves to 0.
@@ -145,3 +148,32 @@ export type Options = {
 
 // Resolves to an exit code.
 export declare function elmWatch(options: Options): Promise<number>;
+
+// Shows errors from other tools (such as esbuild, or code generation) together
+// with Elm’s errors, in the terminal and in the browser. elm-watch owns the
+// terminal, so other tools can’t print there. Pass the reporter as the `errors`
+// option. It can be used both before and while elm-watch runs.
+export declare function createErrorReporter(): ErrorReporter;
+
+export type ErrorReporter = {
+  // Replaces the errors of `source` (such as "esbuild"). An empty array clears
+  // them. `source` is shown as the title of the errors, and must not be the
+  // same as a target name. In "make" mode, any errors when elm-watch finishes
+  // make the exit code 1.
+  set: (source: string, errors: Array<ExternalError>) => void;
+};
+
+export type ExternalError = {
+  // Shown as-is. Can contain colors (ANSI escape codes), which are removed in
+  // the browser.
+  message: string;
+  // Makes it possible to open the error in your editor. `file` is relative to
+  // `root` (or absolute). `line` and `column` start at 1.
+  location?:
+    | {
+        file: string;
+        line?: number | undefined;
+        column?: number | undefined;
+      }
+    | undefined;
+};

@@ -15,11 +15,13 @@ import {
   ELM_WATCH_WEBSOCKET_URL,
   type Env,
 } from "./Env.ts";
+import type { ExternalError } from "./ExternalErrors.ts";
 import {
   bold as boldTerminal,
   dim as dimTerminal,
   escapeHtml,
   RESET_COLOR,
+  sanitizeTerminalText,
   toError,
 } from "./Helpers.ts";
 import type { Host } from "./Host.ts";
@@ -147,6 +149,10 @@ type FancyErrorLocation =
       line: number;
       column: number;
     }
+  | {
+      tag: "FileOnly";
+      file: AbsolutePath;
+    }
   | { tag: "NoLocation" };
 
 type ElmJsonPathOrOutputPath = Extract<
@@ -166,6 +172,9 @@ type Piece =
   | { tag: "Dim"; text: string }
   // The “(N lines)” in a collapsed code excerpt.
   | { tag: "Elision"; text: string }
+  // Text from outside elm-watch, which might contain colors. `text` is without
+  // colors, and `withColor` has them. See `sanitizeTerminalText`.
+  | { tag: "External"; text: string; withColor: string }
   | { tag: "Text"; text: string };
 
 type Template = (
@@ -309,6 +318,8 @@ export function toHtml(
 
 function renderPieceForTerminal(piece: Piece): string {
   switch (piece.tag) {
+    case "External":
+      return piece.withColor;
     case "Bold":
       return boldTerminal(piece.text);
     case "Dim":
@@ -348,6 +359,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
         (piece.underline ? "</u>" : "") +
         (piece.bold ? "</b>" : "")
       );
+    case "External":
     case "Text":
       return escapeHtml(piece.text);
   }
@@ -367,6 +379,7 @@ function fancyToPlainErrorLocation(
     case "OutputPath":
     case "PackageTarget":
       return { tag: "Target", targetName: location.targetName };
+    case "FileOnly":
     case "FileWithLineAndColumn":
       return location;
     case "NoLocation":
@@ -808,6 +821,34 @@ ${bold("But it exited like this:")}
 ${printExitReason(exitReason)}
 ${printStdio(stdout, stderr)}
 `;
+}
+
+export function externalError(
+  root: AbsolutePath,
+  source: string,
+  error: ExternalError,
+): ErrorTemplate {
+  const { location } = error;
+  const file =
+    location === undefined
+      ? undefined
+      : absolutePathFromString(root, location.file);
+  const isPositiveInteger = (value: number | undefined): value is number =>
+    Number.isInteger(value) && value !== undefined && value >= 1;
+  const { withColor, plain } = sanitizeTerminalText(error.message);
+  return fancyError(
+    source.toUpperCase(),
+    file === undefined
+      ? { tag: "NoLocation" }
+      : isPositiveInteger(location?.line)
+        ? {
+            tag: "FileWithLineAndColumn",
+            file,
+            line: location.line,
+            column: isPositiveInteger(location.column) ? location.column : 1,
+          }
+        : { tag: "FileOnly", file },
+  )`${{ tag: "External", text: plain, withColor }}`;
 }
 
 export function postprocessFunctionError(

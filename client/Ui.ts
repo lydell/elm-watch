@@ -46,6 +46,13 @@ export type OverlayError = {
   backgroundColor: string;
 };
 
+// Errors from outside elm-watch (such as from esbuild), from the `errors`
+// option. They are the same for all targets.
+export type ExternalErrorsSource = {
+  source: string;
+  errors: Map<string, OverlayError>;
+};
+
 export type Status =
   | {
       tag: "Busy";
@@ -132,6 +139,12 @@ export type UiTarget = {
     sendKey: SendKey | undefined,
     options: { open: boolean },
   ) => void;
+  // Every target gets the same external errors from the server. New errors
+  // open the error overlay, just like for `setErrors`.
+  setExternalErrors: (
+    sources: Array<ExternalErrorsSource>,
+    sendKey: SendKey | undefined,
+  ) => void;
   // For statuses that need the user’s attention.
   openPanel: () => void;
   unregister: () => void;
@@ -149,6 +162,12 @@ export type TargetSnapshot = {
   info: Info;
   // For actions that work in more statuses than the ones with a `sendKey`.
   sendKey: SendKey | undefined;
+};
+
+type OverlayErrorsEntry = {
+  errors: Map<string, OverlayError>;
+  sendKey: SendKey | undefined;
+  dispatch: (msg: UiMsg) => void;
 };
 
 type TargetEntry = {
@@ -340,14 +359,14 @@ export function createUi(): Ui {
   const entries: Array<TargetEntry> = [];
   let errorOverlayOpen = false;
   // The errors of each target, in the order they first had errors.
-  const overlayErrors = new Map<
-    string,
-    {
-      errors: Map<string, OverlayError>;
-      sendKey: SendKey | undefined;
-      dispatch: (msg: UiMsg) => void;
-    }
-  >();
+  const overlayErrors = new Map<string, OverlayErrorsEntry>();
+  // `targetName` is the target that sent them, which is used for opening
+  // errors in the editor.
+  let externalErrors: {
+    sources: Array<ExternalErrorsSource>;
+    sendKey: SendKey | undefined;
+    targetName: string;
+  } = { sources: [], sendKey: undefined, targetName: "" };
   // Like in the terminal: Errors are shown one at a time by default. Not
   // saved: One at a time should be the default each time.
   let overlayShowAll = false;
@@ -359,11 +378,24 @@ export function createUi(): Ui {
   let panelOpen = false;
   let position = loadUiPosition();
 
+  // External errors first, like in the terminal, since they are often the
+  // cause of Elm errors (code generation, for example).
+  const getAllOverlayErrors = (): Array<OverlayErrorsEntry> => [
+    ...externalErrors.sources.map(({ errors }): OverlayErrorsEntry => ({
+      errors,
+      sendKey: externalErrors.sendKey,
+      dispatch: (msg: UiMsg) => {
+        dispatchToTarget(externalErrors.targetName, msg);
+      },
+    })),
+    ...overlayErrors.values(),
+  ];
+
   // The errors of all targets put together, without duplicates.
   const getErrorGroup = (): ErrorGroup<OverlayErrorItem> =>
     makeErrorGroup(
       "",
-      Array.from(overlayErrors.values(), ({ errors, sendKey, dispatch }) =>
+      getAllOverlayErrors().flatMap(({ errors, sendKey, dispatch }) =>
         Array.from(errors, ([id, error]): OverlayErrorItem => ({
           id,
           location: error.location,
@@ -371,11 +403,11 @@ export function createUi(): Ui {
           sendKey,
           dispatch,
         })),
-      ).flat(),
+      ),
     );
 
   const hasErrors = (): boolean =>
-    Array.from(overlayErrors.values()).some(({ errors }) => errors.size > 0);
+    getAllOverlayErrors().some(({ errors }) => errors.size > 0);
 
   const renderOverlay = (): void => {
     const group = getErrorGroup();
@@ -494,11 +526,15 @@ export function createUi(): Ui {
 
   const render = (): void => {
     const snapshots = getSnapshots();
+    const externalSources = externalErrors.sources.map(({ source }) => source);
     toggleButton.hidden = snapshots.length === 0;
     toggleButton.setAttribute("aria-expanded", panelOpen.toString());
-    toggleButton.setAttribute("aria-label", summaryLabel(snapshots));
+    toggleButton.setAttribute(
+      "aria-label",
+      summaryLabel(snapshots, externalSources),
+    );
 
-    const worst = worstStatus(snapshots);
+    const worst = worstStatus(snapshots, externalSources);
     const flashElement = toggleButton.querySelector(`.${CLASS.flash}`);
     toggleButton.replaceChildren(
       flashElement ??
@@ -568,6 +604,7 @@ export function createUi(): Ui {
     panel.replaceChildren(
       ...viewPanel({
         snapshots,
+        externalErrors: externalErrors.sources,
         hasErrors: hasErrors(),
         errorOverlayOpen,
         onToggleErrorOverlay: () => {
@@ -983,6 +1020,16 @@ export function createUi(): Ui {
     moveToTopLayer(container, containerInner);
   };
 
+  const flash = (flashType: FlashType): void => {
+    const element = toggleButton.querySelector(`.${CLASS.flash}`);
+    if (element instanceof HTMLElement) {
+      // Restart the animation if it is already running.
+      element.removeAttribute("data-flash");
+      void element.offsetWidth;
+      element.setAttribute("data-flash", flashType);
+    }
+  };
+
   const addListeners = (): void => {
     window.addEventListener("keydown", onKeydownCapture, true);
     window.addEventListener("keydown", onKeydownBubble);
@@ -1025,15 +1072,7 @@ export function createUi(): Ui {
           moveToTopLayer(container, containerInner);
         },
 
-        flash: (flashType) => {
-          const element = toggleButton.querySelector(`.${CLASS.flash}`);
-          if (element instanceof HTMLElement) {
-            // Restart the animation if it is already running.
-            element.removeAttribute("data-flash");
-            void element.offsetWidth;
-            element.setAttribute("data-flash", flashType);
-          }
-        },
+        flash,
 
         setErrors: (errors, sendKey, { open }) => {
           if (errors.size === 0) {
@@ -1056,6 +1095,28 @@ export function createUi(): Ui {
           }
         },
 
+        setExternalErrors: (sources, sendKey) => {
+          const previousIds = new Set(
+            externalErrors.sources.flatMap(({ errors }) =>
+              Array.from(errors.keys()),
+            ),
+          );
+          const hasNewErrors = sources.some(({ errors }) =>
+            Array.from(errors.keys()).some((id) => !previousIds.has(id)),
+          );
+          externalErrors = { sources, sendKey, targetName: entry.targetName };
+          renderOverlay();
+          if (hasNewErrors) {
+            flash("error");
+          }
+          if (hasNewErrors && !errorOverlayOpen) {
+            setErrorOverlayOpen(true);
+          } else {
+            updateErrorOverlayVisibility();
+            render();
+          }
+        },
+
         openPanel: () => {
           panelOpen = true;
           render();
@@ -1067,6 +1128,13 @@ export function createUi(): Ui {
             return;
           }
           entries.splice(index, 1);
+          // Open external errors in the editor via another target.
+          if (externalErrors.targetName === entry.targetName) {
+            externalErrors = {
+              ...externalErrors,
+              targetName: entries[0]?.targetName ?? "",
+            };
+          }
           render();
           if (entries.length === 0) {
             removeListeners();
@@ -2052,10 +2120,23 @@ function isReloadTrouble(
   );
 }
 
-function worstStatus(snapshots: Array<TargetSnapshot>): StatusData | undefined {
+function externalErrorsStatus(source: string): StatusData {
+  return {
+    icon: "🚨",
+    status: `Errors from ${source}`,
+    severity: ERROR_SEVERITY,
+  };
+}
+
+function worstStatus(
+  snapshots: Array<TargetSnapshot>,
+  externalSources: Array<string>,
+): StatusData | undefined {
   let worst: StatusData | undefined = undefined;
-  for (const snapshot of snapshots) {
-    const statusData = statusIconAndText(snapshot);
+  for (const statusData of [
+    ...externalSources.map(externalErrorsStatus),
+    ...snapshots.map(statusIconAndText),
+  ]) {
     if (worst === undefined || statusData.severity > worst.severity) {
       worst = statusData;
     }
@@ -2063,9 +2144,25 @@ function worstStatus(snapshots: Array<TargetSnapshot>): StatusData | undefined {
   return worst;
 }
 
-function summaryLabel(snapshots: Array<TargetSnapshot>): string {
+function summaryLabel(
+  snapshots: Array<TargetSnapshot>,
+  externalSources: Array<string>,
+): string {
+  const targetsLabel = summaryLabelForTargets(snapshots);
+  const last = externalSources[externalSources.length - 1];
+  const rest = externalSources.slice(0, -1);
+  return last === undefined
+    ? targetsLabel
+    : `${targetsLabel}. ${
+        rest.length === 0
+          ? `${last} has`
+          : `${rest.join(", ")} and ${last} have`
+      } errors`;
+}
+
+function summaryLabelForTargets(snapshots: Array<TargetSnapshot>): string {
   const statuses = snapshots.map(statusIconAndText);
-  const worst = worstStatus(snapshots);
+  const worst = worstStatus(snapshots, []);
   const { length } = statuses;
 
   if (worst === undefined) {
@@ -2095,6 +2192,7 @@ function summaryLabel(snapshots: Array<TargetSnapshot>): string {
 
 function viewPanel({
   snapshots,
+  externalErrors,
   hasErrors,
   errorOverlayOpen,
   onToggleErrorOverlay,
@@ -2102,6 +2200,7 @@ function viewPanel({
   dispatch,
 }: {
   snapshots: Array<TargetSnapshot>;
+  externalErrors: Array<ExternalErrorsSource>;
   hasErrors: boolean;
   errorOverlayOpen: boolean;
   onToggleErrorOverlay: () => void;
@@ -2155,6 +2254,7 @@ function viewPanel({
     h(
       HTMLUListElement,
       { className: CLASS.targets },
+      ...externalErrors.map(viewExternalErrorsSource),
       ...snapshots.map((snapshot) =>
         viewTarget(
           snapshot,
@@ -2173,6 +2273,36 @@ function viewPanel({
         : "Drag emoji or press shift+arrows to move",
     ),
   ];
+}
+
+// Like a target, but with only the number of errors.
+function viewExternalErrorsSource({
+  source,
+  errors,
+}: ExternalErrorsSource): HTMLElement {
+  return h(
+    HTMLLIElement,
+    { className: CLASS.target, attrs: { "data-source": source } },
+    h(
+      HTMLDivElement,
+      { className: CLASS.row },
+      h(
+        HTMLSpanElement,
+        { className: CLASS.rowIcon, attrs: { "aria-hidden": "true" } },
+        externalErrorsStatus(source).icon,
+      ),
+      h(
+        HTMLSpanElement,
+        { className: CLASS.rowText },
+        h(HTMLSpanElement, { className: CLASS.targetName }, source),
+        h(
+          HTMLSpanElement,
+          { className: CLASS.statusLine },
+          `${errors.size} error${errors.size === 1 ? "" : "s"}`,
+        ),
+      ),
+    ),
+  );
 }
 
 // The page is only reloaded once no target is `Busy` or `Connecting` (see

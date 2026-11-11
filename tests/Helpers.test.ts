@@ -5,6 +5,7 @@ import {
   formatTime,
   printDurationMs,
   printFileSize,
+  sanitizeTerminalText,
   unknownErrorToString,
 } from "../src/Helpers.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
@@ -176,6 +177,54 @@ describe("Helpers", () => {
 
     test("null", () => {
       expect(unknownErrorToString(null)).toBe("null");
+    });
+  });
+
+  describe("sanitizeTerminalText", () => {
+    const show = (string: string): string =>
+      JSON.stringify(sanitizeTerminalText(string), null, 2);
+
+    test("plain text is left alone", () => {
+      expect(sanitizeTerminalText("a\tb\n  c")).toStrictEqual({
+        withColor: "a\tb\n  c",
+        plain: "a\tb\n  c",
+      });
+    });
+
+    test("colors are kept, and reset at the end", () => {
+      expect(
+        show(
+          "\x1B[31mred\x1B[0m \x1B[1;4mbold\x1B[38;5;9m256\x1B[38:2::1:2:3mrgb",
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "withColor": "\\u001b[31mred\\u001b[0m \\u001b[1;4mbold\\u001b[38;5;9m256\\u001b[38:2::1:2:3mrgb\\u001b[0m",
+          "plain": "red bold256rgb"
+        }
+      `);
+    });
+
+    test("other escape sequences are removed", () => {
+      expect(
+        show(
+          "a\x1B[2Jb\x1B[3;4Hc\x1B[?25ld\x1B[>4;2me\x1B]0;title\x07f\x1B]8;;https://example.com\x1B\\link\x1B]8;;\x1B\\g",
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "withColor": "abcdeflinkg",
+          "plain": "abcdeflinkg"
+        }
+      `);
+    });
+
+    test("control characters are removed, leaving harmless text", () => {
+      expect(show("a\r\nb\rc\bd\x07e\x1Bf\x1B(Bg\x9B2Jh\x7Fi"))
+        .toMatchInlineSnapshot(`
+        {
+          "withColor": "a\\nbcdef(Bg2Jhi",
+          "plain": "a\\nbcdef(Bg2Jhi"
+        }
+      `);
     });
   });
 });

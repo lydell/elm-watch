@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import type { Config } from "../src/Config.ts";
 import * as ElmWatchJson from "../src/ElmWatchJson.ts";
 import { type Env, ELM_WATCH_WEBSOCKET_URL } from "../src/Env.ts";
+import { EMPTY_SNAPSHOT } from "../src/ExternalErrors.ts";
 import { DEFAULT_HOST } from "../src/Host.ts";
 import {
   initProject,
@@ -60,6 +61,8 @@ const project: Project = {
   maxParallel: 12,
   host: DEFAULT_HOST,
   openEditor: { tag: "NotSet" },
+  errorReporter: undefined,
+  externalErrors: EMPTY_SNAPSHOT,
   disabledOutputs: [
     {
       originalString: "public/build/HtmlMain.js",

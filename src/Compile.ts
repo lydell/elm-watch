@@ -1962,6 +1962,21 @@ export function printStatusLinesForTargetsErrors(
   logger: Logger,
   project: Project,
 ): void {
+  for (const [source] of project.externalErrors.sources) {
+    const { targetName, delta } = targetNameEmojiTweak(
+      logger.config,
+      markAsTargetName(source),
+    );
+    logger.write(
+      printStatusLine({
+        maxWidth: logger.config.columns - delta,
+        fancy: logger.config.fancy,
+        isTTY: logger.config.isTTY,
+        emojiName: "Error",
+        string: logger.config.fancy ? targetName : `${targetName}: error`,
+      }),
+    );
+  }
   for (const { outputPath } of project.targetsErrors) {
     const { targetName, delta } = targetNameEmojiTweak(
       logger.config,
@@ -2183,8 +2198,22 @@ function errorStatusLineWithCount(
 export function printAllStatusLines(
   logger: Logger,
   project: Project,
-  getRedraw: (targetName: TargetName) => StatusLineRedraw,
+  getRedraw: (targetName: string) => StatusLineRedraw,
 ): void {
+  for (const [source] of project.externalErrors.sources) {
+    const { targetName, delta } = targetNameEmojiTweak(
+      logger.config,
+      markAsTargetName(source),
+    );
+    logger.write(
+      errorStatusLineWithCount(
+        logger.config,
+        targetName,
+        delta,
+        getRedraw(source),
+      ),
+    );
+  }
   for (const { outputPath } of project.targetsErrors) {
     const { targetName, delta } = targetNameEmojiTweak(
       logger.config,
@@ -2415,8 +2444,11 @@ function mockDuration(duration: Duration): Duration {
   }
 }
 
+// Errors from outside elm-watch come first, since they are often the cause of
+// Elm errors (code generation, for example).
 export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
   return [
+    ...renderExternalErrors(project).flatMap(([, errors]) => errors),
     ...project.targetsErrors.map(renderTargetError),
     ...Array.from(project.elmJsons).flatMap(([elmJsonPath, outputs]) =>
       Array.from(outputs).flatMap(([outputPath, { status }]) =>
@@ -2428,6 +2460,15 @@ export function extractErrors(project: Project): Array<Errors.ErrorTemplate> {
         renderOutputErrors(elmJsonPath, packageTarget, status, true),
     ),
   ];
+}
+
+export function renderExternalErrors(
+  project: Project,
+): Array<[source: string, errors: Array<Errors.ErrorTemplate>]> {
+  return project.externalErrors.sources.map(([source, errors]) => [
+    source,
+    errors.map((error) => Errors.externalError(project.root, source, error)),
+  ]);
 }
 
 export function renderTargetError({

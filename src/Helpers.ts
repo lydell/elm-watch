@@ -44,6 +44,36 @@ export function removeColor(string: string): string {
   return string.replace(/\x1B\[\d+m/g, "");
 }
 
+// Matches what to remove from text from the outside (like error messages from
+// other tools), so that it can’t mess up the terminal: Whole CSI and OSC escape
+// sequences, and control characters except tab and newline. Anything a
+// terminal acts on starts with a control character, so if some other kind of
+// escape sequence slips through, only harmless text is left of it. Colors
+// (SGR, a kind of CSI) are kept, though.
+const UNSAFE_TERMINAL_TEXT =
+  /\x1B\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7E]|\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)|[\x00-\x08\x0B-\x1F\x7F-\x9F]/g;
+
+const SGR = /\x1B\[[\d;:]*m/g;
+const ONLY_SGR = /^\x1B\[[\d;:]*m$/;
+
+// Returns the text with colors (reset at the end, so they can’t leak), and the
+// text without colors.
+export function sanitizeTerminalText(string: string): {
+  withColor: string;
+  plain: string;
+} {
+  const withColor = string
+    .replace(/\r\n/g, "\n")
+    .replace(UNSAFE_TERMINAL_TEXT, (match) =>
+      ONLY_SGR.test(match) ? match : "",
+    );
+  const plain = withColor.replace(SGR, "");
+  return {
+    withColor: plain === withColor ? plain : `${withColor}${RESET_COLOR}`,
+    plain,
+  };
+}
+
 export function cursorHorizontalAbsolute(n: number): string {
   return `\x1B[${n}G`;
 }

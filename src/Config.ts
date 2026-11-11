@@ -1,4 +1,5 @@
 import type { AllowedHost } from "./AllowedHosts.ts";
+import type { ErrorReporter } from "./ExternalErrors.ts";
 import type { Host } from "./Host.ts";
 import type { NonEmptyArray } from "./NonEmptyArray.ts";
 import type { Port } from "./Port.ts";
@@ -24,6 +25,7 @@ export type Config = {
   staticFilesDir: string | undefined;
   allowedHosts: Array<AllowedHost>;
   openEditor: OpenEditorFunction | undefined;
+  errorReporter: ErrorReporter | undefined;
 };
 
 export type ConfigSource =

@@ -16,6 +16,11 @@ import {
   ELM_WATCH_WEBSOCKET_URL,
   type Env,
 } from "./Env.ts";
+import {
+  type ErrorReporter,
+  type ExternalErrorsSnapshot,
+  getSnapshot,
+} from "./ExternalErrors.ts";
 import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
 import { DEFAULT_HOST, getHostFromEnv, type Host } from "./Host.ts";
 import type { WalkImportsError } from "./ImportWalker.ts";
@@ -72,6 +77,10 @@ export type Project = {
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
   openEditor: OpenEditor;
+  errorReporter: ErrorReporter | undefined;
+  // The external errors as of the last time the status lines were printed.
+  // See `ExternalErrors.ts`.
+  externalErrors: ExternalErrorsSnapshot;
 };
 
 export type OpenEditor =
@@ -644,6 +653,8 @@ export function initProject({
       webSocketUrl,
       allowedHosts,
       openEditor,
+      errorReporter: config.errorReporter,
+      externalErrors: getSnapshot(config.errorReporter),
     },
   };
 }
@@ -932,6 +943,13 @@ export function projectHasFilePathThatCanBeOpenedInEditor(
       ({ elmJsonPath, outputState }) =>
         filePath === elmJsonPath ||
         outputState.allRelatedElmFilePaths.has(filePath),
+    ) ||
+    project.externalErrors.sources.some(([, errors]) =>
+      errors.some(
+        ({ location }) =>
+          location !== undefined &&
+          absolutePathFromString(project.root, location.file) === filePath,
+      ),
     )
   );
 }
