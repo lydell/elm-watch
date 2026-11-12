@@ -128,6 +128,8 @@ export function makeLogger({
       // ctrl+c was pressed (possibly together with other keys).
       onExit();
     } else {
+      // This also receives responses to `queryTerminal`, including late ones
+      // arriving after the timeout. `ErrorView.parseKeys` ignores those.
       onData?.(string);
     }
   };
@@ -148,6 +150,8 @@ export function makeLogger({
   const config: LoggerConfig = {
     debug: __ELM_WATCH_DEBUG in env,
     noColor,
+    // Emoji (not supported by the old Windows console) are used as status
+    // indicators, which partly rely on color. Use text instead without color.
     fancy: (!IS_WINDOWS || WT_SESSION in env) && !noColor,
     isTTY: __ELM_WATCH_NOT_TTY in env ? false : stdout.isTTY,
     mockedTimings: __ELM_WATCH_MOCKED_TIMINGS in env,
@@ -292,13 +296,13 @@ export function makeLogger({
         const callbacks: Array<(stdin: string | undefined) => void> = [];
         const querying: QueryTerminalStatus = { tag: "Querying", callbacks };
         queryTerminalStatuses.set(escapes, querying);
-        const result = await queryTerminalHelper(
-          queryTerminalTimeoutMs,
+        const result = await queryTerminalHelper({
+          timeoutMs: queryTerminalTimeoutMs,
           stdin,
           stdout,
           escapes,
           isDone,
-        );
+        });
         // Don’t cache the result if `reset` was called during the query.
         if (queryTerminalStatuses.get(escapes) === querying) {
           queryTerminalStatuses.set(escapes, {
@@ -360,13 +364,19 @@ type QueryTerminalStatus =
   | { tag: "Queried"; stdin: string | undefined; date: Date }
   | { tag: "Querying"; callbacks: Array<(stdin: string | undefined) => void> };
 
-async function queryTerminalHelper(
-  queryTerminalTimeoutMs: number,
-  stdin: ReadStream,
-  stdout: WriteStream,
-  escapes: string,
-  isDone: (stdin: string) => boolean,
-): Promise<string | undefined> {
+async function queryTerminalHelper({
+  timeoutMs,
+  stdin,
+  stdout,
+  escapes,
+  isDone,
+}: {
+  timeoutMs: number;
+  stdin: ReadStream;
+  stdout: WriteStream;
+  escapes: string;
+  isDone: (stdin: string) => boolean;
+}): Promise<string | undefined> {
   return new Promise((resolve) => {
     let stdinString = "";
 
@@ -386,6 +396,6 @@ async function queryTerminalHelper(
     const timeoutId = setTimeout(() => {
       stdin.off("data", onStdin);
       resolve(undefined);
-    }, queryTerminalTimeoutMs);
+    }, timeoutMs);
   });
 }
