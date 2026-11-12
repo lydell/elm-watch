@@ -128,4 +128,64 @@ describe("Logger", () => {
     );
     expect(stdout.content).toBe("");
   });
+
+  describe("queryTerminal", () => {
+    function setupQuery(): {
+      logger: ReturnType<typeof makeLogger>;
+      stdin: SilentReadStream;
+      query: (escapes: string) => Promise<string | undefined>;
+    } {
+      const stdin = new SilentReadStream();
+      stdin.isRaw = true;
+      const logger = makeLogger({
+        env: {},
+        getNow: () => new Date(),
+        stdin,
+        stdout: new MemoryWriteStream(),
+        stderr: new MemoryWriteStream(),
+        logDebug: () => {
+          // Do nothing.
+        },
+      });
+      const query = (escapes: string): Promise<string | undefined> =>
+        logger.queryTerminal(escapes, (response) => response.endsWith("!"));
+      return { logger, stdin, query };
+    }
+
+    test("results are cached per escapes", async () => {
+      const { stdin, query } = setupQuery();
+
+      const a1 = query("a");
+      stdin.emit("data", Buffer.from("A!"));
+      expect(await a1).toBe("A!");
+
+      const b = query("b");
+      stdin.emit("data", Buffer.from("B!"));
+      expect(await b).toBe("B!");
+
+      // Cached, so no need to respond.
+      expect(await query("a")).toBe("A!");
+    });
+
+    test("concurrent queries with the same escapes share the response", async () => {
+      const { stdin, query } = setupQuery();
+      const first = query("a");
+      const second = query("a");
+      stdin.emit("data", Buffer.from("A!"));
+      expect(await first).toBe("A!");
+      expect(await second).toBe("A!");
+    });
+
+    test("a query finishing after reset is not cached", async () => {
+      const { logger, stdin, query } = setupQuery();
+      const stale = query("a");
+      logger.reset();
+      stdin.emit("data", Buffer.from("old!"));
+      expect(await stale).toBe("old!");
+
+      const fresh = query("a");
+      stdin.emit("data", Buffer.from("new!"));
+      expect(await fresh).toBe("new!");
+    });
+  });
 });

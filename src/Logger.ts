@@ -89,7 +89,9 @@ export function makeLogger({
   const handleColor = (string: string): string =>
     noColor ? removeColor(string) : string;
 
-  let queryTerminalStatus: QueryTerminalStatus = { tag: "NotQueried" };
+  // Keyed by the escapes sent, since different queries get different
+  // responses. Missing means not queried.
+  const queryTerminalStatuses = new Map<string, QueryTerminalStatus>();
   const defaultOnExit = (): void => {
     // Do nothing.
   };
@@ -247,7 +249,7 @@ export function makeLogger({
     reset() {
       onExit = defaultOnExit;
       onData = undefined;
-      queryTerminalStatus = { tag: "NotQueried" };
+      queryTerminalStatuses.clear();
       if (listeningToStdin) {
         stdin.off("data", exitOnCtrlC);
         listeningToStdin = false;
@@ -277,7 +279,8 @@ export function makeLogger({
 
       const run = async (): Promise<string | undefined> => {
         const callbacks: Array<(stdin: string | undefined) => void> = [];
-        queryTerminalStatus = { tag: "Querying", callbacks };
+        const querying: QueryTerminalStatus = { tag: "Querying", callbacks };
+        queryTerminalStatuses.set(escapes, querying);
         const result = await queryTerminalHelper(
           queryTerminalTimeoutMs,
           stdin,
@@ -285,32 +288,38 @@ export function makeLogger({
           escapes,
           isDone,
         );
-        queryTerminalStatus = {
-          tag: "Queried",
-          stdin: result,
-          date: getNow(),
-        };
+        // Don’t cache the result if `reset` was called during the query.
+        if (queryTerminalStatuses.get(escapes) === querying) {
+          queryTerminalStatuses.set(escapes, {
+            tag: "Queried",
+            stdin: result,
+            date: getNow(),
+          });
+        }
         for (const callback of callbacks) {
           callback(result);
         }
         return result;
       };
 
-      switch (queryTerminalStatus.tag) {
-        case "NotQueried":
-          return run();
+      const status = queryTerminalStatuses.get(escapes);
 
+      if (status === undefined) {
+        return run();
+      }
+
+      switch (status.tag) {
         case "Querying": {
-          const { callbacks } = queryTerminalStatus;
+          const { callbacks } = status;
           return new Promise<string | undefined>((resolve) => {
             callbacks.push(resolve);
           });
         }
 
         case "Queried":
-          return getNow().getTime() - queryTerminalStatus.date.getTime() <=
+          return getNow().getTime() - status.date.getTime() <=
             queryTerminalMaxAgeMs
-            ? queryTerminalStatus.stdin
+            ? status.stdin
             : run();
       }
     },
@@ -331,7 +340,6 @@ export function makeLogger({
 }
 
 type QueryTerminalStatus =
-  | { tag: "NotQueried" }
   | { tag: "Queried"; stdin: string | undefined; date: Date }
   | { tag: "Querying"; callbacks: Array<(stdin: string | undefined) => void> };
 
