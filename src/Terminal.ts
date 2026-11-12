@@ -53,7 +53,7 @@ export type Terminal = {
   // stdout to be TTYs (`config.isTTY`).
   isRawMode: () => boolean;
   reset: () => void;
-  queryTerminal: (
+  query: (
     escapes: string,
     isDone: (stdin: string) => boolean,
   ) => Promise<string | undefined>;
@@ -128,7 +128,7 @@ export function makeTerminal({
       // ctrl+c was pressed (possibly together with other keys).
       onExit();
     } else {
-      // This also receives responses to `queryTerminal`, including late ones
+      // This also receives responses to `query`, including late ones
       // arriving after the timeout. `ErrorView.parseKeys` ignores those.
       onData?.(string);
     }
@@ -285,7 +285,7 @@ export function makeTerminal({
       // the last thing we printed.
       stdout.write(newlineIfNeeded());
     },
-    async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {
+    async query(escapes: string, isDone: (stdin: string) => boolean) {
       // Raw mode is needed to read the response without it being echoed. A TTY
       // is needed so we don’t write the escapes into a file or pipe.
       if (!stdin.isRaw || !config.isTTY) {

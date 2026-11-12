@@ -130,13 +130,11 @@ describe("Terminal", () => {
     const stdout = new MemoryWriteStream();
     stdout.isTTY = false;
     const terminal = makeTestTerminal({ stdin, stdout });
-    expect(await terminal.queryTerminal("\x1B]11;?\x07", () => true)).toBe(
-      undefined,
-    );
+    expect(await terminal.query("\x1B]11;?\x07", () => true)).toBe(undefined);
     expect(stdout.content).toBe("");
   });
 
-  describe("queryTerminal", () => {
+  describe("query", () => {
     function setupQuery(): {
       terminal: Terminal;
       stdin: SilentReadStream;
@@ -146,7 +144,7 @@ describe("Terminal", () => {
       stdin.isRaw = true;
       const terminal = makeTestTerminal({ stdin });
       const query = (escapes: string): Promise<string | undefined> =>
-        terminal.queryTerminal(escapes, (response) => response.endsWith("!"));
+        terminal.query(escapes, (response) => response.endsWith("!"));
       return { terminal, stdin, query };
     }
 

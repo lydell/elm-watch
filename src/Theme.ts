@@ -104,10 +104,7 @@ export async function getThemeFromTerminal(terminal: Terminal): Promise<Theme> {
   if (IS_WINDOWS) {
     return DEFAULT_THEME;
   }
-  const stdin = await terminal.queryTerminal(
-    THEME_ESCAPES_STRING,
-    isThemeResponseDone,
-  );
+  const stdin = await terminal.query(THEME_ESCAPES_STRING, isThemeResponseDone);
   return stdin === undefined ? DEFAULT_THEME : parseTheme(stdin);
 }
 
