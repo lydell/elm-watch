@@ -3,13 +3,16 @@ import { describe, expect, test } from "vitest";
 import { makeLogger } from "../src/Logger.ts";
 import { MemoryWriteStream, SilentReadStream } from "./Helpers.ts";
 
-function setup(stdin: SilentReadStream): {
+function setup(
+  stdin: SilentReadStream,
+  env: Record<string, string> = {},
+): {
   logger: ReturnType<typeof makeLogger>;
   exits: Array<string>;
   keys: Array<string>;
 } {
   const logger = makeLogger({
-    env: {},
+    env,
     getNow: () => new Date(),
     stdin,
     stdout: new MemoryWriteStream(),
@@ -74,5 +77,34 @@ describe("Logger", () => {
     logger.reset();
     expect(stdin.isRaw).toBe(false);
     expect(stdin.readableFlowing).toBe(false);
+  });
+
+  test("raw mode enabled by someone else does not count as reading keypresses", () => {
+    const stdin = new SilentReadStream();
+    stdin.isRaw = true;
+    const logger = makeLogger({
+      env: {},
+      getNow: () => new Date(),
+      stdin,
+      stdout: new MemoryWriteStream(),
+      stderr: new MemoryWriteStream(),
+      logDebug: () => {
+        // Do nothing.
+      },
+    });
+    expect(logger.isRawMode()).toBe(false);
+    logger.setRawMode(() => {
+      // Do nothing.
+    });
+    expect(logger.isRawMode()).toBe(true);
+    logger.reset();
+    expect(logger.isRawMode()).toBe(false);
+  });
+
+  test("no raw mode with __ELM_WATCH_NOT_TTY", () => {
+    const stdin = new SilentReadStream();
+    const { logger } = setup(stdin, { __ELM_WATCH_NOT_TTY: "" });
+    expect(stdin.isRaw).toBe(false);
+    expect(logger.isRawMode()).toBe(false);
   });
 });

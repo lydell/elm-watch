@@ -49,7 +49,8 @@ export type Logger = {
   clearLastLines: (numLines: number) => void;
   moveCursor: (dx: number, dy: number) => void;
   setRawMode: (onExit: () => void, onData?: (data: string) => void) => void;
-  // Whether we read keypresses (see `setRawMode`).
+  // Whether we read keypresses (see `setRawMode`). Requires both stdin and
+  // stdout to be TTYs (`config.isTTY`).
   isRawMode: () => boolean;
   reset: () => void;
   queryTerminal: (
@@ -223,7 +224,7 @@ export function makeLogger({
     setRawMode(passedOnExit, passedOnData) {
       onExit = passedOnExit;
       onData = passedOnData;
-      if (stdin.isTTY && stdout.isTTY && !listeningToStdin) {
+      if (stdin.isTTY && config.isTTY && !listeningToStdin) {
         if (!stdin.isRaw) {
           stdin.setRawMode(true);
           enabledRawMode = true;
@@ -234,14 +235,14 @@ export function makeLogger({
         stdin.resume();
         listeningToStdin = true;
         // We only take keypresses, no typing, so the cursor is just noise.
-        if (config.isTTY) {
-          stdout.write(HIDE_CURSOR);
-          cursorHidden = true;
-        }
+        stdout.write(HIDE_CURSOR);
+        cursorHidden = true;
       }
     },
     isRawMode() {
-      return config.isTTY && stdin.isRaw;
+      // Not `stdin.isRaw`: Whoever uses elm-watch via the JavaScript API might
+      // have enabled raw mode without us listening.
+      return listeningToStdin;
     },
     reset() {
       onExit = defaultOnExit;
