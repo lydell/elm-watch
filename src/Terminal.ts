@@ -29,8 +29,8 @@ import type { GetNow } from "./Types.ts";
 
 export const DEFAULT_COLUMNS = 80;
 
-export type Logger = {
-  config: LoggerConfig;
+export type Terminal = {
+  config: TerminalConfig;
   // The default is to write to `stdout`. `stderr` is used for debug logging.
   // But if there’s a use case for `elm-watch something 2>/dev/null` – use
   // `writeToStderrMakesALotOfSenseHere`.
@@ -60,7 +60,7 @@ export type Logger = {
   withSynchronizedOutput: (callback: () => void) => void;
 };
 
-export type LoggerConfig = {
+export type TerminalConfig = {
   debug: boolean;
   noColor: boolean;
   fancy: boolean;
@@ -70,7 +70,7 @@ export type LoggerConfig = {
   rows: number;
 };
 
-export function makeLogger({
+export function makeTerminal({
   env,
   getNow,
   stdin,
@@ -84,7 +84,7 @@ export function makeLogger({
   stdout: WriteStream;
   stderr: WriteStream;
   logDebug: (message: string) => void;
-}): Logger {
+}): Terminal {
   const noColor = NO_COLOR in env;
   const handleColor = (string: string): string =>
     noColor ? removeColor(string) : string;
@@ -147,7 +147,7 @@ export function makeLogger({
     1000,
   );
 
-  const config: LoggerConfig = {
+  const config: TerminalConfig = {
     debug: __ELM_WATCH_DEBUG in env,
     noColor,
     // Emoji (not supported by the old Windows console) are used as status

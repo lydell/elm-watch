@@ -13,8 +13,8 @@ import type { Env } from "../src/Env.ts";
 import type { ReadStream } from "../src/Helpers.ts";
 import type { HotTestHooks } from "../src/Hot.ts";
 import type { Msg } from "../src/HotUpdate.ts";
-import { makeLogger } from "../src/Logger.ts";
 import { markAsPort } from "../src/Port.ts";
+import { makeTerminal } from "../src/Terminal.ts";
 import type { CompilationMode } from "../src/Types.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
@@ -414,7 +414,7 @@ export async function run({
             ...env,
           };
 
-    window.__ELM_WATCH.LOG_DEBUG = makeLogger({
+    window.__ELM_WATCH.LOG_DEBUG = makeTerminal({
       env: {},
       getNow: () => new Date(),
       stdin: process.stdin,

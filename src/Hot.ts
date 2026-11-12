@@ -39,7 +39,6 @@ import {
   printInfoLine,
   type WatcherEvent,
 } from "./LatestEvent.ts";
-import type { Logger, LoggerConfig } from "./Logger.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import { openEditor, printOpenEditorErrorForTerminal } from "./OpenEditor.ts";
 import { absoluteDirname } from "./PathHelpers.ts";
@@ -52,6 +51,7 @@ import {
 } from "./Project.ts";
 import { waitForRunningCommands } from "./Spawn.ts";
 import { runTeaProgram } from "./TeaProgram.ts";
+import type { Terminal, TerminalConfig } from "./Terminal.ts";
 import * as Theme from "./Theme.ts";
 import {
   type AbsolutePath,
@@ -137,7 +137,7 @@ function subscribeToProcessSigterm(listener: () => void): () => void {
 // keeping state (model) and reacting to events (messages).
 export async function run(
   env: Env,
-  logger: Logger,
+  terminal: Terminal,
   getNow: GetNow,
   createServer: CreateServer,
   restartReasons: Array<LatestEvent>,
@@ -158,7 +158,7 @@ export async function run(
 
   const result = await runTeaProgram<Mutable, Msg, Model, Cmd, HotRunResult>({
     initMutable: initMutable(
-      logger,
+      terminal,
       getNow,
       createServer,
       devServerHolder,
@@ -177,7 +177,7 @@ export async function run(
     ),
     update: (msg: Msg, model: Model): [Model, Array<Cmd>] => {
       const [newModel, cmds] = update(
-        logger.config,
+        terminal.config,
         project,
         exitOnError,
         msg,
@@ -194,7 +194,7 @@ export async function run(
             }
           : { tag: "NoCmd" },
       ];
-      logger.debug(msg.tag, msg, newModel, allCmds);
+      terminal.debug(msg.tag, msg, newModel, allCmds);
       hotTestHooks.onUpdate?.(
         msg,
         newModel.nextAction.tag === "NoAction" &&
@@ -206,7 +206,7 @@ export async function run(
     },
     runCmd: runCmd(
       env,
-      logger,
+      terminal,
       getNow,
       exitOnError,
       devServerHolder,
@@ -282,7 +282,7 @@ export async function watchElmWatchJsonOnce(
 
 const initMutable =
   (
-    logger: Logger,
+    terminal: Terminal,
     getNow: GetNow,
     createServer: CreateServer,
     devServerHolder: DevServerHolder,
@@ -319,7 +319,7 @@ const initMutable =
         });
       },
       (error) => {
-        closeAll(logger, mutable);
+        closeAll(terminal, mutable);
         resolvePromise({
           tag: "ExitOnHandledFatalError",
           errorTemplate: Errors.watcherError(error),
@@ -382,7 +382,7 @@ const initMutable =
     devServer.setDispatch((msg) => {
       onDevServerMsg(
         getNow(),
-        logger,
+        terminal,
         mutable,
         dispatch,
         resolvePromise,
@@ -407,10 +407,10 @@ const initMutable =
         // are always 0 at that time).
         // This has to be done once the server is ready – we don’t know the
         // final port number to print until then.
-        if (!logger.config.isTTY && isNewDevServer) {
-          logger.write(
+        if (!terminal.config.isTTY && isNewDevServer) {
+          terminal.write(
             printServerLine(
-              logger.config,
+              terminal.config,
               mutable.devServer,
               mutable.project.host,
             ),
@@ -429,7 +429,7 @@ const initMutable =
             targetState.status.kill({ force: true });
           }
         }
-        closeAll(logger, mutable);
+        closeAll(terminal, mutable);
       } catch (unknownError) {
         const error = toError(unknownError);
         rejectPromise(toError(error));
@@ -445,7 +445,7 @@ const initMutable =
       return Promise.resolve();
     };
 
-    logger.setRawMode(
+    terminal.setRawMode(
       () => {
         kill();
         resolvePromise({
@@ -474,7 +474,7 @@ const initMutable =
           targetState.status.kill({ force: false });
         }
       }
-      closeAll(logger, mutable);
+      closeAll(terminal, mutable);
       waitForRunningCommands()
         .then(() => {
           resolvePromise({ tag: "ExitOnIdle", reason: "GracefulExit" });
@@ -548,7 +548,7 @@ function writeElmWatchStuffJson(
 const runCmd =
   (
     env: Env,
-    logger: Logger,
+    terminal: Terminal,
     getNow: GetNow,
     exitOnError: boolean,
     devServerHolder: DevServerHolder,
@@ -568,7 +568,7 @@ const runCmd =
         return;
 
       case "ClearScreen":
-        logger.clearScreen();
+        terminal.clearScreen();
         mutable.lastInfoMessage = undefined;
         return;
 
@@ -588,24 +588,30 @@ const runCmd =
             mutable.project.errorReporter,
           );
           if (mutable.project.externalErrors.version !== previousVersion) {
-            sendExternalErrors(logger, mutable, undefined, rejectPromise);
+            sendExternalErrors(terminal, mutable, undefined, rejectPromise);
           }
         }
 
         switch (cmd.mode) {
           case "AfterInstallDependencies":
-            logger.withSynchronizedOutput(() => {
-              Compile.printStatusLinesForTargetsErrors(logger, mutable.project);
-              Compile.printSpaceForOutputs(logger, "hot", outputActions);
+            terminal.withSynchronizedOutput(() => {
+              Compile.printStatusLinesForTargetsErrors(
+                terminal,
+                mutable.project,
+              );
+              Compile.printSpaceForOutputs(terminal, "hot", outputActions);
             });
             break;
 
           case "AfterIdle":
-            logger.withSynchronizedOutput(() => {
-              logger.clearScreen();
+            terminal.withSynchronizedOutput(() => {
+              terminal.clearScreen();
               mutable.lastInfoMessage = undefined;
-              Compile.printStatusLinesForTargetsErrors(logger, mutable.project);
-              Compile.printSpaceForOutputs(logger, "hot", outputActions);
+              Compile.printStatusLinesForTargetsErrors(
+                terminal,
+                mutable.project,
+              );
+              Compile.printSpaceForOutputs(terminal, "hot", outputActions);
             });
             break;
 
@@ -617,7 +623,7 @@ const runCmd =
           for (const action of outputActions.actions) {
             Compile.handleOutputAction({
               env,
-              logger,
+              terminal,
               getNow,
               runMode: {
                 tag: "hot",
@@ -655,8 +661,8 @@ const runCmd =
           // If still an error, print it.
           // oxlint-disable-next-line typescript/no-unnecessary-condition
           if (mutable.elmWatchStuffJsonWriteError !== undefined) {
-            logger.write("");
-            logger.errorTemplate(
+            terminal.write("");
+            terminal.errorTemplate(
               Errors.elmWatchStuffJsonWriteError(
                 mutable.project.elmWatchStuffJsonPath,
                 mutable.elmWatchStuffJsonWriteError,
@@ -664,8 +670,8 @@ const runCmd =
             );
             // In a TTY, the info message starts right away (to be right below
             // the status lines), so we need an empty line.
-            if (logger.config.isTTY) {
-              logger.write("");
+            if (terminal.config.isTTY) {
+              terminal.write("");
             }
             dispatch({ tag: "ElmWatchStuffJsonWriteFailed", date: getNow() });
           }
@@ -678,7 +684,7 @@ const runCmd =
           .then(() => {
             const { promise, kill } = Compile.installDependencies(
               env,
-              logger,
+              terminal,
               getNow,
               mutable.project,
             );
@@ -707,13 +713,13 @@ const runCmd =
           Compile.extractErrors(mutable.project),
         );
         const infoLine = printInfoLine({
-          loggerConfig: logger.config,
+          terminalConfig: terminal.config,
           // In a TTY, the status lines and the error view already say that
           // there are errors, so use the information emoji to not repeat 🚨
           // over and over. In logs, 🚨 marks the end of the errors.
           emojiName: !hasErrors
             ? "Success"
-            : logger.config.isTTY
+            : terminal.config.isTTY
               ? "Information"
               : "Error",
           date: getNow(),
@@ -722,16 +728,16 @@ const runCmd =
           project: mutable.project,
         });
 
-        if (!logger.config.isTTY) {
-          logger.write(`\n${infoLine}`);
+        if (!terminal.config.isTTY) {
+          terminal.write(`\n${infoLine}`);
           return;
         }
 
         mutable.lastInfoLine = infoLine;
 
-        if (errorViewIsActive(logger, exitOnError, mutable.project)) {
+        if (errorViewIsActive(terminal, exitOnError, mutable.project)) {
           renderErrorView(
-            logger,
+            terminal,
             mutable,
             getErrorViewTargets(mutable.project),
             { notice: undefined },
@@ -741,21 +747,21 @@ const runCmd =
 
         const fullMessage = [
           printServerLine(
-            logger.config,
+            terminal.config,
             mutable.devServer,
             mutable.project.host,
           ),
           "",
           infoLine,
         ].join("\n");
-        logger.withSynchronizedOutput(() => {
+        terminal.withSynchronizedOutput(() => {
           if (mutable.lastInfoMessage !== undefined) {
-            logger.clearLastLines(mutable.lastInfoMessage.split("\n").length);
+            terminal.clearLastLines(mutable.lastInfoMessage.split("\n").length);
           }
-          logger.writeWithoutTrailingNewline(fullMessage);
+          terminal.writeWithoutTrailingNewline(fullMessage);
           // For the `run-pty` tool: Let it know that it’s safe to render the
           // keyboard shortcuts below the cursor text again.
-          logger.clearScreenDown();
+          terminal.clearScreenDown();
         });
         mutable.lastInfoMessage = fullMessage;
         return;
@@ -799,7 +805,7 @@ const runCmd =
         return;
 
       case "HandleKeys": {
-        if (!errorViewIsActive(logger, exitOnError, mutable.project)) {
+        if (!errorViewIsActive(terminal, exitOnError, mutable.project)) {
           return;
         }
         const { errorView } = mutable;
@@ -847,14 +853,14 @@ const runCmd =
           }
         }
         errorView.selection = selection;
-        renderErrorView(logger, mutable, targets, { notice: undefined });
+        renderErrorView(terminal, mutable, targets, { notice: undefined });
         return;
       }
 
       case "RenderErrorView":
-        if (errorViewIsActive(logger, exitOnError, mutable.project)) {
+        if (errorViewIsActive(terminal, exitOnError, mutable.project)) {
           renderErrorView(
-            logger,
+            terminal,
             mutable,
             getErrorViewTargets(mutable.project),
             { notice: cmd.notice },
@@ -865,12 +871,12 @@ const runCmd =
       case "PrintCompileErrors":
         // The error view is rendered together with the info message, which is
         // logged right after this.
-        if (!errorViewIsActive(logger, exitOnError, mutable.project)) {
-          logger.withSynchronizedOutput(() => {
-            Compile.printErrors(logger, cmd.errors);
+        if (!errorViewIsActive(terminal, exitOnError, mutable.project)) {
+          terminal.withSynchronizedOutput(() => {
+            Compile.printErrors(terminal, cmd.errors);
             // See `HandleElmWatchStuffJsonWriteError`.
-            if (logger.config.isTTY) {
-              logger.write("");
+            if (terminal.config.isTTY) {
+              terminal.write("");
             }
           });
         }
@@ -910,7 +916,7 @@ const runCmd =
                   getNow().getTime(),
                   getWebSocketConnection(mutable),
                   webSocketToken,
-                  logger.config.debug,
+                  terminal.config.debug,
                 ),
               );
               break;
@@ -935,7 +941,7 @@ const runCmd =
               return false;
           }
         });
-        closeAll(logger, mutable);
+        closeAll(terminal, mutable);
         // Connected browsers reconnect when the server is closed, which makes
         // them get the status of their target in the new elm-watch.json.
         // Otherwise, the server (including waiting output requests) is kept
@@ -954,7 +960,7 @@ const runCmd =
       }
 
       case "ExitOnIdle":
-        closeAll(logger, mutable);
+        closeAll(terminal, mutable);
         resolvePromise({ tag: "ExitOnIdle", reason: "Other" });
         return;
 
@@ -999,14 +1005,14 @@ const runCmd =
         return;
 
       case "WebSocketSendCompileErrorToOutput": {
-        const message = Theme.getThemeFromTerminal(logger).then(
+        const message = Theme.getThemeFromTerminal(terminal).then(
           (theme): WebSocketToClientMessage => ({
             tag: "StatusChanged",
             status: {
               tag: "CompileError",
               compilationMode: cmd.compilationMode,
               errors: cmd.errors.map((errorTemplate) =>
-                Errors.toHtml(errorTemplate, theme, logger.config.noColor),
+                Errors.toHtml(errorTemplate, theme, terminal.config.noColor),
               ),
               foregroundColor: theme.foreground,
               backgroundColor: theme.background,
@@ -1019,7 +1025,7 @@ const runCmd =
       }
 
       case "WebSocketSendExternalErrors":
-        sendExternalErrors(logger, mutable, cmd.webSocket, rejectPromise);
+        sendExternalErrors(terminal, mutable, cmd.webSocket, rejectPromise);
         return;
 
       case "WebSocketSendToOutput":
@@ -1034,7 +1040,7 @@ const runCmd =
 
 function onDevServerMsg(
   now: Date,
-  logger: Logger,
+  terminal: Terminal,
   mutable: Mutable,
   dispatch: (msg: Msg) => void,
   resolvePromise: (result: HotRunResult) => void,
@@ -1113,7 +1119,7 @@ function onDevServerMsg(
       switch (msg.error.tag) {
         case "PortConflict": {
           const { portChoice } = msg.error;
-          closeAll(logger, mutable);
+          closeAll(terminal, mutable);
           resolvePromise({
             tag: "ExitOnHandledFatalError",
             errorTemplate: portChoiceError(
@@ -1127,7 +1133,7 @@ function onDevServerMsg(
 
         case "HostNotFound": {
           const { host } = msg.error;
-          closeAll(logger, mutable);
+          closeAll(terminal, mutable);
           resolvePromise({
             tag: "ExitOnHandledFatalError",
             errorTemplate: Errors.hostNotFound(
@@ -1171,8 +1177,8 @@ function portChoiceError(
 
 // The dev server is closed by the caller of `run`, since it is kept
 // between restarts.
-function closeAll(logger: Logger, mutable: Mutable): void {
-  logger.reset();
+function closeAll(terminal: Terminal, mutable: Mutable): void {
+  terminal.reset();
   mutable.unsubscribeFromGracefulExit();
   mutable.unsubscribeFromExternalErrors();
 
@@ -1275,7 +1281,7 @@ function webSocketSendNow(
 }
 
 function sendExternalErrors(
-  logger: Logger,
+  terminal: Terminal,
   mutable: Mutable,
   // `undefined` means all connections.
   webSocket: WebSocket | undefined,
@@ -1287,7 +1293,7 @@ function sendExternalErrors(
     sources: sources.map(([source, errors]) => ({
       source,
       errors: errors.map((errorTemplate) =>
-        Errors.toHtml(errorTemplate, theme, logger.config.noColor),
+        Errors.toHtml(errorTemplate, theme, terminal.config.noColor),
       ),
     })),
     foregroundColor: theme.foreground,
@@ -1296,7 +1302,7 @@ function sendExternalErrors(
   // Without errors, the colors don’t matter, so don’t make other messages wait.
   let message: WebSocketToClientMessage | Promise<WebSocketToClientMessage>;
   if (isNonEmptyArray(sources)) {
-    const promise = Theme.getThemeFromTerminal(logger).then(toMessage);
+    const promise = Theme.getThemeFromTerminal(terminal).then(toMessage);
     promise.catch(rejectPromise);
     message = promise;
   } else {
@@ -1331,14 +1337,14 @@ function webSocketSendToOutput(
 }
 
 function printServerLine(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   devServer: DevServer,
   host: Host,
 ): string {
   return Compile.printStatusLine({
-    maxWidth: loggerConfig.columns,
-    fancy: loggerConfig.fancy,
-    isTTY: loggerConfig.isTTY,
+    maxWidth: terminalConfig.columns,
+    fancy: terminalConfig.fancy,
+    isTTY: terminalConfig.isTTY,
     emojiName: "Server",
     string: printServerLinks(devServer, host),
   });
@@ -1371,12 +1377,12 @@ function printServerLinks(devServer: DevServer, host: Host): string {
 // keypresses. Otherwise (and when exiting on the first error), all errors are
 // printed.
 function errorViewIsActive(
-  logger: Logger,
+  terminal: Terminal,
   exitOnError: boolean,
   project: Project,
 ): boolean {
   return (
-    logger.isRawMode() &&
+    terminal.isRawMode() &&
     !exitOnError &&
     isNonEmptyArray(Compile.extractErrors(project))
   );
@@ -1418,7 +1424,7 @@ function getErrorViewTargets(
 // all errors), the info line and keys to press. Only the error area changes
 // when switching between one error at a time and showing all errors.
 function renderErrorView(
-  logger: Logger,
+  terminal: Terminal,
   mutable: Mutable,
   targets: Array<ErrorView.ErrorViewTarget>,
   { notice }: { notice: string | undefined },
@@ -1435,32 +1441,32 @@ function renderErrorView(
     selection !== undefined &&
     ErrorSelection.canSwitchTarget(selection, targets);
 
-  logger.withSynchronizedOutput(() => {
-    logger.clearScreen();
+  terminal.withSynchronizedOutput(() => {
+    terminal.clearScreen();
 
-    Compile.printAllStatusLines(logger, mutable.project, (targetName) => ({
+    Compile.printAllStatusLines(terminal, mutable.project, (targetName) => ({
       numErrors:
         targets.find((target) => target.targetName === targetName)?.numErrors ??
         0,
       selected: highlightSelected && selection.targetName === targetName,
     }));
-    logger.write(
-      printServerLine(logger.config, mutable.devServer, mutable.project.host),
+    terminal.write(
+      printServerLine(terminal.config, mutable.devServer, mutable.project.host),
     );
-    logger.write("");
+    terminal.write("");
 
-    logger.writeWithoutTrailingNewline(
+    terminal.writeWithoutTrailingNewline(
       errorView.showAll || selection === undefined
         ? ErrorView.renderShowAll({
-            loggerConfig: logger.config,
+            terminalConfig: terminal.config,
             errorStrings: Compile.errorsToTerminalStrings(
-              logger.config,
+              terminal.config,
               Compile.extractErrors(mutable.project),
             ),
             infoLine: mutable.lastInfoLine,
           })
         : ErrorView.render({
-            loggerConfig: logger.config,
+            terminalConfig: terminal.config,
             expanded: errorView.expanded,
             selection,
             targets,
@@ -1471,7 +1477,7 @@ function renderErrorView(
 
     // For the `run-pty` tool: Let it know that it’s safe to render the
     // keyboard shortcuts below the cursor text again.
-    logger.clearScreenDown();
+    terminal.clearScreenDown();
   });
 
   // The info message is part of the error view, and can’t be updated on its

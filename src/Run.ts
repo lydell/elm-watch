@@ -11,11 +11,11 @@ import * as Errors from "./Errors.ts";
 import type { ErrorViewState } from "./ErrorView.ts";
 import * as Hot from "./Hot.ts";
 import type { LatestEvent } from "./LatestEvent.ts";
-import type { Logger } from "./Logger.ts";
 import * as Make from "./Make.ts";
 import { isNonEmptyArray, mapNonEmptyArray } from "./NonEmptyArray.ts";
 import { absolutePathFromString } from "./PathHelpers.ts";
 import { initProject, projectToDebug } from "./Project.ts";
+import type { Terminal } from "./Terminal.ts";
 import {
   type CliArg,
   type CompilationMode,
@@ -47,7 +47,7 @@ export type RunResult =
 export async function run(
   cwd: Cwd,
   env: Env,
-  logger: Logger,
+  terminal: Terminal,
   getNow: GetNow,
   createServer: CreateServer,
   runMode: RunMode,
@@ -62,14 +62,14 @@ export async function run(
 
   switch (parseResult.tag) {
     case "ReadError":
-      logger.errorTemplate(
+      terminal.errorTemplate(
         Errors.readElmWatchJson(
           parseResult.elmWatchJsonPath,
           parseResult.error,
         ),
       );
       return handleElmWatchJsonError(
-        logger,
+        terminal,
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
@@ -78,14 +78,14 @@ export async function run(
       );
 
     case "DecoderError":
-      logger.errorTemplate(
+      terminal.errorTemplate(
         Errors.decodeElmWatchJson(
           parseResult.elmWatchJsonPath,
           parseResult.error,
         ),
       );
       return handleElmWatchJsonError(
-        logger,
+        terminal,
         runMode,
         parseResult.elmWatchJsonPath,
         webSocketTokenFromPreviousRun,
@@ -94,7 +94,7 @@ export async function run(
       );
 
     case "ElmWatchJsonNotFound":
-      logger.errorTemplate(Errors.elmWatchJsonNotFound(cwd, args));
+      terminal.errorTemplate(Errors.elmWatchJsonNotFound(cwd, args));
       return { tag: "Exit", exitCode: 1 };
 
     case "Parsed": {
@@ -102,7 +102,7 @@ export async function run(
 
       switch (parseArgsResult.tag) {
         case "UnknownFlags":
-          logger.errorTemplate(
+          terminal.errorTemplate(
             Errors.unknownFlags(
               cwd,
               parseResult.elmWatchJsonPath,
@@ -114,11 +114,11 @@ export async function run(
           return { tag: "Exit", exitCode: 1 };
 
         case "DebugOptimizeForHot":
-          logger.errorTemplate(Errors.debugOptimizeForHot());
+          terminal.errorTemplate(Errors.debugOptimizeForHot());
           return { tag: "Exit", exitCode: 1 };
 
         case "DebugOptimizeClash":
-          logger.errorTemplate(Errors.debugOptimizeClash());
+          terminal.errorTemplate(Errors.debugOptimizeClash());
           return { tag: "Exit", exitCode: 1 };
 
         case "Success": {
@@ -136,7 +136,7 @@ export async function run(
             );
 
           if (isNonEmptyArray(unknownTargetsSubstrings)) {
-            logger.errorTemplate(
+            terminal.errorTemplate(
               Errors.unknownTargetsSubstrings(
                 parseResult.elmWatchJsonPath,
                 knownTargets,
@@ -148,7 +148,7 @@ export async function run(
 
           return runConfig({
             env,
-            logger,
+            terminal,
             getNow,
             createServer,
             runMode,
@@ -170,7 +170,7 @@ export async function run(
 
 export async function runConfig({
   env,
-  logger,
+  terminal,
   getNow,
   createServer,
   runMode,
@@ -185,7 +185,7 @@ export async function runConfig({
   hotTestHooks,
 }: {
   env: Env;
-  logger: Logger;
+  terminal: Terminal;
   getNow: GetNow;
   createServer: CreateServer;
   runMode: RunMode;
@@ -215,7 +215,7 @@ export async function runConfig({
 
   switch (elmWatchStuffJsonParseResult?.tag) {
     case "ElmWatchStuffJsonReadError":
-      logger.errorTemplate(
+      terminal.errorTemplate(
         Errors.readElmWatchStuffJson(
           elmWatchStuffJsonPath,
           elmWatchStuffJsonParseResult.errors,
@@ -224,7 +224,7 @@ export async function runConfig({
       return { tag: "Exit", exitCode: 1 };
 
     case "ElmWatchStuffJsonDecodeError":
-      logger.errorTemplate(
+      terminal.errorTemplate(
         Errors.decodeElmWatchStuffJson(
           elmWatchStuffJsonPath,
           elmWatchStuffJsonParseResult.error,
@@ -255,7 +255,7 @@ export async function runConfig({
 
       switch (initProjectResult.tag) {
         case "DuplicateOutputs":
-          logger.errorTemplate(
+          terminal.errorTemplate(
             Errors.duplicateOutputs(
               config.source,
               initProjectResult.duplicates,
@@ -264,7 +264,7 @@ export async function runConfig({
           switch (config.source.tag) {
             case "ElmWatchJson":
               return handleElmWatchJsonError(
-                logger,
+                terminal,
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
@@ -277,7 +277,7 @@ export async function runConfig({
           }
 
         case "NonUniquePackageElmJsons":
-          logger.errorTemplate(
+          terminal.errorTemplate(
             Errors.nonUniquePackageElmJsons(
               config.source,
               initProjectResult.nonUniquePackageElmJsons,
@@ -286,7 +286,7 @@ export async function runConfig({
           switch (config.source.tag) {
             case "ElmWatchJson":
               return handleElmWatchJsonError(
-                logger,
+                terminal,
                 runMode,
                 config.source.elmWatchJsonPath,
                 webSocketTokenFromPreviousRun,
@@ -301,11 +301,11 @@ export async function runConfig({
         case "Project": {
           const { project } = initProjectResult;
 
-          logger.debug("Project", projectToDebug(project));
+          terminal.debug("Project", projectToDebug(project));
 
           switch (runMode) {
             case "make": {
-              const result = await Make.run(env, logger, getNow, project);
+              const result = await Make.run(env, terminal, getNow, project);
               switch (result.tag) {
                 case "Error":
                   return { tag: "Exit", exitCode: 1 };
@@ -318,7 +318,7 @@ export async function runConfig({
             case "hot": {
               const result = await Hot.run(
                 env,
-                logger,
+                terminal,
                 getNow,
                 createServer,
                 restartReasons,
@@ -341,7 +341,7 @@ export async function runConfig({
               );
               switch (result.tag) {
                 case "ExitOnHandledFatalError":
-                  logger.errorTemplate(result.errorTemplate);
+                  terminal.errorTemplate(result.errorTemplate);
                   return { tag: "Exit", exitCode: 1 };
 
                 case "ExitOnIdle":
@@ -362,7 +362,7 @@ export async function runConfig({
 }
 
 async function handleElmWatchJsonError(
-  logger: Logger,
+  terminal: Terminal,
   runMode: RunMode,
   elmWatchJsonPath: ElmWatchJsonPath,
   webSocketTokenFromPreviousRun: WebSocketToken | undefined,
@@ -380,11 +380,11 @@ async function handleElmWatchJsonError(
         // Print this once the watcher is ready, so that if the user (or a
         // test) reacts to it, the change is guaranteed to be picked up.
         () => {
-          logger.write("");
-          Compile.printNumErrors(logger, 1);
+          terminal.write("");
+          Compile.printNumErrors(terminal, 1);
         },
       );
-      logger.clearScreen();
+      terminal.clearScreen();
       return {
         tag: "Restart",
         restartReasons: [{ ...elmWatchJsonEvent, affectsAnyTarget: true }],

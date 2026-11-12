@@ -2,16 +2,16 @@ import * as Compile from "./Compile.ts";
 import type { Env } from "./Env.ts";
 import { getSnapshot } from "./ExternalErrors.ts";
 import { bold, printDurationMs } from "./Helpers.ts";
-import type { Logger, LoggerConfig } from "./Logger.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import type { Project } from "./Project.ts";
+import type { Terminal, TerminalConfig } from "./Terminal.ts";
 import type { GetNow } from "./Types.ts";
 
 type MakeResult = { tag: "Error" } | { tag: "Success" };
 
 export async function run(
   env: Env,
-  logger: Logger,
+  terminal: Terminal,
   getNow: GetNow,
   project: Project,
 ): Promise<MakeResult> {
@@ -19,7 +19,7 @@ export async function run(
 
   const installResult = await Compile.installDependencies(
     env,
-    logger,
+    terminal,
     getNow,
     project,
   ).promise;
@@ -50,9 +50,9 @@ export async function run(
     isNonEmptyArray(initialOutputActions.actions) &&
     !isNonEmptyArray(project.targetsErrors)
   ) {
-    logger.withSynchronizedOutput(() => {
-      Compile.printStatusLinesForTargetsErrors(logger, project);
-      Compile.printSpaceForOutputs(logger, "make", initialOutputActions);
+    terminal.withSynchronizedOutput(() => {
+      Compile.printStatusLinesForTargetsErrors(terminal, project);
+      Compile.printSpaceForOutputs(terminal, "make", initialOutputActions);
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -60,7 +60,7 @@ export async function run(
         for (const action of outputActions.actions) {
           Compile.handleOutputAction({
             env,
-            logger,
+            terminal,
             getNow,
             runMode: { tag: "make" },
             total: outputActions.total,
@@ -80,8 +80,8 @@ export async function run(
       cycle(initialOutputActions);
     });
   } else {
-    logger.withSynchronizedOutput(() => {
-      Compile.printStatusLinesForTargetsErrors(logger, project);
+    terminal.withSynchronizedOutput(() => {
+      Compile.printStatusLinesForTargetsErrors(terminal, project);
     });
   }
 
@@ -90,16 +90,16 @@ export async function run(
   const errors = Compile.extractErrors(project);
   const failed = isNonEmptyArray(errors);
 
-  logger.withSynchronizedOutput(() => {
+  terminal.withSynchronizedOutput(() => {
     if (failed) {
-      Compile.printErrors(logger, errors);
+      Compile.printErrors(terminal, errors);
     }
 
     const duration = getNow().getTime() - startTimestamp;
-    logger.write("");
-    logger.write(
+    terminal.write("");
+    terminal.write(
       compileFinishedMessage({
-        loggerConfig: logger.config,
+        terminalConfig: terminal.config,
         duration,
         hasErrors: failed,
       }),
@@ -128,21 +128,21 @@ function getNextOutputActions(project: Project): Compile.OutputActions {
 }
 
 function compileFinishedMessage({
-  loggerConfig,
+  terminalConfig,
   duration,
   hasErrors,
 }: {
-  loggerConfig: LoggerConfig;
+  terminalConfig: TerminalConfig;
   duration: number;
   hasErrors: boolean;
 }): string {
   return Compile.printStatusLine({
     maxWidth: Infinity,
-    fancy: loggerConfig.fancy,
-    isTTY: loggerConfig.isTTY,
+    fancy: terminalConfig.fancy,
+    isTTY: terminalConfig.isTTY,
     emojiName: hasErrors ? "Error" : "Success",
     string: `Compilation finished in ${bold(
-      printDurationMs(loggerConfig.mockedTimings ? 123 : duration).trim(),
+      printDurationMs(terminalConfig.mockedTimings ? 123 : duration).trim(),
     )}.`,
   });
 }

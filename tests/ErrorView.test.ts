@@ -9,7 +9,7 @@ import {
   render,
 } from "../src/ErrorView.ts";
 import { removeColor } from "../src/Helpers.ts";
-import type { LoggerConfig } from "../src/Logger.ts";
+import type { TerminalConfig } from "../src/Terminal.ts";
 import {
   markAsAbsolutePath,
   markAsTargetName,
@@ -267,7 +267,7 @@ describe("navigate", () => {
 });
 
 describe("render", () => {
-  const loggerConfig: LoggerConfig = {
+  const terminalConfig: TerminalConfig = {
     debug: false,
     noColor: false,
     fancy: true,
@@ -284,7 +284,7 @@ describe("render", () => {
   ): string {
     return (
       render({
-        loggerConfig,
+        terminalConfig,
         expanded: false,
         selection,
         targets,
@@ -327,7 +327,7 @@ describe("render", () => {
       target("B", ["X.elm:1:b1"]),
     ];
     const output = render({
-      loggerConfig: { ...loggerConfig, columns: 40 },
+      terminalConfig: { ...terminalConfig, columns: 40 },
       expanded: false,
       selection: start(targets),
       targets,

@@ -9,13 +9,13 @@ import {
   generateEntrypoint,
 } from "./GenerateEntrypoint.ts";
 import { bold, toError } from "./Helpers.ts";
-import type { Logger } from "./Logger.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import {
   absoluteDirname,
   absolutePathFromString,
   findClosest,
 } from "./PathHelpers.ts";
+import type { Terminal } from "./Terminal.ts";
 import {
   type AbsolutePath,
   type CliArg,
@@ -33,22 +33,26 @@ type Language = EntrypointLanguage | "json";
 
 // `elm-watch init 2>/dev/null` feels like a reasonable thing to do in a script.
 // (Try to create an elm-watch.json and don’t care about errors.)
-export function init(cwd: Cwd, logger: Logger, args: Array<CliArg>): number {
+export function init(
+  cwd: Cwd,
+  terminal: Terminal,
+  args: Array<CliArg>,
+): number {
   const language = parseArgs(args);
 
   switch (language) {
     case undefined:
-      logger.writeToStderrMakesALotOfSenseHere(
+      terminal.writeToStderrMakesALotOfSenseHere(
         `${bold("elm-watch init")} takes either no arguments, ${bold("--javascript")} or ${bold("--typescript")}.`,
       );
       return 1;
 
     case "json":
-      return initElmWatchJson(cwd, logger);
+      return initElmWatchJson(cwd, terminal);
 
     case "javascript":
     case "typescript":
-      return initEntrypoint(cwd, logger, language);
+      return initEntrypoint(cwd, terminal, language);
   }
 }
 
@@ -66,12 +70,12 @@ function parseArgs(args: Array<CliArg>): Language | undefined {
   }
 }
 
-function initElmWatchJson(cwd: Cwd, logger: Logger): number {
+function initElmWatchJson(cwd: Cwd, terminal: Terminal): number {
   const existingElmWatchJson = findClosest("elm-watch.json", cwd);
 
   if (existingElmWatchJson !== undefined) {
     return upgradeElmWatchJson(
-      logger,
+      terminal,
       markAsElmWatchJsonPath(existingElmWatchJson),
     );
   }
@@ -79,7 +83,7 @@ function initElmWatchJson(cwd: Cwd, logger: Logger): number {
   const existingEntrypoint = findExistingEntrypoint(cwd);
 
   if (existingEntrypoint !== undefined) {
-    logger.writeToStderrMakesALotOfSenseHere(
+    terminal.writeToStderrMakesALotOfSenseHere(
       alreadyUsingJavaScriptApi(existingEntrypoint),
     );
     return 1;
@@ -101,13 +105,13 @@ function initElmWatchJson(cwd: Cwd, logger: Logger): number {
     );
   } catch (unknownError) {
     const error = toError(unknownError);
-    logger.writeToStderrMakesALotOfSenseHere(
+    terminal.writeToStderrMakesALotOfSenseHere(
       `Failed to write ${elmWatchJson}:\n\n${error.message}`,
     );
     return 1;
   }
 
-  logger.write(
+  terminal.write(
     `
 ${createdMessage(elmWatchJson, discoveredInputs)}
 
@@ -138,7 +142,7 @@ Go check it out!
 
 // Upgrades an elm-watch.json from elm-watch 1 (see `ElmWatchJson.upgradeTargets`).
 function upgradeElmWatchJson(
-  logger: Logger,
+  terminal: Terminal,
   elmWatchJsonPath: ElmWatchJsonPath,
 ): number {
   let content: string;
@@ -146,13 +150,13 @@ function upgradeElmWatchJson(
     content = fs.readFileSync(elmWatchJsonPath, "utf8");
   } catch (unknownError) {
     const error = toError(unknownError);
-    logger.errorTemplate(Errors.readElmWatchJson(elmWatchJsonPath, error));
+    terminal.errorTemplate(Errors.readElmWatchJson(elmWatchJsonPath, error));
     return 1;
   }
 
   const parsed = Codec.JSON.parse(Codec.unknown, content);
   if (parsed.tag === "DecoderError") {
-    logger.errorTemplate(
+    terminal.errorTemplate(
       Errors.decodeElmWatchJson(elmWatchJsonPath, parsed.error),
     );
     return 1;
@@ -164,7 +168,7 @@ function upgradeElmWatchJson(
   );
 
   if (!isNonEmptyArray(upgradedTargets)) {
-    logger.writeToStderrMakesALotOfSenseHere(
+    terminal.writeToStderrMakesALotOfSenseHere(
       `${elmWatchJson} already exists (and has nothing to upgrade):\n\n${elmWatchJsonPath}`,
     );
     return 1;
@@ -181,13 +185,13 @@ function upgradeElmWatchJson(
     );
   } catch (unknownError) {
     const error = toError(unknownError);
-    logger.writeToStderrMakesALotOfSenseHere(
+    terminal.writeToStderrMakesALotOfSenseHere(
       `Failed to write ${elmWatchJson}:\n\n${error.message}`,
     );
     return 1;
   }
 
-  logger.write(
+  terminal.write(
     `
 Upgraded ${elmWatchJson}:
 
@@ -244,7 +248,7 @@ ${upgradedTargets
 // new file replaces it), or from the same example as `elm-watch init`.
 function initEntrypoint(
   cwd: Cwd,
-  logger: Logger,
+  terminal: Terminal,
   language: EntrypointLanguage,
 ): number {
   const parseResult = ElmWatchJson.findReadAndParseWithLegacyPostprocess(cwd);
@@ -267,7 +271,7 @@ function initEntrypoint(
       break;
 
     case "ReadError":
-      logger.errorTemplate(
+      terminal.errorTemplate(
         Errors.readElmWatchJson(
           parseResult.elmWatchJsonPath,
           parseResult.error,
@@ -276,7 +280,7 @@ function initEntrypoint(
       return 1;
 
     case "DecoderError":
-      logger.errorTemplate(
+      terminal.errorTemplate(
         Errors.decodeElmWatchJson(
           parseResult.elmWatchJsonPath,
           parseResult.error,
@@ -294,7 +298,7 @@ function initEntrypoint(
   const existingEntrypoint = findExistingEntrypoint(dir);
 
   if (existingEntrypoint !== undefined) {
-    logger.writeToStderrMakesALotOfSenseHere(
+    terminal.writeToStderrMakesALotOfSenseHere(
       alreadyUsingJavaScriptApi(existingEntrypoint),
     );
     return 1;
@@ -307,7 +311,7 @@ function initEntrypoint(
     fs.writeFileSync(entrypointPath, generateEntrypoint(json, language));
   } catch (unknownError) {
     const error = toError(unknownError);
-    logger.writeToStderrMakesALotOfSenseHere(
+    terminal.writeToStderrMakesALotOfSenseHere(
       `Failed to write ${bold(entrypointName)}:\n\n${error.message}`,
     );
     return 1;
@@ -321,7 +325,7 @@ Run it like so:
   `.trim();
 
   if (migratedElmWatchJsonPath === undefined) {
-    logger.write(
+    terminal.write(
       `
 ${createdMessage(bold(entrypointName), discoveredInputs)}
 
@@ -337,7 +341,7 @@ Documentation: ${JAVASCRIPT_API_DOCS_LINK}
     fs.unlinkSync(migratedElmWatchJsonPath);
   } catch (unknownError) {
     const error = toError(unknownError);
-    logger.writeToStderrMakesALotOfSenseHere(
+    terminal.writeToStderrMakesALotOfSenseHere(
       `Created ${bold(entrypointPath)} from ${elmWatchJson}, but failed to remove ${elmWatchJson}:\n\n${error.message}\n\nPlease remove it yourself – it’s not used anymore.`,
     );
     return 1;
@@ -352,7 +356,7 @@ Documentation: ${JAVASCRIPT_API_DOCS_LINK}
     ? `\n${upgradedTargetsReport(upgradedTargets)}\n`
     : "";
 
-  logger.write(
+  terminal.write(
     `
 Created ${bold(entrypointName)} from ${elmWatchJson}, and removed ${elmWatchJson}
 (everything from it is in ${entrypointName} now):

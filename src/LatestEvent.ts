@@ -10,9 +10,9 @@ import {
   quote,
   sanitizeTerminalText,
 } from "./Helpers.ts";
-import type { LoggerConfig } from "./Logger.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import type { Project } from "./Project.ts";
+import type { TerminalConfig } from "./Terminal.ts";
 import type { AbsolutePath, CompilationMode, OutputPath } from "./Types.ts";
 
 // The events that make elm-watch do something (or decide that there is nothing
@@ -132,14 +132,14 @@ export function filterLatestEvents(
 
 // The time, the message and the latest event on one line.
 export function printInfoLine({
-  loggerConfig,
+  terminalConfig,
   emojiName,
   date,
   message,
   events,
   project,
 }: {
-  loggerConfig: LoggerConfig;
+  terminalConfig: TerminalConfig;
   emojiName: Compile.EmojiName;
   date: Date;
   message: string;
@@ -152,7 +152,7 @@ export function printInfoLine({
     project.disabledOutputs.length > 0,
   );
   return printMessageWithTimeAndEmoji({
-    loggerConfig,
+    terminalConfig,
     emojiName,
     date,
     dateHighlight: bold,
@@ -226,25 +226,25 @@ function printEventShort(event: LatestEvent, root: AbsolutePath): string {
 }
 
 function printMessageWithTimeAndEmoji({
-  loggerConfig,
+  terminalConfig,
   emojiName,
   date,
   dateHighlight: highlightTime,
   message,
 }: {
-  loggerConfig: LoggerConfig;
+  terminalConfig: TerminalConfig;
   emojiName: Compile.EmojiName;
   date: Date;
   dateHighlight: (string: string) => string;
   message: string;
 }): string {
-  const newDate = loggerConfig.mockedTimings
+  const newDate = terminalConfig.mockedTimings
     ? new Date("2022-02-05T13:10:05Z")
     : date;
   return Compile.printStatusLine({
-    maxWidth: loggerConfig.columns,
-    fancy: loggerConfig.fancy,
-    isTTY: loggerConfig.isTTY,
+    maxWidth: terminalConfig.columns,
+    fancy: terminalConfig.fancy,
+    isTTY: terminalConfig.isTTY,
     emojiName,
     string: `${highlightTime(formatTime(newDate))} ${message}`,
   });

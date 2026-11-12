@@ -23,7 +23,6 @@ import {
   type WalkImportsResult,
 } from "./ImportWalker.ts";
 import * as Inject from "./Inject.ts";
-import type { Logger, LoggerConfig } from "./Logger.ts";
 import {
   flattenNonEmptyArray,
   isNonEmptyArray,
@@ -46,6 +45,7 @@ import {
 } from "./Project.ts";
 import { trackRunning } from "./Spawn.ts";
 import * as SpawnElm from "./SpawnElm.ts";
+import type { Terminal, TerminalConfig } from "./Terminal.ts";
 import {
   type AbsolutePath,
   type CompilationMode,
@@ -76,7 +76,7 @@ export type InstallDependenciesResult =
 // - Two Elm processes writing to `~/.elm` at the same time.
 export function installDependencies(
   env: Env,
-  logger: Logger,
+  terminal: Terminal,
   getNow: GetNow,
   project: Project,
 ): {
@@ -97,11 +97,11 @@ export function installDependencies(
     nonFancy: string,
   ): string =>
     printStatusLine({
-      maxWidth: logger.config.columns,
-      fancy: logger.config.fancy,
-      isTTY: logger.config.isTTY,
+      maxWidth: terminal.config.columns,
+      fancy: terminal.config.fancy,
+      isTTY: terminal.config.isTTY,
       emojiName,
-      string: logger.config.fancy ? message : `${message}: ${nonFancy}`,
+      string: terminal.config.fancy ? message : `${message}: ${nonFancy}`,
     });
 
   const continuation = async (): Promise<InstallDependenciesResult> => {
@@ -135,25 +135,25 @@ export function installDependencies(
       // Avoid printing `loadingMessage` if there’s nothing to download.
       let didWriteLoadingMessage = false as boolean;
       const timeoutId = setTimeout(() => {
-        logger.write(loadingMessage);
+        terminal.write(loadingMessage);
         didWriteLoadingMessage = true;
       }, loadingMessageDelay);
 
       const clearLoadingMessage = (): void => {
         if (didWriteLoadingMessage) {
-          logger.moveCursor(0, -1);
-          logger.clearLine(0);
+          terminal.moveCursor(0, -1);
+          terminal.clearLine(0);
         }
       };
 
       const onError = (
         error: Errors.ErrorTemplate,
       ): InstallDependenciesResult => {
-        logger.withSynchronizedOutput(() => {
+        terminal.withSynchronizedOutput(() => {
           clearLoadingMessage();
-          logger.write(printStatusLineHelper("Error", message, "error"));
-          logger.write("");
-          logger.errorTemplate(error);
+          terminal.write(printStatusLineHelper("Error", message, "error"));
+          terminal.write("");
+          terminal.errorTemplate(error);
         });
         return { tag: "Error" };
       };
@@ -177,9 +177,9 @@ export function installDependencies(
         case "ElmJsonError":
         case "ElmStuffError":
           if (didWriteLoadingMessage) {
-            logger.withSynchronizedOutput(() => {
+            terminal.withSynchronizedOutput(() => {
               clearLoadingMessage();
-              logger.write(
+              terminal.write(
                 printStatusLineHelper("Skipped", message, "skipped"),
               );
             });
@@ -188,9 +188,9 @@ export function installDependencies(
 
         case "Killed":
           if (didWriteLoadingMessage) {
-            logger.withSynchronizedOutput(() => {
+            terminal.withSynchronizedOutput(() => {
               clearLoadingMessage();
-              logger.write(
+              terminal.write(
                 printStatusLineHelper("Busy", message, "interrupted"),
               );
             });
@@ -200,17 +200,17 @@ export function installDependencies(
         case "Success": {
           const gotOutput = result.elmInstallOutput !== "";
           if (gotOutput) {
-            logger.withSynchronizedOutput(() => {
+            terminal.withSynchronizedOutput(() => {
               clearLoadingMessage();
-              logger.write(
+              terminal.write(
                 printStatusLineHelper("Success", message, "success"),
               );
-              logger.write(result.elmInstallOutput);
+              terminal.write(result.elmInstallOutput);
             });
           } else if (didWriteLoadingMessage) {
-            logger.withSynchronizedOutput(() => {
+            terminal.withSynchronizedOutput(() => {
               clearLoadingMessage();
-              logger.write(
+              terminal.write(
                 printStatusLineHelper("Success", message, "success"),
               );
             });
@@ -765,14 +765,14 @@ type RunModeWithExtraData =
 
 export async function handleOutputAction({
   env,
-  logger,
+  terminal,
   getNow,
   runMode,
   total,
   action,
 }: {
   env: Env;
-  logger: Logger;
+  terminal: Terminal;
   getNow: GetNow;
   runMode: RunModeWithExtraData;
   total: number;
@@ -782,7 +782,7 @@ export async function handleOutputAction({
     case "NeedsElmMake": {
       const promise = compileOneOutput({
         env,
-        logger,
+        terminal,
         getNow,
         runMode,
         total,
@@ -808,7 +808,7 @@ export async function handleOutputAction({
         case "hot":
           await typecheck({
             env,
-            logger,
+            terminal,
             getNow,
             runMode: runMode.tag,
             compiler: action.compiler,
@@ -824,7 +824,7 @@ export async function handleOutputAction({
     case "NeedsElmMakePackage":
       await typecheckPackage({
         env,
-        logger,
+        terminal,
         getNow,
         runMode: runMode.tag,
         total,
@@ -834,7 +834,7 @@ export async function handleOutputAction({
 
     case "NeedsPostprocess":
       return postprocessHelper({
-        logger,
+        terminal,
         runMode,
         total,
         ...action.output,
@@ -847,7 +847,7 @@ export async function handleOutputAction({
     case "QueueForElmMake":
       action.output.outputState.setStatus({ tag: "QueuedForElmMake" });
       updateStatusLine({
-        logger,
+        terminal,
         runMode: runMode.tag,
         total,
         ...action.output,
@@ -858,7 +858,7 @@ export async function handleOutputAction({
 
 async function compileOneOutput({
   env,
-  logger,
+  terminal,
   getNow,
   runMode,
   elmJsonPath,
@@ -868,7 +868,7 @@ async function compileOneOutput({
   total,
 }: {
   env: Env;
-  logger: Logger;
+  terminal: Terminal;
   getNow: GetNow;
   runMode: RunModeWithExtraData;
   elmJsonPath: ElmJsonPath;
@@ -881,7 +881,7 @@ async function compileOneOutput({
 
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
-      logger,
+      terminal,
       runMode: runMode.tag,
       outputPath,
       outputState,
@@ -970,7 +970,7 @@ async function compileOneOutput({
   switch (combinedResult.tag) {
     case "elm make success + walker success":
       return onCompileSuccess(
-        logger.config,
+        terminal.config,
         getNow,
         updateStatusLineHelper,
         runMode,
@@ -1021,7 +1021,7 @@ async function compileOneOutput({
 const readFile = util.promisify(fs.readFile);
 
 async function onCompileSuccess(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   getNow: GetNow,
   updateStatusLineHelper: () => void,
   runMode: RunModeWithExtraData,
@@ -1157,7 +1157,7 @@ async function onCompileSuccess(
                 outputState.compilationMode,
                 runMode.webSocketConnection,
                 runMode.webSocketToken,
-                loggerConfig.debug,
+                terminalConfig.debug,
               ) + newCode,
             );
           } catch (unknownError) {
@@ -1256,7 +1256,7 @@ function needsToWriteProxyFile(
 }
 
 async function postprocessHelper({
-  logger,
+  terminal,
   runMode,
   elmJsonPath,
   outputPath,
@@ -1268,7 +1268,7 @@ async function postprocessHelper({
   elmCompiledTimestamp,
   recordFields,
 }: {
-  logger: Logger;
+  terminal: Terminal;
   runMode: RunModeWithExtraData;
   elmJsonPath: ElmJsonPath;
   outputPath: OutputPath;
@@ -1282,7 +1282,7 @@ async function postprocessHelper({
 }): Promise<HandleOutputActionResult> {
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
-      logger,
+      terminal,
       runMode: runMode.tag,
       outputPath,
       outputState,
@@ -1330,7 +1330,7 @@ async function postprocessHelper({
               outputState.compilationMode,
               runMode.webSocketConnection,
               runMode.webSocketToken,
-              logger.config.debug,
+              terminal.config.debug,
             );
             fs.writeFileSync(
               outputPath.theOutputPath,
@@ -1399,7 +1399,7 @@ async function postprocessHelper({
 
 async function typecheckPackage({
   env,
-  logger,
+  terminal,
   getNow,
   runMode,
   elmJsonPath,
@@ -1409,7 +1409,7 @@ async function typecheckPackage({
   total,
 }: {
   env: Env;
-  logger: Logger;
+  terminal: Terminal;
   getNow: GetNow;
   runMode: RunMode;
   elmJsonPath: ElmJsonPath;
@@ -1422,7 +1422,7 @@ async function typecheckPackage({
 
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
-      logger,
+      terminal,
       runMode,
       outputPath,
       outputState,
@@ -1472,7 +1472,7 @@ async function typecheckPackage({
 
 async function typecheck({
   env,
-  logger,
+  terminal,
   getNow,
   runMode,
   compiler,
@@ -1483,7 +1483,7 @@ async function typecheck({
   webSocketToken,
 }: {
   env: Env;
-  logger: Logger;
+  terminal: Terminal;
   getNow: GetNow;
   runMode: RunMode;
   compiler: Compiler;
@@ -1533,7 +1533,7 @@ async function typecheck({
     output.outputState.dirty = false;
     output.outputState.setStatus(outputStatus);
     updateStatusLine({
-      logger,
+      terminal,
       runMode,
       outputPath: output.outputPath,
       outputState: output.outputState,
@@ -1585,7 +1585,7 @@ async function typecheck({
     if (outputState.dirty || elmMakeResult.tag === "Killed") {
       outputState.setStatus({ tag: "Interrupted" });
       updateStatusLine({
-        logger,
+        terminal,
         runMode,
         outputPath,
         outputState,
@@ -1629,7 +1629,7 @@ async function typecheck({
               getNow().getTime(),
               webSocketConnection,
               webSocketToken,
-              logger.config.debug,
+              terminal.config.debug,
             ),
           );
           // The proxy file doesn’t count as writing to disk…
@@ -1675,7 +1675,7 @@ async function typecheck({
     }
 
     updateStatusLine({
-      logger,
+      terminal,
       runMode,
       outputPath,
       outputState,
@@ -1784,11 +1784,11 @@ function combineResults(
 // This allows us to _always_ move the cursor in `updateStatusLine`, even the
 // “first” time which makes everything so much simpler.
 export function printSpaceForOutputs(
-  logger: Logger,
+  terminal: Terminal,
   runMode: RunMode,
   outputActions: OutputActions,
 ): void {
-  if (!logger.config.isTTY) {
+  if (!terminal.config.isTTY) {
     return;
   }
   if (isNonEmptyArray(outputActions.outputsWithoutAction)) {
@@ -1797,11 +1797,11 @@ export function printSpaceForOutputs(
         (output2) => output2.index === index,
       );
       if (output === undefined) {
-        writeNewLines(logger, 1);
+        writeNewLines(terminal, 1);
       } else {
-        logger.write(
+        terminal.write(
           statusLine(
-            logger.config,
+            terminal.config,
             runMode,
             output.outputPath,
             output.outputState,
@@ -1810,26 +1810,26 @@ export function printSpaceForOutputs(
       }
     }
   } else {
-    writeNewLines(logger, outputActions.total);
+    writeNewLines(terminal, outputActions.total);
   }
 }
 
-function writeNewLines(logger: Logger, count: number): void {
+function writeNewLines(terminal: Terminal, count: number): void {
   if (count > 0) {
-    // -1 because the logger always adds a newline.
-    logger.write("\n".repeat(count - 1));
+    // -1 because `terminal.write` always adds a newline.
+    terminal.write("\n".repeat(count - 1));
   }
 }
 
 function updateStatusLine({
-  logger,
+  terminal,
   runMode,
   outputPath,
   outputState,
   index,
   total,
 }: {
-  logger: Logger;
+  terminal: Terminal;
   runMode: RunMode;
   outputPath: TargetLocation;
   outputState: TargetState;
@@ -1841,15 +1841,15 @@ function updateStatusLine({
   // line instead. The cursor is always at the bottom of the screen in that case.
   // Render the line anyway, since that flushes the durations (so that they can
   // be printed again when redrawing the screen).
-  const line = statusLine(logger.config, runMode, outputPath, outputState);
-  if (total - index >= logger.config.rows) {
+  const line = statusLine(terminal.config, runMode, outputPath, outputState);
+  if (total - index >= terminal.config.rows) {
     return;
   }
-  logger.withSynchronizedOutput(() => {
-    logger.moveCursor(0, -total + index);
-    logger.clearLine(0);
-    logger.write(line);
-    logger.moveCursor(0, total - index - 1);
+  terminal.withSynchronizedOutput(() => {
+    terminal.moveCursor(0, -total + index);
+    terminal.clearLine(0);
+    terminal.write(line);
+    terminal.moveCursor(0, total - index - 1);
   });
 }
 
@@ -1922,7 +1922,7 @@ export function emojiWidthFix({
 // might be a bit off. Not the end of the world. And not the fault of this
 // function.
 function targetNameEmojiTweak(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   targetName: TargetName,
 ): { targetName: TargetName; delta: number } {
   const match = STARTS_WITH_EMOJI_REGEX.exec(targetName);
@@ -1934,7 +1934,7 @@ function targetNameEmojiTweak(
   const content = match[0];
 
   // Avoid emoji on Windows, for example.
-  if (!loggerConfig.fancy) {
+  if (!terminalConfig.fancy) {
     return {
       targetName: markAsTargetName(targetName.slice(content.length)),
       delta: 0,
@@ -1944,7 +1944,7 @@ function targetNameEmojiTweak(
   const start = emojiWidthFix({
     emoji: content.trim(),
     column: 6, // 2 chars of status emoji, 2 chars of this emoji and 2 spaces.
-    isTTY: loggerConfig.isTTY,
+    isTTY: terminalConfig.isTTY,
   });
 
   return {
@@ -1959,36 +1959,36 @@ function targetNameEmojiTweak(
 }
 
 export function printStatusLinesForTargetsErrors(
-  logger: Logger,
+  terminal: Terminal,
   project: Project,
 ): void {
   for (const [source] of project.externalErrors.sources) {
     const { targetName, delta } = targetNameEmojiTweak(
-      logger.config,
+      terminal.config,
       markAsTargetName(source),
     );
-    logger.write(
+    terminal.write(
       printStatusLine({
-        maxWidth: logger.config.columns - delta,
-        fancy: logger.config.fancy,
-        isTTY: logger.config.isTTY,
+        maxWidth: terminal.config.columns - delta,
+        fancy: terminal.config.fancy,
+        isTTY: terminal.config.isTTY,
         emojiName: "Error",
-        string: logger.config.fancy ? targetName : `${targetName}: error`,
+        string: terminal.config.fancy ? targetName : `${targetName}: error`,
       }),
     );
   }
   for (const { outputPath } of project.targetsErrors) {
     const { targetName, delta } = targetNameEmojiTweak(
-      logger.config,
+      terminal.config,
       outputPath.targetName,
     );
-    logger.write(
+    terminal.write(
       printStatusLine({
-        maxWidth: logger.config.columns - delta,
-        fancy: logger.config.fancy,
-        isTTY: logger.config.isTTY,
+        maxWidth: terminal.config.columns - delta,
+        fancy: terminal.config.fancy,
+        isTTY: terminal.config.isTTY,
         emojiName: "Error",
-        string: logger.config.fancy ? targetName : `${targetName}: error`,
+        string: terminal.config.fancy ? targetName : `${targetName}: error`,
       }),
     );
   }
@@ -1996,7 +1996,7 @@ export function printStatusLinesForTargetsErrors(
 
 // The same error can occur in several targets – only print it once.
 export function errorsToTerminalStrings(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   errors: Array<Errors.ErrorTemplate>,
 ): Array<string> {
   return Array.from(
@@ -2004,8 +2004,8 @@ export function errorsToTerminalStrings(
       errors.map((template) =>
         Errors.toTerminalString(
           template,
-          loggerConfig.columns,
-          loggerConfig.noColor,
+          terminalConfig.columns,
+          terminalConfig.noColor,
         ),
       ),
     ),
@@ -2013,23 +2013,23 @@ export function errorsToTerminalStrings(
 }
 
 export function printErrors(
-  logger: Logger,
+  terminal: Terminal,
   errors: NonEmptyArray<Errors.ErrorTemplate>,
 ): void {
-  const errorStrings = errorsToTerminalStrings(logger.config, errors);
+  const errorStrings = errorsToTerminalStrings(terminal.config, errors);
 
-  logger.write("");
-  logger.write(errorStrings.join("\n\n"));
-  logger.write("");
-  printNumErrors(logger, errorStrings.length);
+  terminal.write("");
+  terminal.write(errorStrings.join("\n\n"));
+  terminal.write("");
+  printNumErrors(terminal, errorStrings.length);
 }
 
-export function printNumErrors(logger: Logger, numErrors: number): void {
-  logger.write(
+export function printNumErrors(terminal: Terminal, numErrors: number): void {
+  terminal.write(
     printStatusLine({
-      maxWidth: logger.config.columns,
-      fancy: logger.config.fancy,
-      isTTY: logger.config.isTTY,
+      maxWidth: terminal.config.columns,
+      fancy: terminal.config.fancy,
+      isTTY: terminal.config.isTTY,
       emojiName: "Error",
       string: `${bold(numErrors.toString())} error${
         numErrors === 1 ? "" : "s"
@@ -2046,7 +2046,7 @@ type StatusLineRedraw = {
 };
 
 function statusLine(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   runMode: RunMode,
   outputPath: TargetLocation,
   outputState: TargetState,
@@ -2059,15 +2059,15 @@ function statusLine(
       : outputState.lastFlushedDurations;
 
   const { targetName, delta } = targetNameEmojiTweak(
-    loggerConfig,
+    terminalConfig,
     outputPath.targetName,
   );
 
   const helper = (emojiName: EmojiName, string: string): string =>
     printStatusLine({
-      maxWidth: loggerConfig.columns - delta,
-      fancy: loggerConfig.fancy,
-      isTTY: loggerConfig.isTTY,
+      maxWidth: terminalConfig.columns - delta,
+      fancy: terminalConfig.fancy,
+      isTTY: terminalConfig.isTTY,
       emojiName,
       string,
     });
@@ -2084,10 +2084,10 @@ function statusLine(
 
     // Emojis take two terminal columns, plus a space that we add after.
     const startLength =
-      (loggerConfig.fancy ? start.length + 3 : start.length) + delta;
+      (terminalConfig.fancy ? start.length + 3 : start.length) + delta;
     const end = strings.join("   ");
-    const max = Math.min(loggerConfig.columns, 100);
-    const padding = loggerConfig.isTTY
+    const max = Math.min(terminalConfig.columns, 100);
+    const padding = terminalConfig.isTTY
       ? Math.max(3, max - end.length - startLength)
       : 3;
 
@@ -2102,9 +2102,9 @@ function statusLine(
   switch (status.tag) {
     case "NotWrittenToDisk": {
       return withExtraDetailsAtEnd(
-        [maybePrintDurations(loggerConfig, getDurations())],
+        [maybePrintDurations(terminalConfig, getDurations())],
         "Success",
-        loggerConfig.fancy ? targetName : `${targetName}: success`,
+        terminalConfig.fancy ? targetName : `${targetName}: success`,
       );
     }
 
@@ -2120,12 +2120,12 @@ function statusLine(
                 : "standard",
             elmFileSize: status.elmFileSize,
             postprocessFileSize: status.postprocessFileSize,
-            fancy: loggerConfig.fancy,
+            fancy: terminalConfig.fancy,
           }),
-          maybePrintDurations(loggerConfig, getDurations()),
+          maybePrintDurations(terminalConfig, getDurations()),
         ],
         "Success",
-        loggerConfig.fancy ? targetName : `${targetName}: success`,
+        terminalConfig.fancy ? targetName : `${targetName}: success`,
       );
     }
 
@@ -2169,23 +2169,23 @@ function statusLine(
       return redraw === undefined
         ? helper(
             "Error",
-            loggerConfig.fancy ? targetName : `${targetName}: error`,
+            terminalConfig.fancy ? targetName : `${targetName}: error`,
           )
-        : errorStatusLineWithCount(loggerConfig, targetName, delta, redraw);
+        : errorStatusLineWithCount(terminalConfig, targetName, delta, redraw);
   }
 }
 
 function errorStatusLineWithCount(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   targetName: TargetName,
   delta: number,
   { numErrors, selected }: StatusLineRedraw,
 ): string {
-  const marker = selected ? (loggerConfig.fancy ? " ◀" : " <") : "";
+  const marker = selected ? (terminalConfig.fancy ? " ◀" : " <") : "";
   return printStatusLine({
-    maxWidth: loggerConfig.columns - delta,
-    fancy: loggerConfig.fancy,
-    isTTY: loggerConfig.isTTY,
+    maxWidth: terminalConfig.columns - delta,
+    fancy: terminalConfig.fancy,
+    isTTY: terminalConfig.isTTY,
     emojiName: "Error",
     string: `${selected ? bold(targetName) : targetName}: ${numErrors} error${
       numErrors === 1 ? "" : "s"
@@ -2196,18 +2196,18 @@ function errorStatusLineWithCount(
 // Redraw the status lines of all targets, like they were printed during
 // compilation, but with error counts (for the error view).
 export function printAllStatusLines(
-  logger: Logger,
+  terminal: Terminal,
   project: Project,
   getRedraw: (targetName: string) => StatusLineRedraw,
 ): void {
   for (const [source] of project.externalErrors.sources) {
     const { targetName, delta } = targetNameEmojiTweak(
-      logger.config,
+      terminal.config,
       markAsTargetName(source),
     );
-    logger.write(
+    terminal.write(
       errorStatusLineWithCount(
-        logger.config,
+        terminal.config,
         targetName,
         delta,
         getRedraw(source),
@@ -2216,12 +2216,12 @@ export function printAllStatusLines(
   }
   for (const { outputPath } of project.targetsErrors) {
     const { targetName, delta } = targetNameEmojiTweak(
-      logger.config,
+      terminal.config,
       outputPath.targetName,
     );
-    logger.write(
+    terminal.write(
       errorStatusLineWithCount(
-        logger.config,
+        terminal.config,
         targetName,
         delta,
         getRedraw(outputPath.targetName),
@@ -2230,9 +2230,9 @@ export function printAllStatusLines(
   }
   for (const [, outputs] of project.elmJsons) {
     for (const [outputPath, outputState] of outputs) {
-      logger.write(
+      terminal.write(
         statusLine(
-          logger.config,
+          terminal.config,
           "hot",
           outputPath,
           outputState,
@@ -2242,9 +2242,9 @@ export function printAllStatusLines(
     }
   }
   for (const [, [packageTarget, packageState]] of project.packages) {
-    logger.write(
+    terminal.write(
       statusLine(
-        logger.config,
+        terminal.config,
         "hot",
         packageTarget,
         packageState,
@@ -2353,7 +2353,7 @@ function maybePrintFileSize({
 }
 
 function maybePrintDurations(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   durations: Array<Duration>,
 ): string | undefined {
   if (!isNonEmptyArray(durations)) {
@@ -2368,8 +2368,8 @@ function maybePrintDurations(
 
   return mapNonEmptyArray(newDurations, (duration) =>
     printDuration(
-      loggerConfig.mockedTimings ? mockDuration(duration) : duration,
-      loggerConfig.fancy,
+      terminalConfig.mockedTimings ? mockDuration(duration) : duration,
+      terminalConfig.fancy,
     ),
   ).join(" | ");
 }

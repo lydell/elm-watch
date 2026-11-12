@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import { BEGIN_SYNC_UPDATE, END_SYNC_UPDATE } from "../src/Helpers.ts";
-import { type Logger, makeLogger } from "../src/Logger.ts";
+import { type Terminal, makeTerminal } from "../src/Terminal.ts";
 import { MemoryWriteStream, SilentReadStream } from "./Helpers.ts";
 
-function makeTestLogger({
+function makeTestTerminal({
   env = {},
   stdin = new SilentReadStream(),
   stdout = new MemoryWriteStream(),
@@ -14,8 +14,8 @@ function makeTestLogger({
   stdin?: SilentReadStream;
   stdout?: MemoryWriteStream;
   stderr?: MemoryWriteStream;
-}): Logger {
-  return makeLogger({
+}): Terminal {
+  return makeTerminal({
     env,
     getNow: () => new Date(),
     stdin,
@@ -41,14 +41,14 @@ function setup(
   stdin: SilentReadStream,
   env: Record<string, string> = {},
 ): {
-  logger: Logger;
+  terminal: Terminal;
   exits: Array<string>;
   keys: Array<string>;
 } {
-  const logger = makeTestLogger({ env, stdin });
+  const terminal = makeTestTerminal({ env, stdin });
   const exits: Array<string> = [];
   const keys: Array<string> = [];
-  logger.setRawMode(
+  terminal.setRawMode(
     () => {
       exits.push("exit");
     },
@@ -56,10 +56,10 @@ function setup(
       keys.push(data);
     },
   );
-  return { logger, exits, keys };
+  return { terminal, exits, keys };
 }
 
-describe("Logger", () => {
+describe("Terminal", () => {
   test("ctrl+c together with other keys", () => {
     const stdin = new SilentReadStream();
     const { exits, keys } = setup(stdin);
@@ -72,12 +72,12 @@ describe("Logger", () => {
   test("raw mode already enabled", () => {
     const stdin = new SilentReadStream();
     stdin.isRaw = true;
-    const { logger, exits, keys } = setup(stdin);
+    const { terminal, exits, keys } = setup(stdin);
     stdin.emit("data", Buffer.from("l"));
     stdin.emit("data", Buffer.from("\x03"));
     expect(keys).toStrictEqual(["l"]);
     expect(exits).toStrictEqual(["exit"]);
-    logger.reset();
+    terminal.reset();
     // Left enabled, since elm-watch didn’t enable it.
     expect(stdin.isRaw).toBe(true);
   });
@@ -88,18 +88,18 @@ describe("Logger", () => {
       // The caller’s own listener.
     });
     expect(stdin.readableFlowing).toBe(true);
-    const { logger } = setup(stdin);
-    logger.reset();
+    const { terminal } = setup(stdin);
+    terminal.reset();
     // Left flowing, since elm-watch didn’t start it.
     expect(stdin.readableFlowing).toBe(true);
   });
 
   test("raw mode enabled by elm-watch is disabled on reset", () => {
     const stdin = new SilentReadStream();
-    const { logger } = setup(stdin);
+    const { terminal } = setup(stdin);
     expect(stdin.isRaw).toBe(true);
     expect(stdin.readableFlowing).toBe(true);
-    logger.reset();
+    terminal.reset();
     expect(stdin.isRaw).toBe(false);
     expect(stdin.readableFlowing).toBe(false);
   });
@@ -107,21 +107,21 @@ describe("Logger", () => {
   test("raw mode enabled by someone else does not count as reading keypresses", () => {
     const stdin = new SilentReadStream();
     stdin.isRaw = true;
-    const logger = makeTestLogger({ stdin });
-    expect(logger.isRawMode()).toBe(false);
-    logger.setRawMode(() => {
+    const terminal = makeTestTerminal({ stdin });
+    expect(terminal.isRawMode()).toBe(false);
+    terminal.setRawMode(() => {
       // Do nothing.
     });
-    expect(logger.isRawMode()).toBe(true);
-    logger.reset();
-    expect(logger.isRawMode()).toBe(false);
+    expect(terminal.isRawMode()).toBe(true);
+    terminal.reset();
+    expect(terminal.isRawMode()).toBe(false);
   });
 
   test("no raw mode with __ELM_WATCH_NOT_TTY", () => {
     const stdin = new SilentReadStream();
-    const { logger } = setup(stdin, { __ELM_WATCH_NOT_TTY: "" });
+    const { terminal } = setup(stdin, { __ELM_WATCH_NOT_TTY: "" });
     expect(stdin.isRaw).toBe(false);
-    expect(logger.isRawMode()).toBe(false);
+    expect(terminal.isRawMode()).toBe(false);
   });
 
   test("no terminal query when stdout is not a TTY", async () => {
@@ -129,8 +129,8 @@ describe("Logger", () => {
     stdin.isRaw = true;
     const stdout = new MemoryWriteStream();
     stdout.isTTY = false;
-    const logger = makeTestLogger({ stdin, stdout });
-    expect(await logger.queryTerminal("\x1B]11;?\x07", () => true)).toBe(
+    const terminal = makeTestTerminal({ stdin, stdout });
+    expect(await terminal.queryTerminal("\x1B]11;?\x07", () => true)).toBe(
       undefined,
     );
     expect(stdout.content).toBe("");
@@ -138,16 +138,16 @@ describe("Logger", () => {
 
   describe("queryTerminal", () => {
     function setupQuery(): {
-      logger: Logger;
+      terminal: Terminal;
       stdin: SilentReadStream;
       query: (escapes: string) => Promise<string | undefined>;
     } {
       const stdin = new SilentReadStream();
       stdin.isRaw = true;
-      const logger = makeTestLogger({ stdin });
+      const terminal = makeTestTerminal({ stdin });
       const query = (escapes: string): Promise<string | undefined> =>
-        logger.queryTerminal(escapes, (response) => response.endsWith("!"));
-      return { logger, stdin, query };
+        terminal.queryTerminal(escapes, (response) => response.endsWith("!"));
+      return { terminal, stdin, query };
     }
 
     test("results are cached per escapes", async () => {
@@ -175,9 +175,9 @@ describe("Logger", () => {
     });
 
     test("a query finishing after reset is not cached", async () => {
-      const { logger, stdin, query } = setupQuery();
+      const { terminal, stdin, query } = setupQuery();
       const stale = query("a");
-      logger.reset();
+      terminal.reset();
       stdin.emit("data", Buffer.from("old!"));
       expect(await stale).toBe("old!");
 
@@ -190,13 +190,13 @@ describe("Logger", () => {
   test("nested withSynchronizedOutput", () => {
     const stdout = new MemoryWriteStream();
     const written = captureRawWrites(stdout);
-    const logger = makeTestLogger({ stdout });
-    logger.withSynchronizedOutput(() => {
-      logger.write("a");
-      logger.withSynchronizedOutput(() => {
-        logger.write("b");
+    const terminal = makeTestTerminal({ stdout });
+    terminal.withSynchronizedOutput(() => {
+      terminal.write("a");
+      terminal.withSynchronizedOutput(() => {
+        terminal.write("b");
       });
-      logger.write("c");
+      terminal.write("c");
     });
     expect(written.raw).toBe(`${BEGIN_SYNC_UPDATE}a\nb\nc\n${END_SYNC_UPDATE}`);
   });
@@ -204,10 +204,10 @@ describe("Logger", () => {
   test("stderr after writeWithoutTrailingNewline ends the stdout line", () => {
     const stdout = new MemoryWriteStream();
     const stderr = new MemoryWriteStream();
-    const logger = makeTestLogger({ stdout, stderr });
-    logger.writeWithoutTrailingNewline("a");
-    logger.writeToStderrMakesALotOfSenseHere("b");
-    logger.write("c");
+    const terminal = makeTestTerminal({ stdout, stderr });
+    terminal.writeWithoutTrailingNewline("a");
+    terminal.writeToStderrMakesALotOfSenseHere("b");
+    terminal.write("c");
     expect(stdout.content).toBe("a\nc\n");
     expect(stderr.content).toBe("b\n");
   });
@@ -215,10 +215,10 @@ describe("Logger", () => {
   test("clearLastLines(0) does nothing", () => {
     const stdout = new MemoryWriteStream();
     const written = captureRawWrites(stdout);
-    const logger = makeTestLogger({ stdout });
-    logger.writeWithoutTrailingNewline("a");
+    const terminal = makeTestTerminal({ stdout });
+    terminal.writeWithoutTrailingNewline("a");
     written.raw = "";
-    logger.clearLastLines(0);
+    terminal.clearLastLines(0);
     expect(written.raw).toBe("");
   });
 });

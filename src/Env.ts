@@ -41,7 +41,7 @@ export const WATCH_REPORT_DEPENDENCIES = "WATCH_REPORT_DEPENDENCIES";
 export const __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS =
   "__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS";
 
-// This enables `logger.debug()` calls (written to stderr). Since the stuff
+// This enables `terminal.debug()` calls (written to stderr). Since the stuff
 // written to stdout uses cursor movements, you probably want to also set
 // `__ELM_WATCH_NOT_TTY` or pipe to `cat` (if not a tty cursor movements are
 // disabled), or redirect stderr to a file.

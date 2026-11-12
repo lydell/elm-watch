@@ -27,7 +27,6 @@ import {
 } from "./Helpers.ts";
 import type { Host } from "./Host.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
-import { DEFAULT_COLUMNS } from "./Logger.ts";
 import {
   isNonEmptyArray,
   mapNonEmptyArray,
@@ -36,6 +35,7 @@ import {
 import { absolutePathFromString } from "./PathHelpers.ts";
 import type { Port } from "./Port.ts";
 import type { Command, ExitReason } from "./Spawn.ts";
+import { DEFAULT_COLUMNS } from "./Terminal.ts";
 import * as Theme from "./Theme.ts";
 import {
   type AbsolutePath,

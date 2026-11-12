@@ -9,8 +9,8 @@ import {
   type Msg,
   update,
 } from "../src/HotUpdate.ts";
-import type { LoggerConfig } from "../src/Logger.ts";
 import type { Project } from "../src/Project.ts";
+import type { TerminalConfig } from "../src/Terminal.ts";
 import {
   type AbsolutePath,
   markAsAbsolutePath,
@@ -35,7 +35,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 // `CompileAllOutputsAsNeeded`) mutate the project. Here, each step instead
 // says what the project looks like.
 
-const loggerConfig: LoggerConfig = {
+const terminalConfig: TerminalConfig = {
   debug: false,
   noColor: true,
   fancy: false,
@@ -116,7 +116,7 @@ class Simulation {
   send(message: Msg, project: Project = this.project): this {
     this.project = project;
     const [model, cmds] = update(
-      loggerConfig,
+      terminalConfig,
       project,
       this.exitOnError,
       message,

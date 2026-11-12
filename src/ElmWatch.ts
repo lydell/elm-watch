@@ -7,10 +7,10 @@ import * as Help from "./Help.ts";
 import type { ReadStream, WriteStream } from "./Helpers.ts";
 import type { HotTestHooks } from "./Hot.ts";
 import { init } from "./Init.ts";
-import { type Logger, makeLogger } from "./Logger.ts";
 import { decodeOptions } from "./Options.ts";
 import { absolutePathFromString } from "./PathHelpers.ts";
 import { run, runConfig, type RunResult } from "./Run.ts";
+import { type Terminal, makeTerminal } from "./Terminal.ts";
 import {
   type CliArg,
   type CreateServer,
@@ -50,7 +50,7 @@ export default async function elmWatchCli(
   }: Options = {},
 ): Promise<number> {
   const getNow: GetNow = () => new Date();
-  const logger = makeLogger({
+  const terminal = makeTerminal({
     env,
     getNow,
     stdin,
@@ -66,7 +66,7 @@ export default async function elmWatchCli(
     (arg) => arg === "-h" || arg === "-help" || arg === "--help",
   );
   if (isHelp) {
-    logger.write(Help.render(logger.config));
+    terminal.write(Help.render(terminal.config));
     return 0;
   }
 
@@ -75,20 +75,20 @@ export default async function elmWatchCli(
   switch (args[0]) {
     case undefined:
     case "help":
-      logger.write(Help.render(logger.config));
+      terminal.write(Help.render(terminal.config));
       return 0;
 
     case "init":
-      return init(cwd, logger, restArgs);
+      return init(cwd, terminal, restArgs);
 
     case "make":
     case "hot": {
       const runMode = args[0];
-      return runUntilExit(logger, undefined, (previous, devServerHolder) =>
+      return runUntilExit(terminal, undefined, (previous, devServerHolder) =>
         run(
           cwd,
           env,
-          logger,
+          terminal,
           getNow,
           createServer,
           runMode,
@@ -103,7 +103,7 @@ export default async function elmWatchCli(
     }
 
     default:
-      logger.write(`Unknown command: ${args[0]}`);
+      terminal.write(`Unknown command: ${args[0]}`);
       return 1;
   }
 }
@@ -125,7 +125,7 @@ export async function elmWatch(options: unknown): Promise<number> {
   } = (isObject ? options : {}) as Omit<Options, "cwd">;
 
   const getNow: GetNow = () => new Date();
-  const logger = makeLogger({
+  const terminal = makeTerminal({
     env,
     getNow,
     stdin,
@@ -142,14 +142,14 @@ export async function elmWatch(options: unknown): Promise<number> {
 
   switch (decoded.tag) {
     case "DecoderError":
-      logger.errorTemplate(Errors.invalidOptions(decoded.error));
+      terminal.errorTemplate(Errors.invalidOptions(decoded.error));
       return 1;
 
     case "Valid":
-      return runUntilExit(logger, signal, (previous, devServerHolder) =>
+      return runUntilExit(terminal, signal, (previous, devServerHolder) =>
         runConfig({
           env,
-          logger,
+          terminal,
           getNow,
           createServer,
           runMode: decoded.runMode,
@@ -171,7 +171,7 @@ type PreviousRun = Omit<Extract<RunResult, { tag: "Restart" }>, "tag">;
 
 // Restarts elm-watch (for example when elm.json changes) until it exits.
 async function runUntilExit(
-  logger: Logger,
+  terminal: Terminal,
   signal: AbortSignal | undefined,
   runOnce: (
     previous: PreviousRun,
@@ -213,7 +213,7 @@ async function runUntilExit(
         // accidentally on the event loop. That’s of course a bug, but if it
         // happens it should at least be possible to exit with a simple ctrl+c.
         // This also shows the cursor again, even if something crashed.
-        logger.reset();
+        terminal.reset();
       });
   });
 }

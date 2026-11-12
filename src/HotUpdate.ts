@@ -22,7 +22,6 @@ import {
   WATCHER_EVENT_SLEEP_MS,
   type WebSocketRelatedEvent,
 } from "./LatestEvent.ts";
-import type { LoggerConfig } from "./Logger.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import {
   type ApplicationTargetErrorWithMetadata,
@@ -33,6 +32,7 @@ import {
   type PackageState,
   type Project,
 } from "./Project.ts";
+import type { TerminalConfig } from "./Terminal.ts";
 import type {
   AbsolutePath,
   CompilationMode,
@@ -333,7 +333,7 @@ export const init = (
 ];
 
 export function update(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   project: Project,
   exitOnError: boolean,
   msg: Msg,
@@ -555,7 +555,7 @@ export function update(
               { tag: "HandleElmWatchStuffJsonWriteError" },
               {
                 tag: "LogInfoMessage",
-                message: compileFinishedMessage(loggerConfig, duration),
+                message: compileFinishedMessage(terminalConfig, duration),
                 events: model.latestEvents,
               },
               isNonEmptyArray(errors) && exitOnError
@@ -1343,10 +1343,10 @@ export function getNextActionSleepMs(
 }
 
 function compileFinishedMessage(
-  loggerConfig: LoggerConfig,
+  terminalConfig: TerminalConfig,
   duration: number,
 ): string {
   return `Compiled in ${bold(
-    printDurationMs(loggerConfig.mockedTimings ? 123 : duration).trim(),
+    printDurationMs(terminalConfig.mockedTimings ? 123 : duration).trim(),
   )}`;
 }

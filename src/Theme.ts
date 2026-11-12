@@ -1,6 +1,6 @@
 import type { Color } from "./ElmMakeError.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
-import type { Logger } from "./Logger.ts";
+import type { Terminal } from "./Terminal.ts";
 
 export type Theme = {
   foreground: string;
@@ -97,14 +97,14 @@ export const DEFAULT_THEME: Theme = {
   },
 };
 
-export async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
+export async function getThemeFromTerminal(terminal: Terminal): Promise<Theme> {
   // Querying colors is not supported on Windows:
   // https://github.com/microsoft/terminal/issues/3718
   // Save them the timeout.
   if (IS_WINDOWS) {
     return DEFAULT_THEME;
   }
-  const stdin = await logger.queryTerminal(
+  const stdin = await terminal.queryTerminal(
     THEME_ESCAPES_STRING,
     isThemeResponseDone,
   );

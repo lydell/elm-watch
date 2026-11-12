@@ -1,9 +1,9 @@
 /* oxlint-disable no-console */
 
-import { makeLogger } from "../src/Logger.ts";
+import { makeTerminal } from "../src/Terminal.ts";
 import { getThemeFromTerminal } from "../src/Theme.ts";
 
-const logger = makeLogger({
+const terminal = makeTerminal({
   env: process.env,
   getNow: () => new Date(),
   stdin: process.stdin,
@@ -12,15 +12,15 @@ const logger = makeLogger({
   logDebug: console.debug,
 });
 
-logger.setRawMode(() => {
+terminal.setRawMode(() => {
   process.exit();
 });
 
-getThemeFromTerminal(logger)
+getThemeFromTerminal(terminal)
   .then((theme) => {
     console.log(theme);
   })
   .catch(console.error)
   .finally(() => {
-    logger.reset();
+    terminal.reset();
   });

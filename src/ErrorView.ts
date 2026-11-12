@@ -11,7 +11,7 @@ import {
   type Selection,
 } from "./ErrorSelection.ts";
 import { bold, dim, removeColor } from "./Helpers.ts";
-import type { LoggerConfig } from "./Logger.ts";
+import type { TerminalConfig } from "./Terminal.ts";
 
 // In the terminal, errors are shown one at a time, and you navigate between
 // them with the keyboard. See ErrorSelection.ts for which error is selected.
@@ -92,14 +92,14 @@ export function makeErrorViewTarget(
 // so they are right next to the cursor and easy to find. Only the error area
 // changes when switching to showing all errors (see `renderShowAll`).
 export function render({
-  loggerConfig,
+  terminalConfig,
   expanded,
   selection,
   targets,
   notice,
   infoLine,
 }: {
-  loggerConfig: LoggerConfig;
+  terminalConfig: TerminalConfig;
   expanded: boolean;
   selection: Selection;
   targets: Array<ErrorViewTarget>;
@@ -116,9 +116,9 @@ export function render({
     return [
       ...noticeLines,
       ...infoLines,
-      `${loggerConfig.fancy ? "✅ " : ""}${bold(selection.targetName)} has no errors.`,
+      `${terminalConfig.fancy ? "✅ " : ""}${bold(selection.targetName)} has no errors.`,
       "",
-      keyHints(loggerConfig.columns, [
+      keyHints(terminalConfig.columns, [
         hasOtherTargetsWithErrors
           ? ["tab", "next target with errors"]
           : undefined,
@@ -141,16 +141,16 @@ export function render({
   return [
     Errors.toTerminalString(
       error.template,
-      loggerConfig.columns,
-      loggerConfig.noColor,
+      terminalConfig.columns,
+      terminalConfig.noColor,
       !expanded,
     ),
     "",
     ...noticeLines,
     ...infoLines,
-    `${loggerConfig.fancy ? "🚨 " : ""}${position}`,
+    `${terminalConfig.fancy ? "🚨 " : ""}${position}`,
     "",
-    keyHints(loggerConfig.columns, [
+    keyHints(terminalConfig.columns, [
       [
         [
           ["←", errorNumber > 1],
@@ -179,11 +179,11 @@ export function render({
 
 // Like `render`, but with all errors (of all targets).
 export function renderShowAll({
-  loggerConfig,
+  terminalConfig,
   errorStrings,
   infoLine,
 }: {
-  loggerConfig: LoggerConfig;
+  terminalConfig: TerminalConfig;
   errorStrings: Array<string>;
   infoLine: string | undefined;
 }): string {
@@ -191,9 +191,9 @@ export function renderShowAll({
   return [
     ...(numErrors === 0 ? [] : [errorStrings.join("\n\n"), ""]),
     ...(infoLine === undefined ? [] : [infoLine]),
-    `${loggerConfig.fancy ? "🚨 " : ""}${numErrors} error${numErrors === 1 ? "" : "s"}`,
+    `${terminalConfig.fancy ? "🚨 " : ""}${numErrors} error${numErrors === 1 ? "" : "s"}`,
     "",
-    keyHints(loggerConfig.columns, [["a", "show one error at a time"]]),
+    keyHints(terminalConfig.columns, [["a", "show one error at a time"]]),
   ].join("\n");
 }
 

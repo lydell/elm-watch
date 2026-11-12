@@ -7,13 +7,13 @@ import {
   NO_COLOR,
 } from "./Env.ts";
 import { bold, dim } from "./Helpers.ts";
-import type { LoggerConfig } from "./Logger.ts";
+import type { TerminalConfig } from "./Terminal.ts";
 
 const elmWatchJson = bold("elm-watch.json");
 
-export function render(loggerConfig: LoggerConfig): string {
+export function render(terminalConfig: TerminalConfig): string {
   // Not trimming on purpose.
-  const symbolLegend = loggerConfig.fancy
+  const symbolLegend = terminalConfig.fancy
     ? `
 ${bold("Symbol legend:")}
 
@@ -23,7 +23,7 @@ ${Object.values(EMOJI)
     return `${indent}${emojiWidthFix({
       emoji,
       column: indent.length + 3,
-      isTTY: loggerConfig.isTTY,
+      isTTY: terminalConfig.isTTY,
     })} ${description}`;
   })
   .join("\n")}
@@ -61,7 +61,7 @@ ${bold("Durations legend:")}
     ${bold("I")} inject hot reloading code
     ${bold("R")} queued for postprocess
     ${bold("P")} postprocess
-    ${bold(loggerConfig.fancy ? "¦" : "/")} next is run in parallel
+    ${bold(terminalConfig.fancy ? "¦" : "/")} next is run in parallel
 
 ${dim("---")}
 
