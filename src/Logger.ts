@@ -115,6 +115,13 @@ export function makeLogger({
     }
     return "";
   };
+  // stderr usually goes to the same terminal as stdout, so end the last line
+  // on stdout before writing to stderr.
+  const endStdoutLine = (): void => {
+    if (needsNewline) {
+      stdout.write(newlineIfNeeded());
+    }
+  };
   const exitOnCtrlC = (data: Buffer): void => {
     const string = data.toString("utf8");
     if (string.includes("\x03")) {
@@ -166,6 +173,7 @@ export function makeLogger({
       needsNewline = true;
     },
     writeToStderrMakesALotOfSenseHere(message: string) {
+      endStdoutLine();
       stderr.write(`${handleColor(message)}\n`);
     },
     errorTemplate(template) {
@@ -175,6 +183,7 @@ export function makeLogger({
     },
     debug(...args) {
       if (config.debug) {
+        endStdoutLine();
         logDebug(
           args
             .map((arg, index) =>

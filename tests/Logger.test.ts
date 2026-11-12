@@ -216,4 +216,24 @@ describe("Logger", () => {
     });
     expect(raw).toBe(`${BEGIN_SYNC_UPDATE}a\nb\nc\n${END_SYNC_UPDATE}`);
   });
+
+  test("stderr after writeWithoutTrailingNewline ends the stdout line", () => {
+    const stdout = new MemoryWriteStream();
+    const stderr = new MemoryWriteStream();
+    const logger = makeLogger({
+      env: {},
+      getNow: () => new Date(),
+      stdin: new SilentReadStream(),
+      stdout,
+      stderr,
+      logDebug: () => {
+        // Do nothing.
+      },
+    });
+    logger.writeWithoutTrailingNewline("a");
+    logger.writeToStderrMakesALotOfSenseHere("b");
+    logger.write("c");
+    expect(stdout.content).toBe("a\nc\n");
+    expect(stderr.content).toBe("b\n");
+  });
 });
