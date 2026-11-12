@@ -40,10 +40,6 @@ export function dim(string: string): string {
   return `${RESET_COLOR}\x1B[2m${string}${RESET_COLOR}`;
 }
 
-export function removeColor(string: string): string {
-  return string.replace(/\x1B\[\d+m/g, "");
-}
-
 // Matches what to remove from text from the outside (like error messages from
 // other tools), so that it can’t mess up the terminal: Whole CSI and OSC escape
 // sequences, and control characters except tab and newline. Anything a
@@ -55,6 +51,10 @@ const UNSAFE_TERMINAL_TEXT =
 
 const SGR = /\x1B\[[\d;:]*m/g;
 const ONLY_SGR = /^\x1B\[[\d;:]*m$/;
+
+export function removeColor(string: string): string {
+  return string.replace(SGR, "");
+}
 
 // Returns the text with colors (reset at the end, so they can’t leak), and the
 // text without colors.

@@ -5,6 +5,7 @@ import {
   formatTime,
   printDurationMs,
   printFileSize,
+  removeColor,
   sanitizeTerminalText,
   unknownErrorToString,
 } from "../src/Helpers.ts";
@@ -226,5 +227,11 @@ describe("Helpers", () => {
         }
       `);
     });
+  });
+
+  test("removeColor", () => {
+    expect(removeColor("\x1B[1;31mred\x1B[0m \x1B[38:2::1:2:3mrgb\x1B[m")).toBe(
+      "red rgb",
+    );
   });
 });

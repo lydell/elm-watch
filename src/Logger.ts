@@ -96,6 +96,12 @@ export function makeLogger({
   let onExit = defaultOnExit;
   let onData: ((data: string) => void) | undefined = undefined;
   let cursorHidden = false;
+  // Raw mode might already be enabled (and stdin flowing) by whoever uses
+  // elm-watch via the JavaScript API. Then we still need to listen, but should
+  // leave raw mode enabled and stdin flowing.
+  let listeningToStdin = false;
+  let enabledRawMode = false;
+  let resumedStdin = false;
   let needsNewline = false;
   const newlineIfNeeded = (): string => {
     if (needsNewline) {
@@ -106,8 +112,8 @@ export function makeLogger({
   };
   const exitOnCtrlC = (data: Buffer): void => {
     const string = data.toString("utf8");
-    if (string === "\x03") {
-      // ctrl+c was pressed.
+    if (string.includes("\x03")) {
+      // ctrl+c was pressed (possibly together with other keys).
       onExit();
     } else {
       onData?.(string);
@@ -217,10 +223,16 @@ export function makeLogger({
     setRawMode(passedOnExit, passedOnData) {
       onExit = passedOnExit;
       onData = passedOnData;
-      if (stdin.isTTY && stdout.isTTY && !stdin.isRaw) {
-        stdin.setRawMode(true);
+      if (stdin.isTTY && stdout.isTTY && !listeningToStdin) {
+        if (!stdin.isRaw) {
+          stdin.setRawMode(true);
+          enabledRawMode = true;
+        }
+        // Check before adding the listener, since that resumes stdin too.
+        resumedStdin = stdin.readableFlowing !== true;
         stdin.on("data", exitOnCtrlC);
         stdin.resume();
+        listeningToStdin = true;
         // We only take keypresses, no typing, so the cursor is just noise.
         if (config.isTTY) {
           stdout.write(HIDE_CURSOR);
@@ -235,10 +247,17 @@ export function makeLogger({
       onExit = defaultOnExit;
       onData = undefined;
       queryTerminalStatus = { tag: "NotQueried" };
-      stdin.pause();
-      stdin.off("data", exitOnCtrlC);
-      if (stdin.isRaw) {
+      if (listeningToStdin) {
+        stdin.off("data", exitOnCtrlC);
+        listeningToStdin = false;
+      }
+      if (resumedStdin) {
+        stdin.pause();
+        resumedStdin = false;
+      }
+      if (enabledRawMode) {
         stdin.setRawMode(false);
+        enabledRawMode = false;
       }
       if (cursorHidden) {
         stdout.write(SHOW_CURSOR);

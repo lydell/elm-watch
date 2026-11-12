@@ -1716,16 +1716,19 @@ ${limitStdio(stderr)}
 // Limit `string` to take at most 100 lines of terminal (roughly).
 // It doesn’t need to be precise. As long as we don’t print megabytes of
 // JavaScript that completely destroys the error message we’re good.
+// The output can contain anything, so escape codes (and colors, to keep it
+// simple) are removed, and the lines are rendered as text (escaped in HTML).
 const limitStdio =
   (string: string) =>
   (width: number, renderPiece: (piece: Piece) => string) => {
     const max = 100;
-    const lines = string.trimEnd().split("\n");
+    const lines = sanitizeTerminalText(string).plain.trimEnd().split("\n");
     const result: Array<string> = [];
     let usedLines = 0;
 
     for (const line of lines) {
-      const count = Math.ceil(line.length / width);
+      // Even an empty line takes one line.
+      const count = Math.max(1, Math.ceil(line.length / width));
       const available = max - usedLines;
       if (available <= 0) {
         break;
@@ -1733,14 +1736,14 @@ const limitStdio =
         const take = available * width;
         const left = line.length - take;
         result.push(
-          `${line.slice(0, take)} ${renderPiece(
+          `${renderPiece({ tag: "Text", text: line.slice(0, take) })} ${renderPiece(
             dim(left === 1 ? "1 more character" : `${left} more characters`),
           )}`,
         );
         usedLines += available;
         break;
       } else {
-        result.push(line);
+        result.push(renderPiece({ tag: "Text", text: line }));
         usedLines += count;
       }
     }

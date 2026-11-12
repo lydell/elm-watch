@@ -3,7 +3,13 @@ import * as path from "path";
 import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
 import * as Compile from "./Compile.ts";
 import type { WebSocketConnectionRejectedReason } from "./DevServer.ts";
-import { bold, dim, formatTime, quote } from "./Helpers.ts";
+import {
+  bold,
+  dim,
+  formatTime,
+  quote,
+  sanitizeTerminalText,
+} from "./Helpers.ts";
 import type { LoggerConfig } from "./Logger.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import type { Project } from "./Project.ts";
@@ -180,9 +186,13 @@ function printWatcherEventPath(
   event: Extract<LatestEvent, { tag: "WatcherEvent" }>,
   root: AbsolutePath,
 ): string {
-  return event.file.tag === "AbsolutePath"
-    ? path.relative(root, event.file.absolutePath)
-    : event.file.urlPath;
+  // File names can contain newlines and escape codes, which would mess up the
+  // single-line info message.
+  return sanitizeTerminalText(
+    event.file.tag === "AbsolutePath"
+      ? path.relative(root, event.file.absolutePath)
+      : event.file.urlPath,
+  ).plain.replace(/\s/g, " ");
 }
 
 function printEventShort(event: LatestEvent, root: AbsolutePath): string {
