@@ -269,7 +269,9 @@ export function makeLogger({
       stdout.write(newlineIfNeeded());
     },
     async queryTerminal(escapes: string, isDone: (stdin: string) => boolean) {
-      if (!stdin.isRaw) {
+      // Raw mode is needed to read the response without it being echoed. A TTY
+      // is needed so we don’t write the escapes into a file or pipe.
+      if (!stdin.isRaw || !config.isTTY) {
         return undefined;
       }
 

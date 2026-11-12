@@ -107,4 +107,25 @@ describe("Logger", () => {
     expect(stdin.isRaw).toBe(false);
     expect(logger.isRawMode()).toBe(false);
   });
+
+  test("no terminal query when stdout is not a TTY", async () => {
+    const stdin = new SilentReadStream();
+    stdin.isRaw = true;
+    const stdout = new MemoryWriteStream();
+    stdout.isTTY = false;
+    const logger = makeLogger({
+      env: {},
+      getNow: () => new Date(),
+      stdin,
+      stdout,
+      stderr: new MemoryWriteStream(),
+      logDebug: () => {
+        // Do nothing.
+      },
+    });
+    expect(await logger.queryTerminal("\x1B]11;?\x07", () => true)).toBe(
+      undefined,
+    );
+    expect(stdout.content).toBe("");
+  });
 });
