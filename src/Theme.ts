@@ -26,24 +26,25 @@ const THEME_ESCAPES_DONE_CHECK = "]11;";
 const THEME_ESCAPES_REGEX =
   /\x1B](4;)?(\d+);rgb:([\da-f]{4})\/([\da-f]{4})\/([\da-f]{4})/gi;
 
-const INDEX_TO_COLOR: Record<number, Color> = {
-  0: "black",
-  1: "red",
-  2: "green",
-  3: "yellow",
-  4: "blue",
-  5: "magenta",
-  6: "cyan",
-  7: "white",
-  8: "BLACK",
-  9: "RED",
-  10: "GREEN",
-  11: "YELLOW",
-  12: "BLUE",
-  13: "MAGENTA",
-  14: "CYAN",
-  15: "WHITE",
-};
+// The 16 basic colors, in terminal order (`30`–`37` and `90`–`97`).
+export const PALETTE: Array<Color> = [
+  "black",
+  "red",
+  "green",
+  "yellow",
+  "blue",
+  "magenta",
+  "cyan",
+  "white",
+  "BLACK",
+  "RED",
+  "GREEN",
+  "YELLOW",
+  "BLUE",
+  "MAGENTA",
+  "CYAN",
+  "WHITE",
+];
 
 //https://github.com/chalk/ansi-styles/blob/cd0b0cb59337bfd7d3669b2d0fcde7ff661a83a6/index.js#L25-L42
 export const COLOR_TO_TERMINAL_ESCAPE: Record<Color, string> = {
@@ -114,7 +115,7 @@ function parseTheme(stdin: string): Theme {
     const color = `#${convert(r)}${convert(g)}${convert(b)}`;
 
     if (isPalette) {
-      const colorName = INDEX_TO_COLOR[index];
+      const colorName = PALETTE[index];
       if (colorName !== undefined) {
         theme.palette[colorName] = color;
       }

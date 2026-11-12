@@ -1,6 +1,5 @@
-import type { Color } from "./ElmMakeError.ts";
 import { escapeHtml } from "./Helpers.ts";
-import type { Theme } from "./Theme.ts";
+import { PALETTE, type Theme } from "./Theme.ts";
 
 // Turns text with colors (ANSI escape codes) into HTML, for showing errors
 // from other tools (see ExternalErrors.ts) in the browser. The text must have
@@ -30,25 +29,6 @@ const DEFAULT_STYLE: Style = {
   background: undefined,
 };
 
-const PALETTE: Array<Color> = [
-  "black",
-  "red",
-  "green",
-  "yellow",
-  "blue",
-  "magenta",
-  "cyan",
-  "white",
-  "BLACK",
-  "RED",
-  "GREEN",
-  "YELLOW",
-  "BLUE",
-  "MAGENTA",
-  "CYAN",
-  "WHITE",
-];
-
 const SGR = /\x1B\[([\d;:]*)m/g;
 
 export function ansiToHtml(text: string, theme: Theme): string {
@@ -73,18 +53,17 @@ function renderText(text: string, style: Style, theme: Theme): string {
         style.foreground ?? theme.foreground,
       ]
     : [style.foreground, style.background];
+  const decoration = [
+    style.underline ? "underline" : undefined,
+    style.strikethrough ? "line-through" : undefined,
+  ]
+    .flatMap((part) => part ?? [])
+    .join(" ");
   const css = [
     style.bold ? "font-weight: bold" : undefined,
     style.dim ? "opacity: 0.6" : undefined,
     style.italic ? "font-style: italic" : undefined,
-    style.underline || style.strikethrough
-      ? `text-decoration: ${[
-          style.underline ? "underline" : "",
-          style.strikethrough ? "line-through" : "",
-        ]
-          .join(" ")
-          .trim()}`
-      : undefined,
+    decoration === "" ? undefined : `text-decoration: ${decoration}`,
     foreground === undefined ? undefined : `color: ${foreground}`,
     background === undefined ? undefined : `background-color: ${background}`,
   ].flatMap((part) => part ?? []);
@@ -97,7 +76,8 @@ function renderText(text: string, style: Style, theme: Theme): string {
 // (with `:`) are also in use, as well as the kitty extensions `4:n` (underline
 // style) and `58` (underline color). Unknown parameters are ignored.
 function applySgr(style: Style, parameters: string, theme: Theme): Style {
-  const groups = parameters === "" ? ["0"] : parameters.split(";");
+  // An empty parameter (`\x1B[m`) means 0 (reset), since `Number("")` is 0.
+  const groups = parameters.split(";");
   let newStyle = style;
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i] ?? "";
@@ -107,7 +87,7 @@ function applySgr(style: Style, parameters: string, theme: Theme): Style {
       newStyle =
         code === 4
           ? applyUnderlineStyle(newStyle, rest[0])
-          : (applyExtendedColor(newStyle, code, rest, theme) ?? newStyle);
+          : applyExtendedColor(newStyle, code, rest, theme);
       continue;
     }
     const code = Number(group);
@@ -116,13 +96,12 @@ function applySgr(style: Style, parameters: string, theme: Theme): Style {
       // supported, but their arguments must still be skipped.
       const kind = Number(groups[i + 1]);
       const length = kind === 5 ? 2 : kind === 2 ? 4 : 1;
-      newStyle =
-        applyExtendedColor(
-          newStyle,
-          code,
-          groups.slice(i + 1, i + 1 + length).map(Number),
-          theme,
-        ) ?? newStyle;
+      newStyle = applyExtendedColor(
+        newStyle,
+        code,
+        groups.slice(i + 1, i + 1 + length).map(Number),
+        theme,
+      );
       i += length;
       continue;
     }
@@ -134,11 +113,9 @@ function applySgr(style: Style, parameters: string, theme: Theme): Style {
 // `4:0` is no underline, `4:1` to `4:5` are straight, double, curly, dotted
 // and dashed – all shown as a regular underline.
 function applyUnderlineStyle(style: Style, kind: number | undefined): Style {
-  return kind === 0
-    ? { ...style, underline: false }
-    : kind !== undefined && kind >= 1 && kind <= 5
-      ? { ...style, underline: true }
-      : style;
+  return kind !== undefined && kind <= 5
+    ? { ...style, underline: kind !== 0 }
+    : style;
 }
 
 function applyCode(style: Style, code: number, theme: Theme): Style {
@@ -193,11 +170,11 @@ function applyExtendedColor(
   code: number | undefined,
   rest: Array<number>,
   theme: Theme,
-): Style | undefined {
+): Style {
   const key =
     code === 38 ? "foreground" : code === 48 ? "background" : undefined;
   if (key === undefined) {
-    return undefined;
+    return style;
   }
   const [kind, ...numbers] = rest;
   let color: string | undefined = undefined;
@@ -211,7 +188,7 @@ function applyExtendedColor(
         ? `rgb(${rgb.join(", ")})`
         : undefined;
   }
-  return color === undefined ? undefined : { ...style, [key]: color };
+  return color === undefined ? style : { ...style, [key]: color };
 }
 
 function isByte(value: number | undefined): boolean {
