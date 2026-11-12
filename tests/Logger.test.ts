@@ -1,27 +1,51 @@
 import { describe, expect, test } from "vitest";
 
 import { BEGIN_SYNC_UPDATE, END_SYNC_UPDATE } from "../src/Helpers.ts";
-import { makeLogger } from "../src/Logger.ts";
+import { type Logger, makeLogger } from "../src/Logger.ts";
 import { MemoryWriteStream, SilentReadStream } from "./Helpers.ts";
+
+function makeTestLogger({
+  env = {},
+  stdin = new SilentReadStream(),
+  stdout = new MemoryWriteStream(),
+  stderr = new MemoryWriteStream(),
+}: {
+  env?: Record<string, string>;
+  stdin?: SilentReadStream;
+  stdout?: MemoryWriteStream;
+  stderr?: MemoryWriteStream;
+}): Logger {
+  return makeLogger({
+    env,
+    getNow: () => new Date(),
+    stdin,
+    stdout,
+    stderr,
+    logDebug: () => {
+      // Do nothing.
+    },
+  });
+}
+
+// `MemoryWriteStream` removes some escapes. This keeps everything.
+function captureRawWrites(stdout: MemoryWriteStream): { raw: string } {
+  const result = { raw: "" };
+  stdout.write = (chunk: string): boolean => {
+    result.raw += chunk;
+    return true;
+  };
+  return result;
+}
 
 function setup(
   stdin: SilentReadStream,
   env: Record<string, string> = {},
 ): {
-  logger: ReturnType<typeof makeLogger>;
+  logger: Logger;
   exits: Array<string>;
   keys: Array<string>;
 } {
-  const logger = makeLogger({
-    env,
-    getNow: () => new Date(),
-    stdin,
-    stdout: new MemoryWriteStream(),
-    stderr: new MemoryWriteStream(),
-    logDebug: () => {
-      // Do nothing.
-    },
-  });
+  const logger = makeTestLogger({ env, stdin });
   const exits: Array<string> = [];
   const keys: Array<string> = [];
   logger.setRawMode(
@@ -83,16 +107,7 @@ describe("Logger", () => {
   test("raw mode enabled by someone else does not count as reading keypresses", () => {
     const stdin = new SilentReadStream();
     stdin.isRaw = true;
-    const logger = makeLogger({
-      env: {},
-      getNow: () => new Date(),
-      stdin,
-      stdout: new MemoryWriteStream(),
-      stderr: new MemoryWriteStream(),
-      logDebug: () => {
-        // Do nothing.
-      },
-    });
+    const logger = makeTestLogger({ stdin });
     expect(logger.isRawMode()).toBe(false);
     logger.setRawMode(() => {
       // Do nothing.
@@ -114,16 +129,7 @@ describe("Logger", () => {
     stdin.isRaw = true;
     const stdout = new MemoryWriteStream();
     stdout.isTTY = false;
-    const logger = makeLogger({
-      env: {},
-      getNow: () => new Date(),
-      stdin,
-      stdout,
-      stderr: new MemoryWriteStream(),
-      logDebug: () => {
-        // Do nothing.
-      },
-    });
+    const logger = makeTestLogger({ stdin, stdout });
     expect(await logger.queryTerminal("\x1B]11;?\x07", () => true)).toBe(
       undefined,
     );
@@ -132,22 +138,13 @@ describe("Logger", () => {
 
   describe("queryTerminal", () => {
     function setupQuery(): {
-      logger: ReturnType<typeof makeLogger>;
+      logger: Logger;
       stdin: SilentReadStream;
       query: (escapes: string) => Promise<string | undefined>;
     } {
       const stdin = new SilentReadStream();
       stdin.isRaw = true;
-      const logger = makeLogger({
-        env: {},
-        getNow: () => new Date(),
-        stdin,
-        stdout: new MemoryWriteStream(),
-        stderr: new MemoryWriteStream(),
-        logDebug: () => {
-          // Do nothing.
-        },
-      });
+      const logger = makeTestLogger({ stdin });
       const query = (escapes: string): Promise<string | undefined> =>
         logger.queryTerminal(escapes, (response) => response.endsWith("!"));
       return { logger, stdin, query };
@@ -192,21 +189,8 @@ describe("Logger", () => {
 
   test("nested withSynchronizedOutput", () => {
     const stdout = new MemoryWriteStream();
-    let raw = "";
-    stdout.write = (chunk: string): boolean => {
-      raw += chunk;
-      return true;
-    };
-    const logger = makeLogger({
-      env: {},
-      getNow: () => new Date(),
-      stdin: new SilentReadStream(),
-      stdout,
-      stderr: new MemoryWriteStream(),
-      logDebug: () => {
-        // Do nothing.
-      },
-    });
+    const written = captureRawWrites(stdout);
+    const logger = makeTestLogger({ stdout });
     logger.withSynchronizedOutput(() => {
       logger.write("a");
       logger.withSynchronizedOutput(() => {
@@ -214,22 +198,13 @@ describe("Logger", () => {
       });
       logger.write("c");
     });
-    expect(raw).toBe(`${BEGIN_SYNC_UPDATE}a\nb\nc\n${END_SYNC_UPDATE}`);
+    expect(written.raw).toBe(`${BEGIN_SYNC_UPDATE}a\nb\nc\n${END_SYNC_UPDATE}`);
   });
 
   test("stderr after writeWithoutTrailingNewline ends the stdout line", () => {
     const stdout = new MemoryWriteStream();
     const stderr = new MemoryWriteStream();
-    const logger = makeLogger({
-      env: {},
-      getNow: () => new Date(),
-      stdin: new SilentReadStream(),
-      stdout,
-      stderr,
-      logDebug: () => {
-        // Do nothing.
-      },
-    });
+    const logger = makeTestLogger({ stdout, stderr });
     logger.writeWithoutTrailingNewline("a");
     logger.writeToStderrMakesALotOfSenseHere("b");
     logger.write("c");
@@ -239,24 +214,11 @@ describe("Logger", () => {
 
   test("clearLastLines(0) does nothing", () => {
     const stdout = new MemoryWriteStream();
-    let raw = "";
-    stdout.write = (chunk: string): boolean => {
-      raw += chunk;
-      return true;
-    };
-    const logger = makeLogger({
-      env: {},
-      getNow: () => new Date(),
-      stdin: new SilentReadStream(),
-      stdout,
-      stderr: new MemoryWriteStream(),
-      logDebug: () => {
-        // Do nothing.
-      },
-    });
+    const written = captureRawWrites(stdout);
+    const logger = makeTestLogger({ stdout });
     logger.writeWithoutTrailingNewline("a");
-    raw = "";
+    written.raw = "";
     logger.clearLastLines(0);
-    expect(raw).toBe("");
+    expect(written.raw).toBe("");
   });
 });
