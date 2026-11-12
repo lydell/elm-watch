@@ -236,4 +236,27 @@ describe("Logger", () => {
     expect(stdout.content).toBe("a\nc\n");
     expect(stderr.content).toBe("b\n");
   });
+
+  test("clearLastLines(0) does nothing", () => {
+    const stdout = new MemoryWriteStream();
+    let raw = "";
+    stdout.write = (chunk: string): boolean => {
+      raw += chunk;
+      return true;
+    };
+    const logger = makeLogger({
+      env: {},
+      getNow: () => new Date(),
+      stdin: new SilentReadStream(),
+      stdout,
+      stderr: new MemoryWriteStream(),
+      logDebug: () => {
+        // Do nothing.
+      },
+    });
+    logger.writeWithoutTrailingNewline("a");
+    raw = "";
+    logger.clearLastLines(0);
+    expect(raw).toBe("");
+  });
 });

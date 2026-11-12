@@ -216,7 +216,7 @@ export function makeLogger({
       }
     },
     clearLastLines(numLines: number) {
-      if (config.isTTY) {
+      if (config.isTTY && numLines > 0) {
         if (needsNewline) {
           // The cursor is at the end of the last line, rather than at the
           // start of the line below it.
