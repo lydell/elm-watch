@@ -56,6 +56,77 @@ export function trackRunning(promise: Promise<unknown>): void {
   });
 }
 
+// Child processes that are currently running. If elm-watch exits while `elm` is
+// running, `elm` keeps running: If `elm` is stuck (it can get into infinite
+// loops), it keeps running forever. So kill them when exiting, if possible.
+// SIGKILL of elm-watch cannot be handled, though.
+const runningChildren = new Map<childProcess.ChildProcess, KillChild>();
+
+// The signals that make Node.js exit by default, without emitting "exit".
+const EXIT_SIGNALS = ["SIGINT", "SIGHUP", "SIGTERM"] as const;
+
+function trackChild(
+  child: childProcess.ChildProcess,
+  killChild: KillChild,
+): void {
+  if (runningChildren.size === 0) {
+    process.on("exit", killRunningChildren);
+    for (const signal of EXIT_SIGNALS) {
+      process.on(signal, onExitSignal);
+    }
+  }
+  runningChildren.set(child, killChild);
+  const untrack = (): void => {
+    if (runningChildren.delete(child) && runningChildren.size === 0) {
+      stopListening();
+    }
+  };
+  child.once("exit", untrack);
+  child.once("error", () => {
+    // "error" is also emitted if killing fails, but then the child might
+    // still be running.
+    if (child.pid === undefined) {
+      untrack();
+    }
+  });
+}
+
+function stopListening(): void {
+  process.off("exit", killRunningChildren);
+  for (const signal of EXIT_SIGNALS) {
+    process.off(signal, onExitSignal);
+  }
+}
+
+function killRunningChildren(): void {
+  for (const killChild of runningChildren.values()) {
+    killChild({ sync: true });
+  }
+}
+
+function onExitSignal(signal: NodeJS.Signals): void {
+  // Someone else listens to this signal (like `Hot.ts` for SIGTERM, or whoever
+  // uses elm-watch via the JavaScript API). Let them decide what to do. If they
+  // exit, the "exit" listener kills the children.
+  if (process.listenerCount(signal) > 1) {
+    return;
+  }
+  killRunningChildren();
+  stopListening();
+  // With no listeners left, Node.js restores the default behavior for the
+  // signal: Exit, just like if we had never listened.
+  process.kill(process.pid, signal);
+}
+
+// `sync: true` is for when exiting, where async work never finishes.
+type KillChild = (options: { sync: boolean }) => void;
+
+function makeKillChild(child: childProcess.ChildProcess): KillChild {
+  return ({ sync }) => {
+    child.kill(sync ? "SIGKILL" : "SIGTERM");
+  };
+}
+
 export function spawn(command: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
@@ -73,6 +144,9 @@ export function spawn(command: Command): {
       resolve({ tag: "CommandNotFoundError", command });
       return;
     }
+
+    const killChild = makeKillChild(child);
+    trackChild(child, killChild);
 
     const stdout: Array<Buffer> = [];
     const stderr: Array<Buffer> = [];
@@ -121,7 +195,7 @@ export function spawn(command: Command): {
 
     kill = () => {
       if (!killed) {
-        child.kill();
+        killChild({ sync: false });
         resolve({ tag: "Killed", command });
         killed = true;
       }
