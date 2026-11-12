@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
+import { ansiToHtml } from "./AnsiToHtml.ts";
 import { collapseExcerpts, type Elision } from "./CollapseExcerpts.ts";
 import type { ConfigSource } from "./Config.ts";
 import type { ElmJsonType, TooOldPackage } from "./ElmJson.ts";
@@ -360,6 +361,7 @@ function renderPieceToHtml(piece: Piece, theme: Theme.Theme): string {
         (piece.bold ? "</b>" : "")
       );
     case "External":
+      return ansiToHtml(piece.withColor, theme);
     case "Text":
       return escapeHtml(piece.text);
   }

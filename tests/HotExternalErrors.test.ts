@@ -153,7 +153,7 @@ describe("hot external errors", () => {
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">ESBUILD</span><p><button>/Users/you/project/tests/fixtures/hot/error-view/ts/main.ts:12:9</button></p></div>
-      <pre>Expected ; but found foo</pre></div>
+      <pre>Expected <span style="font-weight: bold">;</span> but found <span style="color: rgb(205, 49, 49)">foo</span></pre></div>
 
       ================================================================================
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">

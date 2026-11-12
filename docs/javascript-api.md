@@ -259,7 +259,7 @@ process.exitCode = await elmWatch({
 
 - `errors.set(source, errors)` replaces all errors of `source`. An empty array clears them. You can call it both before and while elm-watch runs.
 - `source` is used as the title of the errors (`-- CODEGEN ---`), and is listed together with the targets. It can’t be the same as a target name.
-- `message` is shown as-is. It can contain colors (ANSI escape codes), which are removed in the browser. Other escape codes, like moving the cursor, are always removed.
+- `message` is shown as-is. It can contain colors (ANSI escape codes), which are shown in the browser too, using the colors of your terminal (like for Elm’s errors). Other escape codes, like moving the cursor, are removed.
 - `location` is optional. `file` is relative to `root` (or absolute), and `line` and `column` start at 1. With a location, you can open the error in your editor from the terminal and the browser (see [Clickable error locations](../browser-ui/#clickable-error-locations)).
 - In `"make"` mode, any errors when elm-watch is done make the exit code 1.
 

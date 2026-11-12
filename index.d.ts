@@ -164,8 +164,8 @@ export type ErrorReporter = {
 };
 
 export type ExternalError = {
-  // Shown as-is. Can contain colors (ANSI escape codes), which are removed in
-  // the browser.
+  // Shown as-is. Can contain colors (ANSI escape codes), which are shown in
+  // the browser too.
   message: string;
   // Makes it possible to open the error in your editor. `file` is relative to
   // `root` (or absolute). `line` and `column` start at 1.
