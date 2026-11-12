@@ -121,9 +121,29 @@ function onExitSignal(signal: NodeJS.Signals): void {
 // `sync: true` is for when exiting, where async work never finishes.
 type KillChild = (options: { sync: boolean }) => void;
 
-function makeKillChild(child: childProcess.ChildProcess): KillChild {
+function makeKillChild(
+  child: childProcess.ChildProcess,
+  usesShell: boolean,
+): KillChild {
   return ({ sync }) => {
-    child.kill(sync ? "SIGKILL" : "SIGTERM");
+    if (usesShell && child.pid !== undefined) {
+      // `child` is `cmd.exe`, running a `.cmd` file (like
+      // `node_modules/.bin/elm.cmd`), which in turn runs the real `elm.exe`.
+      // Killing `cmd.exe` does not kill its children on Windows, so kill the
+      // whole tree.
+      const args = ["/pid", child.pid.toString(), "/T", "/F"];
+      if (sync) {
+        childProcess.spawnSync("taskkill", args, { stdio: "ignore" });
+      } else {
+        childProcess
+          .spawn("taskkill", args, { stdio: "ignore" })
+          .on("error", () => {
+            // Not much to do.
+          });
+      }
+    } else {
+      child.kill(sync ? "SIGKILL" : "SIGTERM");
+    }
   };
 }
 
@@ -138,14 +158,15 @@ export function spawn(command: Command): {
   };
 
   const promise = new Promise<SpawnResult>((resolve) => {
-    const child = spawnChild(command);
+    const spawned = spawnChild(command);
 
-    if (child === undefined) {
+    if (spawned === undefined) {
       resolve({ tag: "CommandNotFoundError", command });
       return;
     }
 
-    const killChild = makeKillChild(child);
+    const { child, usesShell } = spawned;
+    const killChild = makeKillChild(child, usesShell);
     trackChild(child, killChild);
 
     const stdout: Array<Buffer> = [];
@@ -214,11 +235,17 @@ export function spawn(command: Command): {
 
 // Returns `undefined` if the command could not be found on Windows. On other
 // platforms, that is reported via an ENOENT error event instead.
-function spawnChild(
-  command: Command,
-): childProcess.ChildProcessWithoutNullStreams | undefined {
+function spawnChild(command: Command):
+  | {
+      child: childProcess.ChildProcessWithoutNullStreams;
+      usesShell: boolean;
+    }
+  | undefined {
   if (!IS_WINDOWS) {
-    return childProcess.spawn(command.command, command.args, command.options);
+    return {
+      child: childProcess.spawn(command.command, command.args, command.options),
+      usesShell: false,
+    };
   }
 
   const file = findOnWindowsPath(
@@ -238,11 +265,17 @@ function spawnChild(
   // pass `shell: true` here. However, when using that option we must pass
   // everything as a single string and escape stuff ourselves.
   return /\.exe$/i.test(file)
-    ? childProcess.spawn(file, command.args, command.options)
-    : childProcess.spawn([file, ...command.args].map(windowsEscape).join(" "), {
-        ...command.options,
-        shell: true,
-      });
+    ? {
+        child: childProcess.spawn(file, command.args, command.options),
+        usesShell: false,
+      }
+    : {
+        child: childProcess.spawn(
+          [file, ...command.args].map(windowsEscape).join(" "),
+          { ...command.options, shell: true },
+        ),
+        usesShell: true,
+      };
 }
 
 // Like `which`, but for Windows only. We only ever spawn `elm`, so this only
