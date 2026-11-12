@@ -18,13 +18,18 @@ const THEME_ESCAPES_STRING = Array.from(
   .concat("\x1B]10;?\x1B\\", "\x1B]11;?\x1B\\") // Foreground and background.
   .join("");
 
-const THEME_ESCAPES_DONE_CHECK = "]11;";
+// The background is queried last, so we’re done when its response has ended.
+// On macOS (both the default Terminal and iTerm), the returned escape ends with
+// `\x07`. On Gnome Terminal it ends with `\x1B\\`. The response can arrive in
+// several chunks, so `]11;` alone is not enough. Any content is accepted, so
+// that an unexpected response doesn’t make us wait for the timeout (and lose
+// the palette colors).
+const THEME_ESCAPES_DONE_REGEX = /\x1B\]11;[^\x07\x1B]*(?:\x07|\x1B\\)/;
 
-// On macOS (both the default Terminal and iTerm), the returned escape ends with `\x07`.
-// On Gnome Terminal it ends with `\x1B\\`. I don’t think there’s any need of matching
-// the “end” – just take the hexadecimal parts we want.
+// No need to match the “end” here – just take the hexadecimal parts we want.
+// Each part can have 1–4 hexadecimal digits.
 const THEME_ESCAPES_REGEX =
-  /\x1B](4;)?(\d+);rgb:([\da-f]{4})\/([\da-f]{4})\/([\da-f]{4})/gi;
+  /\x1B](4;)?(\d+);rgb:([\da-f]{1,4})\/([\da-f]{1,4})\/([\da-f]{1,4})/gi;
 
 // The 16 basic colors, in terminal order (`30`–`37` and `90`–`97`).
 export const PALETTE: Array<Color> = [
@@ -99,13 +104,18 @@ export async function getThemeFromTerminal(logger: Logger): Promise<Theme> {
   if (IS_WINDOWS) {
     return DEFAULT_THEME;
   }
-  const stdin = await logger.queryTerminal(THEME_ESCAPES_STRING, (stdinSoFar) =>
-    stdinSoFar.includes(THEME_ESCAPES_DONE_CHECK),
+  const stdin = await logger.queryTerminal(
+    THEME_ESCAPES_STRING,
+    isThemeResponseDone,
   );
   return stdin === undefined ? DEFAULT_THEME : parseTheme(stdin);
 }
 
-function parseTheme(stdin: string): Theme {
+export function isThemeResponseDone(stdin: string): boolean {
+  return THEME_ESCAPES_DONE_REGEX.test(stdin);
+}
+
+export function parseTheme(stdin: string): Theme {
   const theme = { ...DEFAULT_THEME, palette: { ...DEFAULT_THEME.palette } };
 
   for (const match of stdin.matchAll(THEME_ESCAPES_REGEX)) {
@@ -131,7 +141,8 @@ function parseTheme(stdin: string): Theme {
 
 // https://github.com/xtermjs/xterm.js/blob/19367a6042a6360e9130fd0fbee0a66cdd75ddd4/src/common/input/XParseColor.ts#L7-L56
 function convert(hexDigits: string): string {
-  return Math.floor((parseInt(hexDigits, 16) / 0xffff) * 0xff)
+  const max = 16 ** hexDigits.length - 1;
+  return Math.round((parseInt(hexDigits, 16) / max) * 0xff)
     .toString(16)
     .padStart(2, "0");
 }
