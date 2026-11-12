@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { BEGIN_SYNC_UPDATE, END_SYNC_UPDATE } from "../src/Helpers.ts";
 import { makeLogger } from "../src/Logger.ts";
 import { MemoryWriteStream, SilentReadStream } from "./Helpers.ts";
 
@@ -187,5 +188,32 @@ describe("Logger", () => {
       stdin.emit("data", Buffer.from("new!"));
       expect(await fresh).toBe("new!");
     });
+  });
+
+  test("nested withSynchronizedOutput", () => {
+    const stdout = new MemoryWriteStream();
+    let raw = "";
+    stdout.write = (chunk: string): boolean => {
+      raw += chunk;
+      return true;
+    };
+    const logger = makeLogger({
+      env: {},
+      getNow: () => new Date(),
+      stdin: new SilentReadStream(),
+      stdout,
+      stderr: new MemoryWriteStream(),
+      logDebug: () => {
+        // Do nothing.
+      },
+    });
+    logger.withSynchronizedOutput(() => {
+      logger.write("a");
+      logger.withSynchronizedOutput(() => {
+        logger.write("b");
+      });
+      logger.write("c");
+    });
+    expect(raw).toBe(`${BEGIN_SYNC_UPDATE}a\nb\nc\n${END_SYNC_UPDATE}`);
   });
 });

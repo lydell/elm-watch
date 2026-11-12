@@ -106,6 +106,8 @@ export function makeLogger({
   let enabledRawMode = false;
   let resumedStdin = false;
   let needsNewline = false;
+  // Nested `withSynchronizedOutput` calls must not end the update early.
+  let synchronizedOutputDepth = 0;
   const newlineIfNeeded = (): string => {
     if (needsNewline) {
       needsNewline = false;
@@ -324,15 +326,21 @@ export function makeLogger({
       }
     },
     withSynchronizedOutput: (callback) => {
-      if (config.isTTY) {
+      if (!config.isTTY) {
+        callback();
+        return;
+      }
+      if (synchronizedOutputDepth === 0) {
         stdout.write(BEGIN_SYNC_UPDATE);
-        try {
-          callback();
-        } finally {
+      }
+      synchronizedOutputDepth++;
+      try {
+        callback();
+      } finally {
+        synchronizedOutputDepth--;
+        if (synchronizedOutputDepth === 0) {
           stdout.write(END_SYNC_UPDATE);
         }
-      } else {
-        callback();
       }
     },
     config,
