@@ -129,8 +129,11 @@ export function classifyWatcherEvent(
               affectsAnyTarget: true,
               file: {
                 tag: "StaticFilesDirPath",
+                // On Windows, `path.sep` is a backslash, and a path starting
+                // with one is relative to the current drive.
                 urlPath: url.pathToFileURL(
-                  path.sep + absolutePath.slice(prefix.length),
+                  `/${absolutePath.slice(prefix.length).split(path.sep).join("/")}`,
+                  { windows: false },
                 ).pathname,
               },
             },
