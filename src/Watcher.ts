@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { toError } from "./Helpers.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
 import { MODULE_NAME_PART } from "./Parser.ts";
 import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 
@@ -10,7 +11,7 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 // - The event type (`"rename"` or `"change"`) is not reliable. For example,
 //   on macOS almost everything is `"rename"`, including saving a file in vim.
 //   So we don’t use it. Instead we only report the path. The caller can check
-//   if it exists.
+//   if it exists. (Except for one Windows quirk, see `isDirectoryChange`.)
 // - Moving a directory into or out of a watched directory results in a single
 //   event for the directory itself, not one per file inside it. So every
 //   reported path must be treated as a potential directory.
@@ -83,8 +84,15 @@ export function watch(
       // `ignore` was added in Node.js 24.14.0 (and is missing in our version
       // of @types/node). Older versions ignore the option, so we filter in the
       // listener as well.
-      const options = { recursive: watchDir.tag !== "Shallow", ignore };
-      fsWatcher = fs.watch(root, options, (_eventType, filename) => {
+      // On Windows, removing the root results in an endless stream of events
+      // with the absolute path of the root as `filename`. Those must reach the
+      // listener, which stops watching. Ignoring them would busy-loop forever.
+      const options = {
+        recursive: watchDir.tag !== "Shallow",
+        ignore: (filename: string) =>
+          !path.isAbsolute(filename) && ignore(filename),
+      };
+      fsWatcher = fs.watch(root, options, (eventType, filename) => {
         if (!fs.existsSync(root)) {
           // The root itself was removed. Everything inside it is gone too, so
           // reporting the root is enough.
@@ -96,6 +104,9 @@ export function watch(
           report(root);
         } else if (!ignore(filename)) {
           const absolutePath = markAsAbsolutePath(path.join(root, filename));
+          if (isDirectoryChange(eventType, absolutePath)) {
+            return;
+          }
           // For events about the root itself, macOS gives the name of the root
           // as `filename`, which results in a bogus path. If it doesn’t exist,
           // report the root instead (which covers everything inside it anyway).
@@ -206,13 +217,17 @@ export function removeCoveredWatchDirs(
 }
 
 function covers(a: WatchDir, b: WatchDir): boolean {
-  const relative = path.relative(a.dir, b.dir);
-  const isInside =
-    relative !== ".." &&
-    !relative.startsWith(`..${path.sep}`) &&
-    !path.isAbsolute(relative);
+  // Not using `path.relative`, since it is case insensitive on Windows, while
+  // the ignore functions are case sensitive: `src/Sub` does not cover `src/sub`.
+  const prefix = a.dir.endsWith(path.sep) ? a.dir : a.dir + path.sep;
+  const relative =
+    b.dir === a.dir
+      ? ""
+      : b.dir.startsWith(prefix)
+        ? b.dir.slice(prefix.length)
+        : undefined;
   return (
-    isInside &&
+    relative !== undefined &&
     looseness[a.tag] >= looseness[b.tag] &&
     (a.tag === "Shallow"
       ? relative === ""
@@ -247,6 +262,23 @@ function findClosestExistingAncestor(
       return undefined;
     }
     current = parent;
+  }
+}
+
+// On Windows, writing a file inside a directory results in a `"change"` event
+// for the directory itself – even when only watching the directory’s parent
+// (shallow). Adding, moving and removing a directory results in `"rename"`.
+// The files inside are reported separately (if watched), so the directory
+// event is just noise. Worse, it would restart elm-watch every time a file is
+// written next to elm-watch.json (if its parent is watched).
+function isDirectoryChange(eventType: string, absolutePath: string): boolean {
+  if (!IS_WINDOWS || eventType !== "change") {
+    return false;
+  }
+  try {
+    return fs.statSync(absolutePath).isDirectory();
+  } catch {
+    return false;
   }
 }
 
