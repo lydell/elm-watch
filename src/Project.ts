@@ -29,6 +29,8 @@ import {
   absoluteDirname,
   absolutePathFromString,
   absoluteRealpath,
+  hasPath,
+  isSamePath,
 } from "./PathHelpers.ts";
 import type {
   Postprocess,
@@ -937,18 +939,21 @@ export function projectHasFilePathThatCanBeOpenedInEditor(
 ): boolean {
   return (
     (project.configSource.tag === "ElmWatchJson" &&
-      filePath === project.configSource.elmWatchJsonPath) ||
-    filePath === project.elmWatchStuffJsonPath ||
+      isSamePath(filePath, project.configSource.elmWatchJsonPath)) ||
+    isSamePath(filePath, project.elmWatchStuffJsonPath) ||
     getFlatOutputs(project).some(
       ({ elmJsonPath, outputState }) =>
-        filePath === elmJsonPath ||
-        outputState.allRelatedElmFilePaths.has(filePath),
+        isSamePath(filePath, elmJsonPath) ||
+        hasPath(outputState.allRelatedElmFilePaths, filePath),
     ) ||
     project.externalErrors.sources.some(([, errors]) =>
       errors.some(
         ({ location }) =>
           location !== undefined &&
-          absolutePathFromString(project.root, location.file) === filePath,
+          isSamePath(
+            absolutePathFromString(project.root, location.file),
+            filePath,
+          ),
       ),
     )
   );

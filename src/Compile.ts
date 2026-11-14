@@ -30,7 +30,7 @@ import {
   type NonEmptyArray,
   nonEmptyArrayUniqueBy,
 } from "./NonEmptyArray.ts";
-import { absoluteDirname } from "./PathHelpers.ts";
+import { absoluteDirname, hasPath } from "./PathHelpers.ts";
 import { type PostprocessToRun, runPostprocess } from "./Postprocess.ts";
 import {
   type Duration,
@@ -1708,7 +1708,7 @@ function onlyElmMakeErrorsRelatedToOutput(
   }
 
   const errors = elmMakeResult.error.errors.filter((error) =>
-    outputState.allRelatedElmFilePaths.has(error.path),
+    hasPath(outputState.allRelatedElmFilePaths, error.path),
   );
 
   return isNonEmptyArray(errors)

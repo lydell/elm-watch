@@ -617,8 +617,14 @@ describe("errors", () => {
   });
 
   test("typecheck only should mark only relevant targets with errors", async () => {
+    // On Windows, use a lowercase drive letter, like after `cd c:\project`.
+    // Elm reports paths with an uppercase drive letter, which must still be
+    // matched to the targets.
+    const dir = fixtureDir("typecheck-only").replace(/^[A-Z]:/, (drive) =>
+      drive.toLowerCase(),
+    );
     expect(
-      await run("typecheck-only", ["hot"], {
+      await runAbsolute(dir, ["hot"], {
         exitHotOnError: true,
         originalStdout: true,
       }),

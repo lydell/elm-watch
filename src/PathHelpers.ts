@@ -3,6 +3,7 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import { toError } from "./Helpers.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
 import type { NonEmptyArray } from "./NonEmptyArray.ts";
 import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 
@@ -11,6 +12,25 @@ export function absolutePathFromString(
   ...pathStrings: NonEmptyArray<string>
 ): AbsolutePath {
   return markAsAbsolutePath(path.resolve(from, ...pathStrings));
+}
+
+// Windows file systems are case insensitive, and Elm reports canonical paths
+// (like `C:\Users\…`), while ours depend on how the current directory was
+// typed (like `c:\Users\…` after `cd c:\Users`). So compare paths reported by
+// Elm with these.
+export function isSamePath(a: AbsolutePath, b: AbsolutePath): boolean {
+  return a === b || (IS_WINDOWS && a.toLowerCase() === b.toLowerCase());
+}
+
+export function hasPath(
+  paths: ReadonlySet<AbsolutePath>,
+  absolutePath: AbsolutePath,
+): boolean {
+  return (
+    paths.has(absolutePath) ||
+    (IS_WINDOWS &&
+      Array.from(paths).some((other) => isSamePath(other, absolutePath)))
+  );
 }
 
 export function absoluteDirname(absolutePath: AbsolutePath): AbsolutePath {
