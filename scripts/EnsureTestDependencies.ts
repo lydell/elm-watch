@@ -20,6 +20,10 @@ const FIXTURES_DIR = absolutePathFromString(
   "fixtures",
 );
 
+// Fixtures with old package versions on purpose. Their tests use a fake `elm`,
+// so the packages never need to be installed.
+const SKIP = new Set(["errors/elm-json-too-old-elm-core/elm.json"]);
+
 function checkDir(dir: AbsolutePath): void {
   for (const item of fs.readdirSync(dir, {
     withFileTypes: true,
@@ -45,6 +49,11 @@ const ElmJson = Codec.fields({
 
 function checkFile(file: AbsolutePath): void {
   const relativeFile = path.relative(FIXTURES_DIR, file);
+
+  if (SKIP.has(relativeFile.split(path.sep).join("/"))) {
+    console.info(`Skipping: ${relativeFile}: Old versions on purpose`);
+    return;
+  }
 
   const parsed = readJsonFile(file, ElmJson);
   // Some test files contain syntax errors on purpose – ignore those.
