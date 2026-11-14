@@ -80,8 +80,9 @@ describe("hot", () => {
       one by one until you figure out which it is!
     `);
 
-    expect(terminal.split("\n").slice(-2).join("\n")).toMatchInlineSnapshot(
-      `✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed elm-stuff⧘`,
+    // On Windows, the removal of elm-stuff/0.19.1 is sometimes reported too.
+    expect(terminal.split("\n").slice(-2).join("\n")).toMatch(
+      /^\n✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘ {3}⧙removed elm-stuff(?: \+1 more)?⧘$/,
     );
   });
 

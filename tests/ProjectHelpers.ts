@@ -1,3 +1,5 @@
+import * as path from "path";
+
 import { EMPTY_SNAPSHOT } from "../src/ExternalErrors.ts";
 import { DEFAULT_HOST } from "../src/Host.ts";
 import {
@@ -23,6 +25,16 @@ import {
 
 // Builds a `Project` by hand (without reading any files), for unit testing
 // code that decides what to do based on the state of all targets.
+
+// `/project/…` on macOS and Linux, `C:\project\…` on Windows.
+export function projectPath(unixPath: string): AbsolutePath {
+  return markAsAbsolutePath(path.resolve(unixPath));
+}
+
+// The inverse of `projectPath`.
+export function posixPath(absolutePath: AbsolutePath): string {
+  return `/${path.relative(path.resolve("/"), absolutePath).split(path.sep).join("/")}`;
+}
 
 const getNow: GetNow = () => new Date(0);
 
@@ -71,7 +83,7 @@ export const S = {
   error: {
     tag: "ReadOutputError",
     error: new Error("Test"),
-    triedPath: markAsAbsolutePath("/project/build/Error.js"),
+    triedPath: projectPath("/project/build/Error.js"),
   },
 } satisfies Record<string, OutputStatus>;
 
@@ -84,11 +96,11 @@ export type TargetSpec = [
 ];
 
 export function elmJsonPath(name: string): ElmJsonPath {
-  return markAsElmJsonPath(markAsAbsolutePath(`/project/${name}/elm.json`));
+  return markAsElmJsonPath(projectPath(`/project/${name}/elm.json`));
 }
 
 export function elmFilePath(name: string): AbsolutePath {
-  return markAsAbsolutePath(`/project/src/${name}.elm`);
+  return projectPath(`/project/src/${name}.elm`);
 }
 
 export function makeProject({
@@ -105,11 +117,11 @@ export function makeProject({
   return {
     watchDirs: [],
     missingSourceDirectories: new Set(),
-    root: markAsAbsolutePath("/project"),
+    root: projectPath("/project"),
     staticFilesDir: undefined,
     configSource: { tag: "Options" },
     elmWatchStuffJsonPath: markAsElmWatchStuffJsonPath(
-      markAsAbsolutePath("/project/elm-stuff/elm-watch/stuff.json"),
+      projectPath("/project/elm-stuff/elm-watch/stuff.json"),
     ),
     disabledOutputs: [],
     targetsErrors: [],
@@ -120,8 +132,8 @@ export function makeProject({
           ([name, statusName, compiler = "elm"]): [OutputPath, OutputState] => {
             const outputPath: OutputPath = {
               tag: "OutputPath",
-              theOutputPath: markAsAbsolutePath(`/project/build/${name}.js`),
-              temporaryOutputPath: markAsAbsolutePath(
+              theOutputPath: projectPath(`/project/build/${name}.js`),
+              temporaryOutputPath: projectPath(
                 `/project/elm-stuff/elm-watch/${name}.js`,
               ),
               originalString: `build/${name}.js`,

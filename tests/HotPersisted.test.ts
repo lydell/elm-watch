@@ -489,7 +489,7 @@ describe("hot", () => {
         .replace("/bin/sh: 1: nope: not found", replacement)
         // Windows
         .replace(
-          "'nope' is not recognized as an internal or external command,\r\noperable program or batch file.",
+          /'nope' is not recognized as an internal or external command,\r?\noperable program or batch file\./,
           replacement,
         )
         .replace("code 1.", "code 127.");

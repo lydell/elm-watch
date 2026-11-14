@@ -122,7 +122,13 @@ export function rm(filePath: string): void {
 // that issue, possibly because all the filesystem calls get a little bit more
 // spread out.
 export async function rimraf(filePath: string): Promise<void> {
-  await fs.promises.rm(filePath, { recursive: true, force: true });
+  await fs.promises.rm(filePath, {
+    recursive: true,
+    force: true,
+    // On Windows, a process that is just exiting can still hold on to files
+    // or its current directory for a little while.
+    maxRetries: 5,
+  });
 }
 
 export function rmSymlink(symlink: string): void {
@@ -545,55 +551,63 @@ export function clean(string: string): string {
   // Match a web socket disconnect followed by a connect, and replace them just
   // with the connect. Sometimes in tests, we don’t get both messages. Also do
   // that when the disconnect and connect end up in separate batches.
-  return string
-    .split(path.dirname(import.meta.dirname))
-    .join(project)
-    .split(path.dirname(import.meta.dirname).replace(/\\/g, "\\\\"))
-    .join(project)
-    .split(url.pathToFileURL(path.dirname(import.meta.dirname)).toString())
-    .join(
-      url
-        .pathToFileURL(project)
-        .toString()
-        .replace(/[A-Z]:\//g, ""),
-    )
-    .replace(
-      /fixtures-copies[\\/]+[^\\/\s]+[\\/]+[^\\/\s]+(?=[\\/])/g,
-      "fixtures",
-    )
-    .split(os.tmpdir())
-    .join(path.join(root, "tmp", "fake"))
-    .replace(/\/private\//g, "/") // Ends up before `os.tmpdir()` on macOS in `fs` errors.
-    .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
-    .replace(
-      /^((?:🌐\S* )?)http:\/\/localhost:\d+(\s+\S*network:\S*) http:\/\/.+$/gm,
-      "$1http://localhost:59123$2 http://192.168.0.1:59123",
-    )
-    .replace(
-      /^((?:🌐\S* )?)http:\/\/localhost:\d+$/gm,
-      "$1http://localhost:59123",
-    )
-    .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
-    .replace(/\x1B\[0?m/g, "⧘")
-    .replace(
-      /[A-Z]:\\(\S+)/g,
-      (_match, rest: string) =>
-        `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`,
-    )
-    .replace(/\S+\.(?:elm|js)/g, (match) => match.replace(/\\/g, "/"))
-    .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
-    .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
-    .replace(
-      /(?:Expected .+|Unexpected token .) in JSON at position \d+(?: \(line \d+ column \d+\))?|Unexpected end of JSON input/g,
-      "(JSON syntax error)",
-    )
-    .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
-    .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
-    .replace(/EOF/g, "EPIPE")
-    .replace(
-      /&webSocketToken=[\da-f-]+/g,
-      "&webSocketToken=37476437-1911-402a-9c87-fd94405770d2",
-    );
+  return (
+    string
+      .split(path.dirname(import.meta.dirname))
+      .join(project)
+      .split(path.dirname(import.meta.dirname).replace(/\\/g, "\\\\"))
+      .join(project)
+      .split(url.pathToFileURL(path.dirname(import.meta.dirname)).toString())
+      .join(
+        url
+          .pathToFileURL(project)
+          .toString()
+          .replace(/[A-Z]:\//g, ""),
+      )
+      .replace(
+        /fixtures-copies[\\/]+[^\\/\s]+[\\/]+[^\\/\s]+(?=[\\/])/g,
+        "fixtures",
+      )
+      .split(os.tmpdir())
+      .join(path.join(root, "tmp", "fake"))
+      .replace(/\/private\//g, "/") // Ends up before `os.tmpdir()` on macOS in `fs` errors.
+      .replace(/(ws:\/\/0\.0\.0\.0):\d{5}/g, "$1:59123")
+      .replace(
+        /^((?:🌐\S* )?)http:\/\/localhost:\d+(\s+\S*network:\S*) http:\/\/.+$/gm,
+        "$1http://localhost:59123$2 http://192.168.0.1:59123",
+      )
+      .replace(
+        /^((?:🌐\S* )?)http:\/\/localhost:\d+$/gm,
+        "$1http://localhost:59123",
+      )
+      .replace(/(?:\x1B\[0?m)?\x1B\[(?!0)\d+m/g, "⧙")
+      .replace(/\x1B\[0?m/g, "⧘")
+      .replace(
+        /[A-Z]:\\(\S+)/g,
+        (_match, rest: string) =>
+          `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`,
+      )
+      .replace(/\S+\.(?:elm|js)/g, (match) => match.replace(/\\/g, "/"))
+      // Watcher events, like `changed src\Dir` (relative paths).
+      .replace(
+        /(⧙(?:changed|removed) )([^⧘]+)/g,
+        (_match, start: string, file: string) =>
+          `${start}${file.replace(/\\/g, "/")}`,
+      )
+      .replace(/(\bcd|--output=\/dev\/null) '([^'\s]+)'/g, "$1 $2")
+      .replace(/'(--output=[^'\s]+)' '([^'\s]+)'/g, "$1 $2")
+      .replace(
+        /(?:Expected .+|Unexpected token .) in JSON at position \d+(?: \(line \d+ column \d+\))?|Unexpected end of JSON input/g,
+        "(JSON syntax error)",
+      )
+      .replace(/(EISDIR: illegal operation on a directory, read) '.+/g, "$1")
+      .replace(/EPERM: operation not permitted/g, "EACCES: permission denied")
+      .replace(/EOF/g, "EPIPE")
+      .replace(
+        /&webSocketToken=[\da-f-]+/g,
+        "&webSocketToken=37476437-1911-402a-9c87-fd94405770d2",
+      )
+  );
 }
 
 export function onlyErrorMessages(terminal: string): string {

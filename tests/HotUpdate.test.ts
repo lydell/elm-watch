@@ -11,16 +11,13 @@ import {
 } from "../src/HotUpdate.ts";
 import type { Project } from "../src/Project.ts";
 import type { TerminalConfig } from "../src/Terminal.ts";
-import {
-  type AbsolutePath,
-  markAsAbsolutePath,
-  markAsTargetName,
-} from "../src/Types.ts";
+import { type AbsolutePath, markAsTargetName } from "../src/Types.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 import {
   elmFilePath,
   elmJsonPath,
   makeProject,
+  projectPath,
   type TargetSpec,
 } from "./ProjectHelpers.ts";
 
@@ -201,7 +198,10 @@ function describeCmd(cmd: Cmd): string {
 }
 
 function shortPath(absolutePath: AbsolutePath): string {
-  return path.relative("/project", absolutePath);
+  return path
+    .relative(path.resolve("/project"), absolutePath)
+    .split(path.sep)
+    .join("/");
 }
 
 describe("Hot update", () => {
@@ -527,7 +527,7 @@ describe("Hot update", () => {
   });
 
   test("a source directory appearing restarts", () => {
-    const lib = markAsAbsolutePath("/project/lib");
+    const lib = projectPath("/project/lib");
     const project = idleProject();
     project.missingSourceDirectories.add(lib);
     expect(

@@ -3,13 +3,12 @@ import { describe, expect, test } from "vitest";
 import type { WatcherEventName } from "../src/LatestEvent.ts";
 import type { Project } from "../src/Project.ts";
 import {
-  markAsAbsolutePath,
   markAsCwd,
   markAsElmWatchJsonPath,
   markAsStaticFilesDir,
 } from "../src/Types.ts";
 import { classifyWatcherEvent } from "../src/WatcherEvents.ts";
-import { makeProject } from "./ProjectHelpers.ts";
+import { makeProject, projectPath } from "./ProjectHelpers.ts";
 
 // `classifyWatcherEvent` decides what a file change means. The integration
 // tests (HotChanges and friends) cover this too, but they are slow, and file
@@ -29,12 +28,12 @@ const project = makeProject({
 function classify(
   theProject: Project,
   eventName: WatcherEventName,
-  absolutePath: string,
+  posixPath: string,
 ): string {
   const result = classifyWatcherEvent(
     theProject,
     eventName,
-    markAsAbsolutePath(absolutePath),
+    projectPath(posixPath),
   );
   if (result === undefined) {
     return "ignored";
@@ -133,9 +132,9 @@ describe("classifyWatcherEvent", () => {
       configSource: {
         tag: "ElmWatchJson",
         elmWatchJsonPath: markAsElmWatchJsonPath(
-          markAsAbsolutePath("/project/elm-watch.json"),
+          projectPath("/project/elm-watch.json"),
         ),
-        cwd: markAsCwd(markAsAbsolutePath("/project")),
+        cwd: markAsCwd(projectPath("/project")),
       },
     };
     expect(
@@ -158,9 +157,7 @@ describe("classifyWatcherEvent", () => {
   test("static files", () => {
     const withStaticFiles: Project = {
       ...project,
-      staticFilesDir: markAsStaticFilesDir(
-        markAsAbsolutePath("/project/build"),
-      ),
+      staticFilesDir: markAsStaticFilesDir(projectPath("/project/build")),
     };
     expect(
       classify(withStaticFiles, "changed", "/project/build/style.css"),

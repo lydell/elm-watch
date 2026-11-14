@@ -4,7 +4,7 @@ import * as path from "path";
 import { afterEach, describe, expect, onTestFinished, test } from "vitest";
 
 import { type LatestEvent, summarizeEvents } from "../src/LatestEvent.ts";
-import { markAsAbsolutePath, markAsTargetName } from "../src/Types.ts";
+import { markAsTargetName } from "../src/Types.ts";
 import {
   CtrlCReadStream,
   grep,
@@ -23,6 +23,7 @@ import {
   run,
   switchCompilationMode,
 } from "./HotHelpers.ts";
+import { projectPath } from "./ProjectHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
@@ -552,7 +553,7 @@ describe("hot", () => {
     const elmJsonPath = path.join(fixtureDir(fixture), "elm.json");
 
     const { terminal } = await run({
-      fixture: path.join(fixture, "example"),
+      fixture: `${fixture}/example`,
       scripts: ["Main.js"],
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });
@@ -582,7 +583,7 @@ describe("hot", () => {
     const elmFile = path.join(fixtureDir(fixture), "src", "Answer.elm");
 
     const { terminal } = await run({
-      fixture: path.join(fixture, "app", "example"),
+      fixture: `${fixture}/app/example`,
       scripts: ["Main.js"],
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });
@@ -607,13 +608,16 @@ describe("hot", () => {
   });
 
   describe("summarizeEvents", () => {
-    const root = markAsAbsolutePath("/project");
+    const root = projectPath("/project");
 
     function summarize(
       events: Array<LatestEvent>,
       hasDisabledTargets: boolean = false,
     ): string | undefined {
-      return summarizeEvents(events, root, hasDisabledTargets);
+      return summarizeEvents(events, root, hasDisabledTargets)?.replace(
+        /\\/g,
+        "/",
+      );
     }
 
     function watcherEvent(
@@ -626,7 +630,7 @@ describe("hot", () => {
         eventName,
         file: {
           tag: "AbsolutePath",
-          absolutePath: markAsAbsolutePath(`/project/${file}`),
+          absolutePath: projectPath(`/project/${file}`),
         },
         affectsAnyTarget,
       };
@@ -636,10 +640,8 @@ describe("hot", () => {
       tag: "WebSocketConnectedNeedingCompilation",
       outputPath: {
         tag: "OutputPath",
-        theOutputPath: markAsAbsolutePath("/project/build/One.js"),
-        temporaryOutputPath: markAsAbsolutePath(
-          "/project/elm-stuff/elm-watch/1.js",
-        ),
+        theOutputPath: projectPath("/project/build/One.js"),
+        temporaryOutputPath: projectPath("/project/elm-stuff/elm-watch/1.js"),
         originalString: "build/One.js",
         targetName: markAsTargetName("One"),
       },

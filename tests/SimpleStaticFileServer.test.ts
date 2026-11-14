@@ -46,6 +46,7 @@ function makeGet(port: number, tmpDir: string): Get {
       .replace(/<!DOCTYPE[^]*<main>([^]*)<\/main>[^]*/, "$1")
       .split(tmpDir)
       .join("/tmp")
+      .replace(/\/tmp[^\s<]*/g, (match) => match.replace(/\\/g, "/"))
       .replace(/content-length: \d{3,}\n/, "");
 }
 

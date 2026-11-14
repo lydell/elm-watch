@@ -3,15 +3,14 @@ import * as os from "os";
 import * as path from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { type AbsolutePath, markAsAbsolutePath } from "../src/Types.ts";
+import type { AbsolutePath } from "../src/Types.ts";
 import {
   removeCoveredWatchDirs,
   watch,
   type WatchDir,
   type Watcher,
 } from "../src/Watcher.ts";
-
-const p = markAsAbsolutePath;
+import { projectPath as p, posixPath } from "./ProjectHelpers.ts";
 
 const POLL = { timeout: 3000, interval: 10 };
 
@@ -28,7 +27,9 @@ async function waitForWatcherStart(): Promise<void> {
 
 describe("removeCoveredWatchDirs", () => {
   const check = (watchDirs: Array<WatchDir>): Array<string> =>
-    removeCoveredWatchDirs(watchDirs).map(({ tag, dir }) => `${tag}: ${dir}`);
+    removeCoveredWatchDirs(watchDirs).map(
+      ({ tag, dir }) => `${tag}: ${posixPath(dir)}`,
+    );
 
   test("duplicates are removed", () => {
     expect(
@@ -131,7 +132,9 @@ describe("watch", () => {
 
   // Use like this: `await expect.poll(eventLines, POLL).toContain("a.txt")`
   const eventLines = (): Array<string> =>
-    events.map((absolutePath) => path.relative(dir, absolutePath));
+    events.map((absolutePath) =>
+      path.relative(dir, absolutePath).split(path.sep).join("/"),
+    );
 
   const printEvents = (): string => eventLines().join("\n");
 
