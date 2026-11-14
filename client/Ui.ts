@@ -552,7 +552,13 @@ export function createUi(): Ui {
         }),
       h(HTMLSpanElement, { className: CLASS.toggleEmoji }, worst?.icon ?? ""),
       ...(snapshots.some((snapshot) => snapshot.compilationMode === "optimize")
-        ? [h(HTMLSpanElement, { className: CLASS.badge }, "🚀")]
+        ? [
+            h(
+              HTMLSpanElement,
+              { className: CLASS.badge },
+              h(HTMLSpanElement, {}, "🚀"),
+            ),
+          ]
         : []),
     );
 
@@ -1704,9 +1710,21 @@ the corner of its hit area. The panel may cover parts of it.
 
 .${CLASS.badge} {
   position: absolute;
-  right: -4px;
+  right: -2.5px;
   bottom: -4px;
+  /* Like the toggle button: A fixed size box, so that the emoji ends up in the
+  same place regardless of the font. Otherwise Segoe UI Emoji (Windows) sticks
+  out below the window when the button is at the bottom edge. */
+  display: grid;
+  grid-template-columns: 100%;
+  place-items: center;
+  width: 11px;
+  height: 11px;
   font-size: 11px;
+}
+
+.${CLASS.badge} > span {
+  text-box: trim-both cap alphabetic;
 }
 
 .${CLASS.flash} {
