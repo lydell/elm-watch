@@ -291,6 +291,11 @@ export function makeTerminal({
       if (!stdin.isRaw || !config.isTTY) {
         return undefined;
       }
+      // The old Windows console does not answer queries. Save it the timeout.
+      // Windows Terminal does (tested with version 1.24).
+      if (IS_WINDOWS && !(WT_SESSION in env)) {
+        return undefined;
+      }
 
       const run = async (): Promise<string | undefined> => {
         const callbacks: Array<(stdin: string | undefined) => void> = [];

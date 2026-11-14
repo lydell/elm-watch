@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { WT_SESSION } from "../src/Env.ts";
 import { BEGIN_SYNC_UPDATE, END_SYNC_UPDATE } from "../src/Helpers.ts";
 import { type Terminal, makeTerminal } from "../src/Terminal.ts";
 import { MemoryWriteStream, SilentReadStream } from "./Helpers.ts";
@@ -142,7 +143,8 @@ describe("Terminal", () => {
     } {
       const stdin = new SilentReadStream();
       stdin.isRaw = true;
-      const terminal = makeTestTerminal({ stdin });
+      // On Windows, only Windows Terminal is queried.
+      const terminal = makeTestTerminal({ env: { [WT_SESSION]: "" }, stdin });
       const query = (escapes: string): Promise<string | undefined> =>
         terminal.query(escapes, (response) => response.endsWith("!"));
       return { terminal, stdin, query };

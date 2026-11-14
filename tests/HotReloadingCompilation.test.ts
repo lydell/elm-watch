@@ -8,7 +8,6 @@ import {
   onlyErrorMessages,
   stringSnapshotSerializer,
   TerminalColorReadStream,
-  testExceptWindows,
 } from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
@@ -673,7 +672,7 @@ describe("hot reloading", () => {
       `);
     });
 
-    testExceptWindows("terminal theme", async () => {
+    test("terminal theme", async () => {
       const { replace, go } = runHotReload({
         fixture,
         name: "App",
