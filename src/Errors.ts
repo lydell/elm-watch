@@ -1561,13 +1561,14 @@ export function openEditorCommandFailed({
   error: ExecException;
   command: string;
   cwd: AbsolutePath;
-  timeout: number;
+  // Set if the command timed out.
+  timeout: number | undefined;
   env: Env;
   stdout: string;
   stderr: string;
 }): string {
   const errorReason =
-    error.killed === true
+    timeout !== undefined
       ? `The command took too long to run, and was killed after ${timeout} ms.`
       : error.code !== undefined
         ? `The command exited with code ${error.code}.`

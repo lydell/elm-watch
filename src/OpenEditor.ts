@@ -9,10 +9,12 @@ import {
   silentlyReadIntEnvValue,
   unknownErrorToString,
 } from "./Helpers.ts";
+import { IS_WINDOWS } from "./IsWindows.ts";
 import {
   type Project,
   projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project.ts";
+import { killWindowsProcessTree } from "./Spawn.ts";
 import type { AbsolutePath } from "./Types.ts";
 
 export type OpenEditorLocation = {
@@ -84,15 +86,16 @@ function openEditorWithCommand(
     line: location.line.toString(),
     column: location.column.toString(),
   };
-  childProcess.exec(
+  let timedOut = false;
+  const child = childProcess.exec(
     command,
     {
       cwd,
       env: { ...env, ...extraEnv },
       encoding: "utf8",
-      timeout,
     },
     (error, stdout, stderr) => {
+      clearTimeout(timeoutId);
       if (error !== null) {
         onError({
           tag: "CommandFailed",
@@ -100,7 +103,7 @@ function openEditorWithCommand(
             error,
             command,
             cwd,
-            timeout,
+            timeout: timedOut ? timeout : undefined,
             env: extraEnv,
             stdout,
             stderr,
@@ -109,6 +112,16 @@ function openEditorWithCommand(
       }
     },
   );
+  // Not using the `timeout` option of `exec`, since it only kills the shell,
+  // not the command, on Windows.
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    if (IS_WINDOWS && child.pid !== undefined) {
+      killWindowsProcessTree(child.pid, { sync: false });
+    } else {
+      child.kill();
+    }
+  }, timeout);
 }
 
 function openEditorWithFunction(

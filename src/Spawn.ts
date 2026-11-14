@@ -129,22 +129,29 @@ function makeKillChild(
     if (usesShell && child.pid !== undefined) {
       // `child` is `cmd.exe`, running a `.cmd` file (like
       // `node_modules/.bin/elm.cmd`), which in turn runs the real `elm.exe`.
-      // Killing `cmd.exe` does not kill its children on Windows, so kill the
-      // whole tree.
-      const args = ["/pid", child.pid.toString(), "/T", "/F"];
-      if (sync) {
-        childProcess.spawnSync("taskkill", args, { stdio: "ignore" });
-      } else {
-        childProcess
-          .spawn("taskkill", args, { stdio: "ignore" })
-          .on("error", () => {
-            // Not much to do.
-          });
-      }
+      killWindowsProcessTree(child.pid, { sync });
     } else {
       child.kill(sync ? "SIGKILL" : "SIGTERM");
     }
   };
+}
+
+// Killing a process does not kill its children on Windows, so kill the whole
+// tree. Note: `taskkill` needs WMI access.
+export function killWindowsProcessTree(
+  pid: number,
+  { sync }: { sync: boolean },
+): void {
+  const args = ["/pid", pid.toString(), "/T", "/F"];
+  if (sync) {
+    childProcess.spawnSync("taskkill", args, { stdio: "ignore" });
+  } else {
+    childProcess
+      .spawn("taskkill", args, { stdio: "ignore" })
+      .on("error", () => {
+        // Not much to do.
+      });
+  }
 }
 
 export function spawn(command: Command): {
