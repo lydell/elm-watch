@@ -629,7 +629,6 @@ describe("errors", () => {
         originalStdout: true,
       }),
     ).toMatchInlineSnapshot(`
-      ✅ Dependencies
       ✅ Main1⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
       🚨 Main2
       🚨 Main3
@@ -927,7 +926,6 @@ describe("errors", () => {
         originalStdout: true,
       }),
     ).toMatchInlineSnapshot(`
-      ✅ Dependencies
       ⚪️ app: queued
       ⚪️ admin: queued
 

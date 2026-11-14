@@ -90,7 +90,6 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      ✅ Dependencies
       ✅ Sync⧙   88.5 KiB → 88.5 KiB (100.0 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2…⧘
       ✅ Async⧙   88.5 KiB → 0.01 KiB (0.0 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 …⧘
       ✅ None⧙                                           88.5 KiB     1 ms Q | 1.23 s E⧘
@@ -131,7 +130,6 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      ✅ Dependencies
       ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
@@ -177,7 +175,6 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      ✅ Dependencies
       🚨 main
 
       ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
@@ -212,7 +209,6 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      ✅ Dependencies
       🚨 main
 
       ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
@@ -463,7 +459,6 @@ describe("library", () => {
         errors,
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ✅ Dependencies
         🚨 esbuild
         🚨 translations
         ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘

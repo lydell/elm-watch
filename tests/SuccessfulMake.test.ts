@@ -85,7 +85,6 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 describe("successful make", () => {
   test("standard mode", async () => {
     expect(await run("successful-make", ["make"])).toMatchInlineSnapshot(`
-      ✅ Dependencies
       ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
@@ -95,7 +94,6 @@ describe("successful make", () => {
   test("--debug", async () => {
     expect(await run("successful-make", ["make", "--debug"]))
       .toMatchInlineSnapshot(`
-        ✅ Dependencies
         ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
@@ -105,7 +103,6 @@ describe("successful make", () => {
   test("--optimize", async () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
-        ✅ Dependencies
         ✅ main⧙                                           88.5 KiB     1 ms Q | 1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
@@ -164,8 +161,6 @@ describe("successful make", () => {
   test("multiple elm.json", async () => {
     expect(await run("multiple-elm-json/config", ["make"]))
       .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        ✅ Dependencies (2/2)
         ✅ app⧙                                                         1 ms Q | 1.23 s E⧘
         ✅ admin⧙                                                       1 ms Q | 1.23 s E⧘
 
@@ -175,8 +170,6 @@ describe("successful make", () => {
 
   test("different compilers for the same elm.json", async () => {
     expect(await run("mixed-compilers", ["make"])).toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ Dependencies (2/2)
       ✅ elm⧙                                                         1 ms Q | 1.23 s E⧘
       ✅ lamdera⧙                                                     1 ms Q | 1.23 s E⧘
 
@@ -194,8 +187,6 @@ describe("successful make", () => {
 
   test("package target, and an example application using the package", async () => {
     expect(await run("package", ["make"])).toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ Dependencies (2/2)
       ✅ Example⧙                                                     1 ms Q | 1.23 s E⧘
       ✅ Package⧙                                                     1 ms Q | 765 ms T⧘
 
@@ -216,7 +207,6 @@ describe("successful make", () => {
           }),
       }),
     ).toMatchInlineSnapshot(`
-      ✅ Dependencies
       ✅ Package⧙                                                     1 ms Q | 765 ms T⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
@@ -229,9 +219,6 @@ describe("successful make", () => {
     // the screen and overwrite the admin line instead.
     expect(await run("multiple-elm-json/config", ["make"], { rows: 2 }))
       .toMatchInlineSnapshot(`
-        ✅ Dependencies
-        ✅ Dependencies (2/2)
-
         ✅ admin⧙                                                       1 ms Q | 1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
@@ -273,21 +260,19 @@ describe("successful make", () => {
   test("no postprocess", async () => {
     expect(await run("successful-make-no-postprocess", ["make"]))
       .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ 💣  Mine Sweeper Clone⧙                                       1 ms Q | 1.23 s E⧘
+        ✅ 💣  Mine Sweeper Clone⧙                                       1 ms Q | 1.23 s E⧘
 
-      ✅ Compilation finished in ⧙123 ms⧘.
-    `);
+        ✅ Compilation finished in ⧙123 ms⧘.
+      `);
   });
 
   test("no postprocess with optimize", async () => {
     expect(await run("successful-make-no-postprocess", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ✅ 💣  Mine Sweeper Clone⧙                          88.5 KiB     1 ms Q | 1.23 s E⧘
+        ✅ 💣  Mine Sweeper Clone⧙                          88.5 KiB     1 ms Q | 1.23 s E⧘
 
-      ✅ Compilation finished in ⧙123 ms⧘.
-    `);
+        ✅ Compilation finished in ⧙123 ms⧘.
+      `);
   });
 
   test("alignment and truncation and emoji", async () => {
@@ -296,7 +281,6 @@ describe("successful make", () => {
     // - It depends on how the ad-hoc test terminal escape interpreter handles characters of length 2.
     // - The non-emoji symbol used to not count as emoji, but now it does. It’s ok, though.
     expect(await run("emoji", ["make"])).toMatchInlineSnapshot(`
-      ✅ Dependencies
       ✅ No emoji⧙                                                    1 ms Q | 1.23 s E⧘
       ✅ No emoji but really long target name that needs to be cut off to fit in the …
       ✅ 😎  Cool emoji⧙                                               1 ms Q | 1.23 s E⧘
@@ -315,7 +299,6 @@ describe("successful make", () => {
         env: { [NO_COLOR]: "" },
       }),
     ).toMatchInlineSnapshot(`
-      Dependencies: success
       No emoji: success                                              1 ms Q | 1.23 s E
       No emoji but really long target name that needs to be cut off to fit in the t...
       Cool emoji: success                                            1 ms Q | 1.23 s E

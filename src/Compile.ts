@@ -132,7 +132,7 @@ export function installDependencies(
         "in progress",
       );
 
-      // Avoid printing `loadingMessage` if there’s nothing to download.
+      // Avoid printing `loadingMessage` if `elm` finishes quickly.
       let didWriteLoadingMessage = false as boolean;
       const timeoutId = setTimeout(() => {
         terminal.write(loadingMessage);
@@ -143,6 +143,25 @@ export function installDependencies(
         if (didWriteLoadingMessage) {
           terminal.moveCursor(0, -1);
           terminal.clearLine(0);
+        }
+      };
+
+      // When nothing interesting happened, remove the loading message – whether
+      // it was printed only depends on how fast `elm` was. Without a TTY the
+      // loading message can’t be removed, so finish it instead.
+      const finishLoadingMessage = (
+        emojiName: EmojiName,
+        nonFancy: string,
+      ): void => {
+        if (didWriteLoadingMessage) {
+          terminal.withSynchronizedOutput(() => {
+            clearLoadingMessage();
+            if (!terminal.config.isTTY) {
+              terminal.write(
+                printStatusLineHelper(emojiName, message, nonFancy),
+              );
+            }
+          });
         }
       };
 
@@ -176,14 +195,7 @@ export function installDependencies(
         // get colored error messages.
         case "ElmJsonError":
         case "ElmStuffError":
-          if (didWriteLoadingMessage) {
-            terminal.withSynchronizedOutput(() => {
-              clearLoadingMessage();
-              terminal.write(
-                printStatusLineHelper("Skipped", message, "skipped"),
-              );
-            });
-          }
+          finishLoadingMessage("Skipped", "skipped");
           break;
 
         case "Killed":
@@ -207,13 +219,8 @@ export function installDependencies(
               );
               terminal.write(result.elmInstallOutput);
             });
-          } else if (didWriteLoadingMessage) {
-            terminal.withSynchronizedOutput(() => {
-              clearLoadingMessage();
-              terminal.write(
-                printStatusLineHelper("Success", message, "success"),
-              );
-            });
+          } else {
+            finishLoadingMessage("Success", "success");
           }
           break;
         }
