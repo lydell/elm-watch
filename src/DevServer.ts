@@ -506,28 +506,31 @@ type ProbeResult =
   | { tag: "Free"; port: number }
   | { tag: "Error"; error: NodeJS.ErrnoException };
 
-// On macOS (and possibly Windows), listening on 127.0.0.1 succeeds even if
-// another program already listens on the same port on 0.0.0.0 or `::` (which is
-// the default for Node.js servers), or on ::1. Then we wouldn’t get a port
-// conflict error, and `localhost` could go to the other program. To detect such
-// conflicts, briefly listen on 0.0.0.0 and ::1 first. (Listening on 0.0.0.0
-// fails if another program listens on 0.0.0.0 or `::`.) The actual listening
-// on 127.0.0.1 then catches conflicts with programs listening on 127.0.0.1.
+// On macOS and Windows, listening on 127.0.0.1 succeeds even if another program
+// already listens on the same port on 0.0.0.0 or `::` (which is the default for
+// Node.js servers), or on ::1. Then we wouldn’t get a port conflict error, and
+// `localhost` could go to the other program. To detect such conflicts, briefly
+// listen on 0.0.0.0, `::` and ::1 first. (On macOS, listening on 0.0.0.0 also
+// fails if another program listens on `::`, but on Windows only the exact same
+// address conflicts.) The actual listening on 127.0.0.1 then catches conflicts
+// with programs listening on 127.0.0.1.
 async function probePort(port: number): Promise<ProbeResult> {
   const result = await probe(port, "0.0.0.0");
-  switch (result.tag) {
-    case "Error":
-      return result;
-    case "Free": {
-      const ipv6Result = await probe(result.port, "::1");
-      return ipv6Result.tag === "Error" &&
-        // IPv6 might not be available.
-        (ipv6Result.error.code === "EADDRNOTAVAIL" ||
-          ipv6Result.error.code === "EAFNOSUPPORT")
-        ? result
-        : ipv6Result;
+  if (result.tag === "Error") {
+    return result;
+  }
+  for (const host of ["::", "::1"]) {
+    const ipv6Result = await probe(result.port, host);
+    if (
+      ipv6Result.tag === "Error" &&
+      // IPv6 might not be available.
+      ipv6Result.error.code !== "EADDRNOTAVAIL" &&
+      ipv6Result.error.code !== "EAFNOSUPPORT"
+    ) {
+      return ipv6Result;
     }
   }
+  return result;
 }
 
 async function probe(port: number, host: string): Promise<ProbeResult> {
