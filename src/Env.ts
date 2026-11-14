@@ -56,6 +56,10 @@ export const __ELM_WATCH_NOT_TTY = "__ELM_WATCH_NOT_TTY";
 // Also used to print emojis even on Windows to be able to use the same test snapshots.
 export const WT_SESSION = "WT_SESSION";
 
+// The VS Code terminal supports emojis too, and sets this to "vscode". It does
+// not set `WT_SESSION` (unless VS Code was started from Windows Terminal).
+export const TERM_PROGRAM = "TERM_PROGRAM";
+
 // Used in tests to print hardcoded durations and timings, for snapshots.
 // Type: Check if defined and ignore value.
 export const __ELM_WATCH_MOCKED_TIMINGS = "__ELM_WATCH_MOCKED_TIMINGS";

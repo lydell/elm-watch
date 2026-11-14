@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { WT_SESSION } from "../src/Env.ts";
+import { NO_COLOR, TERM_PROGRAM, WT_SESSION } from "../src/Env.ts";
 import { BEGIN_SYNC_UPDATE, END_SYNC_UPDATE } from "../src/Helpers.ts";
+import { IS_WINDOWS } from "../src/IsWindows.ts";
 import { type Terminal, makeTerminal } from "../src/Terminal.ts";
 import { MemoryWriteStream, SilentReadStream } from "./Helpers.ts";
 
@@ -61,6 +62,16 @@ function setup(
 }
 
 describe("Terminal", () => {
+  test("fancy output (emoji) in modern terminals", () => {
+    const fancy = (env: Record<string, string>): boolean =>
+      makeTestTerminal({ env }).config.fancy;
+    // On Windows, the old Windows console does not support emoji.
+    expect(fancy({})).toBe(!IS_WINDOWS);
+    expect(fancy({ [WT_SESSION]: "" })).toBe(true);
+    expect(fancy({ [TERM_PROGRAM]: "vscode" })).toBe(true);
+    expect(fancy({ [TERM_PROGRAM]: "vscode", [NO_COLOR]: "" })).toBe(false);
+  });
+
   test("ctrl+c together with other keys", () => {
     const stdin = new SilentReadStream();
     const { exits, keys } = setup(stdin);

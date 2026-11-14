@@ -9,6 +9,7 @@ import {
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
   type Env,
   NO_COLOR,
+  TERM_PROGRAM,
   WT_SESSION,
 } from "./Env.ts";
 import * as Errors from "./Errors.ts";
@@ -86,6 +87,11 @@ export function makeTerminal({
   logDebug: (message: string) => void;
 }): Terminal {
   const noColor = NO_COLOR in env;
+  // The old Windows console does not support emoji, and does not answer
+  // terminal queries. Windows Terminal (tested with version 1.24) and the VS
+  // Code terminal (tested with version 1.146) do.
+  const isModernTerminal =
+    !IS_WINDOWS || WT_SESSION in env || env[TERM_PROGRAM] === "vscode";
   const handleColor = (string: string): string =>
     noColor ? removeColor(string) : string;
 
@@ -152,7 +158,7 @@ export function makeTerminal({
     noColor,
     // Emoji (not supported by the old Windows console) are used as status
     // indicators, which partly rely on color. Use text instead without color.
-    fancy: (!IS_WINDOWS || WT_SESSION in env) && !noColor,
+    fancy: isModernTerminal && !noColor,
     isTTY: __ELM_WATCH_NOT_TTY in env ? false : stdout.isTTY,
     mockedTimings: __ELM_WATCH_MOCKED_TIMINGS in env,
     get columns() {
@@ -291,9 +297,8 @@ export function makeTerminal({
       if (!stdin.isRaw || !config.isTTY) {
         return undefined;
       }
-      // The old Windows console does not answer queries. Save it the timeout.
-      // Windows Terminal does (tested with version 1.24).
-      if (IS_WINDOWS && !(WT_SESSION in env)) {
+      // Save the old Windows console the timeout.
+      if (!isModernTerminal) {
         return undefined;
       }
 
