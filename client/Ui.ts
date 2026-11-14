@@ -1634,6 +1634,9 @@ p {
   top: var(--top);
   left: var(--edge-left);
   display: grid;
+  /* Emoji can be wider than the button (Segoe UI Emoji on Windows). A fixed
+  column makes them overflow equally on both sides, instead of to the right. */
+  grid-template-columns: 100%;
   place-items: center;
   width: ${TOGGLE_SIZE};
   height: ${TOGGLE_SIZE};
@@ -1694,6 +1697,9 @@ the corner of its hit area. The panel may cover parts of it.
 
 .${CLASS.toggleEmoji} {
   position: relative;
+  /* Center the emoji vertically regardless of the font’s line metrics.
+  Without this, Segoe UI Emoji (Windows) ends up 1.5px too low. */
+  text-box: trim-both cap alphabetic;
 }
 
 .${CLASS.badge} {
