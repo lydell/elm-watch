@@ -8,12 +8,7 @@ import {
   runWithBadElmBin,
   runWithBadElmBinAndWrittenError,
 } from "./ErrorsHelpers.ts";
-import {
-  clean,
-  stringSnapshotSerializer,
-  TEST_ENV,
-  testExceptWindows,
-} from "./Helpers.ts";
+import { clean, stringSnapshotSerializer, TEST_ENV } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
@@ -79,10 +74,15 @@ describe("errors", () => {
       `);
     });
 
-    // On Windows, this causes `elm` to be found after all, but fail with `openBinaryFile: permission denied`.
-    testExceptWindows("undefined PATH", async () => {
-      expect(await run("valid", ["make", "app"], { env: {} }))
-        .toMatchInlineSnapshot(`
+    test("undefined PATH", async () => {
+      expect(
+        (await run("valid", ["make", "app"], { env: {} }))
+          // Windows has several PATH-like variables (see `printPATHWindows`).
+          .replace(
+            "because I can't find any PATH-like environment variables!",
+            "because process.env.PATH is undefined!",
+          ),
+      ).toMatchInlineSnapshot(`
         ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
