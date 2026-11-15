@@ -12,6 +12,13 @@ export default defineConfig({
     // cores), 13 workers took ~49 s, while 8–10 workers took ~34–38 s.
     // On CI, use Vitest’s default, since CI runners only have a few cores.
     ...(process.env["CI"] === undefined ? { maxWorkers: 9 } : {}),
+    env: {
+      // Elm is built with `-N -qg -A128m`: one 128 MB nursery per core. On
+      // macOS, setting that up costs ~65 ms every time `elm` starts (Linux
+      // allocates lazily). The test fixtures are tiny and don’t benefit from
+      // the big nursery, so this halves the time of a full run on macOS.
+      GHCRTS: "-A1m",
+    },
     environmentOptions: {
       jsdom: {
         url: "http://localhost",
