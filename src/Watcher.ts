@@ -14,7 +14,8 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 //   if it exists. (Except for one Windows quirk, see `isDirectoryChange`.)
 // - Moving a directory into or out of a watched directory results in a single
 //   event for the directory itself, not one per file inside it. So every
-//   reported path must be treated as a potential directory.
+//   reported path must be treated as a potential directory. (On Linux, moving
+//   a directory in also reports everything inside it.)
 // - Watching a path that does not exist throws. Watched directories (such as
 //   source directories in elm.json) might not exist (yet), so we watch the
 //   closest existing ancestor until they do.
