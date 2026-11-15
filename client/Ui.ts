@@ -202,6 +202,9 @@ type OverlayErrorsEntry = {
 type EditorChooser = {
   // The error location to open once an editor has been chosen.
   location: LocationToOpen | undefined;
+  // Whether “Other” has been chosen, showing the URL field and how to run a
+  // command instead.
+  showOther: boolean;
   // Kept here, since the panel is re-created on every render.
   customTemplate: string;
   customError: string | undefined;
@@ -211,6 +214,7 @@ type EditorChooserProps = EditorChooser & {
   current: Editor | undefined;
   commandHint: string | null;
   onChoose: (editor: string) => void;
+  onShowOther: () => void;
   onCustomInput: (value: string) => void;
   onCustomSubmit: () => void;
   onUseExample: () => void;
@@ -682,6 +686,7 @@ export function createUi(): Ui {
       setup?.tag === "Url" ? parseEditor(setup.editor) : undefined;
     editorChooser = {
       location,
+      showOther: current?.tag === "Custom",
       customTemplate: current?.tag === "Custom" ? current.template : "",
       customError: undefined,
     };
@@ -693,6 +698,18 @@ export function createUi(): Ui {
     );
     if (element instanceof HTMLElement) {
       element.focus({ preventScroll: true });
+    }
+  };
+
+  const showOtherEditor = (): void => {
+    if (editorChooser === undefined) {
+      return;
+    }
+    editorChooser.showOther = true;
+    renderOverlay();
+    const input = overlay.querySelector(`[${DATA_FOCUS_KEY}="editorCustom"]`);
+    if (input instanceof HTMLElement) {
+      input.focus();
     }
   };
 
@@ -735,6 +752,7 @@ export function createUi(): Ui {
               current,
               commandHint: result.openEditor.commandHint,
               onChoose: chooseEditor,
+              onShowOther: showOtherEditor,
               onCustomInput: (value) => {
                 if (editorChooser !== undefined) {
                   editorChooser.customTemplate = value;
@@ -1238,16 +1256,21 @@ export function createUi(): Ui {
       }
       return;
     }
-    const preset =
+    const digit =
       editorChooser !== undefined &&
       /^[1-9]$/.test(event.key) &&
       !(shadowRoot.activeElement instanceof HTMLInputElement)
-        ? EDITOR_PRESETS[Number(event.key) - 1]
+        ? Number(event.key)
         : undefined;
-    if (preset !== undefined) {
+    if (digit !== undefined && digit <= EDITOR_PRESETS.length + 1) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      chooseEditor(preset.id);
+      const preset = EDITOR_PRESETS[digit - 1];
+      if (preset === undefined) {
+        showOtherEditor();
+      } else {
+        chooseEditor(preset.id);
+      }
       return;
     }
     const key = overlayKeyFromEvent(event);
@@ -3367,15 +3390,18 @@ function viewOverlay({
 // “e” to change editor.
 function viewEditorChooser({
   location,
+  showOther,
   customTemplate,
   customError,
   current,
   commandHint,
   onChoose,
+  onShowOther,
   onCustomInput,
   onCustomSubmit,
   onUseExample,
 }: EditorChooserProps): HTMLElement {
+  const otherNumber = (EDITOR_PRESETS.length + 1).toString();
   return h(
     HTMLDivElement,
     {
@@ -3413,7 +3439,55 @@ function viewEditorChooser({
           ` ${preset.name}`,
         ),
       ),
+      h(
+        HTMLButtonElement,
+        {
+          attrs: {
+            [DATA_FOCUS_KEY]: "editorOther",
+            "aria-keyshortcuts": otherNumber,
+            "aria-pressed": (current?.tag === "Custom").toString(),
+          },
+          onclick: onShowOther,
+        },
+        h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "["),
+        h(HTMLElement, { localName: "b" }, otherNumber),
+        h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "]"),
+        " Other",
+      ),
     ),
+    ...(showOther
+      ? viewOtherEditor({
+          customTemplate,
+          customError,
+          current,
+          commandHint,
+          onCustomInput,
+          onCustomSubmit,
+          onUseExample,
+        })
+      : []),
+  );
+}
+
+function viewOtherEditor({
+  customTemplate,
+  customError,
+  current,
+  commandHint,
+  onCustomInput,
+  onCustomSubmit,
+  onUseExample,
+}: Pick<
+  EditorChooserProps,
+  | "customTemplate"
+  | "customError"
+  | "current"
+  | "commandHint"
+  | "onCustomInput"
+  | "onCustomSubmit"
+  | "onUseExample"
+>): Array<HTMLElement | undefined> {
+  return [
     h(
       HTMLFormElement,
       {
@@ -3426,7 +3500,7 @@ function viewEditorChooser({
       h(
         HTMLLabelElement,
         {},
-        "Other editor (URL):",
+        "Editor URL:",
         h(HTMLInputElement, {
           type: "text",
           value: customTemplate,
@@ -3493,7 +3567,7 @@ function viewEditorChooser({
     commandHint === null
       ? undefined
       : h(HTMLPreElement, { className: CLASS.editorNote }, commandHint),
-  );
+  ];
 }
 
 function viewOverlayError(

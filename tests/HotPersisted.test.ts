@@ -326,6 +326,7 @@ describe("hot", () => {
 
       test("env var not set: choose a preset", async () => {
         let chooser = "";
+        let other = "";
 
         await run({
           fixture,
@@ -339,6 +340,8 @@ describe("hot", () => {
           onIdle: async () => {
             clickFirstErrorLocation();
             chooser = getOverlay();
+            clickUiButton("[7] Other");
+            other = /<chooser>[^]*<\/chooser>/.exec(getOverlay())?.[0] ?? "";
             clickUiButton("[1] VS Code");
             await waitFor(() => readChosenEditor() === "vscode");
             return "Stop" as const;
@@ -366,7 +369,23 @@ describe("hot", () => {
           [[4] IntelliJ IDEA]
           [[5] WebStorm]
           [[6] Rider]
-          Other editor (URL):
+          [[7] Other]
+          </chooser>
+          --------------------------------------------------------------------------------
+          <footer>🚨 error 1/1 | [esc] cancel</footer>
+          </overlay>
+        `);
+        expect(other).toMatchInlineSnapshot(`
+          <chooser>
+          Which editor should I open this in?
+          [[1] VS Code]
+          [[2] Cursor]
+          [[3] Zed]
+          [[4] IntelliJ IDEA]
+          [[5] WebStorm]
+          [[6] Rider]
+          [[7] Other]
+          Editor URL:
           <input value="" placeholder="">
           [Use]
           Example:
@@ -375,9 +394,6 @@ describe("hot", () => {
           # ~/.bashrc
           export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
           </chooser>
-          --------------------------------------------------------------------------------
-          <footer>🚨 error 1/1 | [esc] cancel</footer>
-          </overlay>
         `);
         expect(openedUrls).toMatchInlineSnapshot(`
           [
@@ -412,7 +428,12 @@ describe("hot", () => {
             footers.push(grep(getOverlay(), /footer/));
             pressOverlayKey("e");
             footers.push(grep(getOverlay(), /pressed|footer/));
+            pressOverlayKey("7");
+            footers.push(grep(getOverlay(), /Other|URL|footer/));
+            // The URL field is focused, so digits are left for typing.
             pressOverlayKey("1");
+            footers.push(grep(getOverlay(), /input/));
+            clickUiButton("[1] VS Code");
             await waitFor(() => readChosenEditor() === "vscode");
             return "Stop" as const;
           },
@@ -424,6 +445,10 @@ describe("hot", () => {
           <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all</footer>
           [[5] WebStorm] (pressed)
           <footer>🚨 error 1/1 | [esc] cancel</footer>
+          [[7] Other]
+          Editor URL:
+          <footer>🚨 error 1/1 | [esc] cancel</footer>
+          <input value="" placeholder="">
         `);
         expect(openedUrls).toMatchInlineSnapshot(`
           [
@@ -436,6 +461,7 @@ describe("hot", () => {
       test("custom URL", async () => {
         let error = "";
         let example = "";
+        let change = "";
 
         await run({
           fixture,
@@ -448,6 +474,7 @@ describe("hot", () => {
           },
           onIdle: async () => {
             clickFirstErrorLocation();
+            clickUiButton("[7] Other");
             clickUiButton(
               "pycharm://open?file={file}&line={line}&column={column0}",
             );
@@ -460,6 +487,8 @@ describe("hot", () => {
             );
             submitUiForm();
             await waitFor(() => readChosenEditor() !== undefined);
+            pressOverlayKey("e");
+            change = grep(getOverlay(), /pressed|input/);
             return "Stop" as const;
           },
         });
@@ -470,6 +499,11 @@ describe("hot", () => {
         expect(error).toMatchInlineSnapshot(`
           <input value="https://example.com/{file}" placeholder="" invalid>
           https: URLs are not supported. Only URLs for opening apps, like myeditor://
+        `);
+        expect(change).toMatchInlineSnapshot(`
+          [[7] Other] (pressed)
+          <input value="myeditor://open?file={file}&line={line0}&column={column0}" placeholder="">
+          [Use] (pressed)
         `);
         expect(readChosenEditor()).toMatchInlineSnapshot(
           `myeditor://open?file={file}&line={line0}&column={column0}`,
@@ -529,6 +563,7 @@ describe("hot", () => {
           },
           onIdle: () => {
             clickFirstErrorLocation();
+            clickUiButton("[7] Other");
             chooser = getOverlay();
             return "Stop" as const;
           },

@@ -77,7 +77,7 @@ The first time you click an error location (or press Enter), elm-watch asks whic
 
 The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered for all browsers (but you need to choose again in other projects). To change it later, press e in the error overlay.
 
-Using another editor? Type a URL in the “Other editor (URL)” field. Click the example below the field to start from it. These placeholders are replaced:
+Using another editor? Choose “Other” (or press 7) and type a URL in the “Editor URL” field. Click the example below the field to start from it. These placeholders are replaced:
 
 | Placeholder | Replaced with |
 | --- | --- |
