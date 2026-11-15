@@ -376,6 +376,9 @@ export function createUi(): Ui {
   // position when it is still the same.
   let overlayRenderedKey: string | undefined = undefined;
   let panelOpen = false;
+  // For taking screenshots, for example. Not saved: The emoji is back after
+  // reloading the page. It is also back on errors, so that you don’t miss them.
+  let hiddenUntilReloadOrError = false;
   let position = loadUiPosition();
 
   // External errors first, like in the terminal, since they are often the
@@ -527,14 +530,19 @@ export function createUi(): Ui {
   const render = (): void => {
     const snapshots = getSnapshots();
     const externalSources = externalErrors.sources.map(({ source }) => source);
-    toggleButton.hidden = snapshots.length === 0;
+    const worst = worstStatus(snapshots, externalSources);
+    const someError = (worst?.severity ?? 0) >= ERROR_SEVERITY;
+    if (someError) {
+      hiddenUntilReloadOrError = false;
+    }
+    const hidden = snapshots.length === 0 || hiddenUntilReloadOrError;
+    toggleButton.hidden = hidden;
     toggleButton.setAttribute("aria-expanded", panelOpen.toString());
     toggleButton.setAttribute(
       "aria-label",
       summaryLabel(snapshots, externalSources),
     );
 
-    const worst = worstStatus(snapshots, externalSources);
     const flashElement = toggleButton.querySelector(`.${CLASS.flash}`);
     toggleButton.replaceChildren(
       flashElement ??
@@ -562,8 +570,8 @@ export function createUi(): Ui {
         : []),
     );
 
-    if (panelOpen && snapshots.length > 0) {
-      renderPanel(snapshots);
+    if (panelOpen && !hidden) {
+      renderPanel(snapshots, someError);
       if (!supportsPopover) {
         if (!panel.isConnected) {
           root.append(panel);
@@ -598,7 +606,10 @@ export function createUi(): Ui {
     }
   });
 
-  const renderPanel = (snapshots: Array<TargetSnapshot>): void => {
+  const renderPanel = (
+    snapshots: Array<TargetSnapshot>,
+    someError: boolean,
+  ): void => {
     // The panel is re-created on every render. Restore focus afterwards, so
     // that keyboard users don’t lose their place.
     const { activeElement } = shadowRoot;
@@ -619,6 +630,15 @@ export function createUi(): Ui {
           setErrorOverlayOpen(!errorOverlayOpen);
           render();
         },
+        // Hiding is pointless when there are errors, since they show the
+        // emoji again right away.
+        onHide: someError
+          ? undefined
+          : () => {
+              panelOpen = false;
+              hiddenUntilReloadOrError = true;
+              render();
+            },
         onClose: closePanel,
         dispatch: dispatchToTarget,
       }),
@@ -1330,6 +1350,29 @@ function svg(
   return element;
 }
 
+// An eye with a slash through it.
+function hideIcon(): SVGElement {
+  return svg(
+    "svg",
+    {
+      viewBox: "0 0 16 16",
+      width: "16",
+      height: "16",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "1.5",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "aria-hidden": "true",
+    },
+    svg("path", {
+      d: "M1.5 8s2.5-4.5 6.5-4.5 6.5 4.5 6.5 4.5-2.5 4.5-6.5 4.5S1.5 8 1.5 8z",
+    }),
+    svg("circle", { cx: "8", cy: "8", r: "2" }),
+    svg("path", { d: "M2.5 2.5l11 11" }),
+  );
+}
+
 function closeIcon(): SVGElement {
   return svg(
     "svg",
@@ -1358,7 +1401,7 @@ export type Info = {
 const CLASS = {
   badge: "badge",
   button: "button",
-  closeButton: "closeButton",
+  iconButton: "iconButton",
   details: "details",
   envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
@@ -1871,7 +1914,7 @@ focus might be inside the panel and must not be lost.
   background-color: var(--hover);
 }
 
-.${CLASS.closeButton} {
+.${CLASS.iconButton} {
   appearance: none;
   display: grid;
   place-items: center;
@@ -1885,7 +1928,7 @@ focus might be inside the panel and must not be lost.
   cursor: pointer;
 }
 
-.${CLASS.closeButton}:hover {
+.${CLASS.iconButton}:hover {
   background-color: var(--hover);
   color: CanvasText;
 }
@@ -2220,6 +2263,7 @@ function viewPanel({
   hasErrors,
   errorOverlayOpen,
   onToggleErrorOverlay,
+  onHide,
   onClose,
   dispatch,
 }: {
@@ -2228,6 +2272,7 @@ function viewPanel({
   hasErrors: boolean;
   errorOverlayOpen: boolean;
   onToggleErrorOverlay: () => void;
+  onHide: (() => void) | undefined;
   onClose: () => void;
   dispatch: (targetName: string, msg: UiMsg) => void;
 }): Array<HTMLElement> {
@@ -2261,11 +2306,26 @@ function viewPanel({
             },
             errorOverlayOpen ? "Hide errors" : "Show errors",
           )
-        : undefined,
+        : onHide === undefined
+          ? undefined
+          : h(
+              HTMLButtonElement,
+              {
+                className: CLASS.iconButton,
+                attrs: {
+                  [DATA_FOCUS_KEY]: "hide",
+                  "data-test-id": "HideUiButton",
+                  "aria-label": "Hide until reload or error",
+                  title: "Hide until reload or error",
+                },
+                onclick: onHide,
+              },
+              hideIcon(),
+            ),
       h(
         HTMLButtonElement,
         {
-          className: CLASS.closeButton,
+          className: CLASS.iconButton,
           attrs: {
             [DATA_FOCUS_KEY]: "close",
             "aria-label": "Close elm-watch",

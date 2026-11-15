@@ -104,6 +104,7 @@ describe("hot", () => {
       ▲ 🔌
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       🔌 Worker Connecting · 13:10:05
       Drag emoji or press shift+arrows to move
@@ -111,6 +112,7 @@ describe("hot", () => {
       ▲ ⏳
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ Worker Waiting for compilation · 13:10:05
       Compilation mode for Worker
@@ -123,6 +125,7 @@ describe("hot", () => {
       ▲ ⏳
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ Worker Waiting for compilation · 13:10:05
       Compilation mode for Worker
@@ -137,6 +140,7 @@ describe("hot", () => {
       ▲ 🔌
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       🔌 Worker Connecting · 13:10:05
       Drag emoji or press shift+arrows to move
@@ -144,6 +148,7 @@ describe("hot", () => {
       ▲ ⏳
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ Worker Waiting for compilation · 13:10:05
       Compilation mode for Worker
@@ -156,6 +161,7 @@ describe("hot", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ Worker Successfully compiled · 13:10:05
       Compilation mode for Worker
@@ -283,6 +289,7 @@ describe("hot", () => {
       ▲ ⏳
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ Main Waiting for compilation · 13:10:05
       Compilation mode for Main

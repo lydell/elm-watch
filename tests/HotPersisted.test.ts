@@ -710,6 +710,7 @@ describe("hot", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ Main Successfully compiled · 13:10:05
       Compilation mode for Main

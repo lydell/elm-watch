@@ -304,6 +304,7 @@ describe("hot", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ HtmlMain Successfully compiled · 13:10:05
       Compilation mode for HtmlMain
@@ -316,6 +317,7 @@ describe("hot", () => {
       ▲ ⏳
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ HtmlMain Waiting for compilation · 13:10:05
       Compilation mode for HtmlMain

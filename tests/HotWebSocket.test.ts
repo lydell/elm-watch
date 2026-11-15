@@ -143,6 +143,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 ParamsDecodeError Sleeping · 13:10:05
         Attempt 1 failed. Trying again in 1.01 seconds.
@@ -152,6 +153,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 ParamsDecodeError Connecting · 13:10:05
         Drag emoji or press shift+arrows to move
@@ -159,6 +161,7 @@ describe("hot", () => {
         ▲ ⏳
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         ⏳ ParamsDecodeError Waiting for compilation · 13:10:05
         Compilation mode for ParamsDecodeError
@@ -728,6 +731,7 @@ describe("hot", () => {
         ▲ ✅
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         ✅ SendBadJson Successfully compiled · 13:10:05
         Compilation mode for SendBadJson
@@ -740,6 +744,7 @@ describe("hot", () => {
         ▲ ⏳🚀
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         ⏳ SendBadJson Waiting for compilation · 13:10:05
         Compilation mode for SendBadJson
@@ -795,6 +800,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Drag emoji or press shift+arrows to move
@@ -802,6 +808,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Sleeping · 13:10:05
         Attempt 2 failed. Trying again in 1.04 seconds.
@@ -811,6 +818,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Attempt 2.
@@ -819,6 +827,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Sleeping · 13:10:05
         Attempt 3 failed. Trying again in 1.09 seconds.
@@ -828,6 +837,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Attempt 3.
@@ -836,6 +846,7 @@ describe("hot", () => {
         ▲ ⏳
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         ⏳ Reconnect Waiting for compilation · 13:10:05
         Compilation mode for Reconnect
@@ -848,6 +859,7 @@ describe("hot", () => {
         ▲ ⏳
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         ⏳ Reconnect Waiting for compilation · 13:10:05
         Compilation mode for Reconnect
@@ -862,6 +874,7 @@ describe("hot", () => {
         ▲ 🔌
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Drag emoji or press shift+arrows to move
@@ -869,6 +882,7 @@ describe("hot", () => {
         ▲ ⏳
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         ⏳ Reconnect Waiting for compilation · 13:10:05
         Compilation mode for Reconnect
@@ -881,6 +895,7 @@ describe("hot", () => {
         ▲ ✅
         --------------------------------------------------------------------------------
         elm-watch %VERSION%
+        [Hide until reload or error]
         [Close elm-watch]
         ✅ Reconnect Successfully compiled · 13:10:05
         Compilation mode for Reconnect

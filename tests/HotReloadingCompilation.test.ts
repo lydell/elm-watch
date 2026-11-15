@@ -17,6 +17,7 @@ import {
   getOverlay,
   getOverlayAnnouncement,
   hideErrors,
+  hideUi,
   isOverlayVisible,
   pressOverlayKey,
   nextMsg,
@@ -32,6 +33,74 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot reloading", () => {
   afterEach(cleanupAfterEachTest);
+
+  test("Hide UI until reload or error", async () => {
+    const { replace, go } = runHotReload({
+      name: "HtmlMain",
+      programType: "Html",
+      compilationMode: "standard",
+      isTTY: false,
+    });
+
+    const { renders } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          hideUi();
+          // Stays hidden after a successful hot reload.
+          replace((content) => content.replace("hot reload", "hidden"));
+          return "KeepGoing";
+        case 2:
+          // Errors show the emoji again.
+          replace((content) => content.replace("Html.h1", "Html.typo"));
+          return "KeepGoing";
+        case 3:
+          // And it stays after fixing the error.
+          replace((content) => content.replace("Html.typo", "Html.h1"));
+          return "KeepGoing";
+        default:
+          return "Stop";
+      }
+    });
+
+    expect(renders).toMatchInlineSnapshot(`
+      ▼ 🔌
+      ================================================================================
+      ▼ ⏳
+      ================================================================================
+      ▼ 🔌
+      ================================================================================
+      ▼ ⏳
+      ================================================================================
+      ▼ ✅
+      ================================================================================
+      ▲ ✅
+      --------------------------------------------------------------------------------
+      elm-watch %VERSION%
+      [Hide until reload or error]
+      [Close elm-watch]
+      ✅ HtmlMain Successfully compiled · 13:10:05
+      Compilation mode for HtmlMain
+      ◯ (disabled) Debug
+      ◉ Standard
+      ◯ Optimize
+      The Elm debugger isn't supported by \`Html\` programs.
+      Drag emoji or press shift+arrows to move
+      ================================================================================
+      (hidden) ▼ ✅
+      ================================================================================
+      (hidden) ▼ ⏳
+      ================================================================================
+      (hidden) ▼ ✅
+      ================================================================================
+      (hidden) ▼ ⏳
+      ================================================================================
+      ▼ 🚨
+      ================================================================================
+      ▼ ⏳
+      ================================================================================
+      ▼ ✅
+    `);
+  });
 
   test("Switching to optimize mode with Debug.log and switching back", async () => {
     const { go } = runHotReload({
@@ -84,6 +153,7 @@ describe("hot reloading", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ DebugLog Successfully compiled · 13:10:05
       Compilation mode for DebugLog
@@ -96,6 +166,7 @@ describe("hot reloading", () => {
       ▲ ⏳🚀
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ DebugLog Waiting for compilation · 13:10:05
       Compilation mode for DebugLog
@@ -135,6 +206,7 @@ describe("hot reloading", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ DebugLog Successfully compiled · 13:10:05
       Compilation mode for DebugLog

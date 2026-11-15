@@ -49,6 +49,7 @@ describe("hot", () => {
       ▲ 🔌
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       🔌 Main Connecting · 13:10:05
       Drag emoji or press shift+arrows to move
@@ -56,6 +57,7 @@ describe("hot", () => {
       ▲ ⏳
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ Main Waiting for compilation · 13:10:05
       Compilation mode for Main
@@ -68,6 +70,7 @@ describe("hot", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ Main Successfully compiled · 13:10:05
       Compilation mode for Main
@@ -80,6 +83,7 @@ describe("hot", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ Main Successfully compiled · 13:10:05
       Compilation mode for Main
@@ -348,6 +352,7 @@ describe("hot", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ Main Successfully compiled · 13:10:05
       Compilation mode for Main
@@ -512,6 +517,7 @@ describe("hot", () => {
       ▲ ✅
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ✅ HttpCaching Successfully compiled · 13:10:05
       Compilation mode for HttpCaching
@@ -524,6 +530,7 @@ describe("hot", () => {
       ▲ ⏳🚀
       --------------------------------------------------------------------------------
       elm-watch %VERSION%
+      [Hide until reload or error]
       [Close elm-watch]
       ⏳ HttpCaching Waiting for compilation · 13:10:05
       Compilation mode for HttpCaching

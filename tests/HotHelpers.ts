@@ -757,6 +757,20 @@ export function hideErrors(): void {
   });
 }
 
+export function hideUi(): void {
+  expandUi();
+  withShadowRoot((shadowRoot) => {
+    const button = shadowRoot.querySelector(`[data-test-id="HideUiButton"]`);
+    if (button instanceof HTMLElement) {
+      button.click();
+      // Like in `expandUiHelper`: This happens without involving the targets.
+      window.__ELM_WATCH.ON_RENDER("hideUi");
+    } else {
+      throw new Error(`Could not button for hiding the UI.`);
+    }
+  });
+}
+
 export function closeOverlay(): void {
   withShadowRoot((shadowRoot) => {
     const button = shadowRoot.querySelector(
@@ -962,7 +976,9 @@ function walkTextNodes(node: Node, parts: Array<string>): void {
     const textContent = node.textContent.trim();
     const expanded = node.getAttribute("aria-expanded");
     if (expanded !== null) {
-      parts.push(`${expanded === "true" ? "▲" : "▼"} ${textContent}`);
+      parts.push(
+        `${node.hidden === true ? "(hidden) " : ""}${expanded === "true" ? "▲" : "▼"} ${textContent}`,
+      );
     } else {
       newline();
       parts.push(

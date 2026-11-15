@@ -15,6 +15,8 @@ Clicking the emoji opens a panel with one row per target. Each row shows the sta
 
 If the emoji is in the way, drag it somewhere else. It snaps to the closest side of the window. You can also move it with Shift + arrow keys while it (or the panel) has focus. The position is remembered in the browser (using `localStorage`), for all pages on the same origin.
 
+Need a screenshot without the emoji? Click the crossed-out eye in the panel (“Hide until reload or error”). The emoji comes back when you reload the page – or when there are errors, so you don’t miss them.
+
 Here are all the icons you might see (they’re also explained in the panel):
 
 ✅ = Successfully compiled  
