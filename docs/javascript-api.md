@@ -151,7 +151,7 @@ Type definition: `import type { Options } from "elm-watch"`.
 | runMode | `"hot" \| "make"` | _Required_ | Like `elm-watch hot` and `elm-watch make`. |
 | compilationMode | `"standard" \| "debug" \| "optimize"` | `"standard"` | In `"make"` mode: The compilation mode for all targets. In `"hot"` mode: The compilation mode for targets you haven’t switched to another mode in the [browser UI](../browser-ui/). |
 | targets | `Array<Target>` | _Required_ | What to compile. At least one target is required. See below. |
-| port | `number` | An arbitrary available port. Tries to re-use the same port as last time. | Like `"port"` in [elm-watch.json](../elm-watch.json/). |
+| port | `number` | An arbitrary available port. Tries to re-use the same port as last time. | Like `"port"` in [elm-watch.json](../elm-watch.json/). Handy for setting the port only for some runs, like `port: process.env.TUNNEL === "1" ? 443 : undefined` – later runs without `port` don’t reuse it. |
 | host | `string` | `"127.0.0.1"` | The host for the server to listen on, as in Node.js’ `server.listen(port, host)`. Use `"0.0.0.0"` to expose the server on the local network. See [Network exposure](../server/#network-exposure). The `ELM_WATCH_HOST` environment variable is ignored. |
 | staticFilesDir | `string` | unset | A directory of static files to [serve](../server/), relative to `root`. Like `"serve"` in elm-watch.json. |
 | webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable is ignored – use `process.env` yourself if needed. |

@@ -430,7 +430,11 @@ describe("DevServer", () => {
     function createServer(port: number): DevServer {
       return new DevServer({
         ...OPTIONS,
-        portChoice: { tag: "PortFromConfig", port: markAsPort(port) },
+        portChoice: {
+          tag: "PortFromConfig",
+          port: markAsPort(port),
+          persistedPort: undefined,
+        },
       });
     }
 

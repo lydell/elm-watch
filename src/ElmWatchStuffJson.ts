@@ -22,7 +22,8 @@ const Target = Codec.fields({
 
 export type ElmWatchStuffJson = Codec.Infer<typeof ElmWatchStuffJson>;
 export const ElmWatchStuffJson = Codec.fields({
-  port: Port,
+  // Missing if elm-watch has only been run with a port from config.
+  port: Codec.field(Port, { optional: true }),
   webSocketToken: Codec.field(WebSocketToken, { optional: true }),
   targets: Codec.record(Target),
 });

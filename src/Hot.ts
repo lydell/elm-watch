@@ -42,7 +42,7 @@ import {
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import { openEditor, printOpenEditorErrorForTerminal } from "./OpenEditor.ts";
 import { absoluteDirname } from "./PathHelpers.ts";
-import type { PortChoice } from "./Port.ts";
+import { type PortChoice, portToPersist } from "./Port.ts";
 import {
   getAllTargetStates,
   getApplicationTargetsErrors,
@@ -75,6 +75,7 @@ import type { WebSocketConnection as WebSocketUrlConnection } from "./WebSocketU
 type Mutable = {
   watcher: Watcher.Watcher;
   devServer: DevServer;
+  portChoice: PortChoice;
   project: Project;
   lastInfoMessage: string | undefined;
   // The one-line version of the info message (TTY only), for the error view.
@@ -346,6 +347,7 @@ const initMutable =
     const mutable: Mutable = {
       watcher,
       devServer,
+      portChoice,
       project,
       lastInfoMessage: undefined,
       lastInfoLine: undefined,
@@ -523,8 +525,9 @@ function writeElmWatchStuffJson(
     ),
   ]);
 
+  const port = portToPersist(mutable.portChoice, mutable.devServer.port);
   const json: ElmWatchStuffJson = {
-    port: mutable.devServer.port,
+    ...(port === undefined ? {} : { port }),
     webSocketToken,
     targets,
   };

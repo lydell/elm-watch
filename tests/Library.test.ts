@@ -1,7 +1,9 @@
 import * as fs from "fs";
+import * as net from "net";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
+import type { HotTestHooks } from "../src/Hot.ts";
 import { createErrorReporter, elmWatch } from "../src/index.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
@@ -13,6 +15,7 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   TEST_ENV,
+  waitFor,
 } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -153,6 +156,99 @@ describe("library", () => {
     }));
 
     expect(stdout).toBe("");
+  });
+
+  describe("port option in hot mode", () => {
+    async function getFreePort(): Promise<number> {
+      const server = net.createServer();
+      await new Promise<void>((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+      const { port } = server.address() as net.AddressInfo;
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+      return port;
+    }
+
+    // Runs hot mode with `port` until stuff.json has been written, and returns
+    // stuff.json.
+    async function runHot(
+      root: string,
+      port: number,
+    ): Promise<Record<string, unknown>> {
+      const stuffJsonPath = path.join(
+        root,
+        "elm-stuff",
+        "elm-watch",
+        "stuff.json",
+      );
+      const readStuffJson = (): string | undefined => {
+        try {
+          return fs.readFileSync(stuffJsonPath, "utf8");
+        } catch {
+          return undefined;
+        }
+      };
+      let isIdle = false;
+      const hotTestHooks: HotTestHooks = {
+        kill: undefined,
+        onUpdate: (_msg, idle) => {
+          isIdle = idle;
+        },
+      };
+      const stderr = new MemoryWriteStream();
+      const done = elmWatch({
+        root,
+        runMode: "hot",
+        targets: [
+          {
+            type: "application",
+            name: "main",
+            elmJson: "elm.json",
+            inputs: ["src/Main.elm"],
+            output: "build/main.js",
+          },
+        ],
+        port,
+        env: { ...process.env, ...TEST_ENV },
+        stdin: new SilentReadStream(),
+        stdout: new CursorWriteStream(),
+        stderr,
+        logDebug,
+        hotTestHooks,
+      });
+      // elm-watch always writes the web socket token.
+      await waitFor(
+        () => isIdle && readStuffJson()?.includes("webSocketToken") === true,
+      );
+      await hotTestHooks.kill?.();
+      await done;
+      expect(stderr.content).toBe("");
+      return JSON.parse(readStuffJson() ?? "") as Record<string, unknown>;
+    }
+
+    test("keeps the previously saved port", async () => {
+      const root = copyFixture(".", "library");
+      fs.mkdirSync(path.join(root, "elm-stuff", "elm-watch"), {
+        recursive: true,
+      });
+      fs.writeFileSync(
+        path.join(root, "elm-stuff", "elm-watch", "stuff.json"),
+        JSON.stringify({ port: 9876, targets: {} }),
+      );
+      const stuffJson = await runHot(root, await getFreePort());
+      expect(stuffJson["port"]).toBe(9876);
+    });
+
+    test("saves no port if there was none", async () => {
+      const root = copyFixture(".", "library");
+      const stuffJson = await runHot(root, await getFreePort());
+      expect(Object.keys(stuffJson)).toStrictEqual([
+        "webSocketToken",
+        "targets",
+      ]);
+    });
   });
 
   test("postprocess function throws", async () => {

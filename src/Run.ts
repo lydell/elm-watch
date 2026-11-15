@@ -329,8 +329,12 @@ export async function runConfig({
                 errorViewState,
                 project,
                 config.port !== undefined
-                  ? { tag: "PortFromConfig", port: config.port }
-                  : elmWatchStuffJson !== undefined
+                  ? {
+                      tag: "PortFromConfig",
+                      port: config.port,
+                      persistedPort: elmWatchStuffJson?.port,
+                    }
+                  : elmWatchStuffJson?.port !== undefined
                     ? {
                         tag: "PersistedPort",
                         port: elmWatchStuffJson.port,
