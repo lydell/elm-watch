@@ -53,6 +53,7 @@ At the bottom of the overlay you can see which error and file you’re at, and w
 | ← → (or h l) | Previous/next error. |
 | ↑ ↓ (or k j) | Previous/next file. |
 | Enter (or o) | Open the error in your editor (see [Clickable error locations](#clickable-error-locations)). |
+| e | Change which editor to open errors in (if [chosen in the browser](#choose-your-editor-in-the-browser)). |
 | Space | Expand or collapse long code (see below). |
 | a | Show all errors at once (press again to go back to one at a time). |
 | Escape | Close the error overlay. |
@@ -72,11 +73,11 @@ In the error overlay you can click error locations (or press Enter) to open them
 
 ### Choose your editor in the browser
 
-The first time you click an error location, elm-watch asks which editor to use: VS Code, Cursor, Zed, IntelliJ IDEA, WebStorm or Rider. The browser then opens the error location via a URL, such as `vscode://file/path/to/Main.elm:10:5`. The first time, the browser (and VS Code) asks if you want to open the editor – you can tick a box to not be asked again.
+The first time you click an error location (or press Enter), elm-watch asks which editor to use, right in the error overlay: VS Code, Cursor, Zed, IntelliJ IDEA, WebStorm or Rider. Click one, or press its number. The browser then opens the error location via a URL, such as `vscode://file/path/to/Main.elm:10:5`. The first time, the browser (and VS Code) asks if you want to open the editor – you can tick a box to not be asked again.
 
-The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered for all browsers (but you need to choose again in other projects). To change it later, use the “Change” button next to “Editor” in the elm-watch panel (click the emoji).
+The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered for all browsers (but you need to choose again in other projects). To change it later, press e in the error overlay.
 
-Using another editor? Choose “Other editor (URL)” and type a URL. These placeholders are replaced:
+Using another editor? Type a URL in the “Other editor (URL)” field. Click the example below the field to start from it. These placeholders are replaced:
 
 | Placeholder | Replaced with |
 | --- | --- |

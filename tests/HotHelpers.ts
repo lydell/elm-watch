@@ -809,6 +809,9 @@ export function getOverlay(): string {
         if (child.classList.contains("overlayFooter")) {
           return printOverlayFooter(child);
         }
+        if (child.classList.contains("editorChooser")) {
+          return `<chooser>\n${getTextContent(child)}\n</chooser>`;
+        }
         const clone = child.cloneNode(true) as HTMLElement;
         clone.id = index.toString();
         for (const element of [clone, ...clone.querySelectorAll("[class]")]) {

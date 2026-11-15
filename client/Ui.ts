@@ -4,7 +4,6 @@ import {
   EDITOR_PLACEHOLDERS,
   EDITOR_PRESETS,
   type Editor,
-  editorName,
   editorUrl,
   parseEditor,
   validateEditorUrlTemplate,
@@ -208,16 +207,23 @@ type EditorChooser = {
   customError: string | undefined;
 };
 
-type EditorSection = {
+type EditorChooserProps = EditorChooser & {
   current: Editor | undefined;
   commandHint: string | null;
-  chooser: EditorChooser | undefined;
-  onChange: () => void;
   onChoose: (editor: string) => void;
   onCustomInput: (value: string) => void;
   onCustomSubmit: () => void;
-  onCancel: () => void;
+  onUseExample: () => void;
 };
+
+type OverlayEditor = {
+  // The editor chosen in the browser, if any.
+  current: Editor | undefined;
+  chooser: EditorChooserProps | undefined;
+};
+
+const EDITOR_URL_EXAMPLE =
+  "pycharm://open?file={file}&line={line}&column={column0}";
 
 type TargetEntry = {
   targetName: string;
@@ -441,15 +447,11 @@ export function createUi(): Ui {
   const hasErrors = (): boolean =>
     getAllOverlayErrors().some(({ errors }) => errors.size > 0);
 
-  const hasErrorsWithLocation = (): boolean =>
-    getAllOverlayErrors().some(({ errors }) =>
-      Array.from(errors.values()).some(
-        (error) => getOpenEditorLocation(error.location) !== undefined,
-      ),
-    );
-
   const renderOverlay = (): void => {
     const group = getErrorGroup();
+    if (group.numErrors === 0) {
+      editorChooser = undefined;
+    }
     overlaySelection = reconcile(overlaySelection, [group], new Map());
     const selectedError =
       overlaySelection === undefined
@@ -488,6 +490,7 @@ export function createUi(): Ui {
         onOpenEditor: (item, location) => {
           openEditorForItem(item, location);
         },
+        editor: getOverlayEditor(),
       }),
     );
 
@@ -522,7 +525,30 @@ export function createUi(): Ui {
       .htmlContentCollapsed !== undefined;
 
   const handleOverlayKey = (key: OverlayKey): void => {
+    // The other keys are paused while choosing an editor.
+    if (editorChooser !== undefined) {
+      if (key === "CancelEditorChooser") {
+        closeEditorChooser();
+      }
+      return;
+    }
     switch (key) {
+      case "ChangeEditor":
+        if (overlayShowAll || overlaySelection === undefined) {
+          openEditorChooser(undefined);
+        } else {
+          // Open the selected error once chosen.
+          openEditorChooser(
+            getOverlayOpenEditorLocation(
+              getSelectedError(overlaySelection, [getErrorGroup()]),
+            ),
+          );
+        }
+        return;
+
+      case "CancelEditorChooser":
+        return;
+
       case "ToggleShowAll":
         overlayShowAll = !overlayShowAll;
         break;
@@ -639,7 +665,18 @@ export function createUi(): Ui {
     }
   };
 
+  const canChooseEditor = (): boolean => {
+    const result = getOpenEditor();
+    return (
+      result?.connectedTarget !== undefined &&
+      result.openEditor.setup.tag !== "Server"
+    );
+  };
+
   const openEditorChooser = (location: LocationToOpen | undefined): void => {
+    if (!canChooseEditor()) {
+      return;
+    }
     const setup = getOpenEditor()?.openEditor.setup;
     const current =
       setup?.tag === "Url" ? parseEditor(setup.editor) : undefined;
@@ -648,16 +685,20 @@ export function createUi(): Ui {
       customTemplate: current?.tag === "Custom" ? current.template : "",
       customError: undefined,
     };
-    panelOpen = true;
-    render();
-    const selector =
-      current === undefined
-        ? `[${DATA_FOCUS_KEY}^="editor:"]`
-        : `[${DATA_FOCUS_KEY}][aria-pressed="true"]`;
-    const element = panel.querySelector(selector);
+    renderOverlay();
+    const element = overlay.querySelector(
+      current?.tag === "Custom"
+        ? `[${DATA_FOCUS_KEY}="editorCustom"]`
+        : `[${DATA_FOCUS_KEY}="editor:${current?.tag === "Preset" ? current.preset.id : (EDITOR_PRESETS[0]?.id ?? "")}"]`,
+    );
     if (element instanceof HTMLElement) {
       element.focus({ preventScroll: true });
     }
+  };
+
+  const closeEditorChooser = (): void => {
+    editorChooser = undefined;
+    renderOverlay();
   };
 
   const chooseEditor = (editorString: string): void => {
@@ -670,57 +711,65 @@ export function createUi(): Ui {
     editorChooser = undefined;
     if (location !== undefined) {
       openUrl(editorUrl(editor, location));
-      // Get the panel out of the way of the errors.
-      panelOpen = false;
     }
     dispatchToTarget(connectedTarget.targetName, {
       tag: "ChoseEditor",
       editor: editorString,
       sendKey: connectedTarget.sendKey,
     });
-    render();
+    renderOverlay();
   };
 
-  const getEditorSection = (): EditorSection | undefined => {
+  const getOverlayEditor = (): OverlayEditor => {
     const result = getOpenEditor();
-    if (
-      result?.connectedTarget === undefined ||
-      result.openEditor.setup.tag === "Server" ||
-      (editorChooser === undefined && !hasErrorsWithLocation())
-    ) {
-      return undefined;
-    }
-    const { setup, commandHint } = result.openEditor;
+    const setup = result?.openEditor.setup;
+    const current =
+      setup?.tag === "Url" ? parseEditor(setup.editor) : undefined;
     return {
-      current: setup.tag === "Url" ? parseEditor(setup.editor) : undefined,
-      commandHint,
-      chooser: editorChooser,
-      onChange: () => {
-        openEditorChooser(undefined);
-      },
-      onChoose: chooseEditor,
-      onCustomInput: (value) => {
-        if (editorChooser !== undefined) {
-          editorChooser.customTemplate = value;
-        }
-      },
-      onCustomSubmit: () => {
-        if (editorChooser === undefined) {
-          return;
-        }
-        const template = editorChooser.customTemplate.trim();
-        const error = validateEditorUrlTemplate(template);
-        if (error === undefined) {
-          chooseEditor(template);
-        } else {
-          editorChooser.customError = error;
-          render();
-        }
-      },
-      onCancel: () => {
-        editorChooser = undefined;
-        render();
-      },
+      current,
+      chooser:
+        editorChooser === undefined || result === undefined
+          ? undefined
+          : {
+              ...editorChooser,
+              current,
+              commandHint: result.openEditor.commandHint,
+              onChoose: chooseEditor,
+              onCustomInput: (value) => {
+                if (editorChooser !== undefined) {
+                  editorChooser.customTemplate = value;
+                }
+              },
+              onCustomSubmit: () => {
+                if (editorChooser === undefined) {
+                  return;
+                }
+                const template = editorChooser.customTemplate.trim();
+                const error = validateEditorUrlTemplate(template);
+                if (error === undefined) {
+                  chooseEditor(template);
+                } else {
+                  editorChooser.customError = error;
+                  renderOverlay();
+                }
+              },
+              onUseExample: () => {
+                if (editorChooser === undefined) {
+                  return;
+                }
+                editorChooser.customTemplate = EDITOR_URL_EXAMPLE;
+                editorChooser.customError = undefined;
+                renderOverlay();
+                const input = overlay.querySelector(
+                  `[${DATA_FOCUS_KEY}="editorCustom"]`,
+                );
+                if (input instanceof HTMLInputElement) {
+                  input.focus();
+                  // Select the scheme, which is the part to change.
+                  input.setSelectionRange(0, input.value.indexOf(":"));
+                }
+              },
+            },
     };
   };
 
@@ -783,7 +832,6 @@ export function createUi(): Ui {
         panel.hidePopover();
       }
       panel.replaceChildren();
-      editorChooser = undefined;
     }
   };
 
@@ -839,7 +887,6 @@ export function createUi(): Ui {
             },
         onClose: closePanel,
         dispatch: dispatchToTarget,
-        editor: getEditorSection(),
       }),
     );
 
@@ -909,6 +956,10 @@ export function createUi(): Ui {
       return;
     }
     errorOverlayOpen = open;
+    if (!open && editorChooser !== undefined) {
+      editorChooser = undefined;
+      renderOverlay();
+    }
     updateErrorOverlayVisibility();
     // The “Show errors” / “Hide errors” button needs updating.
     render();
@@ -1180,7 +1231,23 @@ export function createUi(): Ui {
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
-      closeErrorOverlay();
+      if (editorChooser === undefined) {
+        closeErrorOverlay();
+      } else {
+        closeEditorChooser();
+      }
+      return;
+    }
+    const preset =
+      editorChooser !== undefined &&
+      /^[1-9]$/.test(event.key) &&
+      !(shadowRoot.activeElement instanceof HTMLInputElement)
+        ? EDITOR_PRESETS[Number(event.key) - 1]
+        : undefined;
+    if (preset !== undefined) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      chooseEditor(preset.id);
       return;
     }
     const key = overlayKeyFromEvent(event);
@@ -1611,9 +1678,11 @@ const CLASS = {
   iconButton: "iconButton",
   details: "details",
   dialog: "dialog",
-  editor: "editor",
+  editorChooser: "editorChooser",
+  editorChooserOptions: "editorChooserOptions",
   editorCustom: "editorCustom",
-  editorPresets: "editorPresets",
+  editorExample: "editorExample",
+  editorNote: "editorNote",
   envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
@@ -1878,6 +1947,115 @@ supported by browsers, for browsers without popover support.
   cursor: pointer;
 }
 
+.${CLASS.editorChooser} {
+  display: grid;
+  gap: 1ch;
+  padding: 2ch;
+  border-top: 0.125em dashed;
+}
+
+.${CLASS.editorChooser} p,
+.${CLASS.editorChooser} pre {
+  margin: 0;
+}
+
+.${CLASS.editorChooser} pre {
+  padding: 0;
+}
+
+.${CLASS.editorChooser} button,
+.${CLASS.editorChooser} input {
+  font: inherit;
+  color: inherit;
+}
+
+.${CLASS.editorChooser} a {
+  color: inherit;
+}
+
+.${CLASS.editorChooserOptions} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1ch 3ch;
+}
+
+.${CLASS.editorChooserOptions} button,
+.${CLASS.editorCustom} button {
+  appearance: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.${CLASS.editorChooserOptions} button:hover,
+.${CLASS.editorCustom} button:hover,
+.${CLASS.editorExample}:hover {
+  text-decoration: underline;
+}
+
+.${CLASS.editorChooserOptions} [aria-hidden] {
+  opacity: 0.6;
+}
+
+.${CLASS.editorChooser} [aria-pressed="true"] {
+  font-weight: bold;
+}
+
+.${CLASS.editorCustom} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+}
+
+.${CLASS.editorCustom} label {
+  flex: 1 1 40ch;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+}
+
+.${CLASS.editorCustom} input {
+  flex: 1 1 30ch;
+  min-width: 0;
+  padding: 0.25ch 1ch;
+  border: 1px solid;
+  border-radius: 0;
+  background: none;
+}
+
+.${CLASS.editorCustom} input[aria-invalid="true"] {
+  border-style: dashed;
+}
+
+.${CLASS.editorCustom} button::before {
+  content: "[";
+  opacity: 0.6;
+}
+
+.${CLASS.editorCustom} button::after {
+  content: "]";
+  opacity: 0.6;
+}
+
+.${CLASS.editorNote} {
+  opacity: 0.7;
+}
+
+.${CLASS.editorExample} {
+  appearance: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  word-break: break-all;
+  cursor: pointer;
+}
+
 .${CLASS.overlayKeyHint} button:disabled {
   font-weight: normal;
   opacity: 0.6;
@@ -1893,7 +2071,6 @@ supported by browsers, for browsers without popover support.
   --subtle: color-mix(in srgb, CanvasText 6%, Canvas);
   --hover: color-mix(in srgb, CanvasText 11%, Canvas);
   --focus: light-dark(#0b57d0, #a8c7fa);
-  --error: light-dark(#c5221f, #f28b82);
   --edge-top: max(env(safe-area-inset-top), var(--gap));
   --edge-bottom: max(env(safe-area-inset-bottom), var(--gap));
   --edge-left: max(env(safe-area-inset-left), var(--gap));
@@ -2302,53 +2479,6 @@ focus might be inside the panel and must not be lost.
   gap: 6px;
 }
 
-.${CLASS.editor} {
-  padding: 10px 12px;
-  border-top: 1px solid var(--border);
-}
-
-.${CLASS.editor} p {
-  margin: 0;
-}
-
-.${CLASS.editorPresets} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.${CLASS.editorPresets} [aria-pressed="true"],
-.${CLASS.editorCustom} [aria-pressed="true"] {
-  outline: 1px solid var(--border-strong);
-  font-weight: 600;
-}
-
-.${CLASS.editorCustom} {
-  display: flex;
-  align-items: end;
-  gap: 6px;
-}
-
-.${CLASS.editorCustom} label {
-  flex: 1;
-  display: grid;
-  gap: 2px;
-}
-
-.${CLASS.editorCustom} input {
-  min-width: 0;
-  padding: 3px 6px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background-color: Canvas;
-  color: inherit;
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-  font-size: 12px;
-}
-
-.${CLASS.editorCustom} input[aria-invalid="true"] {
-  border-color: var(--error);
-}
 
 .${CLASS.footer} {
   margin: 0;
@@ -2550,7 +2680,6 @@ function viewPanel({
   onHide,
   onClose,
   dispatch,
-  editor,
 }: {
   snapshots: Array<TargetSnapshot>;
   externalErrors: Array<ExternalErrorsSource>;
@@ -2560,7 +2689,6 @@ function viewPanel({
   onHide: (() => void) | undefined;
   onClose: () => void;
   dispatch: (targetName: string, msg: UiMsg) => void;
-  editor: EditorSection | undefined;
 }): Array<HTMLElement> {
   const version = snapshots[0]?.info.version ?? "";
   const isTouch =
@@ -2635,7 +2763,6 @@ function viewPanel({
         ),
       ),
     ),
-    ...(editor === undefined ? [] : [viewEditorSection(editor)]),
     h(
       HTMLParagraphElement,
       { className: CLASS.footer },
@@ -2644,171 +2771,6 @@ function viewPanel({
         : "Drag emoji or press shift+arrows to move",
     ),
   ];
-}
-
-// Choosing which editor to open error locations in. Shown when there are
-// errors, unless the server opens the editor (`ELM_WATCH_OPEN_EDITOR` or the
-// `openEditor` option).
-function viewEditorSection({
-  current,
-  commandHint,
-  chooser,
-  onChange,
-  onChoose,
-  onCustomInput,
-  onCustomSubmit,
-  onCancel,
-}: EditorSection): HTMLElement {
-  return h(
-    HTMLDivElement,
-    {
-      className: CLASS.editor,
-      attrs: { role: "group", "aria-label": "Editor" },
-    },
-    h(
-      HTMLDivElement,
-      { className: CLASS.row },
-      h(
-        HTMLSpanElement,
-        { className: CLASS.rowIcon, attrs: { "aria-hidden": "true" } },
-        "📝",
-      ),
-      h(
-        HTMLSpanElement,
-        { className: CLASS.rowText },
-        h(HTMLSpanElement, { className: CLASS.targetName }, "Editor"),
-        h(
-          HTMLSpanElement,
-          { className: CLASS.statusLine },
-          current === undefined ? "Not chosen" : editorName(current),
-        ),
-      ),
-      chooser === undefined
-        ? h(
-            HTMLButtonElement,
-            {
-              className: CLASS.button,
-              attrs: { [DATA_FOCUS_KEY]: "editorChange" },
-              onclick: onChange,
-            },
-            current === undefined ? "Choose" : "Change",
-          )
-        : undefined,
-    ),
-    chooser === undefined
-      ? undefined
-      : h(
-          HTMLDivElement,
-          { className: CLASS.details },
-          h(HTMLParagraphElement, {}, "Open error locations in:"),
-          h(
-            HTMLDivElement,
-            { className: CLASS.editorPresets },
-            ...EDITOR_PRESETS.map((preset) =>
-              h(
-                HTMLButtonElement,
-                {
-                  className: CLASS.button,
-                  attrs: {
-                    [DATA_FOCUS_KEY]: `editor:${preset.id}`,
-                    "aria-pressed": (
-                      current?.tag === "Preset" &&
-                      current.preset.id === preset.id
-                    ).toString(),
-                  },
-                  onclick: () => {
-                    onChoose(preset.id);
-                  },
-                },
-                preset.name,
-              ),
-            ),
-          ),
-          h(
-            HTMLFormElement,
-            {
-              className: CLASS.editorCustom,
-              onsubmit: (event: SubmitEvent) => {
-                event.preventDefault();
-                onCustomSubmit();
-              },
-            },
-            h(
-              HTMLLabelElement,
-              {},
-              "Other editor (URL):",
-              h(HTMLInputElement, {
-                type: "text",
-                value: chooser.customTemplate,
-                placeholder:
-                  "pycharm://open?file={file}&line={line}&column={column0}",
-                spellcheck: false,
-                attrs: {
-                  [DATA_FOCUS_KEY]: "editorCustom",
-                  "aria-invalid": (
-                    chooser.customError !== undefined
-                  ).toString(),
-                },
-                oninput: (event: Event) => {
-                  if (event.currentTarget instanceof HTMLInputElement) {
-                    onCustomInput(event.currentTarget.value);
-                  }
-                },
-              }),
-            ),
-            h(
-              HTMLButtonElement,
-              {
-                className: CLASS.button,
-                type: "submit",
-                attrs: {
-                  [DATA_FOCUS_KEY]: "editorCustomSubmit",
-                  "aria-pressed": (current?.tag === "Custom").toString(),
-                },
-              },
-              "Use",
-            ),
-          ),
-          chooser.customError === undefined
-            ? undefined
-            : h(
-                HTMLParagraphElement,
-                { attrs: { role: "alert" } },
-                chooser.customError,
-              ),
-          h(
-            HTMLParagraphElement,
-            { className: CLASS.note },
-            `Placeholders: ${EDITOR_PLACEHOLDERS.join(" ")}`,
-          ),
-          h(
-            HTMLParagraphElement,
-            {},
-            commandHint === null
-              ? "Or use the openEditor option to run a command. "
-              : "Or run a command, by setting an environment variable: ",
-            h(
-              HTMLAnchorElement,
-              {
-                href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
-                target: "_blank",
-                rel: "noreferrer",
-              },
-              "Clickable error locations",
-            ),
-          ),
-          commandHint === null ? undefined : h(HTMLPreElement, {}, commandHint),
-          h(
-            HTMLButtonElement,
-            {
-              className: CLASS.button,
-              attrs: { [DATA_FOCUS_KEY]: "editorCancel" },
-              onclick: onCancel,
-            },
-            "Cancel",
-          ),
-        ),
-  );
 }
 
 // Like a target, but with only the number of errors.
@@ -3188,6 +3150,8 @@ type OverlayErrorItem = {
 
 type OverlayKey =
   | NavigationKey
+  | "CancelEditorChooser"
+  | "ChangeEditor"
   | "OpenEditor"
   | "ToggleExpanded"
   | "ToggleShowAll";
@@ -3214,6 +3178,8 @@ function overlayKeyFromEvent(event: KeyboardEvent): OverlayKey | undefined {
     case "Enter":
     case "o":
       return "OpenEditor";
+    case "e":
+      return "ChangeEditor";
     case " ":
       return "ToggleExpanded";
     case "a":
@@ -3263,6 +3229,7 @@ function viewOverlay({
   expanded,
   onKey,
   onOpenEditor,
+  editor,
 }: {
   group: ErrorGroup<OverlayErrorItem>;
   selection: Selection | undefined;
@@ -3270,23 +3237,34 @@ function viewOverlay({
   expanded: boolean;
   onKey: (key: OverlayKey) => void;
   onOpenEditor: (item: OverlayErrorItem, location: LocationToOpen) => void;
+  editor: OverlayEditor;
 }): Array<HTMLElement> {
   if (group.numErrors === 0) {
     return [];
   }
 
+  // While choosing an editor, the other keys are paused.
+  const chooser =
+    editor.chooser === undefined ? [] : [viewEditorChooser(editor.chooser)];
+  const cancelHints: Array<[keys: Array<OverlayHintKey>, label: string]> = [
+    [[["esc", "CancelEditorChooser", true, "Cancel"]], "cancel"],
+  ];
+
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
     return [
       ...items.map((item) => viewOverlayError(item, true, onKey, onOpenEditor)),
+      ...chooser,
       viewOverlayFooter(
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
-        [
-          [
-            [["a", "ToggleShowAll", true, "Show one error at a time"]],
-            "show one error at a time",
-          ],
-        ],
+        editor.chooser === undefined
+          ? [
+              [
+                [["a", "ToggleShowAll", true, "Show one error at a time"]],
+                "show one error at a time",
+              ],
+            ]
+          : cancelHints,
         onKey,
       ),
     ];
@@ -3306,54 +3284,201 @@ function viewOverlay({
     .flatMap((part) => part ?? [])
     .join("   ");
 
+  const canOpenEditor = getOverlayOpenEditorLocation(item) !== undefined;
+  const openInName =
+    editor.current?.tag === "Preset" ? editor.current.preset.name : "editor";
+
   return [
     viewOverlayError(item, expanded, onKey, onOpenEditor),
+    ...chooser,
     viewOverlayFooter(
       `🚨 ${position}`,
-      [
-        [
-          [
-            ["←", "PreviousError", errorNumber > 1, "Previous error"],
-            ["→", "NextError", errorNumber < group.numErrors, "Next error"],
-          ],
-          "error",
-        ],
-        [
-          [
-            ["↑", "PreviousFile", selection.fileIndex > 0, "Previous file"],
+      editor.chooser !== undefined
+        ? cancelHints
+        : [
             [
-              "↓",
-              "NextFile",
-              selection.fileIndex + 1 < group.files.length,
-              "Next file",
-            ],
-          ],
-          "file",
-        ],
-        getOverlayOpenEditorLocation(item) === undefined
-          ? undefined
-          : [
-              [["enter", "OpenEditor", true, "Open in editor"]],
-              "open in editor",
-            ],
-        item.error.htmlContentCollapsed === undefined
-          ? undefined
-          : [
               [
+                ["←", "PreviousError", errorNumber > 1, "Previous error"],
+                ["→", "NextError", errorNumber < group.numErrors, "Next error"],
+              ],
+              "error",
+            ],
+            [
+              [
+                ["↑", "PreviousFile", selection.fileIndex > 0, "Previous file"],
                 [
-                  "space",
-                  "ToggleExpanded",
-                  true,
-                  expanded ? "Collapse long code" : "Expand long code",
+                  "↓",
+                  "NextFile",
+                  selection.fileIndex + 1 < group.files.length,
+                  "Next file",
                 ],
               ],
-              expanded ? "collapse" : "expand",
+              "file",
             ],
-        [[["a", "ToggleShowAll", true, "Show all errors"]], "show all"],
-      ],
+            canOpenEditor
+              ? [
+                  [["enter", "OpenEditor", true, `Open in ${openInName}`]],
+                  `open in ${openInName}`,
+                ]
+              : undefined,
+            canOpenEditor && editor.current !== undefined
+              ? [
+                  [["e", "ChangeEditor", true, "Change editor"]],
+                  "change editor",
+                ]
+              : undefined,
+            item.error.htmlContentCollapsed === undefined
+              ? undefined
+              : [
+                  [
+                    [
+                      "space",
+                      "ToggleExpanded",
+                      true,
+                      expanded ? "Collapse long code" : "Expand long code",
+                    ],
+                  ],
+                  expanded ? "collapse" : "expand",
+                ],
+            [[["a", "ToggleShowAll", true, "Show all errors"]], "show all"],
+          ],
       onKey,
     ),
   ];
+}
+
+// Shown in the error overlay when clicking an error location without having
+// chosen an editor (and the server doesn’t open the editor), or when pressing
+// “e” to change editor.
+function viewEditorChooser({
+  location,
+  customTemplate,
+  customError,
+  current,
+  commandHint,
+  onChoose,
+  onCustomInput,
+  onCustomSubmit,
+  onUseExample,
+}: EditorChooserProps): HTMLElement {
+  return h(
+    HTMLDivElement,
+    {
+      className: CLASS.editorChooser,
+      attrs: { role: "group", "aria-label": "Choose editor" },
+    },
+    h(
+      HTMLParagraphElement,
+      {},
+      location === undefined
+        ? "Open error locations in:"
+        : "Which editor should I open this in?",
+    ),
+    h(
+      HTMLParagraphElement,
+      { className: CLASS.editorChooserOptions },
+      ...EDITOR_PRESETS.map((preset, index) =>
+        h(
+          HTMLButtonElement,
+          {
+            attrs: {
+              [DATA_FOCUS_KEY]: `editor:${preset.id}`,
+              "aria-keyshortcuts": (index + 1).toString(),
+              "aria-pressed": (
+                current?.tag === "Preset" && current.preset.id === preset.id
+              ).toString(),
+            },
+            onclick: () => {
+              onChoose(preset.id);
+            },
+          },
+          h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "["),
+          h(HTMLElement, { localName: "b" }, (index + 1).toString()),
+          h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "]"),
+          ` ${preset.name}`,
+        ),
+      ),
+    ),
+    h(
+      HTMLFormElement,
+      {
+        className: CLASS.editorCustom,
+        onsubmit: (event: SubmitEvent) => {
+          event.preventDefault();
+          onCustomSubmit();
+        },
+      },
+      h(
+        HTMLLabelElement,
+        {},
+        "Other editor (URL):",
+        h(HTMLInputElement, {
+          type: "text",
+          value: customTemplate,
+          spellcheck: false,
+          attrs: {
+            [DATA_FOCUS_KEY]: "editorCustom",
+            "aria-invalid": (customError !== undefined).toString(),
+          },
+          oninput: (event: Event) => {
+            if (event.currentTarget instanceof HTMLInputElement) {
+              onCustomInput(event.currentTarget.value);
+            }
+          },
+        }),
+      ),
+      h(
+        HTMLButtonElement,
+        {
+          type: "submit",
+          attrs: {
+            [DATA_FOCUS_KEY]: "editorCustomSubmit",
+            "aria-pressed": (current?.tag === "Custom").toString(),
+          },
+        },
+        "Use",
+      ),
+    ),
+    customError === undefined
+      ? undefined
+      : h(HTMLParagraphElement, { attrs: { role: "alert" } }, customError),
+    h(
+      HTMLParagraphElement,
+      { className: CLASS.editorNote },
+      "Example: ",
+      h(
+        HTMLButtonElement,
+        {
+          className: CLASS.editorExample,
+          title: "Use this example",
+          attrs: { [DATA_FOCUS_KEY]: "editorExample" },
+          onclick: onUseExample,
+        },
+        EDITOR_URL_EXAMPLE,
+      ),
+      h(HTMLElement, { localName: "br" }),
+      `Placeholders: ${EDITOR_PLACEHOLDERS.join(" ")}`,
+    ),
+    h(
+      HTMLParagraphElement,
+      { className: CLASS.editorNote },
+      commandHint === null
+        ? "Or use the openEditor option to run a command. "
+        : "Or run a command, by setting an environment variable. ",
+      h(
+        HTMLAnchorElement,
+        {
+          href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
+          target: "_blank",
+          rel: "noreferrer",
+        },
+        "Clickable error locations",
+      ),
+    ),
+    commandHint === null
+      ? undefined
+      : h(HTMLPreElement, { className: CLASS.editorNote }, commandHint),
+  );
 }
 
 function viewOverlayError(

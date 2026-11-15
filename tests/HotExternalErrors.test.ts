@@ -188,8 +188,6 @@ describe("hot external errors", () => {
       ◉ Standard
       ◯ Optimize
       The Elm debugger isn't available at this point.
-      📝 Editor Not chosen
-      [Choose]
       Drag emoji or press shift+arrows to move
     `);
   });

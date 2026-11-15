@@ -30,7 +30,7 @@ import {
   expandUi,
   fixtureDir,
   getOverlay,
-  getPanel,
+  pressOverlayKey,
   run,
   submitUiForm,
   switchCompilationMode,
@@ -338,43 +338,94 @@ describe("hot", () => {
           },
           onIdle: async () => {
             clickFirstErrorLocation();
-            chooser = getPanel();
-            clickUiButton("VS Code");
+            chooser = getOverlay();
+            clickUiButton("[1] VS Code");
             await waitFor(() => readChosenEditor() === "vscode");
             return "Stop" as const;
           },
         });
 
         expect(chooser).toMatchInlineSnapshot(`
-          elm-watch %VERSION%
-          [Hide errors]
-          [Close elm-watch]
-          🚨 Main Compilation error · 13:10:05
-          Compilation mode for Main
-          ◯ (disabled) Debug
-          ◉ Standard
-          ◯ Optimize
-          The Elm debugger isn't available at this point.
-          📝 Editor Not chosen
-          Open error locations in:
-          [VS Code]
-          [Cursor]
-          [Zed]
-          [IntelliJ IDEA]
-          [WebStorm]
-          [Rider]
+          <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+          <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></div>
+          <pre>I am struggling with this boolean operation:
+
+          10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
+                                            <span style="color: rgb(241, 76, 76)">^</span>
+          Both sides of (&amp;&amp;) must be <span style="color: rgb(229, 229, 16)">Bool</span> values, but the right side is:
+
+              <span style="color: rgb(229, 229, 16)">number</span>
+
+          <u>Hint</u>: Only <span style="color: rgb(35, 209, 139)">Int</span> and <span style="color: rgb(35, 209, 139)">Float</span> values work as numbers.</pre></div>
+          --------------------------------------------------------------------------------
+          <chooser>
+          Which editor should I open this in?
+          [[1] VS Code]
+          [[2] Cursor]
+          [[3] Zed]
+          [[4] IntelliJ IDEA]
+          [[5] WebStorm]
+          [[6] Rider]
           Other editor (URL):
-          <input value="" placeholder="pycharm://open?file={file}&line={line}&column={column0}">
+          <input value="" placeholder="">
           [Use]
-          Placeholders: {file} {line} {column} {line0} {column0}
-          Or run a command, by setting an environment variable: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
+          Example:
+          [pycharm://open?file={file}&line={line}&column={column0}] Placeholders: {file} {line} {column} {line0} {column0}
+          Or run a command, by setting an environment variable. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
           # ~/.bashrc
           export ELM_WATCH_OPEN_EDITOR='your command here'
-          [Cancel]
-          Drag emoji or press shift+arrows to move
+          </chooser>
+          --------------------------------------------------------------------------------
+          <footer>🚨 error 1/1 | [esc] cancel</footer>
+          </overlay>
         `);
         expect(openedUrls).toMatchInlineSnapshot(`
           [
+            vscode://file/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31,
+          ]
+        `);
+        expect(grep(getOverlay(), /footer/)).toMatchInlineSnapshot(`<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in VS Code | [e] change editor | [a] show all</footer>`);
+      });
+
+      test("keyboard: enter, number, e and escape", async () => {
+        const footers: Array<string> = [];
+
+        await run({
+          fixture,
+          args: [],
+          scripts: ["Main.js"],
+          keepElmStuffJson: true,
+          env: {},
+          init: (node) => {
+            window.Elm?.["Main"]?.init({ node });
+          },
+          onIdle: async () => {
+            pressOverlayKey("Enter");
+            footers.push(grep(getOverlay(), /footer/));
+            pressOverlayKey("Escape");
+            footers.push(grep(getOverlay(), /footer|chooser/));
+            pressOverlayKey("Enter");
+            pressOverlayKey("5");
+            await waitFor(() => readChosenEditor() === "webstorm");
+            footers.push(grep(getOverlay(), /footer/));
+            pressOverlayKey("e");
+            footers.push(grep(getOverlay(), /pressed|footer/));
+            pressOverlayKey("1");
+            await waitFor(() => readChosenEditor() === "vscode");
+            return "Stop" as const;
+          },
+        });
+
+        expect(footers.join("\n")).toMatchInlineSnapshot(`
+          <footer>🚨 error 1/1 | [esc] cancel</footer>
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all</footer>
+          [[5] WebStorm] (pressed)
+          <footer>🚨 error 1/1 | [esc] cancel</footer>
+        `);
+        expect(openedUrls).toMatchInlineSnapshot(`
+          [
+            webstorm://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=10&column=30,
             vscode://file/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31,
           ]
         `);
@@ -382,6 +433,7 @@ describe("hot", () => {
 
       test("custom URL", async () => {
         let error = "";
+        let example = "";
 
         await run({
           fixture,
@@ -394,9 +446,13 @@ describe("hot", () => {
           },
           onIdle: async () => {
             clickFirstErrorLocation();
+            clickUiButton(
+              "pycharm://open?file={file}&line={line}&column={column0}",
+            );
+            example = grep(getOverlay(), /input/);
             typeInUiInput("https://example.com/{file}");
             submitUiForm();
-            error = grep(getPanel(), /URLs are not supported/);
+            error = grep(getOverlay(), /input|URLs are not supported/);
             typeInUiInput(
               "myeditor://open?file={file}&line={line0}&column={column0}",
             );
@@ -406,12 +462,12 @@ describe("hot", () => {
           },
         });
 
-        expect(error).toMatchInlineSnapshot(
-          `https: URLs are not supported. Only URLs for opening apps, like myeditor://`,
-        );
-        expect(readChosenEditor()).toMatchInlineSnapshot(
-          `myeditor://open?file={file}&line={line0}&column={column0}`,
-        );
+        expect(example).toMatchInlineSnapshot(`<input value="pycharm://open?file={file}&line={line}&column={column0}" placeholder="">`);
+        expect(error).toMatchInlineSnapshot(`
+          <input value="https://example.com/{file}" placeholder="" invalid>
+          https: URLs are not supported. Only URLs for opening apps, like myeditor://
+        `);
+        expect(readChosenEditor()).toMatchInlineSnapshot(`myeditor://open?file={file}&line={line0}&column={column0}`);
         expect(openedUrls).toMatchInlineSnapshot(`
           [
             myeditor://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=9&column=30,
@@ -422,7 +478,7 @@ describe("hot", () => {
       test("editor from stuff.json", async () => {
         fixtureDir(fixture);
         writeChosenEditor("webstorm");
-        let panel = "";
+        let overlay = "";
 
         await run({
           fixture,
@@ -435,8 +491,7 @@ describe("hot", () => {
           },
           onIdle: () => {
             clickFirstErrorLocation();
-            expandUi();
-            panel = getPanel();
+            overlay = getOverlay();
             return "Stop" as const;
           },
         });
@@ -446,10 +501,7 @@ describe("hot", () => {
             webstorm://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=10&column=30,
           ]
         `);
-        expect(grep(panel, /Editor|WebStorm|Change/)).toMatchInlineSnapshot(`
-          📝 Editor WebStorm
-          [Change]
-        `);
+        expect(grep(overlay, /footer|chooser/)).toMatchInlineSnapshot(`<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all</footer>`);
       });
 
       test("env var is ignored with elm-watch options", async () => {
@@ -469,14 +521,12 @@ describe("hot", () => {
           },
           onIdle: () => {
             clickFirstErrorLocation();
-            chooser = getPanel();
+            chooser = getOverlay();
             return "Stop" as const;
           },
         });
 
-        expect(grep(chooser, /Or /)).toMatchInlineSnapshot(
-          `Or use the openEditor option to run a command. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)`,
-        );
+        expect(grep(chooser, /Or /)).toMatchInlineSnapshot(`Or use the openEditor option to run a command. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)`);
       });
     });
 

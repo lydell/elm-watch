@@ -125,15 +125,6 @@ export function editorToString(editor: Editor): string {
   }
 }
 
-export function editorName(editor: Editor): string {
-  switch (editor.tag) {
-    case "Preset":
-      return editor.preset.name;
-    case "Custom":
-      return editor.template;
-  }
-}
-
 export function editorTemplate(editor: Editor): string {
   switch (editor.tag) {
     case "Preset":
