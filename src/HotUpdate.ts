@@ -722,7 +722,11 @@ export function update(
                   },
                 },
               },
-              ...connectCmds,
+              // A client from another elm-watch version might not understand
+              // anything but this error (which elm-watch 1.x understands), such
+              // as a tab left open after upgrading. Other messages make it show
+              // a decode error instead.
+              ...(result.tag === "WrongVersion" ? [] : connectCmds),
             ],
           ];
       }

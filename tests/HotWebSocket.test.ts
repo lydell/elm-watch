@@ -31,10 +31,13 @@ describe("hot", () => {
   describe("Parse WebSocket connect request url errors", () => {
     const originalWebSocket = WebSocket;
     let _lastWebSocket: WebSocket | undefined = undefined;
+    // The tags of the (non-binary) messages received by the browser.
+    let receivedTags: Array<string> = [];
 
     afterEach(() => {
       window.WebSocket = originalWebSocket;
       _lastWebSocket = undefined;
+      receivedTags = [];
     });
 
     function modifyUrl(f: (url: URL) => void): void {
@@ -49,6 +52,14 @@ describe("hot", () => {
           f(url);
 
           super(url);
+
+          this.addEventListener("message", (event) => {
+            if (typeof event.data === "string") {
+              receivedTags.push(
+                (JSON.parse(event.data) as { tag: string }).tag,
+              );
+            }
+          });
 
           // oxlint-disable-next-line typescript/no-this-alias
           _lastWebSocket = this;
@@ -240,6 +251,9 @@ describe("hot", () => {
         Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
         Drag emoji or press shift+arrows to move
       `);
+
+      // Nothing else, since elm-watch 1.x can’t decode other messages.
+      expect(receivedTags).toStrictEqual(["StatusChanged"]);
     });
 
     test("omitting the version is ok (useful for third party clients)", async () => {
