@@ -517,7 +517,9 @@ describe("hot", () => {
         {
          "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
          "line": "10",
-         "column": "31"
+         "column": "31",
+         "line0": "9",
+         "column0": "30"
         }
 
         The command exited with code 127.
@@ -557,7 +559,9 @@ describe("hot", () => {
         {
          "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
          "line": "10",
-         "column": "31"
+         "column": "31",
+         "line0": "9",
+         "column0": "30"
         }
 
         The command took too long to run, and was killed after 10 ms.
@@ -596,7 +600,9 @@ describe("hot", () => {
         {
          "file": "/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm",
          "line": "10",
-         "column": "31"
+         "column": "31",
+         "line0": "9",
+         "column0": "30"
         }
 
         The command exited with code 1.

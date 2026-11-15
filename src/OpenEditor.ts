@@ -85,6 +85,9 @@ function openEditorWithCommand(
     file: location.file,
     line: location.line.toString(),
     column: location.column.toString(),
+    // For editors that count from 0, since subtracting is not easy in cmd.exe.
+    line0: Math.max(0, location.line - 1).toString(),
+    column0: Math.max(0, location.column - 1).toString(),
   };
   let timedOut = false;
   const child = childProcess.exec(

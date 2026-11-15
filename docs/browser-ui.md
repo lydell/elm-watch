@@ -72,7 +72,7 @@ There’s no universal way of doing that, though, so you’ll have to set it up.
 TL;DR examples:
 
 - bash/zsh with VSCode: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
-- fish with Rider on macOS: `set -Ux ELM_WATCH_OPEN_EDITOR '/Applications/Rider.app/Contents/MacOS/rider --line "$line" --column "$((column - 1))" "$file"'`
+- fish with Rider on macOS: `set -Ux ELM_WATCH_OPEN_EDITOR '/Applications/Rider.app/Contents/MacOS/rider --line "$line" --column "$column0" "$file"'`
 
 Here’s how to set it in different shells:
 
@@ -90,20 +90,25 @@ And here are some commands for a few editors:
 | Editor | Command | Windows command |
 | --- | --- | --- |
 | [VSCode] | `code --goto "$file:$line:$column"` | `code --goto "%file%:%line%:%column%"` |
-| [IntelliJ IDEA] | `idea --line "$line" --column "$((column - 1))" "$file"` \* | `idea64.exe --line "%line%" "%file%"` † |
-| [Rider] | `rider --line "$line" --column "$((column - 1))" "$file"` \* | `rider64.exe --line "%line%" "%file%"` † |
+| [IntelliJ IDEA] | `idea --line "$line" --column "$column0" "$file"` \* | `idea64.exe --line "%line%" --column "%column0%" "%file%"` \* † |
+| [Rider] | `rider --line "$line" --column "$column0" "$file"` \* | `rider64.exe --line "%line%" --column "%column0%" "%file%"` \* † |
 | [Sublime Text] | `subl "$file:$line:$column"` § | `subl "%file%:%line%:%column%"` § † |
 | [Zed] | `zed "$file:$line:$column"` ‡ | n/a ([Zed is macOS-only for now]) |
 | [Emacs] | `emacsclient --no-wait "+$line:$column" "$file"` | `emacsclient --no-wait "+%line%:%column%" "%file%"` † |
 
-\* Neither IntelliJ IDEA nor Rider come with a command in PATH out of the box (at least on macOS). The easiest to it supply the full path. For example:
+\* [JetBrains] IDEs count columns from 0, hence `column0`. They don’t come with a command in PATH out of the box, but there are a couple of ways to get one:
 
-- IntelliJ IDEA on macOS: `"/Applications/IntelliJ IDEA.app/Contents/MacOS/idea" --line "$line" --column "$((column - 1))" "$file"`
-- Rider on macOS: `/Applications/Rider.app/Contents/MacOS/rider --line "$line" --column "$((column - 1))" "$file"`
-- Chances are other [JetBrains] IDEs work similarly, just with different names.
-- Linux and Windows: If you use the JetBrains Toolbox to install, see [JetBrains Toolbox install locations].
+- If you install with the JetBrains Toolbox, it creates small scripts for launching the IDEs (`idea`, `rider`, `webstorm`, etc.), in a folder that stays the same when the IDEs are updated or moved. Use the full path to a script, or add the folder to PATH. Toolbox shows the folder in its settings, under “Tools” > “Shell scripts location”. By default, it is:
+  - macOS: `~/Library/Application Support/JetBrains/Toolbox/scripts` (or `/usr/local/bin`)
+  - Linux: `~/.local/share/JetBrains/Toolbox/scripts`
+  - Windows: `%LOCALAPPDATA%\JetBrains\Toolbox\scripts`
+- Supply the full path to the IDE. For example:
+  - IntelliJ IDEA on macOS: `"/Applications/IntelliJ IDEA.app/Contents/MacOS/idea" --line "$line" --column "$column0" "$file"`
+  - Rider on macOS: `/Applications/Rider.app/Contents/MacOS/rider --line "$line" --column "$column0" "$file"`
+  - Linux and Windows: See [JetBrains Toolbox install locations]. (Note that the path changes when Toolbox updates the IDE – prefer the shell scripts above.)
+- Chances are other JetBrains IDEs work similarly, just with different names.
 
-† I haven’t tested IntelliJ IDEA, Rider, Sublime Text, or Emacs on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work! Also note that I don’t know how to subtract 1 from the column on Windows, so the column might be off by one.
+† I haven’t tested IntelliJ IDEA, Rider, Sublime Text, or Emacs on Windows, so I’m not 100 % sure about those commands. Let me know if they do or do not work!
 
 § For Sublime Text, you might need to [enable the `subl` command][subl].
 
@@ -120,10 +125,11 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
   - On Windows: `cmd.exe`
   - Otherwise: `sh`
 - CWD: The `elm-watch.json` directory.
-- Environment: Three extra environment variables are set:
+- Environment: Five extra environment variables are set:
   - `file`: The absolute file path of the error location.
   - `line`: 1-based line number of the error location. `1` if the error location has no line number.
   - `column`: 1-based column number of the error location. `1` if the error location has no column number.
+  - `line0` and `column0`: The same, but 0-based. For editors that count from 0.
 
 ### With the JavaScript API
 
