@@ -1,8 +1,7 @@
 /*
 This page tries hard to mess with elm-watch’s browser UI. elm-watch puts its UI
-in `<dialog id="elm-watch2">` (directly in `<html>`), which contains a `<div>`
-that is a popover with a shadow root. The shadow root protects against most
-selectors, but not against everything.
+in `<div id="elm-watch2">` (directly in `<html>`), which has a shadow root. The
+shadow root protects against most selectors, but not against everything.
 */
 
 /* Inherited properties, which go into the shadow root. `all: initial` resets
@@ -39,7 +38,7 @@ same names as the ones elm-watch uses internally. */
   --top: 0;
 }
 
-/* A typical CSS reset. `*` matches elm-watch’s `<dialog>` and `<div>`. */
+/* A typical CSS reset. `*` matches elm-watch’s `<div>`. */
 *,
 *::before,
 *::after {
@@ -48,8 +47,8 @@ same names as the ones elm-watch uses internally. */
   padding: 0;
 }
 
-/* Typical styling of all dialogs and popovers on a page. These match
-elm-watch’s elements too. */
+/* Typical styling of all dialogs and popovers on a page. elm-watch’s dialog and
+popover are in the shadow root, so this does not reach them. */
 dialog,
 [popover] {
   position: fixed;
@@ -67,14 +66,15 @@ dialog,
   outline: 5px solid blue;
 }
 
-/* Backdrops are shown for modal dialogs – and for popovers! */
+/* Backdrops are shown for modal dialogs – and for popovers! elm-watch’s are in
+the shadow root, so this does not reach them. */
 ::backdrop {
   background: rgb(255 0 0 / 0.3);
   backdrop-filter: blur(4px);
 }
 
-/* Some sites hide empty divs. elm-watch’s popover `<div>` has no children
-(only a shadow root), so it matches `:empty`. */
+/* Some sites hide empty divs. elm-watch’s `<div>` has no children (only a
+shadow root), so it matches `:empty`. */
 div:empty {
   display: none;
 }

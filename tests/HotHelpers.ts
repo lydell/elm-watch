@@ -389,7 +389,7 @@ export async function run({
 
     window.__ELM_WATCH.ON_RENDER = (targetName) => {
       withShadowRoot((shadowRoot) => {
-        const element = shadowRoot.lastElementChild;
+        const element = shadowRoot.querySelector(".root");
 
         const text =
           element instanceof Node
@@ -699,8 +699,7 @@ export function runHotReload({
 
 function withShadowRoot(f: (shadowRoot: ShadowRoot) => void): void {
   const shadowRoot =
-    document.getElementById(CONTAINER_ID)?.firstElementChild?.shadowRoot ??
-    undefined;
+    document.getElementById(CONTAINER_ID)?.shadowRoot ?? undefined;
 
   if (shadowRoot === undefined) {
     throw new Error(`Couldn’t find #${CONTAINER_ID}!`);

@@ -208,12 +208,8 @@ const MOVE_ANIMATION_MAX_OVERSHOOT = 4;
 const KEYBOARD_STEP = 0.25;
 
 export function createUi(): Ui {
-  const container = h(
-    typeof HTMLDialogElement === "function"
-      ? HTMLDialogElement
-      : (HTMLDivElement as typeof HTMLDialogElement),
-    { id: CONTAINER_ID },
-  );
+  // The only element in the page’s DOM. Everything else is in its shadow root.
+  const container = h(HTMLDivElement, { id: CONTAINER_ID });
   // Note: If we add any more styling to this element, Chrome and Safari expand all the styles
   // in the element inspector, which takes several lines and is pretty distracting.
   container.style.all = "initial";
@@ -227,25 +223,28 @@ export function createUi(): Ui {
   container.lang = "en";
   container.setAttribute("translate", "no");
 
-  // `<dialog>` elements cannot have a shadow root, so we need an inner element.
-  // It covers the whole window, but lets clicks through to the page (except
-  // on our own elements).
-  const containerInner = h(HTMLDivElement, {});
-  containerInner.style.all = "initial";
-  containerInner.style.position = "fixed";
-  containerInner.style.inset = "0";
-  containerInner.style.pointerEvents = "none";
-  containerInner.style.zIndex = "2147483647"; // Maximum z-index supported by browsers. (Popover fallback.)
-  // `all` does not reset `direction`, so a right-to-left page would otherwise
-  // mirror elm-watch’s UI (and mess up the punctuation in error messages).
-  // Everything in the shadow root inherits this.
-  containerInner.style.direction = "ltr";
+  // The dialog is opened as a modal while the error overlay is shown (see
+  // `updateErrorOverlayVisibility`). It contains all of elm-watch’s UI, not
+  // just the overlay: A modal dialog makes everything outside it inert, and the
+  // emoji and the panel (which can hide the errors, for example) need to keep
+  // working while the overlay is shown.
+  const dialog = h(
+    typeof HTMLDialogElement === "function"
+      ? HTMLDialogElement
+      : (HTMLDivElement as typeof HTMLDialogElement),
+    { className: CLASS.dialog },
+  );
 
-  // In Safari, when making a `<dialog>` element into a popovers, it
-  // always covers the entire page (making it impossible to click things),
-  // which is another reason for having the inner element.
+  // This element covers the whole window, but lets clicks through to the page
+  // (except on our own elements). It is put in the top layer as a popover (see
+  // `moveToTopLayer`). (In Safari, when making a `<dialog>` element into a
+  // popover, it always covers the entire page, making it impossible to click
+  // things, so the dialog can’t be the popover.) Popovers and modal dialogs get
+  // a `::backdrop`. Being in the shadow root, the page’s `::backdrop` styles
+  // (for its own dialogs) can’t reach them.
+  const topLayer = h(HTMLDivElement, { className: CLASS.topLayer });
   // This enables popover mode, allowing `.showPopover()` to be called later:
-  containerInner.popover = "manual";
+  topLayer.popover = "manual";
 
   const closeErrorOverlay = (): void => {
     setErrorOverlayOpen(false);
@@ -333,28 +332,10 @@ export function createUi(): Ui {
     element.setAttribute("translate", "no");
   }
 
-  const shadowRoot = containerInner.attachShadow({ mode: "open" });
-  shadowRoot.append(
-    h(HTMLStyleElement, {}, CSS),
-    overlay,
-    overlayAnnouncement,
-    overlayCloseBar,
-    root,
-  );
-  container.append(
-    containerInner,
-    // Popovers get a `::backdrop`, just like modal dialogs. Pages often style
-    // `::backdrop` (for their own dialogs), which would then cover the whole
-    // page with elm-watch’s backdrop. Inline styles can’t target
-    // pseudo-elements, so this needs a style element in the page (rather than
-    // in the shadow root). The ID and `!important` make it win over the page’s
-    // styles.
-    h(
-      HTMLStyleElement,
-      {},
-      `#${CONTAINER_ID} > div::backdrop { display: none !important; }`,
-    ),
-  );
+  topLayer.append(overlay, overlayAnnouncement, overlayCloseBar, root);
+  dialog.append(topLayer);
+  const shadowRoot = container.attachShadow({ mode: "open" });
+  shadowRoot.append(h(HTMLStyleElement, {}, CSS), dialog);
   document.documentElement.append(container);
 
   const entries: Array<TargetEntry> = [];
@@ -687,23 +668,23 @@ export function createUi(): Ui {
     // Support for `<dialog>` shipped in Firefox and Safari in 2022-03-14.
     // These methods are not supported in JSDOM, so we only call them if they exist.
     if (
-      typeof container.close === "function" &&
-      typeof container.showModal === "function" &&
+      typeof dialog.close === "function" &&
+      typeof dialog.showModal === "function" &&
       // Support users removing elm-watch’s UI (`.showModal()` throws an error in that case).
-      container.isConnected
+      dialog.isConnected
     ) {
       // A modal dialog makes the page inert, even if it is not rendered. So
       // when the page hides elm-watch’s UI (`#elm-watch2 { display: none }`),
       // don’t make the page impossible to interact with. (The container is
       // `display: inline` by default, via `all: initial`.)
       if (hidden || window.getComputedStyle(container).display === "none") {
-        container.close();
-      } else if (!container.open) {
-        container.showModal();
+        dialog.close();
+      } else if (!dialog.open) {
+        dialog.showModal();
       }
     }
 
-    moveToTopLayer(container, containerInner);
+    moveToTopLayer(dialog, topLayer);
   };
 
   const setErrorOverlayOpen = (open: boolean): void => {
@@ -1012,7 +993,7 @@ export function createUi(): Ui {
       event.ctrlKey ||
       event.metaKey ||
       event.shiftKey ||
-      isEscapeLikelyForThePage(containerInner)
+      isEscapeLikelyForThePage()
     ) {
       return;
     }
@@ -1035,11 +1016,13 @@ export function createUi(): Ui {
   // elm-watch. Move elm-watch back to the top when that happens. `toggle` does
   // not bubble, so listen in the capture phase. Dialogs fire `toggle` in newer
   // browsers only, so also listen for `close` (to remove the inactive state).
+  // (Our own popovers are in the shadow root, and `toggle` does not propagate
+  // out of it, so this does not react to our own moves.)
   // Cap the number of moves per frame, in case some other script on the page
   // also tries to stay on top this way, which would cause an infinite loop.
   let movesThisFrame = 0;
-  const onTopLayerChange = (event: Event): void => {
-    if (event.target === containerInner || movesThisFrame >= 10) {
+  const onTopLayerChange = (): void => {
+    if (movesThisFrame >= 10) {
       return;
     }
     if (movesThisFrame === 0) {
@@ -1048,7 +1031,7 @@ export function createUi(): Ui {
       });
     }
     movesThisFrame++;
-    moveToTopLayer(container, containerInner);
+    moveToTopLayer(dialog, topLayer);
   };
 
   const flash = (flashType: FlashType): void => {
@@ -1100,7 +1083,7 @@ export function createUi(): Ui {
         render: (snapshot) => {
           entry.snapshot = snapshot;
           render();
-          moveToTopLayer(container, containerInner);
+          moveToTopLayer(dialog, topLayer);
         },
 
         flash,
@@ -1224,7 +1207,7 @@ function stepY(y: number, direction: -1 | 1): number {
   return clamp01(next / steps);
 }
 
-function isEscapeLikelyForThePage(containerInner: HTMLElement): boolean {
+function isEscapeLikelyForThePage(): boolean {
   const { activeElement } = document;
   if (
     activeElement instanceof HTMLElement &&
@@ -1235,10 +1218,9 @@ function isEscapeLikelyForThePage(containerInner: HTMLElement): boolean {
   }
   try {
     // Escape closes modal dialogs and popovers (by default). At this point,
-    // they have not been closed yet.
-    return Array.from(document.querySelectorAll(":modal, :popover-open")).some(
-      (element) => element !== containerInner,
-    );
+    // they have not been closed yet. (This does not find our own popovers,
+    // since they are in the shadow root.)
+    return document.querySelector(":modal, :popover-open") !== null;
   } catch {
     // `:modal` or `:popover-open` is not supported.
     return false;
@@ -1246,10 +1228,10 @@ function isEscapeLikelyForThePage(containerInner: HTMLElement): boolean {
 }
 
 function moveToTopLayer(
-  container: HTMLDialogElement,
-  containerInner: HTMLElement,
+  dialog: HTMLDialogElement,
+  topLayer: HTMLElement,
 ): void {
-  // Put the inner container in the top level. This is needed to stay on top of
+  // Put elm-watch’s UI in the top level. This is needed to stay on top of
   // popovers. See: https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
   // The latest shown popover gets drawn on top, so we need to enter and exit
   // popover frequently for elm-watch to force it to be on the very top.
@@ -1258,13 +1240,13 @@ function moveToTopLayer(
   // required, so we use only call the methods if they exist. The element falls
   // back to having the highest z-index.
   if (
-    typeof containerInner.hidePopover === "function" &&
-    typeof containerInner.showPopover === "function" &&
+    typeof topLayer.hidePopover === "function" &&
+    typeof topLayer.showPopover === "function" &&
     // Support users removing elm-watch’s UI (`.showPopover()` throws an error in that case).
-    containerInner.isConnected
+    topLayer.isConnected
   ) {
-    containerInner.hidePopover();
-    containerInner.showPopover();
+    topLayer.hidePopover();
+    topLayer.showPopover();
   }
 
   // A modal dialog on the page makes everything outside it inert, including
@@ -1273,11 +1255,11 @@ function moveToTopLayer(
   let isInert = false;
   try {
     isInert =
-      document.querySelector(":modal") !== null && !container.matches(":modal");
+      document.querySelector(":modal") !== null && !dialog.matches(":modal");
   } catch {
     // `:modal` is not supported.
   }
-  containerInner.style.opacity = isInert ? "0.5" : "";
+  topLayer.style.opacity = isInert ? "0.5" : "";
 }
 
 export function retryWaitMs(attemptNumber: number): number {
@@ -1408,6 +1390,7 @@ const CLASS = {
   button: "button",
   iconButton: "iconButton",
   details: "details",
+  dialog: "dialog",
   envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
@@ -1444,6 +1427,7 @@ const CLASS = {
   title: "title",
   toggleButton: "toggleButton",
   toggleEmoji: "toggleEmoji",
+  topLayer: "topLayer",
   version: "version",
   visuallyHidden: "visuallyHidden",
 };
@@ -1476,6 +1460,29 @@ textarea {
 
 p {
   margin: 0;
+}
+
+/*
+\`all: initial\` overrides the default dialog styles. Even when closed, the
+dialog is displayed (\`display: inline\`), since it contains all of the UI.
+*/
+.${CLASS.dialog} {
+  all: initial;
+}
+
+/*
+\`all: initial\` overrides the default popover styles. \`all\` does not reset
+\`direction\`, so a right-to-left page would otherwise mirror elm-watch’s UI
+(and mess up the punctuation in error messages). The z-index is the maximum
+supported by browsers, for browsers without popover support.
+*/
+.${CLASS.topLayer} {
+  all: initial;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483647;
+  direction: ltr;
 }
 
 [hidden] {
