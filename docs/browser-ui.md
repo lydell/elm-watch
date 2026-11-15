@@ -17,6 +17,16 @@ If the emoji is in the way, drag it somewhere else. It snaps to the closest side
 
 Need a screenshot without the emoji? Click the crossed-out eye in the panel (“Hide until reload or error”). The emoji comes back when you reload the page – or when there are errors, so you don’t miss them.
 
+To always hide elm-watch’s UI, for example when recording videos, add this CSS to your page:
+
+```css
+#elm-watch2 {
+  display: none !important;
+}
+```
+
+(Note that you won’t see compilation errors in the browser then!)
+
 Here are all the icons you might see (they’re also explained in the panel):
 
 ✅ = Successfully compiled  

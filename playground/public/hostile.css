@@ -1,6 +1,6 @@
 /*
 This page tries hard to mess with elm-watch’s browser UI. elm-watch puts its UI
-in `<dialog id="elm-watch-ui-…">` (directly in `<html>`), which contains a `<div>`
+in `<dialog id="elm-watch2">` (directly in `<html>`), which contains a `<div>`
 that is a popover with a shadow root. The shadow root protects against most
 selectors, but not against everything.
 */

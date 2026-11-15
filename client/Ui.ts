@@ -121,7 +121,11 @@ export const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
 // `TargetSnapshot`). Targets with a different UI version get a UI of their own.
 export const UI_VERSION = 1;
 
-const CONTAINER_ID = `elm-watch-ui-${UI_VERSION}`;
+// Documented, for hiding the UI with CSS, so it does not change with
+// `UI_VERSION`. Several UIs (from different versions) get the same ID, which is
+// fine since nothing looks the container up by ID. elm-watch 1.x uses
+// `elm-watch`, and reuses an existing element with that ID.
+const CONTAINER_ID = "elm-watch2";
 
 export type Ui = {
   register: (targetName: string) => UiTarget;
@@ -688,7 +692,11 @@ export function createUi(): Ui {
       // Support users removing elm-watch’s UI (`.showModal()` throws an error in that case).
       container.isConnected
     ) {
-      if (hidden) {
+      // A modal dialog makes the page inert, even if it is not rendered. So
+      // when the page hides elm-watch’s UI (`#elm-watch2 { display: none }`),
+      // don’t make the page impossible to interact with. (The container is
+      // `display: inline` by default, via `all: initial`.)
+      if (hidden || window.getComputedStyle(container).display === "none") {
         container.close();
       } else if (!container.open) {
         container.showModal();
