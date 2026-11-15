@@ -1694,6 +1694,7 @@ const CLASS = {
   overlay: "overlay",
   overlayCloseBar: "overlayCloseBar",
   overlayCloseButton: "overlayCloseButton",
+  overlayBottom: "overlayBottom",
   overlayError: "overlayError",
   overlayErrorHeader: "overlayErrorHeader",
   overlayFooter: "overlayFooter",
@@ -1907,10 +1908,20 @@ supported by browsers, for browsers without popover support.
   overflow-x: auto;
 }
 
-.${CLASS.overlayFooter} {
+/* The footer, and the editor chooser above it, stick to the bottom, so that the
+   chooser is visible even if the error is long. */
+.${CLASS.overlayBottom} {
   position: sticky;
   bottom: 0;
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  background-color: inherit;
+}
+
+.${CLASS.overlayFooter} {
+  flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
   /* Otherwise the emoji makes the position text taller than the key hints. */
@@ -1950,8 +1961,10 @@ supported by browsers, for browsers without popover support.
 .${CLASS.editorChooser} {
   display: grid;
   gap: 1ch;
+  min-height: 0;
+  overflow-y: auto;
   padding: 2ch;
-  border-top: 0.125em dashed;
+  border-top: 0.125em solid;
 }
 
 .${CLASS.editorChooser} p,
@@ -3245,7 +3258,9 @@ function viewOverlay({
 
   // While choosing an editor, the other keys are paused.
   const chooser =
-    editor.chooser === undefined ? [] : [viewEditorChooser(editor.chooser)];
+    editor.chooser === undefined
+      ? undefined
+      : viewEditorChooser(editor.chooser);
   const cancelHints: Array<[keys: Array<OverlayHintKey>, label: string]> = [
     [[["esc", "CancelEditorChooser", true, "Cancel"]], "cancel"],
   ];
@@ -3254,8 +3269,8 @@ function viewOverlay({
     const items = group.files.flatMap((file) => file.errors);
     return [
       ...items.map((item) => viewOverlayError(item, true, onKey, onOpenEditor)),
-      ...chooser,
       viewOverlayFooter(
+        chooser,
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
         editor.chooser === undefined
           ? [
@@ -3290,8 +3305,8 @@ function viewOverlay({
 
   return [
     viewOverlayError(item, expanded, onKey, onOpenEditor),
-    ...chooser,
     viewOverlayFooter(
+      chooser,
       `🚨 ${position}`,
       editor.chooser !== undefined
         ? cancelHints
@@ -3552,12 +3567,14 @@ type OverlayHintKey = [
 
 // Styled like in the terminal: [key] label
 // The keys are buttons, so that they work with the mouse and on touch screens.
+// The editor chooser (if open) goes above the footer, sticking with it.
 function viewOverlayFooter(
+  chooser: HTMLElement | undefined,
   position: string,
   hints: Array<[keys: Array<OverlayHintKey>, label: string] | undefined>,
   onKey: (key: OverlayKey) => void,
 ): HTMLElement {
-  return h(
+  const footer = h(
     HTMLDivElement,
     { className: CLASS.overlayFooter },
     h(HTMLParagraphElement, { className: CLASS.overlayPosition }, position),
@@ -3601,6 +3618,7 @@ function viewOverlayFooter(
       }),
     ),
   );
+  return h(HTMLDivElement, { className: CLASS.overlayBottom }, chooser, footer);
 }
 
 function viewErrorLocation(

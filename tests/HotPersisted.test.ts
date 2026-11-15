@@ -384,7 +384,9 @@ describe("hot", () => {
             vscode://file/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31,
           ]
         `);
-        expect(grep(getOverlay(), /footer/)).toMatchInlineSnapshot(`<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in VS Code | [e] change editor | [a] show all</footer>`);
+        expect(grep(getOverlay(), /footer/)).toMatchInlineSnapshot(
+          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in VS Code | [e] change editor | [a] show all</footer>`,
+        );
       });
 
       test("keyboard: enter, number, e and escape", async () => {
@@ -462,12 +464,16 @@ describe("hot", () => {
           },
         });
 
-        expect(example).toMatchInlineSnapshot(`<input value="pycharm://open?file={file}&line={line}&column={column0}" placeholder="">`);
+        expect(example).toMatchInlineSnapshot(
+          `<input value="pycharm://open?file={file}&line={line}&column={column0}" placeholder="">`,
+        );
         expect(error).toMatchInlineSnapshot(`
           <input value="https://example.com/{file}" placeholder="" invalid>
           https: URLs are not supported. Only URLs for opening apps, like myeditor://
         `);
-        expect(readChosenEditor()).toMatchInlineSnapshot(`myeditor://open?file={file}&line={line0}&column={column0}`);
+        expect(readChosenEditor()).toMatchInlineSnapshot(
+          `myeditor://open?file={file}&line={line0}&column={column0}`,
+        );
         expect(openedUrls).toMatchInlineSnapshot(`
           [
             myeditor://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=9&column=30,
@@ -501,7 +507,9 @@ describe("hot", () => {
             webstorm://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=10&column=30,
           ]
         `);
-        expect(grep(overlay, /footer|chooser/)).toMatchInlineSnapshot(`<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all</footer>`);
+        expect(grep(overlay, /footer|chooser/)).toMatchInlineSnapshot(
+          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all</footer>`,
+        );
       });
 
       test("env var is ignored with elm-watch options", async () => {
@@ -526,7 +534,9 @@ describe("hot", () => {
           },
         });
 
-        expect(grep(chooser, /Or /)).toMatchInlineSnapshot(`Or use the openEditor option to run a command. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)`);
+        expect(grep(chooser, /Or /)).toMatchInlineSnapshot(
+          `Or use the openEditor option to run a command. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)`,
+        );
       });
     });
 

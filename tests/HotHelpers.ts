@@ -805,20 +805,27 @@ export function getOverlay(): string {
   withShadowRoot((shadowRoot) => {
     const overlay = shadowRoot.querySelector(`[data-test-id="Overlay"]`);
     if (overlay instanceof HTMLElement) {
-      const children = Array.from(overlay.children, (child, index) => {
-        if (child.classList.contains("overlayFooter")) {
-          return printOverlayFooter(child);
-        }
-        if (child.classList.contains("editorChooser")) {
-          return `<chooser>\n${getTextContent(child)}\n</chooser>`;
-        }
-        const clone = child.cloneNode(true) as HTMLElement;
-        clone.id = index.toString();
-        for (const element of [clone, ...clone.querySelectorAll("[class]")]) {
-          element.removeAttribute("class");
-        }
-        return clone.outerHTML.replace("<pre>", "\n<pre>");
-      }).join(`\n${"-".repeat(80)}\n`);
+      const children = Array.from(overlay.children, (child): Array<Element> =>
+        child.classList.contains("overlayBottom")
+          ? Array.from(child.children)
+          : [child],
+      )
+        .flat()
+        .map((child, index) => {
+          if (child.classList.contains("overlayFooter")) {
+            return printOverlayFooter(child);
+          }
+          if (child.classList.contains("editorChooser")) {
+            return `<chooser>\n${getTextContent(child)}\n</chooser>`;
+          }
+          const clone = child.cloneNode(true) as HTMLElement;
+          clone.id = index.toString();
+          for (const element of [clone, ...clone.querySelectorAll("[class]")]) {
+            element.removeAttribute("class");
+          }
+          return clone.outerHTML.replace("<pre>", "\n<pre>");
+        })
+        .join(`\n${"-".repeat(80)}\n`);
       result = `<overlay ${overlay.hidden !== false ? "hidden" : "visible"} style="${
         overlay.getAttribute("style") ?? ""
       }">\n${children}\n</overlay>`;
