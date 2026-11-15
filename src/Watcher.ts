@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -63,10 +64,11 @@ export function watch(
   onError: (error: Error) => void,
 ): Watcher {
   const rootStates = new Map<AbsolutePath, RootState>();
+  const isNewChange = makeDuplicateEventFilter();
   let closed = false;
 
   const report = (absolutePath: AbsolutePath): void => {
-    if (!closed) {
+    if (!closed && isNewChange(absolutePath)) {
       onEvent(absolutePath);
     }
   };
@@ -282,6 +284,83 @@ function isDirectoryChange(eventType: string, absolutePath: string): boolean {
     return false;
   }
 }
+
+// The same change can be reported more than once. For example, on macOS a
+// single write is sometimes reported a second time ~50 ms later under load,
+// which would cause an unnecessary compilation (or interrupt one). To skip such
+// duplicates, we remember what each reported file looked like, and skip events
+// where nothing changed since the last reported event for the same path.
+export function makeDuplicateEventFilter(): (
+  absolutePath: AbsolutePath,
+) => boolean {
+  const lastFileStates = new Map<AbsolutePath, string>();
+  return (absolutePath) => {
+    const fileState = getFileState(absolutePath);
+    if (fileState === undefined) {
+      lastFileStates.delete(absolutePath);
+      return true;
+    }
+    if (lastFileStates.get(absolutePath) === fileState) {
+      return false;
+    }
+    lastFileStates.set(absolutePath, fileState);
+    return true;
+  };
+}
+
+// Stats alone are not enough: Timestamps can be coarse (FAT and some network
+// file systems have 1–2 seconds, and Linux uses a clock that only ticks every
+// few milliseconds). An in-place write keeps the inode, and might keep the
+// size. So if a file is written, then stat:ed, then written again within the
+// same tick, the two stats are identical, and we would miss the second edit.
+// The contents are the ground truth, so small files are hashed as well. That
+// has to happen on _every_ event, since a later duplicate must be compared to
+// the contents at the time of the first event (which might be overwritten by
+// then), and we can’t know in advance whether a duplicate will come. The hash
+// is cheap for .elm files (~0.1 ms for typical sizes). The inode and ctime
+// catch changes that keep the size and restore the mtime (like `cp -p`).
+//
+// Reading happens synchronously on every event, so large files are not hashed:
+// The static files directory might contain big images or videos, which are
+// often written in chunks (one event per chunk). For those, only the stats are
+// used, and only if the file was last modified so long ago that even a coarse
+// clock has ticked since then (`RECENT_MODIFICATION_MS`), so any new edit gets
+// a different mtime. Duplicates arrive shortly after a write, so in practice
+// this means that duplicates for large files are not skipped – which is fine,
+// the important thing is to never skip a real change.
+//
+// Returns `undefined` when the file state can’t be trusted, meaning the event
+// is always reported. That’s also the case for directories: Their timestamps
+// don’t reflect what happened inside them.
+function getFileState(absolutePath: AbsolutePath): string | undefined {
+  let stats: fs.BigIntStats;
+  let content: Buffer | undefined;
+  try {
+    stats = fs.statSync(absolutePath, { bigint: true });
+    if (stats.isDirectory()) {
+      return undefined;
+    }
+    if (stats.size <= MAX_HASHED_FILE_SIZE) {
+      content = fs.readFileSync(absolutePath);
+    } else if (Date.now() - Number(stats.mtimeMs) < RECENT_MODIFICATION_MS) {
+      return undefined;
+    }
+  } catch (unknownError) {
+    return isMissingError(toError(unknownError)) ? "missing" : undefined;
+  }
+  return [
+    stats.ino,
+    stats.size,
+    stats.mtimeNs,
+    stats.ctimeNs,
+    content === undefined
+      ? ""
+      : crypto.createHash("sha1").update(content).digest("hex"),
+  ].join(":");
+}
+
+const MAX_HASHED_FILE_SIZE = 1024 * 1024;
+const RECENT_MODIFICATION_MS = 3000;
 
 function isMissingError(error: Error): boolean {
   const { code } = error as Error & { code?: unknown };

@@ -3,8 +3,9 @@ import * as os from "os";
 import * as path from "path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import type { AbsolutePath } from "../src/Types.ts";
+import { type AbsolutePath, markAsAbsolutePath } from "../src/Types.ts";
 import {
+  makeDuplicateEventFilter,
   removeCoveredWatchDirs,
   watch,
   type WatchDir,
@@ -229,5 +230,87 @@ describe("watch", () => {
 
     fs.writeFileSync(d("src", "Main.elm"), "");
     await expect.poll(eventLines, POLL).toContain("src/Main.elm");
+  });
+});
+
+describe("makeDuplicateEventFilter", () => {
+  let dir = "";
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "elm-watch-duplicate-test-"));
+  });
+
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  const d = (name: string): AbsolutePath =>
+    markAsAbsolutePath(path.join(dir, name));
+
+  test("unchanged files are skipped", () => {
+    const isNewChange = makeDuplicateEventFilter();
+    const file = d("Main.elm");
+    fs.writeFileSync(file, "a");
+    expect(isNewChange(file)).toBe(true);
+    expect(isNewChange(file)).toBe(false);
+    fs.writeFileSync(file, "b");
+    expect(isNewChange(file)).toBe(true);
+    expect(isNewChange(file)).toBe(false);
+  });
+
+  test("same size and restored timestamps", () => {
+    const isNewChange = makeDuplicateEventFilter();
+    const file = d("Main.elm");
+    fs.writeFileSync(file, "a");
+    const { atime, mtime } = fs.statSync(file);
+    expect(isNewChange(file)).toBe(true);
+    fs.writeFileSync(file, "b");
+    fs.utimesSync(file, atime, mtime);
+    expect(isNewChange(file)).toBe(true);
+  });
+
+  test("touch", () => {
+    const isNewChange = makeDuplicateEventFilter();
+    const file = d("Main.elm");
+    fs.writeFileSync(file, "a");
+    expect(isNewChange(file)).toBe(true);
+    const date = new Date(Date.now() + 5000);
+    fs.utimesSync(file, date, date);
+    expect(isNewChange(file)).toBe(true);
+  });
+
+  test("removed files", () => {
+    const isNewChange = makeDuplicateEventFilter();
+    const file = d("Main.elm");
+    expect(isNewChange(file)).toBe(true);
+    expect(isNewChange(file)).toBe(false);
+    fs.writeFileSync(file, "a");
+    expect(isNewChange(file)).toBe(true);
+    fs.rmSync(file);
+    expect(isNewChange(file)).toBe(true);
+    expect(isNewChange(file)).toBe(false);
+  });
+
+  test("directories are always reported", () => {
+    const isNewChange = makeDuplicateEventFilter();
+    const subDir = d("Sub");
+    fs.mkdirSync(subDir);
+    expect(isNewChange(subDir)).toBe(true);
+    expect(isNewChange(subDir)).toBe(true);
+    fs.rmSync(subDir, { recursive: true });
+    expect(isNewChange(subDir)).toBe(true);
+    expect(isNewChange(subDir)).toBe(false);
+  });
+
+  test("large, recently modified files are always reported", () => {
+    const isNewChange = makeDuplicateEventFilter();
+    const file = d("large.bin");
+    fs.writeFileSync(file, Buffer.alloc(2 * 1024 * 1024));
+    expect(isNewChange(file)).toBe(true);
+    expect(isNewChange(file)).toBe(true);
+    const old = new Date(Date.now() - 60_000);
+    fs.utimesSync(file, old, old);
+    expect(isNewChange(file)).toBe(true);
+    expect(isNewChange(file)).toBe(false);
   });
 });
