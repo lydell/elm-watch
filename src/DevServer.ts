@@ -514,7 +514,10 @@ type ProbeResult =
 // fails if another program listens on `::`, but on Windows only the exact same
 // address conflicts.) The actual listening on 127.0.0.1 then catches conflicts
 // with programs listening on 127.0.0.1.
-async function probePort(port: number): Promise<ProbeResult> {
+// When `port` is 0, the operating system picks a port that is free on 0.0.0.0,
+// but it can still be taken on `::` or ::1 (for example by the local end of an
+// outgoing connection). Then ask for another port instead of failing.
+async function probePort(port: number, attempt = 1): Promise<ProbeResult> {
   const result = await probe(port, "0.0.0.0");
   if (result.tag === "Error") {
     return result;
@@ -527,7 +530,11 @@ async function probePort(port: number): Promise<ProbeResult> {
       ipv6Result.error.code !== "EADDRNOTAVAIL" &&
       ipv6Result.error.code !== "EAFNOSUPPORT"
     ) {
-      return ipv6Result;
+      return port === 0 &&
+        ipv6Result.error.code === "EADDRINUSE" &&
+        attempt < 10
+        ? probePort(port, attempt + 1)
+        : ipv6Result;
     }
   }
   return result;
