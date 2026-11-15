@@ -38,7 +38,7 @@ export function fixtureDir(fixture: string): string {
   return copyFixture("hot", fixture);
 }
 
-let watcher: fs.FSWatcher | undefined = undefined;
+let buildPoller: NodeJS.Timeout | undefined = undefined;
 let elmWatchIsIdle = false;
 let watcherIsReady = false;
 const msgListeners = new Set<(msg: Msg) => void>();
@@ -136,14 +136,14 @@ export async function cleanupAfterEachTest(): Promise<void> {
     await window.__ELM_WATCH.KILL_MATCHING(/^/);
   }
 
-  if (watcher !== undefined) {
+  if (buildPoller !== undefined) {
     // oxlint-disable-next-line no-console
     console.error(
-      "cleanupAfterEachTest: watcher never closed by itself – closing now. Test:",
+      "cleanupAfterEachTest: build poller never stopped by itself – stopping now. Test:",
       currentTestName,
     );
-    watcher.close();
-    watcher = undefined;
+    clearInterval(buildPoller);
+    buildPoller = undefined;
   }
 
   if (hotTestHooks.kill !== undefined) {
@@ -471,14 +471,18 @@ export async function run({
     if (keepBuild) {
       loadBuiltFiles();
     } else {
-      watcher = fs.watch(build, () => {
+      // Poll rather than `fs.watch`: On macOS, all `fs.watch` watchers in the
+      // process share one FSEvents stream, which is recreated whenever
+      // elm-watch adds or removes a watcher. Events during that gap are lost,
+      // which could leave the test waiting forever for the scripts. elm-watch
+      // writes the outputs synchronously, so a poll never sees a partial file.
+      buildPoller = setInterval(() => {
         if (absoluteScripts.every(fs.existsSync)) {
-          watcher?.close();
-          watcher = undefined;
+          clearInterval(buildPoller);
+          buildPoller = undefined;
           loadBuiltFiles();
         }
-      });
-      watcher.on("error", reject);
+      }, 10);
     }
 
     const sharedOptions = {
