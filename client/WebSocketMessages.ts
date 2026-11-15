@@ -1,5 +1,6 @@
 import * as Codec from "tiny-decoders";
 
+import { EditorString } from "../src/Editor.ts";
 import { NonEmptyArray } from "../src/NonEmptyArray.ts";
 import { AbsolutePath, CompilationMode } from "../src/Types.ts";
 
@@ -23,6 +24,8 @@ export type OpenEditorError = Codec.Infer<typeof OpenEditorError>;
 const OpenEditorError = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("EnvNotSet"),
+    // See `commandHint` in `OpenEditorSetupChanged`.
+    commandHint: Codec.nullOr(Codec.string),
   },
   {
     tag: Codec.tag("InvalidFilePath"),
@@ -31,6 +34,25 @@ const OpenEditorError = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("CommandFailed"),
     message: Codec.string,
+  },
+]);
+
+// How error locations are opened in the editor.
+export type OpenEditorSetup = Codec.Infer<typeof OpenEditorSetup>;
+const OpenEditorSetup = Codec.taggedUnion("tag", [
+  {
+    // Via the `ELM_WATCH_OPEN_EDITOR` environment variable, or the `openEditor`
+    // option. The browser sends `PressedOpenEditor` to the server.
+    tag: Codec.tag("Server"),
+  },
+  {
+    // The browser opens a URL (see `Editor.ts`).
+    tag: Codec.tag("Url"),
+    editor: EditorString,
+  },
+  {
+    // The browser lets the user choose an editor.
+    tag: Codec.tag("NotSet"),
   },
 ]);
 
@@ -125,6 +147,14 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
     error: OpenEditorError,
   },
   {
+    // Sent when connecting, and to everyone when someone chooses an editor.
+    tag: Codec.tag("OpenEditorSetupChanged"),
+    setup: OpenEditorSetup,
+    // How to set up `ELM_WATCH_OPEN_EDITOR` in the user’s shell. `null` with
+    // the JavaScript API.
+    commandHint: Codec.nullOr(Codec.string),
+  },
+  {
     tag: Codec.tag("StaticFilesChanged"),
     changedFileUrlPaths: NonEmptyArray(Codec.string),
   },
@@ -151,6 +181,11 @@ export const WebSocketToServerMessage = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("ChangedCompilationMode"),
     compilationMode: CompilationMode,
+  },
+  {
+    // Stored in elm-stuff/elm-watch/stuff.json. `null` forgets the choice.
+    tag: Codec.tag("ChoseEditor"),
+    editor: Codec.nullOr(EditorString),
   },
   {
     tag: Codec.tag("FocusedTab"),

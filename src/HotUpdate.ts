@@ -9,6 +9,7 @@ import type {
   WebSocketConnection,
   WebSocketConnectionRejectedReason,
 } from "./DevServer.ts";
+import { type Editor, parseEditor } from "./Editor.ts";
 import * as Errors from "./Errors.ts";
 import type { ErrorTemplate } from "./Errors.ts";
 import type * as ErrorView from "./ErrorView.ts";
@@ -186,6 +187,10 @@ export type Cmd =
       compilationMode: CompilationMode;
     }
   | {
+      tag: "ChooseEditor";
+      editor: Editor | undefined;
+    }
+  | {
       tag: "ClearScreen";
     }
   | {
@@ -289,6 +294,10 @@ export type Cmd =
       tag: "WebSocketSendToOutput";
       outputPath: OutputPath;
       message: WebSocketToClientMessage;
+    }
+  | {
+      tag: "WebSocketSendOpenEditorSetup";
+      webSocket: WebSocket;
     }
   | {
       tag: "WebSocketUpdatePriority";
@@ -648,6 +657,7 @@ export function update(
 
       const connectCmds: Array<Cmd> = [
         externalErrorsCmd,
+        { tag: "WebSocketSendOpenEditorSetup", webSocket: msg.webSocket },
         ...(project.staticFilesDir === undefined
           ? []
           : [
@@ -1313,6 +1323,18 @@ function onWebSocketToServerMessage(
             tag: "WebSocketSend",
             webSocket,
             message: { tag: "FocusedTabAcknowledged" },
+          },
+        ],
+      ];
+
+    case "ChoseEditor":
+      return [
+        model,
+        [
+          {
+            tag: "ChooseEditor",
+            editor:
+              message.editor === null ? undefined : parseEditor(message.editor),
           },
         ],
       ];

@@ -8,6 +8,7 @@ import {
   getAllowedHostsFromEnv,
 } from "./AllowedHosts.ts";
 import type { Config, ConfigSource, OpenEditorFunction } from "./Config.ts";
+import { type Editor, parseEditor } from "./Editor.ts";
 import * as ElmJson from "./ElmJson.ts";
 import type { ElmWatchStuffJson } from "./ElmWatchStuffJson.ts";
 import {
@@ -80,6 +81,9 @@ export type Project = {
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
   openEditor: OpenEditor;
+  // Chosen in the browser UI, and stored in elm-stuff/elm-watch/stuff.json.
+  // Only used if `openEditor` is `NotSet`.
+  editor: Editor | undefined;
   errorReporter: ErrorReporter | undefined;
   // The external errors as of the last time the status lines were printed.
   // See `ExternalErrors.ts`.
@@ -665,6 +669,10 @@ export function initProject({
       webSocketUrl,
       allowedHosts,
       openEditor,
+      editor:
+        elmWatchStuffJson?.editor === undefined
+          ? undefined
+          : parseEditor(elmWatchStuffJson.editor),
       errorReporter: config.errorReporter,
       externalErrors: getSnapshot(config.errorReporter),
     },

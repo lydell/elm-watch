@@ -45,6 +45,8 @@ export function readFile(filePath: string): string {
 
 export const TEST_ENV = {
   [ELM_WATCH_OPEN_EDITOR]: undefined,
+  // For the hint about how to set ELM_WATCH_OPEN_EDITOR.
+  SHELL: "/bin/bash",
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
   [__ELM_WATCH_MOCKED_TIMINGS]: "",

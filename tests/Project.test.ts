@@ -61,6 +61,7 @@ const project: Project = {
   maxParallel: 12,
   host: DEFAULT_HOST,
   openEditor: { tag: "NotSet" },
+  editor: undefined,
   errorReporter: undefined,
   externalErrors: EMPTY_SNAPSHOT,
   disabledOutputs: [

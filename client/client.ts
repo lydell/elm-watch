@@ -1651,6 +1651,7 @@ function modelToSnapshot(model: Model, info: Info): TargetSnapshot {
     elmCompiledTimestampBeforeReload: model.elmCompiledTimestampBeforeReload,
     info,
     sendKey: statusToSpecialCaseSendKey(model.status),
+    openEditor: model.openEditor,
   };
 }
 
@@ -1809,7 +1810,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       errors: new Map(),
-      openEditorError: { tag: "EnvNotSet" },
+      openEditorError: { tag: "EnvNotSet", commandHint: null },
     },
     ElmJsonError: {
       tag: "ElmJsonError",
@@ -1889,6 +1890,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       elmCompiledTimestampBeforeReload: undefined,
       info: { ...(status.info ?? info), targetName },
       sendKey: statusToSpecialCaseSendKey(status),
+      openEditor: undefined,
     });
     uiTarget.openPanel();
   }

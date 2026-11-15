@@ -829,6 +829,7 @@ describe("hot", () => {
         At root["tag"]:
         Expected one of these tags:
          "ChangedCompilationMode",
+         "ChoseEditor",
          "FocusedTab",
          "PressedOpenEditor"
         Got: "Nope"

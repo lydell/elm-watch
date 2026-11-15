@@ -9,6 +9,7 @@ import type { CompilationModeWithProxy } from "../src/Types.ts";
 import {
   type ExternalErrorsSource,
   type FlashType,
+  type OpenEditorSetupWithHint,
   type OverlayError,
   SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
   type SendKey,
@@ -146,6 +147,8 @@ export type Model = {
   compilationMode: CompilationModeWithProxy;
   elmCompiledTimestamp: number;
   elmCompiledTimestampBeforeReload: number | undefined;
+  // Received when connecting. `undefined` until then.
+  openEditor: OpenEditorSetupWithHint | undefined;
 };
 
 export type Cmd =
@@ -240,6 +243,7 @@ export const init = (
     compilationMode: config.originalCompilationMode,
     elmCompiledTimestamp: config.initialElmCompiledTimestamp,
     elmCompiledTimestampBeforeReload,
+    openEditor: undefined,
   };
   return [model, [{ tag: "Render", model }]];
 };
@@ -437,6 +441,31 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
         ],
       ];
 
+    case "ChoseEditor":
+      return [
+        // Optimistic update. The server sends `OpenEditorSetupChanged` to all
+        // browsers.
+        model.openEditor === undefined
+          ? model
+          : {
+              ...model,
+              openEditor: {
+                ...model.openEditor,
+                setup:
+                  msg.editor === null
+                    ? { tag: "NotSet" }
+                    : { tag: "Url", editor: msg.editor },
+              },
+            },
+        [
+          {
+            tag: "SendMessage",
+            message: { tag: "ChoseEditor", editor: msg.editor },
+            sendKey: msg.sendKey,
+          },
+        ],
+      ];
+
     case "PressedOpenEditor":
       return [
         model,
@@ -506,6 +535,15 @@ function onWebSocketToClientMessage(
             reason: "OpenEditorFailed",
           },
         ],
+      ];
+
+    case "OpenEditorSetupChanged":
+      return [
+        {
+          ...model,
+          openEditor: { setup: msg.setup, commandHint: msg.commandHint },
+        },
+        [],
       ];
 
     case "StaticFilesChanged":

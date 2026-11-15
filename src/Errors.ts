@@ -1,4 +1,4 @@
-import type { ExecException } from "child_process";
+import type { ExecException, ExecFileException } from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -1563,9 +1563,17 @@ The web socket code I generate is supposed to always send correct messages, so s
   `.trim();
 }
 
-export function openEditorEnvNotSetForTerminal(): string {
+export function openEditorEnvNotSetForTerminal(
+  commandHint: string | null,
+): string {
   return `
-Opening errors in your editor only works if you set it up, using the ${ELM_WATCH_OPEN_EDITOR} environment variable or the openEditor option.
+Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or ${
+    commandHint === null
+      ? "use the openEditor option"
+      : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a command:
+
+${commandHint}`
+  }
 
 Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
   `.trim();
@@ -1620,6 +1628,37 @@ ${command}
 I ran the command with these extra environment variables:
 
 ${Codec.JSON.stringify(Codec.unknown, env, 2)}
+
+${errorReason}
+
+${printStdio(stdout, stderr)(DEFAULT_COLUMNS, (piece) => piece.text)}
+  `.trim();
+}
+
+export function openEditorUrlFailed({
+  error,
+  command,
+  timeout,
+  stdout,
+  stderr,
+}: {
+  error: ExecFileException;
+  command: [string, ...Array<string>];
+  // Set if the command timed out.
+  timeout: number | undefined;
+  stdout: string;
+  stderr: string;
+}): string {
+  const errorReason =
+    timeout !== undefined
+      ? `The command took too long to run, and was killed after ${timeout} ms.`
+      : typeof error.code === "number"
+        ? `The command exited with code ${error.code}.`
+        : `The command failed: ${error.message}`;
+  return `
+I tried to open your editor (chosen in the browser UI) via a URL:
+
+${commandToPresentationName(command)}
 
 ${errorReason}
 

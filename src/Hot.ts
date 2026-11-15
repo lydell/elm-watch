@@ -10,6 +10,7 @@ import {
 } from "../client/WebSocketMessages.ts";
 import * as Compile from "./Compile.ts";
 import type { DevServer, DevServerHolder, DevServerMsg } from "./DevServer.ts";
+import { editorToString } from "./Editor.ts";
 import { ElmWatchStuffJson, type Target } from "./ElmWatchStuffJson.ts";
 import {
   __ELM_WATCH_EXIT_ON_ERROR,
@@ -40,7 +41,11 @@ import {
   type WatcherEvent,
 } from "./LatestEvent.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
-import { openEditor, printOpenEditorErrorForTerminal } from "./OpenEditor.ts";
+import {
+  getOpenEditorSetupMessage,
+  openEditor,
+  printOpenEditorErrorForTerminal,
+} from "./OpenEditor.ts";
 import { absoluteDirname } from "./PathHelpers.ts";
 import { type PortChoice, portToPersist } from "./Port.ts";
 import {
@@ -526,9 +531,11 @@ function writeElmWatchStuffJson(
   ]);
 
   const port = portToPersist(mutable.portChoice, mutable.devServer.port);
+  const { editor } = mutable.project;
   const json: ElmWatchStuffJson = {
     ...(port === undefined ? {} : { port }),
     webSocketToken,
+    ...(editor === undefined ? {} : { editor: editorToString(editor) }),
     targets,
   };
 
@@ -805,6 +812,23 @@ const runCmd =
         openEditor(env, mutable.project, cmd, (error) => {
           webSocketSend(cmd.webSocket, { tag: "OpenEditorFailed", error });
         });
+        return;
+
+      case "ChooseEditor": {
+        mutable.project.editor = cmd.editor;
+        writeElmWatchStuffJson(mutable, webSocketToken);
+        const message = getOpenEditorSetupMessage(env, mutable.project);
+        for (const { webSocket } of mutable.devServer.getConnections()) {
+          webSocketSend(webSocket, message);
+        }
+        return;
+      }
+
+      case "WebSocketSendOpenEditorSetup":
+        webSocketSend(
+          cmd.webSocket,
+          getOpenEditorSetupMessage(env, mutable.project),
+        );
         return;
 
       case "HandleKeys": {

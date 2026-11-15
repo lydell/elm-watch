@@ -973,9 +973,17 @@ function walkTextNodes(node: Node, parts: Array<string>): void {
     parts.push(
       (node.checked ? "◉" : "◯") + (node.disabled ? " (disabled)" : ""),
     );
+  } else if (node instanceof HTMLInputElement && node.type === "text") {
+    newline();
+    parts.push(
+      `<input value="${node.value}" placeholder="${node.placeholder}"${
+        node.getAttribute("aria-invalid") === "true" ? " invalid" : ""
+      }>`,
+    );
   } else if (node instanceof HTMLButtonElement) {
     const textContent = node.textContent.trim();
     const expanded = node.getAttribute("aria-expanded");
+    const pressed = node.getAttribute("aria-pressed") === "true";
     if (expanded !== null) {
       parts.push(
         `${node.hidden === true ? "(hidden) " : ""}${expanded === "true" ? "▲" : "▼"} ${textContent}`,
@@ -983,7 +991,7 @@ function walkTextNodes(node: Node, parts: Array<string>): void {
     } else {
       newline();
       parts.push(
-        `[${textContent === "" ? (node.getAttribute("aria-label") ?? "") : textContent}]`,
+        `[${textContent === "" ? (node.getAttribute("aria-label") ?? "") : textContent}]${pressed ? " (pressed)" : ""}`,
       );
     }
   } else if (node instanceof HTMLAnchorElement) {
@@ -1028,4 +1036,52 @@ export function click(element: HTMLElement, selector: string): void {
       }`,
     );
   }
+}
+
+// Clicks a button in the browser UI by its text, and records a render (since
+// the editor chooser is handled in the UI without involving the targets).
+export function clickUiButton(text: string): void {
+  withShadowRoot((shadowRoot) => {
+    const button = Array.from(shadowRoot.querySelectorAll("button")).find(
+      (candidate) => candidate.textContent === text,
+    );
+    if (button === undefined) {
+      throw new Error(`Could not find button: ${text}`);
+    }
+    button.click();
+    window.__ELM_WATCH.ON_RENDER("clickUiButton");
+  });
+}
+
+export function typeInUiInput(value: string): void {
+  withShadowRoot((shadowRoot) => {
+    const input = shadowRoot.querySelector('input[type="text"]');
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error("Could not find text input.");
+    }
+    input.value = value;
+    input.dispatchEvent(new Event("input"));
+  });
+}
+
+export function submitUiForm(): void {
+  withShadowRoot((shadowRoot) => {
+    const form = shadowRoot.querySelector("form");
+    if (form === null) {
+      throw new Error("Could not find form.");
+    }
+    form.requestSubmit();
+    window.__ELM_WATCH.ON_RENDER("submitUiForm");
+  });
+}
+
+export function getPanel(): string {
+  let text = "(Panel not found)";
+  withShadowRoot((shadowRoot) => {
+    const panel = shadowRoot.querySelector(".panel");
+    if (panel !== null && panel.childNodes.length > 0) {
+      text = clean(getTextContent(panel));
+    }
+  });
+  return text;
 }

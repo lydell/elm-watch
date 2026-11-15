@@ -3,7 +3,14 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { clean, KeyReadStream, stringSnapshotSerializer } from "./Helpers.ts";
+import { IS_WINDOWS } from "../src/IsWindows.ts";
+import {
+  clean,
+  KeyReadStream,
+  prependPATH,
+  stringSnapshotSerializer,
+  waitFor,
+} from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
   fixtureDir,
@@ -324,17 +331,79 @@ describe("hot error view", () => {
       },
     });
 
-    expect(screen.slice(screen.indexOf("Opening errors")))
-      .toMatchInlineSnapshot(`
-        Opening errors in your editor only works if you set it up, using the ELM_WATCH_OPEN_EDITOR environment variable or the openEditor option.
+    expect(
+      screen
+        .slice(screen.indexOf("Opening errors"))
+        .replace(
+          "# System Settings > Environment Variables\nELM_WATCH_OPEN_EDITOR=your command here",
+          "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='your command here'",
+        ),
+    ).toMatchInlineSnapshot(`
+      Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
 
-        Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      # ~/.bashrc
+      export ELM_WATCH_OPEN_EDITOR='your command here'
 
-        ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
-        🚨 error 1/1
+      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
-      `);
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
+      🚨 error 1/1
+
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+    `);
+  });
+
+  // Opening URLs is done by the browser on Windows, where we can’t easily fake
+  // `rundll32.exe`.
+  test.skipIf(IS_WINDOWS)("open in editor chosen in the browser", async () => {
+    const dir = fixtureDir("error-view");
+    const stuffJsonPath = path.join(
+      dir,
+      "elm-stuff",
+      "elm-watch",
+      "stuff.json",
+    );
+    fs.mkdirSync(path.dirname(stuffJsonPath), { recursive: true });
+    fs.writeFileSync(
+      stuffJsonPath,
+      JSON.stringify({ targets: {}, editor: "zed" }),
+    );
+
+    // Fake `open` (macOS) and `xdg-open` (Linux), so that no editor is opened.
+    const binDir = path.join(dir, "fake-open-bin");
+    const outputFile = path.join(dir, "opened-url.txt");
+    fs.mkdirSync(binDir, { recursive: true });
+    for (const name of ["open", "xdg-open"]) {
+      const file = path.join(binDir, name);
+      fs.writeFileSync(
+        file,
+        `#!/usr/bin/env node\nimport * as fs from "node:fs";\nfs.writeFileSync(${JSON.stringify(outputFile)}, process.argv.slice(2).join(" "));\n`,
+      );
+      fs.chmodSync(file, 0o755);
+    }
+
+    const stdin = new KeyReadStream();
+
+    await run({
+      fixture: "error-view",
+      args: ["Other"],
+      scripts: ["Other.js"],
+      keepElmStuffJson: true,
+      env: { PATH: prependPATH(binDir) },
+      stdin,
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async () => {
+        stdin.press("o");
+        await waitFor(() => fs.existsSync(outputFile));
+        return "Stop" as const;
+      },
+    });
+
+    expect(clean(fs.readFileSync(outputFile, "utf8"))).toMatchInlineSnapshot(
+      `zed://file/Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20`,
+    );
   });
 
   test("one-line info message for files not imported by any target", async () => {

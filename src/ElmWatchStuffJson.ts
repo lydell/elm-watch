@@ -25,6 +25,10 @@ export const ElmWatchStuffJson = Codec.fields({
   // Missing if elm-watch has only been run with a port from config.
   port: Codec.field(Port, { optional: true }),
   webSocketToken: Codec.field(WebSocketToken, { optional: true }),
+  // The editor chosen in the browser UI: A preset ID or a URL template (see
+  // `Editor.ts`). Not validated here, so that an unknown editor (from another
+  // elm-watch version, for example) is just ignored.
+  editor: Codec.field(Codec.string, { optional: true }),
   targets: Codec.record(Target),
 });
 

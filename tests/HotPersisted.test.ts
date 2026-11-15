@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { WebSocketToServerMessage } from "../client/WebSocketMessages.ts";
 import {
@@ -26,11 +26,15 @@ import {
   assertDebugger,
   cleanupAfterEachTest,
   clickFirstErrorLocation,
+  clickUiButton,
   expandUi,
   fixtureDir,
   getOverlay,
+  getPanel,
   run,
+  submitUiForm,
   switchCompilationMode,
+  typeInUiInput,
 } from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -287,49 +291,193 @@ describe("hot", () => {
       return onlyExpandedRenders === "" ? renders : onlyExpandedRenders;
     };
 
-    test("env var not set", async () => {
-      const renders = await runFailClickErrorLocation({ env: {} });
-      expect(renders).toMatchInlineSnapshot(`
-        ▲ 🚨
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide errors]
-        [Close elm-watch]
-        🚨 Main Compilation error · 13:10:05
-        Compilation mode for Main
-        ◯ (disabled) Debug
-        ◉ Standard
-        ◯ Optimize
-        The Elm debugger isn't available at this point.
-        ℹ️ Clicking error locations only works if you set it up.
-        Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
-        Drag emoji or press shift+arrows to move
-      `);
-    });
+    describe("choose editor in the browser", () => {
+      const openedUrls: Array<string> = [];
 
-    test("env var is ignored with elm-watch options", async () => {
-      const renders = await runFailClickErrorLocation({
-        env: {
-          [ELM_WATCH_OPEN_EDITOR]: "true",
-        },
-        useElmWatchFunction: true,
+      beforeEach(() => {
+        openedUrls.length = 0;
+        vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+          function (this: HTMLAnchorElement) {
+            openedUrls.push(clean(this.href));
+          },
+        );
       });
-      expect(renders).toMatchInlineSnapshot(`
-        ▲ 🚨
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide errors]
-        [Close elm-watch]
-        🚨 Main Compilation error · 13:10:05
-        Compilation mode for Main
-        ◯ (disabled) Debug
-        ◉ Standard
-        ◯ Optimize
-        The Elm debugger isn't available at this point.
-        ℹ️ Clicking error locations only works if you set it up.
-        Check this out: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
-        Drag emoji or press shift+arrows to move
-      `);
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      const stuffJsonPath = (): string =>
+        path.join(fixtureDir(fixture), "elm-stuff", "elm-watch", "stuff.json");
+
+      const readChosenEditor = (): unknown =>
+        (
+          JSON.parse(fs.readFileSync(stuffJsonPath(), "utf8")) as {
+            editor?: unknown;
+          }
+        ).editor;
+
+      const writeChosenEditor = (editor: string): void => {
+        const json = JSON.parse(
+          fs.readFileSync(stuffJsonPath(), "utf8"),
+        ) as Record<string, unknown>;
+        fs.writeFileSync(stuffJsonPath(), JSON.stringify({ ...json, editor }));
+      };
+
+      test("env var not set: choose a preset", async () => {
+        let chooser = "";
+
+        await run({
+          fixture,
+          args: [],
+          scripts: ["Main.js"],
+          keepElmStuffJson: true,
+          env: {},
+          init: (node) => {
+            window.Elm?.["Main"]?.init({ node });
+          },
+          onIdle: async () => {
+            clickFirstErrorLocation();
+            chooser = getPanel();
+            clickUiButton("VS Code");
+            await waitFor(() => readChosenEditor() === "vscode");
+            return "Stop" as const;
+          },
+        });
+
+        expect(chooser).toMatchInlineSnapshot(`
+          elm-watch %VERSION%
+          [Hide errors]
+          [Close elm-watch]
+          🚨 Main Compilation error · 13:10:05
+          Compilation mode for Main
+          ◯ (disabled) Debug
+          ◉ Standard
+          ◯ Optimize
+          The Elm debugger isn't available at this point.
+          📝 Editor Not chosen
+          Open error locations in:
+          [VS Code]
+          [Cursor]
+          [Zed]
+          [IntelliJ IDEA]
+          [WebStorm]
+          [Rider]
+          Other editor (URL):
+          <input value="" placeholder="pycharm://open?file={file}&line={line}&column={column}">
+          [Use]
+          Placeholders: {file} {line} {column} {line0} {column0}
+          Or run a command, by setting an environment variable: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
+          # ~/.bashrc
+          export ELM_WATCH_OPEN_EDITOR='your command here'
+          [Cancel]
+          Drag emoji or press shift+arrows to move
+        `);
+        expect(openedUrls).toMatchInlineSnapshot(`
+          [
+            vscode://file/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31,
+          ]
+        `);
+      });
+
+      test("custom URL", async () => {
+        let error = "";
+
+        await run({
+          fixture,
+          args: [],
+          scripts: ["Main.js"],
+          keepElmStuffJson: true,
+          env: {},
+          init: (node) => {
+            window.Elm?.["Main"]?.init({ node });
+          },
+          onIdle: async () => {
+            clickFirstErrorLocation();
+            typeInUiInput("https://example.com/{file}");
+            submitUiForm();
+            error = grep(getPanel(), /URLs are not supported/);
+            typeInUiInput(
+              "myeditor://open?file={file}&line={line0}&column={column0}",
+            );
+            submitUiForm();
+            await waitFor(() => readChosenEditor() !== undefined);
+            return "Stop" as const;
+          },
+        });
+
+        expect(error).toMatchInlineSnapshot(
+          `https: URLs are not supported. Only URLs for opening apps, like myeditor://`,
+        );
+        expect(readChosenEditor()).toMatchInlineSnapshot(
+          `myeditor://open?file={file}&line={line0}&column={column0}`,
+        );
+        expect(openedUrls).toMatchInlineSnapshot(`
+          [
+            myeditor://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=9&column=30,
+          ]
+        `);
+      });
+
+      test("editor from stuff.json", async () => {
+        fixtureDir(fixture);
+        writeChosenEditor("webstorm");
+        let panel = "";
+
+        await run({
+          fixture,
+          args: [],
+          scripts: ["Main.js"],
+          keepElmStuffJson: true,
+          env: {},
+          init: (node) => {
+            window.Elm?.["Main"]?.init({ node });
+          },
+          onIdle: () => {
+            clickFirstErrorLocation();
+            expandUi();
+            panel = getPanel();
+            return "Stop" as const;
+          },
+        });
+
+        expect(openedUrls).toMatchInlineSnapshot(`
+          [
+            webstorm://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=10&column=31,
+          ]
+        `);
+        expect(grep(panel, /Editor|WebStorm|Change/)).toMatchInlineSnapshot(`
+          📝 Editor WebStorm
+          [Change]
+        `);
+      });
+
+      test("env var is ignored with elm-watch options", async () => {
+        let chooser = "";
+
+        await run({
+          fixture,
+          args: [],
+          scripts: ["Main.js"],
+          keepElmStuffJson: true,
+          env: {
+            [ELM_WATCH_OPEN_EDITOR]: "true",
+          },
+          useElmWatchFunction: true,
+          init: (node) => {
+            window.Elm?.["Main"]?.init({ node });
+          },
+          onIdle: () => {
+            clickFirstErrorLocation();
+            chooser = getPanel();
+            return "Stop" as const;
+          },
+        });
+
+        expect(grep(chooser, /Or /)).toMatchInlineSnapshot(
+          `Or use the openEditor option to run a command. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)`,
+        );
+      });
     });
 
     test("openEditor function throws", async () => {

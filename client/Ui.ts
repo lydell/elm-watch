@@ -1,6 +1,15 @@
 import * as Codec from "tiny-decoders";
 
 import {
+  EDITOR_PLACEHOLDERS,
+  EDITOR_PRESETS,
+  type Editor,
+  editorName,
+  editorUrl,
+  parseEditor,
+  validateEditorUrlTemplate,
+} from "../src/Editor.ts";
+import {
   type ErrorGroup,
   getErrorNumber,
   getOpenEditorLocation,
@@ -17,12 +26,23 @@ import type {
   CompilationMode,
   CompilationModeWithProxy,
 } from "../src/Types.ts";
-import type { ErrorLocation, OpenEditorError } from "./WebSocketMessages.ts";
+import type {
+  ErrorLocation,
+  OpenEditorError,
+  OpenEditorSetup,
+} from "./WebSocketMessages.ts";
 
 export type UiMsg =
   | {
       tag: "ChangedCompilationMode";
       compilationMode: CompilationMode;
+      sendKey: SendKey;
+    }
+  | {
+      tag: "ChoseEditor";
+      // A preset ID or URL template (see `Editor.ts`). `null` forgets the
+      // choice.
+      editor: string | null;
       sendKey: SendKey;
     }
   | {
@@ -35,6 +55,11 @@ export type UiMsg =
   | {
       tag: "PressedReconnectNow";
     };
+
+export type OpenEditorSetupWithHint = {
+  setup: OpenEditorSetup;
+  commandHint: string | null;
+};
 
 export type OverlayError = {
   title: string;
@@ -166,12 +191,32 @@ export type TargetSnapshot = {
   info: Info;
   // For actions that work in more statuses than the ones with a `sendKey`.
   sendKey: SendKey | undefined;
+  openEditor: OpenEditorSetupWithHint | undefined;
 };
 
 type OverlayErrorsEntry = {
   errors: Map<string, OverlayError>;
   sendKey: SendKey | undefined;
   dispatch: (msg: UiMsg) => void;
+};
+
+type EditorChooser = {
+  // The error location to open once an editor has been chosen.
+  location: LocationToOpen | undefined;
+  // Kept here, since the panel is re-created on every render.
+  customTemplate: string;
+  customError: string | undefined;
+};
+
+type EditorSection = {
+  current: Editor | undefined;
+  commandHint: string | null;
+  chooser: EditorChooser | undefined;
+  onChange: () => void;
+  onChoose: (editor: string) => void;
+  onCustomInput: (value: string) => void;
+  onCustomSubmit: () => void;
+  onCancel: () => void;
 };
 
 type TargetEntry = {
@@ -358,6 +403,8 @@ export function createUi(): Ui {
   // position when it is still the same.
   let overlayRenderedKey: string | undefined = undefined;
   let panelOpen = false;
+  // Set while choosing an editor for opening error locations in.
+  let editorChooser: EditorChooser | undefined = undefined;
   // For taking screenshots, for example. Not saved: The emoji is back after
   // reloading the page. It is also back on errors, so that you don’t miss them.
   let hiddenUntilReloadOrError = false;
@@ -393,6 +440,13 @@ export function createUi(): Ui {
 
   const hasErrors = (): boolean =>
     getAllOverlayErrors().some(({ errors }) => errors.size > 0);
+
+  const hasErrorsWithLocation = (): boolean =>
+    getAllOverlayErrors().some(({ errors }) =>
+      Array.from(errors.values()).some(
+        (error) => getOpenEditorLocation(error.location) !== undefined,
+      ),
+    );
 
   const renderOverlay = (): void => {
     const group = getErrorGroup();
@@ -431,6 +485,9 @@ export function createUi(): Ui {
         showAll: overlayShowAll,
         expanded: overlayExpanded,
         onKey: handleOverlayKey,
+        onOpenEditor: (item, location) => {
+          openEditorForItem(item, location);
+        },
       }),
     );
 
@@ -482,9 +539,9 @@ export function createUi(): Ui {
           return;
         }
         const item = getSelectedError(overlaySelection, [getErrorGroup()]);
-        const msg = getOverlayOpenEditorMsg(item);
-        if (item !== undefined && msg !== undefined) {
-          item.dispatch(msg);
+        const location = getOverlayOpenEditorLocation(item);
+        if (item !== undefined && location !== undefined) {
+          openEditorForItem(item, location);
         }
         return;
       }
@@ -507,6 +564,164 @@ export function createUi(): Ui {
     entries
       .find((entry) => entry.targetName === targetName)
       ?.callbacks?.onUiMsg(msg);
+  };
+
+  // All targets get the same from the server. To choose an editor, we need a
+  // target that is connected.
+  const getOpenEditor = ():
+    | {
+        openEditor: OpenEditorSetupWithHint;
+        connectedTarget: { targetName: string; sendKey: SendKey } | undefined;
+      }
+    | undefined => {
+    const snapshots = getSnapshots();
+    const openEditor = snapshots.find(
+      (snapshot) => snapshot.openEditor !== undefined,
+    )?.openEditor;
+    if (openEditor === undefined) {
+      return undefined;
+    }
+    const connected = snapshots.find(
+      (snapshot) =>
+        snapshot.openEditor !== undefined && snapshot.sendKey !== undefined,
+    );
+    return {
+      openEditor,
+      connectedTarget:
+        connected?.sendKey === undefined
+          ? undefined
+          : {
+              targetName: connected.info.targetName,
+              sendKey: connected.sendKey,
+            },
+    };
+  };
+
+  // Opening the URL in the click (or keydown) handler counts as a user
+  // action, which browsers require for opening other apps.
+  const openUrl = (url: string): void => {
+    const link = h(HTMLAnchorElement, { href: url });
+    root.append(link);
+    link.click();
+    link.remove();
+  };
+
+  const openEditorForItem = (
+    item: OverlayErrorItem,
+    location: LocationToOpen,
+  ): void => {
+    const setup = getOpenEditor()?.openEditor.setup;
+    switch (setup?.tag) {
+      case "Url": {
+        const editor = parseEditor(setup.editor);
+        if (editor !== undefined) {
+          openUrl(editorUrl(editor, location));
+        }
+        return;
+      }
+
+      case "NotSet":
+        openEditorChooser(location);
+        return;
+
+      case "Server":
+      case undefined:
+        if (item.sendKey !== undefined) {
+          item.dispatch({
+            tag: "PressedOpenEditor",
+            file: location.file,
+            line: location.line,
+            column: location.column,
+            sendKey: item.sendKey,
+          });
+        }
+        return;
+    }
+  };
+
+  const openEditorChooser = (location: LocationToOpen | undefined): void => {
+    const setup = getOpenEditor()?.openEditor.setup;
+    const current =
+      setup?.tag === "Url" ? parseEditor(setup.editor) : undefined;
+    editorChooser = {
+      location,
+      customTemplate: current?.tag === "Custom" ? current.template : "",
+      customError: undefined,
+    };
+    panelOpen = true;
+    render();
+    const selector =
+      current === undefined
+        ? `[${DATA_FOCUS_KEY}^="editor:"]`
+        : `[${DATA_FOCUS_KEY}][aria-pressed="true"]`;
+    const element = panel.querySelector(selector);
+    if (element instanceof HTMLElement) {
+      element.focus({ preventScroll: true });
+    }
+  };
+
+  const chooseEditor = (editorString: string): void => {
+    const connectedTarget = getOpenEditor()?.connectedTarget;
+    const editor = parseEditor(editorString);
+    if (connectedTarget === undefined || editor === undefined) {
+      return;
+    }
+    const location = editorChooser?.location;
+    editorChooser = undefined;
+    if (location !== undefined) {
+      openUrl(editorUrl(editor, location));
+      // Get the panel out of the way of the errors.
+      panelOpen = false;
+    }
+    dispatchToTarget(connectedTarget.targetName, {
+      tag: "ChoseEditor",
+      editor: editorString,
+      sendKey: connectedTarget.sendKey,
+    });
+    render();
+  };
+
+  const getEditorSection = (): EditorSection | undefined => {
+    const result = getOpenEditor();
+    if (
+      result?.connectedTarget === undefined ||
+      result.openEditor.setup.tag === "Server" ||
+      (editorChooser === undefined && !hasErrorsWithLocation())
+    ) {
+      return undefined;
+    }
+    const { setup, commandHint } = result.openEditor;
+    return {
+      current: setup.tag === "Url" ? parseEditor(setup.editor) : undefined,
+      commandHint,
+      chooser: editorChooser,
+      onChange: () => {
+        openEditorChooser(undefined);
+      },
+      onChoose: chooseEditor,
+      onCustomInput: (value) => {
+        if (editorChooser !== undefined) {
+          editorChooser.customTemplate = value;
+        }
+      },
+      onCustomSubmit: () => {
+        if (editorChooser === undefined) {
+          return;
+        }
+        const template = editorChooser.customTemplate.trim();
+        const error = validateEditorUrlTemplate(template);
+        if (error === undefined) {
+          chooseEditor(template);
+        } else {
+          editorChooser.customError = error;
+          render();
+        }
+      },
+      onCancel: () => {
+        editorChooser = undefined;
+        render();
+      },
+    };
   };
 
   const render = (): void => {
@@ -568,6 +783,7 @@ export function createUi(): Ui {
         panel.hidePopover();
       }
       panel.replaceChildren();
+      editorChooser = undefined;
     }
   };
 
@@ -623,6 +839,7 @@ export function createUi(): Ui {
             },
         onClose: closePanel,
         dispatch: dispatchToTarget,
+        editor: getEditorSection(),
       }),
     );
 
@@ -969,6 +1186,9 @@ export function createUi(): Ui {
     const key = overlayKeyFromEvent(event);
     if (
       key === undefined ||
+      // Let the user type in text fields.
+      (shadowRoot.activeElement instanceof HTMLInputElement &&
+        shadowRoot.activeElement.type === "text") ||
       (key === "ToggleExpanded" && !canToggleExpanded()) ||
       // Let Enter and Space press the focused button.
       ((event.key === "Enter" || event.key === " ") &&
@@ -1391,6 +1611,9 @@ const CLASS = {
   iconButton: "iconButton",
   details: "details",
   dialog: "dialog",
+  editor: "editor",
+  editorCustom: "editorCustom",
+  editorPresets: "editorPresets",
   envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
@@ -1670,6 +1893,7 @@ supported by browsers, for browsers without popover support.
   --subtle: color-mix(in srgb, CanvasText 6%, Canvas);
   --hover: color-mix(in srgb, CanvasText 11%, Canvas);
   --focus: light-dark(#0b57d0, #a8c7fa);
+  --error: light-dark(#c5221f, #f28b82);
   --edge-top: max(env(safe-area-inset-top), var(--gap));
   --edge-bottom: max(env(safe-area-inset-bottom), var(--gap));
   --edge-left: max(env(safe-area-inset-left), var(--gap));
@@ -2078,6 +2302,54 @@ focus might be inside the panel and must not be lost.
   gap: 6px;
 }
 
+.${CLASS.editor} {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.${CLASS.editor} p {
+  margin: 0;
+}
+
+.${CLASS.editorPresets} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.${CLASS.editorPresets} [aria-pressed="true"],
+.${CLASS.editorCustom} [aria-pressed="true"] {
+  outline: 1px solid var(--border-strong);
+  font-weight: 600;
+}
+
+.${CLASS.editorCustom} {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+}
+
+.${CLASS.editorCustom} label {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.${CLASS.editorCustom} input {
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background-color: Canvas;
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  font-size: 12px;
+}
+
+.${CLASS.editorCustom} input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
 .${CLASS.footer} {
   margin: 0;
   padding: 8px 12px;
@@ -2278,6 +2550,7 @@ function viewPanel({
   onHide,
   onClose,
   dispatch,
+  editor,
 }: {
   snapshots: Array<TargetSnapshot>;
   externalErrors: Array<ExternalErrorsSource>;
@@ -2287,6 +2560,7 @@ function viewPanel({
   onHide: (() => void) | undefined;
   onClose: () => void;
   dispatch: (targetName: string, msg: UiMsg) => void;
+  editor: EditorSection | undefined;
 }): Array<HTMLElement> {
   const version = snapshots[0]?.info.version ?? "";
   const isTouch =
@@ -2361,6 +2635,7 @@ function viewPanel({
         ),
       ),
     ),
+    ...(editor === undefined ? [] : [viewEditorSection(editor)]),
     h(
       HTMLParagraphElement,
       { className: CLASS.footer },
@@ -2369,6 +2644,171 @@ function viewPanel({
         : "Drag emoji or press shift+arrows to move",
     ),
   ];
+}
+
+// Choosing which editor to open error locations in. Shown when there are
+// errors, unless the server opens the editor (`ELM_WATCH_OPEN_EDITOR` or the
+// `openEditor` option).
+function viewEditorSection({
+  current,
+  commandHint,
+  chooser,
+  onChange,
+  onChoose,
+  onCustomInput,
+  onCustomSubmit,
+  onCancel,
+}: EditorSection): HTMLElement {
+  return h(
+    HTMLDivElement,
+    {
+      className: CLASS.editor,
+      attrs: { role: "group", "aria-label": "Editor" },
+    },
+    h(
+      HTMLDivElement,
+      { className: CLASS.row },
+      h(
+        HTMLSpanElement,
+        { className: CLASS.rowIcon, attrs: { "aria-hidden": "true" } },
+        "📝",
+      ),
+      h(
+        HTMLSpanElement,
+        { className: CLASS.rowText },
+        h(HTMLSpanElement, { className: CLASS.targetName }, "Editor"),
+        h(
+          HTMLSpanElement,
+          { className: CLASS.statusLine },
+          current === undefined ? "Not chosen" : editorName(current),
+        ),
+      ),
+      chooser === undefined
+        ? h(
+            HTMLButtonElement,
+            {
+              className: CLASS.button,
+              attrs: { [DATA_FOCUS_KEY]: "editorChange" },
+              onclick: onChange,
+            },
+            current === undefined ? "Choose" : "Change",
+          )
+        : undefined,
+    ),
+    chooser === undefined
+      ? undefined
+      : h(
+          HTMLDivElement,
+          { className: CLASS.details },
+          h(HTMLParagraphElement, {}, "Open error locations in:"),
+          h(
+            HTMLDivElement,
+            { className: CLASS.editorPresets },
+            ...EDITOR_PRESETS.map((preset) =>
+              h(
+                HTMLButtonElement,
+                {
+                  className: CLASS.button,
+                  attrs: {
+                    [DATA_FOCUS_KEY]: `editor:${preset.id}`,
+                    "aria-pressed": (
+                      current?.tag === "Preset" &&
+                      current.preset.id === preset.id
+                    ).toString(),
+                  },
+                  onclick: () => {
+                    onChoose(preset.id);
+                  },
+                },
+                preset.name,
+              ),
+            ),
+          ),
+          h(
+            HTMLFormElement,
+            {
+              className: CLASS.editorCustom,
+              onsubmit: (event: SubmitEvent) => {
+                event.preventDefault();
+                onCustomSubmit();
+              },
+            },
+            h(
+              HTMLLabelElement,
+              {},
+              "Other editor (URL):",
+              h(HTMLInputElement, {
+                type: "text",
+                value: chooser.customTemplate,
+                placeholder:
+                  "pycharm://open?file={file}&line={line}&column={column}",
+                spellcheck: false,
+                attrs: {
+                  [DATA_FOCUS_KEY]: "editorCustom",
+                  "aria-invalid": (
+                    chooser.customError !== undefined
+                  ).toString(),
+                },
+                oninput: (event: Event) => {
+                  if (event.currentTarget instanceof HTMLInputElement) {
+                    onCustomInput(event.currentTarget.value);
+                  }
+                },
+              }),
+            ),
+            h(
+              HTMLButtonElement,
+              {
+                className: CLASS.button,
+                type: "submit",
+                attrs: {
+                  [DATA_FOCUS_KEY]: "editorCustomSubmit",
+                  "aria-pressed": (current?.tag === "Custom").toString(),
+                },
+              },
+              "Use",
+            ),
+          ),
+          chooser.customError === undefined
+            ? undefined
+            : h(
+                HTMLParagraphElement,
+                { attrs: { role: "alert" } },
+                chooser.customError,
+              ),
+          h(
+            HTMLParagraphElement,
+            { className: CLASS.note },
+            `Placeholders: ${EDITOR_PLACEHOLDERS.join(" ")}`,
+          ),
+          h(
+            HTMLParagraphElement,
+            {},
+            commandHint === null
+              ? "Or use the openEditor option to run a command. "
+              : "Or run a command, by setting an environment variable: ",
+            h(
+              HTMLAnchorElement,
+              {
+                href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
+                target: "_blank",
+                rel: "noreferrer",
+              },
+              "Clickable error locations",
+            ),
+          ),
+          commandHint === null ? undefined : h(HTMLPreElement, {}, commandHint),
+          h(
+            HTMLButtonElement,
+            {
+              className: CLASS.button,
+              attrs: { [DATA_FOCUS_KEY]: "editorCancel" },
+              onclick: onCancel,
+            },
+            "Cancel",
+          ),
+        ),
+  );
 }
 
 // Like a target, but with only the number of errors.
@@ -2783,13 +3223,19 @@ function overlayKeyFromEvent(event: KeyboardEvent): OverlayKey | undefined {
   }
 }
 
-function getOverlayOpenEditorMsg(
+type LocationToOpen = {
+  file: AbsolutePath;
+  line: number;
+  column: number;
+};
+
+// Only while connected, like the other actions.
+function getOverlayOpenEditorLocation(
   item: OverlayErrorItem | undefined,
-): UiMsg | undefined {
-  const location = getOpenEditorLocation(item?.location);
-  return item?.sendKey === undefined || location === undefined
+): LocationToOpen | undefined {
+  return item?.sendKey === undefined
     ? undefined
-    : { tag: "PressedOpenEditor", ...location, sendKey: item.sendKey };
+    : getOpenEditorLocation(item.location);
 }
 
 // For screen readers: Which error is shown, or how many errors there are when
@@ -2816,12 +3262,14 @@ function viewOverlay({
   showAll,
   expanded,
   onKey,
+  onOpenEditor,
 }: {
   group: ErrorGroup<OverlayErrorItem>;
   selection: Selection | undefined;
   showAll: boolean;
   expanded: boolean;
   onKey: (key: OverlayKey) => void;
+  onOpenEditor: (item: OverlayErrorItem, location: LocationToOpen) => void;
 }): Array<HTMLElement> {
   if (group.numErrors === 0) {
     return [];
@@ -2830,7 +3278,7 @@ function viewOverlay({
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
     return [
-      ...items.map((item) => viewOverlayError(item, true, onKey)),
+      ...items.map((item) => viewOverlayError(item, true, onKey, onOpenEditor)),
       viewOverlayFooter(
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
         [
@@ -2859,7 +3307,7 @@ function viewOverlay({
     .join("   ");
 
   return [
-    viewOverlayError(item, expanded, onKey),
+    viewOverlayError(item, expanded, onKey, onOpenEditor),
     viewOverlayFooter(
       `🚨 ${position}`,
       [
@@ -2882,7 +3330,7 @@ function viewOverlay({
           ],
           "file",
         ],
-        getOverlayOpenEditorMsg(item) === undefined
+        getOverlayOpenEditorLocation(item) === undefined
           ? undefined
           : [
               [["enter", "OpenEditor", true, "Open in editor"]],
@@ -2912,6 +3360,7 @@ function viewOverlayError(
   item: OverlayErrorItem,
   expanded: boolean,
   onKey: (key: OverlayKey) => void,
+  onOpenEditor: (item: OverlayErrorItem, location: LocationToOpen) => void,
 ): HTMLElement {
   const { error } = item;
   return h(
@@ -2941,7 +3390,13 @@ function viewOverlayError(
         : h(
             HTMLParagraphElement,
             {},
-            viewErrorLocation(item.dispatch, item.sendKey, error.location),
+            viewErrorLocation(
+              item.sendKey !== undefined,
+              error.location,
+              (location) => {
+                onOpenEditor(item, location);
+              },
+            ),
           ),
     ),
     h(HTMLPreElement, {
@@ -3024,29 +3479,25 @@ function viewOverlayFooter(
 }
 
 function viewErrorLocation(
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey | undefined,
+  clickable: boolean,
   location: ErrorLocation,
+  onOpenEditor: (location: LocationToOpen) => void,
 ): HTMLElement | string {
   switch (location.tag) {
     case "FileOnly":
       return viewErrorLocationButton(
-        dispatch,
-        sendKey,
-        {
-          file: location.file,
-          line: 1,
-          column: 1,
-        },
+        clickable,
+        { file: location.file, line: 1, column: 1 },
         location.file,
+        onOpenEditor,
       );
 
     case "FileWithLineAndColumn": {
       return viewErrorLocationButton(
-        dispatch,
-        sendKey,
+        clickable,
         location,
         `${location.file}:${location.line}:${location.column}`,
+        onOpenEditor,
       );
     }
 
@@ -3056,31 +3507,25 @@ function viewErrorLocation(
 }
 
 function viewErrorLocationButton(
-  dispatch: (msg: UiMsg) => void,
-  sendKey: SendKey | undefined,
-  location: {
-    file: AbsolutePath;
-    line: number;
-    column: number;
-  },
+  clickable: boolean,
+  location: LocationToOpen,
   text: string,
+  onOpenEditor: (location: LocationToOpen) => void,
 ): HTMLButtonElement | string {
-  return sendKey === undefined
-    ? text
-    : h(
+  return clickable
+    ? h(
         HTMLButtonElement,
         {
           className: CLASS.errorLocationButton,
           onclick: () => {
-            dispatch({
-              tag: "PressedOpenEditor",
+            onOpenEditor({
               file: location.file,
               line: location.line,
               column: location.column,
-              sendKey,
             });
           },
         },
         text,
-      );
+      )
+    : text;
 }
