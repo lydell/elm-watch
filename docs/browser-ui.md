@@ -106,10 +106,10 @@ Here’s how to set it in different shells:
 
 | Shell | Config file | Code |
 | --- | --- | --- |
-| bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
-| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='your command here'` |
-| fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your command here'` |
-| Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `your command here` |
+| bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'` |
+| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'` |
+| fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your-editor "$file:$line:$column"'` |
+| Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `your-editor "%file%:%line%:%column%"` |
 
 (Feel free to do it in a different way if you have a preference. Try [direnv] if you want different editors in different projects.)
 
@@ -163,7 +163,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 
 If you use the [JavaScript API](../javascript-api/), [choosing your editor in the browser](#choose-your-editor-in-the-browser) works just the same. But the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. To run a command, pass the `openEditor` option instead. It can be either:
 
-- `shellCommand("your command here")`: Runs the command exactly like `ELM_WATCH_OPEN_EDITOR` does (see above), with `root` as the CWD.
+- `shellCommand('your-editor "$file:$line:$column"')`: Runs the command exactly like `ELM_WATCH_OPEN_EDITOR` does (see above), with `root` as the CWD.
 - A function, which is called with `{ file, line, column }` (same as the environment variables above, but `line` and `column` are numbers). If it throws (or returns a promise that rejects), the error is shown in the browser. Use this if you need to do something special, like translating file paths.
 
 Since people use different editors, it’s a good idea to let each developer choose their own command. Here’s how to keep supporting the `ELM_WATCH_OPEN_EDITOR` environment variable, so that it works just like with the elm-watch CLI:

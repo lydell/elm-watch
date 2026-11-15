@@ -335,14 +335,14 @@ describe("hot error view", () => {
       screen
         .slice(screen.indexOf("Opening errors"))
         .replace(
-          "# System Settings > Environment Variables\nELM_WATCH_OPEN_EDITOR=your command here",
-          "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='your command here'",
+          '# System Settings > Environment Variables\nELM_WATCH_OPEN_EDITOR=your-editor "%file%:%line%:%column%"',
+          `# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'`,
         ),
     ).toMatchInlineSnapshot(`
       Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
 
       # ~/.bashrc
-      export ELM_WATCH_OPEN_EDITOR='your command here'
+      export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 

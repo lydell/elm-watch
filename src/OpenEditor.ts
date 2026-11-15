@@ -96,17 +96,17 @@ function getCommandHint(env: Env, project: Project): string | null {
     return null;
   }
   if (IS_WINDOWS) {
-    return `# System Settings > Environment Variables\n${ELM_WATCH_OPEN_EDITOR}=your command here`;
+    return `# System Settings > Environment Variables\n${ELM_WATCH_OPEN_EDITOR}=your-editor "%file%:%line%:%column%"`;
   }
   const shell = path.basename(env["SHELL"] ?? "");
   switch (shell) {
     case "fish":
-      return `# Run once:\nset -Ux ${ELM_WATCH_OPEN_EDITOR} 'your command here'`;
+      return `# Run once:\nset -Ux ${ELM_WATCH_OPEN_EDITOR} 'your-editor "$file:$line:$column"'`;
     case "bash":
     case "zsh":
-      return `# ~/.${shell}rc\nexport ${ELM_WATCH_OPEN_EDITOR}='your command here'`;
+      return `# ~/.${shell}rc\nexport ${ELM_WATCH_OPEN_EDITOR}='your-editor "$file:$line:$column"'`;
     default:
-      return `# Your shell’s config file\nexport ${ELM_WATCH_OPEN_EDITOR}='your command here'`;
+      return `# Your shell’s config file\nexport ${ELM_WATCH_OPEN_EDITOR}='your-editor "$file:$line:$column"'`;
   }
 }
 

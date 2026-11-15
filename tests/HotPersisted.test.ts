@@ -373,7 +373,7 @@ describe("hot", () => {
           [pycharm://open?file={file}&line={line}&column={column0}] Placeholders: {file} {line} {column} {line0} {column0}
           Or run a command, by setting an environment variable. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
           # ~/.bashrc
-          export ELM_WATCH_OPEN_EDITOR='your command here'
+          export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
           </chooser>
           --------------------------------------------------------------------------------
           <footer>🚨 error 1/1 | [esc] cancel</footer>
