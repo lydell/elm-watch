@@ -304,6 +304,8 @@ export async function run({
     const loadBuiltFiles = (): void => {
       loads++;
 
+      // Like a real page reload: Start over with no elm-watch UI.
+      document.getElementById(CONTAINER_ID)?.remove();
       delete (window as unknown as Record<string, unknown>)["Elm"];
       (window as unknown as Record<string, unknown>)["__ELM_WATCH"] = {};
       setBasicElmWatchProperties();

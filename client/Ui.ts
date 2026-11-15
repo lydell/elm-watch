@@ -204,9 +204,6 @@ const MOVE_ANIMATION_MAX_OVERSHOOT = 4;
 const KEYBOARD_STEP = 0.25;
 
 export function createUi(): Ui {
-  // Remove leftovers, in case the previous UI was not cleaned up.
-  document.getElementById(CONTAINER_ID)?.remove();
-
   const container = h(
     typeof HTMLDialogElement === "function"
       ? HTMLDialogElement
