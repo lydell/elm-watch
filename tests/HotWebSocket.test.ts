@@ -372,10 +372,23 @@ describe("hot", () => {
                   )._socket.write(Buffer.from([0x8f, 0x80, 0, 0, 0, 0]));
                 }),
               );
-              // Larger than `maxPayload`.
+              // Larger than `maxPayload`. Only the frame header is sent: The
+              // server rejects the frame based on the length in the header.
+              // Actually sending 1 MB makes the server close the connection
+              // with unread data, which resets it (ECONNRESET) instead of a
+              // clean close, depending on timing.
               closeCodes.push(
                 await sendBadData(webSocketUrl, (webSocket) => {
-                  webSocket.send("a".repeat(1024 * 1024 + 1));
+                  const header = Buffer.from([
+                    // FIN + text frame, masked + 64-bit length.
+                    0x81, 0xff, 0, 0, 0, 0, 0, 0, 0, 0,
+                    // Masking key.
+                    0, 0, 0, 0,
+                  ]);
+                  header.writeUInt32BE(1024 * 1024 + 1, 6);
+                  (
+                    webSocket as unknown as { _socket: NodeJS.WritableStream }
+                  )._socket.write(header);
                 }),
               );
               return "KeepGoing" as const;
