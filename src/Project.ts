@@ -37,6 +37,7 @@ import type {
   PostprocessError,
   PostprocessToRun,
 } from "./Postprocess.ts";
+import { isShellCommand } from "./ShellCommand.ts";
 import type { RunElmMakeError } from "./SpawnElm.ts";
 import {
   type AbsolutePath,
@@ -87,9 +88,12 @@ export type Project = {
 
 export type OpenEditor =
   | { tag: "NotSet" }
-  // From the ELM_WATCH_OPEN_EDITOR environment variable (elm-watch.json only).
-  | { tag: "Command"; command: string }
+  | { tag: "Command"; command: string; source: OpenEditorCommandSource }
   | { tag: "Function"; openEditor: OpenEditorFunction };
+
+// The `ELM_WATCH_OPEN_EDITOR` environment variable (elm-watch.json only), or
+// `shellCommand()` (JavaScript API).
+export type OpenEditorCommandSource = "Env" | "ShellCommand";
 
 // The code base leans towards pure functions, but these data structures are
 // going to be mutated a lot.
@@ -611,11 +615,17 @@ export function initProject({
     ? env[ELM_WATCH_OPEN_EDITOR]
     : undefined;
   const openEditor: OpenEditor =
-    config.openEditor !== undefined
-      ? { tag: "Function", openEditor: config.openEditor }
-      : openEditorCommand !== undefined
-        ? { tag: "Command", command: openEditorCommand }
-        : { tag: "NotSet" };
+    config.openEditor === undefined
+      ? openEditorCommand === undefined
+        ? { tag: "NotSet" }
+        : { tag: "Command", command: openEditorCommand, source: "Env" }
+      : isShellCommand(config.openEditor)
+        ? {
+            tag: "Command",
+            command: config.openEditor.command,
+            source: "ShellCommand",
+          }
+        : { tag: "Function", openEditor: config.openEditor };
 
   const webSocketUrl =
     (isElmWatchJson ? getWebSocketUrlFromEnv(env) : undefined) ??

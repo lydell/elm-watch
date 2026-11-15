@@ -11,6 +11,7 @@ import {
 } from "./Helpers.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
+  type OpenEditorCommandSource,
   type Project,
   projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project.ts";
@@ -46,7 +47,7 @@ export function openEditor(
           env,
           project,
           location,
-          projectOpenEditor.command,
+          projectOpenEditor,
           onError,
         );
         return;
@@ -73,7 +74,7 @@ function openEditorWithCommand(
   env: Env,
   project: Project,
   location: OpenEditorLocation,
-  command: string,
+  { command, source }: { command: string; source: OpenEditorCommandSource },
   onError: (error: OpenEditorError) => void,
 ): void {
   const cwd = project.root;
@@ -105,6 +106,7 @@ function openEditorWithCommand(
           message: Errors.openEditorCommandFailed({
             error,
             command,
+            source,
             cwd,
             timeout: timedOut ? timeout : undefined,
             env: extraEnv,

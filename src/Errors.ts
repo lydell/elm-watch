@@ -34,6 +34,7 @@ import {
 } from "./NonEmptyArray.ts";
 import { absolutePathFromString } from "./PathHelpers.ts";
 import type { Port } from "./Port.ts";
+import type { OpenEditorCommandSource } from "./Project.ts";
 import type { Command, ExitReason } from "./Spawn.ts";
 import { DEFAULT_COLUMNS } from "./Terminal.ts";
 import * as Theme from "./Theme.ts";
@@ -1583,6 +1584,7 @@ However, no target imports that file. For security reasons, I never executed any
 export function openEditorCommandFailed({
   error,
   command,
+  source,
   cwd,
   timeout,
   env,
@@ -1591,6 +1593,7 @@ export function openEditorCommandFailed({
 }: {
   error: ExecException;
   command: string;
+  source: OpenEditorCommandSource;
   cwd: AbsolutePath;
   // Set if the command timed out.
   timeout: number | undefined;
@@ -1605,7 +1608,11 @@ export function openEditorCommandFailed({
         ? `The command exited with code ${error.code}.`
         : "The command failed for an unknown reason.";
   return `
-I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):
+I ran your command for opening an editor (${
+    source === "Env"
+      ? `set via the ${ELM_WATCH_OPEN_EDITOR} environment variable`
+      : "set via shellCommand() in the openEditor option"
+  }):
 
 ${commandToPresentationName(["cd", cwd])}
 ${command}

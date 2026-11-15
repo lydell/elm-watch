@@ -133,40 +133,23 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 
 ### With the JavaScript API
 
-If you use the [JavaScript API](../javascript-api/), the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. Instead, you pass an `openEditor` function, which is called with `{ file, line, column }` (same as the environment variables above, but `line` and `column` are numbers). If it throws (or returns a promise that rejects), the error is shown in the browser.
+If you use the [JavaScript API](../javascript-api/), the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. Instead, you pass the `openEditor` option. It can be either:
+
+- `shellCommand("your command here")`: Runs the command exactly like `ELM_WATCH_OPEN_EDITOR` does (see above), with `root` as the CWD.
+- A function, which is called with `{ file, line, column }` (same as the environment variables above, but `line` and `column` are numbers). If it throws (or returns a promise that rejects), the error is shown in the browser. Use this if you need to do something special, like translating file paths.
 
 Since people use different editors, it’s a good idea to let each developer choose their own command. Here’s how to keep supporting the `ELM_WATCH_OPEN_EDITOR` environment variable, so that it works just like with the elm-watch CLI:
 
 ```js
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
-import { elmWatch } from "elm-watch";
+import { elmWatch, shellCommand } from "elm-watch";
 
 process.exitCode = await elmWatch({
   // ...
-  openEditor: openEditorFromEnv(),
+  openEditor:
+    process.env.ELM_WATCH_OPEN_EDITOR === undefined
+      ? undefined
+      : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
 });
-
-/** @returns {import("elm-watch").OpenEditor | undefined} */
-function openEditorFromEnv() {
-  const command = process.env.ELM_WATCH_OPEN_EDITOR;
-  if (command === undefined) {
-    return undefined;
-  }
-  const execAsync = promisify(exec);
-  return async ({ file, line, column }) => {
-    await execAsync(command, {
-      cwd: import.meta.dirname,
-      env: {
-        ...process.env,
-        file,
-        line: line.toString(),
-        column: column.toString(),
-      },
-      timeout: 5000,
-    });
-  };
-}
 ```
 
 `elm-watch init --javascript` and `elm-watch init --typescript` generate that code for you.

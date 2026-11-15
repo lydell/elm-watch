@@ -12,6 +12,7 @@ import {
   NO_COLOR,
 } from "../src/Env.ts";
 import { IS_WINDOWS } from "../src/IsWindows.ts";
+import { shellCommand } from "../src/ShellCommand.ts";
 import { markAsAbsolutePath } from "../src/Types.ts";
 import {
   clean,
@@ -612,6 +613,19 @@ describe("hot", () => {
       `);
     });
 
+    test("shellCommand exit 1", async () => {
+      const renders = await runFailClickErrorLocation({
+        env: {},
+        useElmWatchFunction: {
+          openEditor: shellCommand(`node -e "process.exit(1)"`),
+        },
+      });
+      expect(grep(renders, /set via|exited/)).toMatchInlineSnapshot(`
+        I ran your command for opening an editor (set via shellCommand() in the openEditor option):
+        The command exited with code 1.
+      `);
+    });
+
     test("successful execution", async () => {
       const outputFile = path.join(
         fixtureDir(fixture),
@@ -652,6 +666,43 @@ describe("hot", () => {
         `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31`,
       );
     });
+  });
+
+  test("openEditor shellCommand", async () => {
+    const fixture = "persisted-open-error-overlay";
+    const outputFile = path.join(
+      fixtureDir(fixture),
+      "click-error-location-shell-command.txt",
+    );
+    rm(outputFile);
+
+    const arg = IS_WINDOWS
+      ? `"%file%:%line0%:%column0%"`
+      : `"$file:$line0:$column0"`;
+
+    await run({
+      fixture,
+      args: [],
+      scripts: ["Main.js"],
+      keepElmStuffJson: true,
+      useElmWatchFunction: {
+        openEditor: shellCommand(
+          `node -e "require('fs').writeFileSync('click-error-location-shell-command.txt', process.argv[1])" ${arg}`,
+        ),
+      },
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: async () => {
+        clickFirstErrorLocation();
+        await waitFor(() => fs.existsSync(outputFile));
+        return "Stop" as const;
+      },
+    });
+
+    expect(clean(fs.readFileSync(outputFile, "utf-8"))).toMatchInlineSnapshot(
+      `/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:9:30`,
+    );
   });
 
   test("openEditor function", async () => {

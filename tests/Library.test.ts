@@ -4,7 +4,7 @@ import * as path from "path";
 import { describe, expect, test } from "vitest";
 
 import type { HotTestHooks } from "../src/Hot.ts";
-import { createErrorReporter, elmWatch } from "../src/index.ts";
+import { createErrorReporter, elmWatch, shellCommand } from "../src/index.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
@@ -514,6 +514,31 @@ describe("library", () => {
         ]
         Or expected: undefined
       `);
+    });
+
+    test("openEditor is a string", async () => {
+      const { stdout } = await run(1, (root) => ({
+        root,
+        runMode: "make",
+        targets: [target],
+        openEditor: 'code --goto "$file:$line:$column"',
+      }));
+      expect(stdout).toMatchInlineSnapshot(`
+        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+
+        I got invalid options passed to ⧙elmWatch()⧘:
+
+        At root["openEditor"]:
+        Expected a function or \`shellCommand()\`
+        Got: "code --goto \\"$file:$line:$column\\""
+        Or expected: undefined
+      `);
+    });
+
+    test("shellCommand with an empty string", () => {
+      expect(() => shellCommand(" ")).toThrowErrorMatchingInlineSnapshot(
+        `[TypeError: shellCommand: Expected a non-empty string, but got: " "]`,
+      );
     });
   });
 

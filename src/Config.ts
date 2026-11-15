@@ -3,6 +3,7 @@ import type { ErrorReporter } from "./ExternalErrors.ts";
 import type { Host } from "./Host.ts";
 import type { NonEmptyArray } from "./NonEmptyArray.ts";
 import type { Port } from "./Port.ts";
+import type { ShellCommand } from "./ShellCommand.ts";
 import type {
   Cwd,
   AbsolutePath,
@@ -24,7 +25,7 @@ export type Config = {
   webSocketUrl: WebSocketUrl | undefined;
   staticFilesDir: string | undefined;
   allowedHosts: Array<AllowedHost>;
-  openEditor: OpenEditorFunction | undefined;
+  openEditor: OpenEditorFunction | ShellCommand | undefined;
   errorReporter: ErrorReporter | undefined;
 };
 

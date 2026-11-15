@@ -53,6 +53,11 @@ export type OpenEditor = (location: {
   column: number;
 }) => void | Promise<void>;
 
+// Created by `shellCommand()`.
+export type ShellCommand = {
+  readonly command: string;
+};
+
 export type Target = ApplicationTarget | PackageTarget;
 
 // Compiles Elm files with `main` to JavaScript.
@@ -129,7 +134,7 @@ export type Options = {
   createServer?: CreateServer | undefined;
 
   // Called when you click an error location in the browser UI.
-  openEditor?: OpenEditor | undefined;
+  openEditor?: OpenEditor | ShellCommand | undefined;
 
   // Errors from other tools, shown like Elm’s errors. See `createErrorReporter`.
   errors?: ErrorReporter | undefined;
@@ -154,6 +159,13 @@ export declare function elmWatch(options: Options): Promise<number>;
 // terminal, so other tools can’t print there. Pass the reporter as the `errors`
 // option. It can be used both before and while elm-watch runs.
 export declare function createErrorReporter(): ErrorReporter;
+
+// For the `openEditor` option: Runs `command` in a shell (`cmd.exe` on
+// Windows, `sh` otherwise) in `root`, just like the `ELM_WATCH_OPEN_EDITOR`
+// environment variable for the elm-watch command. The location is passed via
+// the `file`, `line`, `column`, `line0` and `column0` environment variables.
+// For example: shellCommand('code --goto "$file:$line:$column"')
+export declare function shellCommand(command: string): ShellCommand;
 
 export type ErrorReporter = {
   // Replaces the errors of `source` (such as "esbuild"). An empty array clears

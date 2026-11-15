@@ -18,6 +18,7 @@ import { isErrorReporter, setTargetNames } from "./ExternalErrors.ts";
 import { Host } from "./Host.ts";
 import { NonEmptyArray } from "./NonEmptyArray.ts";
 import { Port } from "./Port.ts";
+import { isShellCommand, type ShellCommand } from "./ShellCommand.ts";
 import {
   type AbsolutePath,
   CompilationMode,
@@ -136,6 +137,26 @@ const ErrorReporterCodec = Codec.flatMap(Codec.unknown, {
   encoder: (value) => value,
 });
 
+const OpenEditorCodec: Codec.Codec<OpenEditorFunction | ShellCommand> =
+  Codec.flatMap(Codec.unknown, {
+    decoder: (value): Codec.DecoderResult<OpenEditorFunction | ShellCommand> =>
+      typeof value === "function"
+        ? { tag: "Valid", value: value as OpenEditorFunction }
+        : isShellCommand(value)
+          ? { tag: "Valid", value }
+          : {
+              tag: "DecoderError",
+              error: {
+                tag: "custom",
+                message: "Expected a function or `shellCommand()`",
+                got: value,
+                path: [],
+              },
+            },
+    // Encoding is never used.
+    encoder: (value) => value,
+  });
+
 const Options = Codec.fields(
   {
     runMode: Codec.primitiveUnion(["hot", "make"]),
@@ -147,7 +168,7 @@ const Options = Codec.fields(
     staticFilesDir: optionalField(Codec.string),
     webSocketUrl: optionalField(WebSocketUrl("Options")),
     allowedHosts: optionalField(Codec.array(AllowedHost)),
-    openEditor: optionalField(functionCodec<OpenEditorFunction>()),
+    openEditor: optionalField(OpenEditorCodec),
     errors: optionalField(ErrorReporterCodec),
     // These are validated by TypeScript only.
     createServer: optionalField(functionCodec<object>()),
