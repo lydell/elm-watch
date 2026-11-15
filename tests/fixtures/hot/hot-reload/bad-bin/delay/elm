@@ -5,18 +5,31 @@ import { fakeElm, realElm, waitUntil } from "#fake-elm";
 
 const lockFile = path.join(import.meta.dirname, "..", "..", "lock");
 
-// When `lock` says “Delay”, acknowledge it and wait for it to say “Normal”
-// before exiting.
-async function delayed() {
-  const exitCode = await realElm();
+// When `lock` says “Delay”, acknowledge it and wait for it to say “Normal”.
+async function delay() {
   if (fs.readFileSync(lockFile, "utf8") === "Delay") {
     fs.writeFileSync(lockFile, "DelayAck");
     await waitUntil(() => fs.readFileSync(lockFile, "utf8") === "Normal");
   }
+}
+
+// Wait before installing: Like being slow to download packages. (Waiting after
+// installing would mean that elm-watch kills `elm` after it has written to
+// elm-stuff/. elm-watch then cleans up elm-stuff/ like after a half-done
+// install, and the next install has to do it all again.)
+async function delayedInstall() {
+  await delay();
+  return realElm();
+}
+
+// Wait after compiling, before exiting.
+async function delayedMake() {
+  const exitCode = await realElm();
+  await delay();
   return exitCode;
 }
 
 fakeElm({
-  install: delayed,
-  make: delayed,
+  install: delayedInstall,
+  make: delayedMake,
 });

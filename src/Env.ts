@@ -85,6 +85,13 @@ export const __ELM_WATCH_MAX_PARALLEL = "__ELM_WATCH_MAX_PARALLEL";
 // Type: Number.
 export const __ELM_WATCH_ELM_TIMEOUT_MS = "__ELM_WATCH_ELM_TIMEOUT_MS";
 
+// When cleaning up after an interrupted `elm`, elm-watch waits for other `elm`
+// processes holding elm-stuff’s lock, but gives up after a while. Used in tests
+// to not have to wait for so long.
+// Type: Number.
+export const __ELM_WATCH_ELM_STUFF_LOCK_TIMEOUT_MS =
+  "__ELM_WATCH_ELM_STUFF_LOCK_TIMEOUT_MS";
+
 // elm-watch waits a little bit after web socket connections and disconnections
 // before acting, to batch bursts of connections. Used in tests to not have to
 // wait for so long.

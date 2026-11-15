@@ -157,8 +157,18 @@ export function killWindowsProcessTree(
 export function spawn(command: Command): {
   promise: Promise<SpawnResult>;
   kill: () => void;
+  // `promise` resolves right away when killed, while this resolves once the
+  // process has actually exited (or never started).
+  exited: Promise<void>;
 } {
   let killed = false;
+
+  let resolveExited = (): void => {
+    // Set below.
+  };
+  const exited = new Promise<void>((resolve) => {
+    resolveExited = resolve;
+  });
 
   let kill = (): void => {
     killed = true;
@@ -169,6 +179,7 @@ export function spawn(command: Command): {
 
     if (spawned === undefined) {
       resolve({ tag: "CommandNotFoundError", command });
+      resolveExited();
       return;
     }
 
@@ -176,10 +187,15 @@ export function spawn(command: Command): {
     const killChild = makeKillChild(child, usesShell);
     trackChild(child, killChild);
 
+    child.once("exit", resolveExited);
+
     const stdout: Array<Buffer> = [];
     const stderr: Array<Buffer> = [];
 
     child.on("error", (error: Error & { code?: string }) => {
+      if (child.pid === undefined) {
+        resolveExited();
+      }
       resolve(
         error.code === "ENOENT"
           ? { tag: "CommandNotFoundError", command }
@@ -237,6 +253,7 @@ export function spawn(command: Command): {
     kill: () => {
       kill();
     },
+    exited,
   };
 }
 

@@ -2,6 +2,7 @@ import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import { ElmMakeError } from "./ElmMakeError.ts";
+import * as ElmStuffRecovery from "./ElmStuffRecovery.ts";
 import { __ELM_WATCH_ELM_TIMEOUT_MS, type Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import { silentlyReadIntEnvValue } from "./Helpers.ts";
@@ -11,6 +12,7 @@ import {
   type ExitReason,
   spawn,
   type SpawnResult,
+  trackRunning,
 } from "./Spawn.ts";
 import type {
   AbsolutePath,
@@ -108,7 +110,7 @@ export function make({
     },
   };
 
-  const { promise, kill } = spawn(command);
+  const { promise, kill } = spawnElm(command, elmJsonPath, compiler);
 
   const handleSpawnResult = (spawnResult: SpawnResult): RunElmMakeResult => {
     switch (spawnResult.tag) {
@@ -163,6 +165,45 @@ export function make({
       } else {
         delayKill(promise, startTime, getNow, env, kill);
       }
+    },
+  };
+}
+
+function spawnElm(
+  command: Command,
+  elmJsonPath: ElmJsonPath,
+  compiler: Compiler,
+): { promise: Promise<SpawnResult>; kill: () => void } {
+  let killed = false;
+  let killSpawned: (() => void) | undefined;
+  const promise = ElmStuffRecovery.beforeElm(
+    elmJsonPath,
+    compiler,
+    command.options.env,
+  ).then(async (): Promise<SpawnResult> => {
+    if (killed) {
+      return { tag: "Killed", command };
+    }
+    const spawned = spawn(command);
+    killSpawned = spawned.kill;
+    const spawnResult = await spawned.promise;
+    await ElmStuffRecovery.afterElm(
+      elmJsonPath,
+      compiler,
+      spawnResult,
+      spawned.exited,
+      command.options.env,
+    );
+    return spawnResult;
+  });
+  // Exiting elm-watch waits for running commands. Make it wait for the
+  // recovery too.
+  trackRunning(promise);
+  return {
+    promise,
+    kill: () => {
+      killed = true;
+      killSpawned?.();
     },
   };
 }
@@ -376,7 +417,7 @@ export function install({
     },
   };
 
-  const { promise, kill } = spawn(command);
+  const { promise, kill } = spawnElm(command, elmJsonPath, compiler);
 
   const handleSpawnResult = (spawnResult: SpawnResult): ElmInstallResult => {
     switch (spawnResult.tag) {

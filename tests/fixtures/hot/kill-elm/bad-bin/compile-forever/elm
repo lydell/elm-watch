@@ -6,6 +6,14 @@ import { call, fakeElm, hang, realElm } from "#fake-elm";
 const elmJsonPath = path.join(import.meta.dirname, "..", "..", "elm.json");
 const inputPath = path.join(import.meta.dirname, "..", "..", "src", "Main.elm");
 const lockPath = path.join(import.meta.dirname, "..", "..", "lock");
+const interruptedPath = path.join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "elm-stuff",
+  "0.19.3",
+  "Interrupted.elmo",
+);
 
 function touch(filePath) {
   const now = new Date();
@@ -23,6 +31,10 @@ function elmWork() {
     // Hang on compile or typecheck only. Switch to succeeding.
     fs.writeFileSync(lockPath, "NoLock");
     touch(inputPath);
+    // Like a half-written file when the real `elm` is killed. elm-watch
+    // should remove it.
+    fs.mkdirSync(path.dirname(interruptedPath), { recursive: true });
+    fs.writeFileSync(interruptedPath, "half");
     return hang();
   } else {
     return realElm();

@@ -28,6 +28,12 @@ describe("hot", () => {
     const dir = fixtureDir(fixture);
     const input = path.join(dir, "src", "Main.elm");
     const lock = path.join(dir, "lock");
+    const interrupted = path.join(
+      dir,
+      "elm-stuff",
+      "0.19.3",
+      "Interrupted.elmo",
+    );
 
     // Hang on installing dependencies.
     // `bad-bin/compile-forever/elm` then updates `lock` to hang on typecheck
@@ -82,6 +88,9 @@ describe("hot", () => {
       ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm +1 more⧘
     `);
+
+    // The fake `elm` wrote this right before it was killed.
+    expect(fs.existsSync(interrupted)).toBe(false);
   });
 
   test("kill Elm while installing dependencies in TTY mode", async () => {
