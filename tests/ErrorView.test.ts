@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import { EDITOR_PRESETS } from "../src/Editor.ts";
 import type { ErrorTemplate } from "../src/Errors.ts";
 import { navigate, reconcile, type Selection } from "../src/ErrorSelection.ts";
 import {
+  type ErrorViewEditor,
   type ErrorViewTarget,
   makeErrorViewTarget,
   parseKeys,
@@ -74,6 +76,9 @@ describe("parseKeys", () => {
     expect(parseKeys("j")).toEqual(["NextFile"]);
     expect(parseKeys("\x1B[Z")).toEqual(["PreviousTarget"]);
     expect(parseKeys("\r")).toEqual(["OpenEditor"]);
+    expect(parseKeys("e")).toEqual(["ChangeEditor"]);
+    expect(parseKeys("7")).toEqual(["Digit7"]);
+    expect(parseKeys("\x1B")).toEqual(["Cancel"]);
   });
 
   test("several keys in one chunk", () => {
@@ -277,6 +282,13 @@ describe("render", () => {
     rows: 24,
   };
 
+  const noEditor: ErrorViewEditor = {
+    canChoose: true,
+    current: undefined,
+    chooser: undefined,
+    commandHint: null,
+  };
+
   // Shows bold as *x* and dim as ~x~.
   function keyHintsLine(
     selection: Selection,
@@ -290,6 +302,7 @@ describe("render", () => {
         targets,
         notice: undefined,
         infoLine: undefined,
+        editor: noEditor,
       })
         .split("\n")
         .at(-1) ?? ""
@@ -321,6 +334,100 @@ describe("render", () => {
     );
   });
 
+  test("open in the chosen editor, and change it", () => {
+    const targets = [target("A", ["X.elm:1:a1"])];
+    const webStorm = EDITOR_PRESETS.find(({ id }) => id === "webstorm");
+    if (webStorm === undefined) {
+      throw new Error("Expected WebStorm preset");
+    }
+    const output = render({
+      terminalConfig,
+      expanded: false,
+      selection: start(targets),
+      targets,
+      notice: undefined,
+      infoLine: undefined,
+      editor: {
+        ...noEditor,
+        current: { tag: "Preset", preset: webStorm },
+      },
+    });
+    expect(removeColor(output.slice(output.lastIndexOf("\n\n") + 2)))
+      .toMatchInlineSnapshot(`
+      "[←→] error   [↑↓] file   [enter] open in WebStorm   [e] change editor
+      [a] show all"
+    `);
+  });
+
+  test("editor chooser", () => {
+    const targets = [target("A", ["X.elm:1:a1"])];
+    const webStorm = EDITOR_PRESETS.find(({ id }) => id === "webstorm");
+    const chooser = (editor: Partial<ErrorViewEditor>): string => {
+      const output = render({
+        terminalConfig,
+        expanded: false,
+        selection: start(targets),
+        targets,
+        notice: undefined,
+        infoLine: undefined,
+        editor: { ...noEditor, ...editor },
+      });
+      // Shows bold as *x*.
+      return output
+        .slice(output.indexOf("Which editor"))
+        .replace(/\x1B\[0m\x1B\[1m(.*?)\x1B\[0m/g, "*$1*")
+        .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "$1");
+    };
+    expect(chooser({ chooser: { showOther: false } })).toMatchInlineSnapshot(`
+      "Which editor should I open this in?
+      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
+      [*6*] Rider   [*7*] Other
+
+      [*esc*] cancel"
+    `);
+    expect(
+      chooser({
+        chooser: { showOther: true },
+        current:
+          webStorm === undefined
+            ? undefined
+            : { tag: "Preset", preset: webStorm },
+        commandHint: "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='x'",
+      }),
+    ).toMatchInlineSnapshot(`
+      "Which editor should I open this in?
+      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] *WebStorm*
+      [*6*] Rider   [*7*] Other
+
+      To use another editor, choose “Other” in the browser UI (by clicking an error location there) and enter a URL. Or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
+
+      # ~/.bashrc
+      export ELM_WATCH_OPEN_EDITOR='x'
+
+      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+
+      [*esc*] cancel"
+    `);
+    expect(
+      chooser({
+        chooser: { showOther: true },
+        current: { tag: "Custom", template: "myeditor://{file}" },
+      }),
+    ).toMatchInlineSnapshot(`
+      "Which editor should I open this in?
+      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
+      [*6*] Rider   [*7*] *Other*
+
+      Your editor URL (chosen in the browser UI): myeditor://{file}
+
+      To use another editor, choose “Other” in the browser UI (by clicking an error location there) and enter a URL. Or use the openEditor option to run a command.
+
+      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+
+      [*esc*] cancel"
+    `);
+  });
+
   test("key hints wrap between hints in narrow terminals", () => {
     const targets = [
       target("A", ["X.elm:1:a1", "Y.elm:1:a2"]),
@@ -333,6 +440,7 @@ describe("render", () => {
       targets,
       notice: undefined,
       infoLine: undefined,
+      editor: noEditor,
     });
     // The key hints are below the last blank line.
     expect(removeColor(output.slice(output.lastIndexOf("\n\n") + 2)))

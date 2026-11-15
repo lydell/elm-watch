@@ -308,9 +308,9 @@ describe("hot error view", () => {
     `);
   });
 
-  test("open in editor without it being set up", async () => {
+  test("choose editor in the terminal: other and cancel", async () => {
     const stdin = new KeyReadStream();
-    let screen = "";
+    const screens: Array<string> = [];
 
     await run({
       fixture: "error-view",
@@ -321,32 +321,52 @@ describe("hot error view", () => {
         // Do nothing.
       },
       onIdle: async ({ stdout }) => {
-        const failed = nextMsg(
-          (msg) => msg.tag === "OpenEditorFromTerminalFailed",
-        );
+        const footer = (): string => {
+          const screen = clean(stdout.getOutput());
+          return screen.slice(screen.lastIndexOf("🚨 error"));
+        };
         stdin.press("o");
-        await failed;
-        screen = clean(stdout.getOutput());
+        await waitFor(() => footer().includes("Which editor"));
+        screens.push(footer());
+        stdin.press("7");
+        await waitFor(() => footer().includes("Check this out"));
+        screens.push(
+          footer().replace(
+            '# System Settings > Environment Variables\nELM_WATCH_OPEN_EDITOR=your-editor "%file%:%line%:%column%"',
+            `# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'`,
+          ),
+        );
+        stdin.press("\x1B");
+        await waitFor(() => !footer().includes("Which editor"));
+        screens.push(footer());
         return "Stop" as const;
       },
     });
 
-    expect(
-      screen
-        .slice(screen.indexOf("Opening errors"))
-        .replace(
-          '# System Settings > Environment Variables\nELM_WATCH_OPEN_EDITOR=your-editor "%file%:%line%:%column%"',
-          `# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'`,
-        ),
-    ).toMatchInlineSnapshot(`
-      Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
+    expect(screens.join(`\n${"-".repeat(80)}\n`)).toMatchInlineSnapshot(`
+      🚨 error 1/1
+
+      Which editor should I open this in?
+      ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
+      ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ Other
+
+      ⧙[⧘⧙esc⧘⧙]⧘ cancel
+      --------------------------------------------------------------------------------
+      🚨 error 1/1
+
+      Which editor should I open this in?
+      ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
+      ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ Other
+
+      To use another editor, choose “Other” in the browser UI (by clicking an error location there) and enter a URL. Or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
 
       # ~/.bashrc
       export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
+      ⧙[⧘⧙esc⧘⧙]⧘ cancel
+      --------------------------------------------------------------------------------
       🚨 error 1/1
 
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
@@ -404,6 +424,70 @@ describe("hot error view", () => {
     expect(clean(fs.readFileSync(outputFile, "utf8"))).toMatchInlineSnapshot(
       `zed://file/Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20`,
     );
+  });
+
+  test.skipIf(IS_WINDOWS)("choose editor in the terminal", async () => {
+    const dir = fixtureDir("error-view");
+    const stuffJsonPath = path.join(
+      dir,
+      "elm-stuff",
+      "elm-watch",
+      "stuff.json",
+    );
+
+    // Fake `open` (macOS) and `xdg-open` (Linux), so that no editor is opened.
+    const binDir = path.join(dir, "fake-open-bin");
+    const outputFile = path.join(dir, "opened-url.txt");
+    fs.mkdirSync(binDir, { recursive: true });
+    for (const name of ["open", "xdg-open"]) {
+      const file = path.join(binDir, name);
+      fs.writeFileSync(
+        file,
+        `#!/usr/bin/env node\nimport * as fs from "node:fs";\nfs.writeFileSync(${JSON.stringify(outputFile)}, process.argv.slice(2).join(" "));\n`,
+      );
+      fs.chmodSync(file, 0o755);
+    }
+
+    const stdin = new KeyReadStream();
+    let footer = "";
+
+    await run({
+      fixture: "error-view",
+      args: ["Other"],
+      scripts: ["Other.js"],
+      keepElmStuffJson: true,
+      env: { PATH: prependPATH(binDir) },
+      stdin,
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async ({ stdout }) => {
+        stdin.press("o");
+        await waitFor(() => clean(stdout.getOutput()).includes("Which editor"));
+        stdin.press("2");
+        await waitFor(() => fs.existsSync(outputFile));
+        const screen = clean(stdout.getOutput());
+        footer = screen.slice(screen.lastIndexOf("🚨 error"));
+        return "Stop" as const;
+      },
+    });
+
+    expect(clean(fs.readFileSync(outputFile, "utf8"))).toMatchInlineSnapshot(
+      `cursor://file/Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20`,
+    );
+    expect(
+      (
+        JSON.parse(fs.readFileSync(stuffJsonPath, "utf8")) as {
+          editor?: unknown;
+        }
+      ).editor,
+    ).toBe("cursor");
+    expect(footer).toMatchInlineSnapshot(`
+      🚨 error 1/1
+
+      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in Cursor   ⧙[⧘⧙e⧘⧙]⧘ change editor
+      ⧙[⧘⧙a⧘⧙]⧘ show all
+    `);
   });
 
   test("one-line info message for files not imported by any target", async () => {

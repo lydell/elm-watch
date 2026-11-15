@@ -1,3 +1,4 @@
+import { type Editor, EDITOR_PRESETS } from "./Editor.ts";
 import * as Errors from "./Errors.ts";
 import {
   canSwitchTarget,
@@ -29,13 +30,43 @@ export type ErrorViewState = {
   // Long code excerpts are collapsed by default. See CollapseExcerpts.ts.
   expanded: boolean;
   selection: Selection | undefined;
+  // Set while choosing an editor for opening error locations in. Only presets
+  // can be chosen in the terminal. “Other” shows how to use other editors.
+  editorChooser: { showOther: boolean } | undefined;
 };
 
 export type ErrorViewKey =
   | NavigationKey
   | "OpenEditor"
+  | "ChangeEditor"
+  | "Cancel"
+  | Digit
   | "ToggleExpanded"
   | "ToggleShowAll";
+
+export type Digit = `Digit${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`;
+
+const DIGITS: Array<[string, Digit]> = (
+  [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+).map((digit) => [digit.toString(), `Digit${digit}`]);
+
+export function isDigit(key: ErrorViewKey): key is Digit {
+  return key.startsWith("Digit");
+}
+
+export function digitToNumber(digit: Digit): number {
+  return Number(digit.slice("Digit".length));
+}
+
+// What the error view needs to know about opening errors in an editor.
+export type ErrorViewEditor = {
+  // The editor can be chosen in the terminal (and the browser) when no command
+  // has been set up.
+  canChoose: boolean;
+  current: Editor | undefined;
+  chooser: { showOther: boolean } | undefined;
+  commandHint: string | null;
+};
 
 const KEYS: Array<[string, ErrorViewKey]> = [
   ["\x1B[C", "NextError"],
@@ -50,8 +81,12 @@ const KEYS: Array<[string, ErrorViewKey]> = [
   ["\x1B[Z", "PreviousTarget"],
   ["\r", "OpenEditor"],
   ["o", "OpenEditor"],
+  ["e", "ChangeEditor"],
+  ...DIGITS,
   [" ", "ToggleExpanded"],
   ["a", "ToggleShowAll"],
+  // Last, since the escape sequences above start with Escape too.
+  ["\x1B", "Cancel"],
 ];
 
 // Several keys can arrive in one chunk if typed quickly. If anything in the
@@ -98,6 +133,7 @@ export function render({
   targets,
   notice,
   infoLine,
+  editor,
 }: {
   terminalConfig: TerminalConfig;
   expanded: boolean;
@@ -105,6 +141,7 @@ export function render({
   targets: Array<ErrorViewTarget>;
   notice: string | undefined;
   infoLine: string | undefined;
+  editor: ErrorViewEditor;
 }): string {
   const target = getSelectedTarget(selection, targets);
   const hasOtherTargetsWithErrors = canSwitchTarget(selection, targets);
@@ -138,6 +175,12 @@ export function render({
     .flatMap((part) => part ?? [])
     .join("   ");
 
+  const canOpenEditor = getOpenEditorLocation(error.location) !== undefined;
+  const openInName =
+    editor.canChoose && editor.current?.tag === "Preset"
+      ? editor.current.preset.name
+      : "editor";
+
   return [
     Errors.toTerminalString(
       error.template,
@@ -150,30 +193,64 @@ export function render({
     ...infoLines,
     `${terminalConfig.fancy ? "🚨 " : ""}${position}`,
     "",
+    // While choosing an editor, the other keys are paused.
+    canOpenEditor && editor.chooser !== undefined
+      ? renderEditorChooser(terminalConfig, editor, editor.chooser)
+      : keyHints(terminalConfig.columns, [
+          [
+            [
+              ["←", errorNumber > 1],
+              ["→", errorNumber < target.numErrors],
+            ],
+            "error",
+          ],
+          [
+            [
+              ["↑", selection.fileIndex > 0],
+              ["↓", selection.fileIndex + 1 < target.files.length],
+            ],
+            "file",
+          ],
+          hasOtherTargetsWithErrors ? ["tab", "target"] : undefined,
+          canOpenEditor ? ["enter", `open in ${openInName}`] : undefined,
+          canOpenEditor && editor.canChoose && editor.current !== undefined
+            ? ["e", "change editor"]
+            : undefined,
+          Errors.isCollapsible(error.template)
+            ? ["space", expanded ? "collapse" : "expand"]
+            : undefined,
+          ["a", "show all"],
+        ]),
+  ].join("\n");
+}
+
+// Shown instead of the key hints when pressing Enter without having chosen an
+// editor, or when pressing “e” to change editor. The current editor is bold.
+function renderEditorChooser(
+  terminalConfig: TerminalConfig,
+  editor: ErrorViewEditor,
+  { showOther }: { showOther: boolean },
+): string {
+  const { current } = editor;
+  return [
+    "Which editor should I open this in?",
     keyHints(terminalConfig.columns, [
+      ...EDITOR_PRESETS.map((preset, index): [string, string] => [
+        (index + 1).toString(),
+        current?.tag === "Preset" && current.preset.id === preset.id
+          ? bold(preset.name)
+          : preset.name,
+      ]),
       [
-        [
-          ["←", errorNumber > 1],
-          ["→", errorNumber < target.numErrors],
-        ],
-        "error",
+        (EDITOR_PRESETS.length + 1).toString(),
+        current?.tag === "Custom" ? bold("Other") : "Other",
       ],
-      [
-        [
-          ["↑", selection.fileIndex > 0],
-          ["↓", selection.fileIndex + 1 < target.files.length],
-        ],
-        "file",
-      ],
-      hasOtherTargetsWithErrors ? ["tab", "target"] : undefined,
-      getOpenEditorLocation(error.location) === undefined
-        ? undefined
-        : ["enter", "open in editor"],
-      Errors.isCollapsible(error.template)
-        ? ["space", expanded ? "collapse" : "expand"]
-        : undefined,
-      ["a", "show all"],
     ]),
+    ...(showOther
+      ? ["", Errors.openEditorOtherForTerminal(current, editor.commandHint)]
+      : []),
+    "",
+    keyHints(terminalConfig.columns, [["esc", "cancel"]]),
   ].join("\n");
 }
 

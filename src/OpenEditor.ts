@@ -91,7 +91,7 @@ export function getOpenEditorSetupMessage(
 
 // How to set `ELM_WATCH_OPEN_EDITOR` in the user’s shell. The environment
 // variable is only used with elm-watch.json.
-function getCommandHint(env: Env, project: Project): string | null {
+export function getCommandHint(env: Env, project: Project): string | null {
   if (project.configSource.tag !== "ElmWatchJson") {
     return null;
   }
