@@ -256,6 +256,56 @@ describe("hot", () => {
       expect(receivedTags).toStrictEqual(["StatusChanged"]);
     });
 
+    test("wrong version and a target that isn't built", async () => {
+      // Like a file left over from an older elm-watch version, for a target
+      // that has been renamed or removed since.
+      modifyUrl((url) => {
+        url.searchParams.set("elmWatchVersion", "0.0.0");
+        url.searchParams.set("targetName", "nope");
+      });
+
+      const { onlyExpandedRenders } = await run({
+        fixture: "target-not-found",
+        args: ["Enabled"],
+        scripts: ["Enabled1.js"],
+        init: failInit,
+        onIdle: () => "Stop",
+      });
+
+      expect(onlyExpandedRenders).toMatchInlineSnapshot(`
+        ▲ ❌
+        --------------------------------------------------------------------------------
+        elm-watch %VERSION%
+        [Close elm-watch]
+        ❌ Enabled1 Unexpected error · 13:10:05
+        I ran into an unexpected error! This is the error message:
+        The compiled JavaScript code running in the browser says it was compiled with:
+
+        elm-watch 0.0.0
+
+        But the server is:
+
+        elm-watch %VERSION%
+
+        It also says it is for this target:
+
+        nope
+
+        But I'm not building a target with that name. The page most likely loads a file left over from elm-watch 0.0.0. Change the page to load one of these targets instead (and maybe delete the old file):
+
+        EnabledNotFound
+        Enabled1
+        Enabled2
+
+        These targets are also available in elm-watch.json, but are not enabled (because of the CLI arguments passed):
+
+        Disabled1
+        Disabled2
+        Drag emoji or press shift+arrows to move
+      `);
+      expect(receivedTags).toStrictEqual(["StatusChanged"]);
+    });
+
     test("omitting the version is ok (useful for third party clients)", async () => {
       modifyUrl((url) => {
         url.searchParams.delete("elmWatchVersion");

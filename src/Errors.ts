@@ -53,6 +53,7 @@ import {
   type UncheckedInputPath,
   type WriteOutputErrorReasonForWriting,
 } from "./Types.ts";
+import type { TargetNotBuilt } from "./WebSocketConnect.ts";
 import type { WebSocketUrl } from "./WebSocketUrl.ts";
 
 function bold(string: string): Piece {
@@ -1447,10 +1448,12 @@ function webSocketUrlSourceDescription(source: WebSocketUrl["source"]): string {
 }
 
 export function webSocketWrongVersion(
+  configSource: ConfigSource,
   expectedVersion: string,
   actualVersion: string,
+  targetNotBuilt: TargetNotBuilt | undefined,
 ): string {
-  return `
+  const versions = `
 The compiled JavaScript code running in the browser says it was compiled with:
 
 elm-watch ${actualVersion}
@@ -1458,9 +1461,44 @@ elm-watch ${actualVersion}
 But the server is:
 
 elm-watch ${expectedVersion}
+  `.trim();
+
+  if (targetNotBuilt === undefined) {
+    return `
+${versions}
 
 Maybe the JavaScript code running in the browser was compiled with an older version of elm-watch? If so, try reloading the page.
+    `.trim();
+  }
+
+  const config = configSourcePlainName(configSource);
+  const { targetName, enabledOutputs, disabledOutputs } = targetNotBuilt;
+
+  return `
+${versions}
+
+It also says it is for this target:
+
+${targetName}
+
+But I'm not building a target with that name. The page most likely loads a file left over from elm-watch ${actualVersion}. Change the page to load one of these targets instead (and maybe delete the old file):
+
+${enabledOutputs.map((outputPath) => outputPath.targetName).join("\n")}${disabledOutputsExtra(config, disabledOutputs)}
   `.trim();
+}
+
+function disabledOutputsExtra(
+  config: string,
+  disabledOutputs: Array<TargetLocation>,
+): string {
+  return isNonEmptyArray(disabledOutputs)
+    ? `
+
+These targets are also available in ${config}, but are not enabled (because of the CLI arguments passed):
+
+${mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName).join("\n")}
+  `.trimEnd()
+    : "";
 }
 
 export function webSocketTargetNotFound(
@@ -1470,14 +1508,7 @@ export function webSocketTargetNotFound(
   disabledOutputs: Array<TargetLocation>,
 ): string {
   const config = configSourcePlainName(configSource);
-  const extra = isNonEmptyArray(disabledOutputs)
-    ? `
-
-These targets are also available in ${config}, but are not enabled (because of the CLI arguments passed):
-
-${mapNonEmptyArray(disabledOutputs, (outputPath) => outputPath.targetName).join("\n")}
-  `.trimEnd()
-    : "";
+  const extra = disabledOutputsExtra(config, disabledOutputs);
 
   return `
 The compiled JavaScript code running in the browser says it is for this target:

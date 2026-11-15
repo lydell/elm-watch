@@ -99,7 +99,16 @@ export type ParseWebSocketConnectRequestUrlError =
       tag: "WrongVersion";
       expectedVersion: "%VERSION%";
       actualVersion: string;
+      // Set if the target isn’t built by this elm-watch: Then the code in the
+      // browser is from a file that elm-watch never replaces.
+      targetNotBuilt: TargetNotBuilt | undefined;
     };
+
+export type TargetNotBuilt = {
+  targetName: TargetName;
+  enabledOutputs: Array<TargetLocation>;
+  disabledOutputs: Array<TargetLocation>;
+};
 
 export function parseWebSocketConnectRequestUrl(
   project: Project,
@@ -117,17 +126,6 @@ export function parseWebSocketConnectRequestUrl(
   }
   const webSocketConnectedParams = webSocketConnectedParamsResult.value;
 
-  if (
-    webSocketConnectedParams.elmWatchVersion !== undefined &&
-    webSocketConnectedParams.elmWatchVersion !== "%VERSION%"
-  ) {
-    return {
-      tag: "WrongVersion",
-      expectedVersion: "%VERSION%",
-      actualVersion: webSocketConnectedParams.elmWatchVersion,
-    };
-  }
-
   const flatOutputs = getFlatOutputs(project);
 
   const { targetName } = webSocketConnectedParams;
@@ -137,6 +135,21 @@ export function parseWebSocketConnectRequestUrl(
   const matchOutput = flatOutputs.find(
     ({ outputPath }) => outputPath.targetName === targetName,
   );
+
+  if (
+    webSocketConnectedParams.elmWatchVersion !== undefined &&
+    webSocketConnectedParams.elmWatchVersion !== "%VERSION%"
+  ) {
+    return {
+      tag: "WrongVersion",
+      expectedVersion: "%VERSION%",
+      actualVersion: webSocketConnectedParams.elmWatchVersion,
+      targetNotBuilt:
+        matchElmJsonError === undefined && matchOutput === undefined
+          ? { targetName, ...getOutputs(project) }
+          : undefined,
+    };
+  }
 
   if (matchElmJsonError !== undefined) {
     return {
@@ -152,15 +165,7 @@ export function parseWebSocketConnectRequestUrl(
       elmCompiledTimestamp: webSocketConnectedParams.elmCompiledTimestamp,
     };
   } else {
-    const enabledOutputs = [
-      ...project.targetsErrors.map(({ outputPath }) => outputPath),
-      ...flatOutputs.map(({ outputPath }) => outputPath),
-      ...Array.from(
-        project.packages.values(),
-        ([packageTarget]) => packageTarget,
-      ),
-    ];
-    const disabledOutputs = Array.from(project.disabledOutputs);
+    const { enabledOutputs, disabledOutputs } = getOutputs(project);
     const disabledMatch = disabledOutputs.find(
       (outputPath) => outputPath.targetName === targetName,
     );
@@ -178,6 +183,20 @@ export function parseWebSocketConnectRequestUrl(
           disabledOutputs,
         };
   }
+}
+
+function getOutputs(project: Project): Omit<TargetNotBuilt, "targetName"> {
+  return {
+    enabledOutputs: [
+      ...project.targetsErrors.map(({ outputPath }) => outputPath),
+      ...getFlatOutputs(project).map(({ outputPath }) => outputPath),
+      ...Array.from(
+        project.packages.values(),
+        ([packageTarget]) => packageTarget,
+      ),
+    ],
+    disabledOutputs: Array.from(project.disabledOutputs),
+  };
 }
 
 function webSocketConnectRequestUrlResultToOutputPath(
@@ -212,8 +231,10 @@ export function webSocketConnectRequestUrlErrorToString(
 
     case "WrongVersion":
       return Errors.webSocketWrongVersion(
+        configSource,
         error.expectedVersion,
         error.actualVersion,
+        error.targetNotBuilt,
       );
 
     case "TargetNotFound":
