@@ -34,17 +34,17 @@ export const EDITOR_PRESETS: Array<EditorPreset> = [
   {
     id: "idea",
     name: "IntelliJ IDEA",
-    template: "idea://open?file={file}&line={line}&column={column}",
+    template: "idea://open?file={file}&line={line}&column={column0}",
   },
   {
     id: "webstorm",
     name: "WebStorm",
-    template: "webstorm://open?file={file}&line={line}&column={column}",
+    template: "webstorm://open?file={file}&line={line}&column={column0}",
   },
   {
     id: "rider",
     name: "Rider",
-    template: "rider://open?file={file}&line={line}&column={column}",
+    template: "rider://open?file={file}&line={line}&column={column0}",
   },
 ];
 

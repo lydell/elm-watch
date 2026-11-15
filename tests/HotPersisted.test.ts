@@ -364,7 +364,7 @@ describe("hot", () => {
           [WebStorm]
           [Rider]
           Other editor (URL):
-          <input value="" placeholder="pycharm://open?file={file}&line={line}&column={column}">
+          <input value="" placeholder="pycharm://open?file={file}&line={line}&column={column0}">
           [Use]
           Placeholders: {file} {line} {column} {line0} {column0}
           Or run a command, by setting an environment variable: [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
@@ -443,7 +443,7 @@ describe("hot", () => {
 
         expect(openedUrls).toMatchInlineSnapshot(`
           [
-            webstorm://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=10&column=31,
+            webstorm://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=10&column=30,
           ]
         `);
         expect(grep(panel, /Editor|WebStorm|Change/)).toMatchInlineSnapshot(`

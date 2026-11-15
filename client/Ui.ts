@@ -2741,7 +2741,7 @@ function viewEditorSection({
                 type: "text",
                 value: chooser.customTemplate,
                 placeholder:
-                  "pycharm://open?file={file}&line={line}&column={column}",
+                  "pycharm://open?file={file}&line={line}&column={column0}",
                 spellcheck: false,
                 attrs: {
                   [DATA_FOCUS_KEY]: "editorCustom",

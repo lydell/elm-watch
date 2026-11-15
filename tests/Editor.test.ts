@@ -27,7 +27,7 @@ describe("editorUrl", () => {
       `"vscode://file/Users/you/project/src/Main.elm:10:3"`,
     );
     expect(editorUrl(parse("webstorm"), location)).toMatchInlineSnapshot(
-      `"webstorm://open?file=/Users/you/project/src/Main.elm&line=10&column=3"`,
+      `"webstorm://open?file=/Users/you/project/src/Main.elm&line=10&column=2"`,
     );
   });
 
@@ -70,7 +70,7 @@ describe("editorUrl", () => {
         file: "/Users/you/my project/a&b=c?d#e%f+g/Ä.elm",
       }),
     ).toMatchInlineSnapshot(
-      `"idea://open?file=/Users/you/my%20project/a%26b%3Dc%3Fd%23e%25f%2Bg/%C3%84.elm&line=10&column=3"`,
+      `"idea://open?file=/Users/you/my%20project/a%26b%3Dc%3Fd%23e%25f%2Bg/%C3%84.elm&line=10&column=2"`,
     );
   });
 });

@@ -84,7 +84,7 @@ Using another editor? Choose “Other editor (URL)” and type a URL. These plac
 | `{line}` and `{column}` | The line and column numbers, starting at 1. |
 | `{line0}` and `{column0}` | The same, but starting at 0. |
 
-For example, PyCharm (and probably other [JetBrains] IDEs): `pycharm://open?file={file}&line={line}&column={column}`
+For example, PyCharm (and probably other [JetBrains] IDEs): `pycharm://open?file={file}&line={line}&column={column0}` (JetBrains IDEs count columns from 0)
 
 Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like.
 
