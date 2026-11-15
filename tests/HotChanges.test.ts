@@ -91,9 +91,11 @@ describe("hot", () => {
       one by one until you figure out which it is!
     `);
 
-    // On Windows, the removal of elm-stuff/0.19.1 is sometimes reported too.
+    // Removing elm-stuff/ also removes elm-stuff/0.19.1/, and both trigger a
+    // restart. Depending on how the watcher batches and orders the two
+    // events, either one can be the latest, with or without the other.
     expect(terminal.split("\n").slice(-2).join("\n")).toMatch(
-      /^\n✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘ {3}⧙removed elm-stuff(?: \+1 more)?⧘$/,
+      /^\n✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘ {3}⧙removed elm-stuff(?:\/0\.19\.1)?(?: \+1 more)?⧘$/,
     );
   });
 
