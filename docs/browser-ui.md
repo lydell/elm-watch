@@ -65,9 +65,36 @@ When the status changes to 🚨, there’s a similar animation as for ✅ – a 
 
 ## Clickable error locations
 
-In the error overlay you can click error locations to open them in your editor!
+In the error overlay you can click error locations (or press Enter) to open them in your editor! There are two ways of setting that up:
 
-There’s no universal way of doing that, though, so you’ll have to set it up. It’s not that complicated: You need to set the `ELM_WATCH_OPEN_EDITOR` environment variable to some shell script code.
+- [Choose your editor in the browser](#choose-your-editor-in-the-browser). The easiest.
+- [Run a command](#run-a-command). Works with any editor, and doesn’t make the browser ask for permission.
+
+### Choose your editor in the browser
+
+The first time you click an error location, elm-watch asks which editor to use: VS Code, Cursor, Zed, IntelliJ IDEA, WebStorm or Rider. The browser then opens the error location via a URL, such as `vscode://file/path/to/Main.elm:10:5`. The first time, the browser (and VS Code) asks if you want to open the editor – you can tick a box to not be asked again.
+
+The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered for all browsers (but you need to choose again in other projects). To change it later, use the “Change” button next to “Editor” in the elm-watch panel (click the emoji).
+
+Using another editor? Choose “Other editor (URL)” and type a URL. These placeholders are replaced:
+
+| Placeholder | Replaced with |
+| --- | --- |
+| `{file}` | The absolute path of the file, URL encoded. Always starts with a `/` (also on Windows: `/C:/Users/you/project/src/Main.elm`). |
+| `{line}` and `{column}` | The line and column numbers, starting at 1. |
+| `{line0}` and `{column0}` | The same, but starting at 0. |
+
+For example, PyCharm (and probably other [JetBrains] IDEs): `pycharm://open?file={file}&line={line}&column={column}`
+
+Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like.
+
+Pressing Enter on an error in the terminal opens the URL too (via `open` on macOS, `xdg-open` on Linux and `rundll32` on Windows).
+
+Note that the browser opens the editor on the device you click on. If you test on your phone, clicking error locations there does nothing. Use [a command](#run-a-command) if you want that to work.
+
+### Run a command
+
+Set the `ELM_WATCH_OPEN_EDITOR` environment variable to some shell script code. It takes precedence over the editor chosen in the browser.
 
 TL;DR examples:
 
@@ -133,7 +160,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 
 ### With the JavaScript API
 
-If you use the [JavaScript API](../javascript-api/), the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. Instead, you pass the `openEditor` option. It can be either:
+If you use the [JavaScript API](../javascript-api/), [choosing your editor in the browser](#choose-your-editor-in-the-browser) works just the same. But the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. To run a command, pass the `openEditor` option instead. It can be either:
 
 - `shellCommand("your command here")`: Runs the command exactly like `ELM_WATCH_OPEN_EDITOR` does (see above), with `root` as the CWD.
 - A function, which is called with `{ file, line, column }` (same as the environment variables above, but `line` and `column` are numbers). If it throws (or returns a promise that rejects), the error is shown in the browser. Use this if you need to do something special, like translating file paths.

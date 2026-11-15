@@ -157,7 +157,7 @@ Type definition: `import type { Options } from "elm-watch"`.
 | webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable is ignored – use `process.env` yourself if needed. |
 | allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable is ignored – use `process.env` yourself if needed. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |
-| openEditor | `function` or `shellCommand(command)` | unset | Opens error locations that you click in your editor. See [Clickable error locations](../browser-ui/#with-the-javascript-api). The `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. |
+| openEditor | `function` or `shellCommand(command)` | unset | Opens error locations that you click in your editor. When unset, you choose your editor in the browser instead. See [Clickable error locations](../browser-ui/#with-the-javascript-api). The `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. |
 | errors | `ErrorReporter` | unset | Errors from other tools, shown like Elm’s errors. See [Showing errors from other tools](#showing-errors-from-other-tools). |
 | signal | `AbortSignal` | unset | Abort to make elm-watch exit (in `"hot"` mode). See [Stopping elm-watch](#stopping-elm-watch). |
 | env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. |

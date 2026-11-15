@@ -155,9 +155,10 @@ describe("init --javascript and --typescript", () => {
         targets: enabledTargets,
         // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
         host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor.
-        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-        // environment variable, like with the elm-watch command:
+        // Opens error locations that you click in the browser UI in your editor, by
+        // running a command. Each developer can set their command via the
+        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+        // Without it, you choose your editor in the browser UI instead:
         // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
         openEditor:
           process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -249,9 +250,10 @@ describe("init --javascript and --typescript", () => {
         staticFilesDir: "public/",
         webSocketUrl: "wss://dev.example.com/elm-watch",
         allowedHosts: ["other.example.com"],
-        // Opens error locations that you click in the browser UI in your editor.
-        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-        // environment variable, like with the elm-watch command:
+        // Opens error locations that you click in the browser UI in your editor, by
+        // running a command. Each developer can set their command via the
+        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+        // Without it, you choose your editor in the browser UI instead:
         // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
         openEditor:
           process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -350,9 +352,10 @@ describe("init --javascript and --typescript", () => {
         targets: enabledTargets,
         // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
         host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor.
-        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-        // environment variable, like with the elm-watch command:
+        // Opens error locations that you click in the browser UI in your editor, by
+        // running a command. Each developer can set their command via the
+        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+        // Without it, you choose your editor in the browser UI instead:
         // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
         openEditor:
           process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -490,9 +493,10 @@ describe("init --javascript and --typescript", () => {
         targets: enabledTargets,
         // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
         host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor.
-        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-        // environment variable, like with the elm-watch command:
+        // Opens error locations that you click in the browser UI in your editor, by
+        // running a command. Each developer can set their command via the
+        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+        // Without it, you choose your editor in the browser UI instead:
         // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
         openEditor:
           process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -593,9 +597,10 @@ describe("init --javascript and --typescript", () => {
         targets: enabledTargets,
         // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
         host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor.
-        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-        // environment variable, like with the elm-watch command:
+        // Opens error locations that you click in the browser UI in your editor, by
+        // running a command. Each developer can set their command via the
+        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+        // Without it, you choose your editor in the browser UI instead:
         // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
         openEditor:
           process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -724,9 +729,10 @@ describe("init --javascript and --typescript", () => {
         targets: enabledTargets,
         // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
         host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor.
-        // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-        // environment variable, like with the elm-watch command:
+        // Opens error locations that you click in the browser UI in your editor, by
+        // running a command. Each developer can set their command via the
+        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+        // Without it, you choose your editor in the browser UI instead:
         // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
         openEditor:
           process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -927,9 +933,10 @@ describe("init --javascript and --typescript", () => {
           targets: enabledTargets,
           // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
           host: process.env.ELM_WATCH_HOST,
-          // Opens error locations that you click in the browser UI in your editor.
-          // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-          // environment variable, like with the elm-watch command:
+          // Opens error locations that you click in the browser UI in your editor, by
+          // running a command. Each developer can set their command via the
+          // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+          // Without it, you choose your editor in the browser UI instead:
           // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
           openEditor:
             process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -1010,9 +1017,10 @@ describe("init --javascript and --typescript", () => {
           targets: enabledTargets,
           // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
           host: process.env.ELM_WATCH_HOST,
-          // Opens error locations that you click in the browser UI in your editor.
-          // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-          // environment variable, like with the elm-watch command:
+          // Opens error locations that you click in the browser UI in your editor, by
+          // running a command. Each developer can set their command via the
+          // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+          // Without it, you choose your editor in the browser UI instead:
           // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
           openEditor:
             process.env.ELM_WATCH_OPEN_EDITOR === undefined
@@ -1109,9 +1117,10 @@ describe("init --javascript and --typescript", () => {
           targets: enabledTargets,
           // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
           host: process.env.ELM_WATCH_HOST,
-          // Opens error locations that you click in the browser UI in your editor.
-          // Each developer can choose their editor by setting the ELM_WATCH_OPEN_EDITOR
-          // environment variable, like with the elm-watch command:
+          // Opens error locations that you click in the browser UI in your editor, by
+          // running a command. Each developer can set their command via the
+          // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
+          // Without it, you choose your editor in the browser UI instead:
           // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
           openEditor:
             process.env.ELM_WATCH_OPEN_EDITOR === undefined
