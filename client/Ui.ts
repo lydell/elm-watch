@@ -1972,7 +1972,7 @@ supported by browsers, for browsers without popover support.
   gap: 0 3ch;
 }
 
-.${CLASS.overlayKeyHint} > [aria-hidden],
+.${CLASS.overlayKeyHint} [aria-hidden],
 .${CLASS.overlayKeyHint}[data-disabled] {
   opacity: 0.6;
 }
@@ -1983,8 +1983,11 @@ supported by browsers, for browsers without popover support.
   border: none;
   border-radius: 0;
   background: none;
-  font-weight: bold;
   cursor: pointer;
+}
+
+.${CLASS.overlayKeyHint} button:enabled:hover {
+  text-decoration: underline;
 }
 
 .${CLASS.editorChooser} {
@@ -2042,9 +2045,12 @@ supported by browsers, for browsers without popover support.
 }
 
 .${CLASS.overlayKeyHint} button:disabled {
-  font-weight: normal;
   opacity: 0.6;
   cursor: default;
+}
+
+.${CLASS.overlayKeyHint} button:disabled b {
+  font-weight: normal;
 }
 
 .${CLASS.root} {
@@ -3193,7 +3199,7 @@ function viewOverlay({
     editor.chooser === undefined
       ? undefined
       : viewEditorChooser(editor.chooser);
-  const cancelHints: Array<[keys: Array<OverlayHintKey>, label: string]> = [
+  const cancelHints: Array<OverlayHint> = [
     [[["esc", "CancelEditorChooser", true, "Cancel"]], "cancel"],
   ];
 
@@ -3467,13 +3473,17 @@ type OverlayHintKey = [
   label: string,
 ];
 
+type OverlayHint = [keys: Array<OverlayHintKey>, label: string];
+
 // Styled like in the terminal: [key] label
-// The keys are buttons, so that they work with the mouse and on touch screens.
+// The hints are buttons, so that they work with the mouse and on touch screens.
+// A hint with a single key is one button, label included. A hint with several
+// keys (the arrows) has one button per key, and the label is just text.
 // The editor chooser (if open) goes above the footer, sticking with it.
 function viewOverlayFooter(
   chooser: HTMLElement | undefined,
   position: string,
-  hints: Array<[keys: Array<OverlayHintKey>, label: string] | undefined>,
+  hints: Array<OverlayHint | undefined>,
   onKey: (key: OverlayKey) => void,
 ): HTMLElement {
   const footer = h(
@@ -3489,6 +3499,29 @@ function viewOverlayFooter(
         }
         const [keys, label] = hint;
         const anyEnabled = keys.some(([, , enabled]) => enabled);
+        const bracket = (text: string): HTMLElement =>
+          h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, text);
+        const viewButton = (
+          [, overlayKey, enabled, buttonLabel]: OverlayHintKey,
+          ...children: Array<HTMLElement | string | undefined>
+        ): HTMLButtonElement =>
+          h(
+            HTMLButtonElement,
+            {
+              disabled: !enabled,
+              attrs: {
+                "aria-label": buttonLabel,
+                [DATA_FOCUS_KEY]: overlayKey,
+              },
+              onclick: () => {
+                onKey(overlayKey);
+              },
+            },
+            ...children,
+          );
+        const bold = (key: string): HTMLElement =>
+          h(HTMLElement, { localName: "b" }, key);
+        const [singleKey] = keys;
         return [
           h(
             HTMLSpanElement,
@@ -3496,25 +3529,24 @@ function viewOverlayFooter(
               className: CLASS.overlayKeyHint,
               attrs: anyEnabled ? {} : { "data-disabled": "" },
             },
-            h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "["),
-            ...keys.map(([key, overlayKey, enabled, buttonLabel]) =>
-              h(
-                HTMLButtonElement,
-                {
-                  disabled: !enabled,
-                  attrs: {
-                    "aria-label": buttonLabel,
-                    [DATA_FOCUS_KEY]: overlayKey,
-                  },
-                  onclick: () => {
-                    onKey(overlayKey);
-                  },
-                },
-                key,
-              ),
-            ),
-            h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "]"),
-            ` ${label}`,
+            ...(keys.length === 1 && singleKey !== undefined
+              ? [
+                  viewButton(
+                    singleKey,
+                    bracket("["),
+                    bold(singleKey[0]),
+                    bracket("]"),
+                    ` ${label}`,
+                  ),
+                ]
+              : [
+                  bracket("["),
+                  ...keys.map((hintKey) =>
+                    viewButton(hintKey, bold(hintKey[0])),
+                  ),
+                  bracket("]"),
+                  ` ${label}`,
+                ]),
           ),
         ];
       }),
