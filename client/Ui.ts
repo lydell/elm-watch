@@ -300,9 +300,11 @@ export function createUi(): Ui {
     setErrorOverlayOpen(false);
   };
 
+  // The overlay itself is focused when it opens (rather than the first button),
+  // so that Enter and Space work as key hints, and Page Up/Down scroll.
   const overlay = h(HTMLDivElement, {
     className: CLASS.overlay,
-    attrs: { "data-test-id": "Overlay" },
+    attrs: { "data-test-id": "Overlay", tabindex: "-1" },
     hidden: true,
   });
 
@@ -461,9 +463,19 @@ export function createUi(): Ui {
     }
 
     // Restore focus after re-creating the key hint buttons, so that keyboard
-    // users don’t lose their place.
-    const focusKey =
-      shadowRoot.activeElement?.getAttribute(DATA_FOCUS_KEY) ?? undefined;
+    // users don’t lose their place. If the focus isn’t visible (such as after
+    // clicking a button), focus the overlay instead: Focusing a button from
+    // script after a key press would show its focus outline.
+    const { activeElement } = shadowRoot;
+    const focusInOverlay =
+      activeElement !== null &&
+      activeElement !== overlay &&
+      overlay.contains(activeElement);
+    const focusKey = focusInOverlay
+      ? (activeElement.getAttribute(DATA_FOCUS_KEY) ?? undefined)
+      : undefined;
+    const focusVisible =
+      focusInOverlay && activeElement.matches(":focus-visible");
     const { scrollTop } = overlay;
     // The error ID is JSON, so it can’t be confused with "show all".
     const renderedKey = overlayShowAll ? "show all" : selectedError?.id;
@@ -496,12 +508,15 @@ export function createUi(): Ui {
     }
     overlayRenderedKey = renderedKey;
 
-    if (focusKey !== undefined) {
-      const element = overlay.querySelector(
-        `[${DATA_FOCUS_KEY}="${focusKey}"]`,
-      );
+    if (focusInOverlay) {
+      const element =
+        focusKey === undefined || !focusVisible
+          ? undefined
+          : overlay.querySelector(`[${DATA_FOCUS_KEY}="${focusKey}"]`);
       if (element instanceof HTMLElement && !element.matches(":disabled")) {
         element.focus({ preventScroll: true });
+      } else {
+        overlay.focus({ preventScroll: true });
       }
     }
   };
@@ -952,6 +967,7 @@ export function createUi(): Ui {
         dialog.close();
       } else if (!dialog.open) {
         dialog.showModal();
+        overlay.focus({ preventScroll: true });
       }
     }
 
