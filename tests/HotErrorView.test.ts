@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { ELM_WATCH_OPEN_EDITOR } from "../src/Env.ts";
 import { IS_WINDOWS } from "../src/IsWindows.ts";
 import {
   clean,
@@ -502,6 +503,116 @@ describe("hot error view", () => {
       ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
+
+  test.skipIf(IS_WINDOWS)(
+    "ELM_WATCH_OPEN_EDITOR is the default, but a preset can be chosen",
+    async () => {
+      const dir = fixtureDir("error-view");
+      const stuffJsonPath = path.join(
+        dir,
+        "elm-stuff",
+        "elm-watch",
+        "stuff.json",
+      );
+      const readChosenEditor = (): unknown =>
+        (
+          JSON.parse(fs.readFileSync(stuffJsonPath, "utf8")) as {
+            editor?: unknown;
+          }
+        ).editor;
+
+      // Fake `open` (macOS) and `xdg-open` (Linux), so that no editor is opened.
+      const binDir = path.join(dir, "fake-open-bin");
+      const opened = path.join(dir, "opened.txt");
+      fs.mkdirSync(binDir, { recursive: true });
+      for (const name of ["open", "xdg-open"]) {
+        const file = path.join(binDir, name);
+        fs.writeFileSync(
+          file,
+          `#!/usr/bin/env node\nimport * as fs from "node:fs";\nfs.appendFileSync(${JSON.stringify(opened)}, process.argv.slice(2).join(" ") + "\\n");\n`,
+        );
+        fs.chmodSync(file, 0o755);
+      }
+      const readOpened = (): Array<string> =>
+        fs.existsSync(opened)
+          ? clean(fs.readFileSync(opened, "utf8")).trim().split("\n")
+          : [];
+
+      const stdin = new KeyReadStream();
+      const footers: Array<string> = [];
+
+      await run({
+        fixture: "error-view",
+        args: ["Other"],
+        scripts: ["Other.js"],
+        keepElmStuffJson: true,
+        env: {
+          PATH: prependPATH(binDir),
+          [ELM_WATCH_OPEN_EDITOR]: `echo "env $file:$line" >> "${opened}"`,
+        },
+        stdin,
+        init: () => {
+          // Do nothing.
+        },
+        onIdle: async ({ stdout }) => {
+          const footer = (): string => {
+            const screen = clean(stdout.getOutput());
+            return screen.slice(screen.lastIndexOf("🚨 error"));
+          };
+          // The env var is used without asking.
+          stdin.press("\r");
+          await waitFor(() => readOpened().length === 1);
+          footers.push(footer());
+          // Choose a preset.
+          stdin.press("e");
+          await waitFor(() => footer().includes("Which editor"));
+          footers.push(footer());
+          stdin.press("2");
+          await waitFor(() => readOpened().length === 2);
+          footers.push(footer());
+          // Back to the env var.
+          stdin.press("e");
+          stdin.press("7");
+          await waitFor(() => readOpened().length === 3);
+          footers.push(footer());
+          return "Stop" as const;
+        },
+      });
+
+      expect(footers.join(`\n${"-".repeat(80)}\n`)).toMatchInlineSnapshot(`
+        🚨 error 1/1
+
+        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙e⧘⧙]⧘ change editor
+        ⧙[⧘⧙a⧘⧙]⧘ show all
+        --------------------------------------------------------------------------------
+        🚨 error 1/1
+
+        Which editor should I open this in?
+        ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
+        ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ ⧙ELM_WATCH_OPEN_EDITOR⧘
+
+        ⧙[⧘⧙esc⧘⧙]⧘ cancel
+        --------------------------------------------------------------------------------
+        🚨 error 1/1
+
+        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in Cursor   ⧙[⧘⧙e⧘⧙]⧘ change editor
+        ⧙[⧘⧙a⧘⧙]⧘ show all
+        --------------------------------------------------------------------------------
+        🚨 error 1/1
+
+        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙e⧘⧙]⧘ change editor
+        ⧙[⧘⧙a⧘⧙]⧘ show all
+      `);
+      expect(readOpened()).toMatchInlineSnapshot(`
+        [
+          env /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7,
+          cursor://file/Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20,
+          env /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7,
+        ]
+      `);
+      expect(readChosenEditor()).toBeUndefined();
+    },
+  );
 
   test("one-line info message for files not imported by any target", async () => {
     const fixture = "error-view";

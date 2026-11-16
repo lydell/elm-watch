@@ -53,7 +53,7 @@ At the bottom of the overlay you can see which error and file you’re at, and w
 | ← → (or h l) | Previous/next error. |
 | ↑ ↓ (or k j) | Previous/next file. |
 | Enter (or o) | Open the error in your editor (see [Clickable error locations](#clickable-error-locations)). |
-| e | Change which editor to open errors in (if [chosen in the browser or the terminal](#choose-your-editor)). |
+| e | Change which editor to open errors in (see [choose your editor](#choose-your-editor)). |
 | Space | Expand or collapse long code (see below). |
 | a | Show all errors at once (press again to go back to one at a time). |
 | Escape | Close the error overlay. |
@@ -85,7 +85,7 @@ Note that the browser opens the editor on the device you click on. If you test o
 
 ### ELM_WATCH_OPEN_EDITOR
 
-Set the `ELM_WATCH_OPEN_EDITOR` environment variable to either [a URL](#a-url) or [a command](#a-command). If it starts like a URL (`something://`), it’s a URL. Otherwise it’s a command. It takes precedence over the editor chosen in the browser or the terminal.
+Set the `ELM_WATCH_OPEN_EDITOR` environment variable to either [a URL](#a-url) or [a command](#a-command). If it starts like a URL (`something://`), it’s a URL. Otherwise it’s a command. It is used by default in all your projects, but you can still [choose one of the editors](#choose-your-editor) in a specific project (press e in the error overlay or the terminal). To go back to `ELM_WATCH_OPEN_EDITOR` in that project, press e and then 7 (which says “ELM_WATCH_OPEN_EDITOR” instead of “Other” when the environment variable is set).
 
 Here’s how to set it in different shells:
 

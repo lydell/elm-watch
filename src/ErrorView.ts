@@ -1,4 +1,5 @@
 import { EDITOR_PRESETS, type EditorPreset } from "./Editor.ts";
+import { ELM_WATCH_OPEN_EDITOR } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import {
   canSwitchTarget,
@@ -60,10 +61,11 @@ export function digitToNumber(digit: Digit): number {
 
 // What the error view needs to know about opening errors in an editor.
 export type ErrorViewEditor = {
-  // The editor can be chosen in the terminal (and the browser) when no command
-  // has been set up.
-  canChoose: boolean;
+  // The chosen preset, which takes precedence over `ELM_WATCH_OPEN_EDITOR`.
   current: EditorPreset | undefined;
+  // Whether `ELM_WATCH_OPEN_EDITOR` is set. Then it can be chosen instead of
+  // the presets (in place of “Other”).
+  envSet: boolean;
   chooser: { showOther: boolean } | undefined;
   commandHint: string;
 };
@@ -176,10 +178,7 @@ export function render({
     .join("   ");
 
   const canOpenEditor = getOpenEditorLocation(error.location) !== undefined;
-  const openInName =
-    editor.canChoose && editor.current !== undefined
-      ? editor.current.name
-      : "editor";
+  const openInName = editor.current?.name ?? "editor";
 
   return [
     Errors.toTerminalString(
@@ -213,7 +212,7 @@ export function render({
           ],
           hasOtherTargetsWithErrors ? ["tab", "target"] : undefined,
           canOpenEditor ? ["enter", `open in ${openInName}`] : undefined,
-          canOpenEditor && editor.canChoose && editor.current !== undefined
+          canOpenEditor && (editor.current !== undefined || editor.envSet)
             ? ["e", "change editor"]
             : undefined,
           Errors.isCollapsible(error.template)
@@ -231,7 +230,7 @@ function renderEditorChooser(
   editor: ErrorViewEditor,
   { showOther }: { showOther: boolean },
 ): string {
-  const { current } = editor;
+  const { current, envSet } = editor;
   return [
     "Which editor should I open this in?",
     keyHints(terminalConfig.columns, [
@@ -239,7 +238,14 @@ function renderEditorChooser(
         (index + 1).toString(),
         current?.id === preset.id ? bold(preset.name) : preset.name,
       ]),
-      [(EDITOR_PRESETS.length + 1).toString(), "Other"],
+      [
+        (EDITOR_PRESETS.length + 1).toString(),
+        envSet
+          ? current === undefined
+            ? bold(ELM_WATCH_OPEN_EDITOR)
+            : ELM_WATCH_OPEN_EDITOR
+          : "Other",
+      ],
     ]),
     ...(showOther
       ? ["", Errors.openEditorOtherForTerminal(editor.commandHint)]

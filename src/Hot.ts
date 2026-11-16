@@ -856,7 +856,6 @@ const runCmd =
             });
           }
         };
-        const canChooseEditor = mutable.project.openEditor.tag === "NotSet";
         for (const key of cmd.keys) {
           // While choosing an editor, the other keys are paused.
           const { editorChooser } = errorView;
@@ -871,7 +870,14 @@ const runCmd =
                 saveEditor(env, mutable, webSocketToken, preset);
                 openSelectedError();
               } else if (digit === EDITOR_PRESETS.length + 1) {
-                editorChooser.showOther = true;
+                if (mutable.project.openEditor.tag === "NotSet") {
+                  editorChooser.showOther = true;
+                } else {
+                  // Go back to using `ELM_WATCH_OPEN_EDITOR`.
+                  errorView.editorChooser = undefined;
+                  saveEditor(env, mutable, webSocketToken, undefined);
+                  openSelectedError();
+                }
               }
             }
             continue;
@@ -892,7 +898,10 @@ const runCmd =
               break;
 
             case "OpenEditor":
-              if (canChooseEditor && mutable.project.editor === undefined) {
+              if (
+                mutable.project.editor === undefined &&
+                mutable.project.openEditor.tag === "NotSet"
+              ) {
                 openEditorChooser(errorView, selection, targets);
               } else {
                 openSelectedError();
@@ -900,9 +909,7 @@ const runCmd =
               break;
 
             case "ChangeEditor":
-              if (canChooseEditor) {
-                openEditorChooser(errorView, selection, targets);
-              }
+              openEditorChooser(errorView, selection, targets);
               break;
 
             case "Cancel":
@@ -1574,8 +1581,8 @@ function renderErrorView(
             notice,
             infoLine: mutable.lastInfoLine,
             editor: {
-              canChoose: mutable.project.openEditor.tag === "NotSet",
               current: mutable.project.editor,
+              envSet: mutable.project.openEditor.tag !== "NotSet",
               chooser: errorView.editorChooser,
               commandHint: getCommandHint(env),
             },

@@ -37,30 +37,20 @@ const OpenEditorError = Codec.taggedUnion("tag", [
   },
 ]);
 
-// How error locations are opened in the editor.
-export type OpenEditorSetup = Codec.Infer<typeof OpenEditorSetup>;
-const OpenEditorSetup = Codec.taggedUnion("tag", [
+// The `ELM_WATCH_OPEN_EDITOR` environment variable, if set. It is used for
+// opening error locations unless an editor preset has been chosen.
+export type OpenEditorEnv = Codec.Infer<typeof OpenEditorEnv>;
+const OpenEditorEnv = Codec.taggedUnion("tag", [
   {
-    // Via the `ELM_WATCH_OPEN_EDITOR` environment variable (set to a command),
-    // or the `openEditor` option. The browser sends `PressedOpenEditor` to the
-    // server.
-    tag: Codec.tag("Server"),
-  },
-  {
-    // Via the `ELM_WATCH_OPEN_EDITOR` environment variable set to a URL
-    // template (see `Editor.ts`). The browser opens the URL.
+    // Set to a URL template (see `Editor.ts`). The browser opens the URL.
     tag: Codec.tag("Url"),
     template: Codec.string,
   },
   {
-    // Chosen in the browser UI or the terminal. The browser opens the
-    // preset’s URL, and the editor can be changed.
-    tag: Codec.tag("Preset"),
-    editor: EditorPresetId,
-  },
-  {
-    // The browser lets the user choose an editor.
-    tag: Codec.tag("NotSet"),
+    // Set to a command (or an invalid URL). The browser sends
+    // `PressedOpenEditor` to the server, which runs the command (or shows an
+    // error).
+    tag: Codec.tag("Server"),
   },
 ]);
 
@@ -157,7 +147,10 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
   {
     // Sent when connecting, and to everyone when someone chooses an editor.
     tag: Codec.tag("OpenEditorSetupChanged"),
-    setup: OpenEditorSetup,
+    // The editor preset chosen in the browser UI or the terminal. Takes
+    // precedence over `env`.
+    preset: Codec.nullOr(EditorPresetId),
+    env: Codec.nullOr(OpenEditorEnv),
     // How to set up `ELM_WATCH_OPEN_EDITOR` in the user’s shell.
     commandHint: Codec.string,
   },

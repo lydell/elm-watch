@@ -283,8 +283,8 @@ describe("render", () => {
   };
 
   const noEditor: ErrorViewEditor = {
-    canChoose: true,
     current: undefined,
+    envSet: false,
     chooser: undefined,
     commandHint: "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='x'",
   };
@@ -427,6 +427,48 @@ describe("render", () => {
       Then restart elm-watch.
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+
+      [*esc*] cancel"
+    `);
+  });
+
+  test("editor chooser with ELM_WATCH_OPEN_EDITOR set", () => {
+    const targets = [target("A", ["X.elm:1:a1"])];
+    const chooser = (current: ErrorViewEditor["current"]): string => {
+      const output = render({
+        terminalConfig,
+        expanded: false,
+        selection: start(targets),
+        targets,
+        notice: undefined,
+        infoLine: undefined,
+        editor: {
+          ...noEditor,
+          current,
+          envSet: true,
+          chooser: { showOther: false },
+        },
+      });
+      // Shows bold as *x*.
+      return output
+        .slice(output.indexOf("Which editor"))
+        .replace(/\x1B\[0m\x1B\[1m(.*?)\x1B\[0m/g, "*$1*")
+        .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "$1");
+    };
+    // The env var is used when no preset has been chosen.
+    expect(chooser(undefined)).toMatchInlineSnapshot(`
+      "Which editor should I open this in?
+      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
+      [*6*] Rider   [*7*] *ELM_WATCH_OPEN_EDITOR*
+
+      [*esc*] cancel"
+    `);
+    expect(
+      chooser(EDITOR_PRESETS.find(({ id }) => id === "zed")),
+    ).toMatchInlineSnapshot(`
+      "Which editor should I open this in?
+      [*1*] VS Code   [*2*] Cursor   [*3*] *Zed*   [*4*] IntelliJ IDEA   [*5*] WebStorm
+      [*6*] Rider   [*7*] ELM_WATCH_OPEN_EDITOR
 
       [*esc*] cancel"
     `);

@@ -3,7 +3,7 @@ import * as path from "path";
 
 import type {
   OpenEditorError,
-  OpenEditorSetup,
+  OpenEditorEnv,
   WebSocketToClientMessage,
 } from "../client/WebSocketMessages.ts";
 import {
@@ -19,10 +19,7 @@ import {
   type Env,
 } from "./Env.ts";
 import * as Errors from "./Errors.ts";
-import {
-  bold,
-  silentlyReadIntEnvValue,
-} from "./Helpers.ts";
+import { bold, silentlyReadIntEnvValue } from "./Helpers.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
   type Project,
@@ -59,17 +56,20 @@ export function openEditor(
         onError(error);
       }
     };
+    // A chosen preset takes precedence over `ELM_WATCH_OPEN_EDITOR`, so that
+    // you can use a preset in some projects, and your custom editor in others.
+    if (project.editor !== undefined) {
+      openEditorWithUrl(
+        env,
+        location,
+        project.editor.template,
+        "Preset",
+        onDone,
+      );
+      return;
+    }
     switch (projectOpenEditor.tag) {
       case "NotSet":
-        if (project.editor !== undefined) {
-          openEditorWithUrl(
-            env,
-            location,
-            project.editor.template,
-            "Preset",
-            onDone,
-          );
-        }
         return;
 
       case "Url":
@@ -101,17 +101,16 @@ export function getOpenEditorSetupMessage(
 ): WebSocketToClientMessage {
   return {
     tag: "OpenEditorSetupChanged",
-    setup: getOpenEditorSetup(project),
+    preset: project.editor?.id ?? null,
+    env: getOpenEditorEnv(project),
     commandHint: getCommandHint(env),
   };
 }
 
-function getOpenEditorSetup(project: Project): OpenEditorSetup {
+function getOpenEditorEnv(project: Project): OpenEditorEnv | null {
   switch (project.openEditor.tag) {
     case "NotSet":
-      return project.editor === undefined
-        ? { tag: "NotSet" }
-        : { tag: "Preset", editor: project.editor.id };
+      return null;
 
     case "Url":
       // Let the server show the error for invalid URLs.

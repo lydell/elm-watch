@@ -451,8 +451,9 @@ describe("hot", () => {
         `);
       });
 
-      test("env var set to a URL", async () => {
-        let overlay = "";
+      test("env var set to a URL, and switching to a preset and back", async () => {
+        const overlays: Array<string> = [];
+        const chosen: Array<unknown> = [];
 
         await run({
           fixture,
@@ -466,24 +467,43 @@ describe("hot", () => {
           init: (node) => {
             window.Elm?.["Main"]?.init({ node });
           },
-          onIdle: () => {
+          onIdle: async () => {
+            // The env var is used without asking.
             clickFirstErrorLocation();
-            // Can’t change editor, since it’s set by the env var.
+            overlays.push(grep(getOverlay(), /footer/));
+            // But you can switch to a preset for this project.
             pressOverlayKey("e");
-            overlay = getOverlay();
+            overlays.push(grep(getOverlay(), /pressed|ELM_WATCH|footer/));
+            pressOverlayKey("2");
+            await waitFor(() => readChosenEditor() === "cursor");
+            chosen.push(readChosenEditor());
+            overlays.push(grep(getOverlay(), /footer/));
+            // And back to the env var.
+            pressOverlayKey("e");
+            overlays.push(grep(getOverlay(), /pressed|ELM_WATCH/));
+            pressOverlayKey("7");
+            await waitFor(() => readChosenEditor() === undefined);
+            chosen.push(readChosenEditor());
             return "Stop" as const;
           },
         });
 
+        expect(overlays.join("\n")).toMatchInlineSnapshot(`
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [e] change editor | [a] show all</footer>
+          [[7] ELM_WATCH_OPEN_EDITOR] (pressed)
+          <footer>🚨 error 1/1 | [esc] cancel</footer>
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in Cursor | [e] change editor | [a] show all</footer>
+          [[2] Cursor] (pressed)
+          [[7] ELM_WATCH_OPEN_EDITOR]
+        `);
+        expect(chosen).toStrictEqual(["cursor", undefined]);
         expect(openedUrls).toMatchInlineSnapshot(`
           [
             myeditor://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=9&column=30,
+            cursor://file/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31,
+            myeditor://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=9&column=30,
           ]
         `);
-        expect(grep(overlay, /footer|chooser/)).toMatchInlineSnapshot(
-          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>`,
-        );
-        expect(readChosenEditor()).toBeUndefined();
       });
 
       test("env var set to an invalid URL", async () => {

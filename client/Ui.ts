@@ -26,7 +26,7 @@ import type {
 import type {
   ErrorLocation,
   OpenEditorError,
-  OpenEditorSetup,
+  OpenEditorEnv,
 } from "./WebSocketMessages.ts";
 
 export type UiMsg =
@@ -53,8 +53,10 @@ export type UiMsg =
       tag: "PressedReconnectNow";
     };
 
+// See `OpenEditorSetupChanged`.
 export type OpenEditorSetupWithHint = {
-  setup: OpenEditorSetup;
+  preset: string | null;
+  env: OpenEditorEnv | null;
   commandHint: string;
 };
 
@@ -206,14 +208,19 @@ type EditorChooser = {
 
 type EditorChooserProps = EditorChooser & {
   current: EditorPreset | undefined;
+  envSet: boolean;
   commandHint: string;
-  onChoose: (editor: string) => void;
+  // `null` goes back to using `ELM_WATCH_OPEN_EDITOR`.
+  onChoose: (editor: string | null) => void;
   onShowOther: () => void;
 };
 
 type OverlayEditor = {
-  // The editor chosen in the browser or the terminal, if any.
+  // The editor chosen in the browser or the terminal, if any. Takes precedence
+  // over `ELM_WATCH_OPEN_EDITOR`.
   current: EditorPreset | undefined;
+  // Whether `ELM_WATCH_OPEN_EDITOR` is set.
+  envSet: boolean;
   chooser: EditorChooserProps | undefined;
 };
 
@@ -624,61 +631,72 @@ export function createUi(): Ui {
     link.remove();
   };
 
-  const openEditorForItem = (
-    item: OverlayErrorItem,
+  // Opens the location using `ELM_WATCH_OPEN_EDITOR`.
+  const openWithEnv = (
+    env: OpenEditorEnv | undefined,
     location: LocationToOpen,
+    dispatch: ((msg: UiMsg) => void) | undefined,
+    sendKey: SendKey | undefined,
   ): void => {
-    const setup = getOpenEditor()?.openEditor.setup;
-    switch (setup?.tag) {
+    switch (env?.tag) {
       case "Url":
-        openUrl(editorUrl(setup.template, location));
+        openUrl(editorUrl(env.template, location));
         return;
 
-      case "Preset": {
-        const preset = findPreset(setup.editor);
-        if (preset !== undefined) {
-          openUrl(editorUrl(preset.template, location));
-        }
-        return;
-      }
-
-      case "NotSet":
-        openEditorChooser(location);
-        return;
-
+      // `undefined`: Haven’t heard from the server yet. Let it decide.
       case "Server":
       case undefined:
-        if (item.sendKey !== undefined) {
-          item.dispatch({
+        if (dispatch !== undefined && sendKey !== undefined) {
+          dispatch({
             tag: "PressedOpenEditor",
             file: location.file,
             line: location.line,
             column: location.column,
-            sendKey: item.sendKey,
+            sendKey,
           });
         }
         return;
     }
   };
 
-  const canChooseEditor = (): boolean => {
-    const result = getOpenEditor();
-    return (
-      result?.connectedTarget !== undefined &&
-      (result.openEditor.setup.tag === "NotSet" ||
-        result.openEditor.setup.tag === "Preset")
-    );
+  const openEditorForItem = (
+    item: OverlayErrorItem,
+    location: LocationToOpen,
+  ): void => {
+    const openEditor = getOpenEditor()?.openEditor;
+    const preset =
+      openEditor?.preset === null || openEditor === undefined
+        ? undefined
+        : findPreset(openEditor.preset);
+    if (preset !== undefined) {
+      openUrl(editorUrl(preset.template, location));
+    } else if (openEditor !== undefined && openEditor.env === null) {
+      openEditorChooser(location);
+    } else {
+      openWithEnv(
+        openEditor?.env ?? undefined,
+        location,
+        item.dispatch,
+        item.sendKey,
+      );
+    }
   };
+
+  const canChooseEditor = (): boolean =>
+    getOpenEditor()?.connectedTarget !== undefined;
 
   const openEditorChooser = (location: LocationToOpen | undefined): void => {
     if (!canChooseEditor()) {
       return;
     }
     const current = getCurrentPreset();
+    const envSet = isEnvSet();
     editorChooser = { location, showOther: false };
     renderOverlay();
     const element = overlay.querySelector(
-      `[${DATA_FOCUS_KEY}="editor:${current?.id ?? EDITOR_PRESETS[0]?.id ?? ""}"]`,
+      current === undefined && envSet
+        ? `[${DATA_FOCUS_KEY}="editorOther"]`
+        : `[${DATA_FOCUS_KEY}="editor:${current?.id ?? EDITOR_PRESETS[0]?.id ?? ""}"]`,
     );
     if (element instanceof HTMLElement) {
       element.focus({ preventScroll: true });
@@ -698,16 +716,31 @@ export function createUi(): Ui {
     renderOverlay();
   };
 
-  const chooseEditor = (editorString: string): void => {
-    const connectedTarget = getOpenEditor()?.connectedTarget;
-    const preset = findPreset(editorString);
-    if (connectedTarget === undefined || preset === undefined) {
+  const chooseEditor = (editorString: string | null): void => {
+    const result = getOpenEditor();
+    const connectedTarget = result?.connectedTarget;
+    const preset = editorString === null ? undefined : findPreset(editorString);
+    if (
+      connectedTarget === undefined ||
+      (editorString !== null && preset === undefined)
+    ) {
       return;
     }
     const location = editorChooser?.location;
     editorChooser = undefined;
     if (location !== undefined) {
-      openUrl(editorUrl(preset.template, location));
+      if (preset === undefined) {
+        openWithEnv(
+          result?.openEditor.env ?? undefined,
+          location,
+          (msg) => {
+            dispatchToTarget(connectedTarget.targetName, msg);
+          },
+          connectedTarget.sendKey,
+        );
+      } else {
+        openUrl(editorUrl(preset.template, location));
+      }
     }
     dispatchToTarget(connectedTarget.targetName, {
       tag: "ChoseEditor",
@@ -718,21 +751,27 @@ export function createUi(): Ui {
   };
 
   const getCurrentPreset = (): EditorPreset | undefined => {
-    const setup = getOpenEditor()?.openEditor.setup;
-    return setup?.tag === "Preset" ? findPreset(setup.editor) : undefined;
+    const preset = getOpenEditor()?.openEditor.preset ?? null;
+    return preset === null ? undefined : findPreset(preset);
   };
+
+  const isEnvSet = (): boolean =>
+    (getOpenEditor()?.openEditor.env ?? null) !== null;
 
   const getOverlayEditor = (): OverlayEditor => {
     const result = getOpenEditor();
     const current = getCurrentPreset();
+    const envSet = isEnvSet();
     return {
       current,
+      envSet,
       chooser:
         editorChooser === undefined || result === undefined
           ? undefined
           : {
               ...editorChooser,
               current,
+              envSet,
               commandHint: result.openEditor.commandHint,
               onChoose: chooseEditor,
               onShowOther: showOtherEditor,
@@ -1215,10 +1254,12 @@ export function createUi(): Ui {
       event.preventDefault();
       event.stopImmediatePropagation();
       const preset = EDITOR_PRESETS[digit - 1];
-      if (preset === undefined) {
-        showOtherEditor();
-      } else {
+      if (preset !== undefined) {
         chooseEditor(preset.id);
+      } else if (isEnvSet()) {
+        chooseEditor(null);
+      } else {
+        showOtherEditor();
       }
       return;
     }
@@ -3247,7 +3288,7 @@ function viewOverlay({
                   `open in ${openInName}`,
                 ]
               : undefined,
-            canOpenEditor && editor.current !== undefined
+            canOpenEditor && (editor.current !== undefined || editor.envSet)
               ? [
                   [["e", "ChangeEditor", true, "Change editor"]],
                   "change editor",
@@ -3280,6 +3321,7 @@ function viewEditorChooser({
   location,
   showOther,
   current,
+  envSet,
   commandHint,
   onChoose,
   onShowOther,
@@ -3326,13 +3368,22 @@ function viewEditorChooser({
           attrs: {
             [DATA_FOCUS_KEY]: "editorOther",
             "aria-keyshortcuts": otherNumber,
+            // When set, the environment variable is used unless a preset has
+            // been chosen.
+            ...(envSet
+              ? { "aria-pressed": (current === undefined).toString() }
+              : {}),
           },
-          onclick: onShowOther,
+          onclick: envSet
+            ? () => {
+                onChoose(null);
+              }
+            : onShowOther,
         },
         h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "["),
         h(HTMLElement, { localName: "b" }, otherNumber),
         h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, "]"),
-        " Other",
+        envSet ? " ELM_WATCH_OPEN_EDITOR" : " Other",
       ),
     ),
     ...(showOther ? viewOtherEditor(commandHint) : []),

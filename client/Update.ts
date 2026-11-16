@@ -451,10 +451,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
               ...model,
               openEditor: {
                 ...model.openEditor,
-                setup:
-                  msg.editor === null
-                    ? { tag: "NotSet" }
-                    : { tag: "Preset", editor: msg.editor },
+                preset: msg.editor,
               },
             },
         [
@@ -541,7 +538,11 @@ function onWebSocketToClientMessage(
       return [
         {
           ...model,
-          openEditor: { setup: msg.setup, commandHint: msg.commandHint },
+          openEditor: {
+            preset: msg.preset,
+            env: msg.env,
+            commandHint: msg.commandHint,
+          },
         },
         [],
       ];
