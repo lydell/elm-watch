@@ -1815,6 +1815,13 @@ supported by browsers, for browsers without popover support.
   outline: none;
 }
 
+/* Like the borders in the overlay, rather than the browser default. */
+.${CLASS.overlay} :focus-visible,
+.${CLASS.overlayCloseButton}:focus-visible {
+  outline: 0.125em solid currentColor;
+  outline-offset: 0.25em;
+}
+
 .${CLASS.overlayCloseBar} {
   position: fixed;
   z-index: -1;
@@ -1852,6 +1859,11 @@ supported by browsers, for browsers without popover support.
   color: inherit;
   cursor: pointer;
   filter: drop-shadow(0 0 2px var(--backgroundColor));
+}
+
+/* Hug the icon rather than the whole (large) hit area. */
+.${CLASS.overlayCloseButton}:focus-visible {
+  outline-offset: -10px;
 }
 
 .${CLASS.overlayCloseButton} svg {
