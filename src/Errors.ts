@@ -26,7 +26,7 @@ import {
   sanitizeTerminalText,
   toError,
 } from "./Helpers.ts";
-import type { Host } from "./Host.ts";
+import type { Host, HostSource } from "./Host.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
   isNonEmptyArray,
@@ -1341,10 +1341,13 @@ remove "port" from ${config} (which will use an arbitrary available port.)
 export function hostNotFound(
   configSource: ConfigSource,
   host: Host,
-  fromEnv: boolean,
+  hostSource: HostSource,
   error: Error,
 ): ErrorTemplate {
-  if (fromEnv) {
+  // The default host is an IP address, which can’t be “not found”, so
+  // "Default" is never expected here. If it happens anyway, the config message
+  // (saying that `host` is 127.0.0.1) is close enough.
+  if (hostSource === "Env") {
     return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
 This environment variable is set:
 

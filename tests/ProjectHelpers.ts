@@ -191,7 +191,7 @@ export function makeProject({
     webSocketUrl: undefined,
     allowedHosts: [],
     openEditor: { tag: "NotSet" },
-    hostFromEnv: false,
+    hostSource: "Default",
     editor: undefined,
     errorReporter: undefined,
     externalErrors: EMPTY_SNAPSHOT,

@@ -1208,7 +1208,7 @@ function onDevServerMsg(
             errorTemplate: Errors.hostNotFound(
               mutable.project.configSource,
               host,
-              mutable.project.hostFromEnv,
+              mutable.project.hostSource,
               msg.error.error,
             ),
           });

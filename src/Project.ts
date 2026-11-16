@@ -24,7 +24,7 @@ import {
   getSnapshot,
 } from "./ExternalErrors.ts";
 import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
-import { DEFAULT_HOST, getHostFromEnv, type Host } from "./Host.ts";
+import { type Host, type HostSource, resolveHost } from "./Host.ts";
 import type { WalkImportsError } from "./ImportWalker.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import {
@@ -78,8 +78,7 @@ export type Project = {
   packages: Map<ElmJsonPath, [PackageTarget, PackageState]>;
   maxParallel: number;
   host: Host;
-  // Whether `host` comes from the `ELM_WATCH_HOST` environment variable.
-  hostFromEnv: boolean;
+  hostSource: HostSource;
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
   openEditor: OpenEditor;
@@ -609,8 +608,7 @@ export function initProject({
   // JavaScript API. They are each developer’s own settings, so they take
   // precedence over the project’s config. (With the JavaScript API, you can
   // filter the `env` option if you don’t want them.)
-  const hostFromEnv = getHostFromEnv(env);
-  const host = hostFromEnv ?? config.host ?? DEFAULT_HOST;
+  const { host, hostSource } = resolveHost(env, config.host);
 
   const openEditorValue = getEnvValue(env, ELM_WATCH_OPEN_EDITOR);
   const openEditor: OpenEditor =
@@ -653,7 +651,7 @@ export function initProject({
       packages,
       maxParallel,
       host,
-      hostFromEnv: hostFromEnv !== undefined,
+      hostSource,
       webSocketUrl,
       allowedHosts,
       openEditor,
