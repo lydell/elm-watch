@@ -61,6 +61,7 @@ const project: Project = {
   maxParallel: 12,
   host: DEFAULT_HOST,
   openEditor: { tag: "NotSet" },
+  hostFromEnv: false,
   editor: undefined,
   errorReporter: undefined,
   externalErrors: EMPTY_SNAPSHOT,
@@ -506,14 +507,15 @@ describe("Project", () => {
       });
     });
 
-    test("ignored when using the JavaScript API", () => {
+    test("also used with the JavaScript API", () => {
       expect(
         getWebSocketUrl("ws://env.example.com/ws", {
           source: { tag: "Options" },
+          webSocketUrl: { ...configUrl, source: "Options" },
         }),
       ).toStrictEqual({
-        webSocketUrl: undefined,
-        allowedHosts: [],
+        webSocketUrl: "ws://env.example.com/ws (Env)",
+        allowedHosts: ["env.example.com"],
       });
     });
   });

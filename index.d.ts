@@ -45,19 +45,6 @@ export type Postprocess = (
   },
 ) => string | Promise<string>;
 
-// Opens a file in your editor. `file` is an absolute path. `line` and `column`
-// start at 1. If it throws (or rejects), the error is shown in the browser.
-export type OpenEditor = (location: {
-  file: string;
-  line: number;
-  column: number;
-}) => void | Promise<void>;
-
-// Created by `shellCommand()`.
-export type ShellCommand = {
-  readonly command: string;
-};
-
 export type Target = ApplicationTarget | PackageTarget;
 
 // Compiles Elm files with `main` to JavaScript.
@@ -118,6 +105,7 @@ export type Options = {
   // `server.listen(port, host)`. Use "0.0.0.0" to expose the server on the
   // local network (to test on your phone, for example).
   // Default: "127.0.0.1" (only your computer).
+  // The ELM_WATCH_HOST environment variable takes precedence.
   host?: string | undefined;
 
   // A directory of static files to serve, relative to `root`. CSS files in it
@@ -126,15 +114,14 @@ export type Options = {
 
   // A URL starting with `ws:` or `wss:`, for customizing how the browser
   // connects to elm-watch.
+  // The ELM_WATCH_WEBSOCKET_URL environment variable takes precedence.
   webSocketUrl?: string | undefined;
 
   // Extra host names that the server accepts requests for.
+  // The ELM_WATCH_ALLOWED_HOSTS environment variable adds more.
   allowedHosts?: Array<string> | undefined;
 
   createServer?: CreateServer | undefined;
-
-  // Called when you click an error location in the browser UI.
-  openEditor?: OpenEditor | ShellCommand | undefined;
 
   // Errors from other tools, shown like Elm’s errors. See `createErrorReporter`.
   errors?: ErrorReporter | undefined;
@@ -144,7 +131,10 @@ export type Options = {
   // `elmWatch()` then resolves to 0.
   signal?: AbortSignal | undefined;
 
-  // Defaults to the corresponding `process` things.
+  // Defaults to the corresponding `process` things. The elm-watch environment
+  // variables (like ELM_WATCH_HOST and ELM_WATCH_OPEN_EDITOR) are read from
+  // `env`, just like for the elm-watch command. Remove them from `env` if you
+  // don’t want them to have an effect.
   env?: Record<string, string | undefined> | undefined;
   stdin?: ReadStream | undefined;
   stdout?: WriteStream | undefined;
@@ -159,13 +149,6 @@ export declare function elmWatch(options: Options): Promise<number>;
 // terminal, so other tools can’t print there. Pass the reporter as the `errors`
 // option. It can be used both before and while elm-watch runs.
 export declare function createErrorReporter(): ErrorReporter;
-
-// For the `openEditor` option: Runs `command` in a shell (`cmd.exe` on
-// Windows, `sh` otherwise) in `root`, just like the `ELM_WATCH_OPEN_EDITOR`
-// environment variable for the elm-watch command. The location is passed via
-// the `file`, `line`, `column`, `line0` and `column0` environment variables.
-// For example: shellCommand('code --goto "$file:$line:$column"')
-export declare function shellCommand(command: string): ShellCommand;
 
 export type ErrorReporter = {
   // Replaces the errors of `source` (such as "esbuild"). An empty array clears

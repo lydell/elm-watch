@@ -464,7 +464,6 @@ function toConfig(
     webSocketUrl: json.webSocketUrl,
     staticFilesDir: json.serve,
     allowedHosts: json.allowedHosts ?? [],
-    openEditor: undefined,
     errorReporter: undefined,
   };
 }

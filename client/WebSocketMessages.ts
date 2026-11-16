@@ -25,7 +25,7 @@ const OpenEditorError = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("EnvNotSet"),
     // See `commandHint` in `OpenEditorSetupChanged`.
-    commandHint: Codec.nullOr(Codec.string),
+    commandHint: Codec.string,
   },
   {
     tag: Codec.tag("InvalidFilePath"),
@@ -158,9 +158,8 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
     // Sent when connecting, and to everyone when someone chooses an editor.
     tag: Codec.tag("OpenEditorSetupChanged"),
     setup: OpenEditorSetup,
-    // How to set up `ELM_WATCH_OPEN_EDITOR` in the user’s shell. `null` with
-    // the JavaScript API.
-    commandHint: Codec.nullOr(Codec.string),
+    // How to set up `ELM_WATCH_OPEN_EDITOR` in the user’s shell.
+    commandHint: Codec.string,
   },
   {
     tag: Codec.tag("StaticFilesChanged"),

@@ -684,10 +684,10 @@ describe("errors", () => {
       `);
     });
 
-    test("from options (env is ignored)", async () => {
+    test("from options", async () => {
       expect(
         await run("valid", [], {
-          env: { ...elmBinAlwaysSucceedEnv, ELM_WATCH_HOST: "0.0.0.0" },
+          env: elmBinAlwaysSucceedEnv,
           exitHotOnError: true,
           elmWatchOptions: {
             ...(await fixtureOptions(fixtureDir("valid"))),
@@ -716,6 +716,20 @@ describe("errors", () => {
 
         getaddrinfo ENOTFOUND nope.invalid
       `);
+    });
+
+    test("env takes precedence over options", async () => {
+      const output = await run("valid", [], {
+        env: { ...elmBinAlwaysSucceedEnv, ELM_WATCH_HOST: "nope.invalid" },
+        exitHotOnError: true,
+        elmWatchOptions: {
+          ...(await fixtureOptions(fixtureDir("valid"))),
+          runMode: "hot",
+          host: "0.0.0.0",
+        },
+      });
+      expect(output).toContain("ELM_WATCH_HOST=nope.invalid");
+      expect(output).toContain("getaddrinfo ENOTFOUND nope.invalid");
     });
   });
 

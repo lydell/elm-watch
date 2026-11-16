@@ -35,7 +35,6 @@ import {
 } from "./NonEmptyArray.ts";
 import { absolutePathFromString } from "./PathHelpers.ts";
 import type { Port } from "./Port.ts";
-import type { OpenEditorCommandSource } from "./Project.ts";
 import type { Command, ExitReason } from "./Spawn.ts";
 import { DEFAULT_COLUMNS } from "./Terminal.ts";
 import * as Theme from "./Theme.ts";
@@ -1340,9 +1339,12 @@ remove "port" from ${config} (which will use an arbitrary available port.)
 export function hostNotFound(
   configSource: ConfigSource,
   host: Host,
+  fromEnv: boolean,
   error: Error,
 ): ErrorTemplate {
-  switch (configSource.tag) {
+  // elm-watch.json has no "host" field, so the host comes from the environment
+  // variable (or is the default).
+  switch (fromEnv ? "ElmWatchJson" : configSource.tag) {
     case "ElmWatchJson":
       return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
 This environment variable is set:
@@ -1564,34 +1566,24 @@ The web socket code I generate is supposed to always send correct messages, so s
   `.trim();
 }
 
-export function openEditorEnvNotSetForTerminal(
-  commandHint: string | null,
-): string {
+export function openEditorEnvNotSetForTerminal(commandHint: string): string {
   return `
-Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or ${
-    commandHint === null
-      ? "use the openEditor option"
-      : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
+Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
 
-${commandHint}`
-  }
+${commandHint}
 
 Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
   `.trim();
 }
 
-export function openEditorOtherForTerminal(commandHint: string | null): string {
+export function openEditorOtherForTerminal(commandHint: string): string {
   return `
-To use another editor, ${
-    commandHint === null
-      ? "use the openEditor option."
-      : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
+To use another editor, set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
 
 ${commandHint}
 
 Try it out by running: elm-watch try-open
-Then restart elm-watch.`
-  }
+Then restart elm-watch.
 
 Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
   `.trim();
@@ -1684,7 +1676,6 @@ However, no target imports that file. For security reasons, I never executed any
 export function openEditorCommandFailed({
   error,
   command,
-  source,
   cwd,
   timeout,
   env,
@@ -1693,7 +1684,6 @@ export function openEditorCommandFailed({
 }: {
   error: ExecException;
   command: string;
-  source: OpenEditorCommandSource;
   cwd: AbsolutePath;
   // Set if the command timed out.
   timeout: number | undefined;
@@ -1708,11 +1698,7 @@ export function openEditorCommandFailed({
         ? `The command exited with code ${error.code}.`
         : "The command failed for an unknown reason.";
   return `
-I ran your command for opening an editor (${
-    source === "Env"
-      ? `set via the ${ELM_WATCH_OPEN_EDITOR} environment variable`
-      : "set via shellCommand() in the openEditor option"
-  }):
+I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):
 
 ${commandToPresentationName(["cd", cwd])}
 ${command}
@@ -1761,21 +1747,6 @@ ${commandToPresentationName(command)}
 ${errorReason}
 
 ${printStdio(stdout, stderr)(DEFAULT_COLUMNS, (piece) => piece.text)}
-  `.trim();
-}
-
-export function openEditorFunctionFailed(
-  location: { file: string; line: number; column: number },
-  error: string,
-): string {
-  return `
-I called your openEditor function with:
-
-${Codec.JSON.stringify(Codec.unknown, location, 2)}
-
-It threw an error:
-
-${error}
   `.trim();
 }
 

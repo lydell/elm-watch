@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import * as fs from "fs";
 import * as path from "path";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { ELM_WATCH_OPEN_EDITOR } from "../src/Env.ts";
 import { createErrorReporter } from "../src/index.ts";
 import {
   clean,
@@ -26,7 +27,10 @@ import {
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
 describe("hot external errors", () => {
-  afterEach(cleanupAfterEachTest);
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await cleanupAfterEachTest();
+  });
 
   test("shown in the terminal and in the browser, and updated while running", async () => {
     const fixture = "error-view";
@@ -207,18 +211,22 @@ describe("hot external errors", () => {
         location: { file: "translations.json", line: 3 },
       },
     ]);
-    const calls: Array<unknown> = [];
+    const openedUrls: Array<string> = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      openedUrls.push(clean(this.href));
+    });
     const overlayVisible: Array<boolean> = [];
 
     const { renders } = await run({
       fixture,
       scripts: ["Main.js"],
-      useElmWatchFunction: {
-        errors,
-        openEditor: (location: unknown) => {
-          calls.push(location);
-        },
+      env: {
+        [ELM_WATCH_OPEN_EDITOR]:
+          "myeditor://open?file={file}&line={line}&column={column}",
       },
+      useElmWatchFunction: { errors },
       init: () => {
         // Do nothing.
       },
@@ -226,7 +234,7 @@ describe("hot external errors", () => {
         await waitFor(isOverlayVisible);
         overlayVisible.push(isOverlayVisible());
         clickFirstErrorLocation();
-        await waitFor(() => calls.length > 0);
+        await waitFor(() => openedUrls.length > 0);
 
         const handled = nextMsg((msg) => msg.tag === "ExternalErrorsChanged");
         errors.set("codegen", []);
@@ -254,9 +262,11 @@ describe("hot external errors", () => {
       ================================================================================
       ▼ ✅
     `);
-    expect(clean(JSON.stringify(calls))).toMatchInlineSnapshot(
-      `[{"file":"/Users/you/project/tests/fixtures/hot/error-view/translations.json","line":3,"column":1}]`,
-    );
+    expect(openedUrls).toMatchInlineSnapshot(`
+      [
+        myeditor://open?file=/Users/you/project/tests/fixtures/hot/error-view/translations.json&line=3&column=1,
+      ]
+    `);
   });
 
   test("errors set while restarting reach connected browsers", async () => {

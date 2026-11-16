@@ -1204,6 +1204,7 @@ function onDevServerMsg(
             errorTemplate: Errors.hostNotFound(
               mutable.project.configSource,
               host,
+              mutable.project.hostFromEnv,
               msg.error.error,
             ),
           });
@@ -1576,7 +1577,7 @@ function renderErrorView(
               canChoose: mutable.project.openEditor.tag === "NotSet",
               current: mutable.project.editor,
               chooser: errorView.editorChooser,
-              commandHint: getCommandHint(env, mutable.project),
+              commandHint: getCommandHint(env),
             },
           }),
     );

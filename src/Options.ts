@@ -3,11 +3,7 @@ import * as Codec from "tiny-decoders";
 
 import type * as Public from "../index.d.ts";
 import { AllowedHost } from "./AllowedHosts.ts";
-import type {
-  Config,
-  OpenEditorFunction,
-  PostprocessFunction,
-} from "./Config.ts";
+import type { Config, PostprocessFunction } from "./Config.ts";
 import {
   ElmJsonPathString,
   Inputs,
@@ -18,7 +14,6 @@ import { isErrorReporter, setTargetNames } from "./ExternalErrors.ts";
 import { Host } from "./Host.ts";
 import { NonEmptyArray } from "./NonEmptyArray.ts";
 import { Port } from "./Port.ts";
-import { isShellCommand, type ShellCommand } from "./ShellCommand.ts";
 import {
   type AbsolutePath,
   CompilationMode,
@@ -51,7 +46,7 @@ function functionCodec<T extends object>(): Codec.Codec<T> {
 }
 
 // Optional options can also be set to `undefined`, which is convenient when
-// reading environment variables, for example: `host: process.env.ELM_WATCH_HOST`.
+// reading environment variables, for example: `staticFilesDir: process.env.STATIC`.
 // oxlint-disable-next-line typescript/explicit-function-return-type
 function optionalField<Decoded, Encoded>(codec: Codec.Codec<Decoded, Encoded>) {
   return Codec.field(Codec.undefinedOr(codec), { optional: true });
@@ -137,26 +132,6 @@ const ErrorReporterCodec = Codec.flatMap(Codec.unknown, {
   encoder: (value) => value,
 });
 
-const OpenEditorCodec: Codec.Codec<OpenEditorFunction | ShellCommand> =
-  Codec.flatMap(Codec.unknown, {
-    decoder: (value): Codec.DecoderResult<OpenEditorFunction | ShellCommand> =>
-      typeof value === "function"
-        ? { tag: "Valid", value: value as OpenEditorFunction }
-        : isShellCommand(value)
-          ? { tag: "Valid", value }
-          : {
-              tag: "DecoderError",
-              error: {
-                tag: "custom",
-                message: "Expected a function or `shellCommand()`",
-                got: value,
-                path: [],
-              },
-            },
-    // Encoding is never used.
-    encoder: (value) => value,
-  });
-
 const Options = Codec.fields(
   {
     runMode: Codec.primitiveUnion(["hot", "make"]),
@@ -168,7 +143,6 @@ const Options = Codec.fields(
     staticFilesDir: optionalField(Codec.string),
     webSocketUrl: optionalField(WebSocketUrl("Options")),
     allowedHosts: optionalField(Codec.array(AllowedHost)),
-    openEditor: optionalField(OpenEditorCodec),
     errors: optionalField(ErrorReporterCodec),
     // These are validated by TypeScript only.
     createServer: optionalField(functionCodec<object>()),
@@ -275,7 +249,6 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
           webSocketUrl: value.webSocketUrl,
           staticFilesDir: value.staticFilesDir,
           allowedHosts: value.allowedHosts ?? [],
-          openEditor: value.openEditor,
           errorReporter: value.errors,
         },
       };

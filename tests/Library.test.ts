@@ -4,7 +4,7 @@ import * as path from "path";
 import { describe, expect, test } from "vitest";
 
 import type { HotTestHooks } from "../src/Hot.ts";
-import { createErrorReporter, elmWatch, shellCommand } from "../src/index.ts";
+import { createErrorReporter, elmWatch } from "../src/index.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
@@ -448,7 +448,6 @@ describe("library", () => {
           "staticFilesDir",
           "webSocketUrl",
           "allowedHosts",
-          "openEditor",
           "errors",
           "createServer",
           "signal",
@@ -516,7 +515,7 @@ describe("library", () => {
       `);
     });
 
-    test("openEditor is a string", async () => {
+    test("openEditor is not an option (use ELM_WATCH_OPEN_EDITOR)", async () => {
       const { stdout } = await run(1, (root) => ({
         root,
         runMode: "make",
@@ -528,17 +527,27 @@ describe("library", () => {
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
-        At root["openEditor"]:
-        Expected a function or \`shellCommand()\`
-        Got: "code --goto \\"$file:$line:$column\\""
-        Or expected: undefined
+        At root:
+        Expected only these fields:
+          "runMode",
+          "compilationMode",
+          "root",
+          "targets",
+          "port",
+          "host",
+          "staticFilesDir",
+          "webSocketUrl",
+          "allowedHosts",
+          "errors",
+          "createServer",
+          "signal",
+          "env",
+          "stdin",
+          "stdout",
+          "stderr"
+        Found extra fields:
+          "openEditor"
       `);
-    });
-
-    test("shellCommand with an empty string", () => {
-      expect(() => shellCommand(" ")).toThrowErrorMatchingInlineSnapshot(
-        `[TypeError: shellCommand: Expected a non-empty string, but got: " "]`,
-      );
     });
   });
 

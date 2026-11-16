@@ -4,7 +4,7 @@ import { ELM_WATCH_OPEN_EDITOR, type Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import { bold } from "./Helpers.ts";
 import {
-  getOpenEditorEnvHint,
+  getCommandHint,
   openEditorFromEnv,
   printOpenEditorErrorForTerminal,
 } from "./OpenEditor.ts";
@@ -34,7 +34,7 @@ export async function tryOpen(
   const value = env[ELM_WATCH_OPEN_EDITOR];
   if (value === undefined || value === "") {
     terminal.writeToStderrMakesALotOfSenseHere(
-      Errors.tryOpenEnvNotSet(getOpenEditorEnvHint(env)),
+      Errors.tryOpenEnvNotSet(getCommandHint(env)),
     );
     return 1;
   }

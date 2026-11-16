@@ -6,7 +6,6 @@ import type {
   OpenEditorSetup,
   WebSocketToClientMessage,
 } from "../client/WebSocketMessages.ts";
-import type { OpenEditorFunction } from "./Config.ts";
 import {
   EDITOR_PLACEHOLDERS,
   EDITOR_URL_EXAMPLE,
@@ -23,11 +22,9 @@ import * as Errors from "./Errors.ts";
 import {
   bold,
   silentlyReadIntEnvValue,
-  unknownErrorToString,
 } from "./Helpers.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
-  type OpenEditorCommandSource,
   type Project,
   projectHasFilePathThatCanBeOpenedInEditor,
 } from "./Project.ts";
@@ -48,7 +45,7 @@ export function openEditor(
 ): void {
   const { openEditor: projectOpenEditor } = project;
   if (projectOpenEditor.tag === "NotSet" && project.editor === undefined) {
-    onError({ tag: "EnvNotSet", commandHint: getCommandHint(env, project) });
+    onError({ tag: "EnvNotSet", commandHint: getCommandHint(env) });
   } else if (
     !projectHasFilePathThatCanBeOpenedInEditor(project, location.file)
   ) {
@@ -90,12 +87,9 @@ export function openEditor(
           env,
           project.root,
           location,
-          projectOpenEditor,
+          projectOpenEditor.command,
           onDone,
         );
-        return;
-      case "Function":
-        openEditorWithFunction(location, projectOpenEditor.openEditor, onError);
         return;
     }
   }
@@ -108,7 +102,7 @@ export function getOpenEditorSetupMessage(
   return {
     tag: "OpenEditorSetupChanged",
     setup: getOpenEditorSetup(project),
-    commandHint: getCommandHint(env, project),
+    commandHint: getCommandHint(env),
   };
 }
 
@@ -127,20 +121,13 @@ function getOpenEditorSetup(project: Project): OpenEditorSetup {
         : { tag: "Server" };
 
     case "Command":
-    case "Function":
       return { tag: "Server" };
   }
 }
 
 // How to set `ELM_WATCH_OPEN_EDITOR` in the user’s shell: To a URL or a
-// command. The environment variable is only used with elm-watch.json.
-export function getCommandHint(env: Env, project: Project): string | null {
-  return project.configSource.tag === "ElmWatchJson"
-    ? getOpenEditorEnvHint(env)
-    : null;
-}
-
-export function getOpenEditorEnvHint(env: Env): string {
+// command.
+export function getCommandHint(env: Env): string {
   const urlComment = `A URL (${EDITOR_PLACEHOLDERS.join(" ")}):`;
   const commandComment = (variables: Array<string>): string =>
     `Or a command (${variables.join(" ")}):`;
@@ -209,13 +196,7 @@ export async function openEditorFromEnv(
     if (isEditorUrl(value)) {
       openEditorWithUrl(env, location, value, "Env", resolve);
     } else {
-      openEditorWithCommand(
-        env,
-        cwd,
-        location,
-        { command: value, source: "Env" },
-        resolve,
-      );
+      openEditorWithCommand(env, cwd, location, value, resolve);
     }
   });
 }
@@ -224,7 +205,7 @@ function openEditorWithCommand(
   env: Env,
   cwd: AbsolutePath,
   location: OpenEditorLocation,
-  { command, source }: { command: string; source: OpenEditorCommandSource },
+  command: string,
   onDone: (error: OpenEditorError | undefined) => void,
 ): void {
   const timeout = silentlyReadIntEnvValue(
@@ -257,7 +238,6 @@ function openEditorWithCommand(
           message: Errors.openEditorCommandFailed({
             error,
             command,
-            source,
             cwd,
             timeout: timedOut ? timeout : undefined,
             env: extraEnv,
@@ -336,23 +316,4 @@ function getOpenUrlCommand(url: string): [string, ...Array<string>] {
     default:
       return ["xdg-open", url];
   }
-}
-
-function openEditorWithFunction(
-  { file, line, column }: OpenEditorLocation,
-  openEditorFunction: OpenEditorFunction,
-  onError: (error: OpenEditorError) => void,
-): void {
-  const location = { file, line, column };
-  new Promise((resolve) => {
-    resolve(openEditorFunction(location));
-  }).catch((error: unknown) => {
-    onError({
-      tag: "CommandFailed",
-      message: Errors.openEditorFunctionFailed(
-        location,
-        unknownErrorToString(error),
-      ),
-    });
-  });
 }

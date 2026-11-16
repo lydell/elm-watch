@@ -152,15 +152,14 @@ Type definition: `import type { Options } from "elm-watch"`.
 | compilationMode | `"standard" \| "debug" \| "optimize"` | `"standard"` | In `"make"` mode: The compilation mode for all targets. In `"hot"` mode: The compilation mode for targets you haven’t switched to another mode in the [browser UI](../browser-ui/). |
 | targets | `Array<Target>` | _Required_ | What to compile. At least one target is required. See below. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time. | Like `"port"` in [elm-watch.json](../elm-watch.json/). Handy for setting the port only for some runs, like `port: process.env.TUNNEL === "1" ? 443 : undefined` – later runs without `port` don’t reuse it. |
-| host | `string` | `"127.0.0.1"` | The host for the server to listen on, as in Node.js’ `server.listen(port, host)`. Use `"0.0.0.0"` to expose the server on the local network. See [Network exposure](../server/#network-exposure). The `ELM_WATCH_HOST` environment variable is ignored. |
+| host | `string` | `"127.0.0.1"` | The host for the server to listen on, as in Node.js’ `server.listen(port, host)`. Use `"0.0.0.0"` to expose the server on the local network. See [Network exposure](../server/#network-exposure). The `ELM_WATCH_HOST` environment variable takes precedence. |
 | staticFilesDir | `string` | unset | A directory of static files to [serve](../server/), relative to `root`. Like `"serve"` in elm-watch.json. |
-| webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable is ignored – use `process.env` yourself if needed. |
-| allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable is ignored – use `process.env` yourself if needed. |
+| webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable takes precedence. |
+| allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable adds more hosts. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |
-| openEditor | `function` or `shellCommand(command)` | unset | Opens error locations that you click in your editor. When unset, you choose your editor in the browser instead. See [Clickable error locations](../browser-ui/#with-the-javascript-api). The `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. |
 | errors | `ErrorReporter` | unset | Errors from other tools, shown like Elm’s errors. See [Showing errors from other tools](#showing-errors-from-other-tools). |
 | signal | `AbortSignal` | unset | Abort to make elm-watch exit (in `"hot"` mode). See [Stopping elm-watch](#stopping-elm-watch). |
-| env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. |
+| env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. See [Environment variables](#environment-variables). |
 | stdin, stdout, stderr | streams | `process.stdin` etc. | Where elm-watch reads keyboard input and writes output. |
 
 Each target looks like this (see [targets in elm-watch.json](../elm-watch.json/#targets) for more details):
@@ -179,7 +178,26 @@ Type definitions: `Target`, `ApplicationTarget` and `PackageTarget`.
 
 `elmWatch()` returns a promise of an exit code: 0 for success and 1 for errors. Use it with `process.exitCode = await elmWatch(...)`.
 
-Optional options can also be set to `undefined`, which is handy for environment variables: `host: process.env.ELM_WATCH_HOST`.
+Optional options can also be set to `undefined`, which is handy for environment variables: `port: process.env.TUNNEL === "1" ? 443 : undefined`.
+
+### Environment variables
+
+The elm-watch environment variables work just like with the `elm-watch` command, also with the JavaScript API:
+
+- `ELM_WATCH_HOST` and `ELM_WATCH_WEBSOCKET_URL` take precedence over the `host` and `webSocketUrl` options.
+- `ELM_WATCH_ALLOWED_HOSTS` adds to the `allowedHosts` option.
+- `ELM_WATCH_OPEN_EDITOR` sets up [clickable error locations](../browser-ui/#clickable-error-locations).
+
+The environment variables are each developer’s own settings, which is why they take precedence. They are read from the `env` option (which defaults to `process.env`). If you don’t want them to have an effect, remove them from `env`:
+
+```js
+const { ELM_WATCH_HOST, ...env } = process.env;
+
+process.exitCode = await elmWatch({
+  // ...
+  env,
+});
+```
 
 The options are validated, and you get an error message if something is wrong – also if you write plain JavaScript instead of TypeScript. You can use `// @ts-check` and JSDoc to get type checking in plain JavaScript files:
 

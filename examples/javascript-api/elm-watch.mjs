@@ -9,7 +9,7 @@
 //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
 import { parseArgs } from "node:util";
-import { elmWatch, shellCommand } from "elm-watch";
+import { elmWatch } from "elm-watch";
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
@@ -59,16 +59,5 @@ process.exitCode = await elmWatch({
       ? "debug"
       : "standard",
   targets: enabledTargets,
-  // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-  host: process.env.ELM_WATCH_HOST,
   staticFilesDir: ".",
-  // Opens error locations that you click in the browser UI in your editor, by
-  // running a command. Each developer can set their command via the
-  // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-  // Without it, you choose your editor in the browser UI instead:
-  // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-  openEditor:
-    process.env.ELM_WATCH_OPEN_EDITOR === undefined
-      ? undefined
-      : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
 });

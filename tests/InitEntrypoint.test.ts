@@ -103,7 +103,7 @@ describe("init --javascript and --typescript", () => {
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
       import { parseArgs } from "node:util";
-      import { elmWatch, shellCommand } from "elm-watch";
+      import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
         allowPositionals: true,
@@ -153,17 +153,6 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
-        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-        host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor, by
-        // running a command. Each developer can set their command via the
-        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-        // Without it, you choose your editor in the browser UI instead:
-        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-        openEditor:
-          process.env.ELM_WATCH_OPEN_EDITOR === undefined
-            ? undefined
-            : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
       });
     `);
   });
@@ -182,7 +171,7 @@ describe("init --javascript and --typescript", () => {
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
       import { parseArgs } from "node:util";
-      import { elmWatch, shellCommand } from "elm-watch";
+      import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
         allowPositionals: true,
@@ -245,20 +234,9 @@ describe("init --javascript and --typescript", () => {
             : "standard",
         targets: enabledTargets,
         port: 9876,
-        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-        host: process.env.ELM_WATCH_HOST,
         staticFilesDir: "public/",
         webSocketUrl: "wss://dev.example.com/elm-watch",
         allowedHosts: ["other.example.com"],
-        // Opens error locations that you click in the browser UI in your editor, by
-        // running a command. Each developer can set their command via the
-        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-        // Without it, you choose your editor in the browser UI instead:
-        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-        openEditor:
-          process.env.ELM_WATCH_OPEN_EDITOR === undefined
-            ? undefined
-            : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
       });
     `);
   });
@@ -299,7 +277,7 @@ describe("init --javascript and --typescript", () => {
 
       import { spawn } from "node:child_process";
       import { parseArgs } from "node:util";
-      import { elmWatch, shellCommand } from "elm-watch";
+      import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
         allowPositionals: true,
@@ -350,17 +328,6 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
-        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-        host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor, by
-        // running a command. Each developer can set their command via the
-        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-        // Without it, you choose your editor in the browser UI instead:
-        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-        openEditor:
-          process.env.ELM_WATCH_OPEN_EDITOR === undefined
-            ? undefined
-            : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
       });
 
       // Runs your postprocess command from elm-watch.json, like elm-watch 1 did:
@@ -439,7 +406,7 @@ describe("init --javascript and --typescript", () => {
 
       import * as path from "node:path";
       import { parseArgs } from "node:util";
-      import { elmWatch, shellCommand } from "elm-watch";
+      import { elmWatch } from "elm-watch";
       import elmWatchNodePostprocess from "./scripts/postprocess.js";
 
       const { positionals, values } = parseArgs({
@@ -491,17 +458,6 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
-        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-        host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor, by
-        // running a command. Each developer can set their command via the
-        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-        // Without it, you choose your editor in the browser UI instead:
-        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-        openEditor:
-          process.env.ELM_WATCH_OPEN_EDITOR === undefined
-            ? undefined
-            : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
       });
 
       // Calls your postprocess function from elm-watch 1 (\`elm-watch-node\`), which
@@ -544,7 +500,7 @@ describe("init --javascript and --typescript", () => {
 
       import { spawn } from "node:child_process";
       import { parseArgs } from "node:util";
-      import { elmWatch, shellCommand } from "elm-watch";
+      import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
         allowPositionals: true,
@@ -595,17 +551,6 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
-        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-        host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor, by
-        // running a command. Each developer can set their command via the
-        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-        // Without it, you choose your editor in the browser UI instead:
-        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-        openEditor:
-          process.env.ELM_WATCH_OPEN_EDITOR === undefined
-            ? undefined
-            : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
       });
 
       // Runs your postprocess command from elm-watch.json, like elm-watch 1 did:
@@ -677,7 +622,7 @@ describe("init --javascript and --typescript", () => {
       //     node elm-watch.mjs make [--debug|--optimize] [target names...]
 
       import { parseArgs } from "node:util";
-      import { elmWatch, shellCommand } from "elm-watch";
+      import { elmWatch } from "elm-watch";
 
       const { positionals, values } = parseArgs({
         allowPositionals: true,
@@ -727,17 +672,6 @@ describe("init --javascript and --typescript", () => {
             ? "debug"
             : "standard",
         targets: enabledTargets,
-        // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-        host: process.env.ELM_WATCH_HOST,
-        // Opens error locations that you click in the browser UI in your editor, by
-        // running a command. Each developer can set their command via the
-        // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-        // Without it, you choose your editor in the browser UI instead:
-        // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-        openEditor:
-          process.env.ELM_WATCH_OPEN_EDITOR === undefined
-            ? undefined
-            : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
       });
     `);
   });
@@ -882,7 +816,7 @@ describe("init --javascript and --typescript", () => {
         //     node elm-watch.mts make [--debug|--optimize] [target names...]
 
         import { parseArgs } from "node:util";
-        import { elmWatch, shellCommand, type Target } from "elm-watch";
+        import { elmWatch, type Target } from "elm-watch";
 
         const { positionals, values } = parseArgs({
           allowPositionals: true,
@@ -931,17 +865,6 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
-          // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-          host: process.env.ELM_WATCH_HOST,
-          // Opens error locations that you click in the browser UI in your editor, by
-          // running a command. Each developer can set their command via the
-          // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-          // Without it, you choose your editor in the browser UI instead:
-          // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-          openEditor:
-            process.env.ELM_WATCH_OPEN_EDITOR === undefined
-              ? undefined
-              : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
         });
       `);
     });
@@ -962,7 +885,7 @@ describe("init --javascript and --typescript", () => {
 
         import * as path from "node:path";
         import { parseArgs } from "node:util";
-        import { elmWatch, shellCommand, type Postprocess, type Target } from "elm-watch";
+        import { elmWatch, type Postprocess, type Target } from "elm-watch";
         // TypeScript might complain about this JavaScript import. Consider converting
         // it to TypeScript, using the new signature (see postprocessFor below).
         import elmWatchNodePostprocess from "./scripts/postprocess.js";
@@ -1015,17 +938,6 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
-          // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-          host: process.env.ELM_WATCH_HOST,
-          // Opens error locations that you click in the browser UI in your editor, by
-          // running a command. Each developer can set their command via the
-          // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-          // Without it, you choose your editor in the browser UI instead:
-          // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-          openEditor:
-            process.env.ELM_WATCH_OPEN_EDITOR === undefined
-              ? undefined
-              : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
         });
 
         // Calls your postprocess function from elm-watch 1 (\`elm-watch-node\`), which
@@ -1065,7 +977,7 @@ describe("init --javascript and --typescript", () => {
 
         import { spawn } from "node:child_process";
         import { parseArgs } from "node:util";
-        import { elmWatch, shellCommand, type Postprocess, type Target } from "elm-watch";
+        import { elmWatch, type Postprocess, type Target } from "elm-watch";
 
         const { positionals, values } = parseArgs({
           allowPositionals: true,
@@ -1115,17 +1027,6 @@ describe("init --javascript and --typescript", () => {
               ? "debug"
               : "standard",
           targets: enabledTargets,
-          // For example, ELM_WATCH_HOST=0.0.0.0 exposes the server on the local network.
-          host: process.env.ELM_WATCH_HOST,
-          // Opens error locations that you click in the browser UI in your editor, by
-          // running a command. Each developer can set their command via the
-          // ELM_WATCH_OPEN_EDITOR environment variable, like with the elm-watch command.
-          // Without it, you choose your editor in the browser UI instead:
-          // https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-          openEditor:
-            process.env.ELM_WATCH_OPEN_EDITOR === undefined
-              ? undefined
-              : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
         });
 
         // Runs your postprocess command from elm-watch.json, like elm-watch 1 did:

@@ -65,7 +65,7 @@ export type ErrorViewEditor = {
   canChoose: boolean;
   current: EditorPreset | undefined;
   chooser: { showOther: boolean } | undefined;
-  commandHint: string | null;
+  commandHint: string;
 };
 
 const KEYS: Array<[string, ErrorViewKey]> = [

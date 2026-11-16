@@ -180,7 +180,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 - Shell:
   - On Windows: `cmd.exe`
   - Otherwise: `sh`
-- CWD: The `elm-watch.json` directory.
+- CWD: The `elm-watch.json` directory (or `root` with the JavaScript API).
 - Environment: Five extra environment variables are set:
   - `file`: The absolute file path of the error location.
   - `line`: 1-based line number of the error location. `1` if the error location has no line number.
@@ -189,26 +189,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 
 ### With the JavaScript API
 
-If you use the [JavaScript API](../javascript-api/), [choosing your editor](#choose-your-editor) works just the same. But the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. To run a command, pass the `openEditor` option instead. It can be either:
-
-- `shellCommand('your-editor "$file:$line:$column"')`: Runs the command exactly like `ELM_WATCH_OPEN_EDITOR` does (see above), with `root` as the CWD.
-- A function, which is called with `{ file, line, column }` (same as the environment variables above, but `line` and `column` are numbers). If it throws (or returns a promise that rejects), the error is shown in the browser. Use this if you need to do something special, like translating file paths.
-
-Since people use different editors, it’s a good idea to let each developer choose their own command. Here’s how to keep supporting the `ELM_WATCH_OPEN_EDITOR` environment variable, so that it works just like with the elm-watch CLI:
-
-```js
-import { elmWatch, shellCommand } from "elm-watch";
-
-process.exitCode = await elmWatch({
-  // ...
-  openEditor:
-    process.env.ELM_WATCH_OPEN_EDITOR === undefined
-      ? undefined
-      : shellCommand(process.env.ELM_WATCH_OPEN_EDITOR),
-});
-```
-
-`elm-watch init --javascript` and `elm-watch init --typescript` generate that code for you.
+Clickable error locations work just the same with the [JavaScript API](../javascript-api/), including `ELM_WATCH_OPEN_EDITOR`.
 
 [child_process.exec]: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
 [direnv]: https://direnv.net/

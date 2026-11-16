@@ -55,7 +55,7 @@ export type UiMsg =
 
 export type OpenEditorSetupWithHint = {
   setup: OpenEditorSetup;
-  commandHint: string | null;
+  commandHint: string;
 };
 
 export type OverlayError = {
@@ -206,7 +206,7 @@ type EditorChooser = {
 
 type EditorChooserProps = EditorChooser & {
   current: EditorPreset | undefined;
-  commandHint: string | null;
+  commandHint: string;
   onChoose: (editor: string) => void;
   onShowOther: () => void;
 };
@@ -3339,43 +3339,33 @@ function viewEditorChooser({
   );
 }
 
-// Other editors are set up with an environment variable (or the `openEditor`
-// option), rather than in the browser, so they survive deleting elm-stuff/.
-function viewOtherEditor(commandHint: string | null): Array<HTMLElement> {
-  const link = h(
-    HTMLAnchorElement,
-    {
-      href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
-      target: "_blank",
-      rel: "noreferrer",
-    },
-    "Clickable error locations",
-  );
-  return commandHint === null
-    ? [
-        h(
-          HTMLParagraphElement,
-          {},
-          "To use another editor, use the openEditor option. ",
-          link,
-        ),
-      ]
-    : [
-        h(
-          HTMLParagraphElement,
-          {},
-          "To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:",
-        ),
-        h(HTMLPreElement, {}, commandHint),
-        h(
-          HTMLParagraphElement,
-          {},
-          "Try it out by running ",
-          h(HTMLElement, { localName: "code" }, "elm-watch try-open"),
-          " in the terminal. Then restart elm-watch. ",
-          link,
-        ),
-      ];
+// Other editors are set up with an environment variable rather than in the
+// browser, so they survive deleting elm-stuff/.
+function viewOtherEditor(commandHint: string): Array<HTMLElement> {
+  return [
+    h(
+      HTMLParagraphElement,
+      {},
+      "To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:",
+    ),
+    h(HTMLPreElement, {}, commandHint),
+    h(
+      HTMLParagraphElement,
+      {},
+      "Try it out by running ",
+      h(HTMLElement, { localName: "code" }, "elm-watch try-open"),
+      " in the terminal. Then restart elm-watch. ",
+      h(
+        HTMLAnchorElement,
+        {
+          href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
+          target: "_blank",
+          rel: "noreferrer",
+        },
+        "Clickable error locations",
+      ),
+    ),
+  ];
 }
 
 function viewOverlayError(

@@ -7,7 +7,7 @@ import {
   allowedHostFromUrl,
   getAllowedHostsFromEnv,
 } from "./AllowedHosts.ts";
-import type { Config, ConfigSource, OpenEditorFunction } from "./Config.ts";
+import type { Config, ConfigSource } from "./Config.ts";
 import { type EditorPreset, findPreset, isEditorUrl } from "./Editor.ts";
 import * as ElmJson from "./ElmJson.ts";
 import type { ElmWatchStuffJson } from "./ElmWatchStuffJson.ts";
@@ -38,7 +38,6 @@ import type {
   PostprocessError,
   PostprocessToRun,
 } from "./Postprocess.ts";
-import { isShellCommand } from "./ShellCommand.ts";
 import type { RunElmMakeError } from "./SpawnElm.ts";
 import {
   type AbsolutePath,
@@ -78,6 +77,8 @@ export type Project = {
   packages: Map<ElmJsonPath, [PackageTarget, PackageState]>;
   maxParallel: number;
   host: Host;
+  // Whether `host` comes from the `ELM_WATCH_HOST` environment variable.
+  hostFromEnv: boolean;
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
   openEditor: OpenEditor;
@@ -95,12 +96,8 @@ export type OpenEditor =
   // `ELM_WATCH_OPEN_EDITOR` set to a URL template (see Editor.ts). It might be
   // invalid: Then the error is shown when trying to open something.
   | { tag: "Url"; template: string }
-  | { tag: "Command"; command: string; source: OpenEditorCommandSource }
-  | { tag: "Function"; openEditor: OpenEditorFunction };
-
-// The `ELM_WATCH_OPEN_EDITOR` environment variable (elm-watch.json only), or
-// `shellCommand()` (JavaScript API).
-export type OpenEditorCommandSource = "Env" | "ShellCommand";
+  // `ELM_WATCH_OPEN_EDITOR` set to a command.
+  | { tag: "Command"; command: string };
 
 // The code base leans towards pure functions, but these data structures are
 // going to be mutated a lot.
@@ -609,43 +606,29 @@ export function initProject({
     os.cpus().length,
   );
 
-  // The environment variables are for elm-watch.json. With the JavaScript API,
-  // you can read environment variables yourself.
-  const isElmWatchJson = config.source.tag === "ElmWatchJson";
+  // The environment variables work the same with elm-watch.json and the
+  // JavaScript API. They are each developer’s own settings, so they take
+  // precedence over the project’s config. (With the JavaScript API, you can
+  // filter the `env` option if you don’t want them.)
+  const hostFromEnv = getHostFromEnv(env);
+  const host = hostFromEnv ?? config.host ?? DEFAULT_HOST;
 
-  const host =
-    config.host ??
-    (isElmWatchJson ? getHostFromEnv(env) : undefined) ??
-    DEFAULT_HOST;
-
-  const openEditorCommand = isElmWatchJson
-    ? env[ELM_WATCH_OPEN_EDITOR]
-    : undefined;
+  const openEditorValue = env[ELM_WATCH_OPEN_EDITOR];
   const openEditor: OpenEditor =
-    config.openEditor === undefined
-      ? openEditorCommand === undefined
-        ? { tag: "NotSet" }
-        : isEditorUrl(openEditorCommand)
-          ? { tag: "Url", template: openEditorCommand }
-          : { tag: "Command", command: openEditorCommand, source: "Env" }
-      : isShellCommand(config.openEditor)
-        ? {
-            tag: "Command",
-            command: config.openEditor.command,
-            source: "ShellCommand",
-          }
-        : { tag: "Function", openEditor: config.openEditor };
+    openEditorValue === undefined || openEditorValue === ""
+      ? { tag: "NotSet" }
+      : isEditorUrl(openEditorValue)
+        ? { tag: "Url", template: openEditorValue }
+        : { tag: "Command", command: openEditorValue };
 
-  const webSocketUrl =
-    (isElmWatchJson ? getWebSocketUrlFromEnv(env) : undefined) ??
-    config.webSocketUrl;
+  const webSocketUrl = getWebSocketUrlFromEnv(env) ?? config.webSocketUrl;
 
   // If you connect the WebSocket via some custom host, that host should be
   // allowed. It’s typically also the host of the page.
   const allowedHosts = Array.from(
     new Set([
       ...config.allowedHosts,
-      ...(isElmWatchJson ? getAllowedHostsFromEnv(env) : []),
+      ...getAllowedHostsFromEnv(env),
       ...(webSocketUrl === undefined
         ? []
         : [allowedHostFromUrl(webSocketUrl.url)]),
@@ -671,6 +654,7 @@ export function initProject({
       packages,
       maxParallel,
       host,
+      hostFromEnv: hostFromEnv !== undefined,
       webSocketUrl,
       allowedHosts,
       openEditor,

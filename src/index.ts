@@ -2,4 +2,3 @@
 // It must be in sync with index.d.ts.
 export { elmWatch } from "./ElmWatch.ts";
 export { createErrorReporter } from "./ExternalErrors.ts";
-export { shellCommand } from "./ShellCommand.ts";
