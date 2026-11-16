@@ -1905,8 +1905,16 @@ supported by browsers, for browsers without popover support.
   border-radius: 0;
   background: none;
   text-align: left;
+  /* A faint underline hints that the location is clickable, without being as
+     loud as a full underline on every error. */
   text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 0.25em;
   cursor: pointer;
+}
+
+.${CLASS.errorLocationButton}:hover {
+  text-decoration-color: currentColor;
 }
 
 .${CLASS.overlay} pre [data-expand] {
