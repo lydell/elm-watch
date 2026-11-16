@@ -97,7 +97,7 @@ describe("hot", () => {
 
       <u>Hint</u>: Only <span style="color: rgb(35, 209, 139)">Int</span> and <span style="color: rgb(35, 209, 139)">Float</span> values work as numbers.</pre></div>
       --------------------------------------------------------------------------------
-      <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
+      <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
       </overlay>
     `);
   });
@@ -153,7 +153,7 @@ describe("hot", () => {
 
       Hint: Only Int and Float values work as numbers.</pre></div>
       --------------------------------------------------------------------------------
-      <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
+      <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
       </overlay>
     `);
   });
@@ -212,7 +212,7 @@ describe("hot", () => {
       exit 2
       <span style="opacity: 0.6">(no output)</span></pre></div>
       --------------------------------------------------------------------------------
-      <footer>🚨 error 1/1 | [__] error | [__] file | [a] show all</footer>
+      <footer>🚨 error 1/1 | [__] error | [__] file | [a] show all | [esc] close (again to reopen)</footer>
       </overlay>
     `);
   });
@@ -397,7 +397,7 @@ describe("hot", () => {
           ]
         `);
         expect(grep(getOverlay(), /footer/)).toMatchInlineSnapshot(
-          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in VS Code | [e] change editor | [a] show all</footer>`,
+          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in VS Code | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>`,
         );
       });
 
@@ -435,8 +435,8 @@ describe("hot", () => {
 
         expect(footers.join("\n")).toMatchInlineSnapshot(`
           <footer>🚨 error 1/1 | [esc] cancel</footer>
-          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
-          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all</footer>
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>
           [[5] WebStorm] (pressed)
           <footer>🚨 error 1/1 | [esc] cancel</footer>
           [[7] Other]
@@ -489,10 +489,10 @@ describe("hot", () => {
         });
 
         expect(overlays.join("\n")).toMatchInlineSnapshot(`
-          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [e] change editor | [a] show all</footer>
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>
           [[7] ELM_WATCH_OPEN_EDITOR] (pressed)
           <footer>🚨 error 1/1 | [esc] cancel</footer>
-          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in Cursor | [e] change editor | [a] show all</footer>
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in Cursor | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>
           [[2] Cursor] (pressed)
           [[7] ELM_WATCH_OPEN_EDITOR]
         `);
@@ -572,7 +572,7 @@ describe("hot", () => {
           ]
         `);
         expect(grep(overlay, /footer|chooser/)).toMatchInlineSnapshot(
-          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all</footer>`,
+          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>`,
         );
       });
 

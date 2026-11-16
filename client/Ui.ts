@@ -319,11 +319,6 @@ export function createUi(): Ui {
     HTMLDivElement,
     { className: CLASS.overlayCloseBar, hidden: true },
     h(
-      HTMLSpanElement,
-      { className: CLASS.overlayHint, attrs: { "aria-hidden": "true" } },
-      "Esc closes · press again to reopen",
-    ),
-    h(
       HTMLButtonElement,
       {
         className: CLASS.overlayCloseButton,
@@ -546,6 +541,10 @@ export function createUi(): Ui {
         return;
 
       case "CancelEditorChooser":
+        return;
+
+      case "CloseOverlay":
+        closeErrorOverlay();
         return;
 
       case "ToggleShowAll":
@@ -1707,8 +1706,8 @@ const CLASS = {
   overlayError: "overlayError",
   overlayErrorHeader: "overlayErrorHeader",
   overlayFooter: "overlayFooter",
-  overlayHint: "overlayHint",
   overlayKeyHint: "overlayKeyHint",
+  overlayKeyHintNote: "overlayKeyHintNote",
   overlayKeyHints: "overlayKeyHints",
   overlayPosition: "overlayPosition",
   panel: "panel",
@@ -1833,17 +1832,6 @@ supported by browsers, for browsers without popover support.
   font-family: system-ui, sans-serif;
   font-size: 13px;
   color: var(--foregroundColor);
-}
-
-.${CLASS.overlayHint} {
-  opacity: 0.7;
-  filter: drop-shadow(0 0 0.125em var(--backgroundColor));
-}
-
-@media (hover: none) {
-  .${CLASS.overlayHint} {
-    display: none;
-  }
 }
 
 .${CLASS.overlayCloseButton} {
@@ -1973,7 +1961,8 @@ supported by browsers, for browsers without popover support.
 }
 
 .${CLASS.overlayKeyHint} [aria-hidden],
-.${CLASS.overlayKeyHint}[data-disabled] {
+.${CLASS.overlayKeyHint}[data-disabled],
+.${CLASS.overlayKeyHintNote} {
   opacity: 0.6;
 }
 
@@ -3103,6 +3092,7 @@ type OverlayKey =
   | NavigationKey
   | "CancelEditorChooser"
   | "ChangeEditor"
+  | "CloseOverlay"
   | "OpenEditor"
   | "ToggleExpanded"
   | "ToggleShowAll";
@@ -3202,6 +3192,11 @@ function viewOverlay({
   const cancelHints: Array<OverlayHint> = [
     [[["esc", "CancelEditorChooser", true, "Cancel"]], "cancel"],
   ];
+  const closeHint: OverlayHint = [
+    [["esc", "CloseOverlay", true, "Close error overlay"]],
+    "close",
+    "(again to reopen)",
+  ];
 
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
@@ -3216,6 +3211,7 @@ function viewOverlay({
                 [["a", "ToggleShowAll", true, "Show one error at a time"]],
                 "show one error at a time",
               ],
+              closeHint,
             ]
           : cancelHints,
         onKey,
@@ -3293,6 +3289,7 @@ function viewOverlay({
                   expanded ? "collapse" : "expand",
                 ],
             [[["a", "ToggleShowAll", true, "Show all errors"]], "show all"],
+            closeHint,
           ],
       onKey,
     ),
@@ -3473,7 +3470,8 @@ type OverlayHintKey = [
   label: string,
 ];
 
-type OverlayHint = [keys: Array<OverlayHintKey>, label: string];
+// Keys, label, and an optional dimmed note after the label.
+type OverlayHint = [keys: Array<OverlayHintKey>, label: string, note?: string];
 
 // Styled like in the terminal: [key] label
 // The hints are buttons, so that they work with the mouse and on touch screens.
@@ -3497,7 +3495,7 @@ function viewOverlayFooter(
         if (hint === undefined) {
           return [];
         }
-        const [keys, label] = hint;
+        const [keys, label, note] = hint;
         const anyEnabled = keys.some(([, , enabled]) => enabled);
         const bracket = (text: string): HTMLElement =>
           h(HTMLSpanElement, { attrs: { "aria-hidden": "true" } }, text);
@@ -3521,6 +3519,16 @@ function viewOverlayFooter(
           );
         const bold = (key: string): HTMLElement =>
           h(HTMLElement, { localName: "b" }, key);
+        const labelAndNote = [
+          ` ${label}`,
+          note === undefined
+            ? undefined
+            : h(
+                HTMLSpanElement,
+                { className: CLASS.overlayKeyHintNote },
+                ` ${note}`,
+              ),
+        ];
         const [singleKey] = keys;
         return [
           h(
@@ -3536,7 +3544,7 @@ function viewOverlayFooter(
                     bracket("["),
                     bold(singleKey[0]),
                     bracket("]"),
-                    ` ${label}`,
+                    ...labelAndNote,
                   ),
                 ]
               : [
@@ -3545,7 +3553,7 @@ function viewOverlayFooter(
                     viewButton(hintKey, bold(hintKey[0])),
                   ),
                   bracket("]"),
-                  ` ${label}`,
+                  ...labelAndNote,
                 ]),
           ),
         ];

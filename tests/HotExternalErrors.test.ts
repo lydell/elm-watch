@@ -176,7 +176,7 @@ describe("hot external errors", () => {
 
       <u>Hint</u>: Try using <span style="color: rgb(35, 209, 139)">String.fromInt</span> to convert it to a string?</pre></div>
       --------------------------------------------------------------------------------
-      <footer>🚨 error 2/4   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all</footer>
+      <footer>🚨 error 2/4   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
       </overlay>
     `);
     expect(lastRender).toMatchInlineSnapshot(`

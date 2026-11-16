@@ -561,7 +561,7 @@ describe("hot reloading", () => {
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
@@ -579,7 +579,7 @@ describe("hot reloading", () => {
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 1/2   file 1/2 | [_→] error | [_↓] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 1/2   file 1/2 | [_→] error | [_↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
@@ -597,7 +597,7 @@ describe("hot reloading", () => {
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 1/3   file 1/3 | [_→] error | [_↓] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 1/3   file 1/3 | [_→] error | [_↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
@@ -607,7 +607,7 @@ describe("hot reloading", () => {
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
@@ -617,7 +617,7 @@ describe("hot reloading", () => {
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
@@ -648,7 +648,7 @@ describe("hot reloading", () => {
                  <span style="color: rgb(241, 76, 76)">^</span>
         I was expecting to see a type next. Try putting <span style="color: rgb(229, 229, 16)">Int</span> or <span style="color: rgb(229, 229, 16)">String</span> for now?</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 3 errors | [a] show one error at a time</footer>
+        <footer>🚨 3 errors | [a] show one error at a time | [esc] close (again to reopen)</footer>
         </overlay>
       `);
     });
@@ -713,7 +713,7 @@ describe("hot reloading", () => {
 
         <u>Hint</u>: Switch to the <span style="color: rgb(35, 209, 139)">(++)</span> operator to append strings!</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
         <overlay hidden style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
@@ -739,7 +739,7 @@ describe("hot reloading", () => {
 
         <u>Note</u>: This can also happen when something is indented too much!</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
       `);
     });
@@ -781,7 +781,7 @@ describe("hot reloading", () => {
 
         <u>Hint</u>: Switch to the <span style="color: #aaaaaa">(++)</span> operator to append strings!</pre></div>
         --------------------------------------------------------------------------------
-        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>
+        <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
       `);
     });

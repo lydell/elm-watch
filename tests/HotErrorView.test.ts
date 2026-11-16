@@ -920,7 +920,7 @@ describe("hot error view", () => {
 
       <u>Hint</u>: Want to convert an Int into a String? Use the <span style="color: rgb(35, 209, 139)">String.fromInt</span> function!</pre></div>
       --------------------------------------------------------------------------------
-      <footer>🚨 error 1/2 | [_→] error | [__] file | [enter] open in editor | [space] expand | [a] show all</footer>
+      <footer>🚨 error 1/2 | [_→] error | [__] file | [enter] open in editor | [space] expand | [a] show all | [esc] close (again to reopen)</footer>
       </overlay>
       ================================================================================
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
@@ -963,7 +963,7 @@ describe("hot error view", () => {
 
       <u>Hint</u>: Want to convert an Int into a String? Use the <span style="color: rgb(35, 209, 139)">String.fromInt</span> function!</pre></div>
       --------------------------------------------------------------------------------
-      <footer>🚨 error 1/2 | [_→] error | [__] file | [enter] open in editor | [space] collapse | [a] show all</footer>
+      <footer>🚨 error 1/2 | [_→] error | [__] file | [enter] open in editor | [space] collapse | [a] show all | [esc] close (again to reopen)</footer>
       </overlay>
     `);
   });
