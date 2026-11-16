@@ -85,7 +85,7 @@ describe("hot", () => {
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></div>
       <pre>I am struggling with this boolean operation:
 
@@ -141,7 +141,7 @@ describe("hot", () => {
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></div>
       <pre>I am struggling with this boolean operation:
 
@@ -197,7 +197,7 @@ describe("hot", () => {
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNEXPECTED ELM OUTPUT</span><p>Target: Main</p></div>
       <pre>I ran the following commands:
 
@@ -346,7 +346,7 @@ describe("hot", () => {
         });
 
         expect(chooser).toMatchInlineSnapshot(`
-          <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+          <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
           <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31</button></p></div>
           <pre>I am struggling with this boolean operation:
 

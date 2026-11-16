@@ -315,22 +315,20 @@ export function createUi(): Ui {
     hidden: true,
   });
 
-  const overlayCloseBar = h(
-    HTMLDivElement,
-    { className: CLASS.overlayCloseBar, hidden: true },
-    h(
-      HTMLButtonElement,
-      {
-        className: CLASS.overlayCloseButton,
-        attrs: {
-          "aria-label": "Close error overlay",
-          "aria-keyshortcuts": "Escape",
-          "data-test-id": "OverlayCloseButton",
-        },
-        onclick: closeErrorOverlay,
+  // Re-added to the overlay on every render, as its first child.
+  const overlayCloseButton = h(
+    HTMLButtonElement,
+    {
+      className: CLASS.overlayCloseButton,
+      attrs: {
+        "aria-label": "Close error overlay",
+        "aria-keyshortcuts": "Escape",
+        "data-test-id": "OverlayCloseButton",
+        [DATA_FOCUS_KEY]: "OverlayCloseButton",
       },
-      closeIcon(),
-    ),
+      onclick: closeErrorOverlay,
+    },
+    closeIcon(),
   );
 
   const toggleButton = h(HTMLButtonElement, {
@@ -372,12 +370,12 @@ export function createUi(): Ui {
     root.append(panel);
   }
 
-  for (const element of [overlay, overlayAnnouncement, overlayCloseBar, root]) {
+  for (const element of [overlay, overlayAnnouncement, root]) {
     element.lang = "en";
     element.setAttribute("translate", "no");
   }
 
-  topLayer.append(overlay, overlayAnnouncement, overlayCloseBar, root);
+  topLayer.append(overlay, overlayAnnouncement, root);
   dialog.append(topLayer);
   const shadowRoot = container.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS), dialog);
@@ -456,11 +454,7 @@ export function createUi(): Ui {
     if (firstError !== undefined) {
       overlay.style.backgroundColor = firstError.backgroundColor;
       overlay.style.color = firstError.foregroundColor;
-      overlayCloseBar.style.setProperty(
-        "--foregroundColor",
-        firstError.foregroundColor,
-      );
-      overlayCloseBar.style.setProperty(
+      overlay.style.setProperty(
         "--backgroundColor",
         firstError.backgroundColor,
       );
@@ -475,6 +469,7 @@ export function createUi(): Ui {
     const renderedKey = overlayShowAll ? "show all" : selectedError?.id;
 
     overlay.replaceChildren(
+      overlayCloseButton,
       ...viewOverlay({
         group,
         selection: overlaySelection,
@@ -936,12 +931,6 @@ export function createUi(): Ui {
     const hidden = !isErrorOverlayVisible();
     overlay.hidden = hidden;
     overlayAnnouncement.hidden = hidden;
-    overlayCloseBar.hidden = hidden;
-
-    // Avoid drawing the close button on top of a scrollbar.
-    overlayCloseBar.style.right = `${
-      overlay.offsetWidth - overlay.clientWidth
-    }px`;
 
     // elm-watch’s overlay needs to be a modal `<dialog>` for two reasons:
     // - It makes sure you cannot interact with elements behind it.
@@ -1713,7 +1702,6 @@ const CLASS = {
   modes: "modes",
   note: "note",
   overlay: "overlay",
-  overlayCloseBar: "overlayCloseBar",
   overlayCloseButton: "overlayCloseButton",
   overlayBottom: "overlayBottom",
   overlayError: "overlayError",
@@ -1811,8 +1799,6 @@ supported by browsers, for browsers without popover support.
   /* The footer sticks to the bottom, even if the error is short. */
   display: flex;
   flex-direction: column;
-  /* Room for the close button above the first error. */
-  padding-top: calc(${OVERLAY_CLOSE_BUTTON_SIZE} - 2ch);
   user-select: text;
   pointer-events: auto;
 }
@@ -1828,26 +1814,20 @@ supported by browsers, for browsers without popover support.
 }
 
 /* Like the borders in the overlay, rather than the browser default. */
-.${CLASS.overlay} :focus-visible,
-.${CLASS.overlayCloseButton}:focus-visible {
+.${CLASS.overlay} :focus-visible {
   outline: 0.125em solid currentColor;
   outline-offset: 0.25em;
 }
 
-.${CLASS.overlayCloseBar} {
-  position: fixed;
-  z-index: -1;
-  top: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  pointer-events: auto;
-  font-family: system-ui, sans-serif;
-  font-size: 13px;
-  color: var(--foregroundColor);
-}
-
+/* Sticking to the top right of the overlay’s content box keeps the button the
+   same distance from the edges, whether there is a scrollbar or not. */
 .${CLASS.overlayCloseButton} {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  align-self: flex-end;
+  /* Overlap the top margin of the first error. */
+  margin-bottom: -2ch;
   appearance: none;
   display: grid;
   place-items: center;

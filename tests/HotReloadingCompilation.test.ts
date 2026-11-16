@@ -546,7 +546,7 @@ describe("hot reloading", () => {
       `);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
         <pre>The following string uses single quotes:
 
@@ -564,7 +564,7 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
         <pre>The following string uses single quotes:
 
@@ -582,7 +582,7 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/2   file 1/2 | [_→] error | [_↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
         <pre>The following string uses single quotes:
 
@@ -600,7 +600,7 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/3   file 1/3 | [_→] error | [_↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
@@ -610,7 +610,7 @@ describe("hot reloading", () => {
         <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
@@ -620,7 +620,7 @@ describe("hot reloading", () => {
         <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
         <pre>The following string uses single quotes:
 
@@ -703,7 +703,7 @@ describe("hot reloading", () => {
       expect(visibility).toStrictEqual([true, false, true, false, true]);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></div>
         <pre>I cannot do addition with <span style="color: rgb(229, 229, 16)">String</span> values like this one:
 
@@ -716,11 +716,11 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay hidden style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay hidden style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
 
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
         <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">SYNTAX PROBLEM</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:1:2</button></p></div>
         <pre>I got stuck here:
 
@@ -771,7 +771,7 @@ describe("hot reloading", () => {
       });
 
       expect(overlay).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);">
+        <overlay visible style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51); --backgroundColor: #aabbcc;">
         <div style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);" id="0"><div><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/App.elm:7:19</button></p></div>
         <pre>I cannot do addition with <span style="color: #333333">String</span> values like this one:
 

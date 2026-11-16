@@ -806,9 +806,11 @@ export function getOverlay(): string {
     const overlay = shadowRoot.querySelector(`[data-test-id="Overlay"]`);
     if (overlay instanceof HTMLElement) {
       const children = Array.from(overlay.children, (child): Array<Element> =>
-        child.classList.contains("overlayBottom")
-          ? Array.from(child.children)
-          : [child],
+        child.classList.contains("overlayCloseButton")
+          ? []
+          : child.classList.contains("overlayBottom")
+            ? Array.from(child.children)
+            : [child],
       )
         .flat()
         .map((child, index) => {
@@ -882,11 +884,13 @@ export function getOverlayAnnouncement(): string {
 
 export function clickFirstErrorLocation(): void {
   withShadowRoot((shadowRoot) => {
-    const button = shadowRoot.querySelector(`[data-test-id="Overlay"] button`);
+    const button = shadowRoot.querySelector(
+      `[data-test-id="Overlay"] .errorLocationButton`,
+    );
     if (button instanceof HTMLButtonElement) {
       button.click();
     } else {
-      throw new Error(`Could not find any button in overlay.`);
+      throw new Error(`Could not find any error location button in overlay.`);
     }
   });
 }

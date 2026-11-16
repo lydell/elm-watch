@@ -155,12 +155,12 @@ describe("hot external errors", () => {
       🌐 http://localhost:59123
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">ESBUILD</span><p><button>/Users/you/project/tests/fixtures/hot/error-view/ts/main.ts:12:9</button></p></div>
       <pre>Expected <span style="font-weight: bold">;</span> but found <span style="color: rgb(205, 49, 49)">foo</span></pre></div>
 
       ================================================================================
-      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5</button></p></div>
       <pre>Something is off with the body of the \`a\` definition:
 

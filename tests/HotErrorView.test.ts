@@ -895,7 +895,7 @@ describe("hot error view", () => {
       ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
-      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5</button></p></div>
       <pre>Something is off with the body of the \`f\` definition:
 
@@ -923,7 +923,7 @@ describe("hot error view", () => {
       <footer>🚨 error 1/2 | [_→] error | [__] file | [enter] open in editor | [space] expand | [a] show all | [esc] close (again to reopen)</footer>
       </overlay>
       ================================================================================
-      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);">
+      <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
       <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5</button></p></div>
       <pre>Something is off with the body of the \`f\` definition:
 
