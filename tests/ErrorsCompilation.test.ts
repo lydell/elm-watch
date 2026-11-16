@@ -718,6 +718,45 @@ describe("errors", () => {
       `);
     });
 
+    test("from elm-watch.json", async () => {
+      expect(
+        await run("host-not-found", ["hot"], {
+          env: elmBinAlwaysSucceedEnv,
+          exitHotOnError: true,
+        }),
+      ).toMatchInlineSnapshot(`
+        ⧙── HOST NOT FOUND ──────────────────────────────────────────────────────────────⧘
+        /Users/you/project/tests/fixtures/errors/host-not-found/elm-watch.json
+
+        In your ⧙elm-watch.json⧘ you have this:
+
+        "host": "nope.invalid"
+
+        But that host was not found!
+
+        It’s common to set it to the following to expose elm-watch’s HTTP server on the
+        local network:
+
+        "host": "0.0.0.0"
+
+        If unset, the default host is 127.0.0.1, which restricts the HTTP server to
+        your computer.
+
+        This is the error message I got:
+
+        getaddrinfo ENOTFOUND nope.invalid
+      `);
+    });
+
+    test("env takes precedence over elm-watch.json", async () => {
+      const output = await run("host-not-found", ["hot"], {
+        env: { ...elmBinAlwaysSucceedEnv, ELM_WATCH_HOST: "also.invalid" },
+        exitHotOnError: true,
+      });
+      expect(output).toContain("ELM_WATCH_HOST=also.invalid");
+      expect(output).toContain("getaddrinfo ENOTFOUND also.invalid");
+    });
+
     test("env takes precedence over options", async () => {
       const output = await run("valid", [], {
         env: { ...elmBinAlwaysSucceedEnv, ELM_WATCH_HOST: "nope.invalid" },

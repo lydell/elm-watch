@@ -5,6 +5,7 @@ import * as Codec from "tiny-decoders";
 import { AllowedHost } from "./AllowedHosts.ts";
 import type { Config, Target as ConfigTarget } from "./Config.ts";
 import { readElmJsonType, readSourceDirectories } from "./ElmJson.ts";
+import { Host } from "./Host.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
   isNonEmptyArray,
@@ -229,6 +230,7 @@ const elmWatchJsonFields = {
     TargetRecordHelper,
   ),
   port: Codec.field(Port, { optional: true }),
+  host: Codec.field(Host, { optional: true }),
   webSocketUrl: Codec.field(WebSocketUrl("elm-watch.json"), {
     optional: true,
   }),
@@ -460,7 +462,7 @@ function toConfig(
       },
     ) as NonEmptyArray<ConfigTarget>,
     port: json.port,
-    host: undefined,
+    host: json.host,
     webSocketUrl: json.webSocketUrl,
     serve: json.serve,
     allowedHosts: json.allowedHosts ?? [],

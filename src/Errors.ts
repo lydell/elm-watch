@@ -1344,11 +1344,8 @@ export function hostNotFound(
   fromEnv: boolean,
   error: Error,
 ): ErrorTemplate {
-  // elm-watch.json has no "host" field, so the host comes from the environment
-  // variable (or is the default).
-  switch (fromEnv ? "ElmWatchJson" : configSource.tag) {
-    case "ElmWatchJson":
-      return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
+  if (fromEnv) {
+    return fancyError("HOST NOT FOUND", { tag: "NoLocation" })`
 This environment variable is set:
 
 ${text(ELM_WATCH_HOST)}=${text(host)}
@@ -1369,19 +1366,20 @@ This is the error message I got:
 
 ${text(error.message)}
   `;
+  }
 
-    case "Options":
-      return fancyError("HOST NOT FOUND", configSourceLocation(configSource))`
+  const key = configSource.tag === "ElmWatchJson" ? '"host"' : "host";
+  return fancyError("HOST NOT FOUND", configSourceLocation(configSource))`
 In your ${configSourceName(configSource)} you have this:
 
-host: ${json(host)}
+${text(key)}: ${json(host)}
 
 But that host was not found!
 
 It’s common to set it to the following to expose elm-watch’s HTTP server on the
 local network:
 
-host: ${json("0.0.0.0")}
+${text(key)}: ${json("0.0.0.0")}
 
 If unset, the default host is 127.0.0.1, which restricts the HTTP server to
 your computer.
@@ -1390,7 +1388,6 @@ This is the error message I got:
 
 ${text(error.message)}
   `;
-  }
 }
 
 export function watcherError(error: Error): ErrorTemplate {

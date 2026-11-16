@@ -234,6 +234,7 @@ describe("init --javascript and --typescript", () => {
             : "standard",
         targets: enabledTargets,
         port: 9876,
+        host: "0.0.0.0",
         serve: "public/",
         webSocketUrl: "wss://dev.example.com/elm-watch",
         allowedHosts: ["other.example.com"],
