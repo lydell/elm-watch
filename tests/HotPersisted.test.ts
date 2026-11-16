@@ -401,7 +401,7 @@ describe("hot", () => {
         );
       });
 
-      test("keyboard: enter, number, e and escape", async () => {
+      test("keyboard: enter, number, e, a and escape", async () => {
         const footers: Array<string> = [];
 
         await run({
@@ -414,6 +414,9 @@ describe("hot", () => {
             window.Elm?.["Main"]?.init({ node });
           },
           onIdle: async () => {
+            // “e” is not offered before choosing an editor.
+            pressOverlayKey("e");
+            footers.push(grep(getOverlay(), /footer|chooser/));
             pressOverlayKey("Enter");
             footers.push(grep(getOverlay(), /footer/));
             pressOverlayKey("Escape");
@@ -429,11 +432,17 @@ describe("hot", () => {
             // The presets can still be chosen after showing “Other”.
             pressOverlayKey("1");
             await waitFor(() => readChosenEditor() === "vscode");
+            // “e” works when showing all errors, too.
+            pressOverlayKey("a");
+            footers.push(grep(getOverlay(), /footer/));
+            pressOverlayKey("e");
+            footers.push(grep(getOverlay(), /Open error locations|footer/));
             return "Stop" as const;
           },
         });
 
         expect(footers.join("\n")).toMatchInlineSnapshot(`
+          <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
           <footer>🚨 error 1/1 | [esc] cancel</footer>
           <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
           <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>
@@ -442,6 +451,9 @@ describe("hot", () => {
           [[7] Other]
           To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
           <footer>🚨 error 1/1 | [esc] cancel</footer>
+          <footer>🚨 1 error | [e] change editor | [a] show one error at a time | [esc] close (again to reopen)</footer>
+          Open error locations in:
+          <footer>🚨 1 error | [esc] cancel</footer>
         `);
         expect(openedUrls).toMatchInlineSnapshot(`
           [

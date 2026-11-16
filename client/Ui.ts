@@ -511,6 +511,16 @@ export function createUi(): Ui {
     }
   };
 
+  // The errors currently shown in the overlay.
+  const getOverlayItems = (): Array<OverlayErrorItem> => {
+    const group = getErrorGroup();
+    if (overlayShowAll || overlaySelection === undefined) {
+      return group.files.flatMap((file) => file.errors);
+    }
+    const item = getSelectedError(overlaySelection, [group]);
+    return item === undefined ? [] : [item];
+  };
+
   // Space scrolls as usual if there is nothing to collapse.
   const canToggleExpanded = (): boolean =>
     !overlayShowAll &&
@@ -528,6 +538,9 @@ export function createUi(): Ui {
     }
     switch (key) {
       case "ChangeEditor":
+        if (!canChangeEditor(getOverlayItems(), getOverlayEditor())) {
+          return;
+        }
         if (overlayShowAll || overlaySelection === undefined) {
           openEditorChooser(undefined);
         } else {
@@ -3145,6 +3158,19 @@ function getOverlayOpenEditorLocation(
     : getOpenEditorLocation(item.location);
 }
 
+// “e” is only offered if some shown error location can be opened, and an editor
+// has already been chosen. Otherwise, opening a location shows the chooser
+// anyway.
+function canChangeEditor(
+  items: Array<OverlayErrorItem>,
+  editor: Pick<OverlayEditor, "current" | "envSet">,
+): boolean {
+  return (
+    (editor.current !== undefined || editor.envSet) &&
+    items.some((item) => getOverlayOpenEditorLocation(item) !== undefined)
+  );
+}
+
 // For screen readers: Which error is shown, or how many errors there are when
 // showing all of them.
 function getOverlayAnnouncement(
@@ -3207,6 +3233,12 @@ function viewOverlay({
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
         editor.chooser === undefined
           ? [
+              canChangeEditor(items, editor)
+                ? [
+                    [["e", "ChangeEditor", true, "Change editor"]],
+                    "change editor",
+                  ]
+                : undefined,
               [
                 [["a", "ToggleShowAll", true, "Show one error at a time"]],
                 "show one error at a time",
@@ -3269,7 +3301,7 @@ function viewOverlay({
                   `open in ${openInName}`,
                 ]
               : undefined,
-            canOpenEditor && (editor.current !== undefined || editor.envSet)
+            canChangeEditor([item], editor)
               ? [
                   [["e", "ChangeEditor", true, "Change editor"]],
                   "change editor",
