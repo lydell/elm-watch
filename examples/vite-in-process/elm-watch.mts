@@ -122,7 +122,7 @@ process.exitCode = await elmWatch({
       ? "debug"
       : "standard",
   // Lets elm-watch serve the compiled Elm code (see below).
-  staticFilesDir: "public",
+  serve: "public",
   targets: [
     {
       type: "application",

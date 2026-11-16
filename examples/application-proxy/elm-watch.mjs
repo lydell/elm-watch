@@ -35,7 +35,7 @@ process.exitCode = await elmWatch({
       : "standard",
   // Serves `public/`. For URLs that aren’t files, `public/index.html` is
   // served, so that reloading the page works in `Browser.application`.
-  staticFilesDir: "public",
+  serve: "public",
   targets: [
     {
       type: "application",

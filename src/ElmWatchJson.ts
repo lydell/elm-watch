@@ -462,7 +462,7 @@ function toConfig(
     port: json.port,
     host: undefined,
     webSocketUrl: json.webSocketUrl,
-    staticFilesDir: json.serve,
+    serve: json.serve,
     allowedHosts: json.allowedHosts ?? [],
     errorReporter: undefined,
   };

@@ -46,7 +46,7 @@ function functionCodec<T extends object>(): Codec.Codec<T> {
 }
 
 // Optional options can also be set to `undefined`, which is convenient when
-// reading environment variables, for example: `staticFilesDir: process.env.STATIC`.
+// reading environment variables, for example: `serve: process.env.STATIC`.
 // oxlint-disable-next-line typescript/explicit-function-return-type
 function optionalField<Decoded, Encoded>(codec: Codec.Codec<Decoded, Encoded>) {
   return Codec.field(Codec.undefinedOr(codec), { optional: true });
@@ -140,7 +140,7 @@ const Options = Codec.fields(
     targets: Targets,
     port: optionalField(Port),
     host: optionalField(Host),
-    staticFilesDir: optionalField(Codec.string),
+    serve: optionalField(Codec.string),
     webSocketUrl: optionalField(WebSocketUrl("Options")),
     allowedHosts: optionalField(Codec.array(AllowedHost)),
     errors: optionalField(ErrorReporterCodec),
@@ -247,7 +247,7 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
           port: value.port,
           host: value.host,
           webSocketUrl: value.webSocketUrl,
-          staticFilesDir: value.staticFilesDir,
+          serve: value.serve,
           allowedHosts: value.allowedHosts ?? [],
           errorReporter: value.errors,
         },

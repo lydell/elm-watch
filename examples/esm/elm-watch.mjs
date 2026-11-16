@@ -29,7 +29,7 @@ process.exitCode = await elmWatch({
     : values.debug
       ? "debug"
       : "standard",
-  staticFilesDir: "public",
+  serve: "public",
   targets: [
     {
       type: "application",

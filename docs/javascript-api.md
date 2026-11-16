@@ -153,7 +153,7 @@ Type definition: `import type { Options } from "elm-watch"`.
 | targets | `Array<Target>` | _Required_ | What to compile. At least one target is required. See below. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time. | Like `"port"` in [elm-watch.json](../elm-watch.json/). Handy for setting the port only for some runs, like `port: process.env.TUNNEL === "1" ? 443 : undefined` – later runs without `port` don’t reuse it. |
 | host | `string` | `"127.0.0.1"` | The host for the server to listen on, as in Node.js’ `server.listen(port, host)`. Use `"0.0.0.0"` to expose the server on the local network. See [Network exposure](../server/#network-exposure). The `ELM_WATCH_HOST` environment variable takes precedence. |
-| staticFilesDir | `string` | unset | A directory of static files to [serve](../server/), relative to `root`. Like `"serve"` in elm-watch.json. |
+| serve | `string` | unset | A directory of static files to [serve](../server/), relative to `root`. Like `"serve"` in elm-watch.json. |
 | webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable takes precedence. |
 | allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable adds more hosts. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |

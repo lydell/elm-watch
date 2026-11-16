@@ -1003,7 +1003,7 @@ describe("SimpleStaticFileServer", () => {
                     project.
                   </p>
                   <p>Add the following to your <strong>elmWatch()</strong> options:</p>
-                  <pre><code>staticFilesDir: "./folder/to/serve/",</code></pre>
+                  <pre><code>serve: "./folder/to/serve/",</code></pre>
           `);
         },
         { staticFilesDir: null, configSource },

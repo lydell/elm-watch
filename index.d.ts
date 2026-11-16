@@ -110,7 +110,7 @@ export type Options = {
 
   // A directory of static files to serve, relative to `root`. CSS files in it
   // are hot reloaded.
-  staticFilesDir?: string | undefined;
+  serve?: string | undefined;
 
   // A URL starting with `ws:` or `wss:`, for customizing how the browser
   // connects to elm-watch.

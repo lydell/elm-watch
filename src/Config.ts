@@ -22,7 +22,7 @@ export type Config = {
   port: Port | undefined;
   host: Host | undefined;
   webSocketUrl: WebSocketUrl | undefined;
-  staticFilesDir: string | undefined;
+  serve: string | undefined;
   allowedHosts: Array<AllowedHost>;
   errorReporter: ErrorReporter | undefined;
 };

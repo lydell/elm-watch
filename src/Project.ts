@@ -587,11 +587,9 @@ export function initProject({
   }
 
   const staticFilesDir: StaticFilesDir | undefined =
-    config.staticFilesDir === undefined
+    config.serve === undefined
       ? undefined
-      : markAsStaticFilesDir(
-          absolutePathFromString(config.root, config.staticFilesDir),
-        );
+      : markAsStaticFilesDir(absolutePathFromString(config.root, config.serve));
 
   const watchDirs = getWatchDirs({
     configSource: config.source,

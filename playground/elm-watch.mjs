@@ -113,7 +113,7 @@ process.exitCode = await elmWatch({
     : values.debug
       ? "debug"
       : "standard",
-  staticFilesDir: "public",
+  serve: "public",
   targets: enabledTargets,
   createServer: ({ onRequest, onUpgrade }) =>
     http

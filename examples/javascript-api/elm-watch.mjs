@@ -59,5 +59,5 @@ process.exitCode = await elmWatch({
       ? "debug"
       : "standard",
   targets: enabledTargets,
-  staticFilesDir: ".",
+  serve: ".",
 });

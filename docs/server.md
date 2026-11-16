@@ -20,7 +20,7 @@ For example:
 "serve": "./public/"
 ```
 
-With the [JavaScript API](../javascript-api/), use the `staticFilesDir` option instead: `staticFilesDir: "./public/"`.
+With the [JavaScript API](../javascript-api/), use the `serve` option: `serve: "./public/"`.
 
 The simple static file server tries to be useful by default through strong conventions, and extensible enough for more advanced use cases, while still being light weight.
 
@@ -269,7 +269,7 @@ import { elmWatch } from "elm-watch";
 process.exitCode = await elmWatch({
   root: import.meta.dirname,
   runMode: "hot",
-  staticFilesDir: "public",
+  serve: "public",
   targets: [
     {
       type: "application",
@@ -299,7 +299,7 @@ import { elmWatch } from "elm-watch";
 process.exitCode = await elmWatch({
   root: import.meta.dirname,
   runMode: "hot",
-  staticFilesDir: "public",
+  serve: "public",
   targets: [
     {
       type: "application",
@@ -368,7 +368,7 @@ const proxy = new httpProxy.createProxyServer({
 process.exitCode = await elmWatch({
   root: import.meta.dirname,
   runMode: "hot",
-  staticFilesDir: "public",
+  serve: "public",
   targets: [
     {
       type: "application",
@@ -417,7 +417,7 @@ const CERTIFICATE = {
 process.exitCode = await elmWatch({
   root: import.meta.dirname,
   runMode: "hot",
-  staticFilesDir: "public",
+  serve: "public",
   targets: [
     {
       type: "application",

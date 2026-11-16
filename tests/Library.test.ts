@@ -126,7 +126,7 @@ describe("library", () => {
       ],
       port: undefined,
       host: undefined,
-      staticFilesDir: undefined,
+      serve: undefined,
       webSocketUrl: undefined,
       allowedHosts: undefined,
       createServer: undefined,
@@ -430,7 +430,7 @@ describe("library", () => {
         root,
         runMode: "hot",
         targets: [target],
-        serve: "public",
+        staticFilesDir: "public",
       }));
       expect(stdout).toMatchInlineSnapshot(`
         ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
@@ -445,7 +445,7 @@ describe("library", () => {
           "targets",
           "port",
           "host",
-          "staticFilesDir",
+          "serve",
           "webSocketUrl",
           "allowedHosts",
           "errors",
@@ -456,7 +456,7 @@ describe("library", () => {
           "stdout",
           "stderr"
         Found extra fields:
-          "serve"
+          "staticFilesDir"
       `);
     });
 
@@ -535,7 +535,7 @@ describe("library", () => {
           "targets",
           "port",
           "host",
-          "staticFilesDir",
+          "serve",
           "webSocketUrl",
           "allowedHosts",
           "errors",

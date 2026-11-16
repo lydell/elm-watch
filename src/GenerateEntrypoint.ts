@@ -62,7 +62,7 @@ export function generateEntrypoint(
 
   const extraOptions = [
     json.port === undefined ? undefined : `port: ${js(json.port)},`,
-    json.serve === undefined ? undefined : `staticFilesDir: ${js(json.serve)},`,
+    json.serve === undefined ? undefined : `serve: ${js(json.serve)},`,
     json.webSocketUrl === undefined
       ? undefined
       : `webSocketUrl: ${js(json.webSocketUrl.url.href)},`,

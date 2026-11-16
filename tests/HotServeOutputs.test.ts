@@ -92,7 +92,7 @@ async function start(
   const done = elmWatch({
     root: dir,
     runMode: "hot",
-    staticFilesDir: "public",
+    serve: "public",
     targets: targets.map((target) => ({
       type: "application",
       elmJson: "elm.json",

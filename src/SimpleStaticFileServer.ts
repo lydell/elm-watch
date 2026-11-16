@@ -482,7 +482,7 @@ export function staticFileNotEnabledHtml(configSource: ConfigSource): Html {
       <pre><code>${
         configSource.tag === "ElmWatchJson"
           ? html`"serve": "./folder/to/serve/"`
-          : html`staticFilesDir: "./folder/to/serve/",`
+          : html`serve: "./folder/to/serve/",`
       }</code></pre>
     `,
   );
