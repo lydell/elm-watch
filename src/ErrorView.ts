@@ -12,6 +12,7 @@ import {
   type Selection,
 } from "./ErrorSelection.ts";
 import { bold, dim, removeColor } from "./Helpers.ts";
+import type { LineEditor } from "./LineEditor.ts";
 import type { TerminalConfig } from "./Terminal.ts";
 
 // In the terminal, errors are shown one at a time, and you navigate between
@@ -30,10 +31,23 @@ export type ErrorViewState = {
   // Long code excerpts are collapsed by default. See CollapseExcerpts.ts.
   expanded: boolean;
   selection: Selection | undefined;
-  // Set while choosing an editor for opening error locations in. Only presets
-  // can be chosen in the terminal. “Other” shows how to use other editors.
-  editorChooser: { showOther: boolean } | undefined;
+  // Set while choosing an editor for opening error locations in.
+  editorChooser: EditorChooser<LineEditor> | undefined;
 };
+
+export type EditorChooser<Input extends TextInput = TextInput> = {
+  // Set when “Other” has been chosen: A text field for an editor URL.
+  other: { input: Input; error: string | undefined } | undefined;
+};
+
+// What has been typed in a text field, and where the cursor is (see
+// LineEditor.ts).
+export type TextInput = {
+  readonly line: string;
+  readonly cursor: number;
+};
+
+export const EDITOR_URL_PROMPT = "Editor URL: ";
 
 export type ErrorViewKey =
   | NavigationKey
@@ -64,7 +78,7 @@ export type ErrorViewEditor = {
   // has been set up.
   canChoose: boolean;
   current: Editor | undefined;
-  chooser: { showOther: boolean } | undefined;
+  chooser: EditorChooser | undefined;
   commandHint: string | null;
 };
 
@@ -229,9 +243,24 @@ export function render({
 function renderEditorChooser(
   terminalConfig: TerminalConfig,
   editor: ErrorViewEditor,
-  { showOther }: { showOther: boolean },
+  { other }: EditorChooser,
 ): string {
   const { current } = editor;
+  if (other !== undefined) {
+    // The text field is last, so the cursor is at the bottom, like usual.
+    return [
+      "Which editor should I open this in?",
+      "",
+      Errors.openEditorOtherForTerminal(editor.commandHint),
+      "",
+      ...(other.error === undefined ? [] : [bold(other.error)]),
+      keyHints(terminalConfig.columns, [
+        ["enter", "use"],
+        ["esc", "back"],
+      ]),
+      `${EDITOR_URL_PROMPT}${other.input.line}`,
+    ].join("\n");
+  }
   return [
     "Which editor should I open this in?",
     keyHints(terminalConfig.columns, [
@@ -246,12 +275,32 @@ function renderEditorChooser(
         current?.tag === "Custom" ? bold("Other") : "Other",
       ],
     ]),
-    ...(showOther
-      ? ["", Errors.openEditorOtherForTerminal(current, editor.commandHint)]
-      : []),
     "",
     keyHints(terminalConfig.columns, [["esc", "cancel"]]),
   ].join("\n");
+}
+
+// After rendering the text field last (see `renderEditorChooser`), the cursor
+// is at the end of it. Returns how much to move the cursor to put it where it
+// is in the text field. The text field might wrap over several lines.
+export function getTextInputCursorMove(
+  columns: number,
+  { line, cursor }: TextInput,
+): { dx: number; dy: number } {
+  const width = (string: string): number => Array.from(string).length;
+  const total = width(EDITOR_URL_PROMPT + line);
+  const target = width(EDITOR_URL_PROMPT + line.slice(0, cursor));
+  if (target === total) {
+    return { dx: 0, dy: 0 };
+  }
+  // When the text exactly fills the last line, the cursor stays in the last
+  // column rather than moving to the next line.
+  const endRow = Math.floor((total - 1) / columns);
+  const endColumn = total % columns === 0 ? columns - 1 : total % columns;
+  return {
+    dx: (target % columns) - endColumn,
+    dy: Math.floor(target / columns) - endRow,
+  };
 }
 
 // Like `render`, but with all errors (of all targets).

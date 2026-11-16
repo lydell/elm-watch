@@ -7,7 +7,7 @@ import * as Codec from "tiny-decoders";
 import { ansiToHtml } from "./AnsiToHtml.ts";
 import { collapseExcerpts, type Elision } from "./CollapseExcerpts.ts";
 import type { ConfigSource } from "./Config.ts";
-import type { Editor } from "./Editor.ts";
+import { EDITOR_PLACEHOLDERS, EDITOR_URL_EXAMPLE } from "./Editor.ts";
 import type { ElmJsonType, TooOldPackage } from "./ElmJson.ts";
 import type * as ElmMakeError from "./ElmMakeError.ts";
 import * as ElmWatchJson from "./ElmWatchJson.ts";
@@ -1580,27 +1580,22 @@ Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-l
   `.trim();
 }
 
-export function openEditorOtherForTerminal(
-  current: Editor | undefined,
-  commandHint: string | null,
-): string {
-  const currentLines =
-    current?.tag === "Custom"
-      ? [`Your editor URL (chosen in the browser UI): ${current.template}`, ""]
-      : [];
-  const other = `To use another editor, choose “Other” in the browser UI (by clicking an error location there) and enter a URL. Or ${
+export function openEditorOtherForTerminal(commandHint: string | null): string {
+  return `
+Enter a URL that opens files in your editor.
+Example: ${EDITOR_URL_EXAMPLE}
+Placeholders: ${EDITOR_PLACEHOLDERS.join(" ")}
+
+Or ${
     commandHint === null
       ? "use the openEditor option to run a command."
       : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a command:
 
 ${commandHint}`
-  }`;
-  return [
-    ...currentLines,
-    other,
-    "",
-    "Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
-  ].join("\n");
+  }
+
+Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+  `.trim();
 }
 
 export function openEditorInvalidFilePath(file: string): string {

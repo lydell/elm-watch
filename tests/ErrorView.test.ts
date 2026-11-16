@@ -9,6 +9,7 @@ import {
   makeErrorViewTarget,
   parseKeys,
   render,
+  getTextInputCursorMove,
 } from "../src/ErrorView.ts";
 import { removeColor } from "../src/Helpers.ts";
 import type { TerminalConfig } from "../src/Terminal.ts";
@@ -378,7 +379,7 @@ describe("render", () => {
         .replace(/\x1B\[0m\x1B\[1m(.*?)\x1B\[0m/g, "*$1*")
         .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "$1");
     };
-    expect(chooser({ chooser: { showOther: false } })).toMatchInlineSnapshot(`
+    expect(chooser({ chooser: { other: undefined } })).toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
       [*6*] Rider   [*7*] Other
@@ -387,7 +388,12 @@ describe("render", () => {
     `);
     expect(
       chooser({
-        chooser: { showOther: true },
+        chooser: {
+          other: {
+            input: { line: "myeditor://", cursor: 11 },
+            error: "The URL must contain {file}.",
+          },
+        },
         current:
           webStorm === undefined
             ? undefined
@@ -396,35 +402,79 @@ describe("render", () => {
       }),
     ).toMatchInlineSnapshot(`
       "Which editor should I open this in?
-      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] *WebStorm*
-      [*6*] Rider   [*7*] Other
 
-      To use another editor, choose “Other” in the browser UI (by clicking an error location there) and enter a URL. Or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
+      Enter a URL that opens files in your editor.
+      Example: pycharm://open?file={file}&line={line}&column={column0}
+      Placeholders: {file} {line} {column} {line0} {column0}
+
+      Or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
 
       # ~/.bashrc
       export ELM_WATCH_OPEN_EDITOR='x'
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      [*esc*] cancel"
+      *The URL must contain {file}.*
+      [*enter*] use   [*esc*] back
+      Editor URL: myeditor://"
     `);
     expect(
       chooser({
-        chooser: { showOther: true },
+        chooser: {
+          other: {
+            input: { line: "myeditor://{file}", cursor: 0 },
+            error: undefined,
+          },
+        },
         current: { tag: "Custom", template: "myeditor://{file}" },
       }),
     ).toMatchInlineSnapshot(`
       "Which editor should I open this in?
-      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
-      [*6*] Rider   [*7*] *Other*
 
-      Your editor URL (chosen in the browser UI): myeditor://{file}
+      Enter a URL that opens files in your editor.
+      Example: pycharm://open?file={file}&line={line}&column={column0}
+      Placeholders: {file} {line} {column} {line0} {column0}
 
-      To use another editor, choose “Other” in the browser UI (by clicking an error location there) and enter a URL. Or use the openEditor option to run a command.
+      Or use the openEditor option to run a command.
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      [*esc*] cancel"
+      [*enter*] use   [*esc*] back
+      Editor URL: myeditor://{file}"
+    `);
+  });
+
+  test("text field cursor", () => {
+    // "Editor URL: " is 12 characters.
+    const move = (columns: number, line: string, cursor: number): string => {
+      const { dx, dy } = getTextInputCursorMove(columns, { line, cursor });
+      return `${dx},${dy}`;
+    };
+    expect([
+      move(80, "abc", 3),
+      move(80, "abc", 0),
+      move(80, "abc", 1),
+      // 10 columns: "Editor URL" + ": abcdefgh" + "i".
+      move(10, "abcdefghi", 9),
+      move(10, "abcdefghi", 8),
+      move(10, "abcdefghi", 0),
+      // Exactly fills 2 rows: At the end, the cursor stays in the last column
+      // (on the "h"), rather than moving to the next line.
+      move(10, "abcdefgh", 8),
+      move(10, "abcdefgh", 7),
+      move(10, "abcdefgh", 0),
+    ]).toMatchInlineSnapshot(`
+      [
+        "0,0",
+        "-3,0",
+        "-2,0",
+        "0,0",
+        "-1,0",
+        "1,-1",
+        "0,0",
+        "0,0",
+        "-7,0",
+      ]
     `);
   });
 

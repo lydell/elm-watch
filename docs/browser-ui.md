@@ -89,7 +89,7 @@ For example, PyCharm (and probably other [JetBrains] IDEs): `pycharm://open?file
 
 Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like.
 
-You can choose your editor in the terminal too: Press Enter on an error (or e to change editor), and then the number of your editor. Custom URLs (“Other”) can only be entered in the browser, though. Pressing Enter on an error in the terminal opens the URL (via `open` on macOS, `xdg-open` on Linux and `rundll32` on Windows).
+You can choose your editor in the terminal too: Press Enter on an error (or e to change editor), and then the number of your editor. For “Other” (7), type the URL and press Enter (Escape goes back). Pressing Enter on an error in the terminal opens the URL (via `open` on macOS, `xdg-open` on Linux and `rundll32` on Windows).
 
 Note that the browser opens the editor on the device you click on. If you test on your phone, clicking error locations there does nothing. Use [a command](#run-a-command) if you want that to work.
 

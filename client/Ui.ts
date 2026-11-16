@@ -3,6 +3,7 @@ import * as Codec from "tiny-decoders";
 import {
   EDITOR_PLACEHOLDERS,
   EDITOR_PRESETS,
+  EDITOR_URL_EXAMPLE,
   type Editor,
   editorUrl,
   parseEditor,
@@ -225,9 +226,6 @@ type OverlayEditor = {
   current: Editor | undefined;
   chooser: EditorChooserProps | undefined;
 };
-
-const EDITOR_URL_EXAMPLE =
-  "pycharm://open?file={file}&line={line}&column={column0}";
 
 type TargetEntry = {
   targetName: string;

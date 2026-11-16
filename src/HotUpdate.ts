@@ -109,6 +109,11 @@ export type Msg =
       message: string;
     }
   | {
+      tag: "TextTyped";
+      date: Date;
+      text: string;
+    }
+  | {
       tag: "OutputRequested";
       date: Date;
       outputPath: OutputPath;
@@ -207,6 +212,10 @@ export type Cmd =
   | {
       tag: "HandleKeys";
       keys: NonEmptyArray<ErrorView.ErrorViewKey>;
+    }
+  | {
+      tag: "HandleText";
+      text: string;
     }
   | {
       tag: "InstallDependencies";
@@ -356,6 +365,14 @@ export function update(
         model,
         model.hotState.tag === "Idle"
           ? [{ tag: "HandleKeys", keys: msg.keys }]
+          : [],
+      ];
+
+    case "TextTyped":
+      return [
+        model,
+        model.hotState.tag === "Idle"
+          ? [{ tag: "HandleText", text: msg.text }]
           : [],
       ];
 

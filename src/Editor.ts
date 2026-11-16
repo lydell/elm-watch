@@ -58,6 +58,10 @@ export type EditorLocation = {
   column: number;
 };
 
+// Shown in the browser UI and the terminal when choosing “Other” editor.
+export const EDITOR_URL_EXAMPLE =
+  "pycharm://open?file={file}&line={line}&column={column0}";
+
 export const EDITOR_PLACEHOLDERS = [
   "{file}",
   "{line}",
