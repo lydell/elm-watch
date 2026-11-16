@@ -112,6 +112,7 @@ describe("help", () => {
               https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
           ⧙ELM_WATCH_HOST⧘
+              Override "host" in ⧙elm-watch.json⧘
               Defaults to 127.0.0.1 (only your computer)
               Set it to 0.0.0.0 to expose on the local network
 
@@ -191,6 +192,7 @@ describe("help", () => {
                 https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
             ELM_WATCH_HOST
+                Override "host" in elm-watch.json
                 Defaults to 127.0.0.1 (only your computer)
                 Set it to 0.0.0.0 to expose on the local network
 

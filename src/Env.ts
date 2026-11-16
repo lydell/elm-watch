@@ -12,23 +12,27 @@ export function getEnvValue(env: Env, name: string): string | undefined {
 // Type: Check if non-empty and ignore value (https://no-color.org/).
 export const NO_COLOR = "NO_COLOR";
 
-// If set, enables clicking error locations in the browser to open them in your editor.
-// Type: String of shell code.
+// If set, enables clicking error locations in the browser (and the terminal) to
+// open them in your editor. See `isEditorUrl` in Editor.ts.
+// Type: URL template, or a command (shell code).
 export const ELM_WATCH_OPEN_EDITOR = "ELM_WATCH_OPEN_EDITOR";
 
 // By default, elm-watch’s HTTP server is run on `127.0.0.1`, which restricts it
 // to just your computer. By setting this variable to `0.0.0.0` you can expose
 // the server on the local network (to test on your phone, for example).
-// Type: IP address.
+// Takes precedence over "host" in elm-watch.json and the `host` option.
+// Type: Host name or IP address.
 export const ELM_WATCH_HOST = "ELM_WATCH_HOST";
 
-// This lets you override "webSocketUrl" in elm-watch.json, for cases where you
+// This lets you override "webSocketUrl" in elm-watch.json (or the
+// `webSocketUrl` option), for cases where you
 // need to set it dynamically. For example, you might want to set a certain port
 // but keep the host name dynamic (if you run a remote dev container).
 // Type: URL starting with ws: or wss:.
 export const ELM_WATCH_WEBSOCKET_URL = "ELM_WATCH_WEBSOCKET_URL";
 
-// Hosts to allow in addition to "allowedHosts" in elm-watch.json, for cases
+// Hosts to allow in addition to "allowedHosts" in elm-watch.json (or the
+// `allowedHosts` option), for cases
 // where you need to set them dynamically. For example, if every developer has
 // their own tunnel domain.
 // Type: Comma-separated hostnames.
