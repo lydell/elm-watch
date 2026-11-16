@@ -79,9 +79,9 @@ describe("hot error view", () => {
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 1/3   file 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
+      ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 ⧙Main⧘: 3 errors ◀
       🚨 Other: 1 error
@@ -105,9 +105,9 @@ describe("hot error view", () => {
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 2/3   file 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 2/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
+      ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 ⧙Main⧘: 3 errors ◀
       🚨 Other: 1 error
@@ -131,9 +131,9 @@ describe("hot error view", () => {
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 3/3   file 2/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 3/3   file 2/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
+      ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 Main: 3 errors
       🚨 ⧙Other⧘: 1 error ◀
@@ -151,9 +151,9 @@ describe("hot error view", () => {
       ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 1/1
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor
+      ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 Main: 3 errors
       🚨 Other: 1 error
@@ -222,9 +222,8 @@ describe("hot error view", () => {
       ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 4 errors
 
-      ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
+      🚨 4 errors  ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
       ================================================================================
       🚨 Main: 3 errors
       🚨 ⧙Other⧘: 1 error ◀
@@ -242,9 +241,9 @@ describe("hot error view", () => {
       ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 1/1
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor
+      ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
 
@@ -303,9 +302,9 @@ describe("hot error view", () => {
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
       ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/A.elm⧘
-      🚨 error 2/2   file 2/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 2/2   file 2/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
+      ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
 
@@ -324,7 +323,7 @@ describe("hot error view", () => {
       onIdle: async ({ stdout }) => {
         const footer = (): string => {
           const screen = clean(stdout.getOutput());
-          return screen.slice(screen.lastIndexOf("🚨 error"));
+          return screen.slice(screen.lastIndexOf("ℹ️ "));
         };
         stdin.press("o");
         await waitFor(() => footer().includes("Which editor"));
@@ -352,15 +351,15 @@ describe("hot error view", () => {
     });
 
     expect(screens.join(`\n${"-".repeat(80)}\n`)).toMatchInlineSnapshot(`
-      🚨 error 1/1
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
       Which editor should I open this in?
       ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
       ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ Other
 
-      ⧙[⧘⧙esc⧘⧙]⧘ cancel
+      🚨 error 1/1  ⧙[⧘⧙esc⧘⧙]⧘ cancel
       --------------------------------------------------------------------------------
-      🚨 error 1/1
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
       Which editor should I open this in?
       ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
@@ -379,11 +378,11 @@ describe("hot error view", () => {
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      ⧙[⧘⧙esc⧘⧙]⧘ cancel
+      🚨 error 1/1  ⧙[⧘⧙esc⧘⧙]⧘ cancel
       --------------------------------------------------------------------------------
-      🚨 error 1/1
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
 
@@ -481,7 +480,7 @@ describe("hot error view", () => {
         stdin.press("2");
         await waitFor(() => fs.existsSync(outputFile));
         const screen = clean(stdout.getOutput());
-        footer = screen.slice(screen.lastIndexOf("🚨 error"));
+        footer = screen.slice(screen.lastIndexOf("ℹ️ "));
         return "Stop" as const;
       },
     });
@@ -497,10 +496,10 @@ describe("hot error view", () => {
       ).editor,
     ).toBe("cursor");
     expect(footer).toMatchInlineSnapshot(`
-      🚨 error 1/1
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in Cursor   ⧙[⧘⧙e⧘⧙]⧘ change editor
-      ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in Cursor
+      ⧙[⧘⧙e⧘⧙]⧘ change editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
 
@@ -557,7 +556,7 @@ describe("hot error view", () => {
         onIdle: async ({ stdout }) => {
           const footer = (): string => {
             const screen = clean(stdout.getOutput());
-            return screen.slice(screen.lastIndexOf("🚨 error"));
+            return screen.slice(screen.lastIndexOf("ℹ️ "));
           };
           // The env var is used without asking.
           stdin.press("\r");
@@ -580,28 +579,28 @@ describe("hot error view", () => {
       });
 
       expect(footers.join(`\n${"-".repeat(80)}\n`)).toMatchInlineSnapshot(`
-        🚨 error 1/1
+        ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
-        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙e⧘⧙]⧘ change editor
-        ⧙[⧘⧙a⧘⧙]⧘ show all
+        🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor
+        ⧙[⧘⧙e⧘⧙]⧘ change editor   ⧙[⧘⧙a⧘⧙]⧘ show all
         --------------------------------------------------------------------------------
-        🚨 error 1/1
+        ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
         Which editor should I open this in?
         ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
         ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ ⧙ELM_WATCH_OPEN_EDITOR⧘
 
-        ⧙[⧘⧙esc⧘⧙]⧘ cancel
+        🚨 error 1/1  ⧙[⧘⧙esc⧘⧙]⧘ cancel
         --------------------------------------------------------------------------------
-        🚨 error 1/1
+        ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
-        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in Cursor   ⧙[⧘⧙e⧘⧙]⧘ change editor
-        ⧙[⧘⧙a⧘⧙]⧘ show all
+        🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in Cursor
+        ⧙[⧘⧙e⧘⧙]⧘ change editor   ⧙[⧘⧙a⧘⧙]⧘ show all
         --------------------------------------------------------------------------------
-        🚨 error 1/1
+        ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
 
-        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙e⧘⧙]⧘ change editor
-        ⧙[⧘⧙a⧘⧙]⧘ show all
+        🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor
+        ⧙[⧘⧙e⧘⧙]⧘ change editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       `);
       expect(readOpened()).toMatchInlineSnapshot(`
         [
@@ -635,9 +634,7 @@ describe("hot error view", () => {
       },
     });
 
-    expect(screen.split("\n").at(-3)).toMatchInlineSnapshot(
-      `🚨 error 1/3   file 1/2`,
-    );
+    expect(screen.split("\n").at(-3)).toMatchInlineSnapshot(``);
   });
 
   test("several targets but only one with errors: no highlight, and tab does nothing", async () => {
@@ -676,8 +673,8 @@ describe("hot error view", () => {
         ✅ Other⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
         🌐 http://localhost:59123
         …
-
-        ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+        🚨 error 1/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙enter⧘⧙]⧘ open in editor
+        ⧙[⧘⧙a⧘⧙]⧘ show all
       `);
   });
 
@@ -724,17 +721,17 @@ describe("hot error view", () => {
     });
 
     expect(footers.join("\n---\n")).toMatchInlineSnapshot(`
-      🚨 4 errors
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
 
-      ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
+      🚨 4 errors  ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
       ---
-      🚨 4 errors
+      ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed elm.json⧘
 
-      ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
+      🚨 4 errors  ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
       ---
-      🚨 error 2/3   file 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 2/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
+      ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
 
@@ -750,10 +747,10 @@ describe("hot error view", () => {
     // Everything below the server line.
     const screen = (output: string): string =>
       clean(output).split("\n").slice(3).join("\n");
-    // From the position line (the key hints can wrap to several lines).
+    // From the info line (the chooser and key hints can be several lines).
     const lastLines = (output: string): string => {
       const cleaned = clean(output);
-      return cleaned.slice(cleaned.lastIndexOf("🚨 error"));
+      return cleaned.slice(cleaned.lastIndexOf("ℹ️ "));
     };
 
     await run({
@@ -834,9 +831,9 @@ describe("hot error view", () => {
       ⧙Hint⧘: Want to convert an Int into a String? Use the ⧙String.fromInt⧘ function!
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ expand   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ expand
+      ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5
@@ -880,18 +877,17 @@ describe("hot error view", () => {
       ⧙Hint⧘: Want to convert an Int into a String? Use the ⧙String.fromInt⧘ function!
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse
+      🚨 error 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse
       ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      🚨 error 2/2
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 2/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      🚨 error 1/2
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse
+      🚨 error 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ collapse
       ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`

@@ -276,7 +276,8 @@ describe("render", () => {
     debug: false,
     noColor: false,
     fancy: true,
-    isTTY: true,
+    // Avoid cursor movement after emoji in snapshots.
+    isTTY: false,
     mockedTimings: true,
     columns: 80,
     rows: 24,
@@ -289,24 +290,23 @@ describe("render", () => {
     commandHint: "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='x'",
   };
 
+  // From the position, which the key hints follow (possibly wrapping).
   // Shows bold as *x* and dim as ~x~.
   function keyHintsLine(
     selection: Selection,
     targets: Array<ErrorViewTarget>,
   ): string {
-    return (
-      render({
-        terminalConfig,
-        expanded: false,
-        selection,
-        targets,
-        notice: undefined,
-        infoLine: undefined,
-        editor: noEditor,
-      })
-        .split("\n")
-        .at(-1) ?? ""
-    )
+    const output = render({
+      terminalConfig,
+      expanded: false,
+      selection,
+      targets,
+      notice: undefined,
+      infoLine: undefined,
+      editor: noEditor,
+    });
+    return output
+      .slice(output.lastIndexOf("🚨"))
       .replace(/\x1B\[0m\x1B\[1m(.*?)\x1B\[0m/g, "*$1*")
       .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "~$1~");
   }
@@ -318,7 +318,10 @@ describe("render", () => {
     ];
     const first = start(targets);
     expect(keyHintsLine(first, targets)).toMatchInlineSnapshot(
-      `"~[~~←~*→*~]~ error   ~[~~↑~*↓*~]~ file   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"`,
+      `
+      "🚨 error 1/3   file 1/2  ~[~~←~*→*~]~ error   ~[~~↑~*↓*~]~ file   ~[~*tab*~]~ target
+      ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"
+    `,
     );
     const last = navigate(
       navigate(first, targets, "NextFile"),
@@ -326,11 +329,17 @@ describe("render", () => {
       "NextError",
     );
     expect(keyHintsLine(last, targets)).toMatchInlineSnapshot(
-      `"~[~*←*~→~~]~ error   ~[~*↑*~↓~~]~ file   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"`,
+      `
+      "🚨 error 3/3   file 2/2  ~[~*←*~→~~]~ error   ~[~*↑*~↓~~]~ file   ~[~*tab*~]~ target
+      ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"
+    `,
     );
     const only = navigate(first, targets, "NextTarget");
     expect(keyHintsLine(only, targets)).toMatchInlineSnapshot(
-      `"~[~~←~~→~~]~ ~error~   ~[~~↑~~↓~~]~ ~file~   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor   ~[~*a*~]~ show all"`,
+      `
+      "🚨 error 1/1  ~[~~←~~→~~]~ ~error~   ~[~~↑~~↓~~]~ ~file~   ~[~*tab*~]~ target   ~[~*enter*~]~ open in editor
+      ~[~*a*~]~ show all"
+    `,
     );
   });
 
@@ -354,9 +363,9 @@ describe("render", () => {
     });
     expect(removeColor(output.slice(output.lastIndexOf("\n\n") + 2)))
       .toMatchInlineSnapshot(`
-      "[←→] error   [↑↓] file   [enter] open in WebStorm   [e] change editor
-      [a] show all"
-    `);
+        "🚨 error 1/1  [←→] error   [↑↓] file   [enter] open in WebStorm
+        [e] change editor   [a] show all"
+      `);
   });
 
   test("editor chooser", () => {
@@ -383,7 +392,7 @@ describe("render", () => {
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
       [*6*] Rider   [*7*] Other
 
-      [*esc*] cancel"
+      🚨 error 1/1  [*esc*] cancel"
     `);
     expect(
       chooser({
@@ -406,7 +415,7 @@ describe("render", () => {
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      [*esc*] cancel"
+      🚨 error 1/1  [*esc*] cancel"
     `);
     expect(
       chooser({
@@ -428,7 +437,7 @@ describe("render", () => {
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      [*esc*] cancel"
+      🚨 error 1/1  [*esc*] cancel"
     `);
   });
 
@@ -461,16 +470,16 @@ describe("render", () => {
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
       [*6*] Rider   [*7*] *ELM_WATCH_OPEN_EDITOR*
 
-      [*esc*] cancel"
+      🚨 error 1/1  [*esc*] cancel"
     `);
     expect(chooser(EDITOR_PRESETS.find(({ id }) => id === "zed")))
       .toMatchInlineSnapshot(`
-      "Which editor should I open this in?
-      [*1*] VS Code   [*2*] Cursor   [*3*] *Zed*   [*4*] IntelliJ IDEA   [*5*] WebStorm
-      [*6*] Rider   [*7*] ELM_WATCH_OPEN_EDITOR
+        "Which editor should I open this in?
+        [*1*] VS Code   [*2*] Cursor   [*3*] *Zed*   [*4*] IntelliJ IDEA   [*5*] WebStorm
+        [*6*] Rider   [*7*] ELM_WATCH_OPEN_EDITOR
 
-      [*esc*] cancel"
-    `);
+        🚨 error 1/1  [*esc*] cancel"
+      `);
   });
 
   test("key hints wrap between hints in narrow terminals", () => {
@@ -487,11 +496,12 @@ describe("render", () => {
       infoLine: undefined,
       editor: noEditor,
     });
-    // The key hints are below the last blank line.
+    // The position and key hints are below the last blank line.
     expect(removeColor(output.slice(output.lastIndexOf("\n\n") + 2)))
       .toMatchInlineSnapshot(`
-      "[←→] error   [↑↓] file   [tab] target
-      [enter] open in editor   [a] show all"
-    `);
+        "🚨 error 1/2   file 1/2  [←→] error
+        [↑↓] file   [tab] target
+        [enter] open in editor   [a] show all"
+      `);
   });
 });

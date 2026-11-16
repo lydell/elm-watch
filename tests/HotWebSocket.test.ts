@@ -507,6 +507,8 @@ describe("hot", () => {
         ⧙But they don't exist!⧘
 
         Is something misspelled? Or do you need to create them?
+
+        ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       `);
 
       expect(onlyExpandedRenders).toMatchInlineSnapshot(`

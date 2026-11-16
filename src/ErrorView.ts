@@ -1,3 +1,4 @@
+import { EMOJI, type EmojiName, emojiWidthFix } from "./Compile.ts";
 import { EDITOR_PRESETS, type EditorPreset } from "./Editor.ts";
 import { ELM_WATCH_OPEN_EDITOR } from "./Env.ts";
 import * as Errors from "./Errors.ts";
@@ -125,9 +126,10 @@ export function makeErrorViewTarget(
 }
 
 // Everything below the status lines and server line: The selected error, the
-// info message line, where you are and which keys to press. The keys are last,
-// so they are right next to the cursor and easy to find. Only the error area
-// changes when switching to showing all errors (see `renderShowAll`).
+// info message line, and where you are followed by which keys to press (like
+// the footer in the browser). The keys are last, so they are right next to the
+// cursor and easy to find. Only the error area changes when switching to
+// showing all errors (see `renderShowAll`).
 export function render({
   terminalConfig,
   expanded,
@@ -149,20 +151,26 @@ export function render({
   const hasOtherTargetsWithErrors = canSwitchTarget(selection, targets);
   const error = getSelectedError(selection, targets);
   const noticeLines = notice === undefined ? [] : [notice, ""];
-  const infoLines = infoLine === undefined ? [] : [infoLine];
+  const infoLines = infoLine === undefined ? [] : [infoLine, ""];
 
   if (target === undefined || error === undefined) {
     return [
       ...noticeLines,
       ...infoLines,
-      `${terminalConfig.fancy ? "✅ " : ""}${bold(selection.targetName)} has no errors.`,
-      "",
-      keyHints(terminalConfig.columns, [
-        hasOtherTargetsWithErrors
-          ? ["tab", "next target with errors"]
-          : undefined,
-        ["a", "show all"],
-      ]),
+      keyHints(
+        terminalConfig.columns,
+        withEmoji(
+          terminalConfig,
+          "Success",
+          `${bold(selection.targetName)} has no errors.`,
+        ),
+        [
+          hasOtherTargetsWithErrors
+            ? ["tab", "next target with errors"]
+            : undefined,
+          ["a", "show all"],
+        ],
+      ),
     ].join("\n");
   }
 
@@ -179,6 +187,8 @@ export function render({
 
   const canOpenEditor = getOpenEditorLocation(error.location) !== undefined;
   const openInName = editor.current?.name ?? "editor";
+  // While choosing an editor, the other keys are paused.
+  const chooser = canOpenEditor ? editor.chooser : undefined;
 
   return [
     Errors.toTerminalString(
@@ -190,40 +200,44 @@ export function render({
     "",
     ...noticeLines,
     ...infoLines,
-    `${terminalConfig.fancy ? "🚨 " : ""}${position}`,
-    "",
-    // While choosing an editor, the other keys are paused.
-    canOpenEditor && editor.chooser !== undefined
-      ? renderEditorChooser(terminalConfig, editor, editor.chooser)
-      : keyHints(terminalConfig.columns, [
-          [
+    ...(chooser === undefined
+      ? []
+      : [renderEditorChooser(terminalConfig, editor, chooser), ""]),
+    keyHints(
+      terminalConfig.columns,
+      withEmoji(terminalConfig, "Error", position),
+      chooser !== undefined
+        ? [["esc", "cancel"]]
+        : [
             [
-              ["←", errorNumber > 1],
-              ["→", errorNumber < target.numErrors],
+              [
+                ["←", errorNumber > 1],
+                ["→", errorNumber < target.numErrors],
+              ],
+              "error",
             ],
-            "error",
-          ],
-          [
             [
-              ["↑", selection.fileIndex > 0],
-              ["↓", selection.fileIndex + 1 < target.files.length],
+              [
+                ["↑", selection.fileIndex > 0],
+                ["↓", selection.fileIndex + 1 < target.files.length],
+              ],
+              "file",
             ],
-            "file",
+            hasOtherTargetsWithErrors ? ["tab", "target"] : undefined,
+            canOpenEditor ? ["enter", `open in ${openInName}`] : undefined,
+            canOpenEditor && (editor.current !== undefined || editor.envSet)
+              ? ["e", "change editor"]
+              : undefined,
+            Errors.isCollapsible(error.template)
+              ? ["space", expanded ? "collapse" : "expand"]
+              : undefined,
+            ["a", "show all"],
           ],
-          hasOtherTargetsWithErrors ? ["tab", "target"] : undefined,
-          canOpenEditor ? ["enter", `open in ${openInName}`] : undefined,
-          canOpenEditor && (editor.current !== undefined || editor.envSet)
-            ? ["e", "change editor"]
-            : undefined,
-          Errors.isCollapsible(error.template)
-            ? ["space", expanded ? "collapse" : "expand"]
-            : undefined,
-          ["a", "show all"],
-        ]),
+    ),
   ].join("\n");
 }
 
-// Shown instead of the key hints when pressing Enter without having chosen an
+// Shown above the key hints when pressing Enter without having chosen an
 // editor, or when pressing “e” to change editor. The current editor is bold.
 function renderEditorChooser(
   terminalConfig: TerminalConfig,
@@ -233,7 +247,7 @@ function renderEditorChooser(
   const { current, envSet } = editor;
   return [
     "Which editor should I open this in?",
-    keyHints(terminalConfig.columns, [
+    keyHints(terminalConfig.columns, undefined, [
       ...EDITOR_PRESETS.map((preset, index): [string, string] => [
         (index + 1).toString(),
         current?.id === preset.id ? bold(preset.name) : preset.name,
@@ -250,8 +264,6 @@ function renderEditorChooser(
     ...(showOther
       ? ["", Errors.openEditorOtherForTerminal(editor.commandHint)]
       : []),
-    "",
-    keyHints(terminalConfig.columns, [["esc", "cancel"]]),
   ].join("\n");
 }
 
@@ -268,11 +280,37 @@ export function renderShowAll({
   const numErrors = errorStrings.length;
   return [
     ...(numErrors === 0 ? [] : [errorStrings.join("\n\n"), ""]),
-    ...(infoLine === undefined ? [] : [infoLine]),
-    `${terminalConfig.fancy ? "🚨 " : ""}${numErrors} error${numErrors === 1 ? "" : "s"}`,
-    "",
-    keyHints(terminalConfig.columns, [["a", "show one error at a time"]]),
+    ...(infoLine === undefined ? [] : [infoLine, ""]),
+    keyHints(
+      terminalConfig.columns,
+      withEmoji(
+        terminalConfig,
+        "Error",
+        `${numErrors} error${numErrors === 1 ? "" : "s"}`,
+      ),
+      [["a", "show one error at a time"]],
+    ),
   ].join("\n");
+}
+
+// Text with an emoji at the start of the line (in fancy mode), and its width.
+function withEmoji(
+  terminalConfig: TerminalConfig,
+  emojiName: EmojiName,
+  text: string,
+): [text: string, width: number] {
+  const width = Array.from(removeColor(text)).length;
+  return terminalConfig.fancy
+    ? [
+        `${emojiWidthFix({
+          emoji: EMOJI[emojiName].emoji,
+          column: 3,
+          isTTY: terminalConfig.isTTY,
+        })} ${text}`,
+        // The emoji takes two columns, plus the space after it.
+        width + 3,
+      ]
+    : [text, width];
 }
 
 // A key, or several keys with whether each of them does anything right now.
@@ -282,15 +320,16 @@ type HintKeys = string | Array<[key: string, enabled: boolean]>;
 // Keys that don’t do anything right now are dimmed (and the label too, if none
 // of the keys do anything).
 // If the hints don’t fit on one line, they wrap between hints rather than in
-// the middle of one.
+// the middle of one. The hints can start on the same line as some text (`first`,
+// with its width).
 function keyHints(
   columns: number,
+  first: [text: string, width: number] | undefined,
   hints: Array<[keys: HintKeys, label: string] | undefined>,
 ): string {
-  const separator = "   ";
   const lines: Array<string> = [];
-  let line = "";
-  let lineWidth = 0;
+  let [line, lineWidth] = first ?? ["", 0];
+  let separator = "  ";
   for (const hint of renderKeyHints(hints)) {
     const width = Array.from(removeColor(hint)).length;
     if (line === "") {
@@ -304,6 +343,7 @@ function keyHints(
       line = hint;
       lineWidth = width;
     }
+    separator = "   ";
   }
   lines.push(line);
   return lines.join("\n");

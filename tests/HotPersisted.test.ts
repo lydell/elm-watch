@@ -82,6 +82,8 @@ describe("hot", () => {
           ⧙number⧘
 
       ⧙Hint⧘: Only ⧙Int⧘ and ⧙Float⧘ values work as numbers.
+
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
@@ -135,9 +137,8 @@ describe("hot", () => {
       Hint: Only Int and Float values work as numbers.
 
       13:10:05 Up to date   web socket connected: Main
-      error 1/1
 
-      [←→] error   [↑↓] file   [enter] open in editor   [a] show all
+      error 1/1  [←→] error   [↑↓] file   [enter] open in editor   [a] show all
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`
@@ -194,6 +195,8 @@ describe("hot", () => {
 
       exit 2
       ⧙(no output)⧘
+
+      ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙compilation mode "optimize": Main⧘
     `);
 
     expect(getOverlay()).toMatchInlineSnapshot(`

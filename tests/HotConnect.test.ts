@@ -345,9 +345,8 @@ describe("hot", () => {
       ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/hot/basic/elm-stuff/elm-watch/2.js'
 
       ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Removed⧘
-      🚨 error 1/1
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`
@@ -399,9 +398,8 @@ describe("hot", () => {
       EACCES: permission denied, open '/Users/you/project/tests/fixtures/hot/basic/build/Readonly.js'
 
       ℹ️ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Readonly⧘
-      🚨 error 1/1
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
 
     expect(onlyExpandedRenders).toMatchInlineSnapshot(`

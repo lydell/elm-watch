@@ -140,9 +140,9 @@ describe("hot external errors", () => {
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
       ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Main⧘
-      🚨 error 1/3   file 1/2
 
-      ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+      🚨 error 1/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
+      ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
       🚨 Main: 3 errors
       ✅ Other
