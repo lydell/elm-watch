@@ -96,11 +96,8 @@ export function isEditorUrl(string: string): boolean {
 export function validateEditorUrlTemplate(
   template: string,
 ): string | undefined {
-  const match = SCHEME_REGEX.exec(template);
-  if (match === null) {
-    return "The URL must start with a scheme, like myeditor://";
-  }
-  const scheme = (match[1] ?? "").toLowerCase();
+  // Only called for strings that pass `isEditorUrl`, so there is a scheme.
+  const scheme = (SCHEME_REGEX.exec(template)?.[1] ?? "").toLowerCase();
   if (DISALLOWED_SCHEMES.has(scheme)) {
     return `${scheme}: URLs are not supported. Only URLs for opening apps, like myeditor://`;
   }

@@ -463,9 +463,8 @@ describe("render", () => {
 
       [*esc*] cancel"
     `);
-    expect(
-      chooser(EDITOR_PRESETS.find(({ id }) => id === "zed")),
-    ).toMatchInlineSnapshot(`
+    expect(chooser(EDITOR_PRESETS.find(({ id }) => id === "zed")))
+      .toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] *Zed*   [*4*] IntelliJ IDEA   [*5*] WebStorm
       [*6*] Rider   [*7*] ELM_WATCH_OPEN_EDITOR

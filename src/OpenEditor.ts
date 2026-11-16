@@ -41,8 +41,10 @@ export function openEditor(
   onError: (error: OpenEditorError) => void,
 ): void {
   const { openEditor: projectOpenEditor } = project;
+  // With no editor set up, the browser and the terminal show the editor
+  // chooser instead of asking us to open anything.
   if (projectOpenEditor.tag === "NotSet" && project.editor === undefined) {
-    onError({ tag: "EnvNotSet", commandHint: getCommandHint(env) });
+    return;
   } else if (
     !projectHasFilePathThatCanBeOpenedInEditor(project, location.file)
   ) {
@@ -174,13 +176,7 @@ function getShellConfig(
 export function printOpenEditorErrorForTerminal(
   error: OpenEditorError,
 ): string {
-  switch (error.tag) {
-    case "EnvNotSet":
-      return Errors.openEditorEnvNotSetForTerminal(error.commandHint);
-    case "InvalidFilePath":
-    case "CommandFailed":
-      return `${bold("Opening the location in your editor failed!")}\n\n${error.message}`;
-  }
+  return `${bold("Opening the location in your editor failed!")}\n\n${error.message}`;
 }
 
 // For `elm-watch try-open`: Open the location using `ELM_WATCH_OPEN_EDITOR`

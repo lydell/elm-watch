@@ -23,11 +23,6 @@ const nonNegativeIntCodec = Codec.flatMap(Codec.number, {
 export type OpenEditorError = Codec.Infer<typeof OpenEditorError>;
 const OpenEditorError = Codec.taggedUnion("tag", [
   {
-    tag: Codec.tag("EnvNotSet"),
-    // See `commandHint` in `OpenEditorSetupChanged`.
-    commandHint: Codec.string,
-  },
-  {
     tag: Codec.tag("InvalidFilePath"),
     message: Codec.string,
   },

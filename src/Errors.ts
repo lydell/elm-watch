@@ -1566,16 +1566,6 @@ The web socket code I generate is supposed to always send correct messages, so s
   `.trim();
 }
 
-export function openEditorEnvNotSetForTerminal(commandHint: string): string {
-  return `
-Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
-
-${commandHint}
-
-Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-  `.trim();
-}
-
 export function openEditorOtherForTerminal(commandHint: string): string {
   return `
 To use another editor, set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:

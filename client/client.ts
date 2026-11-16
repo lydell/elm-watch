@@ -1810,7 +1810,10 @@ function renderMockStatuses(ui: Ui | undefined): void {
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       errors: new Map(),
-      openEditorError: { tag: "EnvNotSet", commandHint: "" },
+      openEditorError: {
+        tag: "CommandFailed",
+        message: "Opening the editor failed.",
+      },
     },
     ElmJsonError: {
       tag: "ElmJsonError",

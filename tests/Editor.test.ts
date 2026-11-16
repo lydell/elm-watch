@@ -84,8 +84,6 @@ describe("validateEditorUrlTemplate", () => {
   test("invalid", () => {
     expect(
       [
-        "",
-        "{file}",
         "https://example.com/{file}",
         "JavaScript:alert({file})",
         "data:text/html,{file}",
@@ -99,9 +97,7 @@ describe("validateEditorUrlTemplate", () => {
         )
         .join("\n"),
     ).toMatchInlineSnapshot(`
-      """: The URL must start with a scheme, like myeditor://
-      "{file}": The URL must start with a scheme, like myeditor://
-      "https://example.com/{file}": https: URLs are not supported. Only URLs for opening apps, like myeditor://
+      ""https://example.com/{file}": https: URLs are not supported. Only URLs for opening apps, like myeditor://
       "JavaScript:alert({file})": javascript: URLs are not supported. Only URLs for opening apps, like myeditor://
       "data:text/html,{file}": data: URLs are not supported. Only URLs for opening apps, like myeditor://
       "file://{file}": file: URLs are not supported. Only URLs for opening apps, like myeditor://

@@ -1693,7 +1693,6 @@ const CLASS = {
   dialog: "dialog",
   editorChooser: "editorChooser",
   editorChooserOptions: "editorChooserOptions",
-  envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
   flash: "flash",
@@ -2440,11 +2439,6 @@ focus might be inside the panel and must not be lost.
   justify-self: start;
 }
 
-.${CLASS.envNotSet} {
-  display: grid;
-  gap: 6px;
-}
-
 
 .${CLASS.footer} {
   margin: 0;
@@ -3027,53 +3021,18 @@ function viewCompilationModeChooser(
 }
 
 function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
-  switch (error.tag) {
-    case "EnvNotSet":
-      return [
-        h(
-          HTMLDivElement,
-          { className: CLASS.envNotSet },
-          h(
-            HTMLParagraphElement,
-            {},
-            "ℹ️ Clicking error locations only works if you set it up.",
-          ),
-          h(
-            HTMLParagraphElement,
-            {},
-            "Check this out: ",
-            h(
-              HTMLAnchorElement,
-              {
-                href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
-                target: "_blank",
-                rel: "noreferrer",
-              },
-              h(
-                HTMLElement,
-                { localName: "strong" },
-                "Clickable error locations",
-              ),
-            ),
-          ),
-        ),
-      ];
-
-    case "InvalidFilePath":
-    case "CommandFailed":
-      return [
-        h(
-          HTMLParagraphElement,
-          {},
-          h(
-            HTMLElement,
-            { localName: "strong" },
-            "Opening the location in your editor failed!",
-          ),
-        ),
-        h(HTMLPreElement, {}, error.message),
-      ];
-  }
+  return [
+    h(
+      HTMLParagraphElement,
+      {},
+      h(
+        HTMLElement,
+        { localName: "strong" },
+        "Opening the location in your editor failed!",
+      ),
+    ),
+    h(HTMLPreElement, {}, error.message),
+  ];
 }
 
 function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
