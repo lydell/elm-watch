@@ -1,7 +1,7 @@
 import { isIP } from "net";
 import * as Codec from "tiny-decoders";
 
-import { ELM_WATCH_ALLOWED_HOSTS, type Env } from "./Env.ts";
+import { ELM_WATCH_ALLOWED_HOSTS, type Env, getEnvValue } from "./Env.ts";
 import type { Brand } from "./Types.ts";
 
 // elm-watch’s server only accepts requests where the `Host` header (and for
@@ -87,7 +87,7 @@ function markAsAllowedHost(hostname: string): AllowedHost {
 // Invalid hosts in the environment variable are silently ignored, just like
 // for other environment variables.
 export function getAllowedHostsFromEnv(env: Env): Array<AllowedHost> {
-  const string = env[ELM_WATCH_ALLOWED_HOSTS];
+  const string = getEnvValue(env, ELM_WATCH_ALLOWED_HOSTS);
   if (string === undefined) {
     return [];
   }

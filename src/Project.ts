@@ -16,6 +16,7 @@ import {
   ELM_WATCH_OPEN_EDITOR,
   ELM_WATCH_WEBSOCKET_URL,
   type Env,
+  getEnvValue,
 } from "./Env.ts";
 import {
   type ErrorReporter,
@@ -611,9 +612,9 @@ export function initProject({
   const hostFromEnv = getHostFromEnv(env);
   const host = hostFromEnv ?? config.host ?? DEFAULT_HOST;
 
-  const openEditorValue = env[ELM_WATCH_OPEN_EDITOR];
+  const openEditorValue = getEnvValue(env, ELM_WATCH_OPEN_EDITOR);
   const openEditor: OpenEditor =
-    openEditorValue === undefined || openEditorValue === ""
+    openEditorValue === undefined
       ? { tag: "NotSet" }
       : isEditorUrl(openEditorValue)
         ? { tag: "Url", template: openEditorValue }
@@ -755,7 +756,7 @@ function ancestorsUntilContaining(
 }
 
 function getWebSocketUrlFromEnv(env: Env): WebSocketUrl | undefined {
-  const envWebSocketUrlString = env[ELM_WATCH_WEBSOCKET_URL];
+  const envWebSocketUrlString = getEnvValue(env, ELM_WATCH_WEBSOCKET_URL);
 
   if (envWebSocketUrlString === undefined) {
     return undefined;

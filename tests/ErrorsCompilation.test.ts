@@ -882,7 +882,7 @@ describe("errors", () => {
           env: {
             ...process.env,
             ...TEST_ENV,
-            [NO_COLOR]: "",
+            [NO_COLOR]: "1",
           },
           isTTY: false,
           originalStdout: true,
@@ -938,7 +938,7 @@ describe("errors", () => {
           env: {
             ...process.env,
             ...TEST_ENV,
-            [NO_COLOR]: "",
+            [NO_COLOR]: "1",
           },
           isTTY: false,
           originalStdout: true,

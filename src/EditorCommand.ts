@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { EDITOR_PLACEHOLDERS } from "./Editor.ts";
-import { ELM_WATCH_OPEN_EDITOR, type Env } from "./Env.ts";
+import { ELM_WATCH_OPEN_EDITOR, type Env, getEnvValue } from "./Env.ts";
 import { bold, dim, toError } from "./Helpers.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
 import {
@@ -33,8 +33,8 @@ export async function editorCommand(
     return 1;
   }
 
-  const value = env[ELM_WATCH_OPEN_EDITOR];
-  if (value === undefined || value === "") {
+  const value = getEnvValue(env, ELM_WATCH_OPEN_EDITOR);
+  if (value === undefined) {
     terminal.write(gettingStarted(env));
     return 0;
   }

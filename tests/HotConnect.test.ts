@@ -179,7 +179,7 @@ describe("hot", () => {
       args: ["Html"],
       scripts: ["Html.js"],
       env: {
-        [NO_COLOR]: "",
+        [NO_COLOR]: "1",
       },
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });
@@ -204,7 +204,7 @@ describe("hot", () => {
       scripts: ["Html.js"],
       isTTY: false,
       env: {
-        [NO_COLOR]: "",
+        [NO_COLOR]: "1",
       },
       init: (node) => {
         window.Elm?.["HtmlMain"]?.init({ node });

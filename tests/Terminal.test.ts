@@ -69,7 +69,9 @@ describe("Terminal", () => {
     expect(fancy({})).toBe(!IS_WINDOWS);
     expect(fancy({ [WT_SESSION]: "" })).toBe(true);
     expect(fancy({ [TERM_PROGRAM]: "vscode" })).toBe(true);
-    expect(fancy({ [TERM_PROGRAM]: "vscode", [NO_COLOR]: "" })).toBe(false);
+    expect(fancy({ [TERM_PROGRAM]: "vscode", [NO_COLOR]: "1" })).toBe(false);
+    // Empty means unset: https://no-color.org/
+    expect(fancy({ [TERM_PROGRAM]: "vscode", [NO_COLOR]: "" })).toBe(true);
   });
 
   test("ctrl+c together with other keys", () => {

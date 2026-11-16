@@ -111,7 +111,7 @@ describe("hot", () => {
       scripts: ["Main.js"],
       keepElmStuffJson: true,
       env: {
-        [NO_COLOR]: "",
+        [NO_COLOR]: "1",
       },
       init: (node) => {
         window.Elm?.["Main"]?.init({ node });

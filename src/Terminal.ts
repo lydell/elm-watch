@@ -8,6 +8,7 @@ import {
   __ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS,
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
   type Env,
+  getEnvValue,
   NO_COLOR,
   TERM_PROGRAM,
   WT_SESSION,
@@ -86,7 +87,7 @@ export function makeTerminal({
   stderr: WriteStream;
   logDebug: (message: string) => void;
 }): Terminal {
-  const noColor = NO_COLOR in env;
+  const noColor = getEnvValue(env, NO_COLOR) !== undefined;
   // The old Windows console does not support emoji, and does not answer
   // terminal queries. Windows Terminal (tested with version 1.24) and the VS
   // Code terminal (tested with version 1.146) do.

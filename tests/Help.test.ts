@@ -141,7 +141,7 @@ describe("help", () => {
   });
 
   test("NO_COLOR", async () => {
-    expect(await helpHelper(["help"], { [NO_COLOR]: "" }))
+    expect(await helpHelper(["help"], { [NO_COLOR]: "1" }))
       .toMatchInlineSnapshot(`
         elm-watch init [--javascript|--typescript]
             Create a minimal elm-watch.json in the current directory.

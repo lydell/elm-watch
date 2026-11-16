@@ -1,7 +1,15 @@
 export type Env = Record<string, string | undefined>;
 
+// Empty environment variables are treated as unset, so that `NAME= elm-watch`
+// works for unsetting a variable for a single run. (Only for the public
+// variables below. The internal `__ELM_WATCH_*` ones are only used in tests.)
+export function getEnvValue(env: Env, name: string): string | undefined {
+  const value = env[name];
+  return value === "" ? undefined : value;
+}
+
 // Disable colored output.
-// Type: Check if defined and ignore value.
+// Type: Check if non-empty and ignore value (https://no-color.org/).
 export const NO_COLOR = "NO_COLOR";
 
 // If set, enables clicking error locations in the browser to open them in your editor.

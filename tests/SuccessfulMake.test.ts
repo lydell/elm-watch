@@ -146,7 +146,7 @@ describe("successful make", () => {
     expect(
       await run("successful-make", ["make", "--optimize"], {
         isTTY: false,
-        env: { [NO_COLOR]: "" },
+        env: { [NO_COLOR]: "1" },
       }),
     ).toMatchInlineSnapshot(`
       Dependencies: in progress
@@ -296,7 +296,7 @@ describe("successful make", () => {
   test("alignment and truncation and emoji – non-fancy", async () => {
     expect(
       await run("emoji", ["make"], {
-        env: { [NO_COLOR]: "" },
+        env: { [NO_COLOR]: "1" },
       }),
     ).toMatchInlineSnapshot(`
       No emoji: success                                              1 ms Q | 1.23 s E
