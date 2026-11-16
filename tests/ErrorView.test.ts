@@ -389,7 +389,7 @@ describe("render", () => {
     expect(chooser({ chooser: { showOther: false } })).toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
-      [*6*] Rider   [*7*] Other
+      [*6*] Other
 
       🚨 error 1/1  [*esc*] cancel"
     `);
@@ -401,7 +401,7 @@ describe("render", () => {
     ).toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] *WebStorm*
-      [*6*] Rider   [*7*] Other
+      [*6*] Other
 
       To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable.
       The easiest way to get started is to run:
@@ -417,7 +417,7 @@ describe("render", () => {
     ).toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
-      [*6*] Rider   [*7*] Other
+      [*6*] Other
 
       To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable.
       The easiest way to get started is to run:
@@ -454,7 +454,7 @@ describe("render", () => {
     expect(chooser(undefined)).toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
-      [*6*] Rider   [*7*] *ELM_WATCH_OPEN_EDITOR*
+      [*6*] *ELM_WATCH_OPEN_EDITOR*
 
       🚨 error 1/1  [*esc*] cancel"
     `);
@@ -462,7 +462,7 @@ describe("render", () => {
       .toMatchInlineSnapshot(`
         "Which editor should I open this in?
         [*1*] VS Code   [*2*] Cursor   [*3*] *Zed*   [*4*] IntelliJ IDEA   [*5*] WebStorm
-        [*6*] Rider   [*7*] ELM_WATCH_OPEN_EDITOR
+        [*6*] ELM_WATCH_OPEN_EDITOR
 
         🚨 error 1/1  [*esc*] cancel"
       `);

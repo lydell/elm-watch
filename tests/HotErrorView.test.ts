@@ -328,7 +328,7 @@ describe("hot error view", () => {
         stdin.press("o");
         await waitFor(() => footer().includes("Which editor"));
         screens.push(footer());
-        stdin.press("7");
+        stdin.press("6");
         await waitFor(() => footer().includes("elm-watch editor"));
         screens.push(footer());
         stdin.press("\x1B");
@@ -343,7 +343,7 @@ describe("hot error view", () => {
 
       Which editor should I open this in?
       ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
-      ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ Other
+      ⧙[⧘⧙6⧘⧙]⧘ Other
 
       🚨 error 1/1  ⧙[⧘⧙esc⧘⧙]⧘ cancel
       --------------------------------------------------------------------------------
@@ -351,7 +351,7 @@ describe("hot error view", () => {
 
       Which editor should I open this in?
       ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
-      ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ Other
+      ⧙[⧘⧙6⧘⧙]⧘ Other
 
       To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable.
       The easiest way to get started is to run:
@@ -550,7 +550,7 @@ describe("hot error view", () => {
           footers.push(footer());
           // Back to the env var.
           stdin.press("e");
-          stdin.press("7");
+          stdin.press("6");
           await waitFor(() => readOpened().length === 3);
           footers.push(footer());
           return "Stop" as const;
@@ -567,7 +567,7 @@ describe("hot error view", () => {
 
         Which editor should I open this in?
         ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
-        ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ ⧙ELM_WATCH_OPEN_EDITOR⧘
+        ⧙[⧘⧙6⧘⧙]⧘ ⧙ELM_WATCH_OPEN_EDITOR⧘
 
         🚨 error 1/1  ⧙[⧘⧙esc⧘⧙]⧘ cancel
         --------------------------------------------------------------------------------

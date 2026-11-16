@@ -340,7 +340,7 @@ describe("hot", () => {
           onIdle: async () => {
             clickFirstErrorLocation();
             chooser = getOverlay();
-            clickUiButton("[7] Other");
+            clickUiButton("[6] Other");
             other = /<chooser>[^]*<\/chooser>/.exec(getOverlay())?.[0] ?? "";
             clickUiButton("[1] VS Code");
             await waitFor(() => readChosenEditor() === "vscode");
@@ -368,8 +368,7 @@ describe("hot", () => {
           [[3] Zed]
           [[4] IntelliJ IDEA]
           [[5] WebStorm]
-          [[6] Rider]
-          [[7] Other]
+          [[6] Other]
           </chooser>
           --------------------------------------------------------------------------------
           <footer>🚨 error 1/1 | [esc] cancel</footer>
@@ -383,8 +382,7 @@ describe("hot", () => {
           [[3] Zed]
           [[4] IntelliJ IDEA]
           [[5] WebStorm]
-          [[6] Rider]
-          [[7] Other]
+          [[6] Other]
           To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable. The easiest way to get started is to run:
           elm-watch editor
           </chooser>
@@ -425,7 +423,7 @@ describe("hot", () => {
             footers.push(grep(getOverlay(), /footer/));
             pressOverlayKey("e");
             footers.push(grep(getOverlay(), /pressed|footer/));
-            pressOverlayKey("7");
+            pressOverlayKey("6");
             footers.push(grep(getOverlay(), /Other|another editor|footer/));
             // The presets can still be chosen after showing “Other”.
             pressOverlayKey("1");
@@ -446,7 +444,7 @@ describe("hot", () => {
           <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in WebStorm | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>
           [[5] WebStorm] (pressed)
           <footer>🚨 error 1/1 | [esc] cancel</footer>
-          [[7] Other]
+          [[6] Other]
           To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable. The easiest way to get started is to run:
           <footer>🚨 error 1/1 | [esc] cancel</footer>
           <footer>🚨 1 error | [e] change editor | [a] show one error at a time | [esc] close (again to reopen)</footer>
@@ -491,7 +489,7 @@ describe("hot", () => {
             // And back to the env var.
             pressOverlayKey("e");
             overlays.push(grep(getOverlay(), /pressed|ELM_WATCH/));
-            pressOverlayKey("7");
+            pressOverlayKey("6");
             await waitFor(() => readChosenEditor() === undefined);
             chosen.push(readChosenEditor());
             return "Stop" as const;
@@ -500,11 +498,11 @@ describe("hot", () => {
 
         expect(overlays.join("\n")).toMatchInlineSnapshot(`
           <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>
-          [[7] ELM_WATCH_OPEN_EDITOR] (pressed)
+          [[6] ELM_WATCH_OPEN_EDITOR] (pressed)
           <footer>🚨 error 1/1 | [esc] cancel</footer>
           <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in Cursor | [e] change editor | [a] show all | [esc] close (again to reopen)</footer>
           [[2] Cursor] (pressed)
-          [[7] ELM_WATCH_OPEN_EDITOR]
+          [[6] ELM_WATCH_OPEN_EDITOR]
         `);
         expect(chosen).toStrictEqual(["cursor", undefined]);
         expect(openedUrls).toMatchInlineSnapshot(`

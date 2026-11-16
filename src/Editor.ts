@@ -41,11 +41,6 @@ export const EDITOR_PRESETS: Array<EditorPreset> = [
     name: "WebStorm",
     template: "webstorm://open?file={file}&line={line}&column={column0}",
   },
-  {
-    id: "rider",
-    name: "Rider",
-    template: "rider://open?file={file}&line={line}&column={column0}",
-  },
 ];
 
 export type EditorLocation = {

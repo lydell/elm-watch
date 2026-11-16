@@ -73,7 +73,7 @@ In the error overlay you can click error locations (or press Enter) to open them
 
 ### Choose your editor
 
-The first time you click an error location (or press Enter), elm-watch asks which editor to use, right in the error overlay: VS Code, Cursor, Zed, IntelliJ IDEA, WebStorm or Rider. Click one, or press its number. The browser then opens the error location via a URL, such as `vscode://file/path/to/Main.elm:10:5`. The first time, the browser (and VS Code) asks if you want to open the editor – you can tick a box to not be asked again.
+The first time you click an error location (or press Enter), elm-watch asks which editor to use, right in the error overlay: VS Code, Cursor, Zed, IntelliJ IDEA or WebStorm. Click one, or press its number. The browser then opens the error location via a URL, such as `vscode://file/path/to/Main.elm:10:5`. The first time, the browser (and VS Code) asks if you want to open the editor – you can tick a box to not be asked again.
 
 The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered for all browsers (but you need to choose again in other projects, or if you delete `elm-stuff/`). To change it later, press e in the error overlay.
 
@@ -132,7 +132,6 @@ The editors you can choose from use these URLs:
 | Zed | `zed://file{file}:{line}:{column}` |
 | IntelliJ IDEA | `idea://open?file={file}&line={line}&column={column0}` |
 | WebStorm | `webstorm://open?file={file}&line={line}&column={column0}` |
-| Rider | `rider://open?file={file}&line={line}&column={column0}` |
 
 Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like.
 
