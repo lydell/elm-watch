@@ -70,7 +70,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
 
       I am struggling with this boolean operation:
@@ -121,7 +121,7 @@ describe("hot", () => {
       Main: 1 error
       http://localhost:59123
 
-      -- TYPE MISMATCH ---------------------------------------------------------------
+      ── TYPE MISMATCH ───────────────────────────────────────────────────────────────
       /Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm:10:31
 
       I am struggling with this boolean operation:
@@ -179,7 +179,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+      ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
       ⧙Target: Main⧘
 
       I ran the following commands:

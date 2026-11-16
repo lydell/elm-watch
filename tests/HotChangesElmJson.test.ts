@@ -86,7 +86,7 @@ describe("hot", () => {
     await window.__ELM_WATCH.KILL_MATCHING(/^/);
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+      ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -98,7 +98,7 @@ describe("hot", () => {
 
       …
 
-      ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+      ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-watch-json/src/elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -111,7 +111,7 @@ describe("hot", () => {
 
       …
 
-      ⧙-- elm-watch.json NOT FOUND ----------------------------------------------------⧘
+      ⧙── elm-watch.json NOT FOUND ────────────────────────────────────────────────────⧘
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -191,7 +191,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- EXTRA COMMA -----------------------------------------------------------------⧘
+      ⧙── EXTRA COMMA ─────────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
       I ran into a problem with your elm.json file. I was partway through parsing a
@@ -274,7 +274,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- elm.json TYPE MISMATCH ------------------------------------------------------⧘
+      ⧙── elm.json TYPE MISMATCH ──────────────────────────────────────────────────────⧘
       ⧙Target: HtmlMain⧘
 
       This target has ⧙"type": "application"⧘, but its ⧙elm.json⧘ has ⧙"type": "package"⧘:
@@ -290,7 +290,7 @@ describe("hot", () => {
 
       …
 
-      ⧙-- elm.json NOT FOUND ----------------------------------------------------------⧘
+      ⧙── elm.json NOT FOUND ──────────────────────────────────────────────────────────⧘
       ⧙Target: HtmlMain⧘
 
       I could not find the ⧙elm.json⧘ for this target:
@@ -332,7 +332,7 @@ describe("hot", () => {
       elm-watch %VERSION%
       [Close elm-watch]
       🚨 HtmlMain elm.json or inputs error · 13:10:05
-      -- elm.json TYPE MISMATCH ------------------------------------------------------
+      ── elm.json TYPE MISMATCH ──────────────────────────────────────────────────────
       Target: HtmlMain
 
       This target has "type": "application", but its elm.json has "type": "package":
@@ -352,7 +352,7 @@ describe("hot", () => {
       elm-watch %VERSION%
       [Close elm-watch]
       🚨 HtmlMain elm.json or inputs error · 13:10:05
-      -- elm.json NOT FOUND ----------------------------------------------------------
+      ── elm.json NOT FOUND ──────────────────────────────────────────────────────────
       Target: HtmlMain
 
       I could not find the elm.json for this target:
@@ -396,7 +396,7 @@ describe("hot", () => {
 
     // Both Elm and the Walker will fail on the invalid elm.json, but only the Elm error should be shown.
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- EXTRA COMMA -----------------------------------------------------------------⧘
+      ⧙── EXTRA COMMA ─────────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-json/elm.json
 
       I ran into a problem with your elm.json file. I was partway through parsing a

@@ -256,8 +256,10 @@ export function toTerminalString(
     width,
     renderPiece,
   );
-  const prefix = `-- ${title} `;
-  const line = "-".repeat(Math.max(0, width - prefix.length));
+  // Box drawing characters render as a solid line, and are supported by the
+  // fonts of the Windows console too.
+  const prefix = `── ${title} `;
+  const line = "─".repeat(Math.max(0, width - prefix.length));
   const titleWithSeparator = renderPiece(bold(`${prefix}${line}`));
 
   return [

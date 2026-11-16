@@ -43,7 +43,7 @@ describe("errors", () => {
   describe("elm compilation errors", () => {
     test('wrong "type" in elm.json', async () => {
       expect(await run("wrong-elm-json-type", ["make"])).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED TYPE -------------------------------------------------------------⧘
+        ⧙── UNEXPECTED TYPE ─────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/wrong-elm-json-type/elm.json
 
         I got stuck while reading your elm.json file. I cannot handle a "type" like
@@ -61,7 +61,7 @@ describe("errors", () => {
       // Elm’s message is a bit odd.
       expect(await run("compilation-errors", ["make", "Dir"]))
         .toMatchInlineSnapshot(`
-          ⧙-- FILE NOT FOUND --------------------------------------------------------------⧘
+          ⧙── FILE NOT FOUND ──────────────────────────────────────────────────────────────⧘
           ⧙Target: Dir⧘
 
           I cannot find this file:
@@ -79,105 +79,105 @@ describe("errors", () => {
     test("Elm syntax error", async () => {
       expect(await run("compilation-errors", ["make", "SyntaxError"]))
         .toMatchInlineSnapshot(`
-        ⧙-- UNFINISHED MODULE DECLARATION -----------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/compilation-errors/src/SyntaxError.elm:1:28
+          ⧙── UNFINISHED MODULE DECLARATION ───────────────────────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/compilation-errors/src/SyntaxError.elm:1:28
 
-        I am parsing an \`module\` declaration, but I got stuck here:
+          I am parsing an \`module\` declaration, but I got stuck here:
 
-        1| module SyntaxError exposing
-                                      ⧙^⧘
-        Here are some examples of valid \`module\` declarations:
+          1| module SyntaxError exposing
+                                        ⧙^⧘
+          Here are some examples of valid \`module\` declarations:
 
-            ⧙module⧘ Main ⧙exposing⧘ (..)
-            ⧙module⧘ Dict ⧙exposing⧘ (Dict, empty, get)
+              ⧙module⧘ Main ⧙exposing⧘ (..)
+              ⧙module⧘ Dict ⧙exposing⧘ (Dict, empty, get)
 
-        I generally recommend using an explicit exposing list. I can skip compiling a
-        bunch of files when the public interface of a module stays the same, so exposing
-        fewer values can help improve compile times!
-      `);
+          I generally recommend using an explicit exposing list. I can skip compiling a
+          bunch of files when the public interface of a module stays the same, so exposing
+          fewer values can help improve compile times!
+        `);
     });
 
     test("Elm syntax error – tabs", async () => {
       expect(await run("compilation-errors", ["make", "Tabs"]))
         .toMatchInlineSnapshot(`
-        ⧙-- NO TABS ---------------------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/compilation-errors/src/Tabs.elm:6:1
+          ⧙── NO TABS ─────────────────────────────────────────────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/compilation-errors/src/Tabs.elm:6:1
 
-        I ran into a tab, but tabs are not allowed in Elm files.
+          I ran into a tab, but tabs are not allowed in Elm files.
 
-        6| 	Html.text "Hello"
-           ⧙^⧘
-        Replace the tab with spaces.
-      `);
+          6| 	Html.text "Hello"
+             ⧙^⧘
+          Replace the tab with spaces.
+        `);
     });
 
     test("module name and file name mismatch", async () => {
       expect(await run("compilation-errors", ["make", "ModuleNameMismatch"]))
         .toMatchInlineSnapshot(`
-        ⧙-- MODULE NAME MISMATCH --------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/compilation-errors/src/ModuleNameMismatch.elm:1:8
+          ⧙── MODULE NAME MISMATCH ────────────────────────────────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/compilation-errors/src/ModuleNameMismatch.elm:1:8
 
-        It looks like this module name is out of sync:
+          It looks like this module name is out of sync:
 
-        1| module OtherModuleName exposing (a)
-                  ⧙^^^^^^^^^^^^^^^⧘
-        I need it to match the file path, so I was expecting to see \`ModuleNameMismatch\`
-        here. Make the following change, and you should be all set!
+          1| module OtherModuleName exposing (a)
+                    ⧙^^^^^^^^^^^^^^^⧘
+          I need it to match the file path, so I was expecting to see \`ModuleNameMismatch\`
+          here. Make the following change, and you should be all set!
 
-            ⧙OtherModuleName⧘ -> ⧙ModuleNameMismatch⧘
+              ⧙OtherModuleName⧘ -> ⧙ModuleNameMismatch⧘
 
-        ⧙Note⧘: I require that module names correspond to file paths. This makes it much
-        easier to explore unfamiliar codebases! So if you want to keep the current
-        module name, try renaming the file instead.
-      `);
+          ⧙Note⧘: I require that module names correspond to file paths. This makes it much
+          easier to explore unfamiliar codebases! So if you want to keep the current
+          module name, try renaming the file instead.
+        `);
     });
 
     test("type error", async () => {
       expect(await run("compilation-errors", ["make", "TypeError"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
+          ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/compilation-errors/src/TypeError.elm:3:9
 
-        I cannot do addition with ⧙String⧘ values like this one:
+          I cannot do addition with ⧙String⧘ values like this one:
 
-        3| error = "a" + 1
-                   ⧙^^^⧘
-        The (+) operator only works with ⧙Int⧘ and ⧙Float⧘ values.
+          3| error = "a" + 1
+                     ⧙^^^⧘
+          The (+) operator only works with ⧙Int⧘ and ⧙Float⧘ values.
 
-        ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
-      `);
+          ⧙Hint⧘: Switch to the ⧙(++)⧘ operator to append strings!
+        `);
     });
 
     test("missing main", async () => {
       expect(await run("compilation-errors", ["make", "MissingMain"]))
         .toMatchInlineSnapshot(`
-        ⧙-- NO MAIN ---------------------------------------------------------------------⧘
-        ⧙Target: MissingMain⧘
+          ⧙── NO MAIN ─────────────────────────────────────────────────────────────────────⧘
+          ⧙Target: MissingMain⧘
 
-        When producing a JS file, I require that the given file has a \`main\` value. That
-        way Elm.MissingMain.init() is definitely defined in the resulting file!
+          When producing a JS file, I require that the given file has a \`main\` value. That
+          way Elm.MissingMain.init() is definitely defined in the resulting file!
 
-        Try adding a \`main\` value to your file? Or if you just want to verify that this
-        module compiles, switch to --output=/dev/null to skip the code gen phase
-        altogether.
+          Try adding a \`main\` value to your file? Or if you just want to verify that this
+          module compiles, switch to --output=/dev/null to skip the code gen phase
+          altogether.
 
-        ⧙Note⧘: Adding a \`main\` value can be as brief as adding something like this:
+          ⧙Note⧘: Adding a \`main\` value can be as brief as adding something like this:
 
-        ⧙import⧘ Html
+          ⧙import⧘ Html
 
-        ⧙main⧘ =
-          ⧙Html⧘.text ⧙"Hello!"⧘
+          ⧙main⧘ =
+            ⧙Html⧘.text ⧙"Hello!"⧘
 
-        Or use https://package.elm-lang.org/packages/elm/core/latest/Platform#worker to
-        make a \`main\` with no user interface.
-      `);
+          Or use https://package.elm-lang.org/packages/elm/core/latest/Platform#worker to
+          make a \`main\` with no user interface.
+        `);
     });
 
     test("--optimize with Debug.log", async () => {
       expect(
         await run("compilation-errors", ["make", "DebugLog", "--optimize"]),
       ).toMatchInlineSnapshot(`
-        ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
+        ⧙── DEBUG REMNANTS ──────────────────────────────────────────────────────────────⧘
         ⧙Target: DebugLog⧘
 
         There are uses of the \`Debug\` module in the following modules:
@@ -229,7 +229,7 @@ describe("errors", () => {
       }
       fs.writeFileSync(iDat, fs.readFileSync(iDat).subarray(0, 128));
       expect(await run(fixture, ["make", "Main"])).toMatchInlineSnapshot(`
-        ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
+        ⧙── CORRUPT CACHE ───────────────────────────────────────────────────────────────⧘
         ⧙Target: Main⧘
 
         +-------------------------------------------------------------------------------
@@ -253,7 +253,7 @@ describe("errors", () => {
 
     test("Elm crash immediately", async () => {
       expect(await runWithBadElmBin("elm-crash")).toMatchInlineSnapshot(`
-        ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
+        ⧙── ELM CRASHED ─────────────────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -271,7 +271,7 @@ describe("errors", () => {
 
     test("Elm crash half-way through printing JSON", async () => {
       expect(await runWithBadElmBin("elm-crash-json")).toMatchInlineSnapshot(`
-        ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
+        ⧙── ELM CRASHED ─────────────────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -289,7 +289,7 @@ describe("errors", () => {
 
     test("Elm crash with non-JSON printed before", async () => {
       expect(await runWithBadElmBin("elm-crash-extra")).toMatchInlineSnapshot(`
-        ⧙-- ELM CRASHED -----------------------------------------------------------------⧘
+        ⧙── ELM CRASHED ─────────────────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -376,7 +376,7 @@ describe("errors", () => {
         ⏳ Main: elm make (typecheck only)
         🚨 Main
 
-        ⧙-- ENDLESS STRING --------------------------------------------------------------⧘
+        ⧙── ENDLESS STRING ──────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/interrupt-typecheck/src/Main.elm:7:17
 
         I got to the end of the line without seeing the closing double quote:
@@ -407,7 +407,7 @@ describe("errors", () => {
 
   test("fail to read the size of Elm’s output", async () => {
     expect(await runWithBadElmBin("exit-0-no-write")).toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
+      ⧙── TROUBLE READING OUTPUT ──────────────────────────────────────────────────────⧘
       ⧙Target: app⧘
 
       I managed to compile your code. Then I tried to read the output:
@@ -424,58 +424,58 @@ describe("errors", () => {
     test("is a folder", async () => {
       expect(await run("elm-watch-stuff-json-is-folder", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING elm-stuff/elm-watch/stuff.json ------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-is-folder/elm-stuff/elm-watch/stuff.json
+          ⧙── TROUBLE READING elm-stuff/elm-watch/stuff.json ──────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-is-folder/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
+          I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
-        ⧙I had trouble reading it:⧘
+          ⧙I had trouble reading it:⧘
 
-        EISDIR: illegal operation on a directory, read
+          EISDIR: illegal operation on a directory, read
 
-        This file is created by elm-watch, so reading it should never fail really.
-        You could try removing that file (it contains nothing essential).
-      `);
+          This file is created by elm-watch, so reading it should never fail really.
+          You could try removing that file (it contains nothing essential).
+        `);
     });
 
     test("bad json", async () => {
       expect(await run("elm-watch-stuff-json-bad-json", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-stuff/elm-watch/stuff.json FORMAT -------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch/stuff.json
+          ⧙── INVALID elm-stuff/elm-watch/stuff.json FORMAT ───────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-json/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
+          I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
-        ⧙I had trouble with the JSON inside:⧘
+          ⧙I had trouble with the JSON inside:⧘
 
-        At root:
-        SyntaxError: (JSON syntax error)
+          At root:
+          SyntaxError: (JSON syntax error)
 
-        This file is created by elm-watch, so reading it should never fail really.
-        You could try removing that file (it contains nothing essential).
-      `);
+          This file is created by elm-watch, so reading it should never fail really.
+          You could try removing that file (it contains nothing essential).
+        `);
     });
 
     test("bad compilation mode", async () => {
       expect(await run("elm-watch-stuff-json-bad-compilation-mode", ["hot"]))
         .toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-stuff/elm-watch/stuff.json FORMAT -------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-compilation-mode/elm-stuff/elm-watch/stuff.json
+          ⧙── INVALID elm-stuff/elm-watch/stuff.json FORMAT ───────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-bad-compilation-mode/elm-stuff/elm-watch/stuff.json
 
-        I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
+          I read stuff from ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
 
-        ⧙I had trouble with the JSON inside:⧘
+          ⧙I had trouble with the JSON inside:⧘
 
-        At root["targets"]["Main"]["compilationMode"]:
-        Expected one of these variants:
-          "debug",
-          "standard",
-          "optimize"
-        Got: "normal"
+          At root["targets"]["Main"]["compilationMode"]:
+          Expected one of these variants:
+            "debug",
+            "standard",
+            "optimize"
+          Got: "normal"
 
-        This file is created by elm-watch, so reading it should never fail really.
-        You could try removing that file (it contains nothing essential).
-      `);
+          This file is created by elm-watch, so reading it should never fail really.
+          You could try removing that file (it contains nothing essential).
+        `);
     });
 
     test("write error", async () => {
@@ -509,7 +509,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- TROUBLE WRITING elm-stuff/elm-watch/stuff.json ------------------------------⧘
+        ⧙── TROUBLE WRITING elm-stuff/elm-watch/stuff.json ──────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/elm-watch-stuff-json-write-error/elm-stuff/elm-watch/stuff.json
 
         I write stuff to ⧙elm-stuff/elm-watch/stuff.json⧘ to remember some things between runs.
@@ -534,7 +534,7 @@ describe("errors", () => {
         exitHotOnError: true,
       }),
     ).toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING ELM FILES ---------------------------------------------------⧘
+      ⧙── TROUBLE READING ELM FILES ───────────────────────────────────────────────────⧘
       ⧙Target: Main⧘
 
       When figuring out all Elm files that your inputs depend on I read a lot of Elm files.
@@ -566,7 +566,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+        ⧙── PORT CONFLICT ───────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/port-conflict-for-persisted-port/elm-stuff/elm-watch/stuff.json
 
         I ask the operating system for an arbitrary available port for the
@@ -599,7 +599,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+        ⧙── PORT CONFLICT ───────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/port-conflict-for-port-from-config/elm-watch.json
 
         In your ⧙elm-watch.json⧘ you have this:
@@ -633,7 +633,7 @@ describe("errors", () => {
       🚨 Main2
       🚨 Main3
 
-      ⧙-- UNKNOWN EXPORT --------------------------------------------------------------⧘
+      ⧙── UNKNOWN EXPORT ──────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/errors/typecheck-only/src/Main2.elm:1:24
 
       You are trying to expose a value named \`forMainTypo\` but I cannot find its
@@ -660,7 +660,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- HOST NOT FOUND --------------------------------------------------------------⧘
+        ⧙── HOST NOT FOUND ──────────────────────────────────────────────────────────────⧘
 
         This environment variable is set:
 
@@ -696,7 +696,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- HOST NOT FOUND --------------------------------------------------------------⧘
+        ⧙── HOST NOT FOUND ──────────────────────────────────────────────────────────────⧘
 
         In your ⧙elm-watch options⧘ you have this:
 
@@ -772,7 +772,7 @@ describe("errors", () => {
         ⏳ postprocess-error: elm make
         🟢 postprocess-error: elm make done
 
-        ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+        ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
 
         The 1st argument to \`text\` is not what I expect:
@@ -787,7 +787,7 @@ describe("errors", () => {
 
             ⧙String⧘
 
-        ⧙-- TOO MANY ARGS ---------------------------------------------------------------⧘
+        ⧙── TOO MANY ARGS ───────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:5
 
         The \`text\` function expects 1 argument, but it got 2 instead.
@@ -819,7 +819,7 @@ describe("errors", () => {
         ⏳ postprocess-error: postprocess
         🚨 postprocess-error
 
-        ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+        ⧙── POSTPROCESS ERROR ───────────────────────────────────────────────────────────⧘
         ⧙Target: postprocess-error⧘
 
         I ran your postprocess function for this target.
@@ -861,7 +861,7 @@ describe("errors", () => {
         postprocess-error: elm make
         postprocess-error: elm make done
 
-        -- TYPE MISMATCH ---------------------------------------------------------------
+        ── TYPE MISMATCH ───────────────────────────────────────────────────────────────
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:15
 
         The 1st argument to \`text\` is not what I expect:
@@ -876,7 +876,7 @@ describe("errors", () => {
 
             String
 
-        -- TOO MANY ARGS ---------------------------------------------------------------
+        ── TOO MANY ARGS ───────────────────────────────────────────────────────────────
         /Users/you/project/tests/fixtures/errors/ci/src/Admin.elm:8:5
 
         The \`text\` function expects 1 argument, but it got 2 instead.
@@ -913,7 +913,7 @@ describe("errors", () => {
         postprocess-error: postprocess
         postprocess-error: error
 
-        -- POSTPROCESS ERROR -----------------------------------------------------------
+        ── POSTPROCESS ERROR ───────────────────────────────────────────────────────────
         Target: postprocess-error
 
         I ran your postprocess function for this target.
@@ -943,7 +943,7 @@ describe("errors", () => {
       ⚪️ app: queued
       ⚪️ admin: queued
 
-      ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
+      ⧙── STUCK IN PROGRESS ───────────────────────────────────────────────────────────⧘
       ⧙Target: app⧘
 
       I thought that all outputs had finished compiling, but my inner state says
@@ -951,7 +951,7 @@ describe("errors", () => {
 
       ⧙This is not supposed to ever happen.⧘
 
-      ⧙-- STUCK IN PROGRESS -----------------------------------------------------------⧘
+      ⧙── STUCK IN PROGRESS ───────────────────────────────────────────────────────────⧘
       ⧙Target: admin⧘
 
       I thought that all outputs had finished compiling, but my inner state says
@@ -988,7 +988,7 @@ describe("errors", () => {
           ),
         ),
       ).toMatchInlineSnapshot(`
-        ⧙-- TROUBLE SPAWNING COMMAND ----------------------------------------------------⧘
+        ⧙── TROUBLE SPAWNING COMMAND ────────────────────────────────────────────────────⧘
         /Users/you/project/elm.json
 
         I tried to execute ⧙elm⧘, but I ran into an error!
@@ -1029,7 +1029,7 @@ describe("errors", () => {
           ),
         ),
       ).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
         ⧙Target: main⧘
 
         I ran the following commands:
@@ -1074,7 +1074,7 @@ describe("errors", () => {
           ),
         ),
       ).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
         ⧙Target: main⧘
 
         I ran the following commands:
@@ -1101,7 +1101,7 @@ describe("errors", () => {
           ),
         ),
       ).toMatchInlineSnapshot(`
-        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+        ⧙── PORT CONFLICT ───────────────────────────────────────────────────────────────⧘
 
         In your ⧙elm-watch options⧘ you have this:
 
@@ -1182,7 +1182,7 @@ describe("errors", () => {
 
       test("both stdout and stderr", () => {
         expect(unexpectedOutput("out", "err")).toMatchInlineSnapshot(`
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+          ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
           ⧙Target: main⧘
 
           I ran the following commands:
@@ -1211,7 +1211,7 @@ describe("errors", () => {
           Errors.portConflictForNoPort(new Error("The error message")),
         ),
       ).toMatchInlineSnapshot(`
-        ⧙-- PORT CONFLICT ---------------------------------------------------------------⧘
+        ⧙── PORT CONFLICT ───────────────────────────────────────────────────────────────⧘
 
         I ask the operating system for an arbitrary available port for the
         web socket server.

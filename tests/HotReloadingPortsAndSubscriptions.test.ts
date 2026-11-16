@@ -488,7 +488,7 @@ describe("hot reloading", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+      ⧙── INPUTS NOT FOUND ────────────────────────────────────────────────────────────⧘
       ⧙Target: RemoveInput⧘
 
       You asked me to compile these inputs:

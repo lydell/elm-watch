@@ -61,7 +61,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5
 
       Something is off with the body of the \`a\` definition:
@@ -87,7 +87,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:11:5
 
       Something is off with the body of the \`b\` definition:
@@ -113,7 +113,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/B.elm:6:5
 
       Something is off with the body of the \`c\` definition:
@@ -139,7 +139,7 @@ describe("hot error view", () => {
       🚨 ⧙Other⧘: 1 error ◀
       🌐 http://localhost:59123
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20
 
       I cannot do addition with ⧙String⧘ values like this one:
@@ -159,7 +159,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5
 
       Something is off with the body of the \`a\` definition:
@@ -176,7 +176,7 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:11:5
 
       Something is off with the body of the \`b\` definition:
@@ -193,7 +193,7 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/B.elm:6:5
 
       Something is off with the body of the \`c\` definition:
@@ -210,7 +210,7 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20
 
       I cannot do addition with ⧙String⧘ values like this one:
@@ -230,7 +230,7 @@ describe("hot error view", () => {
       🚨 ⧙Other⧘: 1 error ◀
       🌐 http://localhost:59123
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20
 
       I cannot do addition with ⧙String⧘ values like this one:
@@ -285,7 +285,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view/src/B.elm:6:5
 
       Something is off with the body of the \`c\` definition:
@@ -807,7 +807,7 @@ describe("hot error view", () => {
     });
 
     expect(screens.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5
 
       Something is off with the body of the \`f\` definition:
@@ -838,7 +838,7 @@ describe("hot error view", () => {
 
       ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ expand   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      ⧙-- TYPE MISMATCH ---------------------------------------------------------------⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/error-view-collapse/src/Main.elm:19:5
 
       Something is off with the body of the \`f\` definition:

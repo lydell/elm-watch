@@ -273,7 +273,7 @@ describe("library", () => {
     expect(stdout).toMatchInlineSnapshot(`
       🚨 main
 
-      ⧙-- POSTPROCESS ERROR -----------------------------------------------------------⧘
+      ⧙── POSTPROCESS ERROR ───────────────────────────────────────────────────────────⧘
       ⧙Target: main⧘
 
       I ran your postprocess function for this target.
@@ -307,7 +307,7 @@ describe("library", () => {
     expect(stdout).toMatchInlineSnapshot(`
       🚨 main
 
-      ⧙-- INVALID POSTPROCESS RESULT --------------------------------------------------⧘
+      ⧙── INVALID POSTPROCESS RESULT ──────────────────────────────────────────────────⧘
       ⧙Target: main⧘
 
       I ran your postprocess function for this target.
@@ -347,7 +347,7 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      ⧙-- DUPLICATE OUTPUTS -----------------------------------------------------------⧘
+      ⧙── DUPLICATE OUTPUTS ───────────────────────────────────────────────────────────⧘
 
       Some of your outputs seem to be duplicates!
 
@@ -375,7 +375,7 @@ describe("library", () => {
         targets: [target],
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -392,7 +392,7 @@ describe("library", () => {
         targets: [{ ...target, type: "package" }],
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -415,7 +415,7 @@ describe("library", () => {
         targets: [{ ...target, elmJson: "." }],
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -433,7 +433,7 @@ describe("library", () => {
         serve: "public",
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -467,7 +467,7 @@ describe("library", () => {
         targets: [],
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -484,7 +484,7 @@ describe("library", () => {
         targets: [target, { ...target, output: "build/other.js" }],
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -501,7 +501,7 @@ describe("library", () => {
         targets: [{ ...target, postprocess: ["elm-watch-node", "a.js"] }],
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -523,7 +523,7 @@ describe("library", () => {
         openEditor: 'code --goto "$file:$line:$column"',
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -593,21 +593,21 @@ describe("library", () => {
         🚨 translations
         ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
 
-        ⧙-- ESBUILD ---------------------------------------------------------------------⧘
+        ⧙── ESBUILD ─────────────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/library/ts/main.ts:12:9
 
         Expected ⧙;⧘ but found ⧙foo⧘⧘
 
-        ⧙-- ESBUILD ---------------------------------------------------------------------⧘
+        ⧙── ESBUILD ─────────────────────────────────────────────────────────────────────⧘
         /absolute/file.ts
 
         Only a file
 
-        ⧙-- TRANSLATIONS ----------------------------------------------------------------⧘
+        ⧙── TRANSLATIONS ────────────────────────────────────────────────────────────────⧘
 
         Missing key: goodbye
 
-        ⧙-- POSTPROCESS -----------------------------------------------------------------⧘
+        ⧙── POSTPROCESS ─────────────────────────────────────────────────────────────────⧘
 
         Set while compiling
 
@@ -640,7 +640,7 @@ describe("library", () => {
         errors,
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 
@@ -664,7 +664,7 @@ describe("library", () => {
         errors: { set: () => undefined },
       }));
       expect(stdout).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch OPTIONS ---------------------------------------------------⧘
+        ⧙── INVALID elm-watch OPTIONS ───────────────────────────────────────────────────⧘
 
         I got invalid options passed to ⧙elmWatch()⧘:
 

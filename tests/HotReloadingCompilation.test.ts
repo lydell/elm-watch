@@ -124,7 +124,7 @@ describe("hot reloading", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- DEBUG REMNANTS --------------------------------------------------------------⧘
+      ⧙── DEBUG REMNANTS ──────────────────────────────────────────────────────────────⧘
       ⧙Target: DebugLog⧘
 
       There are uses of the \`Debug\` module in the following modules:

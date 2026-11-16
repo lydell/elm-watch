@@ -26,7 +26,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
+        ⧙── ELM NOT FOUND ───────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
         I tried to execute ⧙elm⧘, but it does not appear to exist!
@@ -56,7 +56,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- LAMDERA NOT FOUND -----------------------------------------------------------⧘
+        ⧙── LAMDERA NOT FOUND ───────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/lamdera-not-found/elm.json
 
         I tried to execute ⧙lamdera⧘, but it does not appear to exist!
@@ -83,7 +83,7 @@ describe("errors", () => {
             "because process.env.PATH is undefined!",
           ),
       ).toMatchInlineSnapshot(`
-        ⧙-- ELM NOT FOUND ---------------------------------------------------------------⧘
+        ⧙── ELM NOT FOUND ───────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
         I tried to execute ⧙elm⧘, but it does not appear to exist!
@@ -160,7 +160,7 @@ describe("errors", () => {
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
 
-        ⧙-- PROBLEM LOADING PACKAGE LIST ------------------------------------------------⧘
+        ⧙── PROBLEM LOADING PACKAGE LIST ────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/valid/elm.json
 
         I need the list of published packages to verify your dependencies, so I tried to
@@ -182,95 +182,95 @@ describe("errors", () => {
     test("elm install error – hot", async () => {
       expect(await runWithBadElmBin("install-error", { exitHotOnError: true }))
         .toMatchInlineSnapshot(`
-        ⧙-- PROBLEM LOADING PACKAGE LIST ------------------------------------------------⧘
-        /Users/you/project/tests/fixtures/errors/valid/elm.json
+          ⧙── PROBLEM LOADING PACKAGE LIST ────────────────────────────────────────────────⧘
+          /Users/you/project/tests/fixtures/errors/valid/elm.json
 
-        I need the list of published packages to verify your dependencies, so I tried to
-        fetch:
+          I need the list of published packages to verify your dependencies, so I tried to
+          fetch:
 
-            https://package.elm-lang.org/all-packages
+              https://package.elm-lang.org/all-packages
 
-        But my HTTP library is giving me the following error message:
+          But my HTTP library is giving me the following error message:
 
-            ConnectionFailure Network.Socket.getAddrInfo (called with preferred socket type/protocol: AddrInfo {addrFlags = [AI_ADDRCONFIG], addrFamily = AF_UNSPEC, addrSocketType = Stream, addrProtocol = 0, addrAddress = <assumed to be undefined>, addrCanonName = <assumed to be undefined>}, host name: Just "package.elm-lang.org", service name: Just "443"): does not exist (nodename nor servname provided, or not known)
+              ConnectionFailure Network.Socket.getAddrInfo (called with preferred socket type/protocol: AddrInfo {addrFlags = [AI_ADDRCONFIG], addrFamily = AF_UNSPEC, addrSocketType = Stream, addrProtocol = 0, addrAddress = <assumed to be undefined>, addrCanonName = <assumed to be undefined>}, host name: Just "package.elm-lang.org", service name: Just "443"): does not exist (nodename nor servname provided, or not known)
 
-        Are you somewhere with a slow internet connection? Or no internet? Does the link
-        I am trying to fetch work in your browser? Maybe the site is down? Does your
-        internet connection have a firewall that blocks certain domains? It is usually
-        something like that!
-      `);
+          Are you somewhere with a slow internet connection? Or no internet? Does the link
+          I am trying to fetch work in your browser? Maybe the site is down? Does your
+          internet connection have a firewall that blocks certain domains? It is usually
+          something like that!
+        `);
     });
 
     describe("unexpected elm install output", () => {
       test("exit 0 + stderr", async () => {
         expect(await runWithBadElmBin("exit-0-stderr-install"))
           .toMatchInlineSnapshot(`
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          /Users/you/project/tests/fixtures/errors/valid/elm.json
+            ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
+            /Users/you/project/tests/fixtures/errors/valid/elm.json
 
-          I tried to make sure all packages are installed by running the following commands:
+            I tried to make sure all packages are installed by running the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
+            cd /Users/you/project/tests/fixtures/errors/valid
+            elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
 
-          The file is not supposed to exist, so I expected it to exit 1 with
-          a FILE NOT FOUND error (success), or with another error I can recognize
-          (using regex) on stderr.
+            The file is not supposed to exist, so I expected it to exit 1 with
+            a FILE NOT FOUND error (success), or with another error I can recognize
+            (using regex) on stderr.
 
-          ⧙But it exited like this:⧘
+            ⧙But it exited like this:⧘
 
-          exit 0
-          some output
-          on stderr
-        `);
+            exit 0
+            some output
+            on stderr
+          `);
       });
 
       test("exit 1 + stderr not matching", async () => {
         expect(await runWithBadElmBin("exit-1-stderr-not-install-error-match"))
           .toMatchInlineSnapshot(`
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          /Users/you/project/tests/fixtures/errors/valid/elm.json
+            ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
+            /Users/you/project/tests/fixtures/errors/valid/elm.json
 
-          I tried to make sure all packages are installed by running the following commands:
+            I tried to make sure all packages are installed by running the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
+            cd /Users/you/project/tests/fixtures/errors/valid
+            elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
 
-          The file is not supposed to exist, so I expected it to exit 1 with
-          a FILE NOT FOUND error (success), or with another error I can recognize
-          (using regex) on stderr.
+            The file is not supposed to exist, so I expected it to exit 1 with
+            a FILE NOT FOUND error (success), or with another error I can recognize
+            (using regex) on stderr.
 
-          ⧙But it exited like this:⧘
+            ⧙But it exited like this:⧘
 
-          exit 1
-          STDOUT:
-          Dependencies ready!
+            exit 1
+            STDOUT:
+            Dependencies ready!
 
-          STDERR:
-          I ran into an unexpected problem!
-        `);
+            STDERR:
+            I ran into an unexpected problem!
+          `);
       });
 
       test("exit 2 + no output", async () => {
         expect(await runWithBadElmBin("exit-2-no-output-install"))
           .toMatchInlineSnapshot(`
-          ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-          /Users/you/project/tests/fixtures/errors/valid/elm.json
+            ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
+            /Users/you/project/tests/fixtures/errors/valid/elm.json
 
-          I tried to make sure all packages are installed by running the following commands:
+            I tried to make sure all packages are installed by running the following commands:
 
-          cd /Users/you/project/tests/fixtures/errors/valid
-          elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
+            cd /Users/you/project/tests/fixtures/errors/valid
+            elm make --output=/dev/null elm.json/ElmWatchNonExistentFile.elm
 
-          The file is not supposed to exist, so I expected it to exit 1 with
-          a FILE NOT FOUND error (success), or with another error I can recognize
-          (using regex) on stderr.
+            The file is not supposed to exist, so I expected it to exit 1 with
+            a FILE NOT FOUND error (success), or with another error I can recognize
+            (using regex) on stderr.
 
-          ⧙But it exited like this:⧘
+            ⧙But it exited like this:⧘
 
-          exit 2
-          ⧙(no output)⧘
-        `);
+            exit 2
+            ⧙(no output)⧘
+          `);
       });
     });
   });
@@ -281,7 +281,7 @@ describe("errors", () => {
         await runWithBadElmBinAndWrittenError("json-syntax-error");
 
       expect(output).toMatchInlineSnapshot(`
-        ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
+        ⧙── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -301,7 +301,7 @@ describe("errors", () => {
       `);
 
       expect(writtenError).toMatchInlineSnapshot(`
-        -- TROUBLE WITH JSON REPORT ----------------------------------------------------
+        ── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────
 
         I ran the following commands:
 
@@ -327,7 +327,7 @@ describe("errors", () => {
         await runWithBadElmBinAndWrittenError("json-decode-error");
 
       expect(output).toMatchInlineSnapshot(`
-        ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
+        ⧙── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -350,7 +350,7 @@ describe("errors", () => {
       `);
 
       expect(writtenError).toMatchInlineSnapshot(`
-        -- TROUBLE WITH JSON REPORT ----------------------------------------------------
+        ── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────
 
         I ran the following commands:
 
@@ -377,35 +377,35 @@ describe("errors", () => {
     test("error failed to write", async () => {
       expect(await runWithBadElmBin("json-error-failed-write"))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE WITH JSON REPORT ----------------------------------------------------⧘
-        ⧙Target: app⧘
+          ⧙── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────⧘
+          ⧙Target: app⧘
 
-        I ran the following commands:
+          I ran the following commands:
 
-        cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=build/app.js src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=build/app.js src/App.elm
 
-        I seem to have gotten some JSON back as expected,
-        but I ran into an error when decoding it:
+          I seem to have gotten some JSON back as expected,
+          but I ran into an error when decoding it:
 
-        At root:
-        SyntaxError: (JSON syntax error)
+          At root:
+          SyntaxError: (JSON syntax error)
 
-        I tried to write that to this file:
+          I tried to write that to this file:
 
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.txt
+          /Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.txt
 
-        ⧙But that failed too:⧘
+          ⧙But that failed too:⧘
 
-        EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.txt'
-      `);
+          EISDIR: illegal operation on a directory, open '/Users/you/project/tests/fixtures/errors/valid/elm-watch-ElmMakeJsonParseError-fb337d3432f9465ea0a23c33debf6525c68f21f95061a35ff08c271f6c8e176b.txt'
+        `);
     });
   });
 
   describe("unexpected `elm make` output", () => {
     test("exit 0 + stdout", async () => {
       expect(await runWithBadElmBin("exit-0-stdout")).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -426,7 +426,7 @@ describe("errors", () => {
 
     test("exit 0 + stderr", async () => {
       expect(await runWithBadElmBin("exit-0-stderr")).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -447,7 +447,7 @@ describe("errors", () => {
 
     test("exit 1 + stdout", async () => {
       expect(await runWithBadElmBin("exit-1-stdout")).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -469,35 +469,35 @@ describe("errors", () => {
     test("exit 1 + stderr that isn’t json", async () => {
       expect(await runWithBadElmBin("exit-1-stderr-not-{"))
         .toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-        ⧙Target: app⧘
+          ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
+          ⧙Target: app⧘
 
-        I ran the following commands:
+          I ran the following commands:
 
-        cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=build/app.js src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=build/app.js src/App.elm
 
-        I expected it to either exit 0 with no output (success),
-        or exit 1 with JSON on stderr (compile errors).
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
 
-        ⧙But it exited like this:⧘
+          ⧙But it exited like this:⧘
 
-        exit 1
-        This flag was given a bad value:
+          exit 1
+          This flag was given a bad value:
 
-            --output=.js
+              --output=.js
 
-        I need a valid <output-file> value. For example:
+          I need a valid <output-file> value. For example:
 
-            --output=elm.js
-            --output=index.html
-            --output=/dev/null
-      `);
+              --output=elm.js
+              --output=index.html
+              --output=/dev/null
+        `);
     });
 
     test("exit 2 + no output", async () => {
       expect(await runWithBadElmBin("exit-2-no-output")).toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
+        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
         ⧙Target: app⧘
 
         I ran the following commands:
@@ -518,27 +518,27 @@ describe("errors", () => {
     test("exit 2 + both stdout and stderr", async () => {
       expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
         .toMatchInlineSnapshot(`
-        ⧙-- UNEXPECTED ELM OUTPUT -------------------------------------------------------⧘
-        ⧙Target: app⧘
+          ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
+          ⧙Target: app⧘
 
-        I ran the following commands:
+          I ran the following commands:
 
-        cd /Users/you/project/tests/fixtures/errors/valid
-        elm make --report=json --output=build/app.js src/App.elm
+          cd /Users/you/project/tests/fixtures/errors/valid
+          elm make --report=json --output=build/app.js src/App.elm
 
-        I expected it to either exit 0 with no output (success),
-        or exit 1 with JSON on stderr (compile errors).
+          I expected it to either exit 0 with no output (success),
+          or exit 1 with JSON on stderr (compile errors).
 
-        ⧙But it exited like this:⧘
+          ⧙But it exited like this:⧘
 
-        exit 2
-        STDOUT:
-        stuff on stdout
-        second write to stdout
+          exit 2
+          STDOUT:
+          stuff on stdout
+          second write to stdout
 
-        STDERR:
-        stuff on stderr
-      `);
+          STDERR:
+          stuff on stderr
+        `);
     });
   });
 });

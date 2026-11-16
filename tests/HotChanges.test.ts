@@ -70,7 +70,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- CORRUPT CACHE ---------------------------------------------------------------⧘
+      ⧙── CORRUPT CACHE ───────────────────────────────────────────────────────────────⧘
       ⧙Target: Main⧘
 
       +-------------------------------------------------------------------------------
@@ -173,7 +173,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- MODULE NOT FOUND ------------------------------------------------------------⧘
+      ⧙── MODULE NOT FOUND ────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/watched-directories/src/Main.elm:3:8
 
       You are trying to import a \`Dir.Text\` module:
@@ -236,7 +236,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- INPUTS NOT FOUND ------------------------------------------------------------⧘
+      ⧙── INPUTS NOT FOUND ────────────────────────────────────────────────────────────⧘
       ⧙Target: Other⧘
 
       You asked me to compile these inputs:
@@ -312,7 +312,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- MISSING SOURCE DIRECTORY ----------------------------------------------------⧘
+      ⧙── MISSING SOURCE DIRECTORY ────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/watched-directories/elm.json
 
       I need a valid elm.json file, but the "source-directories" field lists the
@@ -383,7 +383,7 @@ describe("hot", () => {
       ),
     ).toMatchInlineSnapshot(`
       ⏳ Dependencies
-      ⧙-- MISSING SOURCE DIRECTORY ----------------------------------------------------⧘
+      ⧙── MISSING SOURCE DIRECTORY ────────────────────────────────────────────────────⧘
       ⏳ Dependencies
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed lib⧘
       ⏳ Dependencies
@@ -433,7 +433,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- TROUBLE READING ELM FILES ---------------------------------------------------⧘
+      ⧙── TROUBLE READING ELM FILES ───────────────────────────────────────────────────⧘
       ⧙Target: HtmlMain⧘
 
       When figuring out all Elm files that your inputs depend on I read a lot of Elm files.
@@ -446,7 +446,7 @@ describe("hot", () => {
 
       …
 
-      ⧙-- AMBIGUOUS IMPORT ------------------------------------------------------------⧘
+      ⧙── AMBIGUOUS IMPORT ────────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/changes-to-elm-files/src/HtmlMain.elm:3:8
 
       You are trying to import a \`Html\` module:
@@ -694,7 +694,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙-- WEIRD DECLARATION -----------------------------------------------------------⧘
+      ⧙── WEIRD DECLARATION ───────────────────────────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/compile-error/src/Main.elm:1:1
 
       I am trying to parse a declaration, but I am getting stuck here:
@@ -715,7 +715,7 @@ describe("hot", () => {
 
       …
 
-      ⧙-- WEIRD DECLARATION ---------------------------------------⧘
+      ⧙── WEIRD DECLARATION ───────────────────────────────────────⧘
       /Users/you/project/tests/fixtures/hot/compile-error/src/Main.elm:1:1
 
       I am trying to parse a declaration, but I am getting stuck here:

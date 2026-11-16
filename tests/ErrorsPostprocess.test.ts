@@ -12,17 +12,17 @@ describe("errors", () => {
     test("fail to read Elm’s output", async () => {
       expect(await runWithBadElmBin("exit-0-no-write", { postprocess: true }))
         .toMatchInlineSnapshot(`
-        ⧙-- TROUBLE READING OUTPUT ------------------------------------------------------⧘
-        ⧙Target: app⧘
+          ⧙── TROUBLE READING OUTPUT ──────────────────────────────────────────────────────⧘
+          ⧙Target: app⧘
 
-        I managed to compile your code. Then I tried to read the output:
+          I managed to compile your code. Then I tried to read the output:
 
-        /Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js
+          /Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js
 
-        Doing so I encountered this error:
+          Doing so I encountered this error:
 
-        ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js'
-      `);
+          ENOENT: no such file or directory, open '/Users/you/project/tests/fixtures/errors/valid/postprocess/elm-stuff/elm-watch/0.js'
+        `);
     });
 
     test("fail to write output after postprocess", async () => {
@@ -39,7 +39,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- TROUBLE WRITING OUTPUT ------------------------------------------------------⧘
+        ⧙── TROUBLE WRITING OUTPUT ──────────────────────────────────────────────────────⧘
         ⧙Target: Main⧘
 
         I managed to compile your code and read the generated file:
@@ -58,7 +58,7 @@ describe("errors", () => {
 
     test("postprocess in elm-watch.json is no longer supported", async () => {
       expect(await run("old-postprocess", ["make"])).toMatchInlineSnapshot(`
-        ⧙-- INVALID elm-watch.json FORMAT -----------------------------------------------⧘
+        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/errors/old-postprocess/elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
@@ -90,7 +90,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙-- TROUBLE WRITING DUMMY OUTPUT ------------------------------------------------⧘
+        ⧙── TROUBLE WRITING DUMMY OUTPUT ────────────────────────────────────────────────⧘
         ⧙Target: Main⧘
 
         There are no WebSocket connections for this target, so I only typecheck the
