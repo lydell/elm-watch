@@ -7,7 +7,7 @@ import * as Codec from "tiny-decoders";
 import { ansiToHtml } from "./AnsiToHtml.ts";
 import { collapseExcerpts, type Elision } from "./CollapseExcerpts.ts";
 import type { ConfigSource } from "./Config.ts";
-import { EDITOR_PLACEHOLDERS, EDITOR_URL_EXAMPLE } from "./Editor.ts";
+import { EDITOR_PLACEHOLDERS } from "./Editor.ts";
 import type { ElmJsonType, TooOldPackage } from "./ElmJson.ts";
 import type * as ElmMakeError from "./ElmMakeError.ts";
 import * as ElmWatchJson from "./ElmWatchJson.ts";
@@ -1568,16 +1568,11 @@ The web socket code I generate is supposed to always send correct messages, so s
   `.trim();
 }
 
-export function openEditorOtherForTerminal(commandHint: string): string {
+export function openEditorOtherForTerminal(): string {
   return `
-To use another editor, set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
-
-${commandHint}
-
-Try it out by running: elm-watch try-open
-Then restart elm-watch.
-
-Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+To use another editor, set the ${ELM_WATCH_OPEN_EDITOR} environment variable.
+The easiest way to get started is to run:
+${boldTerminal("elm-watch editor")}
   `.trim();
 }
 
@@ -1590,68 +1585,6 @@ ${url}
 But it is not a valid URL for opening an editor: ${error}
 
 These placeholders are replaced: ${EDITOR_PLACEHOLDERS.join(" ")}
-  `.trim();
-}
-
-export function tryOpenEnvNotSet(hint: string): string {
-  return `
-${boldTerminal("elm-watch try-open")} tries out the ${ELM_WATCH_OPEN_EDITOR} environment variable, but it isn’t set. Set it to a URL or a command:
-
-${hint}
-
-Or try it out without setting it permanently:
-
-${
-  IS_WINDOWS
-    ? `$env:${ELM_WATCH_OPEN_EDITOR}='${EDITOR_URL_EXAMPLE}'; elm-watch try-open`
-    : `${ELM_WATCH_OPEN_EDITOR}='${EDITOR_URL_EXAMPLE}' elm-watch try-open`
-}
-
-Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-  `.trim();
-}
-
-export function tryOpenNoPackageJson(cwd: Cwd): string {
-  return `
-${boldTerminal("elm-watch try-open")} opens the closest package.json, but I couldn’t find one in this directory or any of its parents:
-
-${cwd}
-  `.trim();
-}
-
-export function tryOpenReadError(file: AbsolutePath, error: unknown): string {
-  return `
-I tried to read the closest package.json, but failed:
-
-${file}
-
-${toError(error).message}
-  `.trim();
-}
-
-export function tryOpenOpening(
-  value: string,
-  location: { file: AbsolutePath; line: number; column: number },
-  // `undefined` if "elm-watch" wasn’t found in package.json.
-  lineText: string | undefined,
-): string {
-  const position = `${location.file}:${location.line}:${location.column}`;
-  return `
-Opening package.json using ${ELM_WATCH_OPEN_EDITOR}:
-
-${value}
-
-${
-  lineText === undefined
-    ? `package.json does not mention "elm-watch", so your editor should show the cursor at the very start of the file:
-
-${position}`
-    : `Your editor should show the cursor right before "elm-watch":
-
-${position}
-${lineText}
-${" ".repeat(location.column - 1)}^`
-}
   `.trim();
 }
 

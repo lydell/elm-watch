@@ -72,9 +72,9 @@ describe("help", () => {
       By default all targets in the closest ⧙elm-watch.json⧘ are built.
       Pass ⧙target names⧘ to only build some. Names are matched by substring!
 
-      ⧙elm-watch try-open⧘
-          Try out ⧙ELM_WATCH_OPEN_EDITOR⧘ by opening the closest
-          package.json in your editor.
+      ⧙elm-watch editor⧘
+          Set up ⧙ELM_WATCH_OPEN_EDITOR⧘ for opening
+          error locations in your editor.
 
       ⧙---⧘
 
@@ -162,9 +162,9 @@ describe("help", () => {
         By default all targets in the closest elm-watch.json are built.
         Pass target names to only build some. Names are matched by substring!
 
-        elm-watch try-open
-            Try out ELM_WATCH_OPEN_EDITOR by opening the closest
-            package.json in your editor.
+        elm-watch editor
+            Set up ELM_WATCH_OPEN_EDITOR for opening
+            error locations in your editor.
 
         ---
 

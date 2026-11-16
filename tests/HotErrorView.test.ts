@@ -329,20 +329,8 @@ describe("hot error view", () => {
         await waitFor(() => footer().includes("Which editor"));
         screens.push(footer());
         stdin.press("7");
-        await waitFor(() => footer().includes("Check this out"));
-        screens.push(
-          // The hint is different on Windows.
-          footer().replace(
-            /# System Settings > Environment Variables\n[^]*?(?=\n\n)/,
-            [
-              "# ~/.bashrc",
-              "# A URL ({file} {line} {column} {line0} {column0}):",
-              "export ELM_WATCH_OPEN_EDITOR='pycharm://open?file={file}&line={line}&column={column0}'",
-              "# Or a command ($file $line $column $line0 $column0):",
-              `export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'`,
-            ].join("\n"),
-          ),
-        );
+        await waitFor(() => footer().includes("elm-watch editor"));
+        screens.push(footer());
         stdin.press("\x1B");
         await waitFor(() => !footer().includes("Which editor"));
         screens.push(footer());
@@ -365,18 +353,9 @@ describe("hot error view", () => {
       ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
       ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ Other
 
-      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
-
-      # ~/.bashrc
-      # A URL ({file} {line} {column} {line0} {column0}):
-      export ELM_WATCH_OPEN_EDITOR='pycharm://open?file={file}&line={line}&column={column0}'
-      # Or a command ($file $line $column $line0 $column0):
-      export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
-
-      Try it out by running: elm-watch try-open
-      Then restart elm-watch.
-
-      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable.
+      The easiest way to get started is to run:
+      ⧙elm-watch editor⧘
 
       🚨 error 1/1  ⧙[⧘⧙esc⧘⧙]⧘ cancel
       --------------------------------------------------------------------------------

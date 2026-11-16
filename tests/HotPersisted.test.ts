@@ -385,13 +385,8 @@ describe("hot", () => {
           [[5] WebStorm]
           [[6] Rider]
           [[7] Other]
-          To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
-          # ~/.bashrc
-          # A URL ({file} {line} {column} {line0} {column0}):
-          export ELM_WATCH_OPEN_EDITOR='pycharm://open?file={file}&line={line}&column={column0}'
-          # Or a command ($file $line $column $line0 $column0):
-          export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
-          Try it out by running elm-watch try-open in the terminal. Then restart elm-watch. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
+          To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable. The easiest way to get started is to run:
+          elm-watch editor
           </chooser>
         `);
         expect(openedUrls).toMatchInlineSnapshot(`
@@ -452,7 +447,7 @@ describe("hot", () => {
           [[5] WebStorm] (pressed)
           <footer>🚨 error 1/1 | [esc] cancel</footer>
           [[7] Other]
-          To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
+          To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable. The easiest way to get started is to run:
           <footer>🚨 error 1/1 | [esc] cancel</footer>
           <footer>🚨 1 error | [e] change editor | [a] show one error at a time | [esc] close (again to reopen)</footer>
           Open error locations in:

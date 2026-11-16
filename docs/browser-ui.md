@@ -87,6 +87,8 @@ Note that the browser opens the editor on the device you click on. If you test o
 
 Set the `ELM_WATCH_OPEN_EDITOR` environment variable to either [a URL](#a-url) or [a command](#a-command). If it starts like a URL (`something://`), it’s a URL. Otherwise it’s a command. It is used by default in all your projects, but you can still [choose one of the editors](#choose-your-editor) in a specific project (press e in the error overlay or the terminal). To go back to `ELM_WATCH_OPEN_EDITOR` in that project, press e and then 7 (which says “ELM_WATCH_OPEN_EDITOR” instead of “Other” when the environment variable is set).
 
+The easiest way to get started is to run `elm-watch editor`. It explains how to try out values and how to set the environment variable permanently in your shell.
+
 Here’s how to set it in different shells:
 
 | Shell | Config file | Code |
@@ -100,10 +102,12 @@ Here’s how to set it in different shells:
 
 Use single quotes: Both URLs (`{file}`) and commands (`$file`) contain characters that some shells would otherwise replace.
 
-To try it out, run `elm-watch try-open`. It opens the closest `package.json` in your editor, at the `"elm-watch"` line, and shows where the cursor should end up. That way you can check that both the line and the column are right (some editors count from 0). You can set the environment variable just for that command while experimenting:
+To try out a value, set the environment variable just for one run of `elm-watch editor`:
 
-- bash/zsh/fish: `ELM_WATCH_OPEN_EDITOR='...' elm-watch try-open`
-- PowerShell: `$env:ELM_WATCH_OPEN_EDITOR='...'; elm-watch try-open`
+- bash/zsh/fish: `ELM_WATCH_OPEN_EDITOR='...' elm-watch editor`
+- PowerShell: `$env:ELM_WATCH_OPEN_EDITOR='...'; elm-watch editor`
+
+It opens the closest `package.json` in your editor, at the `"elm-watch"` line, and shows where the cursor should end up. That way you can check that both the line and the column are right (some editors count from 0).
 
 Remember to restart `elm-watch hot` after changing the environment variable.
 

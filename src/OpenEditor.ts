@@ -1,23 +1,12 @@
 import * as childProcess from "child_process";
-import * as path from "path";
 
 import type {
   OpenEditorError,
   OpenEditorEnv,
   WebSocketToClientMessage,
 } from "../client/WebSocketMessages.ts";
-import {
-  EDITOR_PLACEHOLDERS,
-  EDITOR_URL_EXAMPLE,
-  editorUrl,
-  isEditorUrl,
-  validateEditorUrlTemplate,
-} from "./Editor.ts";
-import {
-  __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
-  ELM_WATCH_OPEN_EDITOR,
-  type Env,
-} from "./Env.ts";
+import { editorUrl, isEditorUrl, validateEditorUrlTemplate } from "./Editor.ts";
+import { __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS, type Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import { bold, silentlyReadIntEnvValue } from "./Helpers.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
@@ -98,14 +87,12 @@ export function openEditor(
 }
 
 export function getOpenEditorSetupMessage(
-  env: Env,
   project: Project,
 ): WebSocketToClientMessage {
   return {
     tag: "OpenEditorSetupChanged",
     preset: project.editor?.id ?? null,
     env: getOpenEditorEnv(project),
-    commandHint: getCommandHint(env),
   };
 }
 
@@ -126,60 +113,13 @@ function getOpenEditorEnv(project: Project): OpenEditorEnv | null {
   }
 }
 
-// How to set `ELM_WATCH_OPEN_EDITOR` in the user’s shell: To a URL or a
-// command.
-export function getCommandHint(env: Env): string {
-  const urlComment = `A URL (${EDITOR_PLACEHOLDERS.join(" ")}):`;
-  const commandComment = (variables: Array<string>): string =>
-    `Or a command (${variables.join(" ")}):`;
-  const variableNames = EDITOR_PLACEHOLDERS.map((placeholder) =>
-    placeholder.slice(1, -1),
-  );
-  if (IS_WINDOWS) {
-    return [
-      "# System Settings > Environment Variables",
-      `# ${urlComment}`,
-      `${ELM_WATCH_OPEN_EDITOR}=${EDITOR_URL_EXAMPLE}`,
-      `# ${commandComment(variableNames.map((name) => `%${name}%`))}`,
-      `${ELM_WATCH_OPEN_EDITOR}=your-editor "%file%:%line%:%column%"`,
-    ].join("\n");
-  }
-  const [comment, set] = getShellConfig(path.basename(env["SHELL"] ?? ""));
-  return [
-    `# ${comment}`,
-    `# ${urlComment}`,
-    set(`'${EDITOR_URL_EXAMPLE}'`),
-    `# ${commandComment(variableNames.map((name) => `$${name}`))}`,
-    set(`'your-editor "$file:$line:$column"'`),
-  ].join("\n");
-}
-
-function getShellConfig(
-  shell: string,
-): [comment: string, set: (quotedValue: string) => string] {
-  const exportValue = (quotedValue: string): string =>
-    `export ${ELM_WATCH_OPEN_EDITOR}=${quotedValue}`;
-  switch (shell) {
-    case "fish":
-      return [
-        "Run once:",
-        (quotedValue) => `set -Ux ${ELM_WATCH_OPEN_EDITOR} ${quotedValue}`,
-      ];
-    case "bash":
-    case "zsh":
-      return [`~/.${shell}rc`, exportValue];
-    default:
-      return ["Your shell’s config file", exportValue];
-  }
-}
-
 export function printOpenEditorErrorForTerminal(
   error: OpenEditorError,
 ): string {
   return `${bold("Opening the location in your editor failed!")}\n\n${error.message}`;
 }
 
-// For `elm-watch try-open`: Open the location using `ELM_WATCH_OPEN_EDITOR`
+// For `elm-watch editor`: Open the location using `ELM_WATCH_OPEN_EDITOR`
 // (set to a URL or a command), and wait for the result.
 export async function openEditorFromEnv(
   env: Env,

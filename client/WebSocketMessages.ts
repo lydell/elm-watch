@@ -146,8 +146,6 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
     // precedence over `env`.
     preset: Codec.nullOr(EditorPresetId),
     env: Codec.nullOr(OpenEditorEnv),
-    // How to set up `ELM_WATCH_OPEN_EDITOR` in the user’s shell.
-    commandHint: Codec.string,
   },
   {
     tag: Codec.tag("StaticFilesChanged"),

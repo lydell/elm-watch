@@ -287,7 +287,6 @@ describe("render", () => {
     current: undefined,
     envSet: false,
     chooser: undefined,
-    commandHint: "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='x'",
   };
 
   // From the position, which the key hints follow (possibly wrapping).
@@ -398,22 +397,15 @@ describe("render", () => {
       chooser({
         chooser: { showOther: true },
         current: webStorm,
-        commandHint: "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='x'",
       }),
     ).toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] *WebStorm*
       [*6*] Rider   [*7*] Other
 
-      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
-
-      # ~/.bashrc
-      export ELM_WATCH_OPEN_EDITOR='x'
-
-      Try it out by running: elm-watch try-open
-      Then restart elm-watch.
-
-      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable.
+      The easiest way to get started is to run:
+      *elm-watch editor*
 
       🚨 error 1/1  [*esc*] cancel"
     `);
@@ -427,15 +419,9 @@ describe("render", () => {
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
       [*6*] Rider   [*7*] Other
 
-      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
-
-      # ~/.bashrc
-      export ELM_WATCH_OPEN_EDITOR='x'
-
-      Try it out by running: elm-watch try-open
-      Then restart elm-watch.
-
-      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable.
+      The easiest way to get started is to run:
+      *elm-watch editor*
 
       🚨 error 1/1  [*esc*] cancel"
     `);

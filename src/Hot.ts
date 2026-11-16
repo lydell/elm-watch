@@ -42,7 +42,6 @@ import {
 } from "./LatestEvent.ts";
 import { isNonEmptyArray } from "./NonEmptyArray.ts";
 import {
-  getCommandHint,
   getOpenEditorSetupMessage,
   openEditor,
   printOpenEditorErrorForTerminal,
@@ -749,7 +748,6 @@ const runCmd =
 
         if (errorViewIsActive(terminal, exitOnError, mutable.project)) {
           renderErrorView(
-            env,
             terminal,
             mutable,
             getErrorViewTargets(mutable.project),
@@ -818,13 +816,13 @@ const runCmd =
         return;
 
       case "ChooseEditor":
-        saveEditor(env, mutable, webSocketToken, cmd.editor);
+        saveEditor(mutable, webSocketToken, cmd.editor);
         return;
 
       case "WebSocketSendOpenEditorSetup":
         webSocketSend(
           cmd.webSocket,
-          getOpenEditorSetupMessage(env, mutable.project),
+          getOpenEditorSetupMessage(mutable.project),
         );
         return;
 
@@ -867,7 +865,7 @@ const runCmd =
               const preset = EDITOR_PRESETS[digit - 1];
               if (preset !== undefined) {
                 errorView.editorChooser = undefined;
-                saveEditor(env, mutable, webSocketToken, preset);
+                saveEditor(mutable, webSocketToken, preset);
                 openSelectedError();
               } else if (digit === EDITOR_PRESETS.length + 1) {
                 if (mutable.project.openEditor.tag === "NotSet") {
@@ -875,7 +873,7 @@ const runCmd =
                 } else {
                   // Go back to using `ELM_WATCH_OPEN_EDITOR`.
                   errorView.editorChooser = undefined;
-                  saveEditor(env, mutable, webSocketToken, undefined);
+                  saveEditor(mutable, webSocketToken, undefined);
                   openSelectedError();
                 }
               }
@@ -922,7 +920,7 @@ const runCmd =
           }
         }
         errorView.selection = selection;
-        renderErrorView(env, terminal, mutable, targets, {
+        renderErrorView(terminal, mutable, targets, {
           notice: undefined,
         });
         return;
@@ -931,7 +929,6 @@ const runCmd =
       case "RenderErrorView":
         if (errorViewIsActive(terminal, exitOnError, mutable.project)) {
           renderErrorView(
-            env,
             terminal,
             mutable,
             getErrorViewTargets(mutable.project),
@@ -1449,14 +1446,13 @@ function printServerLinks(devServer: DevServer, host: Host): string {
 // Store the editor chosen in the terminal or the browser, and let all browsers
 // know.
 function saveEditor(
-  env: Env,
   mutable: Mutable,
   webSocketToken: WebSocketToken,
   editor: EditorPreset | undefined,
 ): void {
   mutable.project.editor = editor;
   writeElmWatchStuffJson(mutable, webSocketToken);
-  const message = getOpenEditorSetupMessage(env, mutable.project);
+  const message = getOpenEditorSetupMessage(mutable.project);
   for (const { webSocket } of mutable.devServer.getConnections()) {
     webSocketSend(webSocket, message);
   }
@@ -1531,7 +1527,6 @@ function getErrorViewTargets(
 // all errors), the info line and keys to press. Only the error area changes
 // when switching between one error at a time and showing all errors.
 function renderErrorView(
-  env: Env,
   terminal: Terminal,
   mutable: Mutable,
   targets: Array<ErrorView.ErrorViewTarget>,
@@ -1584,7 +1579,6 @@ function renderErrorView(
               current: mutable.project.editor,
               envSet: mutable.project.openEditor.tag !== "NotSet",
               chooser: errorView.editorChooser,
-              commandHint: getCommandHint(env),
             },
           }),
     );

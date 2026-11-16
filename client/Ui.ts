@@ -54,10 +54,9 @@ export type UiMsg =
     };
 
 // See `OpenEditorSetupChanged`.
-export type OpenEditorSetupWithHint = {
+export type OpenEditorSetup = {
   preset: string | null;
   env: OpenEditorEnv | null;
-  commandHint: string;
 };
 
 export type OverlayError = {
@@ -190,7 +189,7 @@ export type TargetSnapshot = {
   info: Info;
   // For actions that work in more statuses than the ones with a `sendKey`.
   sendKey: SendKey | undefined;
-  openEditor: OpenEditorSetupWithHint | undefined;
+  openEditor: OpenEditorSetup | undefined;
 };
 
 type OverlayErrorsEntry = {
@@ -209,7 +208,6 @@ type EditorChooser = {
 type EditorChooserProps = EditorChooser & {
   current: EditorPreset | undefined;
   envSet: boolean;
-  commandHint: string;
   // `null` goes back to using `ELM_WATCH_OPEN_EDITOR`.
   onChoose: (editor: string | null) => void;
   onShowOther: () => void;
@@ -617,7 +615,7 @@ export function createUi(): Ui {
   // target that is connected.
   const getOpenEditor = ():
     | {
-        openEditor: OpenEditorSetupWithHint;
+        openEditor: OpenEditorSetup;
         connectedTarget: { targetName: string; sendKey: SendKey } | undefined;
       }
     | undefined => {
@@ -794,7 +792,6 @@ export function createUi(): Ui {
               ...editorChooser,
               current,
               envSet,
-              commandHint: result.openEditor.commandHint,
               onChoose: chooseEditor,
               onShowOther: showOtherEditor,
             },
@@ -3332,7 +3329,6 @@ function viewEditorChooser({
   showOther,
   current,
   envSet,
-  commandHint,
   onChoose,
   onShowOther,
 }: EditorChooserProps): HTMLElement {
@@ -3396,36 +3392,20 @@ function viewEditorChooser({
         envSet ? " ELM_WATCH_OPEN_EDITOR" : " Other",
       ),
     ),
-    ...(showOther ? viewOtherEditor(commandHint) : []),
+    ...(showOther ? viewOtherEditor() : []),
   );
 }
 
 // Other editors are set up with an environment variable rather than in the
 // browser, so they survive deleting elm-stuff/.
-function viewOtherEditor(commandHint: string): Array<HTMLElement> {
+function viewOtherEditor(): Array<HTMLElement> {
   return [
     h(
       HTMLParagraphElement,
       {},
-      "To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:",
+      "To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable. The easiest way to get started is to run:",
     ),
-    h(HTMLPreElement, {}, commandHint),
-    h(
-      HTMLParagraphElement,
-      {},
-      "Try it out by running ",
-      h(HTMLElement, { localName: "code" }, "elm-watch try-open"),
-      " in the terminal. Then restart elm-watch. ",
-      h(
-        HTMLAnchorElement,
-        {
-          href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
-          target: "_blank",
-          rel: "noreferrer",
-        },
-        "Clickable error locations",
-      ),
-    ),
+    h(HTMLPreElement, {}, "elm-watch editor"),
   ];
 }
 

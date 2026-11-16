@@ -50,9 +50,9 @@ ${bold("elm-watch hot [target names...]")}
 By default all targets in the closest ${elmWatchJson} are built.
 Pass ${bold("target names")} to only build some. Names are matched by substring!
 
-${bold("elm-watch try-open")}
-    Try out ${bold(ELM_WATCH_OPEN_EDITOR)} by opening the closest
-    package.json in your editor.
+${bold("elm-watch editor")}
+    Set up ${bold(ELM_WATCH_OPEN_EDITOR)} for opening
+    error locations in your editor.
 
 ${dim("---")}
 ${symbolLegend}

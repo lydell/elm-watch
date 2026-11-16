@@ -9,7 +9,7 @@ import type { CompilationModeWithProxy } from "../src/Types.ts";
 import {
   type ExternalErrorsSource,
   type FlashType,
-  type OpenEditorSetupWithHint,
+  type OpenEditorSetup,
   type OverlayError,
   SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
   type SendKey,
@@ -148,7 +148,7 @@ export type Model = {
   elmCompiledTimestamp: number;
   elmCompiledTimestampBeforeReload: number | undefined;
   // Received when connecting. `undefined` until then.
-  openEditor: OpenEditorSetupWithHint | undefined;
+  openEditor: OpenEditorSetup | undefined;
 };
 
 export type Cmd =
@@ -541,7 +541,6 @@ function onWebSocketToClientMessage(
           openEditor: {
             preset: msg.preset,
             env: msg.env,
-            commandHint: msg.commandHint,
           },
         },
         [],

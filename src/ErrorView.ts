@@ -68,7 +68,6 @@ export type ErrorViewEditor = {
   // the presets (in place of “Other”).
   envSet: boolean;
   chooser: { showOther: boolean } | undefined;
-  commandHint: string;
 };
 
 const KEYS: Array<[string, ErrorViewKey]> = [
@@ -261,9 +260,7 @@ function renderEditorChooser(
           : "Other",
       ],
     ]),
-    ...(showOther
-      ? ["", Errors.openEditorOtherForTerminal(editor.commandHint)]
-      : []),
+    ...(showOther ? ["", Errors.openEditorOtherForTerminal()] : []),
   ].join("\n");
 }
 
