@@ -182,7 +182,7 @@ Optional options can also be set to `undefined`, which is handy for environment 
 
 ### Environment variables
 
-The elm-watch environment variables work just like with the `elm-watch` command, also with the JavaScript API:
+The elm-watch [environment variables](../elm-watch.json/#environment-variables) work just like with the `elm-watch` command, also with the JavaScript API:
 
 - `ELM_WATCH_HOST` and `ELM_WATCH_WEBSOCKET_URL` take precedence over the `host` and `webSocketUrl` options.
 - `ELM_WATCH_ALLOWED_HOSTS` adds to the `allowedHosts` option.
